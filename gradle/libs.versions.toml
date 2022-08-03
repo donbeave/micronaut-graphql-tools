@@ -1,7 +1,7 @@
 [versions]
 managed-graphql-java = "16.2"
 
-micronaut = "3.5.3"
+micronaut = "3.5.4"
 micronaut-docs = "2.0.0"
 micronaut-gradle-plugin = "3.5.1"
 
