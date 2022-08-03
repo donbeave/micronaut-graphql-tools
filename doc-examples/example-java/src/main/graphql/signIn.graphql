@@ -1,0 +1,24 @@
+mutation signIn($username: String!, $password: String!) {
+  signIn(username: $username, password: $password) {
+    data {
+      username
+      firstName
+      lastName
+      books {
+        id
+        title
+        year
+      }
+    }
+    error {
+      ... on ValidationError {
+        message
+        validationCode: code
+      }
+      ... on SecurityError {
+        message
+        securityCode: code
+      }
+    }
+  }
+}

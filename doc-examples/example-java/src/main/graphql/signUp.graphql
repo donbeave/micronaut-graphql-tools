@@ -1,0 +1,24 @@
+mutation signUp($input: SignUpInput!) {
+  signUp(input: $input) {
+    data {
+      username
+      firstName
+      lastName
+      books {
+        id
+        title
+        year
+      }
+    }
+    error {
+      ... on ValidationError {
+        message
+        validationCode: code
+      }
+      ... on SecurityError {
+        message
+        securityCode: code
+      }
+    }
+  }
+}

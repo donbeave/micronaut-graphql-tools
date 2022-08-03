@@ -1,0 +1,87 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  searchProfile(contains: String!, limit: Int): [Profile!]!
+
+  allBooks: [Book!]!
+
+  currentUser: User
+}
+
+type Mutation {
+  signIn(username: String!, password: String!): SignInPayload!
+
+  signUp(input: SignUpInput!): SignUpPayload!
+
+  addBook(id: ID!): AddBookPayload!
+}
+
+input SignUpInput {
+  username: String!
+  password: String!
+  firstName: String!
+  lastName: String!
+}
+
+type ValidationError {
+  message: String!
+  code: ValidationErrorCode!
+}
+
+enum ValidationErrorCode {
+  NOT_FOUND
+  DUPLICATE
+}
+
+type SecurityError {
+  message: String!
+  code: SecurityErrorCode!
+}
+
+enum SecurityErrorCode {
+  INCORRECT_CREDENTIALS
+  NOT_AUTHENTICATED
+}
+
+union Error = ValidationError | SecurityError
+
+type SignInPayload {
+  error: Error
+  data: User
+}
+
+type SignUpPayload {
+  error: Error
+  data: User
+}
+
+type AddBookPayload {
+  error: Error
+}
+
+type Profile {
+  username: String!
+  fullName: String!
+}
+
+type User {
+  username: String!
+  firstName: String!
+  lastName: String!
+  books: [Book!]!
+}
+
+type Book {
+  id: ID!
+  title: String!
+  year: Int!
+  sellers: [BookSeller!]!
+}
+
+type BookSeller {
+  name: String!
+  price: Float!
+}

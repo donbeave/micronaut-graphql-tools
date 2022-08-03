@@ -1,0 +1,6 @@
+query searchProfile($contains: String!, $limit: Int) {
+  searchProfile(contains: $contains, limit: $limit) {
+    username
+    fullName
+  }
+}
