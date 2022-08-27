@@ -733,9 +733,10 @@ final class GraphQLRuntimeWiringGenerator {
             return;
         }
 
-        runnable.run();
-
+        // save processed type before actual processing is because sometimes one type can refer to itself in it fields
         processedTypes.put(typeDefinition.getName(), targetClass);
+
+        runnable.run();
     }
 
 }
