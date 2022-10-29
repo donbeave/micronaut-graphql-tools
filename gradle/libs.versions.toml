@@ -1,12 +1,14 @@
 [versions]
+micronaut = "4.0.0-SNAPSHOT"
+micronaut-docs = "2.0.0"
+micronaut-test = "3.7.0"
+groovy = "4.0.5"
+spock = "2.3-groovy-4.0"
+
 managed-graphql-java = "16.2"
 
-micronaut = "3.5.4"
-micronaut-docs = "2.0.0"
-micronaut-gradle-plugin = "3.5.1"
-
+micronaut-gradle-plugin = "3.6.3"
 apollo = "3.4.0"
-groovy = "3.0.11"
 jetbrains-annotations = "23.0.0"
 
 [libraries]
@@ -14,7 +16,6 @@ managed-graphql-java = { module = "com.graphql-java:graphql-java", version.ref =
 
 micronaut-jackson-databind = { module = "io.micronaut:micronaut-jackson-databind" }
 micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql" }
-micronaut-docs = { module = "io.micronaut.docs:micronaut-docs-asciidoc-config-props", version.ref = "micronaut-docs" }
 gradle-micronaut = { module = "io.micronaut.gradle:micronaut-gradle-plugin", version.ref = "micronaut-gradle-plugin" }
 
 apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }

@@ -4,10 +4,6 @@ plugins {
     id("com.apollographql.apollo3").version("3.4.0") // TODO
 }
 
-repositories {
-    mavenCentral()
-}
-
 application {
     mainClass.set("example.Application")
 }

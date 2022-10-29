@@ -10,7 +10,6 @@ plugins {
     id("io.micronaut.build.shared.settings") version "6.0.1"
 }
 
-
 dependencyResolutionManagement {
     repositories {
         mavenLocal()
@@ -31,6 +30,6 @@ include("graphql-tools-bom")
 // examples
 include("doc-examples:example-java")
 
-micronautBuild {
+configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     importMicronautCatalog()
 }
