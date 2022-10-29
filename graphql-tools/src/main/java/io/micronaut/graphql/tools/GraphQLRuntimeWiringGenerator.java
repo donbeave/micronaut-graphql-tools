@@ -42,6 +42,7 @@ import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanMethod;
 import io.micronaut.core.beans.BeanProperty;
+import io.micronaut.core.naming.Described;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
@@ -63,7 +64,10 @@ import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.schema.UnionTypeResolver;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
+import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Provider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,6 +78,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
@@ -96,6 +101,8 @@ import static io.micronaut.graphql.tools.SystemTypes.isJavaBuiltInClass;
  */
 @Internal
 final class GraphQLRuntimeWiringGenerator {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GraphQLRuntimeWiringGenerator.class);
 
     private final ApplicationContext applicationContext;
     private final GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry;
@@ -139,18 +146,27 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     RuntimeWiring generate() {
-        SchemaDefinition schemaDefinition = typeDefinitionRegistry.schemaDefinition()
-                .orElseThrow(SchemaDefinitionNotProvidedException::new);
+        long start = System.nanoTime();
 
-        if (!graphQLResolversRegistry.hasRootResolvers()) {
-            throw new RootResolverNotFoundException();
+        try {
+            SchemaDefinition schemaDefinition = typeDefinitionRegistry.schemaDefinition()
+                    .orElseThrow(SchemaDefinitionNotProvidedException::new);
+
+            if (!graphQLResolversRegistry.hasRootResolvers()) {
+                throw new RootResolverNotFoundException();
+            }
+
+            for (OperationTypeDefinition operationTypeDefinition : schemaDefinition.getOperationTypeDefinitions()) {
+                processOperationTypeDefinition(operationTypeDefinition);
+            }
+
+            return rootRuntimeWiringBuilder.build();
+        } finally {
+            if (LOG.isInfoEnabled()) {
+                long took = elapsedMillis(start);
+                LOG.info("GraphQL runtime wiring generated in {}ms.", took);
+            }
         }
-
-        for (OperationTypeDefinition operationTypeDefinition : schemaDefinition.getOperationTypeDefinitions()) {
-            processOperationTypeDefinition(operationTypeDefinition);
-        }
-
-        return rootRuntimeWiringBuilder.build();
     }
 
     void processExecutableMethod(Executable<Object, ?> executable, ReturnType<?> returnType,
@@ -737,6 +753,10 @@ final class GraphQLRuntimeWiringGenerator {
         processedTypes.put(typeDefinition.getName(), targetClass);
 
         runnable.run();
+    }
+
+    private static long elapsedMillis(long startNanos) {
+        return TimeUnit.MILLISECONDS.convert(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
     }
 
 }
