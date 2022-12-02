@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.apollo.runtime)
     implementation(libs.apollo.rx3.support)
     runtimeOnly(libs.logback.classic)
+
+    implementation(mn.micronaut.websocket)
 }
 
 apollo {

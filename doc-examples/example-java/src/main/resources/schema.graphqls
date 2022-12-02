@@ -3,8 +3,10 @@ schema {
   mutation: Mutation
 }
 
+directive @stripHtml on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+
 type Query {
-  searchProfile(contains: String!, limit: Int): [Profile!]!
+  searchProfile(contains: String! @stripHtml, limit: Int): [Profile!]!
 
   allBooks: [Book!]!
 
@@ -20,7 +22,7 @@ type Mutation {
 }
 
 input SignUpInput {
-  username: String!
+  username: String! @stripHtml
   password: String!
   firstName: String!
   lastName: String!
