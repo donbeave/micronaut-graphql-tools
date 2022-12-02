@@ -9,7 +9,6 @@ dependencies {
 
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)
-    testImplementation(mn.micronaut.test.spock)
-    testImplementation(mn.spock)
+    testImplementation(mnTest.micronaut.test.spock)
     testImplementation(libs.jetbrains.annotations)
 }
