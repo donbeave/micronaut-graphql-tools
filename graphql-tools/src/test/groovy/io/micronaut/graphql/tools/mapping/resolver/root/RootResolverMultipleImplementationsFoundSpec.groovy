@@ -30,25 +30,25 @@ type User {
 
     void "method returns interfaces which has multiple GraphQLType implementations"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MultipleImplementationsFoundException
-            e.cause.message == """Found multiple implementations for the interface ${User.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MultipleImplementationsFoundException
+        e.cause.message == """Found multiple implementations for the interface ${User.name}.
   GraphQL object type: Query
   GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()
   Implementation classes: ${UserAltImpl.name}, ${UserImpl.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'user'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == "user()"
-            e.cause.implementationClasses == [UserAltImpl, UserImpl]
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'user'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == "user()"
+        e.cause.implementationClasses == [UserAltImpl, UserImpl]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

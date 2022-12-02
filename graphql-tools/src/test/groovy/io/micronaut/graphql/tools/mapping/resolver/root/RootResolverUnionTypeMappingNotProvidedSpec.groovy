@@ -39,23 +39,23 @@ type ValidationError {
 
     void "unable to detect representation class"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof UnionTypeMappingNotProvidedException
-            e.cause.message == """Can not detect representation class for type ValidationError, member of PayloadError union. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof UnionTypeMappingNotProvidedException
+        e.cause.message == """Can not detect representation class for type ValidationError, member of PayloadError union. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
   GraphQL object type: Query
   GraphQL field: unionTest
   Mapped class: ${Query.name}
   Mapped method: unionTest()"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'unionTest'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'unionTest()'
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'unionTest'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'unionTest()'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

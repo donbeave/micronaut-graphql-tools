@@ -58,10 +58,10 @@ type Test {
     @Unroll
     void "use standard graphql scalars as method return types"() {
         given:
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     test {
         testString
@@ -77,18 +77,18 @@ type Test {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.test.testString == 'test'
-            result.data.test.testBoolean1 == true
-            result.data.test.testBoolean2 == false
-            result.data.test.testInt1 == Integer.MAX_VALUE
-            result.data.test.testInt2 == Integer.MIN_VALUE
-            result.data.test.testFloat1 == Float.MAX_VALUE as Double
-            result.data.test.testFloat2 == Float.MIN_VALUE as Double
-            result.data.test.testID == 'id'
+        result.errors.isEmpty()
+        result.data.test.testString == 'test'
+        result.data.test.testBoolean1 == true
+        result.data.test.testBoolean2 == false
+        result.data.test.testInt1 == Integer.MAX_VALUE
+        result.data.test.testInt2 == Integer.MIN_VALUE
+        result.data.test.testFloat1 == Float.MAX_VALUE as Double
+        result.data.test.testFloat2 == Float.MIN_VALUE as Double
+        result.data.test.testID == 'id'
 
         where:
-            schema << [SCHEMA1, SCHEMA2]
+        schema << [SCHEMA1, SCHEMA2]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

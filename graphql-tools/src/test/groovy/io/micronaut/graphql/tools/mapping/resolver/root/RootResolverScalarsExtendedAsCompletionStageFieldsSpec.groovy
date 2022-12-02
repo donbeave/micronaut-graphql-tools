@@ -54,10 +54,10 @@ type Query {
     @Unroll
     void "use extended graphql-java scalars as method return types wrapped with CompletionStage"() {
         given:
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     testLong
     testShort
@@ -67,14 +67,14 @@ type Query {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.testLong == Long.MIN_VALUE
-            result.data.testShort == Short.MIN_VALUE
-            result.data.testBigDecimal == BigDecimal.ZERO
-            result.data.testBigInteger == BigInteger.ONE
+        result.errors.isEmpty()
+        result.data.testLong == Long.MIN_VALUE
+        result.data.testShort == Short.MIN_VALUE
+        result.data.testBigDecimal == BigDecimal.ZERO
+        result.data.testBigInteger == BigInteger.ONE
 
         where:
-            schema << [SCHEMA1, SCHEMA2]
+        schema << [SCHEMA1, SCHEMA2]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

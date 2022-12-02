@@ -13,8 +13,8 @@ class TypeResolverIntrospectedEntityAsFieldSpec extends AbstractTest {
 
     void "use GraphQLTypeResolver for the introspected entity"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -28,10 +28,10 @@ type User {
   fullName: String
 }
 """
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     user {
         username
@@ -41,9 +41,9 @@ type User {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.user.username == 'test'
-            result.data.user.fullName == 'Test User'
+        result.errors.isEmpty()
+        result.data.user.username == 'test'
+        result.data.user.fullName == 'Test User'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

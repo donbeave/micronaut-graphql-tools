@@ -1,12 +1,10 @@
 package io.micronaut.graphql.tools.mapping.resolver.type
 
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.InvalidSourceArgumentException
 import org.intellij.lang.annotations.Language
 
 class TypeResolverSourceArgumentSpec extends AbstractTest {
@@ -31,10 +29,10 @@ type User {
 
     void "the source object passed to the GraphQLTypeResolver's method"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 { 
     user {
         username
@@ -44,10 +42,10 @@ type User {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.dataPresent
-            result.data.user.username == 'test'
-            result.data.user.avatar == 'pig.png'
+        result.errors.isEmpty()
+        result.dataPresent
+        result.data.user.username == 'test'
+        result.data.user.avatar == 'pig.png'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

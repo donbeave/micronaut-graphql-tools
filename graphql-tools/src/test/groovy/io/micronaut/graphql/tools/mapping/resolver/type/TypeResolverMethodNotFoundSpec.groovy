@@ -15,8 +15,8 @@ class TypeResolverMethodNotFoundSpec extends AbstractTest {
 
     void "type's property or method not found"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -30,20 +30,20 @@ type User {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MethodNotFoundException
-            e.cause.message == """The property or method `username` not found in ${User.name}'s type or it resolvers: [${UserResolver.name}].
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MethodNotFoundException
+        e.cause.message == """The property or method `username` not found in ${User.name}'s type or it resolvers: [${UserResolver.name}].
   GraphQL object type: User
   GraphQL field: username"""
-            e.cause.mappingContext.graphQlObjectType == 'User'
-            e.cause.mappingContext.graphQlField == 'username'
-            e.cause.methodName == 'username'
+        e.cause.mappingContext.graphQlObjectType == 'User'
+        e.cause.mappingContext.graphQlField == 'username'
+        e.cause.methodName == 'username'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -29,10 +29,10 @@ type User {
 
     void "DataFetchingEnvironment passed to a GraphQLType's method"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 { 
     user {
         username
@@ -41,9 +41,9 @@ type User {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.dataPresent
-            result.data.user.username == 'test'
+        result.errors.isEmpty()
+        result.dataPresent
+        result.data.user.username == 'test'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

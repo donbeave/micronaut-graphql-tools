@@ -15,8 +15,8 @@ class TypeResolverIncorrectAnnotationSpec extends AbstractTest {
 
     void "the GraphQLTypeResolver annotation used without specify a value class"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -32,12 +32,12 @@ type User {
 """
 
         when:
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         then:
-            def e = thrown(BeanContextException)
-            e.cause instanceof IncorrectAnnotationException
-            e.cause.message == "Empty value member for @GraphQLTypeResolver annotation in ${UserResolver.class.name} class."
+        def e = thrown(BeanContextException)
+        e.cause instanceof IncorrectAnnotationException
+        e.cause.message == "Empty value member for @GraphQLTypeResolver annotation in ${UserResolver.class.name} class."
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

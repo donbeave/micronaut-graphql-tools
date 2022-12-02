@@ -13,8 +13,8 @@ class RootResolverIncorrectFieldMappingObjectTypeToBuiltInClassSpec extends Abst
 
     void "the field which returns object type points to a method which returns an Integer"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -28,31 +28,31 @@ type User {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The field is mapped to a built-in class, when required a custom class.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The field is mapped to a built-in class, when required a custom class.
   GraphQL object type: Query
   GraphQL field: currentUser
   Mapped class: ${Query.name}
   Mapped method: currentUser()
   Provided class: ${Integer.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'currentUser'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'currentUser()'
-            e.cause.providedClass == Integer
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'currentUser'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'currentUser()'
+        e.cause.providedClass == Integer
     }
 
     void "mapping custom GraphQL type to a wrong class [required field]"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -66,25 +66,25 @@ type User {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The field is mapped to a built-in class, when required a custom class.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The field is mapped to a built-in class, when required a custom class.
   GraphQL object type: Query
   GraphQL field: currentUser
   Mapped class: ${Query.name}
   Mapped method: currentUser()
   Provided class: ${Integer.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'currentUser'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'currentUser()'
-            e.cause.providedClass == Integer
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'currentUser'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'currentUser()'
+        e.cause.providedClass == Integer
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

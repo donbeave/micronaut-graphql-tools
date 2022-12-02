@@ -12,8 +12,8 @@ class RootResolverSkipProcessOneTypeTwiceSpec extends AbstractTest {
 
     void "skip process one type twice"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -28,10 +28,10 @@ type User {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     testUser1 {
         username
@@ -43,9 +43,9 @@ type User {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.testUser1.username == 'test1'
-            result.data.testUser2.username == 'test2'
+        result.errors.isEmpty()
+        result.data.testUser1.username == 'test1'
+        result.data.testUser2.username == 'test2'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -35,10 +35,10 @@ type ValidationError {
 
     void "basic union support"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     testUnion(securityError: true) {
         ... on SecurityError {
@@ -52,12 +52,12 @@ type ValidationError {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.dataPresent
-            result.data.testUnion.securityCode == 'AUTH'
+        result.errors.isEmpty()
+        result.dataPresent
+        result.data.testUnion.securityCode == 'AUTH'
 
         when:
-            result = executeQuery("""
+        result = executeQuery("""
 {
     testUnion(securityError: false) {
         ... on SecurityError {
@@ -71,9 +71,9 @@ type ValidationError {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.dataPresent
-            result.data.testUnion.validationCode == 123
+        result.errors.isEmpty()
+        result.dataPresent
+        result.data.testUnion.validationCode == 123
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

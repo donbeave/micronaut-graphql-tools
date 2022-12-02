@@ -36,10 +36,10 @@ type PaymentMethod {
 
     void "DataFetchingEnvironment passed to a GraphQLTypeResolver's method"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 { 
     user {
         username
@@ -51,12 +51,12 @@ type PaymentMethod {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.dataPresent
-            result.data.user.username == 'test'
-            result.data.user.paymentMethodList.size() == 2
-            result.data.user.paymentMethodList[0].number == '123'
-            result.data.user.paymentMethodList[1].number == '456'
+        result.errors.isEmpty()
+        result.dataPresent
+        result.data.user.username == 'test'
+        result.data.user.paymentMethodList.size() == 2
+        result.data.user.paymentMethodList[0].number == '123'
+        result.data.user.paymentMethodList[1].number == '456'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

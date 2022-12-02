@@ -31,25 +31,25 @@ type User {
 
     void "the method has more arguments (exclude DataFetchingEnvironment)"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectArgumentCountException
-            e.cause.message == """The method has too many arguments, provided: 2, required 1 arg(s): username(${User.name} user)
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectArgumentCountException
+        e.cause.message == """The method has too many arguments, provided: 2, required 1 arg(s): username(${User.name} user)
   GraphQL object type: User
   GraphQL field: username
   Mapped class: ${UserResolver.name}
   Mapped method: username(${User.name} user, ${String.name} uid, ${DataFetchingEnvironment.name} dfe)"""
-            e.cause.mappingContext.graphQlObjectType == 'User'
-            e.cause.mappingContext.graphQlField == 'username'
-            e.cause.mappingContext.mappedClass == UserResolver
-            e.cause.mappingContext.mappedMethod == "username(${User.name} user, ${String.name} uid, ${DataFetchingEnvironment.name} dfe)"
-            e.cause.providedCount == 2
-            e.cause.requiredCount == 1
+        e.cause.mappingContext.graphQlObjectType == 'User'
+        e.cause.mappingContext.graphQlField == 'username'
+        e.cause.mappingContext.mappedClass == UserResolver
+        e.cause.mappingContext.mappedMethod == "username(${User.name} user, ${String.name} uid, ${DataFetchingEnvironment.name} dfe)"
+        e.cause.providedCount == 2
+        e.cause.requiredCount == 1
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

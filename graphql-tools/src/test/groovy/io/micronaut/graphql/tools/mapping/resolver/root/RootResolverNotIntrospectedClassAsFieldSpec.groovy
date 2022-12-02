@@ -14,8 +14,8 @@ class RootResolverNotIntrospectedClassAsFieldSpec extends AbstractTest {
 
     void "field returns a not introspected class"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -28,23 +28,23 @@ type User {
   username: String
 }
 """
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof ClassNotIntrospectedException
-            e.cause.message == """The class ${User.name} is not introspected. Ensure the class is annotated with ${GraphQLType.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof ClassNotIntrospectedException
+        e.cause.message == """The class ${User.name} is not introspected. Ensure the class is annotated with ${GraphQLType.name}.
   GraphQL object type: Query
   GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'user'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == "user()"
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'user'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == "user()"
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

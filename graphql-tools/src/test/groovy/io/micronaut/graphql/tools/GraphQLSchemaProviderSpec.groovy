@@ -7,26 +7,26 @@ class GraphQLSchemaProviderSpec extends Specification {
 
     void "no GraphQLSchema present"() {
         given:
-            def provider = new GraphQLSchemaProvider()
+        def provider = new GraphQLSchemaProvider()
 
         when:
-            provider.get()
+        provider.get()
 
         then:
-            def e = thrown(NoSuchElementException)
-            e.message == 'No graphQLSchema present'
+        def e = thrown(NoSuchElementException)
+        e.message == 'No graphQLSchema present'
     }
 
     void "GraphQLSchema present"() {
         given:
-            def provider = new GraphQLSchemaProvider()
-            provider.init(Mock(GraphQLSchema))
+        def provider = new GraphQLSchemaProvider()
+        provider.init(Mock(GraphQLSchema))
 
         when:
-            def schema = provider.get()
+        def schema = provider.get()
 
         then:
-            schema != null
+        schema != null
     }
 
 }

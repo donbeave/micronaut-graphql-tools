@@ -14,8 +14,8 @@ class RootResolverIncorrectArgumentMappingInputObjectValueToInterfaceSpec extend
 
     void "the input object type as a field's argument points to an interface"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -30,27 +30,27 @@ input PriceInput {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The argument is mapped to an interface, when required a custom class.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The argument is mapped to an interface, when required a custom class.
   GraphQL object type: Query
   GraphQL field: price
   GraphQL argument: input
   Mapped class: ${Query.name}
   Mapped method: price(${PriceInput.name} input)
   Provided class: ${PriceInput.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'price'
-            e.cause.mappingContext.graphQlArgument == 'input'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == "price(${PriceInput.name} input)"
-            e.cause.providedClass == PriceInput
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'price'
+        e.cause.mappingContext.graphQlArgument == 'input'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == "price(${PriceInput.name} input)"
+        e.cause.providedClass == PriceInput
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

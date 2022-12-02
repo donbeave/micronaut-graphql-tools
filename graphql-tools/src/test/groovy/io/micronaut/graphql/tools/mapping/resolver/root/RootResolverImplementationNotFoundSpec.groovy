@@ -30,26 +30,26 @@ type User {
 
     void "method returns interface which implementation class is not marked correctly with an annotation"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof ImplementationNotFoundException
-            e.cause.message == """Can not find implementation class for the interface ${User.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof ImplementationNotFoundException
+        e.cause.message == """Can not find implementation class for the interface ${User.name}.
   GraphQL object type: Query
   GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'user'
-            e.cause.mappingContext.objectTypeDefinition.name == 'Query'
-            e.cause.mappingContext.fieldDefinition.name == 'user'
-            e.cause.mappingContext.inputValueDefinition.isPresent() == false
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == "user()"
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'user'
+        e.cause.mappingContext.objectTypeDefinition.name == 'Query'
+        e.cause.mappingContext.fieldDefinition.name == 'user'
+        e.cause.mappingContext.inputValueDefinition.isPresent() == false
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == "user()"
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

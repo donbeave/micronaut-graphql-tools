@@ -14,8 +14,8 @@ class RootResolverNotIntrospectedClassAsArgumentSpec extends AbstractTest {
 
     void "field's argument points to a not introspected class"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -29,28 +29,28 @@ input PriceInput {
   to: String!
 }
 """
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof ClassNotIntrospectedException
-            e.cause.message == """The class ${PriceInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof ClassNotIntrospectedException
+        e.cause.message == """The class ${PriceInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
   GraphQL object type: Query
   GraphQL field: price
   GraphQL argument: input
   Mapped class: ${Query.name}
   Mapped method: price(${PriceInput.name} input)"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'price'
-            e.cause.mappingContext.graphQlArgument == 'input'
-            e.cause.mappingContext.objectTypeDefinition.name == 'Query'
-            e.cause.mappingContext.fieldDefinition.name == 'price'
-            e.cause.mappingContext.inputValueDefinition.get().name == 'input'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == "price(${PriceInput.name} input)"
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'price'
+        e.cause.mappingContext.graphQlArgument == 'input'
+        e.cause.mappingContext.objectTypeDefinition.name == 'Query'
+        e.cause.mappingContext.fieldDefinition.name == 'price'
+        e.cause.mappingContext.inputValueDefinition.get().name == 'input'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == "price(${PriceInput.name} input)"
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

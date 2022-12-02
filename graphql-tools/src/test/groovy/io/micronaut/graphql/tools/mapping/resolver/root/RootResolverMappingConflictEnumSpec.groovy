@@ -13,8 +13,8 @@ class RootResolverMappingConflictEnumSpec extends AbstractTest {
 
     void "attempt map a single enum to a different implementations"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -31,23 +31,23 @@ enum Month {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MappingConflictException
-            e.cause.message == """Unable to map GraphQL enum `Month` to ${AnotherMonth.name}, as it is already mapped to ${Month.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MappingConflictException
+        e.cause.message == """Unable to map GraphQL enum `Month` to ${AnotherMonth.name}, as it is already mapped to ${Month.name}.
   GraphQL object type: Query
   GraphQL field: nextMonth
   Mapped class: ${Query.name}
   Mapped method: nextMonth()"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'nextMonth'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'nextMonth()'
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'nextMonth'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'nextMonth()'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

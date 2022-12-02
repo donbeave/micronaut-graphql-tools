@@ -13,8 +13,8 @@ class RootResolverIncorrectArgumentMappingEnumToCustomClassSpec extends Abstract
 
     void "the enum as a field's argument points to a String parameter"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -30,26 +30,26 @@ enum Month {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The argument is mapped to a built-in class, when required an enum.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The argument is mapped to a built-in class, when required an enum.
   GraphQL object type: Query
   GraphQL field: displayName
   GraphQL argument: value
   Mapped class: ${Query.name}
   Mapped method: displayName(java.lang.String value)
   Provided class: java.lang.String"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'displayName'
-            e.cause.mappingContext.graphQlArgument == 'value'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'displayName(java.lang.String value)'
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'displayName'
+        e.cause.mappingContext.graphQlArgument == 'value'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'displayName(java.lang.String value)'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

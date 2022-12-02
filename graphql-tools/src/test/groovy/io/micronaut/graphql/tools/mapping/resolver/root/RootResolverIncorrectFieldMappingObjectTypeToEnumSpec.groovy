@@ -14,8 +14,8 @@ class RootResolverIncorrectFieldMappingObjectTypeToEnumSpec extends AbstractTest
 
     void "the field which returns object type points to a method which returns an enum"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -29,21 +29,21 @@ type User {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The field is mapped to an enum, when required a custom class.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The field is mapped to an enum, when required a custom class.
   GraphQL object type: User
   GraphQL field: username
   Provided class: ${User.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'User'
-            e.cause.mappingContext.graphQlField == 'username'
-            e.cause.providedClass == User
+        e.cause.mappingContext.graphQlObjectType == 'User'
+        e.cause.mappingContext.graphQlField == 'username'
+        e.cause.providedClass == User
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

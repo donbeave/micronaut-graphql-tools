@@ -12,8 +12,8 @@ class RootResolverIntrospectedEntityAsFieldSpec extends AbstractTest {
 
     void "field returns an introspected class"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -26,10 +26,10 @@ type User {
   username: String
 }
 """
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     user {
         username
@@ -38,8 +38,8 @@ type User {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.user.username == 'test'
+        result.errors.isEmpty()
+        result.data.user.username == 'test'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

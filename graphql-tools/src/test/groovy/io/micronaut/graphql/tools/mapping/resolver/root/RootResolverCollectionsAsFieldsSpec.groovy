@@ -11,8 +11,8 @@ class RootResolverCollectionsAsFieldsSpec extends AbstractTest {
 
     void "different Iterable implementations supported as field return types"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -26,10 +26,10 @@ type Query {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     testList
     testSet
@@ -40,12 +40,12 @@ type Query {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.testList == ['test1', 'test2']
-            result.data.testSet == ['test1', 'test2']
-            result.data.testQueue == ['test1', 'test2']
-            result.data.testIterable == ['test1', 'test2']
-            result.data.testIterator == ['test1', 'test2']
+        result.errors.isEmpty()
+        result.data.testList == ['test1', 'test2']
+        result.data.testSet == ['test1', 'test2']
+        result.data.testQueue == ['test1', 'test2']
+        result.data.testIterable == ['test1', 'test2']
+        result.data.testIterator == ['test1', 'test2']
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

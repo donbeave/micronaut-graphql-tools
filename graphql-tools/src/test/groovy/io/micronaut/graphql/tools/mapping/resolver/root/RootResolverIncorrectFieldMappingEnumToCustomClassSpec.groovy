@@ -14,8 +14,8 @@ class RootResolverIncorrectFieldMappingEnumToCustomClassSpec extends AbstractTes
 
     void "the field which returns enum points to a method which returns a custom class"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -31,25 +31,25 @@ enum Month {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The field is mapped to a custom class, when required an enum.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The field is mapped to a custom class, when required an enum.
   GraphQL object type: Query
   GraphQL field: month
   Mapped class: ${Query.name}
   Mapped method: month()
   Provided class: ${MyMonth.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'month'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'month()'
-            e.cause.providedClass == MyMonth
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'month'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'month()'
+        e.cause.providedClass == MyMonth
     }
 
 

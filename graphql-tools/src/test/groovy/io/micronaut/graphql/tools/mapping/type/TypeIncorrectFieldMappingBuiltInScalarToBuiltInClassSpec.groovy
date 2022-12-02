@@ -14,8 +14,8 @@ class TypeIncorrectFieldMappingBuiltInScalarToBuiltInClassSpec extends AbstractT
 
     void "the String field points to a method which returns an Integer"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -29,33 +29,33 @@ type User {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The field is mapped to the incorrect class.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The field is mapped to the incorrect class.
   GraphQL object type: User
   GraphQL field: username
   Mapped class: ${User.name}
   Mapped method: getUsername()
   Provided class: ${Integer.name}
   Supported classes: ${String.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'User'
-            e.cause.mappingContext.graphQlField == 'username'
-            e.cause.mappingContext.mappedClass == User
-            e.cause.mappingContext.mappedMethod == 'getUsername()'
-            e.cause.providedClass == Integer
-            e.cause.supportedClasses == [String] as HashSet
+        e.cause.mappingContext.graphQlObjectType == 'User'
+        e.cause.mappingContext.graphQlField == 'username'
+        e.cause.mappingContext.mappedClass == User
+        e.cause.mappingContext.mappedMethod == 'getUsername()'
+        e.cause.providedClass == Integer
+        e.cause.supportedClasses == [String] as HashSet
     }
 
     void "GraphQL field inside sub-type mapped to the incorrect class [required field]"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -69,27 +69,27 @@ type User {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The field is mapped to the incorrect class.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The field is mapped to the incorrect class.
   GraphQL object type: User
   GraphQL field: username
   Mapped class: ${User.name}
   Mapped method: getUsername()
   Provided class: ${Integer.name}
   Supported classes: ${String.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'User'
-            e.cause.mappingContext.graphQlField == 'username'
-            e.cause.mappingContext.mappedClass == User
-            e.cause.mappingContext.mappedMethod == 'getUsername()'
-            e.cause.providedClass == Integer
-            e.cause.supportedClasses == [String] as HashSet
+        e.cause.mappingContext.graphQlObjectType == 'User'
+        e.cause.mappingContext.graphQlField == 'username'
+        e.cause.mappingContext.mappedClass == User
+        e.cause.mappingContext.mappedMethod == 'getUsername()'
+        e.cause.providedClass == Integer
+        e.cause.supportedClasses == [String] as HashSet
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

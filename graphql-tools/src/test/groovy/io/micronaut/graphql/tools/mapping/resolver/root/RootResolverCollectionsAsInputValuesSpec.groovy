@@ -12,8 +12,8 @@ class RootResolverCollectionsAsInputValuesSpec extends AbstractTest {
 
     void "different Iterable implementations supported as field arguments"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -30,10 +30,10 @@ input HelloInput {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     hello(input: {
         testList: ["test1", "test2"],
@@ -45,8 +45,8 @@ input HelloInput {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.hello == 'World'
+        result.errors.isEmpty()
+        result.data.hello == 'World'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

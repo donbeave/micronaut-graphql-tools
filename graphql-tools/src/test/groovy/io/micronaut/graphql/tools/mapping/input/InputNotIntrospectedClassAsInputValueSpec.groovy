@@ -14,8 +14,8 @@ class InputNotIntrospectedClassAsInputValueSpec extends AbstractTest {
 
     void "input object type refers to the class without GraphQLInput annotation"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -33,25 +33,25 @@ input ConversionInput {
   to: String!
 }
 """
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof ClassNotIntrospectedException
-            e.cause.message == """The class ${ConversionInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof ClassNotIntrospectedException
+        e.cause.message == """The class ${ConversionInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
   GraphQL input object type: PriceInput
   GraphQL input value: conversion
   Mapped class: ${PriceInput.name}
   Mapped property: conversion"""
-            e.cause.mappingContext.graphQlInputObjectType == 'PriceInput'
-            e.cause.mappingContext.graphQlInputValue == 'conversion'
-            e.cause.mappingContext.inputObjectTypeDefinition.name == 'PriceInput'
-            e.cause.mappingContext.inputValueDefinition.name == 'conversion'
-            e.cause.mappingContext.mappedClass == PriceInput
-            e.cause.mappingContext.mappedProperty == 'conversion'
+        e.cause.mappingContext.graphQlInputObjectType == 'PriceInput'
+        e.cause.mappingContext.graphQlInputValue == 'conversion'
+        e.cause.mappingContext.inputObjectTypeDefinition.name == 'PriceInput'
+        e.cause.mappingContext.inputValueDefinition.name == 'conversion'
+        e.cause.mappingContext.mappedClass == PriceInput
+        e.cause.mappingContext.mappedProperty == 'conversion'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

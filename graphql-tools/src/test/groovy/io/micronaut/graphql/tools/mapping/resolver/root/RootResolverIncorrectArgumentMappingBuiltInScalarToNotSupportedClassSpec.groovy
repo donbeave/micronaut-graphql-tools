@@ -13,8 +13,8 @@ class RootResolverIncorrectArgumentMappingBuiltInScalarToNotSupportedClassSpec e
 
     void "the String field's argument points to an Integer parameter"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -23,15 +23,15 @@ type Query {
   hello(input: String): String
 }
 """
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The argument is mapped to the incorrect class.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The argument is mapped to the incorrect class.
   GraphQL object type: Query
   GraphQL field: hello
   GraphQL argument: input
@@ -39,13 +39,13 @@ type Query {
   Mapped method: hello(${Integer.name} input)
   Provided class: ${Integer.name}
   Supported classes: ${String.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'hello'
-            e.cause.mappingContext.graphQlArgument == 'input'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == "hello(${Integer.name} input)"
-            e.cause.providedClass == Integer
-            e.cause.supportedClasses == [String] as HashSet
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'hello'
+        e.cause.mappingContext.graphQlArgument == 'input'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == "hello(${Integer.name} input)"
+        e.cause.providedClass == Integer
+        e.cause.supportedClasses == [String] as HashSet
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -37,30 +37,30 @@ type Query {
     @Unroll
     void "the String field points to a method which returns an Integer"() {
         given:
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The field is mapped to the incorrect class.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The field is mapped to the incorrect class.
   GraphQL object type: Query
   GraphQL field: hello
   Mapped class: ${Query.name}
   Mapped method: hello()
   Provided class: ${Integer.name}
   Supported classes: ${String.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'hello'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'hello()'
-            e.cause.providedClass == Integer
-            e.cause.supportedClasses == [String] as HashSet
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'hello'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'hello()'
+        e.cause.providedClass == Integer
+        e.cause.supportedClasses == [String] as HashSet
 
         where:
-            schema << [SCHEMA1, SCHEMA2]
+        schema << [SCHEMA1, SCHEMA2]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -14,8 +14,8 @@ class CircularReferencesSpec extends AbstractTest {
     @Unroll
     void "reference type from itself"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -31,13 +31,13 @@ type Category {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            noExceptionThrown()
+        noExceptionThrown()
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -32,24 +32,24 @@ type User {
 
     void "multiple methods detected for single field"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MultipleMethodsFoundException
-            e.cause.message == """Found multiple methods for one GraphQL field.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MultipleMethodsFoundException
+        e.cause.message == """Found multiple methods for one GraphQL field.
   GraphQL object type: User
   GraphQL field: roles
   Methods: 
   1) ${UserResolver.name} roles(${User.name} user)
   2) ${UserResolver.name} roles(${User.name} user, ${DataFetchingEnvironment.name} env)"""
-            e.cause.mappingContext.graphQlObjectType == 'User'
-            e.cause.mappingContext.graphQlField == 'roles'
-            e.cause.mappingContext.mappedClass == null
-            e.cause.mappingContext.mappedMethod == null
+        e.cause.mappingContext.graphQlObjectType == 'User'
+        e.cause.mappingContext.graphQlField == 'roles'
+        e.cause.mappingContext.mappedClass == null
+        e.cause.mappingContext.mappedMethod == null
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -56,10 +56,10 @@ type Test {
     @Unroll
     void "use standard graphql scalars as method return types wrapped with CompletionStage"() {
         given:
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     test {
         testString
@@ -72,15 +72,15 @@ type Test {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.test.testString == 'test'
-            result.data.test.testBoolean == false
-            result.data.test.testInt == Integer.MIN_VALUE
-            result.data.test.testFloat == Float.MIN_VALUE as Double
-            result.data.test.testID == 'id'
+        result.errors.isEmpty()
+        result.data.test.testString == 'test'
+        result.data.test.testBoolean == false
+        result.data.test.testInt == Integer.MIN_VALUE
+        result.data.test.testFloat == Float.MIN_VALUE as Double
+        result.data.test.testID == 'id'
 
         where:
-            schema << [SCHEMA1, SCHEMA2]
+        schema << [SCHEMA1, SCHEMA2]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

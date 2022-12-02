@@ -13,8 +13,8 @@ class RootResolverMethodNotFoundSpec extends AbstractTest {
 
     void "Query's method not found"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -24,26 +24,26 @@ type Query {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MethodNotFoundException
-            e.cause.message == """The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MethodNotFoundException
+        e.cause.message == """The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
   GraphQL object type: Query
   GraphQL field: hello"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'hello'
-            e.cause.methodName == 'hello'
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'hello'
+        e.cause.methodName == 'hello'
     }
 
     void "Mutation's method not found"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   mutation: Mutation
 }
@@ -53,20 +53,20 @@ type Mutation {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MethodNotFoundException
-            e.cause.message == """The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MethodNotFoundException
+        e.cause.message == """The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
   GraphQL object type: Mutation
   GraphQL field: hello"""
-            e.cause.mappingContext.graphQlObjectType == 'Mutation'
-            e.cause.mappingContext.graphQlField == 'hello'
-            e.cause.methodName == 'hello'
+        e.cause.mappingContext.graphQlObjectType == 'Mutation'
+        e.cause.mappingContext.graphQlField == 'hello'
+        e.cause.methodName == 'hello'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

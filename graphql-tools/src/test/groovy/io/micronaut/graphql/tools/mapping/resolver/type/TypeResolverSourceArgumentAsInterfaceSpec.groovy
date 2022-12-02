@@ -29,10 +29,10 @@ type User {
 
     void "the source object passed to the GraphQLTypeResolver's method"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 { 
     user {
         username
@@ -42,10 +42,10 @@ type User {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.dataPresent
-            result.data.user.username == 'test'
-            result.data.user.avatar == 'pig.png'
+        result.errors.isEmpty()
+        result.dataPresent
+        result.data.user.username == 'test'
+        result.data.user.avatar == 'pig.png'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

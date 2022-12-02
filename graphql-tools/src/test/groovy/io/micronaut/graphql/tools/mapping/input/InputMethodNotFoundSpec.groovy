@@ -14,8 +14,8 @@ class InputMethodNotFoundSpec extends AbstractTest {
 
     void "input's property not found"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -30,21 +30,21 @@ input HelloInput {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MethodNotFoundException
-            e.cause.message == """The property or method `lastName` not found in ${HelloInput.name}'s input.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MethodNotFoundException
+        e.cause.message == """The property or method `lastName` not found in ${HelloInput.name}'s input.
   GraphQL input object type: HelloInput
   GraphQL input value: lastName
   Mapped class: ${HelloInput.name}"""
-            e.cause.mappingContext.graphQlInputObjectType == 'HelloInput'
-            e.cause.mappingContext.mappedClass == HelloInput
-            e.cause.methodName == 'lastName'
+        e.cause.mappingContext.graphQlInputObjectType == 'HelloInput'
+        e.cause.mappingContext.mappedClass == HelloInput
+        e.cause.methodName == 'lastName'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

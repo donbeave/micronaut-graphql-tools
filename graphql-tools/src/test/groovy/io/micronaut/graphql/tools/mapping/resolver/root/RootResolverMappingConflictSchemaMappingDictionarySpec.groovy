@@ -31,23 +31,23 @@ type User {
 
     void "attempt map a single type to a different implementations by using SchemaMappingDictionary"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MappingConflictException
-            e.cause.message == """Unable to map GraphQL type `User` to ${User.name}, as it is already mapped to ${AnotherUser.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MappingConflictException
+        e.cause.message == """Unable to map GraphQL type `User` to ${User.name}, as it is already mapped to ${AnotherUser.name}.
   GraphQL object type: Query
   GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'user'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'user()'
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'user'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'user()'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -13,8 +13,8 @@ class RootResolverIncorrectArgumentMappingListToBuiltInClassSpec extends Abstrac
 
     void "the List as a field's argument points to a String parameter"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -24,15 +24,15 @@ type Query {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The argument is mapped to a built-in class, when required an instance of Iterable interface.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The argument is mapped to a built-in class, when required an instance of Iterable interface.
   GraphQL object type: Query
   GraphQL field: testString
   GraphQL argument: input
@@ -40,13 +40,13 @@ type Query {
   Mapped method: testString(${String.name} input)
   Provided class: ${String.name}
   Supported classes: java.lang.Iterable, java.util.Collection, java.util.List, java.util.Set"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'testString'
-            e.cause.mappingContext.graphQlArgument == 'input'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == "testString(${String.name} input)"
-            e.cause.providedClass == String
-            e.cause.supportedClasses == [Iterable, Collection, List, Set] as HashSet
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'testString'
+        e.cause.mappingContext.graphQlArgument == 'input'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == "testString(${String.name} input)"
+        e.cause.providedClass == String
+        e.cause.supportedClasses == [Iterable, Collection, List, Set] as HashSet
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

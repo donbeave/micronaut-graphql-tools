@@ -56,10 +56,10 @@ input HelloInput {
 
     void "use standard graphql scalars as input's properties"() {
         given:
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     hello(input: {
         testString: "test",
@@ -75,11 +75,11 @@ input HelloInput {
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.hello == 'World'
+        result.errors.isEmpty()
+        result.data.hello == 'World'
 
         where:
-            schema << [SCHEMA1, SCHEMA2]
+        schema << [SCHEMA1, SCHEMA2]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

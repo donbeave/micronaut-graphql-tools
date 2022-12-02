@@ -24,25 +24,25 @@ type Query {
 
     void "the method has less arguments"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectArgumentCountException
-            e.cause.message == """The method has too few arguments, provided: 0, required 1 arg(s): username(ID uid)
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectArgumentCountException
+        e.cause.message == """The method has too few arguments, provided: 0, required 1 arg(s): username(ID uid)
   GraphQL object type: Query
   GraphQL field: username
   Mapped class: ${Query1.name}
   Mapped method: username()"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'username'
-            e.cause.mappingContext.mappedClass == Query1
-            e.cause.mappingContext.mappedMethod == 'username()'
-            e.cause.providedCount == 0
-            e.cause.requiredCount == 1
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'username'
+        e.cause.mappingContext.mappedClass == Query1
+        e.cause.mappingContext.mappedMethod == 'username()'
+        e.cause.providedCount == 0
+        e.cause.requiredCount == 1
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

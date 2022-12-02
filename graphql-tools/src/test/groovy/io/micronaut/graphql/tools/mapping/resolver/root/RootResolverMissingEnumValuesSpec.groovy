@@ -13,8 +13,8 @@ class RootResolverMissingEnumValuesSpec extends AbstractTest {
 
     void "validates enum has missed values"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -30,25 +30,25 @@ enum Month {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof MissingEnumValuesException
-            e.cause.message == """Some enum values are missing in class ${Month.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof MissingEnumValuesException
+        e.cause.message == """Some enum values are missing in class ${Month.name}.
   GraphQL object type: Query
   GraphQL field: month
   Mapped class: ${Query.name}
   Mapped method: month()
   Missing values: MARCH"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'month'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'month()'
-            e.cause.missingValues == ['MARCH']
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'month'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'month()'
+        e.cause.missingValues == ['MARCH']
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

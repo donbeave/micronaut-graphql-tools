@@ -10,8 +10,8 @@ class RootResolverNotFoundSpec extends AbstractTest {
 
     void "no any root resolvers found"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -21,15 +21,15 @@ type Query {
 }
 """
 
-            startContext(schema, null)
+        startContext(schema, null)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof RootResolverNotFoundException
-            e.cause.message == "No any root resolvers found. Create one or ensure the class is annotated with ${GraphQLRootResolver.name}."
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof RootResolverNotFoundException
+        e.cause.message == "No any root resolvers found. Create one or ensure the class is annotated with ${GraphQLRootResolver.name}."
     }
 
 }

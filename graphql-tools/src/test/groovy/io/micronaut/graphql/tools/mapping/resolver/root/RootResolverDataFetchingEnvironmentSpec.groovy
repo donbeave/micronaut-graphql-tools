@@ -23,19 +23,19 @@ type Query {
 
     void "DataFetchingEnvironment passed to a GraphQLRootResolver's method"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 { 
     hello
 }
 """)
 
         then:
-            result.errors.isEmpty()
-            result.dataPresent
-            result.data.hello == 'World'
+        result.errors.isEmpty()
+        result.dataPresent
+        result.data.hello == 'World'
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

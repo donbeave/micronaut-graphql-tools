@@ -30,25 +30,25 @@ type User {
 
     void "the method returns an interface which is not implemented in the introspected class"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectImplementationException
-            e.cause.message == """The annotated implementation class is not implementing the ${User.name} interface.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectImplementationException
+        e.cause.message == """The annotated implementation class is not implementing the ${User.name} interface.
   GraphQL object type: Query
   GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()
   Implementation class: ${UserImpl.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'user'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == "user()"
-            e.cause.implementationClass == UserImpl
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'user'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == "user()"
+        e.cause.implementationClass == UserImpl
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

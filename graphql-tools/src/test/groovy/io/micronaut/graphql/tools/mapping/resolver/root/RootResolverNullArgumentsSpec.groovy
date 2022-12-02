@@ -28,29 +28,29 @@ input HelloInput {
 
     void "null arguments successfully passed"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            def result = executeQuery("""
+        def result = executeQuery("""
 {
     hello
 }
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.hello == null
+        result.errors.isEmpty()
+        result.data.hello == null
 
         when:
-            result = executeQuery("""
+        result = executeQuery("""
 {
     hello(input: null, inputList: null, inputString: null, inputStringList: null)
 }
 """)
 
         then:
-            result.errors.isEmpty()
-            result.data.hello == null
+        result.errors.isEmpty()
+        result.data.hello == null
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -31,25 +31,25 @@ type User {
 
     void "the first argument in the GraphQLTypeResolver's method should be the source instance"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof InvalidSourceArgumentException
-            e.cause.message == """The source argument must be instance of ${User.name} class, provided: ${String.name}.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof InvalidSourceArgumentException
+        e.cause.message == """The source argument must be instance of ${User.name} class, provided: ${String.name}.
   GraphQL object type: User
   GraphQL field: username
   Mapped class: ${UserResolver.name}
   Mapped method: username(${String.name} uid, ${DataFetchingEnvironment.name} dfe)"""
-            e.cause.mappingContext.graphQlObjectType == 'User'
-            e.cause.mappingContext.graphQlField == 'username'
-            e.cause.mappingContext.mappedClass == UserResolver
-            e.cause.mappingContext.mappedMethod == "username(${String.name} uid, ${DataFetchingEnvironment.name} dfe)"
-            e.cause.providedClass == String
-            e.cause.requiredClass == User
+        e.cause.mappingContext.graphQlObjectType == 'User'
+        e.cause.mappingContext.graphQlField == 'username'
+        e.cause.mappingContext.mappedClass == UserResolver
+        e.cause.mappingContext.mappedMethod == "username(${String.name} uid, ${DataFetchingEnvironment.name} dfe)"
+        e.cause.providedClass == String
+        e.cause.requiredClass == User
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

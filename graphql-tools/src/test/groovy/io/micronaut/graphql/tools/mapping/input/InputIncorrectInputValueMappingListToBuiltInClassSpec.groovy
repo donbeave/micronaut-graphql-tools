@@ -14,8 +14,8 @@ class InputIncorrectInputValueMappingListToBuiltInClassSpec extends AbstractTest
 
     void "the List input value points to a String property"() {
         given:
-            @Language("GraphQL")
-            String schema = """
+        @Language("GraphQL")
+        String schema = """
 schema {
   query: Query
 }
@@ -29,27 +29,27 @@ input TestInput {
 }
 """
 
-            startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The argument is mapped to a built-in class, when required an instance of Iterable interface.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The argument is mapped to a built-in class, when required an instance of Iterable interface.
   GraphQL input object type: TestInput
   GraphQL input value: from
   Mapped class: ${TestInput.name}
   Mapped property: from
   Provided class: ${String.name}
   Supported classes: java.lang.Iterable, java.util.Collection, java.util.List, java.util.Set"""
-            e.cause.mappingContext.graphQlInputObjectType == 'TestInput'
-            e.cause.mappingContext.graphQlInputValue == 'from'
-            e.cause.mappingContext.mappedClass == TestInput
-            e.cause.mappingContext.mappedProperty == "from"
-            e.cause.providedClass == String
-            e.cause.supportedClasses == [Iterable, Collection, List, Set] as HashSet
+        e.cause.mappingContext.graphQlInputObjectType == 'TestInput'
+        e.cause.mappingContext.graphQlInputValue == 'from'
+        e.cause.mappingContext.mappedClass == TestInput
+        e.cause.mappingContext.mappedProperty == "from"
+        e.cause.providedClass == String
+        e.cause.supportedClasses == [Iterable, Collection, List, Set] as HashSet
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

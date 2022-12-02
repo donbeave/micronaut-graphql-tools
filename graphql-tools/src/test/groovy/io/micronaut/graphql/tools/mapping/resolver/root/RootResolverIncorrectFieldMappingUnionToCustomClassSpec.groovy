@@ -37,25 +37,25 @@ type ValidationError {
 
     void "the field which returns union points to a method which returns a custom class"() {
         given:
-            startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME)
 
         when:
-            getGraphQLBean()
+        getGraphQLBean()
 
         then:
-            def e = thrown(BeanInstantiationException)
-            e.cause instanceof IncorrectClassMappingException
-            e.cause.message == """The field is mapped to a custom class, when required an interface.
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectClassMappingException
+        e.cause.message == """The field is mapped to a custom class, when required an interface.
   GraphQL object type: Query
   GraphQL field: testUnion
   Mapped class: ${Query.name}
   Mapped method: testUnion()
   Provided class: ${SecurityError.name}"""
-            e.cause.mappingContext.graphQlObjectType == 'Query'
-            e.cause.mappingContext.graphQlField == 'testUnion'
-            e.cause.mappingContext.mappedClass == Query
-            e.cause.mappingContext.mappedMethod == 'testUnion()'
-            e.cause.providedClass == SecurityError
+        e.cause.mappingContext.graphQlObjectType == 'Query'
+        e.cause.mappingContext.graphQlField == 'testUnion'
+        e.cause.mappingContext.mappedClass == Query
+        e.cause.mappingContext.mappedMethod == 'testUnion()'
+        e.cause.providedClass == SecurityError
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
