@@ -142,8 +142,7 @@ final class GraphQLRuntimeWiringGenerator {
                 .scalar(Scalars.GraphQLLong)
                 .scalar(Scalars.GraphQLShort)
                 .scalar(Scalars.GraphQLBigDecimal)
-                .scalar(Scalars.GraphQLBigInteger)
-                .directive("test", new CustomWiring());
+                .scalar(Scalars.GraphQLBigInteger);
     }
 
     RuntimeWiring generate() {
