@@ -1,6 +1,5 @@
 package example.graphql;
 
-import example.ElapsedTimeInterceptor;
 import example.data.BookSeller;
 import example.data.BookSellerRepository;
 import io.micronaut.scheduling.TaskExecutors;
@@ -28,7 +27,7 @@ public class BookSellerDataLoader implements MappedBatchLoader<String, List<Book
     private final ExecutorService executor;
 
     public BookSellerDataLoader(BookSellerRepository bookSellerRepository,
-                                @Named(TaskExecutors.IO) ExecutorService executor) {
+                                @Named(TaskExecutors.BLOCKING) ExecutorService executor) {
         this.bookSellerRepository = bookSellerRepository;
         this.executor = executor;
     }
