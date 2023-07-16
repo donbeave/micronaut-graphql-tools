@@ -8,5 +8,5 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.gradle.micronaut)
+    implementation(libs.micronaut.gradle.plugin)
 }

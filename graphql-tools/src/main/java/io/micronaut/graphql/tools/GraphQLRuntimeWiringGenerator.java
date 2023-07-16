@@ -16,7 +16,6 @@
 package io.micronaut.graphql.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import graphql.Scalars;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.EnumValueDefinition;
 import graphql.language.FieldDefinition;
@@ -30,6 +29,7 @@ import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
+import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
@@ -42,7 +42,6 @@ import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanMethod;
 import io.micronaut.core.beans.BeanProperty;
-import io.micronaut.core.naming.Described;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
@@ -64,7 +63,6 @@ import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.schema.UnionTypeResolver;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
-import io.micronaut.runtime.Micronaut;
 import jakarta.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -139,10 +137,10 @@ final class GraphQLRuntimeWiringGenerator {
                 .registerModule(new BeanIntrospectionModule());
         this.rootRuntimeWiringBuilder = RuntimeWiring.newRuntimeWiring()
                 .wiringFactory(new DefaultWiringFactory())
-                .scalar(Scalars.GraphQLLong)
-                .scalar(Scalars.GraphQLShort)
-                .scalar(Scalars.GraphQLBigDecimal)
-                .scalar(Scalars.GraphQLBigInteger);
+                .scalar(ExtendedScalars.GraphQLLong)
+                .scalar(ExtendedScalars.GraphQLShort)
+                .scalar(ExtendedScalars.GraphQLBigDecimal)
+                .scalar(ExtendedScalars.GraphQLBigInteger);
     }
 
     RuntimeWiring generate() {
@@ -259,7 +257,7 @@ final class GraphQLRuntimeWiringGenerator {
         suggestedMethodArgs.addAll(
                 mappingContext.getFieldDefinition().getInputValueDefinitions().stream()
                         .map(it -> getTypeName(it.getType()).getName() + " " + it.getName())
-                        .collect(Collectors.toList())
+                        .toList()
         );
 
         if (suggestedMethodArgs.isEmpty()) {
@@ -336,18 +334,18 @@ final class GraphQLRuntimeWiringGenerator {
 
         Class<?> returnClass = argument.getType();
 
-        if (graphQlType instanceof ListType) {
+        if (graphQlType instanceof ListType listType) {
             if (!(Iterable.class.isAssignableFrom(returnClass) || Iterator.class.isAssignableFrom(returnClass))) {
                 throw IncorrectClassMappingException.forField(
                         IncorrectClassMappingException.MappingType.DETECT_TYPE,
                         IncorrectClassMappingException.MappingType.ITERABLE,
                         mappingContext,
                         returnClass,
-                        getSupportedClasses((ListType) graphQlType)
+                        getSupportedClasses(listType)
                 );
             }
 
-            Type<?> listFieldType = ((ListType) graphQlType).getType();
+            Type<?> listFieldType = (listType).getType();
             Argument<?> listArgument = argument.getFirstTypeVariable().get();
 
             processFieldReturnType(listArgument, listFieldType, mappingContext);
@@ -365,12 +363,12 @@ final class GraphQLRuntimeWiringGenerator {
         } else {
             TypeDefinition<?> typeDefinition = typeDefinitionRegistry.getType(typeName.getName()).get();
 
-            if (typeDefinition instanceof EnumTypeDefinition) {
-                processEnumTypeDefinition((EnumTypeDefinition) typeDefinition, returnClass, false, mappingContext);
-            } else if (typeDefinition instanceof UnionTypeDefinition) {
-                processUnionTypeDefinition((UnionTypeDefinition) typeDefinition, returnClass, mappingContext);
-            } else if (typeDefinition instanceof ObjectTypeDefinition) {
-                processObjectTypeDefinition((ObjectTypeDefinition) typeDefinition, returnClass, mappingContext);
+            if (typeDefinition instanceof EnumTypeDefinition enumTypeDefinition) {
+                processEnumTypeDefinition(enumTypeDefinition, returnClass, false, mappingContext);
+            } else if (typeDefinition instanceof UnionTypeDefinition unionTypeDefinition) {
+                processUnionTypeDefinition(unionTypeDefinition, returnClass, mappingContext);
+            } else if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
+                processObjectTypeDefinition(objectTypeDefinition, returnClass, mappingContext);
             } else {
                 throw unsupportedTypeDefinition(typeDefinition);
             }
@@ -438,17 +436,17 @@ final class GraphQLRuntimeWiringGenerator {
                     .map(EnumValueDefinition::getName)
                     .distinct()
                     .sorted()
-                    .collect(Collectors.toList());
+                    .toList();
 
             List<String> existingValues = Arrays.stream(targetClass.getEnumConstants())
                     .map(it -> ((Enum<?>) it).name())
                     .distinct()
                     .sorted()
-                    .collect(Collectors.toList());
+                    .toList();
 
             List<String> missingValues = expectedValues.stream()
                     .filter(it -> !existingValues.contains(it))
-                    .collect(Collectors.toList());
+                    .toList();
 
             if (!missingValues.isEmpty()) {
                 throw new MissingEnumValuesException(mappingContext, targetClass, missingValues);
@@ -476,14 +474,14 @@ final class GraphQLRuntimeWiringGenerator {
                     TypeName typeName = getTypeName(type);
                     TypeDefinition<?> typeDefinition = typeDefinitionRegistry.getType(typeName).get();
 
-                    if (typeDefinition instanceof ObjectTypeDefinition) {
+                    if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
                         Class<?> clazz = Optional
                                 .ofNullable(schemaMappingDictionary.getTypes().get(typeDefinition.getName()))
                                 .orElseThrow(() -> new UnionTypeMappingNotProvidedException(
                                         mappingContext, typeName.getName(), unionTypeDefinition.getName()
                                 ));
 
-                        processObjectTypeDefinition((ObjectTypeDefinition) typeDefinition, clazz, mappingContext);
+                        processObjectTypeDefinition(objectTypeDefinition, clazz, mappingContext);
 
                         objectTypes.put(clazz, typeName.getName());
                     } else {
@@ -659,7 +657,7 @@ final class GraphQLRuntimeWiringGenerator {
                 Optional<BeanProperty<Object, Object>> property =
                         beanIntrospection.getProperty(inputValueDefinition.getName());
 
-                if (!property.isPresent()) {
+                if (property.isEmpty()) {
                     throw MethodNotFoundException.forInput(
                             inputValueDefinition.getName(),
                             new InputMappingContext(
@@ -693,14 +691,14 @@ final class GraphQLRuntimeWiringGenerator {
         Type<?> fieldType = unwrapNonNullType(graphQlType);
         Class<?> returnType = argument.getType();
 
-        if (fieldType instanceof ListType) {
+        if (fieldType instanceof ListType listType) {
             if (!(Iterable.class.isAssignableFrom(returnType))) {
                 throw IncorrectClassMappingException.forArgument(
                         IncorrectClassMappingException.MappingType.DETECT_TYPE,
                         IncorrectClassMappingException.MappingType.ITERABLE,
                         mappingContext,
                         returnType,
-                        getSupportedClasses((ListType) fieldType)
+                        getSupportedClasses(listType)
                 );
             }
 
@@ -715,14 +713,14 @@ final class GraphQLRuntimeWiringGenerator {
 
         TypeDefinition<?> typeDefinition = typeDefinitionRegistry.getType(typeName).get();
 
-        if (typeDefinition instanceof InputObjectTypeDefinition) {
+        if (typeDefinition instanceof InputObjectTypeDefinition inputObjectTypeDefinition) {
             processInputObjectTypeDefinition(
-                    (InputObjectTypeDefinition) typeDefinition,
+                    inputObjectTypeDefinition,
                     returnType,
                     mappingContext
             );
-        } else if (typeDefinition instanceof EnumTypeDefinition) {
-            processEnumTypeDefinition((EnumTypeDefinition) typeDefinition, returnType, true, mappingContext);
+        } else if (typeDefinition instanceof EnumTypeDefinition enumTypeDefinition) {
+            processEnumTypeDefinition(enumTypeDefinition, returnType, true, mappingContext);
         } else if (isGraphQlBuiltInType(typeName)) {
             Set<Class<?>> supportedClasses = getSupportedClasses(typeName);
 

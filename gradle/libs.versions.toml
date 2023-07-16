@@ -1,24 +1,28 @@
 [versions]
-micronaut = "4.0.0-SNAPSHOT"
+micronaut = "4.0.0"
+micronaut-platform = "4.0.0-RC1"
 micronaut-docs = "2.0.0"
-micronaut-test = "4.0.0-SNAPSHOT"
-groovy = "4.0.6"
+micronaut-gradle-plugin = "4.0.0"
+micronaut-test = "4.0.0"
+micronaut-graphql = "4.0.1"
+
+groovy = "4.0.13"
 spock = "2.3-groovy-4.0"
 
-managed-graphql-java = "16.2"
+apollo = "3.8.2"
+jetbrains-annotations = "24.0.1"
 
-micronaut-gradle-plugin = "3.6.3"
-apollo = "3.4.0"
-jetbrains-annotations = "23.0.0"
+managed-graphql-java-extended-scalars = "20.2"
 
 [libraries]
-managed-graphql-java = { module = "com.graphql-java:graphql-java", version.ref = "managed-graphql-java" }
+managed-graphql-java-extended-scalars = { module = "com.graphql-java:graphql-java-extended-scalars", version.ref = "managed-graphql-java-extended-scalars" }
 
-micronaut-jackson-databind = { module = "io.micronaut:micronaut-jackson-databind" }
-micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql" }
-gradle-micronaut = { module = "io.micronaut.gradle:micronaut-gradle-plugin", version.ref = "micronaut-gradle-plugin" }
+# BOMs
+micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", version.ref = "micronaut-graphql" }
 
 apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
 apollo-rx3-support = { module = "com.apollographql.apollo3:apollo-rx3-support", version.ref = "apollo" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
-logback-classic = { module = "ch.qos.logback:logback-classic" }
+
+# plugins
+micronaut-gradle-plugin = { module = "io.micronaut.gradle:micronaut-gradle-plugin", version.ref = "micronaut-gradle-plugin" }

@@ -1,23 +1,12 @@
 pluginManagement {
     repositories {
-        mavenLocal()
         gradlePluginPortal()
         mavenCentral()
     }
 }
 
 plugins {
-    id("io.micronaut.build.shared.settings") version "6.1.1"
-}
-
-dependencyResolutionManagement {
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        gradlePluginPortal()
-        maven("https://s01.oss.sonatype.org/content/repositories/snapshots")
-    }
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    id("io.micronaut.build.shared.settings") version "6.5.3"
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -31,5 +20,7 @@ include("graphql-tools-bom")
 include("doc-examples:example-java")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {
+    useStandardizedProjectNames = true
     importMicronautCatalog()
+    importMicronautCatalog("micronaut-graphql")
 }
