@@ -24,15 +24,15 @@ class AllBooksQueryTest extends AbstractTest {
         assertNotNull(response.data.allBooks);
         assertEquals(5, response.data.allBooks.size());
 
-        assertEquals("ab", response.data.allBooks.get(0).id);
-        assertEquals("The Fractured Sage", response.data.allBooks.get(0).title);
-        assertEquals(1982, response.data.allBooks.get(0).year);
+        assertEquals("ab", response.data.allBooks.getFirst().id);
+        assertEquals("The Fractured Sage", response.data.allBooks.getFirst().title);
+        assertEquals(1982, response.data.allBooks.getFirst().year);
 
-        assertEquals(2, response.data.allBooks.get(0).sellers.size());
-        assertEquals("Amaz", response.data.allBooks.get(0).sellers.get(0).name);
-        assertEquals(20.0, response.data.allBooks.get(0).sellers.get(0).price);
-        assertEquals("Yah", response.data.allBooks.get(0).sellers.get(1).name);
-        assertEquals(21.0, response.data.allBooks.get(0).sellers.get(1).price);
+        assertEquals(2, response.data.allBooks.getFirst().sellers.size());
+        assertEquals("Amaz", response.data.allBooks.getFirst().sellers.get(0).name);
+        assertEquals(20.0, response.data.allBooks.getFirst().sellers.get(0).price);
+        assertEquals("Yah", response.data.allBooks.getFirst().sellers.get(1).name);
+        assertEquals(21.0, response.data.allBooks.getFirst().sellers.get(1).price);
     }
 
 }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @MicronautTest
@@ -24,6 +25,7 @@ class SearchProfileQueryTest extends AbstractTest {
                 Rx3Apollo.single(apolloClient.query(searchProfileQuery)).blockingGet();
 
         assertFalse(response.hasErrors());
+        assertNotNull(response.data);
         assertTrue(response.data.searchProfile.isEmpty());
     }
 
@@ -36,9 +38,10 @@ class SearchProfileQueryTest extends AbstractTest {
                 Rx3Apollo.single(apolloClient.query(searchProfileQuery)).blockingGet();
 
         assertFalse(response.hasErrors());
+        assertNotNull(response.data);
         assertEquals(1, response.data.searchProfile.size());
-        assertEquals("test", response.data.searchProfile.get(0).username);
-        assertEquals("Test Test", response.data.searchProfile.get(0).fullName);
+        assertEquals("test", response.data.searchProfile.getFirst().username);
+        assertEquals("Test Test", response.data.searchProfile.getFirst().fullName);
     }
 
 }

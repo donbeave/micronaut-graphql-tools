@@ -68,9 +68,9 @@ class AddBookMutationTest extends AbstractTest {
         assertNotNull(currentUserResponse.data.currentUser);
         assertEquals("bob", currentUserResponse.data.currentUser.username);
         assertEquals(1, currentUserResponse.data.currentUser.books.size());
-        assertEquals("ab", currentUserResponse.data.currentUser.books.get(0).id);
-        assertEquals("The Fractured Sage", currentUserResponse.data.currentUser.books.get(0).title);
-        assertEquals(1982, currentUserResponse.data.currentUser.books.get(0).year);
+        assertEquals("ab", currentUserResponse.data.currentUser.books.getFirst().id);
+        assertEquals("The Fractured Sage", currentUserResponse.data.currentUser.books.getFirst().title);
+        assertEquals(1982, currentUserResponse.data.currentUser.books.getFirst().year);
     }
 
 }
