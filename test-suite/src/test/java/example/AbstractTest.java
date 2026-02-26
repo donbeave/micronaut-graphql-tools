@@ -1,6 +1,6 @@
 package example;
 
-import com.apollographql.apollo3.ApolloClient;
+import com.apollographql.apollo.ApolloClient;
 import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;

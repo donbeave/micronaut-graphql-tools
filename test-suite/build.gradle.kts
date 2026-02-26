@@ -2,7 +2,7 @@ plugins {
     id("io.micronaut.application") version "4.6.2"
     id("com.gradleup.shadow") version "8.3.9"
     id("io.micronaut.aot") version "4.6.2"
-    id("com.apollographql.apollo3").version("3.8.6") // TODO
+    id("com.apollographql.apollo").version("4.4.1")
 }
 
 repositories {
@@ -54,7 +54,7 @@ tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative"
 apollo {
     service("service") {
         packageName.set("example.client")
-        schemaFile.set(file("src/main/resources/schema.graphqls"))
+        schemaFiles.from("src/main/resources/schema.graphqls")
         generateKotlinModels.set(false)
     }
 }

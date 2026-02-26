@@ -7,7 +7,7 @@ micronaut-graphql = "4.8.0"
 groovy = "4.0.24"
 spock = "2.3-groovy-4.0"
 
-apollo = "3.8.2"
+apollo = "4.4.1"
 jetbrains-annotations = "24.0.1"
 
 managed-graphql-java-extended-scalars = "20.2"
@@ -21,6 +21,6 @@ managed-graphql-java-extended-scalars = { module = "com.graphql-java:graphql-jav
 # BOMs
 micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", version.ref = "micronaut-graphql" }
 
-apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
-apollo-rx3-support = { module = "com.apollographql.apollo3:apollo-rx3-support", version.ref = "apollo" }
+apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
+apollo-rx3-support = { module = "com.apollographql.apollo:apollo-rx3-support", version.ref = "apollo" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }

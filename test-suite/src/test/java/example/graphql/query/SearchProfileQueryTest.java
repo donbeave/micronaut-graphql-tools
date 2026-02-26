@@ -1,8 +1,8 @@
 package example.graphql.query;
 
-import com.apollographql.apollo3.api.ApolloResponse;
-import com.apollographql.apollo3.api.Optional;
-import com.apollographql.apollo3.rx3.Rx3Apollo;
+import com.apollographql.apollo.api.ApolloResponse;
+import com.apollographql.apollo.api.Optional;
+import com.apollographql.apollo.rx3.Rx3Apollo;
 import example.AbstractTest;
 import example.client.SearchProfileQuery;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
