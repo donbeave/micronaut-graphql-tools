@@ -15,9 +15,7 @@ rootProject.name = "graphql-tools-parent"
 
 include("graphql-tools")
 include("graphql-tools-bom")
-
-// examples
-//include("doc-examples:example-java")
+include("test-suite")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true

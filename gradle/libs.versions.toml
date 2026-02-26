@@ -1,9 +1,8 @@
 [versions]
-micronaut = "4.10.14"
+micronaut = "4.10.9"
 micronaut-docs = "3.0.0"
 micronaut-test = "4.6.2"
 micronaut-graphql = "4.8.0"
-micronaut-gradle-plugin = "4.6.2"
 
 groovy = "4.0.24"
 spock = "2.3-groovy-4.0"
@@ -25,6 +24,3 @@ micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", ver
 apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
 apollo-rx3-support = { module = "com.apollographql.apollo3:apollo-rx3-support", version.ref = "apollo" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
-
-# plugins
-micronaut-gradle-plugin = { module = "io.micronaut.gradle:micronaut-gradle-plugin", version.ref = "micronaut-gradle-plugin" }
