@@ -6,7 +6,7 @@ pluginManagement {
 }
 
 plugins {
-    id("io.micronaut.build.shared.settings") version "6.5.3"
+    id("io.micronaut.build.shared.settings") version "8.0.0-M16"
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -17,7 +17,7 @@ include("graphql-tools")
 include("graphql-tools-bom")
 
 // examples
-include("doc-examples:example-java")
+//include("doc-examples:example-java")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true

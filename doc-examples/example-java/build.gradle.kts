@@ -2,7 +2,7 @@ plugins {
     id("java")
     id("io.micronaut.application")
     id("io.micronaut.aot")
-    id("com.apollographql.apollo3").version("3.8.2") // TODO
+    id("com.apollographql.apollo").version("4.4.1") // TODO
 }
 
 dependencies {
@@ -40,14 +40,5 @@ apollo {
         packageName.set("example.client")
         schemaFile.set(file("src/main/resources/schema.graphqls"))
         generateKotlinModels.set(false)
-    }
-}
-
-// TODO temp fix
-tasks {
-    nativeCompile {
-        options.get().apply {
-            classpath.from.add(file("./build/libs/micronaut-example-java-1.0.0-SNAPSHOT.jar"))
-        }
     }
 }
