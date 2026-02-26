@@ -63,7 +63,7 @@ final class MicronautUtils {
 
     static String getExecutableMethodFullName(Executable<?, ?> executable) {
         String args = Arrays.stream(executable.getArguments())
-                .map(arg -> arg.getTypeString(false) + " " + arg.getName())
+                .map(arg -> arg.getType().getName() + " " + arg.getName())
                 .collect(Collectors.joining(", "));
 
         if (executable instanceof ExecutableMethod) {
