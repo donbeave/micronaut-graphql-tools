@@ -35,17 +35,13 @@ final class GraphQLUtils {
     }
 
     static String getType(TypeDefinition<?> typeDefinition) {
-        if (typeDefinition instanceof EnumTypeDefinition) {
-            return "enum";
-        } else if (typeDefinition instanceof UnionTypeDefinition) {
-            return "union";
-        } else if (typeDefinition instanceof ObjectTypeDefinition) {
-            return "type";
-        } else if (typeDefinition instanceof InputObjectTypeDefinition) {
-            return "input";
-        } else {
-            throw unsupportedTypeDefinition(typeDefinition);
-        }
+        return switch (typeDefinition) {
+            case EnumTypeDefinition enumTypeDefinition -> "enum";
+            case UnionTypeDefinition unionTypeDefinition -> "union";
+            case ObjectTypeDefinition objectTypeDefinition -> "type";
+            case InputObjectTypeDefinition inputObjectTypeDefinition -> "input";
+            case null, default -> throw unsupportedTypeDefinition(typeDefinition);
+        };
     }
 
     static TypeName getTypeName(Type<?> graphQlType) {
@@ -53,8 +49,8 @@ final class GraphQLUtils {
     }
 
     static Type<?> unwrapNonNullType(Type<?> type) {
-        if (type instanceof NonNullType) {
-            return unwrapNonNullType(((NonNullType) type).getType());
+        if (type instanceof NonNullType typeNonNull) {
+            return unwrapNonNullType(typeNonNull.getType());
         }
         return type;
     }

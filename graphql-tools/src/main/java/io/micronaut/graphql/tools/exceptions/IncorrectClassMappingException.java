@@ -89,22 +89,14 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
     }
 
     private static String toString(MappingType mappingType, Class<?> providedClass) {
-        switch (mappingType) {
-            case BUILT_IN_JAVA_CLASS:
-                return "a built-in class";
-            case CUSTOM_CLASS:
-                return "a custom class";
-            case ENUM:
-                return "an enum";
-            case INTERFACE:
-                return "an interface";
-            case ITERABLE:
-                return "an instance of Iterable interface";
-            case DETECT_TYPE:
-                return toString(providedClass);
-            default:
-                throw new UnsupportedOperationException();
-        }
+        return switch (mappingType) {
+            case BUILT_IN_JAVA_CLASS -> "a built-in class";
+            case CUSTOM_CLASS -> "a custom class";
+            case ENUM -> "an enum";
+            case INTERFACE -> "an interface";
+            case ITERABLE -> "an instance of Iterable interface";
+            case DETECT_TYPE -> toString(providedClass);
+        };
     }
 
     private static String toString(Class<?> clazz) {
