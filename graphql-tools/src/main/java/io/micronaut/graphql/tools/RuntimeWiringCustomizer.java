@@ -30,8 +30,8 @@ import io.micronaut.core.annotation.NonNull;
  * <p>A customizer may only add. The startup fails with
  * {@link io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException}, which names every replacement and the
  * customizer that made it, if a customizer replaces a data fetcher, default data fetcher, type resolver or scalar that
- * the library registered, or the wiring factory, or puts a data fetcher or type resolver for a field or type the
- * library wired into a code registry ({@code RuntimeWiring.Builder#codeRegistry}; graphql-java's schema generator lets
+ * the library registered, the wiring of a {@link SchemaDirective} bean, or the wiring factory, or puts a data fetcher
+ * or type resolver for a field or type the library wired into a code registry ({@code RuntimeWiring.Builder#codeRegistry}; graphql-java's schema generator lets
  * the code registry win). Such a replacement would silently undo the binding. To wrap data fetchers use a
  * {@link graphql.schema.idl.SchemaDirectiveWiring}; to change the generated schema use a
  * {@link GraphQLSchemaCustomizer} (graphql-java 25 removed {@code RuntimeWiring.Builder#transformer}).</p>

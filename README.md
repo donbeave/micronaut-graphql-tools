@@ -151,6 +151,55 @@ public RuntimeWiringCustomizer hideInternalFields() {
 }
 ```
 
+## Schema directives
+
+The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirectiveWiring`) only through a
+`SchemaDirective` bean:
+
+- `SchemaDirective.named(name, wiring)` binds the wiring to **one** directive name; graphql-java calls it only for the
+  elements that apply that directive (`RuntimeWiring.Builder#directive`). Two such beans for one name fail the
+  startup with `DuplicateDirectiveWiringException`, and a `RuntimeWiringCustomizer` that replaces such a wiring fails
+  it with `RuntimeWiringOverrideException`.
+- `SchemaDirective.everyElement(names, wiring)` registers a wiring that graphql-java calls for **every** schema element
+  and that decides itself what to do (`RuntimeWiring.Builder#directiveWiring`); the names say which directives it
+  implements. These run lowest order first (`@Order` or `Ordered` on the `SchemaDirective` bean), so the first one
+  wraps a data fetcher innermost.
+
+A `SchemaDirectiveWiring` bean is **not** applied on its own: if no `SchemaDirective` bean wraps that instance, the
+startup fails with `UnwrappedDirectiveWiringException`, which names the bean. A wiring therefore never runs on every
+element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of its
+`SchemaDirective`.
+
+```java
+@Bean
+@Singleton
+public SchemaDirective upper(UpperCaseWiring upperCaseWiring) { // UpperCaseWiring may be a bean
+    return SchemaDirective.named("upper", upperCaseWiring);
+}
+```
+
+graphql-java-extended-validation plugs in as a wiring for every element that names its constraint directives, and a
+`TypeDefinitionRegistryCustomizer` can add their declarations unless the SDL declares them:
+
+```java
+@Bean
+@Singleton
+public SchemaDirective validation() {
+    DirectiveConstraints constraints = DirectiveConstraints.newDirectiveConstraints().build();
+    return SchemaDirective.everyElement(constraints.getConstraints().keySet(),
+            new ValidationSchemaWiring(ValidationRules.newValidationRules().build()));
+}
+
+@Bean
+@Singleton
+public TypeDefinitionRegistryCustomizer validationDirectives() {
+    return registry -> registry.merge(DirectiveConstraints.newDirectiveConstraints().build().getDirectivesDeclaration());
+}
+```
+
+Use extended-validation 21.0 with graphql-java 21.3 and 24.0 with 25.1 (21.0 calls a `GraphQLCodeRegistry` method
+that graphql-java 25 removed); the library's tests run both.
+
 ## Building the GraphQL bean yourself
 
 The library creates two beans: the bound `GraphQLSchema`, and the `GraphQL` engine that runs it. Each one is created

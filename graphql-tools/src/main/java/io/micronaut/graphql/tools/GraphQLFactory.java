@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
+import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
@@ -27,6 +28,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -73,7 +75,15 @@ public final class GraphQLFactory {
                 configuration
         );
 
-        RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate(runtimeWiringCustomizers);
+        // the directive beans first: an application's customizer then cannot replace them unnoticed
+        List<RuntimeWiringCustomizer> customizers = new ArrayList<>();
+        customizers.add(new SchemaDirectiveWirings(
+                applicationContext.getBeanRegistrations(SchemaDirectiveWiring.class),
+                applicationContext.getBeanRegistrations(SchemaDirective.class)
+        ));
+        customizers.addAll(runtimeWiringCustomizers);
+
+        RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate(customizers);
 
         // destroys GraphQLResolversRegistry as it no use in runtime after we initialized RuntimeWiring successfully
         applicationContext.destroyBean(graphQLResolversRegistry);

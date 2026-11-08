@@ -24,6 +24,7 @@ import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLScalarType;
 import graphql.schema.TypeResolver;
 import graphql.schema.idl.RuntimeWiring;
+import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.WiringFactory;
 import io.micronaut.core.annotation.Internal;
@@ -108,6 +109,7 @@ final class RuntimeWiringCustomizers {
      * @param wiringFactory       the wiring factory
      * @param scalars             scalar name to scalar
      * @param typeResolvers       type name to type resolver
+     * @param directiveWirings    directive name to the wiring registered for it
      * @param codeRegistry        the code registry the schema generator starts from
      */
     private record Snapshot(
@@ -116,6 +118,7 @@ final class RuntimeWiringCustomizers {
             @Nullable WiringFactory wiringFactory,
             Map<String, GraphQLScalarType> scalars,
             Map<String, TypeResolver> typeResolvers,
+            Map<String, SchemaDirectiveWiring> directiveWirings,
             GraphQLCodeRegistry codeRegistry
     ) {
 
@@ -135,6 +138,7 @@ final class RuntimeWiringCustomizers {
                     runtimeWiring.getWiringFactory(),
                     new TreeMap<>(runtimeWiring.getScalars()),
                     new TreeMap<>(runtimeWiring.getTypeResolvers()),
+                    new TreeMap<>(runtimeWiring.getRegisteredDirectiveWiring()),
                     runtimeWiring.getCodeRegistry()
             );
         }
@@ -167,6 +171,11 @@ final class RuntimeWiringCustomizers {
             typeResolvers.forEach((type, typeResolver) -> {
                 if (after.typeResolvers.get(type) != typeResolver) {
                     replaced.add("type resolver of " + type);
+                }
+            });
+            directiveWirings.forEach((name, wiring) -> {
+                if (after.directiveWirings.get(name) != wiring) {
+                    replaced.add("directive wiring @" + name);
                 }
             });
             replaced.addAll(replacedThroughCodeRegistry(after, fieldsByType));
