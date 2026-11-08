@@ -38,7 +38,8 @@ public final class GraphQLFactory {
     public GraphQL graphQL(ApplicationContext applicationContext,
                            GraphQLResolversRegistry graphQLResolversRegistry,
                            TypeDefinitionRegistry typeDefinitionRegistry,
-                           SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer) {
+                           SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer,
+                           GraphQLToolsConfiguration configuration) {
         SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
         schemaMappingDictionaryCustomizer.customize(schemaMappingDictionary);
 
@@ -50,7 +51,8 @@ public final class GraphQLFactory {
                 graphQLResolversRegistry,
                 typeDefinitionRegistry,
                 schemaMappingDictionary,
-                graphQLSchemaProvider
+                graphQLSchemaProvider,
+                configuration
         );
 
         RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate();

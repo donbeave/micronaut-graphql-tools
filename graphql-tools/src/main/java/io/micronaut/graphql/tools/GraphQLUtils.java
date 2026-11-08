@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools;
 
 import graphql.language.EnumTypeDefinition;
 import graphql.language.InputObjectTypeDefinition;
+import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
@@ -41,6 +42,7 @@ final class GraphQLUtils {
             case UnionTypeDefinition unionTypeDefinition -> "union";
             case ObjectTypeDefinition objectTypeDefinition -> "type";
             case InputObjectTypeDefinition inputObjectTypeDefinition -> "input";
+            case InterfaceTypeDefinition interfaceTypeDefinition -> "interface";
             case null, default -> throw unsupportedTypeDefinition(typeDefinition);
         };
     }

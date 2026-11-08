@@ -22,6 +22,7 @@ import graphql.language.EnumValueDefinition;
 import graphql.language.FieldDefinition;
 import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InputValueDefinition;
+import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
@@ -51,6 +52,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
+import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException;
 import io.micronaut.graphql.tools.exceptions.InvalidSourceArgumentException;
 import io.micronaut.graphql.tools.exceptions.MappingConflictException;
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
@@ -59,6 +61,7 @@ import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException;
 import io.micronaut.graphql.tools.exceptions.RootResolverNotFoundException;
 import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException;
+import io.micronaut.graphql.tools.exceptions.UnreachableTypesException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
 import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
@@ -75,11 +78,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -118,6 +125,7 @@ final class GraphQLRuntimeWiringGenerator {
     private final SchemaMappingDictionary schemaMappingDictionary;
     private final Provider<GraphQLSchema> graphQLSchemaProvider;
     private final ObjectMapper objectMapper;
+    private final GraphQLToolsConfiguration configuration;
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
 
     private final Map<String, Class<?>> processedTypes = new HashMap<>();
@@ -130,13 +138,15 @@ final class GraphQLRuntimeWiringGenerator {
                                   GraphQLResolversRegistry graphQLResolversRegistry,
                                   TypeDefinitionRegistry typeDefinitionRegistry,
                                   SchemaMappingDictionary schemaMappingDictionary,
-                                  Provider<GraphQLSchema> graphQLSchemaProvider) {
+                                  Provider<GraphQLSchema> graphQLSchemaProvider,
+                                  GraphQLToolsConfiguration configuration) {
         requireNonNull("applicationContext", applicationContext);
         requireNonNull("graphQLBeanIntrospectionRegistry", graphQLBeanIntrospectionRegistry);
         requireNonNull("graphQLResolversRegistry", graphQLResolversRegistry);
         requireNonNull("typeDefinitionRegistry", typeDefinitionRegistry);
         requireNonNull("schemaParserDictionary", schemaMappingDictionary);
         requireNonNull("graphQLSchemaProvider", graphQLSchemaProvider);
+        requireNonNull("configuration", configuration);
 
         this.applicationContext = applicationContext;
         this.graphQLBeanIntrospectionRegistry = graphQLBeanIntrospectionRegistry;
@@ -144,11 +154,11 @@ final class GraphQLRuntimeWiringGenerator {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.schemaMappingDictionary = schemaMappingDictionary;
         this.graphQLSchemaProvider = graphQLSchemaProvider;
+        this.configuration = configuration;
 
         this.objectMapper = new ObjectMapper()
                 .registerModule(new BeanIntrospectionModule());
         this.rootRuntimeWiringBuilder = RuntimeWiring.newRuntimeWiring()
-                .wiringFactory(new DefaultWiringFactory())
                 .scalar(ExtendedScalars.GraphQLLong)
                 .scalar(ExtendedScalars.GraphQLShort)
                 .scalar(ExtendedScalars.GraphQLBigDecimal)
@@ -176,6 +186,8 @@ final class GraphQLRuntimeWiringGenerator {
                 processOperationTypeDefinition(operationTypeDefinition);
             }
 
+            rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(processUnreachableTypes(schemaDefinition)));
+
             return rootRuntimeWiringBuilder.build();
         } finally {
             if (LOG.isInfoEnabled()) {
@@ -183,6 +195,85 @@ final class GraphQLRuntimeWiringGenerator {
                 LOG.info("GraphQL runtime wiring generated in {}ms.", took);
             }
         }
+    }
+
+    /**
+     * Finds the object, interface and union types of the schema that no field reachable from a root operation type
+     * returns (nothing binds them) and applies {@link GraphQLToolsConfiguration#getUnreachableTypes()} and
+     * {@link GraphQLToolsConfiguration#getAllowUnreachable()} to them.
+     *
+     * @param schemaDefinition the schema definition
+     * @return the unreachable object types that stay in the schema with graphql-java's default data fetchers
+     */
+    private Set<String> processUnreachableTypes(SchemaDefinition schemaDefinition) {
+        Set<String> reachedTypeNames = new HashSet<>(processedTypes.keySet());
+        for (OperationTypeDefinition operationTypeDefinition : schemaDefinition.getOperationTypeDefinitions()) {
+            reachedTypeNames.add(operationTypeDefinition.getTypeName().getName());
+        }
+
+        Map<String, TypeDefinition<?>> unreachableTypes = new TreeMap<>();
+        for (TypeDefinition<?> typeDefinition : typeDefinitionRegistry.types().values()) {
+            boolean needsBinding = typeDefinition instanceof ObjectTypeDefinition
+                    || typeDefinition instanceof InterfaceTypeDefinition
+                    || typeDefinition instanceof UnionTypeDefinition;
+            if (needsBinding && !reachedTypeNames.contains(typeDefinition.getName())) {
+                unreachableTypes.put(typeDefinition.getName(), typeDefinition);
+            }
+        }
+
+        Set<String> allowed = new TreeSet<>(configuration.getAllowUnreachable());
+        List<String> undefined = allowed.stream()
+                .filter(it -> !isDefined(it))
+                .toList();
+        List<String> notUnreachable = allowed.stream()
+                .filter(it -> isDefined(it) && !unreachableTypes.containsKey(it))
+                .toList();
+        if (!undefined.isEmpty() || !notUnreachable.isEmpty()) {
+            throw new InvalidAllowUnreachableException(undefined, notUnreachable);
+        }
+
+        Set<String> unbound;
+        if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
+            unbound = unreachableTypes.keySet();
+            if (!unbound.isEmpty()) {
+                LOG.warn("{} is ignore: the schema defines types that no field reachable from a root operation "
+                                + "type returns; they use graphql-java's default data fetchers: {}",
+                        GraphQLToolsConfiguration.PREFIX + ".unreachable-types", String.join(", ", unbound));
+            }
+        } else {
+            Map<String, String> failing = new LinkedHashMap<>();
+            unreachableTypes.forEach((name, typeDefinition) -> {
+                if (!allowed.contains(name)) {
+                    failing.put(name, getType(typeDefinition));
+                }
+            });
+            if (!failing.isEmpty()) {
+                throw new UnreachableTypesException(failing);
+            }
+            unbound = allowed;
+            if (!unbound.isEmpty()) {
+                LOG.info("Unreachable types allowed by {} use graphql-java's default data fetchers: {}",
+                        GraphQLToolsConfiguration.PREFIX + ".allow-unreachable", String.join(", ", unbound));
+            }
+        }
+
+        for (String name : unbound) {
+            TypeDefinition<?> typeDefinition = unreachableTypes.get(name);
+            if (!(typeDefinition instanceof ObjectTypeDefinition)) {
+                // nothing returns an unreachable interface or union, so its type resolver is never called
+                rootRuntimeWiringBuilder.type(name, typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder
+                        .typeResolver(env -> {
+                            throw new IllegalStateException("No type resolver for the unreachable type " + name);
+                        }));
+            }
+        }
+
+        return unbound;
+    }
+
+    private boolean isDefined(String typeName) {
+        return typeDefinitionRegistry.types().containsKey(typeName)
+                || typeDefinitionRegistry.scalars().containsKey(typeName);
     }
 
     void processExecutableMethod(Executable<Object, ?> executable, ReturnType<?> returnType,

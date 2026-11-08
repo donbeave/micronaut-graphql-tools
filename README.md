@@ -86,6 +86,21 @@ The mapping then checks `T`. Anything else fails at startup with `UnsupportedRet
 - `DataFetcherResult<Publisher<T>>` is not supported on a subscription field, although graphql-java would unwrap it:
   return the `Publisher` and, if needed, a `DataFetcherResult` per event.
 
+## Configuration
+
+| Property | Values (default first) | Meaning |
+|---|---|---|
+| `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
+| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
+
+```yaml
+micronaut:
+  graphql:
+    tools:
+      allow-unreachable:
+        - LegacyReport
+```
+
 ## Custom types mapping
 
 GraphQL interfaces and union types often have multiple concrete implementations.

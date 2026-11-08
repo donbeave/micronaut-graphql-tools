@@ -11,6 +11,7 @@ dependencies {
     testImplementation(mn.micronaut.inject.java)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(libs.jetbrains.annotations)
+    testImplementation(libs.logback.classic)
 }
 
 micronautBuild {
