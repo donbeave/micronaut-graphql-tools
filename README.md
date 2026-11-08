@@ -249,6 +249,10 @@ public GraphQL graphQL(GraphQLSchema schema, MyInstrumentation instrumentation) 
 }
 ```
 
+[`test-suite/src/test/java/example/host`](test-suite/src/test/java/example/host) is such an application: it supplies the
+`TypeDefinitionRegistry`, consumes only the library's `GraphQLSchema` and builds its own `GraphQL` with its own
+instrumentation, which then serves the HTTP requests.
+
 The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and its HTTP controller serves
 whichever `GraphQL` bean exists. The library's own code does not use it, so an application with its own transport
 can exclude that dependency.
