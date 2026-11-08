@@ -60,6 +60,7 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
 - `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+- `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
 These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums and unions to Java interfaces without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
 
@@ -95,6 +96,7 @@ its own. Micronaut AOP advice (`@Around`) on the implementation still applies.
 ```java
 @GraphQLTypeResolver(Book.class)
 public interface BookLabelResolverContract {
+    @GraphQLSchemaCoordinate("Book.label")
     String label(Book book);
 }
 
@@ -105,6 +107,20 @@ public class BookLabelResolver implements BookLabelResolverContract {
 }
 ```
 
+`@GraphQLSchemaCoordinate` is also inherited and makes the contract methods executable. Fields are still matched by
+method name, and the coordinate is checked at startup, never trusted:
+
+- On a bean where at least one method carries a coordinate, only those methods bind. Other public methods (helpers)
+  are not candidates.
+- The startup fails with `InvalidSchemaCoordinateException`, listing every problem, when a coordinate is not of the
+  form `Type.field`, names a type or field the schema does not have or a type that is not an object type, names a field
+  that differs from the method name, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
+  `@GraphQLTypeResolver`, or sits on a bean that is neither.
+- It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
+  class that the `@GraphQLTypeResolver` does not resolve, a property of the mapped class binds the field, or a root
+  method of the same name also binds a field of another root operation type. A coordinate whose type is unreachable and
+  allowed (see [Configuration](#configuration)) is not bound and is logged as a warning.
+
 **Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
 class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both
 then bind the same field, the startup fails with `MultipleMethodsFoundException` naming both classes. Annotate only the
@@ -113,7 +129,8 @@ class that should be the resolver.
 **Several contracts on one bean.** A bean may implement type resolver contracts for different classes. The
 annotation metadata keeps only one of the inherited values, so the class hierarchy is read to find every contract, and
 each method binds for the class of its first parameter (the source object). A public method whose first parameter is
-none of those classes fails the startup with `AmbiguousTypeResolverException`, naming the bean and every contract.
+none of those classes fails the startup with `AmbiguousTypeResolverException`, naming the bean and every contract (on a
+bean that uses `@GraphQLSchemaCoordinate`, only methods with a coordinate count).
 
 This is the one place where the library reads class annotations by reflection
 (`Class.getDeclaredAnnotation(GraphQLTypeResolver.class)` on the bean class, its superclasses and interfaces). The

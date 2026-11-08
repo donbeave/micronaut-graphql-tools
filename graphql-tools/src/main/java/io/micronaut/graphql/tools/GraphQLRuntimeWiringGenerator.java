@@ -48,11 +48,15 @@ import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
+import io.micronaut.graphql.tools.GraphQLResolversRegistry.SchemaCoordinateMethod;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
+import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
 import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException;
+import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException;
 import io.micronaut.graphql.tools.exceptions.InvalidSourceArgumentException;
 import io.micronaut.graphql.tools.exceptions.MappingConflictException;
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
@@ -67,6 +71,7 @@ import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.schema.UnionTypeResolver;
+import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
 import jakarta.inject.Provider;
@@ -89,6 +94,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
@@ -118,6 +124,8 @@ final class GraphQLRuntimeWiringGenerator {
     private static final List<Class<?>> RETURN_TYPE_WRAPPERS =
             List.of(CompletionStage.class, Publisher.class, DataFetcherResult.class, Optional.class);
 
+    private static final Pattern SCHEMA_COORDINATE = Pattern.compile("[_A-Za-z][_0-9A-Za-z]*\\.[_A-Za-z][_0-9A-Za-z]*");
+
     private final ApplicationContext applicationContext;
     private final GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry;
     private final GraphQLResolversRegistry graphQLResolversRegistry;
@@ -129,6 +137,12 @@ final class GraphQLRuntimeWiringGenerator {
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
 
     private final Map<String, Class<?>> processedTypes = new HashMap<>();
+
+    // key: schema coordinate (Type.field), value: description of the member bound to it
+    private final Map<String, String> fieldBindings = new HashMap<>();
+
+    // key: resolver bean class and method, value: the schema coordinates the method is bound to
+    private final Map<String, Set<String>> resolverBindings = new HashMap<>();
 
     @Nullable
     private String subscriptionTypeName;
@@ -178,6 +192,8 @@ final class GraphQLRuntimeWiringGenerator {
 
             graphQLResolversRegistry.verifyTypeResolverContracts();
 
+            validateSchemaCoordinates(schemaDefinition);
+
             subscriptionTypeName = schemaDefinition.getOperationTypeDefinitions().stream()
                     .filter(it -> "subscription".equals(it.getName()))
                     .map(it -> it.getTypeName().getName())
@@ -188,7 +204,11 @@ final class GraphQLRuntimeWiringGenerator {
                 processOperationTypeDefinition(operationTypeDefinition);
             }
 
-            rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(processUnreachableTypes(schemaDefinition)));
+            Set<String> unboundTypes = processUnreachableTypes(schemaDefinition);
+
+            verifySchemaCoordinateBindings(unboundTypes);
+
+            rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(unboundTypes));
 
             return rootRuntimeWiringBuilder.build();
         } finally {
@@ -271,6 +291,163 @@ final class GraphQLRuntimeWiringGenerator {
         }
 
         return unbound;
+    }
+
+    /**
+     * Checks every {@link io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate} against the schema, its method
+     * and its bean, before anything is bound.
+     *
+     * @param schemaDefinition the schema definition
+     */
+    private void validateSchemaCoordinates(SchemaDefinition schemaDefinition) {
+        Set<String> operationTypeNames = schemaDefinition.getOperationTypeDefinitions().stream()
+                .map(it -> it.getTypeName().getName())
+                .collect(Collectors.toCollection(TreeSet::new));
+
+        List<String> problems = new ArrayList<>();
+        for (SchemaCoordinateMethod coordinateMethod : graphQLResolversRegistry.getSchemaCoordinateMethods()) {
+            String problem = checkSchemaCoordinate(coordinateMethod, operationTypeNames);
+            if (problem != null) {
+                problems.add(describe(coordinateMethod) + ": " + problem);
+            }
+        }
+
+        if (!problems.isEmpty()) {
+            throw new InvalidSchemaCoordinateException(problems);
+        }
+    }
+
+    @Nullable
+    private String checkSchemaCoordinate(SchemaCoordinateMethod coordinateMethod, Set<String> operationTypeNames) {
+        BeanDefinition<?> beanDefinition = coordinateMethod.beanDefinition();
+        boolean rootResolver = beanDefinition.hasStereotype(GraphQLRootResolver.class);
+        boolean typeResolver = beanDefinition.hasStereotype(GraphQLTypeResolver.class);
+
+        if (!rootResolver && !typeResolver) {
+            return "the bean is neither a @" + GraphQLRootResolver.class.getSimpleName() + " nor a @"
+                    + GraphQLTypeResolver.class.getSimpleName() + ".";
+        }
+
+        String coordinate = coordinateMethod.coordinate();
+        if (!SCHEMA_COORDINATE.matcher(coordinate).matches()) {
+            return "the value is not a schema coordinate of the form Type.field.";
+        }
+
+        String typeName = coordinate.substring(0, coordinate.indexOf('.'));
+        String fieldName = coordinate.substring(coordinate.indexOf('.') + 1);
+
+        Optional<TypeDefinition> typeDefinition = typeDefinitionRegistry.getType(typeName);
+        if (typeDefinition.isEmpty()) {
+            return "the schema has no type " + typeName + ".";
+        }
+        if (!(typeDefinition.get() instanceof ObjectTypeDefinition objectTypeDefinition)) {
+            return typeName + " is not an object type.";
+        }
+        if (objectTypeDefinition.getFieldDefinitions().stream().noneMatch(it -> it.getName().equals(fieldName))) {
+            return "the type " + typeName + " has no field " + fieldName + ".";
+        }
+
+        String methodName = coordinateMethod.method().getMethodName();
+        if (!fieldName.equals(methodName)) {
+            return "the field name " + fieldName + " differs from the method name " + methodName + ".";
+        }
+
+        boolean operationType = operationTypeNames.contains(typeName);
+        if (rootResolver && !operationType) {
+            return "a @" + GraphQLRootResolver.class.getSimpleName() + " binds fields of the root operation types "
+                    + operationTypeNames + " only, not of " + typeName + ".";
+        }
+        if (typeResolver && operationType) {
+            return "a @" + GraphQLTypeResolver.class.getSimpleName() + " cannot bind a field of the root operation type "
+                    + typeName + ".";
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks that every method that carries {@link io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate} is
+     * bound to exactly the field its coordinate names. A method whose type is unbound on purpose
+     * ({@link GraphQLToolsConfiguration#getAllowUnreachable()}, {@link GraphQLToolsConfiguration#getUnreachableTypes()})
+     * is not bound and is logged.
+     *
+     * @param unboundTypes the types left unbound on purpose
+     */
+    private void verifySchemaCoordinateBindings(Set<String> unboundTypes) {
+        List<String> problems = new ArrayList<>();
+        List<String> unboundMethods = new ArrayList<>();
+
+        for (SchemaCoordinateMethod coordinateMethod : graphQLResolversRegistry.getSchemaCoordinateMethods()) {
+            String coordinate = coordinateMethod.coordinate();
+            String typeName = coordinate.substring(0, coordinate.indexOf('.'));
+            Set<String> bound = resolverBindings.getOrDefault(coordinateMethod.describe(), Collections.emptySet());
+
+            if (bound.equals(Set.of(coordinate))) {
+                continue;
+            }
+
+            if (bound.isEmpty() && unboundTypes.contains(typeName)) {
+                unboundMethods.add(describe(coordinateMethod));
+                continue;
+            }
+
+            Set<String> others = new TreeSet<>(bound);
+            others.remove(coordinate);
+
+            if (!others.isEmpty()) {
+                problems.add(describe(coordinateMethod) + ": the method is "
+                        + (bound.contains(coordinate) ? "also " : "")
+                        + "bound to " + String.join(", ", others) + ".");
+            } else {
+                problems.add(describe(coordinateMethod) + ": the method is not bound to " + coordinate + ", "
+                        + describeBinding(coordinateMethod, typeName) + ".");
+            }
+        }
+
+        if (!problems.isEmpty()) {
+            throw new InvalidSchemaCoordinateException(problems);
+        }
+
+        if (!unboundMethods.isEmpty()) {
+            LOG.warn("Methods whose @GraphQLSchemaCoordinate names an unreachable type are not bound: {}",
+                    String.join("; ", unboundMethods));
+        }
+    }
+
+    private String describeBinding(SchemaCoordinateMethod coordinateMethod, String typeName) {
+        String coordinate = coordinateMethod.coordinate();
+        String boundTo = fieldBindings.get(coordinate);
+        Class<?> mappedClass = processedTypes.get(typeName);
+
+        StringBuilder builder = new StringBuilder(boundTo != null
+                ? coordinate + " is bound to " + boundTo
+                : "nothing is bound to " + coordinate);
+
+        Optional<Class> resolvedClass = coordinateMethod.beanDefinition()
+                .classValue(GraphQLTypeResolver.class);
+        if (mappedClass != null && resolvedClass.isPresent()) {
+            Class<?> sourceClass = graphQLBeanIntrospectionRegistry.getInterfaceClass(mappedClass);
+            if (!sourceClass.equals(resolvedClass.get())) {
+                builder.append(" (").append(typeName).append(" is mapped to ").append(sourceClass.getName())
+                        .append(", the bean resolves ").append(resolvedClass.get().getName()).append(")");
+            }
+        }
+
+        return builder.toString();
+    }
+
+    private static String describe(SchemaCoordinateMethod coordinateMethod) {
+        return "@GraphQLSchemaCoordinate(\"" + coordinateMethod.coordinate() + "\") on " + coordinateMethod.describe();
+    }
+
+    private void recordResolverBinding(TypeMappingContext mappingContext,
+                                       BeanDefinitionAndMethod beanDefinitionAndMethod) {
+        String coordinate = mappingContext.getGraphQlObjectType() + "." + mappingContext.getGraphQlField();
+        String method = GraphQLResolversRegistry.describeMethod(
+                beanDefinitionAndMethod.getBeanDefinition(), beanDefinitionAndMethod.getExecutableMethod());
+
+        fieldBindings.put(coordinate, "resolver " + method);
+        resolverBindings.computeIfAbsent(method, it -> new TreeSet<>()).add(coordinate);
     }
 
     private boolean isDefined(String typeName) {
@@ -593,6 +770,8 @@ final class GraphQLRuntimeWiringGenerator {
 
                 BeanDefinitionAndMethod beanDefinitionAndMethod = beanDefinitionAndMethods.get(0);
 
+                recordResolverBinding(mappingContext, beanDefinitionAndMethod);
+
                 ExecutableMethod<Object, ?> executable = beanDefinitionAndMethod.getExecutableMethod();
 
                 processExecutableMethod(
@@ -766,6 +945,10 @@ final class GraphQLRuntimeWiringGenerator {
                     getPropertyMethodName(beanProperty.get())
             );
 
+            fieldBindings.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                    "property " + beanIntrospection.getBeanType().getName() + "."
+                            + getPropertyMethodName(beanProperty.get()));
+
             // the bean property don't have arguments, that's why we only validates arguments count, not exact types
             checkArgumentCount(beanProperty.get(), mappingContext);
 
@@ -776,6 +959,10 @@ final class GraphQLRuntimeWiringGenerator {
 
         if (!beanMethods.isEmpty()) {
             BeanMethod<Object, ?> beanMethod = beanMethods.get(0);
+
+            fieldBindings.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                    "method " + beanIntrospection.getBeanType().getName() + "."
+                            + getExecutableMethodFullName(beanMethod));
 
             processExecutableMethod(
                     beanMethod,
@@ -809,6 +996,8 @@ final class GraphQLRuntimeWiringGenerator {
         }
 
         BeanDefinitionAndMethod beanDefinitionAndMethod = beanDefinitionAndMethods.get(0);
+
+        recordResolverBinding(mappingContext, beanDefinitionAndMethod);
 
         ExecutableMethod<Object, ?> executable = beanDefinitionAndMethod.getExecutableMethod();
 

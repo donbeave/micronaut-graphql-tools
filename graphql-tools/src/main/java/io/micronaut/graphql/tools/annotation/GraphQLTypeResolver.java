@@ -33,7 +33,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * method name. The first parameter of each method is the source object.
  *
  * <p>The annotation is {@link Inherited}: it may sit on an interface (for example a generated resolver contract) or a
- * superclass, and every bean implementing or extending it is a type resolver without an annotation of its own.</p>
+ * superclass, and every bean implementing or extending it is a type resolver without an annotation of its own. Methods
+ * that carry {@link GraphQLSchemaCoordinate} restrict and validate the binding, see there.</p>
  *
  * @author Alexey Zhokhov
  */

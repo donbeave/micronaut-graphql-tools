@@ -21,6 +21,7 @@ import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.exceptions.AmbiguousTypeResolverException;
 import io.micronaut.graphql.tools.exceptions.IncorrectAnnotationException;
@@ -46,6 +47,8 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static io.micronaut.graphql.tools.MicronautUtils.getExecutableMethodFullName;
+
 /**
  * @author Alexey Zhokhov
  */
@@ -69,6 +72,9 @@ public final class GraphQLResolversRegistry {
     // reads the types of a class hierarchy that declare @GraphQLTypeResolver
     private Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader =
             GraphQLResolversRegistry::findTypeResolverContracts;
+    private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
+    // key: bean definition, value: the signatures of its methods that carry @GraphQLSchemaCoordinate
+    private final Map<BeanDefinition<?>, Set<String>> schemaCoordinateSignatures = new HashMap<>();
 
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
         rootResolvers.stream()
@@ -163,9 +169,42 @@ public final class GraphQLResolversRegistry {
         this.typeResolverContractReader = typeResolverContractReader;
     }
 
+    /**
+     * Records a method that carries {@link GraphQLSchemaCoordinate}, whatever the bean is.
+     *
+     * @param beanDefinition the bean definition
+     * @param method         the method
+     */
+    public void registerSchemaCoordinateExecutableMethod(BeanDefinition<?> beanDefinition,
+                                                         ExecutableMethod<Object, ?> method) {
+        String coordinate = method.stringValue(GraphQLSchemaCoordinate.class).orElse("");
+
+        schemaCoordinateMethods.add(new SchemaCoordinateMethod(beanDefinition, method, coordinate));
+        schemaCoordinateSignatures.computeIfAbsent(beanDefinition, it -> new HashSet<>())
+                .add(getExecutableMethodFullName(method));
+    }
+
+    /**
+     * @return the methods that carry {@link GraphQLSchemaCoordinate}, sorted by bean class and method
+     */
+    List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
+        return schemaCoordinateMethods.stream()
+                .sorted(Comparator.comparing(SchemaCoordinateMethod::describe))
+                .toList();
+    }
+
+    /**
+     * A method of a bean on which some methods carry {@link GraphQLSchemaCoordinate} binds only if it carries one too.
+     */
+    private boolean isCandidate(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
+        Set<String> signatures = schemaCoordinateSignatures.get(beanDefinition);
+        return signatures == null || signatures.contains(getExecutableMethodFullName(method));
+    }
+
     private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String methodName) {
         return item.getExecutableMethods().stream()
                 .filter(executableMethod -> executableMethod.getMethodName().equals(methodName))
+                .filter(executableMethod -> isCandidate(item.getBeanDefinition(), executableMethod))
                 .map(executableMethod -> new BeanDefinitionAndMethod(item.getBeanDefinition(), executableMethod))
                 .collect(Collectors.toList());
     }
@@ -216,6 +255,7 @@ public final class GraphQLResolversRegistry {
                 .sorted(Comparator.comparing(it -> it.getKey().getBeanType().getName()))
                 .forEach(entry -> {
                     List<String> methods = entry.getValue().stream()
+                            .filter(method -> isCandidate(entry.getKey(), method))
                             .map(MicronautUtils::getExecutableMethodFullName)
                             .sorted()
                             .toList();
@@ -305,6 +345,31 @@ public final class GraphQLResolversRegistry {
                 : Collections.emptyList();
 
         throw MethodNotFoundException.forType(methodName, mappingContext, beanType, resolvers);
+    }
+
+    /**
+     * @param beanDefinition the bean definition
+     * @param method         a method of the bean
+     * @return the user's bean class (not the AOP proxy) and the method signature
+     */
+    static String describeMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<?, ?> method) {
+        return getUserBeanType(beanDefinition).getName() + " " + getExecutableMethodFullName(method);
+    }
+
+    /**
+     * A method that carries {@link GraphQLSchemaCoordinate}.
+     *
+     * @param beanDefinition the bean the method belongs to
+     * @param method         the method
+     * @param coordinate     the declared coordinate, as written
+     */
+    record SchemaCoordinateMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method,
+                                  String coordinate) {
+
+        String describe() {
+            return describeMethod(beanDefinition, method);
+        }
+
     }
 
 }
