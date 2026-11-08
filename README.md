@@ -279,8 +279,9 @@ String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
   Where reflection cannot find it (for example a native image without reflection configuration), they are written from
   Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
   `java.util.List<Book>`), no raw types (`List` is written `java.util.List<java.lang.Object>`) and no type arguments of
-  array components (`List<String>[]` is written `java.util.List[]`). The body is sorted by `String#compareTo`, UTF-8,
-  `LF`; nothing is escaped, and a part that would contain ` → ` or ` · ` fails instead.
+  array components (`List<String>[]` is written `java.util.List[]`); the first such member is logged at INFO. The body is
+  sorted by `String#compareTo`, UTF-8, `LF`; nothing is escaped, and a part that would contain ` → ` or ` · ` fails
+  instead.
 
 ## Strict mode
 
