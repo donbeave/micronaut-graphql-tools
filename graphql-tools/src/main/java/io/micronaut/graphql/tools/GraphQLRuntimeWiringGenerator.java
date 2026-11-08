@@ -457,7 +457,7 @@ final class GraphQLRuntimeWiringGenerator {
                     TypeMappingContext.forArgument(mappingContext, inputValueDefinition.getName())
             );
 
-            result.add(ArgumentDefinition.ofInputValueArgument(inputs.get(i).getName(), argument.getType()));
+            result.add(ArgumentDefinition.ofInputValueArgument(inputs.get(i).getName(), argument));
         }
 
         if (containsEnvironmentArgument) {
