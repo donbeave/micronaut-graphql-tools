@@ -92,6 +92,7 @@ The mapping then checks `T`. Anything else fails at startup with `UnsupportedRet
 |---|---|---|
 | `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
+| `micronaut.graphql.tools.inert-directives` | list of directive names, without `@` (empty) | Directives the schema may apply without a wiring, because they have no effect at runtime; they are logged at INFO. Every other applied directive needs a wiring (see [Schema directives](#schema-directives)). Every entry must be a directive the schema declares, that is not built in and that has no wiring, otherwise the startup fails, so the list cannot go stale. |
 
 ```yaml
 micronaut:
@@ -169,6 +170,17 @@ A `SchemaDirectiveWiring` bean is **not** applied on its own: if no `SchemaDirec
 startup fails with `UnwrappedDirectiveWiringException`, which names the bean. A wiring therefore never runs on every
 element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of its
 `SchemaDirective`.
+
+**Every directive the schema applies must have a wiring**, or the startup fails with `UnwiredDirectivesException`,
+which lists every such directive and where the schema applies it. A directive counts as wired if a `SchemaDirective`
+bean names it, or if a `RuntimeWiringCustomizer` registers a wiring for it with `RuntimeWiring.Builder#directive`. A
+directive that is meant to have no effect at runtime (documentation, or enforced elsewhere) is listed in
+`micronaut.graphql.tools.inert-directives`. `SchemaDirectiveWiring` has no hook for the schema definition or for
+directive arguments, so a directive applied there can only be listed as inert, or be handled by a
+`GraphQLSchemaCustomizer`. Exempt: graphql-java's built-in directives (`@deprecated`, `@specifiedBy`, `@oneOf`,
+`@include`, `@skip`), directives the schema declares but never applies, and directives it applies without declaring
+them (graphql-java reports those). `SchemaDirective` names that the schema does not declare are logged at INFO and not
+used, so a shared module may wire more directives than one schema applies.
 
 ```java
 @Bean

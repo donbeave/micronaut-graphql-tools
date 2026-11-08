@@ -35,6 +35,7 @@ public class GraphQLToolsConfiguration {
 
     private UnreachableTypes unreachableTypes = UnreachableTypes.FAIL;
     private List<String> allowUnreachable = Collections.emptyList();
+    private List<String> inertDirectives = Collections.emptyList();
 
     /**
      * @return what happens to object, interface and union types of the schema that no field reachable from a root
@@ -75,6 +76,27 @@ public class GraphQLToolsConfiguration {
     public void setAllowUnreachable(@NonNull List<String> allowUnreachable) {
         ArgumentUtils.requireNonNull("allowUnreachable", allowUnreachable);
         this.allowUnreachable = List.copyOf(allowUnreachable);
+    }
+
+    /**
+     * @return the directives the schema may apply without a wiring, because they have no effect at runtime
+     */
+    @NonNull
+    public List<String> getInertDirectives() {
+        return inertDirectives;
+    }
+
+    /**
+     * Sets the directives the schema may apply without a wiring, because they have no effect at runtime (names
+     * without {@code @}). Any other directive the schema applies needs a wiring, except graphql-java's built-in
+     * ones. Every name must be a directive the schema declares and that has no wiring; any other name fails the
+     * startup, so the list cannot go stale. Default: empty.
+     *
+     * @param inertDirectives the directive names
+     */
+    public void setInertDirectives(@NonNull List<String> inertDirectives) {
+        ArgumentUtils.requireNonNull("inertDirectives", inertDirectives);
+        this.inertDirectives = List.copyOf(inertDirectives);
     }
 
     /**

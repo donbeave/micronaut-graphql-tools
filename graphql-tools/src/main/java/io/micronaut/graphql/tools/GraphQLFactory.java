@@ -77,13 +77,17 @@ public final class GraphQLFactory {
 
         // the directive beans first: an application's customizer then cannot replace them unnoticed
         List<RuntimeWiringCustomizer> customizers = new ArrayList<>();
-        customizers.add(new SchemaDirectiveWirings(
+        SchemaDirectiveWirings schemaDirectiveWirings = new SchemaDirectiveWirings(
                 applicationContext.getBeanRegistrations(SchemaDirectiveWiring.class),
                 applicationContext.getBeanRegistrations(SchemaDirective.class)
-        ));
+        );
+        customizers.add(schemaDirectiveWirings);
         customizers.addAll(runtimeWiringCustomizers);
 
         RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate(customizers);
+
+        DirectiveWiringCheck.check(registry, runtimeWiring, schemaDirectiveWirings.getEveryElementDirectiveNames(),
+                schemaDirectiveWirings.getDirectiveNames(), configuration);
 
         // destroys GraphQLResolversRegistry as it no use in runtime after we initialized RuntimeWiring successfully
         applicationContext.destroyBean(graphQLResolversRegistry);

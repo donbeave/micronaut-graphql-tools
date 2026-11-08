@@ -44,6 +44,9 @@ import java.util.Set;
  * runs on every schema element merely because it is a bean; a wiring that is a bean is wrapped by injecting it into
  * the factory method of its {@code SchemaDirective}.</p>
  *
+ * <p>Every directive the schema applies needs a {@code SchemaDirective} that names it, or must be listed in
+ * {@code micronaut.graphql.tools.inert-directives}.</p>
+ *
  * <p>For example, a factory method {@code SchemaDirective upper()} annotated {@code @Singleton} that returns
  * {@code SchemaDirective.named("upper", new UpperCaseWiring())}.</p>
  */

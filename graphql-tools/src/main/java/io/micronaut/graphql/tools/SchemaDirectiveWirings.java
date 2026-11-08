@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,6 +45,8 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
     private final List<SchemaDirective> namedDirectives = new ArrayList<>();
     private final List<SchemaDirectiveWiring> everyElementWirings;
     private final List<String> unwrappedWirings = new ArrayList<>();
+    private final Set<String> everyElementDirectiveNames = new LinkedHashSet<>();
+    private final Set<String> directiveNames = new LinkedHashSet<>();
 
     /**
      * @param wirings    the {@link SchemaDirectiveWiring} beans
@@ -56,8 +59,10 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
         for (BeanRegistration<SchemaDirective> registration : directives) {
             SchemaDirective directive = registration.getBean();
             wrapped.add(directive.getWiring());
+            directiveNames.addAll(directive.getDirectiveNames());
             if (directive.isEveryElement()) {
                 everyElement.add(registration);
+                everyElementDirectiveNames.addAll(directive.getDirectiveNames());
             } else {
                 namedDirectives.add(directive);
             }
@@ -72,6 +77,21 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
             }
         }
         Collections.sort(unwrappedWirings);
+    }
+
+    /**
+     * @return the directives that {@link SchemaDirective#everyElement(Collection, SchemaDirectiveWiring)} beans
+     * implement; the named ones are in the runtime wiring
+     */
+    Set<String> getEveryElementDirectiveNames() {
+        return everyElementDirectiveNames;
+    }
+
+    /**
+     * @return the directives that {@link SchemaDirective} beans of either kind implement
+     */
+    Set<String> getDirectiveNames() {
+        return directiveNames;
     }
 
     @Override
