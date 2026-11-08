@@ -39,6 +39,7 @@ final class Problems {
     static final String PREFIX = "[graphql] ";
 
     private final Set<Problem> problems = new LinkedHashSet<>();
+    private final List<String> notes = new ArrayList<>();
 
     /**
      * Records an error that is about neither a schema element nor a Java element.
@@ -59,6 +60,17 @@ final class Problems {
      */
     void error(String coordinate, String message, Node<?> node, Element element) {
         problems.add(new Problem(PREFIX + coordinate + ": " + message + location(node), element));
+    }
+
+    /**
+     * Records a part of the schema the checks leave to the startup, reported as a note, so that a green compilation
+     * says what it did not check.
+     *
+     * @param coordinate the schema coordinate
+     * @param reason     why it is not checked at compile time
+     */
+    void note(String coordinate, String reason) {
+        notes.add(PREFIX + coordinate + ": not checked at compile time, the startup checks it: " + reason + ".");
     }
 
     /**
@@ -83,6 +95,9 @@ final class Problems {
      * @param messager the messager
      */
     void report(Messager messager) {
+        for (String note : notes) {
+            messager.printMessage(Diagnostic.Kind.NOTE, note);
+        }
         for (Problem problem : problems) {
             if (problem.element() != null) {
                 messager.printMessage(Diagnostic.Kind.ERROR, problem.message(), problem.element());

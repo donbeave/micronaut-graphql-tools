@@ -21,6 +21,45 @@ public class HelloQuery {
 }
 '''
 
+    static final String LIBRARY_QUERY = '''
+package example;
+
+import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+import java.util.List;
+
+@GraphQLRootResolver
+public class HelloQuery {
+    public String hello() {
+        return "world";
+    }
+
+    public List<Result> search(Filter filter) {
+        return null;
+    }
+
+    public Node node() {
+        return null;
+    }
+}
+'''
+
+    static final String REPORT_QUERY = '''
+package example;
+
+import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+
+@GraphQLRootResolver
+public class HelloQuery {
+    public String hello() {
+        return "world";
+    }
+
+    public Report report() {
+        return null;
+    }
+}
+'''
+
     static final String SCHEMA = '''schema {
   query: Query
 }
@@ -238,7 +277,13 @@ interface Node {
 type Shelf implements Node {
   id: ID
 }
-''').compile()
+''')
+                .source('example.HelloQuery', LIBRARY_QUERY)
+                .source('example.Filter', 'package example; @io.micronaut.graphql.tools.annotation.GraphQLInput public class Filter { private Range range; public Range getRange() { return range; } public void setRange(Range range) { this.range = range; } }')
+                .source('example.Range', 'package example; @io.micronaut.graphql.tools.annotation.GraphQLInput public class Range { private Integer from; public Integer getFrom() { return from; } public void setFrom(Integer from) { this.from = from; } }')
+                .source('example.Result', 'package example; public interface Result { }')
+                .source('example.Node', 'package example; public interface Node { }')
+                .compile()
 
         then:
         result.success
@@ -251,8 +296,7 @@ type Shelf implements Node {
 }
 
 type Query {
-  hello: String @cached
-  old: String @deprecated(reason: "use hello")
+  hello: String @cached @deprecated(reason: "use hello")
 }
 ''').compile()
 
@@ -319,7 +363,8 @@ type Query {
                 .schema('schema.graphqls', 'schema {\n  query: Query\n}\n')
                 .schema('query/query.graphqls', 'type Query {\n  hello: String\n  report: Report\n}\n')
                 .schema('query/report.graphql', 'type Report {\n  title: String\n}\ntype Orphan {\n  x: Int\n}\n')
-                .source('example.HelloQuery', HELLO_QUERY)
+                .source('example.HelloQuery', REPORT_QUERY)
+                .source('example.Report', 'package example; @io.micronaut.graphql.tools.annotation.GraphQLType public class Report { public String getTitle() { return null; } }')
                 .compile()
 
         then:

@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.processing
 
 import groovy.transform.CompileStatic
 
+import javax.annotation.processing.Processor
 import javax.tools.Diagnostic
 import javax.tools.DiagnosticCollector
 import javax.tools.JavaCompiler
@@ -37,6 +38,7 @@ class Compilation {
     private final Map<String, String> options = new LinkedHashMap<>()
     private final List<File> classpath = []
     private boolean sdlDir = true
+    private final List<Processor> extraProcessors = []
 
     /**
      * @param path    the path of the file, relative to the schema directory
@@ -70,6 +72,14 @@ class Compilation {
      */
     Compilation withoutSdlDir() {
         sdlDir = false
+        return this
+    }
+
+    /**
+     * @param processor a processor to run next to this one, for example one that generates sources
+     */
+    Compilation withProcessor(Processor processor) {
+        extraProcessors.add(processor)
         return this
     }
 
@@ -109,7 +119,9 @@ class Compilation {
 
         List<JavaFileObject> units = sources.collect { name, content -> (JavaFileObject) new Source(name, content) }
         JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, diagnostics, arguments, null, units)
-        task.setProcessors([new GraphQLSchemaBindingProcessor()])
+        List<Processor> processors = [(Processor) new GraphQLSchemaBindingProcessor()]
+        processors.addAll(extraProcessors)
+        task.setProcessors(processors)
         boolean success = task.call()
         fileManager.close()
         return new Result(success, diagnostics.diagnostics, classes.toFile(), schemaDir.toFile())
@@ -139,6 +151,14 @@ class Compilation {
          */
         List<String> getErrors() {
             return diagnostics.findAll { it.kind == Diagnostic.Kind.ERROR }.collect { format(it) }
+        }
+
+        /**
+         * @return the notes of the processor (those starting with {@code [graphql]}): what it left to the startup
+         */
+        List<String> getGraphqlNotes() {
+            return diagnostics.findAll { it.kind == Diagnostic.Kind.NOTE && it.getMessage(Locale.ROOT).contains(Problems.PREFIX) }
+                    .collect { format(it) }
         }
 
         /**

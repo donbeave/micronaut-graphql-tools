@@ -544,6 +544,45 @@ Checked from the schema files and the options alone:
 - unreachable types, with `allowUnreachable` and `unreachableTypes` as at startup (in strict mode also enum, input
   and scalar types), and `allowUnreachable` entries that are not unreachable types.
 
+Checked against the Java code, walking the schema from the root operation types as the startup binds it (the Java type
+a method or property returns is the Java type of the field's GraphQL type):
+
+- every root field has exactly one root resolver method, and every field of a bound object type has a property or
+  `@GraphQLField` method of the introspected Java type or a type resolver method, decided by `precedence` and
+  `resolverDirectives` exactly as at startup (an ambiguous field fails with `precedence: strict`; a field with a
+  resolver directive needs a type resolver method);
+- the number of parameters besides `DataFetchingEnvironment`, the source object first for a type resolver, and the
+  Java type of each argument in the schema's order (lists, built-in scalars, `ArgumentValue`; a primitive for a
+  nullable type);
+- return types: the wrappers graphql-java resolves (`CompletionStage` at field level only, `Publisher` exactly on the
+  subscription type, `DataFetcherResult`, `Optional` on nullable types, each once and not raw), lists, built-in scalars;
+- resolver contracts: an annotated interface of the compilation that no bean implements, or that several beans
+  implement;
+- `@GraphQLSchemaCoordinate`: validated as at startup (form, type and field exist, field name equals method name, root
+  or type resolver) and bound to exactly the field it names;
+- in strict mode, public resolver methods that bind no field, and a root method without a coordinate that binds fields
+  of several root operation types.
+
+The processor checks the resolver beans of one compilation: apply it in the module that holds all of them (usually the
+application). Contracts and model classes may come from dependencies. A compilation that has `sdlDir` but no root or
+type resolver fails, rather than checking nothing. Classes that another processor generates in the same compilation
+under a `$` name (Micronaut's bean definitions and AOP proxies) are not application classes and are ignored; a class
+annotated `@Generated` (generated code compiled with the application) is checked like any other. Fields of type
+extensions (`extend type`, `extend interface`, ...) are checked like fields of the type itself.
+
+Not checked at compile time, because the startup decides them with runtime beans or with classes the compilation
+does not have; the strict startup and a test that starts the context check them. The processor reports each such part
+as a javac note (`[graphql] <coordinate>: not checked at compile time, the startup checks it: <reason>`), so that a
+green compilation says what it left out:
+
+- the Java classes of custom scalars (`GraphQLScalarMapping` beans) and scalars without a mapping;
+- directive wirings and type resolvers of interfaces and unions;
+- the members of unions and the implementations of interfaces, which come from the `SchemaMappingDictionary`, and
+  fields an SDL interface declares when a type resolver of a Java interface of the model has a method of their name
+  (without such a method, the field is checked like any other);
+- a Java interface returned by a field whose implementation is not in the compilation;
+- what the input `ObjectMapper` can set (custom deserializers, naming strategies).
+
 ## Custom types mapping
 
 GraphQL interfaces and union types often have multiple concrete implementations.

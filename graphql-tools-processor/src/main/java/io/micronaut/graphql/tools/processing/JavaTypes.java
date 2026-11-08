@@ -16,9 +16,11 @@
 package io.micronaut.graphql.tools.processing;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.util.ArrayDeque;
@@ -27,6 +29,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Helpers for the Java types of the compilation and of its classpath.
@@ -81,6 +84,127 @@ final class JavaTypes {
             pending.addAll(types.directSupertypes(mirror));
         }
         return result;
+    }
+
+    /**
+     * @param type a class
+     * @return its superclasses, nearest first, without {@code java.lang.Object}
+     */
+    List<TypeElement> superclasses(TypeElement type) {
+        List<TypeElement> result = new ArrayList<>();
+        TypeMirror superclass = type.getSuperclass();
+        while (superclass instanceof DeclaredType declaredType
+                && declaredType.asElement() instanceof TypeElement element
+                && !element.getQualifiedName().contentEquals("java.lang.Object")) {
+            result.add(element);
+            superclass = element.getSuperclass();
+        }
+        return result;
+    }
+
+    /**
+     * @param type a type
+     * @return its binary name, as {@link Class#getName()} gives it ({@code a.Outer$Inner})
+     */
+    String name(TypeElement type) {
+        return elements.getBinaryName(type).toString();
+    }
+
+    /**
+     * @param type a Java type
+     * @return the binary name of its erasure, or the name of a primitive type; for an array its type name
+     */
+    String erasedName(TypeMirror type) {
+        if (type.getKind().isPrimitive()) {
+            return type.toString();
+        }
+        TypeMirror erasure = types.erasure(type);
+        if (erasure instanceof DeclaredType declaredType && declaredType.asElement() instanceof TypeElement element) {
+            return name(element);
+        }
+        return erasure.toString();
+    }
+
+    /**
+     * @param type a Java type
+     * @return its class, or {@code null} for a primitive, an array or a type variable
+     */
+    TypeElement element(TypeMirror type) {
+        TypeMirror erasure = types.erasure(type);
+        if (erasure instanceof DeclaredType declaredType && declaredType.asElement() instanceof TypeElement element) {
+            return element;
+        }
+        return null;
+    }
+
+    /**
+     * @param type      a Java type
+     * @param className the qualified name of a class or interface
+     * @return whether the type is that class or interface or a subtype of it; {@code false} if the class is not on the
+     * classpath
+     */
+    boolean isA(TypeMirror type, String className) {
+        TypeElement element = elements.getTypeElement(className);
+        if (element == null || type.getKind().isPrimitive()) {
+            return false;
+        }
+        return types.isAssignable(types.erasure(type), types.erasure(element.asType()));
+    }
+
+    /**
+     * @param type      a Java type
+     * @param className the qualified name of a class
+     * @return whether the erasure of the type is that class
+     */
+    boolean is(TypeMirror type, String className) {
+        TypeElement element = element(type);
+        return element != null && element.getQualifiedName().contentEquals(className);
+    }
+
+    /**
+     * The first type argument of a type, as Micronaut's {@code Argument#getFirstTypeVariable()} gives it: of the
+     * declared type itself, not of a supertype; the upper bound of a wildcard.
+     *
+     * @param type a Java type
+     * @return the first type argument, or {@code null} if the type declares none
+     */
+    TypeMirror firstTypeArgument(TypeMirror type) {
+        if (!(type instanceof DeclaredType declaredType) || declaredType.getTypeArguments().isEmpty()) {
+            return null;
+        }
+        TypeMirror argument = declaredType.getTypeArguments().get(0);
+        if (argument instanceof WildcardType wildcard) {
+            return wildcard.getExtendsBound() != null ? wildcard.getExtendsBound()
+                    : elements.getTypeElement("java.lang.Object").asType();
+        }
+        return argument;
+    }
+
+    /**
+     * @param method a method
+     * @return its name and the erased types of its parameters, as {@code name(java.lang.String, int)}
+     */
+    String signature(ExecutableElement method) {
+        return method.getSimpleName() + "(" + method.getParameters().stream()
+                .map(it -> erasedName(it.asType()))
+                .collect(Collectors.joining(", ")) + ")";
+    }
+
+    /**
+     * @param method a method
+     * @return the binary name of its class, {@code #} and its signature
+     */
+    String describe(ExecutableElement method) {
+        return name((TypeElement) method.getEnclosingElement()) + "#" + signature(method);
+    }
+
+    /**
+     * @param type a type
+     * @return whether it is a root or type resolver, directly or through a supertype (a bean or a contract)
+     */
+    boolean isResolver(TypeElement type) {
+        return hierarchy(type).stream().anyMatch(it -> Annotations.has(it, Annotations.ROOT_RESOLVER)
+                || Annotations.has(it, Annotations.TYPE_RESOLVER));
     }
 
     /**

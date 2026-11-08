@@ -41,6 +41,7 @@ import java.util.Set;
 public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
 
     private final Set<String> typeNames = new LinkedHashSet<>();
+    private int round;
 
     /**
      * Creates the processor; javac does, through {@code META-INF/services/javax.annotation.processing.Processor}.
@@ -65,7 +66,13 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        round++;
         for (TypeElement type : ElementFilter.typesIn(roundEnv.getRootElements())) {
+            if (round > 1 && type.getSimpleName().toString().startsWith("$")) {
+                // generated in this compilation by another processor, under the $ prefix that Micronaut gives its bean
+                // definitions, introspections and AOP proxies: not a class of the application
+                continue;
+            }
             collect(type);
         }
         if (roundEnv.processingOver()) {
@@ -105,8 +112,22 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
         }
 
         TypeDefinitionRegistry registry = SchemaFiles.read(options.sdlDir(), problems);
-        if (registry != null) {
-            new SchemaChecks(registry, options, problems).check();
+        if (registry == null) {
+            problems.report(processingEnv.getMessager());
+            return;
+        }
+        // the checks see each type with the fields of its extensions
+        TypeDefinitionRegistry checked = TypeExtensions.merge(registry);
+        if (new SchemaChecks(checked, options, problems).check()) {
+            if (types.stream().anyMatch(javaTypes::isResolver)) {
+                BindingChecks bindingChecks = new BindingChecks(checked, options, problems, javaTypes, types);
+                bindingChecks.check(checked.schemaDefinition().orElseThrow());
+                bindingChecks.skipped().forEach(problems::note);
+            } else {
+                problems.error(ProcessorOptions.SDL_DIR + " is set, but the compilation has no root or type resolver to "
+                        + "check against the schema. Apply the processor in the module that holds the resolver beans, or "
+                        + "do not set " + ProcessorOptions.SDL_DIR + " here.");
+            }
         }
         problems.report(processingEnv.getMessager());
     }
