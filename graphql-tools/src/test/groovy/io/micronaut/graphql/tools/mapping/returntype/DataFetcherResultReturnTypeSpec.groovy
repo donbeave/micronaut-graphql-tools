@@ -105,7 +105,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message == """The return type of the method is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), DataFetcherResult, Optional (nullable types only), each at most once.
+        e.cause.message == """The return type of the method is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), Publisher (subscription fields only), DataFetcherResult, Optional (nullable types only), each at most once.
   GraphQL object type: Query
   GraphQL field: greeting
   Mapped class: ${NestedQuery.name}
