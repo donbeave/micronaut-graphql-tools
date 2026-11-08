@@ -26,6 +26,9 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
 
+import java.util.List;
+import java.util.Objects;
+
 /**
  * @author Alexey Zhokhov
  */
@@ -39,9 +42,16 @@ public final class GraphQLFactory {
                            GraphQLResolversRegistry graphQLResolversRegistry,
                            TypeDefinitionRegistry typeDefinitionRegistry,
                            SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer,
-                           GraphQLToolsConfiguration configuration) {
+                           GraphQLToolsConfiguration configuration,
+                           List<TypeDefinitionRegistryCustomizer> typeDefinitionRegistryCustomizers,
+                           List<RuntimeWiringCustomizer> runtimeWiringCustomizers,
+                           List<GraphQLSchemaCustomizer> graphQLSchemaCustomizers) {
         SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
         schemaMappingDictionaryCustomizer.customize(schemaMappingDictionary);
+
+        // a copy: the customizers must not change the application's bean
+        TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(typeDefinitionRegistry);
+        typeDefinitionRegistryCustomizers.forEach(customizer -> customizer.customize(registry));
 
         GraphQLSchemaProvider graphQLSchemaProvider = new GraphQLSchemaProvider();
 
@@ -49,19 +59,25 @@ public final class GraphQLFactory {
                 applicationContext,
                 new GraphQLBeanIntrospectionRegistry(),
                 graphQLResolversRegistry,
-                typeDefinitionRegistry,
+                registry,
                 schemaMappingDictionary,
                 graphQLSchemaProvider,
                 configuration
         );
 
-        RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate();
+        RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate(runtimeWiringCustomizers);
 
         // destroys GraphQLResolversRegistry as it no use in runtime after we initialized RuntimeWiring successfully
         applicationContext.destroyBean(graphQLResolversRegistry);
 
         SchemaGenerator schemaGenerator = new SchemaGenerator();
-        GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(typeDefinitionRegistry, runtimeWiring);
+        GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(registry, runtimeWiring);
+
+        for (GraphQLSchemaCustomizer customizer : graphQLSchemaCustomizers) {
+            graphQLSchema = Objects.requireNonNull(customizer.customize(graphQLSchema),
+                    () -> "GraphQLSchemaCustomizer " + customizer.getClass().getName()
+                            + " returned null instead of a schema");
+        }
 
         graphQLSchemaProvider.init(graphQLSchema);
 

@@ -119,6 +119,38 @@ return schemaMappingDictionary -> schemaMappingDictionary
 }
 ```
 
+## Customizing the schema
+
+Three kinds of beans change what the library builds. Each kind may have any number of beans; they run lowest order
+first, by `@Order` on the bean class or factory method, or by `Ordered#getOrder()` if the bean implements `Ordered`.
+
+| Bean type | Receives | Runs |
+|---|---|---|
+| `TypeDefinitionRegistryCustomizer` | a copy of the application's `TypeDefinitionRegistry` bean (the bean itself stays unchanged) | before the binding: types and fields added here need a binding like any other |
+| `RuntimeWiringCustomizer` | the `RuntimeWiring.Builder` that holds the library's wiring | after the binding, before the schema is generated |
+| `GraphQLSchemaCustomizer` | the generated `GraphQLSchema`; returns the schema to use | last |
+
+A `RuntimeWiringCustomizer` may only **add** (scalars, directive wirings, field visibility, ...). If it replaces a data
+fetcher, default data fetcher, type resolver or scalar that the library registered, or the wiring factory, or puts a
+data fetcher or type resolver for a field or type the library wired into a code registry (`builder.codeRegistry(...)`,
+which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
+and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
+providers, are allowed.
+(On graphql-java 25.1 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
+resolver or scalar with `StrictModeWiringException`; 21.3 accepts them silently.) To wrap data fetchers, use a
+`SchemaDirectiveWiring`; to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
+`RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
+`GraphQLSchemaCustomizer` changes.
+
+```java
+@Bean
+@Singleton
+@Order(10)
+public RuntimeWiringCustomizer hideInternalFields() {
+    return builder -> builder.fieldVisibility(BlockedFields.newBlock().addPattern("Query.internal.*").build());
+}
+```
+
 ## Examples
 
 Examples can be found in the [test-suite](test-suite) directory.

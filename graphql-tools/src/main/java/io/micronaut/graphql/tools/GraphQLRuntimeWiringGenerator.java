@@ -165,7 +165,13 @@ final class GraphQLRuntimeWiringGenerator {
                 .scalar(ExtendedScalars.GraphQLBigInteger);
     }
 
-    RuntimeWiring generate() {
+    /**
+     * Wires every field the library binds, then applies the customizers.
+     *
+     * @param customizers the {@link RuntimeWiringCustomizer} beans, in {@code Ordered} order
+     * @return the runtime wiring
+     */
+    RuntimeWiring generate(List<RuntimeWiringCustomizer> customizers) {
         long start = System.nanoTime();
 
         try {
@@ -187,6 +193,8 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(processUnreachableTypes(schemaDefinition)));
+
+            RuntimeWiringCustomizers.apply(rootRuntimeWiringBuilder, customizers, typeDefinitionRegistry);
 
             return rootRuntimeWiringBuilder.build();
         } finally {
