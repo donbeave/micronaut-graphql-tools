@@ -10,7 +10,7 @@ spock = "2.3-groovy-4.0"
 apollo = "4.4.1"
 jetbrains-annotations = "24.0.1"
 
-managed-graphql-java-extended-scalars = "20.2"
+managed-graphql-java-extended-scalars = "21.0"
 
 [libraries]
 # Core
