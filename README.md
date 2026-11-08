@@ -229,6 +229,56 @@ The method `missing` not found in any root resolvers: [example.BookQuery].
 
 `getMappingContext().getCoordinate()` and `getMappingContext().getSourceLocation()` give the same information to code.
 
+## Binding manifest
+
+The `BindingManifest` bean says what the schema is bound to: one line per schema coordinate, naming the Java member
+that serves it, in a stable text format (`graphql-binding-manifest 1`) that can be checked into a repository and
+diffed. Getting the bean binds the schema first. With `micronaut.graphql.tools.manifest.enabled: true` it is written
+at startup to `micronaut.graphql.tools.manifest.path` (directories are created), or logged at INFO when no path is
+set.
+
+```
+# graphql-binding-manifest 1
+# binder: micronaut-graphql-tools 1.0.0
+# graphql-java: 21.3
+# schema-sha256: 207c5aaec4894a775f03ae20eaa6b97ba4293ed6608936aa65c812af3a469469
+!unreachable Legacy
+Book → object · example.data.Book · - · -
+Book.sellers: [BookSeller!]! → resolver · example.graphql.type.resolver.BookResolver#sellers(example.data.Book, graphql.schema.DataFetchingEnvironment) · java.util.concurrent.CompletionStage<java.util.List<example.data.BookSeller>> · java.util.List<example.data.BookSeller>
+Book.title: String! → property · example.data.Book#getTitle() · java.lang.String · java.lang.String
+Error → union · example.graphql.type.Error · - · -
+Error/SecurityError → resolves · example.graphql.type.SecurityError · - · -
+Query.allBooks: [Book!]! → root · example.graphql.query.AllBooksQuery#allBooks() · java.util.List<example.data.Book> · java.util.List<example.data.Book>
+SecurityErrorCode.NOT_AUTHENTICATED → enumValue · example.graphql.type.SecurityErrorCode#NOT_AUTHENTICATED · - · -
+SignUpInput.username: String! → inputField · example.graphql.input.SignUpInput#username · java.lang.String · java.lang.String
+String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
+```
+
+- The header names the format, the library version (`unknown` outside a jar), the graphql-java version and the SHA-256
+  of the schema definitions (sorted by name, printed by graphql-java's `AstPrinter`).
+- Type lines: `object`, `interface`, `union`, `enum`, `input` with their Java type, `scalar` with its `Coercing` class
+  (only scalars that a bound field, argument or input field uses). Root operation types have no Java type (`-`).
+- Field lines: `Type.field(argument: Type): Type → kind · member · declared type · converted type`. The kind is `root`,
+  `resolver` (a type resolver method, also of an interface) or `property` (a getter or a `@GraphQLField` method of the
+  Java type). Methods are written `Class#method(parameter types)` with every Java parameter, on the class the method
+  is written in (AOP proxies are unwrapped; an inherited `@GraphQLField` method on its superclass); getters on the
+  class that declares them. The converted type is the
+  declared type without `CompletionStage`, `Publisher` (subscription fields only), `DataFetcherResult` (also per list
+  element) and `Optional`, unwrapped once in that order. Interface fields have no lines of their own: each object type
+  that implements them has its line.
+- `resolves` lines map each member of a union and each implementation of an interface to its Java type;
+  `enumValue` and `inputField` lines list enum values and input fields.
+- Lines starting with `!` are findings: `!unreachable Type` for a declared type nothing binds (allowed or ignored, see
+  [Configuration](#configuration); an enum, input or scalar type that an argument of a directive definition uses,
+  directly or through input fields, is reached), `!ambiguous Type.field · member | member` for a field decided by a lenient
+  `precedence`.
+- Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from the reflected method or getter.
+  Where reflection cannot find it (for example a native image without reflection configuration), they are written from
+  Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
+  `java.util.List<Book>`), no raw types (`List` is written `java.util.List<java.lang.Object>`) and no type arguments of
+  array components (`List<String>[]` is written `java.util.List[]`). The body is sorted by `String#compareTo`, UTF-8,
+  `LF`; nothing is escaped, and a part that would contain ` → ` or ` · ` fails instead.
+
 ## Configuration
 
 | Property | Values (default first) | Meaning |
@@ -237,6 +287,8 @@ The method `missing` not found in any root resolvers: [example.BookQuery].
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
+| `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). |
+| `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
 
 ```yaml
 micronaut:

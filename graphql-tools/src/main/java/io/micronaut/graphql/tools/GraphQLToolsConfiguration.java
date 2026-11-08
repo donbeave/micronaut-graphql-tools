@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools;
 
 import io.micronaut.context.annotation.ConfigurationProperties;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArgumentUtils;
 
 import java.util.Collections;
@@ -118,6 +119,53 @@ public class GraphQLToolsConfiguration {
     public void setResolverDirectives(@NonNull List<String> resolverDirectives) {
         ArgumentUtils.requireNonNull("resolverDirectives", resolverDirectives);
         this.resolverDirectives = List.copyOf(resolverDirectives);
+    }
+
+    /**
+     * Options of the binding manifest, under {@value GraphQLToolsConfiguration#PREFIX}{@code .manifest}.
+     */
+    @ConfigurationProperties("manifest")
+    public static class ManifestConfiguration {
+
+        private boolean enabled;
+        @Nullable
+        private String path;
+
+        /**
+         * @return whether the binding manifest is written at startup
+         */
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        /**
+         * Sets whether the binding manifest is written at startup: to {@link #getPath()}, or to the log when no path is
+         * set. Default: {@code false}. The {@link BindingManifest} bean is available either way.
+         *
+         * @param enabled whether to write it
+         */
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        /**
+         * @return the file the binding manifest is written to, or {@code null} to log it
+         */
+        @Nullable
+        public String getPath() {
+            return path;
+        }
+
+        /**
+         * Sets the file the binding manifest is written to at startup; its directories are created. Default: none,
+         * the manifest is logged at INFO.
+         *
+         * @param path the file
+         */
+        public void setPath(@Nullable String path) {
+            this.path = path;
+        }
+
     }
 
     /**
