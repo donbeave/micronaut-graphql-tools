@@ -76,6 +76,11 @@ public final class GraphQLResolversRegistry {
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
 
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
+        if (method.isAbstract()) {
+            // the declaration of an abstract superclass the bean inherits the annotation from: its implementation in the
+            // bean is registered too, and is the one method that binds
+            return;
+        }
         rootResolvers.stream()
                 .filter(it -> it.getBeanDefinition().equals(beanDefinition))
                 .findFirst()
@@ -88,6 +93,10 @@ public final class GraphQLResolversRegistry {
     }
 
     public void registerTypeResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
+        if (method.isAbstract()) {
+            // as for root resolvers: the implementation in the bean is the method that binds
+            return;
+        }
         getTypeResolverValue(beanDefinition);
 
         // the contracts of the bean are read when the binding starts, see resolveTypeResolverMethods()
