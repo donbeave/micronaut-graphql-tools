@@ -9,6 +9,9 @@ dependencies {
 
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)
+    // parity tests compile fixtures with Micronaut's processors too and start them, see Compilation#withMicronaut()
+    testImplementation(mn.micronaut.inject.java)
+    testRuntimeOnly(libs.logback.classic)
 }
 
 micronautBuild {

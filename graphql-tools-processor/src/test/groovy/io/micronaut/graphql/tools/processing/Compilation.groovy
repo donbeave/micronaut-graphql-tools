@@ -33,11 +33,78 @@ import java.nio.file.Path
 @CompileStatic
 class Compilation {
 
+    /**
+     * The schema of a compilation {@link #withMicronaut()}, parsed at startup from the schema directory, one file after
+     * the other.
+     */
+    static final String SCHEMA_FACTORY = '''
+package startup;
+
+import graphql.schema.idl.SchemaParser;
+import graphql.schema.idl.TypeDefinitionRegistry;
+import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Value;
+import jakarta.inject.Singleton;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
+
+@Factory
+public class SchemaFactory {
+    @Singleton
+    TypeDefinitionRegistry typeDefinitionRegistry(@Value("${startup.sdl-dir}") String sdlDir) {
+        TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
+        try (Stream<Path> files = Files.walk(Path.of(sdlDir))) {
+            files.filter(Files::isRegularFile).sorted().forEach(file -> {
+                try {
+                    registry.merge(new SchemaParser().parse(Files.readString(file)));
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return registry;
+    }
+}
+'''
+
+    /**
+     * Starts the application of a compilation {@link #withMicronaut()} and returns its binding manifest, or the error
+     * of the startup.
+     */
+    static final String STARTUP = '''
+package startup;
+
+import io.micronaut.context.ApplicationContext;
+import io.micronaut.graphql.tools.BindingManifest;
+import java.util.Map;
+
+public final class Startup {
+    public static String manifest(Map<String, Object> properties) {
+        try (ApplicationContext context = ApplicationContext.run(properties)) {
+            return context.getBean(BindingManifest.class).render();
+        } catch (RuntimeException e) {
+            Throwable cause = e;
+            while (cause.getCause() != null) {
+                cause = cause.getCause();
+            }
+            return "FAILED: " + cause.getMessage();
+        }
+    }
+}
+'''
+
     private final Map<String, String> sources = new LinkedHashMap<>()
     private final Map<String, String> schemaFiles = new LinkedHashMap<>()
     private final Map<String, String> options = new LinkedHashMap<>()
     private final List<File> classpath = []
     private boolean sdlDir = true
+    private boolean micronaut
+    private boolean checks = true
     private File output
     private final List<Processor> extraProcessors = []
 
@@ -74,6 +141,25 @@ class Compilation {
     Compilation withoutSdlDir() {
         sdlDir = false
         return this
+    }
+
+    /**
+     * Compiles with every annotation processor of the test classpath, Micronaut's included, as a build that applies
+     * this processor next to Micronaut's does, so that {@link Result#startupManifest} can start the result.
+     */
+    Compilation withMicronaut() {
+        micronaut = true
+        sources.put('startup.SchemaFactory', SCHEMA_FACTORY)
+        sources.put('startup.Startup', STARTUP)
+        return this
+    }
+
+    /**
+     * Compiles {@link #withMicronaut()} but without this processor: only the startup checks the bindings.
+     */
+    Compilation withMicronautOnly() {
+        checks = false
+        return withMicronaut()
     }
 
     /**
@@ -132,10 +218,27 @@ class Compilation {
 
         List<JavaFileObject> units = sources.collect { name, content -> (JavaFileObject) new Source(name, content) }
         JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, diagnostics, arguments, null, units)
-        List<Processor> processors = [(Processor) new GraphQLSchemaBindingProcessor()]
-        processors.addAll(extraProcessors)
-        task.setProcessors(processors)
-        boolean success = task.call()
+        boolean success
+        if (micronaut) {
+            // Micronaut's processor copies the -Amicronaut.* options into the system properties, where a later startup
+            // would read them as configuration
+            Properties systemProperties = (Properties) System.properties.clone()
+            if (!checks) {
+                task.setProcessors(ServiceLoader.load(Processor, getClass().classLoader).findAll {
+                    !(it instanceof GraphQLSchemaBindingProcessor)
+                })
+            }
+            try {
+                success = task.call()
+            } finally {
+                System.properties = systemProperties
+            }
+        } else {
+            List<Processor> processors = [(Processor) new GraphQLSchemaBindingProcessor()]
+            processors.addAll(extraProcessors)
+            task.setProcessors(processors)
+            success = task.call()
+        }
         fileManager.close()
         return new Result(success, diagnostics.diagnostics, classes.toFile(), schemaDir.toFile())
     }
@@ -156,6 +259,47 @@ class Compilation {
             this.diagnostics = diagnostics
             this.classOutput = classOutput
             this.schemaDir = schemaDir
+        }
+
+        /**
+         * @return the binding manifest the processor wrote to the class output, or {@code null} if it wrote none
+         */
+        String getManifest() {
+            File file = new File(classOutput, BindingManifestLines.PATH)
+            return file.isFile() ? Files.readString(file.toPath(), StandardCharsets.UTF_8) : null
+        }
+
+        /**
+         * @return the record of what the manifest leaves out, or {@code null} if the processor wrote none
+         */
+        String getOmitted() {
+            File file = new File(classOutput, BindingManifestLines.OMITTED_PATH)
+            return file.isFile() ? Files.readString(file.toPath(), StandardCharsets.UTF_8) : null
+        }
+
+        /**
+         * Starts the compiled application (a compilation {@link Compilation#withMicronaut()}) with the schema files of
+         * the compilation and returns the binding manifest of the startup, as {@code BindingManifest#render()}, or
+         * {@code FAILED: <message>} if the startup fails. The application runs in a class loader of its own, so that
+         * Micronaut's caches (the bean introspections) see only its classes.
+         *
+         * @param properties the configuration, such as {@code micronaut.graphql.tools.strict: false}
+         */
+        String startupManifest(Map<String, Object> properties = [:]) {
+            List<URL> urls = [classOutput.toURI().toURL()]
+            System.getProperty('java.class.path').split(File.pathSeparator).each { urls.add(new File(it).toURI().toURL()) }
+            URLClassLoader loader = new URLClassLoader(urls as URL[], ClassLoader.platformClassLoader)
+            Thread thread = Thread.currentThread()
+            ClassLoader previous = thread.contextClassLoader
+            try {
+                thread.contextClassLoader = loader
+                Map<String, Object> configuration = new LinkedHashMap<>(properties)
+                configuration.put('startup.sdl-dir', schemaDir.absolutePath)
+                return (String) loader.loadClass('startup.Startup').getMethod('manifest', Map).invoke(null, configuration)
+            } finally {
+                thread.contextClassLoader = previous
+                loader.close()
+            }
         }
 
         /**

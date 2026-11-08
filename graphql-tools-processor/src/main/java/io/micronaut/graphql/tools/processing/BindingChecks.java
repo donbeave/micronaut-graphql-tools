@@ -44,8 +44,11 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,6 +59,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The checks of the Java code against the schema. They walk the schema from the root operation types the way the
@@ -112,8 +116,16 @@ final class BindingChecks {
     private final Set<String> traversedModelClasses = new TreeSet<>();
     private final Map<Method, Set<String>> boundMethods = new IdentityHashMap<>();
     private final Map<Method, Boolean> shadowedMethods = new IdentityHashMap<>();
+    private final BindingManifestLines manifest;
+    private final TypeNames typeNames;
     private final Map<String, String> skipped = new TreeMap<>();
     private boolean objectTypesSkipped;
+    // what the manifest leaves out: types whose lines are left out, types to leave out with what only they reach, fields,
+    // and resolver methods whose !unbound line cannot be decided
+    private final Set<String> omittedTypes = new TreeSet<>();
+    private final Set<String> omissionRoots = new TreeSet<>();
+    private final Set<String> omittedFields = new TreeSet<>();
+    private final Set<String> undecidedMembers = new TreeSet<>();
 
     /**
      * @param registry  the schema
@@ -121,9 +133,10 @@ final class BindingChecks {
      * @param problems  where errors are reported
      * @param javaTypes the type helpers
      * @param types     the types of the compilation
+     * @param manifest  where the lines of the binding manifest are recorded
      */
     BindingChecks(TypeDefinitionRegistry registry, ProcessorOptions options, Problems problems, JavaTypes javaTypes,
-                  Collection<TypeElement> types) {
+                  Collection<TypeElement> types, BindingManifestLines manifest) {
         this.registry = registry;
         this.options = options;
         this.problems = problems;
@@ -131,6 +144,8 @@ final class BindingChecks {
         this.types = types;
         this.beans = new ResolverBeans(javaTypes, types);
         this.models = new ModelMembers(javaTypes, types);
+        this.manifest = manifest;
+        this.typeNames = new TypeNames(javaTypes);
     }
 
     /**
@@ -179,6 +194,7 @@ final class BindingChecks {
 
         for (OperationTypeDefinition operation : schemaDefinition.getOperationTypeDefinitions()) {
             registry.getType(operation.getTypeName().getName(), ObjectTypeDefinition.class).ifPresent(type -> {
+                manifest.type(type.getName(), "object", null);
                 for (FieldDefinition field : type.getFieldDefinitions()) {
                     bindRootField(type, field);
                 }
@@ -188,6 +204,7 @@ final class BindingChecks {
         checkUnboundMethods();
         checkSharedRootMethods();
         checkSchemaCoordinateBindings(schemaDefinition);
+        recordImplementedInterfaces();
     }
 
     // ---------------------------------------------------------------- contracts and coordinates (before binding)
@@ -339,6 +356,8 @@ final class BindingChecks {
         }
         Method method = candidates.get(0);
         bound(method, coordinate);
+        recordField(type, field, "root", beanMethodMember(method), method.element().getReturnType(),
+                type.getName().equals(subscriptionType));
         checkMethod(method.element(), method.bean().type(), null, type, field);
     }
 
@@ -368,8 +387,10 @@ final class BindingChecks {
         if (models.usesFieldAccess(introspected.get())) {
             skip(type.getName(), javaTypes.name(introspected.get()) + " is introspected with accessKind = FIELD, which the "
                     + "processor does not model", true);
+            omittedTypes.add(type.getName());
             return;
         }
+        manifest.type(type.getName(), "object", javaTypes.name(introspected.get()));
         TypeElement sourceClass = models.sourceClass(introspected.get());
         traversedModelClasses.add(javaTypes.name(sourceClass));
 
@@ -445,6 +466,7 @@ final class BindingChecks {
                 } else {
                     skip(type.getName(), "the Java interface " + javaTypes.name(javaClass) + " has no introspection of its "
                             + "own and no implementation in this compilation", true);
+                    omittedTypes.add(type.getName());
                 }
                 return Optional.empty();
             }
@@ -477,6 +499,7 @@ final class BindingChecks {
             } else {
                 skip(type.getName(), javaTypes.name(javaClass) + " is not in this compilation and carries no "
                         + "introspection annotation", true);
+                omittedTypes.add(type.getName());
             }
             return Optional.empty();
         }
@@ -536,7 +559,12 @@ final class BindingChecks {
         if (!missing.isEmpty()) {
             problems.error(type.getName(), "the Java enum " + javaTypes.name(javaClass) + " has no constant for the "
                     + "schema values " + missing + ".", type, javaClass);
+        } else {
+            manifest.type(type.getName(), "enum", javaTypes.name(javaClass));
+            values.forEach(it -> manifest.enumValue(type.getName(), it, javaTypes.name(javaClass)));
         }
+        constants.stream().map(it -> it.getSimpleName().toString()).filter(it -> !values.contains(it)).sorted()
+                .forEach(it -> manifest.diagnostic("unbound", javaTypes.name(javaClass) + "#" + it));
         if (options.strict()) {
             for (Element constant : constants) {
                 if (!values.contains(constant.getSimpleName().toString())) {
@@ -562,8 +590,11 @@ final class BindingChecks {
             return;
         }
         if (mapType(type, javaClass, coordinate, node, element)) {
+            manifest.type(type.getName(), type instanceof UnionTypeDefinition ? "union" : "interface",
+                    javaTypes.name(javaClass));
             skip(type.getName(), "the Java classes of its object types come from the SchemaMappingDictionary, "
                     + "a runtime bean", true);
+            omissionRoots.addAll(memberTypes(type));
         }
     }
 
@@ -592,12 +623,14 @@ final class BindingChecks {
             } else {
                 skip(type.getName(), javaTypes.name(javaClass) + " is not in this compilation and carries no "
                         + "introspection annotation", false);
+                omittedTypes.add(type.getName());
             }
             return;
         }
         if (models.usesFieldAccess(javaClass)) {
             skip(type.getName(), javaTypes.name(javaClass) + " is introspected with accessKind = FIELD, which the processor "
                     + "does not model", false);
+            omittedTypes.add(type.getName());
             return;
         }
 
@@ -611,6 +644,9 @@ final class BindingChecks {
                 continue;
             }
             checkInputType(property.type(), field.getType(), true, fieldCoordinate, field, property.accessor());
+            manifest.inputField(type.getName(), field.getName(), field.getType(), javaTypes.name(javaClass),
+                    property.name(), typeNames.render(declaredType(property)),
+                    typeNames.converted(declaredType(property), false));
             if (options.detectOmission() && javaTypes.is(property.type(), ARGUMENT_VALUE)) {
                 boolean writeOnly = !property.accessor().getParameters().isEmpty();
                 if (!property.settable() || writeOnly) {
@@ -629,6 +665,8 @@ final class BindingChecks {
                 .filter(it -> !fields.contains(it))
                 .sorted()
                 .toList();
+        unmapped.forEach(it -> manifest.diagnostic("unbound", javaTypes.name(javaClass) + "#" + it));
+        manifest.type(type.getName(), "input", javaTypes.name(javaClass));
         if (options.failOnUnmappedProperties() && !unmapped.isEmpty()) {
             problems.error(type.getName(), "the input class " + javaTypes.name(javaClass) + " has properties that "
                     + "the input type does not define, so no request can set them: " + String.join(", ", unmapped)
@@ -671,6 +709,14 @@ final class BindingChecks {
                     resolvers.forEach(it -> shadowedMethods.put(it, true));
                     return;
                 }
+                if (directive == null) {
+                    // the precedence decides; the manifest records that it had to
+                    manifest.diagnostic("ambiguous", coordinate, Stream.concat(
+                            Stream.of(property.map(it -> propertyMember(it, introspected))
+                                    .orElseGet(() -> methodMember(fieldMethods.get(0)))),
+                            resolvers.stream().map(this::beanMethodMember).sorted())
+                            .collect(Collectors.joining(" | ")));
+                }
                 if (directive == null && options.precedence() == ProcessorOptions.Precedence.PROPERTY_FIRST) {
                     resolvers.forEach(it -> shadowedMethods.put(it, true));
                     bindMember(type, field, introspected, property, fieldMethods);
@@ -684,6 +730,7 @@ final class BindingChecks {
                     && hasInterfaceResolver(introspected, field.getName())) {
                 skip(coordinate, "a type resolver of a Java interface of " + javaTypes.name(introspected)
                         + " has a method " + field.getName() + " and may bind it", true);
+                omitField(type, field);
                 return;
             }
             if (directive != null) {
@@ -700,6 +747,7 @@ final class BindingChecks {
             if (declaredByInterface && hasInterfaceResolver(introspected, field.getName())) {
                 skip(coordinate, "a type resolver of a Java interface of " + javaTypes.name(introspected)
                         + " has a method " + field.getName() + " and may bind it", true);
+                omitField(type, field);
                 return;
             }
             problems.error(coordinate, "nothing binds the field: " + javaTypes.name(introspected)
@@ -716,6 +764,8 @@ final class BindingChecks {
         String coordinate = type.getName() + "." + field.getName();
         if (property.isPresent()) {
             ExecutableElement accessor = property.get().accessor();
+            recordField(type, field, "property", propertyMember(property.get(), introspected),
+                    declaredType(property.get()), false);
             if (!field.getInputValueDefinitions().isEmpty()) {
                 problems.error(coordinate, "the field has " + field.getInputValueDefinitions().size()
                         + " argument(s), but the property " + javaTypes.describe(accessor) + " takes none. Bind it with "
@@ -726,6 +776,7 @@ final class BindingChecks {
             return;
         }
         ExecutableElement method = fieldMethods.get(0);
+        recordField(type, field, "property", methodMember(method), method.getReturnType(), false);
         checkMethod(method, introspected, null, type, field);
     }
 
@@ -740,6 +791,7 @@ final class BindingChecks {
         }
         Method method = resolvers.get(0);
         bound(method, coordinate);
+        recordField(type, field, "resolver", beanMethodMember(method), method.element().getReturnType(), false);
         checkMethod(method.element(), method.bean().type(), sourceClass, type, field);
     }
 
@@ -1047,12 +1099,10 @@ final class BindingChecks {
     // ---------------------------------------------------------------- after binding
 
     /**
-     * Strict mode: every method of a resolver bean that can bind a field must bind one.
+     * Every method of a resolver bean that can bind a field must bind one: a strict-mode error, and an
+     * {@code !unbound} line of the manifest without strict mode.
      */
     private void checkUnboundMethods() {
-        if (!options.strict()) {
-            return;
-        }
         for (Bean bean : beans.beans()) {
             for (Method method : bean.methods()) {
                 if (!bean.isCandidate(method) || method.objectMethod() || boundMethods.containsKey(method)
@@ -1060,6 +1110,11 @@ final class BindingChecks {
                     continue;
                 }
                 if (!bean.root() && !reachedModelClass(bean, method)) {
+                    undecidedMembers.add(beanMethodMember(method));
+                    continue;
+                }
+                manifest.diagnostic("unbound", beanMethodMember(method));
+                if (!options.strict()) {
                     continue;
                 }
                 problems.error(javaTypes.describe(method.element()), "the resolver method binds no schema field "
@@ -1139,6 +1194,144 @@ final class BindingChecks {
     private String describeBinding(String typeName) {
         TypeElement javaType = processedTypes.get(typeName);
         return javaType == null ? "" : " (" + typeName + " is mapped to " + javaTypes.name(javaType) + ")";
+    }
+
+    // ---------------------------------------------------------------- manifest
+
+    /**
+     * What the manifest leaves out, because the startup decides it with runtime beans, as the lines of
+     * {@value BindingManifestLines#OMITTED_PATH}: the line kinds the processor never writes, every type whose lines it
+     * leaves out (the types it skipped, and every type that only the skipped parts reach: members of unions and
+     * interfaces and what they reach), fields, and resolver methods whose {@code !unbound} line it cannot decide.
+     *
+     * @return the lines, sorted within each kind
+     */
+    List<String> omissions() {
+        Set<String> types = new TreeSet<>(omittedTypes);
+        Deque<String> pending = new ArrayDeque<>(omissionRoots);
+        pending.addAll(omittedTypes);
+        Set<String> visited = new HashSet<>();
+        while (!pending.isEmpty()) {
+            String name = pending.poll();
+            if (!visited.add(name)) {
+                continue;
+            }
+            if (!processedTypes.containsKey(name) && !operationTypes.contains(name) && !manifest.hasType(name)
+                    && registry.getType(name).filter(it -> !(it instanceof ScalarTypeDefinition)).isPresent()) {
+                // scalar lines are left out as a kind
+                types.add(name);
+            }
+            if (processedTypes.containsKey(name) && !omittedTypes.contains(name)) {
+                // bound here: what it reaches was bound or omitted on its own
+                continue;
+            }
+            pending.addAll(reachedTypes(name));
+        }
+        List<String> result = new ArrayList<>(List.of("kind resolves", "kind scalar", "kind unusedDictionary"));
+        types.forEach(it -> result.add("type " + it));
+        omittedFields.forEach(it -> result.add("field " + it));
+        undecidedMembers.forEach(it -> result.add("unbound " + it));
+        return result;
+    }
+
+    private List<String> memberTypes(TypeDefinition<?> type) {
+        if (type instanceof UnionTypeDefinition union) {
+            return union.getMemberTypes().stream().map(SchemaChecks::typeName).toList();
+        }
+        if (type instanceof InterfaceTypeDefinition iface) {
+            return registry.getImplementationsOf(iface).stream().map(ObjectTypeDefinition::getName).toList();
+        }
+        return List.of();
+    }
+
+    private void omitField(ObjectTypeDefinition type, FieldDefinition field) {
+        omittedFields.add(type.getName() + "." + field.getName());
+        omissionRoots.add(SchemaChecks.typeName(field.getType()));
+        field.getInputValueDefinitions().forEach(it -> omissionRoots.add(SchemaChecks.typeName(it.getType())));
+    }
+
+    /**
+     * @return the types the binding of a type reaches: of its fields, arguments and input fields, its members or
+     * implementations, and the interfaces it implements
+     */
+    private List<String> reachedTypes(String name) {
+        List<String> result = new ArrayList<>();
+        TypeDefinition<?> type = registry.getType(name).orElse(null);
+        if (type instanceof ObjectTypeDefinition object) {
+            object.getFieldDefinitions().forEach(field -> {
+                result.add(SchemaChecks.typeName(field.getType()));
+                field.getInputValueDefinitions().forEach(it -> result.add(SchemaChecks.typeName(it.getType())));
+            });
+            object.getImplements().forEach(it -> result.add(SchemaChecks.typeName(it)));
+        } else if (type instanceof InterfaceTypeDefinition || type instanceof UnionTypeDefinition) {
+            result.addAll(memberTypes(type));
+        } else if (type instanceof InputObjectTypeDefinition input) {
+            input.getInputValueDefinitions().forEach(it -> result.add(SchemaChecks.typeName(it.getType())));
+        }
+        return result;
+    }
+
+    /**
+     * An interface that no field returns but that a bound object type implements, as the library's
+     * {@code wireInterfaceTypeResolvers}. The object types bound through the {@code SchemaMappingDictionary} are not
+     * known here, so an interface only they implement has no line.
+     */
+    private void recordImplementedInterfaces() {
+        registry.getTypes(InterfaceTypeDefinition.class).stream()
+                .filter(it -> !processedTypes.containsKey(it.getName()))
+                .filter(it -> registry.getImplementationsOf(it).stream()
+                        .anyMatch(implementation -> processedTypes.containsKey(implementation.getName())))
+                .forEach(it -> manifest.type(it.getName(), "interface", null));
+    }
+
+    private void recordField(ObjectTypeDefinition type, FieldDefinition field, String kind, String member,
+                             TypeMirror declaredType, boolean subscription) {
+        manifest.field(type, field, kind, member, typeNames.render(declaredType),
+                typeNames.converted(declaredType, subscription));
+    }
+
+    /**
+     * @param property a property
+     * @return its type as its getter declares it (or its setter, without a getter), as reflection gives it to the
+     * library's manifest: a type variable of a generic superclass stays a type variable
+     */
+    private static TypeMirror declaredType(Property property) {
+        ExecutableElement accessor = property.accessor();
+        return accessor.getParameters().isEmpty() ? accessor.getReturnType() : accessor.getParameters().get(0).asType();
+    }
+
+    /**
+     * @param method a method of a resolver bean
+     * @return {@code Bean#method(generic parameter types)}: the class is the bean, also for a method it inherits, as the
+     * library's manifest names a resolver method (Micronaut's executable method of the bean, AOP proxy unwrapped); the
+     * parameter types are those of the declaration, as reflection gives them
+     */
+    private String beanMethodMember(Method method) {
+        return method.bean().name() + "#" + method.element().getSimpleName() + typeNames.parameters(method.element());
+    }
+
+    /**
+     * @param method a {@code @GraphQLField} method of a model
+     * @return {@code Class#method(generic parameter types)}, the class being the one the method is written in, as the
+     * library's manifest names a method of an introspection
+     */
+    private String methodMember(ExecutableElement method) {
+        return javaTypes.name((TypeElement) method.getEnclosingElement()) + "#" + method.getSimpleName()
+                + typeNames.parameters(method);
+    }
+
+    /**
+     * @param property     a property
+     * @param introspected the introspected type
+     * @return {@code Class#getter()}, the class being the one that declares the getter (or record accessor); for a
+     * property without one, {@code IntrospectedType#property}, as the library's manifest names a property
+     */
+    private String propertyMember(Property property, TypeElement introspected) {
+        ExecutableElement accessor = property.accessor();
+        if (accessor.getParameters().isEmpty()) {
+            return javaTypes.name((TypeElement) accessor.getEnclosingElement()) + "#" + accessor.getSimpleName() + "()";
+        }
+        return javaTypes.name(introspected) + "#" + property.name();
     }
 
     // ---------------------------------------------------------------- messages

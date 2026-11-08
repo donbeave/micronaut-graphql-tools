@@ -38,6 +38,7 @@ import java.util.TreeSet;
  * @param unmappedProperties how input class properties without an input field are handled: {@code fail},
  *                           {@code ignore} or {@code null} to follow strict mode
  * @param detectOmission     whether {@code ArgumentValue} parameters and input properties are enabled
+ * @param manifest           whether the binding manifest is written
  */
 record ProcessorOptions(String sdlDir,
                         boolean strict,
@@ -46,7 +47,8 @@ record ProcessorOptions(String sdlDir,
                         Set<String> allowUnreachable,
                         boolean ignoreUnreachable,
                         String unmappedProperties,
-                        boolean detectOmission) {
+                        boolean detectOmission,
+                        boolean manifest) {
 
     /**
      * The prefix of every option.
@@ -96,10 +98,16 @@ record ProcessorOptions(String sdlDir,
     static final String DETECT_OMISSION = PREFIX + "input.detectOmission";
 
     /**
+     * {@code true} or {@code false}; default {@code true}: the binding manifest is written to the class output, as
+     * {@code META-INF/micronaut-graphql-tools/binding-manifest.txt}.
+     */
+    static final String MANIFEST = PREFIX + "manifest";
+
+    /**
      * Every option name.
      */
     static final Set<String> NAMES = Set.of(SDL_DIR, STRICT, PRECEDENCE, RESOLVER_DIRECTIVES, ALLOW_UNREACHABLE,
-            UNREACHABLE_TYPES, UNMAPPED_PROPERTIES, DETECT_OMISSION);
+            UNREACHABLE_TYPES, UNMAPPED_PROPERTIES, DETECT_OMISSION, MANIFEST);
 
     /**
      * How a field is bound when both a member of its Java type and a type resolver method can bind it.
@@ -164,6 +172,8 @@ record ProcessorOptions(String sdlDir,
             }
         }
 
+        boolean manifest = bool(options, MANIFEST, true, problems);
+
         String sdlDir = options.get(SDL_DIR);
         return new ProcessorOptions(
                 sdlDir == null || sdlDir.isBlank() ? null : sdlDir.trim(),
@@ -173,7 +183,8 @@ record ProcessorOptions(String sdlDir,
                 new TreeSet<>(list(options.get(ALLOW_UNREACHABLE))),
                 unreachableTypes.equals("ignore"),
                 unmappedProperties,
-                bool(options, DETECT_OMISSION, false, problems)
+                bool(options, DETECT_OMISSION, false, problems),
+                manifest
         );
     }
 

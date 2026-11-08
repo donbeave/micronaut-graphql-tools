@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 /**
@@ -67,6 +68,7 @@ final class SchemaChecks {
     private final TypeDefinitionRegistry registry;
     private final ProcessorOptions options;
     private final Problems problems;
+    private final Set<String> unreachableLines = new TreeSet<>();
 
     /**
      * @param registry the schema
@@ -95,6 +97,15 @@ final class SchemaChecks {
         }
         checkUnreachableTypes(schemaDefinition.get());
         return true;
+    }
+
+    /**
+     * @return the types the binding manifest lists as {@code !unreachable}, as at startup: the unreachable object,
+     * interface and union types that are allowed (all of them with {@code unreachableTypes=ignore}) and every unused
+     * enum, input and scalar type
+     */
+    Set<String> unreachableLines() {
+        return unreachableLines;
     }
 
     private void checkResolverDirectives() {
@@ -197,6 +208,10 @@ final class SchemaChecks {
             }
         }
 
+        unreachableLines.addAll(unreachableValueTypes.keySet());
+        unreachable.keySet().stream()
+                .filter(it -> options.ignoreUnreachable() || options.allowUnreachable().contains(it))
+                .forEach(unreachableLines::add);
         if (options.ignoreUnreachable()) {
             return;
         }

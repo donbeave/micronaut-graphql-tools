@@ -263,9 +263,10 @@ String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
   (only scalars that a bound field, argument or input field uses). Root operation types have no Java type (`-`).
 - Field lines: `Type.field(argument: Type): Type → kind · member · declared type · converted type`. The kind is `root`,
   `resolver` (a type resolver method, also of an interface) or `property` (a getter or a `@GraphQLField` method of the
-  Java type). Methods are written `Class#method(parameter types)` with every Java parameter, on the class the method
-  is written in (AOP proxies are unwrapped; an inherited `@GraphQLField` method on its superclass); getters on the
-  class that declares them. The converted type is the
+  Java type). Methods are written `Class#method(parameter types)` with every Java parameter: a root or type resolver
+  method on its bean class, also when the bean inherits it (AOP proxies are unwrapped), a `@GraphQLField` method on the
+  class it is written in; getters on the class that declares them. Parameter and declared types are those of the
+  declaration, so a type variable of a generic superclass stays a type variable (`T`). The converted type is the
   declared type without `CompletionStage`, `Publisher` (subscription fields only), `DataFetcherResult` (also per list
   element) and `Optional`, unwrapped once in that order. Interface fields have no lines of their own: each object type
   that implements them has its line.
@@ -537,6 +538,7 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 | `micronaut.graphql.tools.unreachableTypes` | `unreachable-types` |
 | `micronaut.graphql.tools.input.unmappedProperties` | `input.unmapped-properties` |
 | `micronaut.graphql.tools.input.detectOmission` | `input.detect-omission` |
+| `micronaut.graphql.tools.manifest` | none: `true` (default) writes the [binding manifest](#the-manifest-as-a-build-artifact) to the class output, `false` does not |
 
 Checked from the schema files and the options alone:
 
@@ -597,6 +599,47 @@ green compilation says what it left out:
   interface, or one of the compilation, without an implementation fails);
 - a model or input class introspected with `@Introspected(accessKind = FIELD)`, which the processor does not model;
 - what the input `ObjectMapper` can set (custom deserializers, naming strategies).
+
+### The manifest as a build artifact
+
+A compilation that passes the checks writes the [binding manifest](#binding-manifest) to its class output as
+`META-INF/micronaut-graphql-tools/binding-manifest.txt`: once, after the last round, in the format of the startup
+manifest (same header, UTF-8, `LF`, body sorted by `String#compareTo`). A compilation with an error writes none, so a
+manifest in the output always belongs to code that passed the checks. `-Amicronaut.graphql.tools.manifest=false`
+turns it off.
+
+For the same code, schema and options it has the lines of the startup manifest, byte for byte, except those that only
+the running application knows:
+
+- `scalar` lines, which name the `Coercing` of the scalar's runtime wiring;
+- `resolves` lines, and every line of an object type bound only through the `SchemaMappingDictionary` (the members of
+  unions and the implementations of interfaces that fields return), of what only those types reach, and of an
+  interface only they implement;
+- fields that a type resolver of an SDL interface binds, `!unusedDictionary` lines, and the `!unbound` lines of type
+  resolver methods whose class only those parts may reach;
+- the lines of a type the processor leaves to the startup for another reason (reported as a note, see above).
+
+The processor writes what it left out next to the manifest, as
+`META-INF/micronaut-graphql-tools/binding-manifest-omitted.txt`, one entry per line:
+
+```
+# graphql-binding-manifest-omitted 1
+kind resolves
+kind scalar
+kind unusedDictionary
+type Magazine
+field Book.name
+unbound example.MagazineResolver#issue(example.Magazine)
+```
+
+`kind K` stands for every line of kind `K`; `type T` for every line about `T` (`T → ...`, `T.x ...`, `T/...`,
+`!ambiguous T.x ...`); `field T.f` for the line of the field and its `!ambiguous` line; `unbound M` for the line
+`!unbound M`. A comparison of both manifests removes from the startup manifest exactly what this record names, and
+nothing else, so the omissions come from the processor, never from a list in the build.
+
+The header is identical when the processor and the library come from the same release (the `# binder:` line names
+the version of the jar). The library's tests compile fixtures with the processor, start them, and compare both
+manifests under this rule.
 
 ## Custom types mapping
 
