@@ -56,6 +56,7 @@ import io.micronaut.graphql.tools.exceptions.AmbiguousTypeMappingException;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
+import io.micronaut.graphql.tools.exceptions.IncorrectMemberMappingException;
 import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException;
 import io.micronaut.graphql.tools.exceptions.InterfaceTypeMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException;
@@ -935,7 +936,8 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             rootRuntimeWiringBuilder.type(unionTypeDefinition.getName(), typeRuntimeWiringBuilder -> {
-                Map<Class<?>, String> objectTypes = new HashMap<>();
+                Map<Class<?>, String> exactClasses = new HashMap<>();
+                Map<String, Class<?>> objectTypes = new HashMap<>();
 
                 for (Type<?> type : unionTypeDefinition.getMemberTypes()) {
                     TypeName typeName = getTypeName(type);
@@ -948,10 +950,14 @@ final class GraphQLRuntimeWiringGenerator {
                                         mappingContext, typeName.getName(), unionTypeDefinition.getName()
                                 ));
 
+                        checkMemberClass("union", unionTypeDefinition.getName(), targetClass, typeName.getName(), clazz,
+                                mappingContext);
+
                         processObjectTypeDefinition(objectTypeDefinition, clazz, mappingContext);
 
+                        objectTypes.put(typeName.getName(), clazz);
                         for (Class<?> mappedClass : getMappedClasses(clazz)) {
-                            objectTypes.put(mappedClass, typeName.getName());
+                            exactClasses.put(mappedClass, typeName.getName());
                         }
                     } else {
                         throw unsupportedTypeDefinition(typeDefinition);
@@ -959,7 +965,7 @@ final class GraphQLRuntimeWiringGenerator {
                 }
 
                 typeRuntimeWiringBuilder.typeResolver(new AbstractTypeResolver(
-                        graphQLSchemaProvider, "union", unionTypeDefinition.getName(), objectTypes
+                        graphQLSchemaProvider, "union", unionTypeDefinition.getName(), exactClasses, objectTypes
                 ));
                 return typeRuntimeWiringBuilder;
             });
@@ -995,6 +1001,9 @@ final class GraphQLRuntimeWiringGenerator {
                                 mappingContext, implementation.getName(), interfaceTypeDefinition.getName()
                         ));
 
+                checkMemberClass("interface", interfaceTypeDefinition.getName(), targetClass, implementation.getName(),
+                        clazz, mappingContext);
+
                 processObjectTypeDefinition(implementation, clazz, mappingContext);
             }
         });
@@ -1016,6 +1025,19 @@ final class GraphQLRuntimeWiringGenerator {
             return null;
         }
         return schemaMappingDictionary.getTypes().getOrDefault(objectTypeDefinition.getName(), processedClass);
+    }
+
+    /**
+     * An object a field returns is an instance of the Java type the field declares for the union or interface, so an
+     * object type of it must be mapped to a subtype of that Java type, or no object can ever resolve to it.
+     */
+    private static void checkMemberClass(String abstractTypeKind, String abstractTypeName, Class<?> declaredClass,
+                                         String objectTypeName, Class<?> memberClass,
+                                         TypeMappingContext mappingContext) {
+        if (!declaredClass.isAssignableFrom(memberClass)) {
+            throw new IncorrectMemberMappingException(mappingContext, abstractTypeKind, abstractTypeName,
+                    declaredClass, objectTypeName, memberClass);
+        }
     }
 
     /**
@@ -1060,15 +1082,17 @@ final class GraphQLRuntimeWiringGenerator {
             String name = interfaceTypeDefinition.getName();
             boolean returned = processedTypes.containsKey(name);
 
-            Map<Class<?>, String> objectTypes = new HashMap<>();
+            Map<Class<?>, String> exactClasses = new HashMap<>();
+            Map<String, Class<?>> objectTypes = new HashMap<>();
             Set<Class<?>> sharedClasses = new HashSet<>();
             boolean implemented = false;
             for (ObjectTypeDefinition implementation : getImplementations(interfaceTypeDefinition)) {
                 Class<?> clazz = getBoundClass(implementation);
                 if (clazz != null) {
                     implemented = true;
+                    objectTypes.put(implementation.getName(), clazz);
                     for (Class<?> mappedClass : getMappedClasses(clazz)) {
-                        if (objectTypes.putIfAbsent(mappedClass, implementation.getName()) != null) {
+                        if (exactClasses.putIfAbsent(mappedClass, implementation.getName()) != null) {
                             // only possible for an implemented-only interface (the dictionary maps each class once):
                             // its type resolver is never called, and an exact lookup must not pick one of the types
                             sharedClasses.add(mappedClass);
@@ -1076,7 +1100,7 @@ final class GraphQLRuntimeWiringGenerator {
                     }
                 }
             }
-            sharedClasses.forEach(objectTypes::remove);
+            sharedClasses.forEach(exactClasses::remove);
 
             if (!returned && !implemented) {
                 continue;
@@ -1086,7 +1110,8 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             rootRuntimeWiringBuilder.type(name, typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder
-                    .typeResolver(new AbstractTypeResolver(graphQLSchemaProvider, "interface", name, objectTypes)));
+                    .typeResolver(new AbstractTypeResolver(graphQLSchemaProvider, "interface", name, exactClasses,
+                            objectTypes)));
         }
 
         return implementedInterfaces;

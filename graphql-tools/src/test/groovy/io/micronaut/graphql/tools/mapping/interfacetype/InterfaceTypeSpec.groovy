@@ -143,7 +143,11 @@ type MediaSection implements Section {
         }
     }
 
-    static interface Section {
+    static interface IdentifiedSection {
+        String getId()
+    }
+
+    static interface Section extends IdentifiedSection {
         String getId()
 
         String getTitle()
@@ -262,7 +266,7 @@ type MediaSection implements Section {
     @Requires(property = 'spec.name', value = SPEC_NAME + ".implementationMissingField")
     @GraphQLTypeResolver(Book.class)
     static class UntitledSectionsResolver {
-        List<Section> sections(Book book) {
+        List<IdentifiedSection> sections(Book book) {
             return []
         }
     }
@@ -279,8 +283,9 @@ type MediaSection implements Section {
         }
     }
 
+    // the field declares IdentifiedSection, so that each implementation is mapped to a subtype of it
     @GraphQLType
-    static class UntitledSection {
+    static class UntitledSection implements IdentifiedSection {
         String id
         String url
     }

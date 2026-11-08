@@ -184,7 +184,8 @@ either the interface or such a class for the same GraphQL type. The rules, each 
 - Mapping one GraphQL object type to an interface and another one to a class (or interface) implementing it fails
   with `AmbiguousTypeMappingException`, which names both GraphQL types and both Java types: an object of that class
   would match both.
-- A class and its subclass may be mapped to two GraphQL types; a union then resolves an object by its exact class.
+- A class and its subclass may be mapped to two GraphQL types. A union or interface resolves an object of either class by
+  its exact class; an object of a further subclass is an instance of both and fails as described below.
 - Two fields that declare different Java types for one GraphQL type fail with `MappingConflictException`, unless the
   two types are an interface and a class annotated with `@GraphQLType(TheInterface.class)` that is read through the
   same bean introspection.
@@ -197,14 +198,34 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   otherwise the startup fails (`UnionTypeMappingNotProvidedException`, `InterfaceTypeMappingNotProvidedException`).
   Each of these object types is bound like any other, so every field of the interface must be bound on every
   implementation. That an object type declares all fields of its interfaces is checked by graphql-java.
-- At runtime the object type is chosen by the exact class of the returned object. An object of any other class is a
-  GraphQL error on that field (the data of the field is `null`), naming the union or interface, the path and the class:
+- Each of these object types must be mapped to a subtype of the Java interface the field declares (the class or
+  interface implements or extends it), otherwise the startup fails with `IncorrectMemberMappingException`: no object
+  the field returns could resolve to that object type.
+- At runtime the object type of a returned object is chosen in two steps, and the result is cached per class:
+  1. **Exact class:** the class an object type is mapped to, or, for an object type mapped to a Java interface, a class
+     annotated with `@GraphQLType(TheInterface.class)`.
+  2. **Assignability:** otherwise, the one object type whose Java type the object is an instance of: a subclass of a
+     mapped class (including runtime subclasses such as proxies) or any implementation of a mapped Java interface.
+
+  An object that matches no object type, or more than one in the second step, is a GraphQL error on that field (the
+  data of the field is `null`) that names the union or interface, the path, the class and the candidates; the library
+  never picks one:
 
   ```
   Can't resolve '/book/sections[1]'. Abstract type 'Section' must resolve to an Object type at runtime for field ...
   The object of class com.example.UnknownSection is none of the object types of interface Section:
   MediaSection (com.example.MediaSection), TextSection (com.example.TextSection).
+
+  Can't resolve '/bundle'. Abstract type 'Item' must resolve to an Object type at runtime for field 'Query.item'.
+  The object of class com.example.BundleModel is an instance of more than one object type of union Item:
+  Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph). Map its class to one of them, or let it
+  implement only one of their Java types.
   ```
+
+  What can be checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
+  object types) and the member types against the declared Java interface. Whether one object is an instance of two
+  unrelated mapped Java interfaces, or of a subclass of two mapped classes, depends on the runtime class and is
+  reported at runtime.
 - Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
   (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
 - A `@GraphQLTypeResolver` for the Java interface that an SDL interface is mapped to binds the fields of that interface
