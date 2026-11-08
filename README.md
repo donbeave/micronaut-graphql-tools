@@ -535,6 +535,7 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 | `micronaut.graphql.tools.allowUnreachable` | `allow-unreachable` (comma-separated) |
 | `micronaut.graphql.tools.unreachableTypes` | `unreachable-types` |
 | `micronaut.graphql.tools.input.unmappedProperties` | `input.unmapped-properties` |
+| `micronaut.graphql.tools.input.detectOmission` | `input.detect-omission` |
 
 Checked from the schema files and the options alone:
 
