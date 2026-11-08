@@ -38,7 +38,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleImplementationsFoundException
-        e.cause.message == """Found multiple implementations for the interface ${User.name}.
+        e.cause.message == """Found multiple implementations for the interface ${User.name}. Annotate the interface with @GraphQLType, so that its own bean introspection reads every implementation.
   GraphQL object type: Query
   GraphQL field: user
   Mapped class: ${Query.name}

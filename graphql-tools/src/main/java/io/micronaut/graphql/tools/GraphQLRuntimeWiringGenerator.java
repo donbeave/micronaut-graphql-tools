@@ -140,6 +140,8 @@ final class GraphQLRuntimeWiringGenerator {
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
 
     private final Map<String, Class<?>> processedTypes = new HashMap<>();
+    // object type -> the Java interface whose own introspection its properties are read through
+    private final Map<String, Class<?>> contractTypes = new HashMap<>();
 
     // key: schema coordinate (Type.field), value: description of the member bound to it
     private final Map<String, String> fieldBindings = new HashMap<>();
@@ -1118,6 +1120,9 @@ final class GraphQLRuntimeWiringGenerator {
 
             BeanIntrospection<Object> beanIntrospection =
                     graphQLBeanIntrospectionRegistry.getGraphQlTypeBeanIntrospection(mappingContext, targetClass);
+            if (beanIntrospection.getBeanType().isInterface()) {
+                contractTypes.put(objectTypeDefinition.getName(), beanIntrospection.getBeanType());
+            }
 
             TypeRuntimeWiring.Builder typeRuntimeWiringBuilder = TypeRuntimeWiring
                     .newTypeWiring(objectTypeDefinition.getName())
@@ -1227,9 +1232,8 @@ final class GraphQLRuntimeWiringGenerator {
         }
 
         if (beanDefinitionAndMethods.isEmpty()) {
-            // throws MethodNotFoundException
-            beanDefinitionAndMethods = graphQLResolversRegistry
-                    .getTypeExecutableMethod(sourceClass, fieldDefinition.getName(), mappingContext);
+            throw methodNotFound(objectTypeDefinition.getName(), sourceClass, fieldDefinition.getName(),
+                    mappingContext);
         }
 
         if (beanDefinitionAndMethods.size() > 1) {
@@ -1341,11 +1345,8 @@ final class GraphQLRuntimeWiringGenerator {
                 .min(Comparator.comparing(InterfaceField::coordinate));
         if (unbound.isPresent()) {
             InterfaceField field = unbound.get();
-            // throws MethodNotFoundException
-            graphQLResolversRegistry.getTypeExecutableMethod(
-                    field.ownSourceClass(), field.fieldDefinition().getName(), field.mappingContext()
-            );
-            throw new IllegalStateException("No binding for " + field.coordinate());
+            throw methodNotFound(field.objectTypeDefinition().getName(), field.ownSourceClass(),
+                    field.fieldDefinition().getName(), field.mappingContext());
         }
 
         for (InterfaceField field : sortedByCoordinate(interfaceResolverFields)) {
@@ -1396,6 +1397,20 @@ final class GraphQLRuntimeWiringGenerator {
 
     private static List<InterfaceField> sortedByCoordinate(List<InterfaceField> fields) {
         return fields.stream().sorted(Comparator.comparing(InterfaceField::coordinate)).toList();
+    }
+
+    /**
+     * @return the {@link MethodNotFoundException} for a field that neither a property, a method of the type nor a type
+     * resolver binds; for a type read through the introspection of a Java interface it says that getters only an
+     * implementation class declares are not candidates
+     */
+    private MethodNotFoundException methodNotFound(String objectTypeName, Class<?> sourceClass, String fieldName,
+                                                   TypeMappingContext mappingContext) {
+        MethodNotFoundException exception =
+                graphQLResolversRegistry.typeMethodNotFound(sourceClass, fieldName, mappingContext);
+        Class<?> contractClass = contractTypes.get(objectTypeName);
+
+        return contractClass != null ? exception.forContract(contractClass) : exception;
     }
 
     private void processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,

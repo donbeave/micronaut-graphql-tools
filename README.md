@@ -215,6 +215,38 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   Only interfaces that a field returns have a Java type, so a resolver for an interface that is only implemented is
   not applied.
 
+## Java interfaces as object types
+
+A field may declare a Java interface for a GraphQL object type. Where its properties come from depends on whether the
+interface has a bean introspection of its own:
+
+- **The interface is annotated with `@GraphQLType` (or `@Introspected`)**, so that Micronaut generates an
+  introspection for it (the annotation processor has to run where the interface is compiled). The properties are the
+  getters of the interface, read from an object of any class that implements it. Any number of classes may implement
+  it, and they need no annotation; a class annotated with `@GraphQLType(TheInterface.class)` is read through the
+  interface as well. A `@GraphQLTypeResolver(TheInterface.class)` resolver receives the object as `TheInterface`.
+- **The interface has no introspection of its own.** Exactly one class annotated with `@GraphQLType(TheInterface.class)`
+  is read, with all of its getters, including getters that the interface does not declare (the library cannot read
+  the interface's methods without an introspection). No such class fails with `ImplementationNotFoundException` and
+  several with `MultipleImplementationsFoundException`; annotate the interface with `@GraphQLType` to read all of them
+  and to make implementation-only getters non-candidates.
+
+A getter that only an implementation class declares is not a property of an interface that has its own
+introspection. A GraphQL field that only such a getter could back fails at startup with `MethodNotFoundException`,
+which names the GraphQL type, the field and the interface:
+
+```
+The property or method `draftNote` not found in example.ArticleGraph's type. Properties are read from the interface
+example.ArticleGraph, so a getter that only an implementation class declares is not a property.
+  GraphQL object type: Article
+  GraphQL field: draftNote
+```
+
+Declare the getter on the interface, or resolve the field with a `@GraphQLTypeResolver(TheInterface.class)` method.
+**Behaviour change:** before, such an interface was read through its one annotated implementation class, so getters
+of that class bound even when the interface did not declare them. There is no option to keep that: the binding
+silently depended on which class happened to implement the interface.
+
 ## Examples
 
 Examples can be found in the [test-suite](test-suite) directory.
