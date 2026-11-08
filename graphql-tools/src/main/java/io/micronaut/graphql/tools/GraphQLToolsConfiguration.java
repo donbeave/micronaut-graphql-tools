@@ -33,6 +33,14 @@ public class GraphQLToolsConfiguration {
      */
     public static final String PREFIX = "micronaut.graphql.tools";
 
+    /**
+     * The name of an optional {@code com.fasterxml.jackson.databind.ObjectMapper} bean that converts arguments and
+     * input objects into their Java types. Without such a bean the library uses a private mapper with Jackson's
+     * defaults (among them {@code FAIL_ON_UNKNOWN_PROPERTIES=true}). The library works on a copy of the bean and adds
+     * its own modules to the copy, so the bean itself is not changed.
+     */
+    public static final String INPUT_OBJECT_MAPPER = "graphql-tools";
+
     private UnreachableTypes unreachableTypes = UnreachableTypes.FAIL;
     private List<String> allowUnreachable = Collections.emptyList();
 

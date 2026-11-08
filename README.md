@@ -138,6 +138,36 @@ The startup fails:
 Values of custom scalars inside input objects reach the input class as the instances the scalar parsed, also for
 classes Jackson cannot serialize itself (such as `java.time` types without the JSR-310 module).
 
+## Arguments and input objects
+
+graphql-java hands a data fetcher the coerced argument values: scalar values, enum names, a `Map` per input object
+and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
+including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`), with a Jackson
+`ObjectMapper`.
+
+By default that is a private mapper with Jackson's defaults plus Micronaut's `BeanIntrospectionModule`. In particular
+`FAIL_ON_UNKNOWN_PROPERTIES` stays `true`: an input field that the input class cannot take fails the request instead of
+being dropped. To convert with your own settings, define an `ObjectMapper` bean named `graphql-tools`
+(`GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER`):
+
+```java
+@Bean
+@Singleton
+@Named(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER)
+ObjectMapper graphQLToolsObjectMapper() {
+    return new ObjectMapper()
+            .registerModule(new BeanIntrospectionModule())
+            .registerModule(new JavaTimeModule());
+}
+```
+
+- Only a bean with exactly this name is used; the application's default `ObjectMapper` and the `jackson.*`
+  configuration do not affect input conversion.
+- The library works on a copy of the bean and adds its own module to the copy (custom scalar values pass through
+  unchanged, see [Custom scalars](#custom-scalars)); the bean itself is not changed.
+- The bean is used as it is otherwise: register `BeanIntrospectionModule` yourself if input classes must be read
+  without reflection (GraalVM native image).
+
 ## Configuration
 
 | Property | Values (default first) | Meaning |

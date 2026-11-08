@@ -71,6 +71,7 @@ import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.schema.UnionTypeResolver;
 import io.micronaut.inject.ExecutableMethod;
+import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
 import jakarta.inject.Provider;
 import org.reactivestreams.Publisher;
@@ -163,15 +164,27 @@ final class GraphQLRuntimeWiringGenerator {
 
         this.scalarMappings = collectScalarMappings(applicationContext.getBeansOfType(GraphQLScalarMapping.class));
 
-        this.objectMapper = new ObjectMapper()
-                .registerModule(new BeanIntrospectionModule())
-                .registerModule(new ScalarValuesModule(scalarMappings.values()));
+        this.objectMapper = createInputObjectMapper(applicationContext, scalarMappings.values());
         this.rootRuntimeWiringBuilder = RuntimeWiring.newRuntimeWiring()
                 .scalar(ExtendedScalars.GraphQLLong)
                 .scalar(ExtendedScalars.GraphQLShort)
                 .scalar(ExtendedScalars.GraphQLBigDecimal)
                 .scalar(ExtendedScalars.GraphQLBigInteger);
         scalarMappings.values().forEach(it -> rootRuntimeWiringBuilder.scalar(it.getScalarType()));
+    }
+
+    /**
+     * @return a copy of the application's {@link GraphQLToolsConfiguration#INPUT_OBJECT_MAPPER} bean if there is one,
+     * otherwise a mapper with Jackson's defaults and the {@link BeanIntrospectionModule}; in both cases with the
+     * library's own modules added
+     */
+    private static ObjectMapper createInputObjectMapper(ApplicationContext applicationContext,
+                                                        Collection<GraphQLScalarMapping> scalarMappings) {
+        ObjectMapper objectMapper = applicationContext
+                .findBean(ObjectMapper.class, Qualifiers.byName(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER))
+                .map(ObjectMapper::copy)
+                .orElseGet(() -> new ObjectMapper().registerModule(new BeanIntrospectionModule()));
+        return objectMapper.registerModule(new ScalarValuesModule(scalarMappings));
     }
 
     private static Map<String, GraphQLScalarMapping> collectScalarMappings(
