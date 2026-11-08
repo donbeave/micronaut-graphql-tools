@@ -50,7 +50,8 @@ public final class GraphQLFactory {
                 applicationContext,
                 new GraphQLBeanIntrospectionRegistry(),
                 graphQLResolversRegistry,
-                typeDefinitionRegistry,
+                // bound with the fields of their extensions; the schema is generated from the registry as parsed
+                TypeExtensions.merge(typeDefinitionRegistry),
                 schemaMappingDictionary,
                 graphQLSchemaProvider,
                 configuration
