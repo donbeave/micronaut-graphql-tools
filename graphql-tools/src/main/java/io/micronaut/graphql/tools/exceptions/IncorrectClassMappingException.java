@@ -88,6 +88,49 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
         );
     }
 
+    /**
+     * @param mappingContext   the coordinate
+     * @param providedClass    the declared Java type
+     * @param scalarName       the name of the custom scalar
+     * @param input            {@code true} for an argument or an input field, {@code false} for a field
+     * @return the exception for a custom scalar whose mapping declares no classes for this side
+     */
+    public static IncorrectClassMappingException forScalarWithoutClasses(MappingContext mappingContext,
+                                                                         Class<?> providedClass, String scalarName,
+                                                                         boolean input) {
+        return new IncorrectClassMappingException(
+                input
+                        ? String.format("The mapping of the GraphQL scalar %s declares no input classes, so the "
+                        + "scalar cannot be used for an argument or an input field.", scalarName)
+                        : String.format("The mapping of the GraphQL scalar %s declares no output classes, so the "
+                        + "scalar cannot be used for a field.", scalarName),
+                mappingContext,
+                providedClass,
+                Set.of()
+        );
+    }
+
+    /**
+     * @param mappingContext   the coordinate
+     * @param primitiveClass   the declared primitive Java type
+     * @param scalarName       the name of the nullable custom scalar type
+     * @param supportedClasses the input classes of the scalar's mapping
+     * @return the exception for a primitive Java type bound to a nullable GraphQL type, which can be {@code null}
+     */
+    public static IncorrectClassMappingException forNullablePrimitive(MappingContext mappingContext,
+                                                                      Class<?> primitiveClass, String scalarName,
+                                                                      Set<Class<?>> supportedClasses) {
+        return new IncorrectClassMappingException(
+                String.format("The argument is mapped to the primitive %s, but the GraphQL type %s is nullable, so "
+                                + "null cannot be passed. Use %s or make the GraphQL type non-null.",
+                        primitiveClass.getName(), scalarName,
+                        supportedClasses.stream().map(Class::getName).sorted().collect(Collectors.joining(" or "))),
+                mappingContext,
+                primitiveClass,
+                supportedClasses
+        );
+    }
+
     private static String toString(MappingType mappingType, Class<?> providedClass) {
         return switch (mappingType) {
             case BUILT_IN_JAVA_CLASS -> "a built-in class";

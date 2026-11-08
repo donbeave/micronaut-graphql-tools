@@ -27,6 +27,7 @@ import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.OperationTypeDefinition;
+import graphql.language.ScalarTypeDefinition;
 import graphql.language.SchemaDefinition;
 import graphql.language.Type;
 import graphql.language.TypeDefinition;
@@ -53,12 +54,14 @@ import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
 import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException;
+import io.micronaut.graphql.tools.exceptions.InvalidScalarMappingException;
 import io.micronaut.graphql.tools.exceptions.InvalidSourceArgumentException;
 import io.micronaut.graphql.tools.exceptions.MappingConflictException;
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
 import io.micronaut.graphql.tools.exceptions.MissingEnumValuesException;
 import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException;
 import io.micronaut.graphql.tools.exceptions.RootResolverNotFoundException;
+import io.micronaut.graphql.tools.exceptions.ScalarMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException;
@@ -75,6 +78,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -126,6 +130,7 @@ final class GraphQLRuntimeWiringGenerator {
     private final Provider<GraphQLSchema> graphQLSchemaProvider;
     private final ObjectMapper objectMapper;
     private final GraphQLToolsConfiguration configuration;
+    private final Map<String, GraphQLScalarMapping> scalarMappings;
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
 
     private final Map<String, Class<?>> processedTypes = new HashMap<>();
@@ -156,13 +161,38 @@ final class GraphQLRuntimeWiringGenerator {
         this.graphQLSchemaProvider = graphQLSchemaProvider;
         this.configuration = configuration;
 
+        this.scalarMappings = collectScalarMappings(applicationContext.getBeansOfType(GraphQLScalarMapping.class));
+
         this.objectMapper = new ObjectMapper()
-                .registerModule(new BeanIntrospectionModule());
+                .registerModule(new BeanIntrospectionModule())
+                .registerModule(new ScalarValuesModule(scalarMappings.values()));
         this.rootRuntimeWiringBuilder = RuntimeWiring.newRuntimeWiring()
                 .scalar(ExtendedScalars.GraphQLLong)
                 .scalar(ExtendedScalars.GraphQLShort)
                 .scalar(ExtendedScalars.GraphQLBigDecimal)
                 .scalar(ExtendedScalars.GraphQLBigInteger);
+        scalarMappings.values().forEach(it -> rootRuntimeWiringBuilder.scalar(it.getScalarType()));
+    }
+
+    private static Map<String, GraphQLScalarMapping> collectScalarMappings(
+            Collection<GraphQLScalarMapping> scalarMappings) {
+        Map<String, GraphQLScalarMapping> result = new TreeMap<>();
+        Map<String, Integer> counts = new TreeMap<>();
+        Set<String> builtIn = new TreeSet<>();
+        for (GraphQLScalarMapping scalarMapping : scalarMappings) {
+            String name = scalarMapping.getName();
+            counts.merge(name, 1, Integer::sum);
+            if (isGraphQlBuiltInType(name)) {
+                builtIn.add(name);
+            }
+            result.put(name, scalarMapping);
+        }
+        Map<String, Integer> duplicates = new TreeMap<>(counts);
+        duplicates.values().removeIf(count -> count == 1);
+        if (!duplicates.isEmpty() || !builtIn.isEmpty()) {
+            throw new InvalidScalarMappingException(duplicates, List.copyOf(builtIn));
+        }
+        return result;
     }
 
     RuntimeWiring generate() {
@@ -311,7 +341,7 @@ final class GraphQLRuntimeWiringGenerator {
         }
 
         int currentArgs = (int) Arrays.stream(executable.getArguments())
-                .filter(it -> !it.getType().isAssignableFrom(DataFetchingEnvironment.class))
+                .filter(it -> !it.getType().equals(DataFetchingEnvironment.class))
                 .count();
 
         if (requiredArgs == currentArgs) {
@@ -422,7 +452,7 @@ final class GraphQLRuntimeWiringGenerator {
             Argument<?> argument = arguments.get(i);
 
             processInputType(
-                    unwrapNonNullType(inputValueDefinition.getType()),
+                    inputValueDefinition.getType(),
                     argument,
                     TypeMappingContext.forArgument(mappingContext, inputValueDefinition.getName())
             );
@@ -484,6 +514,17 @@ final class GraphQLRuntimeWiringGenerator {
                 processUnionTypeDefinition(unionTypeDefinition, returnClass, mappingContext);
             } else if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
                 processObjectTypeDefinition(objectTypeDefinition, returnClass, mappingContext);
+            } else if (typeDefinition instanceof ScalarTypeDefinition scalarTypeDefinition) {
+                GraphQLScalarMapping scalarMapping = requireScalarMapping(scalarTypeDefinition, mappingContext);
+
+                if (scalarMapping.getOutputClasses().isEmpty()) {
+                    throw IncorrectClassMappingException.forScalarWithoutClasses(mappingContext, returnClass,
+                            scalarMapping.getName(), false);
+                }
+                if (!scalarMapping.isOutputClass(returnClass)) {
+                    throw IncorrectClassMappingException.forField(mappingContext, returnClass,
+                            scalarMapping.getOutputClasses());
+                }
             } else {
                 throw unsupportedTypeDefinition(typeDefinition);
             }
@@ -883,6 +924,7 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     private void processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext) {
+        boolean nonNull = graphQlType instanceof NonNullType;
         graphQlType = unwrapNonNullType(graphQlType);
         argument = unwrapArgument(argument);
 
@@ -925,9 +967,34 @@ final class GraphQLRuntimeWiringGenerator {
             if (!supportedClasses.contains(returnType)) {
                 throw IncorrectClassMappingException.forArgument(mappingContext, returnType, supportedClasses);
             }
+        } else if (typeDefinition instanceof ScalarTypeDefinition scalarTypeDefinition) {
+            GraphQLScalarMapping scalarMapping = requireScalarMapping(scalarTypeDefinition, mappingContext);
+
+            if (scalarMapping.getInputClasses().isEmpty()) {
+                throw IncorrectClassMappingException.forScalarWithoutClasses(mappingContext, returnType,
+                        scalarMapping.getName(), true);
+            }
+            if (!scalarMapping.isInputClass(returnType)) {
+                throw IncorrectClassMappingException.forArgument(mappingContext, returnType,
+                        scalarMapping.getInputClasses());
+            }
+            if (returnType.isPrimitive() && !nonNull) {
+                // null (omitted or explicit) cannot be passed to a primitive parameter or set on a primitive property
+                throw IncorrectClassMappingException.forNullablePrimitive(mappingContext, returnType,
+                        scalarMapping.getName(), scalarMapping.getInputClasses());
+            }
         } else {
             throw unsupportedTypeDefinition(typeDefinition);
         }
+    }
+
+    private GraphQLScalarMapping requireScalarMapping(ScalarTypeDefinition scalarTypeDefinition,
+                                                      MappingContext mappingContext) {
+        GraphQLScalarMapping scalarMapping = scalarMappings.get(scalarTypeDefinition.getName());
+        if (scalarMapping == null) {
+            throw new ScalarMappingNotProvidedException(mappingContext, scalarTypeDefinition.getName());
+        }
+        return scalarMapping;
     }
 
     private void processIfNotProcessed(TypeDefinition<?> typeDefinition, Class<?> targetClass,

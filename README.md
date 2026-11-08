@@ -86,6 +86,58 @@ The mapping then checks `T`. Anything else fails at startup with `UnsupportedRet
 - `DataFetcherResult<Publisher<T>>` is not supported on a subscription field, although graphql-java would unwrap it:
   return the `Publisher` and, if needed, a `DataFetcherResult` per event.
 
+## Custom scalars
+
+GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`,
+`BigDecimal` and `BigInteger` are built in. Any other scalar of the schema needs a `GraphQLScalarMapping` bean: the
+graphql-java `GraphQLScalarType` that implements it, and the Java classes that stand for it.
+
+```java
+@Factory
+public class ScalarsFactory {
+
+    @Bean
+    @Singleton
+    GraphQLScalarMapping localDate() {
+        // same Java classes for fields, arguments and input fields
+        return GraphQLScalarMapping.of(myLocalDateScalarType, LocalDate.class);
+    }
+
+    @Bean
+    @Singleton
+    GraphQLScalarMapping json() {
+        // different classes for output and input
+        return GraphQLScalarMapping.builder(ExtendedScalars.Json)
+                .outputClasses(Object.class)
+                .inputClasses(Object.class, Map.class)
+                .build();
+    }
+
+}
+```
+
+- **Output classes** are the classes the scalar's `serialize` accepts. A field of the scalar type may be backed by one
+  of them or a subclass.
+- **Input classes** are the classes the scalar's `parseValue`/`parseLiteral` produce. An argument or an input object
+  field of the scalar type must be declared as exactly one of them.
+- A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type
+  (`Count!`), because `null` cannot be passed to it.
+
+The library ships no scalar implementations of its own beyond the built-in ones; graphql-java-extended-scalars and
+other libraries provide many. A mapping only takes effect for scalars the schema declares.
+
+The startup fails:
+
+- with `ScalarMappingNotProvidedException` when a field, argument or input field uses a scalar that has no mapping;
+  the message names the coordinate;
+- with `IncorrectClassMappingException` when the Java type is not one of the mapping's classes, when the mapping
+  declares no classes for that side, or when a primitive stands for a nullable input;
+- with `InvalidScalarMappingException` when two mappings have the same scalar name, or a mapping names a built-in
+  scalar.
+
+Values of custom scalars inside input objects reach the input class as the instances the scalar parsed, also for
+classes Jackson cannot serialize itself (such as `java.time` types without the JSR-310 module).
+
 ## Configuration
 
 | Property | Values (default first) | Meaning |

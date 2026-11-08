@@ -12,6 +12,7 @@ dependencies {
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(libs.jetbrains.annotations)
     testImplementation(libs.logback.classic)
+    testImplementation(libs.graphql.java.datetime)
 }
 
 micronautBuild {
