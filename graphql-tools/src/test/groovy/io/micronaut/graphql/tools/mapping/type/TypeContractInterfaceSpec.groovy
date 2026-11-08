@@ -180,6 +180,7 @@ type Chapter {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """The property or method `draftNote` not found in ${ArticleGraph.name}'s type. Properties are read from the interface ${ArticleGraph.name}, so a getter that only an implementation class declares is not a property.
+  GraphQL coordinate: Article.draftNote (line 12, column 3)
   GraphQL object type: Article
   GraphQL field: draftNote"""
         e.cause.mappingContext.graphQlObjectType == 'Article'
@@ -197,6 +198,7 @@ type Chapter {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """The property or method `subtitle` not found in ${MemoGraph.name}'s type. Properties are read from the interface ${MemoGraph.name}, so a getter that only an implementation class declares is not a property.
+  GraphQL coordinate: Memo.subtitle (line 17, column 3)
   GraphQL object type: Memo
   GraphQL field: subtitle"""
     }

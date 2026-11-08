@@ -92,6 +92,7 @@ type Book {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """The method `helper` not found in any root resolvers: [${BookQuery.name}].
+  GraphQL coordinate: Query.helper (line 8, column 3)
   GraphQL object type: Query
   GraphQL field: helper"""
     }
@@ -122,6 +123,7 @@ type Book {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """The property or method `blurb` not found in ${Book.name}'s type or it resolvers: [${BookResolver.name}].
+  GraphQL coordinate: Book.blurb (line 14, column 3)
   GraphQL object type: Book
   GraphQL field: blurb"""
     }

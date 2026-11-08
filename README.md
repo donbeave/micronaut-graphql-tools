@@ -207,6 +207,28 @@ shadows the type resolver silently. An application that relied on the getter win
 (and gets a warning that lists the fields where it applies). A field without both members binds as before in every
 mode.
 
+## Startup errors
+
+The schema is bound when the `GraphQL` bean is created. Every field that cannot be bound is reported; the binding does
+not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
+`MultipleMethodsFoundException`, `IncorrectClassMappingException`, ...). Several are thrown together as
+`BindingFailuresException`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
+others are suppressed exceptions. The checks that need a complete binding (unreachable types, schema coordinates) run
+only when no field failed.
+
+Each failure names the schema coordinate (`Type.field`, `Type.field(argument:)` or `InputType.field`) and where it is
+declared, as graphql-java parsed it (the source name appears when the schema was parsed with one, for example through
+`MultiSourceReader`), followed by the candidates that were considered:
+
+```
+The method `missing` not found in any root resolvers: [example.BookQuery].
+  GraphQL coordinate: Query.missing (books.graphqls, line 9, column 3)
+  GraphQL object type: Query
+  GraphQL field: missing
+```
+
+`getMappingContext().getCoordinate()` and `getMappingContext().getSourceLocation()` give the same information to code.
+
 ## Configuration
 
 | Property | Values (default first) | Meaning |

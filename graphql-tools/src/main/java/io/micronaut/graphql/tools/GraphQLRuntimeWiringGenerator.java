@@ -54,8 +54,10 @@ import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
 import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException;
 import io.micronaut.graphql.tools.exceptions.AmbiguousTypeMappingException;
+import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
@@ -172,6 +174,9 @@ final class GraphQLRuntimeWiringGenerator {
     // of all reached interfaces are known (precedence resolver-first: an interface resolver wins)
     private final List<InterfaceField> deferredModelMemberFields = new ArrayList<>();
 
+    // failures of fields that cannot be bound, reported together once every field was tried
+    private final List<AbstractMappingException> bindingFailures = new ArrayList<>();
+
     // key: schema coordinate (Type.field) that a member and a type resolver can both bind, decided by the precedence,
     // value: the members
     private final Map<String, String> ambiguousBindings = new TreeMap<>();
@@ -241,6 +246,9 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             bindInterfaceFields();
+
+            // the checks below would only repeat what partial bindings left out
+            throwBindingFailures();
 
             if (!ambiguousBindings.isEmpty()) {
                 LOG.warn("{} is {}: fields that both a member of the Java type and a type resolver method can bind: {}",
@@ -869,35 +877,41 @@ final class GraphQLRuntimeWiringGenerator {
 
         rootRuntimeWiringBuilder.type(operationTypeDefinition.getTypeName().getName(), typeRuntimeWiringBuilder -> {
             for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
-                TypeMappingContext mappingContext =
-                        TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
-
-                List<BeanDefinitionAndMethod> beanDefinitionAndMethods =
-                        graphQLResolversRegistry.getRootExecutableMethods(objectTypeDefinition.getName(),
-                                fieldDefinition.getName(), mappingContext);
-
-                if (beanDefinitionAndMethods.size() > 1) {
-                    throw new MultipleMethodsFoundException(mappingContext, toMap(beanDefinitionAndMethods));
-                }
-
-                BeanDefinitionAndMethod beanDefinitionAndMethod = beanDefinitionAndMethods.get(0);
-
-                recordResolverBinding(mappingContext, beanDefinitionAndMethod);
-
-                ExecutableMethod<Object, ?> executable = beanDefinitionAndMethod.getExecutableMethod();
-
-                processExecutableMethod(
-                        executable,
-                        executable.getReturnType(),
-                        null,
-                        applicationContext.getBean(beanDefinitionAndMethod.getBeanDefinition()),
-                        typeRuntimeWiringBuilder,
-                        mappingContext
-                );
+                collectFailure(() -> processRootFieldDefinition(objectTypeDefinition, fieldDefinition,
+                        typeRuntimeWiringBuilder));
             }
 
             return typeRuntimeWiringBuilder;
         });
+    }
+
+    private void processRootFieldDefinition(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,
+                                            TypeRuntimeWiring.Builder typeRuntimeWiringBuilder) {
+        TypeMappingContext mappingContext =
+                TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
+
+        List<BeanDefinitionAndMethod> beanDefinitionAndMethods =
+                graphQLResolversRegistry.getRootExecutableMethods(objectTypeDefinition.getName(),
+                        fieldDefinition.getName(), mappingContext);
+
+        if (beanDefinitionAndMethods.size() > 1) {
+            throw new MultipleMethodsFoundException(mappingContext, toMap(beanDefinitionAndMethods));
+        }
+
+        BeanDefinitionAndMethod beanDefinitionAndMethod = beanDefinitionAndMethods.get(0);
+
+        recordResolverBinding(mappingContext, beanDefinitionAndMethod);
+
+        ExecutableMethod<Object, ?> executable = beanDefinitionAndMethod.getExecutableMethod();
+
+        processExecutableMethod(
+                executable,
+                executable.getReturnType(),
+                null,
+                applicationContext.getBean(beanDefinitionAndMethod.getBeanDefinition()),
+                typeRuntimeWiringBuilder,
+                mappingContext
+        );
     }
 
     private void processEnumTypeDefinition(EnumTypeDefinition enumTypeDefinition, Class<?> targetClass, boolean input,
@@ -1178,9 +1192,9 @@ final class GraphQLRuntimeWiringGenerator {
             objectTypeWirings.put(objectTypeDefinition.getName(), typeRuntimeWiringBuilder);
 
             for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
-                processFieldDefinition(
+                collectFailure(() -> processFieldDefinition(
                         fieldDefinition, objectTypeDefinition, typeRuntimeWiringBuilder, beanIntrospection
-                );
+                ));
             }
         });
     }
@@ -1519,11 +1533,13 @@ final class GraphQLRuntimeWiringGenerator {
                 progress = true;
 
                 if (methods.size() > 1) {
-                    throw new MultipleMethodsFoundException(field.mappingContext(), toInterfaceMethodsMap(methods));
+                    bindingFailures.add(new MultipleMethodsFoundException(field.mappingContext(),
+                            toInterfaceMethodsMap(methods)));
+                    continue;
                 }
 
                 interfaceResolverFields.add(field);
-                bindInterfaceField(field, methods.get(0));
+                collectFailure(() -> bindInterfaceField(field, methods.get(0)));
             }
 
             if (progress) {
@@ -1539,30 +1555,31 @@ final class GraphQLRuntimeWiringGenerator {
                 List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
                 if (methods.isEmpty()) {
                     ownInterfaceFields.add(field);
-                    bindModelMember(field.objectTypeDefinition(), field.fieldDefinition(),
-                            objectTypeWirings.get(field.objectTypeDefinition().getName()), field.modelMember());
+                    collectFailure(() -> bindModelMember(field.objectTypeDefinition(), field.fieldDefinition(),
+                            objectTypeWirings.get(field.objectTypeDefinition().getName()), field.modelMember()));
                 } else {
-                    bindResolverOverModelMember(field, methods);
+                    collectFailure(() -> bindResolverOverModelMember(field, methods));
                 }
             }
         }
 
-        Optional<InterfaceField> unbound = unboundInterfaceFields.stream()
-                .min(Comparator.comparing(InterfaceField::coordinate));
-        if (unbound.isPresent()) {
-            InterfaceField field = unbound.get();
+        for (InterfaceField field : sortedByCoordinate(unboundInterfaceFields)) {
+            unboundInterfaceFields.remove(field);
             if (field.modelMember() != null) {
-                throw new ResolverRequiredException(field.mappingContext(),
-                        getResolverDirective(field.fieldDefinition()), field.ownMembers());
+                bindingFailures.add(new ResolverRequiredException(field.mappingContext(),
+                        getResolverDirective(field.fieldDefinition()), field.ownMembers()));
+            } else {
+                bindingFailures.add(methodNotFound(field.objectTypeDefinition().getName(), field.ownSourceClass(),
+                        field.fieldDefinition().getName(), field.mappingContext()));
             }
-            throw methodNotFound(field.objectTypeDefinition().getName(), field.ownSourceClass(),
-                    field.fieldDefinition().getName(), field.mappingContext());
         }
 
         for (InterfaceField field : sortedByCoordinate(interfaceResolverFields)) {
             List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
             if (methods.size() > 1) {
-                throw new MultipleMethodsFoundException(field.mappingContext(), toInterfaceMethodsMap(methods));
+                interfaceResolverFields.remove(field);
+                bindingFailures.add(new MultipleMethodsFoundException(field.mappingContext(),
+                        toInterfaceMethodsMap(methods)));
             }
         }
 
@@ -1578,18 +1595,23 @@ final class GraphQLRuntimeWiringGenerator {
                 Map<Class<?>, List<String>> members = toInterfaceMethodsMap(methods);
                 field.ownMembers().forEach((clazz, names) ->
                         members.computeIfAbsent(clazz, it -> new ArrayList<>()).addAll(names));
-                throw new MultipleMethodsFoundException(field.mappingContext(), members);
+                ownInterfaceFields.remove(field);
+                bindingFailures.add(new MultipleMethodsFoundException(field.mappingContext(), members));
+                continue;
             }
 
             switch (configuration.getPrecedence()) {
-                case STRICT -> throw new AmbiguousBindingException(field.mappingContext(),
-                        merge(field.ownMembers(), toInterfaceMethodsMap(methods)));
+                case STRICT -> {
+                    ownInterfaceFields.remove(field);
+                    bindingFailures.add(new AmbiguousBindingException(field.mappingContext(),
+                            merge(field.ownMembers(), toInterfaceMethodsMap(methods))));
+                }
                 case PROPERTY_FIRST -> recordAmbiguity(field.mappingContext(), field.ownMembers(),
                         toInterfaceMethodsMap(methods));
                 case RESOLVER_FIRST -> {
                     // the interface's Java type became known only after the member was bound: bind the resolver
                     ownInterfaceFields.remove(field);
-                    bindResolverOverModelMember(field, methods);
+                    collectFailure(() -> bindResolverOverModelMember(field, methods));
                     rebound = true;
                 }
                 default -> throw new IllegalStateException("Unknown precedence " + configuration.getPrecedence());
@@ -1597,6 +1619,37 @@ final class GraphQLRuntimeWiringGenerator {
         }
 
         return rebound;
+    }
+
+    /**
+     * Runs the binding of one field and records a failure instead of stopping at it, so that every field that cannot
+     * be bound is reported at once.
+     *
+     * @param action the binding of one field
+     */
+    private void collectFailure(Runnable action) {
+        try {
+            action.run();
+        } catch (AbstractMappingException e) {
+            bindingFailures.add(e);
+        }
+    }
+
+    /**
+     * Throws the binding failures collected so far: a single one as is, several as a {@link BindingFailuresException},
+     * sorted by schema coordinate.
+     */
+    private void throwBindingFailures() {
+        if (bindingFailures.isEmpty()) {
+            return;
+        }
+        if (bindingFailures.size() == 1) {
+            throw bindingFailures.get(0);
+        }
+        List<AbstractMappingException> sorted = bindingFailures.stream()
+                .sorted(Comparator.comparing(it -> it.getMappingContext().getCoordinate()))
+                .toList();
+        throw new BindingFailuresException(sorted);
     }
 
     private void bindResolverOverModelMember(InterfaceField field, List<InterfaceResolverMethod> methods) {

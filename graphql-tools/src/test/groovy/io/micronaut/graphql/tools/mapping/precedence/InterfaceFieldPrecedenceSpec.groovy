@@ -61,6 +61,7 @@ type MediaSection implements Section {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof AmbiguousBindingException
         e.cause.message.startsWith("""Both a member of the Java type and a type resolver method can bind one GraphQL field.
+  GraphQL coordinate: TextSection.summary (line ${line}, column 3)
   GraphQL object type: TextSection
   GraphQL field: summary
   Members:
@@ -69,9 +70,9 @@ type MediaSection implements Section {
 """)
 
         where:
-        order                               | schema
-        'the interface is reached first'    | SCHEMA
-        'the implementation is reached first' | SCHEMA.replace('sections: [Section!]!', 'text: TextSection\n  sections: [Section!]!')
+        order                                 | line | schema
+        'the interface is reached first'      | 19   | SCHEMA
+        'the implementation is reached first' | 20   | SCHEMA.replace('sections: [Section!]!', 'text: TextSection\n  sections: [Section!]!')
     }
 
     void "a field marked with a resolver directive binds the interface resolver, not the getter (#order)"() {
@@ -193,6 +194,7 @@ type MediaSection implements Section {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ResolverRequiredException
         e.cause.message.startsWith("""The GraphQL field carries @computed, so a type resolver method must bind it, but none does.
+  GraphQL coordinate: TextSection.summary (line 19, column 3)
   GraphQL object type: TextSection
   GraphQL field: summary
   Not bound:

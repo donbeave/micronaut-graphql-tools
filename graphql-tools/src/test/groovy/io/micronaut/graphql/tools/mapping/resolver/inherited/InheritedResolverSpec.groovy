@@ -171,6 +171,7 @@ type Book {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """Found multiple methods for one GraphQL field.
+  GraphQL coordinate: Query.book (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: book
   Methods:\u0020
@@ -189,6 +190,7 @@ type Book {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """Found multiple methods for one GraphQL field.
+  GraphQL coordinate: Book.summary (line 13, column 3)
   GraphQL object type: Book
   GraphQL field: summary
   Methods:\u0020
