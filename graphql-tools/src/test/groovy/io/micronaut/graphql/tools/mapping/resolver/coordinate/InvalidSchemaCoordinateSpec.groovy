@@ -61,7 +61,7 @@ enum Genre {
         where:
         name               | problem
         'unknownType'      | "@GraphQLSchemaCoordinate(\"Novel.summary\") on ${UnknownTypeResolver.name} summary(${Book.name} book): the schema has no type Novel."
-        'notObjectType'    | "@GraphQLSchemaCoordinate(\"Genre.summary\") on ${EnumTypeResolver.name} summary(${Book.name} book): Genre is not an object type."
+        'notObjectType'    | "@GraphQLSchemaCoordinate(\"Genre.summary\") on ${EnumTypeResolver.name} summary(${Book.name} book): Genre is neither an object type nor an interface."
         'unknownField'     | "@GraphQLSchemaCoordinate(\"Book.synopsis\") on ${UnknownFieldResolver.name} synopsis(${Book.name} book): the type Book has no field synopsis."
         'nameMismatch'     | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${NameMismatchResolver.name} summaryText(${Book.name} book): the field name summary differs from the method name summaryText."
         'malformed'        | "@GraphQLSchemaCoordinate(\"summary\") on ${MalformedResolver.name} summary(${Book.name} book): the value is not a schema coordinate of the form Type.field."

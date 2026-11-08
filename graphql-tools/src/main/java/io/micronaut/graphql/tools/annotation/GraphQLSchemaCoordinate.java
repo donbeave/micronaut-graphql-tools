@@ -36,11 +36,13 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * <p>The coordinate is checked at startup, never trusted. The startup fails when:</p>
  * <ul>
  *     <li>the bean is neither a {@link GraphQLRootResolver} nor a {@link GraphQLTypeResolver};</li>
- *     <li>the value is not of the form {@code Type.field}, the schema has no such object type, or the type has no
- *     such field;</li>
+ *     <li>the value is not of the form {@code Type.field}, the schema has no such object type or interface, or the
+ *     type has no such field;</li>
  *     <li>the field name differs from the method name;</li>
  *     <li>the type is not a root operation type on a {@link GraphQLRootResolver}, or is one on a
  *     {@link GraphQLTypeResolver};</li>
+ *     <li>(on a {@link GraphQLTypeResolver} for the Java type of an interface, the coordinate names the interface
+ *     field, {@code Interface.field}, which the method binds on the implementing object types)</li>
  *     <li>the method does not end up bound to exactly that field, for example because the type is mapped to a class
  *     that the {@link GraphQLTypeResolver} does not resolve, a property of the mapped class binds the field, or the
  *     same method name also binds a field of another root operation type.</li>

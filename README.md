@@ -113,7 +113,8 @@ method name, and the coordinate is checked at startup, never trusted:
 - On a bean where at least one method carries a coordinate, only those methods bind. Other public methods (helpers)
   are not candidates.
 - The startup fails with `InvalidSchemaCoordinateException`, listing every problem, when a coordinate is not of the
-  form `Type.field`, names a type or field the schema does not have or a type that is not an object type, names a field
+  form `Type.field`, names a type or field the schema does not have or a type that is neither an object type nor an
+  interface, names a field
   that differs from the method name, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
   `@GraphQLTypeResolver`, or sits on a bean that is neither.
 - It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
@@ -191,6 +192,13 @@ return schemaMappingDictionary -> schemaMappingDictionary
   ```
 - Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
   (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
+- A `@GraphQLTypeResolver` for the Java interface that an SDL interface is mapped to binds the fields of that interface
+  on every implementing object type that does not bind them itself (the first parameter is the Java interface). Its
+  coordinate, if any, is the interface field (`Section.summary`). When an implementation binds such a field itself as
+  well (a property, a `@GraphQLField` method or its own type resolver), or two interfaces of it have a resolver for the
+  field, the startup fails with `MultipleMethodsFoundException` naming the object type, the field and both members.
+  Only interfaces that a field returns have a Java type, so a resolver for an interface that is only implemented is
+  not applied.
 
 ## Examples
 

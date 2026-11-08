@@ -320,22 +320,31 @@ public final class GraphQLResolversRegistry {
         throw MethodNotFoundException.forRoot(methodName, mappingContext, resolvers);
     }
 
+    /**
+     * @param beanType   the class the type resolvers are declared for
+     * @param methodName the field name
+     * @return the type resolver methods for the field, possibly none
+     */
+    List<BeanDefinitionAndMethod> findTypeExecutableMethods(Class<?> beanType, String methodName) {
+        List<BeanDefinitionAndMethod> result = new ArrayList<>();
+
+        for (BeanDefinitionAndMethods item : typeResolvers.getOrDefault(beanType, Collections.emptyList())) {
+            result.addAll(findMethods(item, methodName));
+        }
+
+        return result;
+    }
+
     List<BeanDefinitionAndMethod> getTypeExecutableMethod(Class<?> beanType, String methodName,
                                                           MappingContext mappingContext) {
         resolveTypeResolverMethods();
 
         List<BeanDefinitionAndMethods> items = typeResolvers.get(beanType);
 
-        if (items != null) {
-            List<BeanDefinitionAndMethod> result = new ArrayList<>();
+        List<BeanDefinitionAndMethod> result = findTypeExecutableMethods(beanType, methodName);
 
-            for (BeanDefinitionAndMethods item : items) {
-                result.addAll(findMethods(item, methodName));
-            }
-
-            if (!result.isEmpty()) {
-                return result;
-            }
+        if (!result.isEmpty()) {
+            return result;
         }
 
         List<Class<?>> resolvers = items != null
