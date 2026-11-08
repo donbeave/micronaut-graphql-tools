@@ -151,6 +151,30 @@ public RuntimeWiringCustomizer hideInternalFields() {
 }
 ```
 
+## Building the GraphQL bean yourself
+
+The library creates two beans: the bound `GraphQLSchema`, and the `GraphQL` engine that runs it. Each one is created
+only when the application has no bean of that type:
+
+- An application that configures the engine itself (instrumentation, execution strategies, its own transport)
+  provides a `GraphQL` bean built from the library's `GraphQLSchema` bean. The library then creates no `GraphQL`
+  bean, so there is exactly one.
+- An application that provides its own `GraphQLSchema` bean gets no binding from the library (no
+  `TypeDefinitionRegistry` is needed); the library's `GraphQL` bean, unless the application has one too, runs that
+  schema.
+
+```java
+@Bean
+@Singleton
+public GraphQL graphQL(GraphQLSchema schema, MyInstrumentation instrumentation) {
+    return GraphQL.newGraphQL(schema).instrumentation(instrumentation).build();
+}
+```
+
+The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and its HTTP controller serves
+whichever `GraphQL` bean exists. The library's own code does not use it, so an application with its own transport
+can exclude that dependency.
+
 ## Examples
 
 Examples can be found in the [test-suite](test-suite) directory.
