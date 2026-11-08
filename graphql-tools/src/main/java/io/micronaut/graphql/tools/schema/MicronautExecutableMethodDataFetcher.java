@@ -16,8 +16,6 @@
 package io.micronaut.graphql.tools.schema;
 
 import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
@@ -25,9 +23,9 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.graphql.tools.ArgumentDefinition;
+import io.micronaut.graphql.tools.ArgumentValue;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -37,59 +35,34 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Internal
 public final class MicronautExecutableMethodDataFetcher implements DataFetcher<Object> {
 
-    private final ObjectMapper objectMapper;
+    private final InputValueConverter inputValueConverter;
     private final Executable<Object, ?> executable;
     private final List<ArgumentDefinition> argumentDefinitions;
     private final JavaType[] javaTypes;
+    private final boolean[] argumentValues;
     private final Object instance;
 
     public MicronautExecutableMethodDataFetcher(
-            ObjectMapper objectMapper,
+            InputValueConverter inputValueConverter,
             Executable<Object, ?> executable,
             List<ArgumentDefinition> argumentDefinitions,
             @Nullable Object instance
     ) {
-        this.objectMapper = objectMapper;
+        this.inputValueConverter = inputValueConverter;
         this.executable = executable;
         this.argumentDefinitions = new CopyOnWriteArrayList<>(argumentDefinitions);
-        this.javaTypes = argumentDefinitions.stream()
-                .map(it -> it.getInputValueArgument()
-                        .map(argument -> toJavaType(objectMapper.getTypeFactory(), argument))
-                        .orElse(null))
-                .toArray(JavaType[]::new);
+        this.javaTypes = new JavaType[argumentDefinitions.size()];
+        this.argumentValues = new boolean[argumentDefinitions.size()];
+        for (int i = 0; i < argumentDefinitions.size(); i++) {
+            Argument<?> argument = argumentDefinitions.get(i).getInputValueArgument().orElse(null);
+            if (argument != null) {
+                // the binding allows ArgumentValue only with a declared type argument
+                argumentValues[i] = ArgumentValue.class.equals(argument.getType());
+                javaTypes[i] = inputValueConverter.toJavaType(
+                        argumentValues[i] ? argument.getFirstTypeVariable().orElseThrow() : argument);
+            }
+        }
         this.instance = instance;
-    }
-
-    /**
-     * @param typeFactory the type factory of the mapper
-     * @param argument    a declared Java type with its type arguments, e.g. {@code List<List<SomeInput>>}
-     * @return the Jackson type with the same type arguments
-     */
-    static JavaType toJavaType(TypeFactory typeFactory, Argument<?> argument) {
-        Argument<?>[] typeParameters = argument.getTypeParameters();
-        if (typeParameters.length == 0) {
-            return typeFactory.constructType(argument.getType());
-        }
-        JavaType[] parameterTypes = Arrays.stream(typeParameters)
-                .map(it -> toJavaType(typeFactory, it))
-                .toArray(JavaType[]::new);
-        return typeFactory.constructParametricType(argument.getType(), parameterTypes);
-    }
-
-    /**
-     * Converts a value graphql-java coerced (a scalar value, an enum name, a {@code Map} for an input object or a
-     * {@code List} of these) into the declared Java type, including its type arguments. A value that already is an
-     * instance of a declared type without type arguments is passed as is.
-     */
-    @Nullable
-    private Object convert(@Nullable Object value, JavaType javaType) {
-        if (value == null) {
-            return null;
-        }
-        if (!javaType.hasGenericTypes() && javaType.getRawClass().isInstance(value)) {
-            return value;
-        }
-        return objectMapper.convertValue(value, javaType);
     }
 
     @Override
@@ -102,10 +75,19 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                 arguments.add(environment.getSource());
             } else if (argumentDefinition.isDataFetchingEnvironmentArgument()) {
                 arguments.add(environment);
+            } else if (argumentValues[i]) {
+                // graphql-java leaves an argument out of the map only if the client did not provide it and the
+                // schema declares no default value for it
+                if (environment.containsArgument(argumentDefinition.getName())) {
+                    Object argumentValue = environment.getArgument(argumentDefinition.getName());
+                    arguments.add(ArgumentValue.ofNullable(inputValueConverter.convert(argumentValue, javaTypes[i])));
+                } else {
+                    arguments.add(ArgumentValue.omitted());
+                }
             } else {
                 Object argumentValue = environment.getArgument(argumentDefinition.getName());
 
-                arguments.add(convert(argumentValue, javaTypes[i]));
+                arguments.add(inputValueConverter.convert(argumentValue, javaTypes[i]));
             }
         }
 

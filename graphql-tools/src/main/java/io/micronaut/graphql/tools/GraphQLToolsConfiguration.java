@@ -43,6 +43,7 @@ public class GraphQLToolsConfiguration {
 
     private UnreachableTypes unreachableTypes = UnreachableTypes.FAIL;
     private List<String> allowUnreachable = Collections.emptyList();
+    private InputConfiguration input = new InputConfiguration();
 
     /**
      * @return what happens to object, interface and union types of the schema that no field reachable from a root
@@ -83,6 +84,52 @@ public class GraphQLToolsConfiguration {
     public void setAllowUnreachable(@NonNull List<String> allowUnreachable) {
         ArgumentUtils.requireNonNull("allowUnreachable", allowUnreachable);
         this.allowUnreachable = List.copyOf(allowUnreachable);
+    }
+
+    /**
+     * @return the options for arguments and input objects, under {@value #PREFIX}.input
+     */
+    @NonNull
+    public InputConfiguration getInput() {
+        return input;
+    }
+
+    /**
+     * @param input the options for arguments and input objects
+     */
+    public void setInput(@NonNull InputConfiguration input) {
+        ArgumentUtils.requireNonNull("input", input);
+        this.input = input;
+    }
+
+    /**
+     * Options for arguments and input objects, under {@value GraphQLToolsConfiguration#PREFIX}.input.
+     */
+    @ConfigurationProperties("input")
+    public static class InputConfiguration {
+
+        private boolean detectOmission;
+
+        /**
+         * @return whether resolver parameters and input class properties declared as {@link ArgumentValue} tell an
+         * omitted value from an explicit {@code null}
+         */
+        public boolean isDetectOmission() {
+            return detectOmission;
+        }
+
+        /**
+         * Enables {@link ArgumentValue} for resolver parameters and input class properties, so that they tell an
+         * omitted value from an explicit {@code null}. Without it a declared {@link ArgumentValue} fails the startup,
+         * and an omitted value and an explicit {@code null} both reach the resolver as {@code null}. Default:
+         * {@code false}.
+         *
+         * @param detectOmission whether to enable {@link ArgumentValue}
+         */
+        public void setDetectOmission(boolean detectOmission) {
+            this.detectOmission = detectOmission;
+        }
+
     }
 
     /**

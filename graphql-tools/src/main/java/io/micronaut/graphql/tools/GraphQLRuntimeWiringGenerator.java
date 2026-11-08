@@ -65,8 +65,11 @@ import io.micronaut.graphql.tools.exceptions.ScalarMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException;
+import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
+import io.micronaut.graphql.tools.schema.ArgumentValueModule;
 import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
+import io.micronaut.graphql.tools.schema.InputValueConverter;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.schema.UnionTypeResolver;
@@ -93,6 +96,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -129,7 +133,9 @@ final class GraphQLRuntimeWiringGenerator {
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final SchemaMappingDictionary schemaMappingDictionary;
     private final Provider<GraphQLSchema> graphQLSchemaProvider;
-    private final ObjectMapper objectMapper;
+    private final InputValueConverter inputValueConverter;
+    private final Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans = new ConcurrentHashMap<>();
+    private final List<Map.Entry<InputMappingContext, Class<?>>> writeOnlyInputObjectProperties = new ArrayList<>();
     private final GraphQLToolsConfiguration configuration;
     private final Map<String, GraphQLScalarMapping> scalarMappings;
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
@@ -164,7 +170,10 @@ final class GraphQLRuntimeWiringGenerator {
 
         this.scalarMappings = collectScalarMappings(applicationContext.getBeansOfType(GraphQLScalarMapping.class));
 
-        this.objectMapper = createInputObjectMapper(applicationContext, scalarMappings.values());
+        this.inputValueConverter = new InputValueConverter(
+                createInputObjectMapper(applicationContext, scalarMappings.values(), configuration),
+                omissionPlans
+        );
         this.rootRuntimeWiringBuilder = RuntimeWiring.newRuntimeWiring()
                 .scalar(ExtendedScalars.GraphQLLong)
                 .scalar(ExtendedScalars.GraphQLShort)
@@ -176,15 +185,20 @@ final class GraphQLRuntimeWiringGenerator {
     /**
      * @return a copy of the application's {@link GraphQLToolsConfiguration#INPUT_OBJECT_MAPPER} bean if there is one,
      * otherwise a mapper with Jackson's defaults and the {@link BeanIntrospectionModule}; in both cases with the
-     * library's own modules added
+     * library's own modules added ({@link ArgumentValueModule} only with {@code input.detect-omission})
      */
     private static ObjectMapper createInputObjectMapper(ApplicationContext applicationContext,
-                                                        Collection<GraphQLScalarMapping> scalarMappings) {
+                                                        Collection<GraphQLScalarMapping> scalarMappings,
+                                                        GraphQLToolsConfiguration configuration) {
         ObjectMapper objectMapper = applicationContext
                 .findBean(ObjectMapper.class, Qualifiers.byName(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER))
                 .map(ObjectMapper::copy)
                 .orElseGet(() -> new ObjectMapper().registerModule(new BeanIntrospectionModule()));
-        return objectMapper.registerModule(new ScalarValuesModule(scalarMappings));
+        objectMapper.registerModule(new ScalarValuesModule(scalarMappings));
+        if (configuration.getInput().isDetectOmission()) {
+            objectMapper.registerModule(new ArgumentValueModule());
+        }
+        return objectMapper;
     }
 
     private static Map<String, GraphQLScalarMapping> collectScalarMappings(
@@ -228,6 +242,8 @@ final class GraphQLRuntimeWiringGenerator {
             for (OperationTypeDefinition operationTypeDefinition : schemaDefinition.getOperationTypeDefinitions()) {
                 processOperationTypeDefinition(operationTypeDefinition);
             }
+
+            checkWriteOnlyInputObjectProperties();
 
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(processUnreachableTypes(schemaDefinition)));
 
@@ -334,7 +350,7 @@ final class GraphQLRuntimeWiringGenerator {
 
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
-                new MicronautExecutableMethodDataFetcher(objectMapper, executable, argumentDefinitions, instance)
+                new MicronautExecutableMethodDataFetcher(inputValueConverter, executable, argumentDefinitions, instance)
         );
 
         processFieldReturnType(returnType.asArgument(), mappingContext.getFieldDefinition().getType(),
@@ -905,6 +921,10 @@ final class GraphQLRuntimeWiringGenerator {
                 );
             }
 
+            boolean detectOmission = configuration.getInput().isDetectOmission();
+            List<BeanProperty<Object, Object>> argumentValueProperties = new ArrayList<>();
+            List<BeanProperty<Object, Object>> inputObjectProperties = new ArrayList<>();
+
             for (InputValueDefinition inputValueDefinition : inputObjectTypeDefinition.getInputValueDefinitions()) {
                 Optional<BeanProperty<Object, Object>> property =
                         beanIntrospection.getProperty(inputValueDefinition.getName());
@@ -922,24 +942,100 @@ final class GraphQLRuntimeWiringGenerator {
                     );
                 }
 
-                processInputType(
-                        inputValueDefinition.getType(),
-                        property.get().asArgument(),
-                        new InputMappingContext(
-                                inputObjectTypeDefinition,
-                                inputValueDefinition.getName(),
-                                targetClass,
-                                property.get().getName()
-                        )
+                InputMappingContext inputMappingContext = new InputMappingContext(
+                        inputObjectTypeDefinition,
+                        inputValueDefinition.getName(),
+                        targetClass,
+                        property.get().getName()
                 );
+
+                processInputType(inputValueDefinition.getType(), property.get().asArgument(), inputMappingContext);
+
+                if (ArgumentValue.class.equals(property.get().getType()) && property.get().isReadOnly()) {
+                    throw new UnsupportedInputTypeException(inputMappingContext, ArgumentValue.class.getName()
+                            + " needs a writable property: it is set to omitted() when the client leaves it out.");
+                }
+
+                if (detectOmission) {
+                    if (ArgumentValue.class.equals(property.get().getType())) {
+                        if (property.get().isWriteOnly()) {
+                            throw new UnsupportedInputTypeException(inputMappingContext, ArgumentValue.class.getName()
+                                    + " needs a readable property: it is read to set it to omitted() when the client "
+                                    + "leaves it out.");
+                        }
+                        argumentValueProperties.add(property.get());
+                    } else if (isInputObjectType(inputValueDefinition.getType())) {
+                        if (property.get().isWriteOnly()) {
+                            writeOnlyInputObjectProperties.add(
+                                    Map.entry(inputMappingContext, elementClass(property.get().asArgument())));
+                        } else {
+                            inputObjectProperties.add(property.get());
+                        }
+                    }
+                }
+            }
+
+            if (!argumentValueProperties.isEmpty() || !inputObjectProperties.isEmpty()) {
+                omissionPlans.put(targetClass,
+                        new InputValueConverter.OmissionPlan(argumentValueProperties, inputObjectProperties));
             }
         });
     }
 
     private void processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext) {
+        processInputType(graphQlType, argument, mappingContext, true);
+    }
+
+    private boolean isInputObjectType(Type<?> graphQlType) {
+        Type<?> type = graphQlType;
+        while (!(type instanceof TypeName)) {
+            type = type instanceof NonNullType nonNullType ? nonNullType.getType() : ((ListType) type).getType();
+        }
+        return typeDefinitionRegistry.getType(((TypeName) type).getName())
+                .filter(InputObjectTypeDefinition.class::isInstance)
+                .isPresent();
+    }
+
+    private static Class<?> elementClass(Argument<?> argument) {
+        Argument<?> result = argument;
+        while ((ArgumentValue.class.equals(result.getType()) || Iterable.class.isAssignableFrom(result.getType()))
+                && result.getFirstTypeVariable().isPresent()) {
+            result = result.getFirstTypeVariable().get();
+        }
+        return result.getType();
+    }
+
+    /**
+     * A write-only property of an input object type cannot be visited after a conversion, so the
+     * {@link ArgumentValue} properties further down could not be set to {@code omitted()}.
+     */
+    private void checkWriteOnlyInputObjectProperties() {
+        for (Map.Entry<InputMappingContext, Class<?>> entry : writeOnlyInputObjectProperties) {
+            if (holdsArgumentValues(entry.getValue(), new HashSet<>())) {
+                throw new UnsupportedInputTypeException(entry.getKey(), "the property is write-only, but its input "
+                        + "class " + entry.getValue().getName() + " has " + ArgumentValue.class.getName()
+                        + " properties, which are read to set them to omitted() when the client leaves them out.");
+            }
+        }
+    }
+
+    private boolean holdsArgumentValues(Class<?> inputClass, Set<Class<?>> visited) {
+        InputValueConverter.OmissionPlan plan = omissionPlans.get(inputClass);
+        if (plan == null || !visited.add(inputClass)) {
+            return false;
+        }
+        if (!plan.argumentValueProperties().isEmpty()) {
+            return true;
+        }
+        return plan.inputObjectProperties().stream()
+                .anyMatch(it -> holdsArgumentValues(elementClass(it.asArgument()), visited));
+    }
+
+    private void processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext,
+                                  boolean fieldLevel) {
+        argument = unwrapArgumentValue(unwrapArgument(argument), graphQlType, fieldLevel, mappingContext);
         boolean nonNull = graphQlType instanceof NonNullType;
         graphQlType = unwrapNonNullType(graphQlType);
-        argument = unwrapArgument(argument);
 
         Type<?> fieldType = unwrapNonNullType(graphQlType);
         Class<?> returnType = argument.getType();
@@ -958,7 +1054,7 @@ final class GraphQLRuntimeWiringGenerator {
             Type<?> listFieldType = ((ListType) fieldType).getType();
             Argument<?> listArgument = argument.getFirstTypeVariable().get();
 
-            processInputType(listFieldType, listArgument, mappingContext);
+            processInputType(listFieldType, listArgument, mappingContext, false);
             return;
         }
 
@@ -999,6 +1095,44 @@ final class GraphQLRuntimeWiringGenerator {
         } else {
             throw unsupportedTypeDefinition(typeDefinition);
         }
+    }
+
+    /**
+     * Removes an {@link ArgumentValue} from the declared type of an argument or an input class property. It needs
+     * {@code input.detect-omission}, a nullable GraphQL type (only those can be omitted or {@code null}) and the field
+     * level (a list element cannot be omitted).
+     *
+     * @param argument       the declared type
+     * @param graphQlType    the GraphQL type of the argument, input field or list element, before removing non-null
+     * @param fieldLevel     {@code true} for the argument or input field itself, {@code false} for a list element
+     * @param mappingContext the mapping context
+     * @return the type the GraphQL type has to be mapped to
+     */
+    private Argument<?> unwrapArgumentValue(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
+                                            MappingContext mappingContext) {
+        if (!ArgumentValue.class.equals(argument.getType())) {
+            return argument;
+        }
+        String wrapper = ArgumentValue.class.getName();
+        if (!configuration.getInput().isDetectOmission()) {
+            throw new UnsupportedInputTypeException(mappingContext,
+                    wrapper + " needs " + GraphQLToolsConfiguration.PREFIX + ".input.detect-omission=true.");
+        }
+        if (!fieldLevel) {
+            throw new UnsupportedInputTypeException(mappingContext,
+                    wrapper + " is not allowed inside a list: a list element cannot be omitted.");
+        }
+        if (graphQlType instanceof NonNullType) {
+            throw new UnsupportedInputTypeException(mappingContext, wrapper
+                    + " is only allowed for a nullable GraphQL type, the type is " + printType(graphQlType) + ".");
+        }
+        Argument<?> result = argument.getFirstTypeVariable()
+                .orElseThrow(() -> new UnsupportedInputTypeException(mappingContext,
+                        wrapper + " must declare the type it wraps."));
+        if (ArgumentValue.class.equals(result.getType())) {
+            throw new UnsupportedInputTypeException(mappingContext, wrapper + " cannot wrap " + wrapper + ".");
+        }
+        return result;
     }
 
     private GraphQLScalarMapping requireScalarMapping(ScalarTypeDefinition scalarTypeDefinition,

@@ -168,12 +168,40 @@ ObjectMapper graphQLToolsObjectMapper() {
 - The bean is used as it is otherwise: register `BeanIntrospectionModule` yourself if input classes must be read
   without reflection (GraalVM native image).
 
+### Omitted values and `null`
+
+By default an omitted argument and an explicit `null` both reach the resolver as `null` (an input class property the
+client leaves out keeps the value the class gives it). Default values of the schema apply in any case, and enum values
+arrive as the Java enum constants of the same name.
+
+To tell them apart, set `micronaut.graphql.tools.input.detect-omission: true` and declare the resolver parameter or the
+input class property as `ArgumentValue<T>`:
+
+```java
+String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput> profile) {
+    if (nickname.isOmitted()) { /* not sent: keep the stored value */ }
+    else if (nickname.isNull()) { /* sent as null: clear it */ }
+    else { /* nickname.get() */ }
+}
+```
+
+- `isOmitted()`: not provided and no schema default; `isNull()`: an explicit `null`; `isPresent()`: a value (provided
+  or the schema's default).
+- A variable the request does not provide counts as omitted.
+- `ArgumentValue` is allowed only for a nullable GraphQL type, not inside a list, and an input class property of that
+  type needs a getter and a setter (the library sets it to `ArgumentValue.omitted()` when the client leaves it out).
+  Otherwise, and without the option, the startup fails with `UnsupportedInputTypeException`.
+- After a conversion the library reads only the `ArgumentValue` properties and the properties that hold input objects
+  (worked out at startup); it never calls other getters. A write-only property that holds an input class with
+  `ArgumentValue` properties fails the startup, because they could not be set to `omitted()`.
+
 ## Configuration
 
 | Property | Values (default first) | Meaning |
 |---|---|---|
 | `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
+| `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
 
 ```yaml
 micronaut:
