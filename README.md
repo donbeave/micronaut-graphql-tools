@@ -320,6 +320,132 @@ checked for reachability, and the findings appear in the manifest only. `allow-u
 enum, input and scalar types, so switching strict mode off never makes a valid configuration fail; without strict mode
 those entries have no effect.
 Checks of Java input classes against the schema's input fields are not part of this mode.
+## Custom scalars
+
+GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`,
+`BigDecimal` and `BigInteger` are built in. Any other scalar of the schema needs a `GraphQLScalarMapping` bean: the
+graphql-java `GraphQLScalarType` that implements it, and the Java classes that stand for it.
+
+```java
+@Factory
+public class ScalarsFactory {
+
+    @Bean
+    @Singleton
+    GraphQLScalarMapping localDate() {
+        // same Java classes for fields, arguments and input fields
+        return GraphQLScalarMapping.of(myLocalDateScalarType, LocalDate.class);
+    }
+
+    @Bean
+    @Singleton
+    GraphQLScalarMapping json() {
+        // different classes for output and input
+        return GraphQLScalarMapping.builder(ExtendedScalars.Json)
+                .outputClasses(Object.class)
+                .inputClasses(Object.class, Map.class)
+                .build();
+    }
+
+}
+```
+
+- **Output classes** are the classes the scalar's `serialize` accepts. A field of the scalar type may be backed by one
+  of them or a subclass.
+- **Input classes** are the classes the scalar's `parseValue`/`parseLiteral` produce. An argument or an input object
+  field of the scalar type must be declared as exactly one of them.
+- A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type
+  (`Count!`), because `null` cannot be passed to it.
+
+The library ships no scalar implementations of its own beyond the built-in ones; graphql-java-extended-scalars and
+other libraries provide many. A mapping only takes effect for scalars the schema declares.
+
+The startup fails:
+
+- with `ScalarMappingNotProvidedException` when a field, argument or input field uses a scalar that has no mapping;
+  the message names the coordinate;
+- with `IncorrectClassMappingException` when the Java type is not one of the mapping's classes, when the mapping
+  declares no classes for that side, or when a primitive stands for a nullable input;
+- with `InvalidScalarMappingException` when two mappings have the same scalar name, or a mapping names a built-in
+  scalar.
+
+Values of custom scalars inside input objects reach the input class as the instances the scalar parsed, also for
+classes Jackson cannot serialize itself (such as `java.time` types without the JSR-310 module).
+
+## Arguments and input objects
+
+graphql-java hands a data fetcher the coerced argument values: scalar values, enum names, a `Map` per input object
+and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
+including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`), with a Jackson
+`ObjectMapper`.
+
+By default that is a private mapper with Jackson's defaults plus Micronaut's `BeanIntrospectionModule`. In particular
+`FAIL_ON_UNKNOWN_PROPERTIES` stays `true`. An input field that the input class cannot take fails the startup in any
+case (see [Input classes and input types](#input-classes-and-input-types)). To convert with your own settings, define an `ObjectMapper` bean named `graphql-tools`
+(`GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER`):
+
+```java
+@Bean
+@Singleton
+@Named(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER)
+ObjectMapper graphQLToolsObjectMapper() {
+    return new ObjectMapper()
+            .registerModule(new BeanIntrospectionModule())
+            .registerModule(new JavaTimeModule());
+}
+```
+
+- Only a bean with exactly this name is used; the application's default `ObjectMapper` and the `jackson.*`
+  configuration do not affect input conversion.
+- The library works on a copy of the bean and adds its own module to the copy (custom scalar values pass through
+  unchanged, see [Custom scalars](#custom-scalars)); the bean itself is not changed.
+- The bean is used as it is otherwise: register `BeanIntrospectionModule` yourself if input classes must be read
+  without reflection (GraalVM native image).
+
+### Input classes and input types
+
+Input classes are checked against their GraphQL input types at startup, in both directions:
+
+- Every field of an input type needs a property of the same name that the input `ObjectMapper` can set: a setter, a
+  field or a constructor parameter, under the name Jackson uses. A missing property fails the startup with
+  `MethodNotFoundException`; a read-only, `@JsonIgnore`d or renamed one (naming strategy, `@JsonProperty`) with
+  `InputFieldNotSettableException`, which names the field as `InputType.field`. Such a field would otherwise fail every
+  request that sends it, or be dropped silently by a lenient mapper. The check uses the mapper that converts requests,
+  including a [named mapper](#arguments-and-input-objects); it is skipped for a class the mapper converts with a
+  deserializer of its own.
+- A property the class can set (through a setter or the constructor) that the input type does not define fails the
+  startup, all of them in one `UnmappedInputPropertiesException`, because no request can set it. Set
+  `micronaut.graphql.tools.input.unmapped-properties: ignore` to accept such properties. Read-only properties, such as
+  computed getters, are not checked.
+
+Both checks apply wherever the input type is used: an argument, a list, another input type, an `ArgumentValue`.
+
+### Omitted values and `null`
+
+By default an omitted argument and an explicit `null` both reach the resolver as `null` (an input class property the
+client leaves out keeps the value the class gives it). Default values of the schema apply in any case, and enum values
+arrive as the Java enum constants of the same name.
+
+To tell them apart, set `micronaut.graphql.tools.input.detect-omission: true` and declare the resolver parameter or the
+input class property as `ArgumentValue<T>`:
+
+```java
+String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput> profile) {
+    if (nickname.isOmitted()) { /* not sent: keep the stored value */ }
+    else if (nickname.isNull()) { /* sent as null: clear it */ }
+    else { /* nickname.get() */ }
+}
+```
+
+- `isOmitted()`: not provided and no schema default; `isNull()`: an explicit `null`; `isPresent()`: a value (provided
+  or the schema's default).
+- A variable the request does not provide counts as omitted.
+- `ArgumentValue` is allowed only for a nullable GraphQL type, not inside a list, and an input class property of that
+  type needs a getter and a setter (the library sets it to `ArgumentValue.omitted()` when the client leaves it out).
+  Otherwise, and without the option, the startup fails with `UnsupportedInputTypeException`.
+- After a conversion the library reads only the `ArgumentValue` properties and the properties that hold input objects
+  (worked out at startup); it never calls other getters. A write-only property that holds an input class with
+  `ArgumentValue` properties fails the startup, because they could not be set to `omitted()`.
 
 ## Configuration
 
@@ -332,6 +458,8 @@ Checks of Java input classes against the schema's input fields are not part of t
 | `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode). `false` binds as before and only lists them in the manifest. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
+| `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
+| `micronaut.graphql.tools.input.unmapped-properties` | `fail` \| `ignore` | Input class properties that the GraphQL input type does not define. `fail` stops the startup with one error that lists them for every input class; `ignore` accepts them. See [Input classes and input types](#input-classes-and-input-types). |
 
 ```yaml
 micronaut:
