@@ -174,6 +174,21 @@ return schemaMappingDictionary -> schemaMappingDictionary
 }
 ```
 
+A GraphQL type can be mapped to a class or to a Java interface. An interface and the classes annotated with
+`@GraphQLType(TheInterface.class)` are one mapping: for a union member or an implementation of an SDL interface that
+is mapped to `TheInterface`, an object of any of those classes resolves to that object type, and a field may declare
+either the interface or such a class for the same GraphQL type. The rules, each checked at startup:
+
+- A GraphQL type is mapped once, and a Java type to one GraphQL type. Both errors name the GraphQL types and the Java
+  types involved.
+- Mapping one GraphQL object type to an interface and another one to a class (or interface) implementing it fails
+  with `AmbiguousTypeMappingException`, which names both GraphQL types and both Java types: an object of that class
+  would match both.
+- A class and its subclass may be mapped to two GraphQL types; a union then resolves an object by its exact class.
+- Two fields that declare different Java types for one GraphQL type fail with `MappingConflictException`, unless the
+  two types are an interface and a class annotated with `@GraphQLType(TheInterface.class)` that is read through the
+  same bean introspection.
+
 ### Unions and interfaces
 
 - A field that returns a GraphQL union or interface declares a Java interface (for example `List<Section>` for

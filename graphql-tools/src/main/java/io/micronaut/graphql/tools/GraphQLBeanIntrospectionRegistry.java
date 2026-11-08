@@ -115,6 +115,16 @@ final class GraphQLBeanIntrospectionRegistry {
     }
 
     /**
+     * @param interfaceClass a Java interface
+     * @return the classes annotated with {@code @GraphQLType(interfaceClass)}, or an empty list
+     */
+    List<Class<?>> getImplementationClasses(Class<?> interfaceClass) {
+        loadTypeIntrospections();
+
+        return interfaceToImplementation.getOrDefault(interfaceClass, List.of());
+    }
+
+    /**
      * Get interface by class implementation or return the current class if it's not implement any interfaces.
      *
      * @param implementationClass the implementation class

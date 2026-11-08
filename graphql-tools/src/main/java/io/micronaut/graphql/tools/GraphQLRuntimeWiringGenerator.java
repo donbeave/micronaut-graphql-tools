@@ -52,6 +52,7 @@ import io.micronaut.graphql.tools.GraphQLResolversRegistry.SchemaCoordinateMetho
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+import io.micronaut.graphql.tools.exceptions.AmbiguousTypeMappingException;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
@@ -210,6 +211,8 @@ final class GraphQLRuntimeWiringGenerator {
 
             validateSchemaCoordinates(schemaDefinition);
 
+            validateSchemaMappingDictionary();
+
             subscriptionTypeName = schemaDefinition.getOperationTypeDefinitions().stream()
                     .filter(it -> "subscription".equals(it.getName()))
                     .map(it -> it.getTypeName().getName())
@@ -339,6 +342,44 @@ final class GraphQLRuntimeWiringGenerator {
 
         if (!problems.isEmpty()) {
             throw new InvalidSchemaCoordinateException(problems);
+        }
+    }
+
+    /**
+     * Rejects dictionary entries that map one GraphQL object type to a Java interface and another one to a class or
+     * interface that implements it: an object of that class would match both types. Entries for names that are not
+     * object types of the schema are left to the code that uses them.
+     */
+    private void validateSchemaMappingDictionary() {
+        List<Map.Entry<String, Class<?>>> entries = schemaMappingDictionary.getTypes().entrySet().stream()
+                .filter(it -> typeDefinitionRegistry.getType(it.getKey())
+                        .filter(ObjectTypeDefinition.class::isInstance)
+                        .isPresent())
+                .sorted(Map.Entry.comparingByKey())
+                .toList();
+
+        List<String> conflicts = new ArrayList<>();
+        Set<String> graphQlTypes = new TreeSet<>();
+
+        for (int i = 0; i < entries.size(); i++) {
+            for (int j = i + 1; j < entries.size(); j++) {
+                Map.Entry<String, Class<?>> first = entries.get(i);
+                Map.Entry<String, Class<?>> second = entries.get(j);
+
+                String conflict = describeAmbiguity(first, second);
+                if (conflict == null) {
+                    conflict = describeAmbiguity(second, first);
+                }
+                if (conflict != null) {
+                    conflicts.add(conflict);
+                    graphQlTypes.add(first.getKey());
+                    graphQlTypes.add(second.getKey());
+                }
+            }
+        }
+
+        if (!conflicts.isEmpty()) {
+            throw new AmbiguousTypeMappingException(conflicts, new ArrayList<>(graphQlTypes));
         }
     }
 
@@ -478,6 +519,19 @@ final class GraphQLRuntimeWiringGenerator {
 
         fieldBindings.put(coordinate, "resolver " + method);
         resolverBindings.computeIfAbsent(method, it -> new TreeSet<>()).add(coordinate);
+    }
+
+    @Nullable
+    private String describeAmbiguity(Map.Entry<String, Class<?>> interfaceEntry, Map.Entry<String, Class<?>> other) {
+        Class<?> interfaceClass = interfaceEntry.getValue();
+        Class<?> otherClass = other.getValue();
+
+        if (!interfaceClass.isInterface() || !interfaceClass.isAssignableFrom(otherClass)) {
+            return null;
+        }
+
+        return "`" + interfaceEntry.getKey() + "` is mapped to the interface " + interfaceClass.getName() + " and `"
+                + other.getKey() + "` to " + otherClass.getName() + ", which implements it";
     }
 
     private boolean isDefined(String typeName) {
@@ -894,7 +948,9 @@ final class GraphQLRuntimeWiringGenerator {
 
                         processObjectTypeDefinition(objectTypeDefinition, clazz, mappingContext);
 
-                        objectTypes.put(clazz, typeName.getName());
+                        for (Class<?> mappedClass : getMappedClasses(clazz)) {
+                            objectTypes.put(mappedClass, typeName.getName());
+                        }
                     } else {
                         throw unsupportedTypeDefinition(typeDefinition);
                     }
@@ -942,6 +998,41 @@ final class GraphQLRuntimeWiringGenerator {
         });
     }
 
+    /**
+     * The Java type a bound object type is resolved by: the class the {@link SchemaMappingDictionary} maps it to, which
+     * every implementation of a returned interface has, so that the result does not depend on which of two alike
+     * classes (see {@link #bindsAlike}) a field reached the type through first. Without a dictionary entry, the class
+     * the type was bound with.
+     *
+     * @param objectTypeDefinition the object type
+     * @return the Java type, or {@code null} if the object type is not bound
+     */
+    @Nullable
+    private Class<?> getBoundClass(ObjectTypeDefinition objectTypeDefinition) {
+        Class<?> processedClass = processedTypes.get(objectTypeDefinition.getName());
+        if (processedClass == null) {
+            return null;
+        }
+        return schemaMappingDictionary.getTypes().getOrDefault(objectTypeDefinition.getName(), processedClass);
+    }
+
+    /**
+     * @param clazz the Java type an object type is mapped to
+     * @return the classes whose objects resolve to that object type by their exact class: the type itself and, for a
+     * Java interface, the classes annotated with {@code @GraphQLType(theInterface)}, as an object is never an instance
+     * of the interface itself
+     */
+    private List<Class<?>> getMappedClasses(Class<?> clazz) {
+        if (!clazz.isInterface()) {
+            return List.of(clazz);
+        }
+
+        List<Class<?>> result = new ArrayList<>();
+        result.add(clazz);
+        result.addAll(graphQLBeanIntrospectionRegistry.getImplementationClasses(clazz));
+        return result;
+    }
+
     private List<ObjectTypeDefinition> getImplementations(InterfaceTypeDefinition interfaceTypeDefinition) {
         return typeDefinitionRegistry.getImplementationsOf(interfaceTypeDefinition).stream()
                 .sorted(Comparator.comparing(ObjectTypeDefinition::getName))
@@ -971,13 +1062,15 @@ final class GraphQLRuntimeWiringGenerator {
             Set<Class<?>> sharedClasses = new HashSet<>();
             boolean implemented = false;
             for (ObjectTypeDefinition implementation : getImplementations(interfaceTypeDefinition)) {
-                Class<?> clazz = processedTypes.get(implementation.getName());
+                Class<?> clazz = getBoundClass(implementation);
                 if (clazz != null) {
                     implemented = true;
-                    if (objectTypes.putIfAbsent(clazz, implementation.getName()) != null) {
-                        // only possible for an implemented-only interface (the dictionary maps each class once):
-                        // its type resolver is never called, and an exact lookup must not pick one of the types
-                        sharedClasses.add(clazz);
+                    for (Class<?> mappedClass : getMappedClasses(clazz)) {
+                        if (objectTypes.putIfAbsent(mappedClass, implementation.getName()) != null) {
+                            // only possible for an implemented-only interface (the dictionary maps each class once):
+                            // its type resolver is never called, and an exact lookup must not pick one of the types
+                            sharedClasses.add(mappedClass);
+                        }
                     }
                 }
             }
@@ -1002,7 +1095,7 @@ final class GraphQLRuntimeWiringGenerator {
         processIfNotProcessed(objectTypeDefinition, targetClass, mappingContext, () -> {
             Optional.ofNullable(schemaMappingDictionary.getTypes().get(objectTypeDefinition.getName()))
                     .ifPresent(registeredClass -> {
-                        if (!registeredClass.equals(targetClass)) {
+                        if (!bindsAlike(targetClass, registeredClass, mappingContext)) {
                             throw new MappingConflictException(
                                     mappingContext,
                                     getType(objectTypeDefinition),
@@ -1420,7 +1513,11 @@ final class GraphQLRuntimeWiringGenerator {
         if (processedTypes.containsKey(typeDefinition.getName())) {
             Class<?> processedClass = processedTypes.get(typeDefinition.getName());
 
-            if (!targetClass.equals(processedClass)) {
+            boolean sameBinding = typeDefinition instanceof ObjectTypeDefinition
+                    ? bindsAlike(targetClass, processedClass, mappingContext)
+                    : targetClass.equals(processedClass);
+
+            if (!sameBinding) {
                 throw new MappingConflictException(
                         mappingContext, getType(typeDefinition), typeDefinition.getName(), targetClass, processedClass
                 );
@@ -1434,6 +1531,26 @@ final class GraphQLRuntimeWiringGenerator {
         processedTypes.put(typeDefinition.getName(), targetClass);
 
         runnable.run();
+    }
+
+    /**
+     * Two Java types bind a GraphQL object type alike when they are equal, or when one is a Java interface and the
+     * other a class annotated with {@code @GraphQLType(thatInterface)}, or both are such classes, and the type's
+     * properties are read through the same bean introspection either way.
+     */
+    private boolean bindsAlike(Class<?> first, Class<?> second, MappingContext mappingContext) {
+        if (first.equals(second)) {
+            return true;
+        }
+
+        if (!graphQLBeanIntrospectionRegistry.getInterfaceClass(first)
+                .equals(graphQLBeanIntrospectionRegistry.getInterfaceClass(second))) {
+            return false;
+        }
+
+        return graphQLBeanIntrospectionRegistry.getGraphQlTypeBeanIntrospection(mappingContext, first).getBeanType()
+                .equals(graphQLBeanIntrospectionRegistry.getGraphQlTypeBeanIntrospection(mappingContext, second)
+                        .getBeanType());
     }
 
     private static long elapsedMillis(long startNanos) {
