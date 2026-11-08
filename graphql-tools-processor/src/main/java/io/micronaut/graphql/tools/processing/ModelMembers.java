@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.processing;
 
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -25,10 +26,12 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The members of a Java type that Micronaut's bean introspection, which the library reads at runtime, gives it, and
@@ -43,6 +46,7 @@ final class ModelMembers {
 
     private final JavaTypes javaTypes;
     private final Map<String, List<TypeElement>> implementations = new LinkedHashMap<>();
+    private final Set<String> introspectedClasses = new HashSet<>();
 
     /**
      * @param javaTypes the type helpers
@@ -55,6 +59,8 @@ final class ModelMembers {
                 contractOf(type).ifPresent(contract ->
                         implementations.computeIfAbsent(javaTypes.name(contract), it -> new ArrayList<>()).add(type));
             }
+            Annotations.find(type, Annotations.INTROSPECTED)
+                    .ifPresent(it -> introspectedClasses.addAll(Annotations.classValues(it, "classes")));
         }
     }
 
@@ -79,11 +85,12 @@ final class ModelMembers {
     /**
      * @param type a Java type
      * @return whether it has a bean introspection: {@code @GraphQLType}, {@code @GraphQLInput} or {@code @Introspected}
-     * (also as a meta-annotation)
+     * (also as a meta-annotation), or a class of the compilation lists it in {@code @Introspected(classes = ...)}
      */
     boolean isIntrospected(TypeElement type) {
         return Annotations.has(type, Annotations.TYPE) || Annotations.has(type, Annotations.INPUT)
-                || Annotations.hasStereotype(type, java.util.Set.of(Annotations.INTROSPECTED));
+                || Annotations.hasStereotype(type, Set.of(Annotations.INTROSPECTED))
+                || introspectedClasses.contains(type.getQualifiedName().toString());
     }
 
     /**
@@ -123,35 +130,77 @@ final class ModelMembers {
      * @return the property, if the introspection has it
      */
     Optional<Property> property(TypeElement type, String name) {
-        ExecutableElement getter = null;
-        ExecutableElement setter = null;
+        return Optional.ofNullable(properties(type).get(name));
+    }
+
+    /**
+     * @param type an introspected type
+     * @return its properties by name, in the order of their accessors
+     */
+    Map<String, Property> properties(TypeElement type) {
+        Map<String, ExecutableElement> getters = new LinkedHashMap<>();
+        Map<String, ExecutableElement> setters = new LinkedHashMap<>();
+        Set<String> settable = new HashSet<>(constructorParameters(type));
         if (type.getKind() == ElementKind.RECORD) {
             for (RecordComponentElement component : type.getRecordComponents()) {
-                if (component.getSimpleName().contentEquals(name)) {
-                    return Optional.of(new Property(name, component.getAccessor(), component.getAccessor().getReturnType()));
-                }
+                getters.put(component.getSimpleName().toString(), component.getAccessor());
+                settable.add(component.getSimpleName().toString());
             }
         }
         for (ExecutableElement method : methods(type)) {
             String methodName = method.getSimpleName().toString();
             if (method.getParameters().isEmpty() && method.getReturnType().getKind() != TypeKind.VOID) {
-                if (methodName.startsWith("get") && methodName.length() > 3 && name.equals(decapitalize(methodName.substring(3)))
-                        || methodName.startsWith("is") && methodName.length() > 2 && isBoolean(method.getReturnType())
-                        && name.equals(decapitalize(methodName.substring(2)))) {
-                    getter = getter == null ? method : getter;
+                if (methodName.startsWith("get") && methodName.length() > 3) {
+                    getters.putIfAbsent(decapitalize(methodName.substring(3)), method);
+                } else if (methodName.startsWith("is") && methodName.length() > 2 && isBoolean(method.getReturnType())) {
+                    getters.putIfAbsent(decapitalize(methodName.substring(2)), method);
                 }
-            } else if (method.getParameters().size() == 1 && methodName.startsWith("set") && methodName.length() > 3
-                    && name.equals(decapitalize(methodName.substring(3)))) {
-                setter = setter == null ? method : setter;
+            } else if (method.getParameters().size() == 1 && methodName.startsWith("set") && methodName.length() > 3) {
+                setters.putIfAbsent(decapitalize(methodName.substring(3)), method);
             }
         }
-        if (getter != null) {
-            return Optional.of(new Property(name, getter, getter.getReturnType()));
+        Map<String, Property> result = new LinkedHashMap<>();
+        Optional<AnnotationMirror> introspected = Annotations.find(type, Annotations.INTROSPECTED);
+        List<String> includes = introspected.map(it -> Annotations.stringValues(it, "includes")).orElse(List.of());
+        List<String> excludes = introspected.map(it -> Annotations.stringValues(it, "excludes")).orElse(List.of());
+        getters.forEach((name, getter) -> result.put(name, new Property(name, getter,
+                javaTypes.memberType(type, getter).getReturnType(),
+                setters.containsKey(name) || settable.contains(name))));
+        setters.forEach((name, setter) -> result.putIfAbsent(name, new Property(name, setter,
+                javaTypes.memberType(type, setter).getParameterTypes().get(0), true)));
+        // as Micronaut builds the introspection: @Introspected(includes = ...) keeps, excludes = ... drops properties
+        result.keySet().removeIf(it -> !includes.isEmpty() && !includes.contains(it) || excludes.contains(it));
+        return result;
+    }
+
+    /**
+     * @param type an introspected type
+     * @return whether its {@code @Introspected} reads fields ({@code accessKind = FIELD}), which the checks do not
+     * model: such a type is left to the startup
+     */
+    boolean usesFieldAccess(TypeElement type) {
+        return Annotations.find(type, Annotations.INTROSPECTED)
+                .map(it -> Annotations.stringValues(it, "accessKind").contains("FIELD"))
+                .orElse(false);
+    }
+
+    /**
+     * @param type a class
+     * @return the parameter names of the constructor its introspection uses: the one annotated {@code @Creator}, or
+     * the only public one
+     */
+    private List<String> constructorParameters(TypeElement type) {
+        List<ExecutableElement> constructors = ElementFilter.constructorsIn(type.getEnclosedElements()).stream()
+                .filter(it -> it.getModifiers().contains(Modifier.PUBLIC))
+                .toList();
+        ExecutableElement constructor = constructors.stream()
+                .filter(it -> Annotations.has(it, "io.micronaut.core.annotation.Creator"))
+                .findFirst()
+                .orElse(constructors.size() == 1 ? constructors.get(0) : null);
+        if (constructor == null) {
+            return List.of();
         }
-        if (setter != null) {
-            return Optional.of(new Property(name, setter, setter.getParameters().get(0).asType()));
-        }
-        return Optional.empty();
+        return constructor.getParameters().stream().map(it -> it.getSimpleName().toString()).toList();
     }
 
     /**
@@ -200,9 +249,10 @@ final class ModelMembers {
      *
      * @param name     its name
      * @param accessor its getter, record accessor, or (write-only) setter
-     * @param type     its type
+     * @param type     its type, as a member of the introspected type (type variables of a generic superclass replaced)
+     * @param settable whether a request can set it: through a setter, a record component or a constructor parameter
      */
-    record Property(String name, ExecutableElement accessor, TypeMirror type) {
+    record Property(String name, ExecutableElement accessor, TypeMirror type, boolean settable) {
     }
 
 }

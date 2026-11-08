@@ -560,6 +560,17 @@ a method or property returns is the Java type of the field's GraphQL type):
   implement;
 - `@GraphQLSchemaCoordinate`: validated as at startup (form, type and field exist, field name equals method name, root
   or type resolver) and bound to exactly the field it names;
+- model classes: one Java type per schema type wherever it is reached (two classes bind an object type alike only with
+  the same contract and introspection), a custom class with a bean introspection (with the properties its
+  `@Introspected(includes = ..., excludes = ...)` leaves), read through the contract interface
+  when it has its own introspection (getters only an implementation declares do not bind), every class annotated
+  `@GraphQLType(Contract.class)` implementing the contract; in strict mode, a Java interface without its own
+  introspection read through its implementation;
+- enums: a Java enum with a constant for every schema value, and in strict mode no constant without one;
+- input types: an introspected class with a property for every input field, of a matching type (also nested input
+  types, lists and enums), and, in strict mode or with `input.unmappedProperties=fail`, no property a request can set
+  (setter, record component or constructor parameter) that the input type does not define;
+- unions and interfaces: the field declares a Java interface;
 - in strict mode, public resolver methods that bind no field, and a root method without a coordinate that binds fields
   of several root operation types.
 
@@ -580,7 +591,9 @@ green compilation says what it left out:
 - the members of unions and the implementations of interfaces, which come from the `SchemaMappingDictionary`, and
   fields an SDL interface declares when a type resolver of a Java interface of the model has a method of their name
   (without such a method, the field is checked like any other);
-- a Java interface returned by a field whose implementation is not in the compilation;
+- a Java interface of a dependency, returned by a field, whose implementation is not in the compilation (a JDK
+  interface, or one of the compilation, without an implementation fails);
+- a model or input class introspected with `@Introspected(accessKind = FIELD)`, which the processor does not model;
 - what the input `ObjectMapper` can set (custom deserializers, naming strategies).
 
 ## Custom types mapping

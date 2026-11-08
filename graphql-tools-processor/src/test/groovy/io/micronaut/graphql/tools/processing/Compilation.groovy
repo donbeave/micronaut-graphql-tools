@@ -38,6 +38,7 @@ class Compilation {
     private final Map<String, String> options = new LinkedHashMap<>()
     private final List<File> classpath = []
     private boolean sdlDir = true
+    private File output
     private final List<Processor> extraProcessors = []
 
     /**
@@ -84,6 +85,18 @@ class Compilation {
     }
 
     /**
+     * Compiles into a class output that exists already and is on the classpath too, as an incremental compilation does:
+     * the classes of an earlier compilation there are unchanged classes of the module, not sources.
+     *
+     * @param directory the class output of an earlier compilation
+     */
+    Compilation incrementallyInto(File directory) {
+        output = directory
+        classpath.add(directory)
+        return this
+    }
+
+    /**
      * @param entry a directory or jar to add to the classpath, for example the class output of an earlier compilation
      */
     Compilation classpath(File entry) {
@@ -100,7 +113,7 @@ class Compilation {
             Files.createDirectories(file.parent)
             Files.writeString(file, content)
         }
-        Path classes = work.resolve('classes')
+        Path classes = output != null ? output.toPath() : work.resolve('classes')
         Files.createDirectories(classes)
 
         JavaCompiler compiler = ToolProvider.systemJavaCompiler

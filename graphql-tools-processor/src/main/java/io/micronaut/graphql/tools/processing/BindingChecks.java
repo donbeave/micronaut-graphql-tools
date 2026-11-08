@@ -41,6 +41,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import java.util.ArrayList;
@@ -107,10 +108,10 @@ final class BindingChecks {
     private final Set<String> operationTypes = new TreeSet<>();
     private String subscriptionType;
     private final Map<String, TypeElement> processedTypes = new LinkedHashMap<>();
+    private final Map<String, String> mappedBy = new LinkedHashMap<>();
     private final Set<String> traversedModelClasses = new TreeSet<>();
     private final Map<Method, Set<String>> boundMethods = new IdentityHashMap<>();
     private final Map<Method, Boolean> shadowedMethods = new IdentityHashMap<>();
-    private final List<Binding> bindings = new ArrayList<>();
     private final Map<String, String> skipped = new TreeMap<>();
     private boolean objectTypesSkipped;
 
@@ -130,13 +131,6 @@ final class BindingChecks {
         this.types = types;
         this.beans = new ResolverBeans(javaTypes, types);
         this.models = new ModelMembers(javaTypes, types);
-    }
-
-    /**
-     * @return what each checked field is bound to
-     */
-    List<Binding> bindings() {
-        return bindings;
     }
 
     /**
@@ -345,21 +339,35 @@ final class BindingChecks {
         }
         Method method = candidates.get(0);
         bound(method, coordinate);
-        bindings.add(new Binding(coordinate, Binding.ROOT, method.element(), method.element().getReturnType(),
-                type.getName().equals(subscriptionType)));
-        checkMethod(method.element(), null, type, field);
+        checkMethod(method.element(), method.bean().type(), null, type, field);
     }
 
-    private void bindObjectType(ObjectTypeDefinition type, TypeElement javaType) {
-        if (processedTypes.containsKey(type.getName())) {
+    /**
+     * Binds an object type to the Java type a field returns, as {@code processObjectTypeDefinition}: a custom class or
+     * interface, the same (or an alike) Java type wherever the type is reached, with a bean introspection, then each
+     * of its fields.
+     */
+    private void bindObjectType(ObjectTypeDefinition type, TypeMirror javaType, String coordinate, Node<?> node,
+                                Element element) {
+        TypeElement javaClass = javaTypes.element(javaType);
+        String javaName = javaTypes.erasedName(javaType);
+        if (javaClass == null || isBuiltInJavaClass(javaName) || javaClass.getKind() == ElementKind.ENUM
+                || javaClass.getKind() == ElementKind.ANNOTATION_TYPE) {
+            problems.error(coordinate, "the field is mapped to the incorrect class: the object type " + type.getName()
+                    + " needs a custom class, the Java type is " + javaName + ".", node, element);
             return;
         }
-        processedTypes.put(type.getName(), javaType);
+        if (!mapType(type, javaClass, coordinate, node, element)) {
+            return;
+        }
 
-        Optional<TypeElement> introspected = models.introspectedType(javaType);
+        Optional<TypeElement> introspected = introspection(type, javaClass, coordinate, node, element);
         if (introspected.isEmpty()) {
-            skip(type.getName(), "the Java interface " + javaTypes.name(javaType) + " has no introspection of its own "
-                    + "and not exactly one implementation in this compilation", true);
+            return;
+        }
+        if (models.usesFieldAccess(introspected.get())) {
+            skip(type.getName(), javaTypes.name(introspected.get()) + " is introspected with accessKind = FIELD, which the "
+                    + "processor does not model", true);
             return;
         }
         TypeElement sourceClass = models.sourceClass(introspected.get());
@@ -367,6 +375,258 @@ final class BindingChecks {
 
         for (FieldDefinition field : type.getFieldDefinitions()) {
             bindField(type, field, introspected.get(), sourceClass);
+        }
+    }
+
+    /**
+     * Records the Java type of a schema type, or checks it against the Java type recorded before: one schema type has
+     * one Java type wherever it is reached. Two Java types bind an object type alike when they have the same contract
+     * and the same introspection.
+     *
+     * @return whether the type is reached for the first time, so that it still has to be checked
+     */
+    private boolean mapType(TypeDefinition<?> type, TypeElement javaClass, String coordinate, Node<?> node,
+                            Element element) {
+        TypeElement previous = processedTypes.get(type.getName());
+        if (previous == null) {
+            processedTypes.put(type.getName(), javaClass);
+            mappedBy.put(type.getName(), coordinate);
+            return true;
+        }
+        boolean same = type instanceof ObjectTypeDefinition ? alike(previous, javaClass) : previous.equals(javaClass);
+        if (!same) {
+            problems.error(coordinate, "the " + SchemaChecks.kind(type) + " " + type.getName() + " is mapped to "
+                    + javaTypes.name(javaClass) + " here and to " + javaTypes.name(previous) + " by "
+                    + mappedBy.get(type.getName()) + ". One schema type needs one Java type.", node, element);
+        }
+        return false;
+    }
+
+    private boolean alike(TypeElement first, TypeElement second) {
+        if (first.equals(second)) {
+            return true;
+        }
+        if (!models.contractOf(first).orElse(first).equals(models.contractOf(second).orElse(second))) {
+            return false;
+        }
+        Optional<TypeElement> firstIntrospection = models.introspectedType(first);
+        return firstIntrospection.isPresent() && firstIntrospection.equals(models.introspectedType(second));
+    }
+
+    /**
+     * The Java type whose bean introspection binds an object type, as {@code GraphQLBeanIntrospectionRegistry}
+     * decides, with its errors: a contract interface with its own introspection (every class annotated
+     * {@code @GraphQLType(contract)} must implement it); a Java interface without one is read through its single
+     * implementation (a strict-mode finding); a class needs an introspection.
+     *
+     * @return the introspected type, or empty after an error or if it cannot be decided in this compilation
+     */
+    private Optional<TypeElement> introspection(ObjectTypeDefinition type, TypeElement javaClass, String coordinate,
+                                                Node<?> node, Element element) {
+        TypeElement contract = javaClass.getKind() == ElementKind.INTERFACE ? javaClass
+                : models.contractOf(javaClass).orElse(null);
+        if (contract != null && models.isIntrospected(contract)) {
+            for (TypeElement implementation : models.implementations(contract)) {
+                if (!implementsContract(implementation, contract, coordinate, node)) {
+                    return Optional.empty();
+                }
+            }
+            return Optional.of(contract);
+        }
+        if (javaClass.getKind() == ElementKind.INTERFACE) {
+            List<TypeElement> implementations = models.implementations(javaClass);
+            if (implementations.isEmpty()) {
+                if (isChecked(javaClass)) {
+                    // a JDK interface, or one of this compilation, which no class of a dependency can implement
+                    problems.error(coordinate, "the object type " + type.getName() + " is mapped to the Java interface "
+                            + javaTypes.name(javaClass) + ", which has no introspection of its own and no class "
+                            + "annotated @GraphQLType(" + javaClass.getSimpleName() + ".class). Return a class with a bean "
+                            + "introspection, or annotate the interface with @GraphQLType.", node, element);
+                } else {
+                    skip(type.getName(), "the Java interface " + javaTypes.name(javaClass) + " has no introspection of its "
+                            + "own and no implementation in this compilation", true);
+                }
+                return Optional.empty();
+            }
+            if (implementations.size() > 1) {
+                problems.error(coordinate, "the object type " + type.getName() + " is mapped to the Java interface "
+                        + javaTypes.name(javaClass) + ", which has no introspection of its own and several classes "
+                        + "annotated @GraphQLType(" + javaClass.getSimpleName() + ".class): " + implementations.stream()
+                        .map(javaTypes::name).collect(Collectors.joining(", ")) + ". Annotate the interface with "
+                        + "@GraphQLType or @Introspected.", node, element);
+                return Optional.empty();
+            }
+            TypeElement implementation = implementations.get(0);
+            if (!implementsContract(implementation, javaClass, coordinate, node)) {
+                return Optional.empty();
+            }
+            if (options.strict()) {
+                problems.error(coordinate, "the object type " + type.getName() + " is mapped to the Java interface "
+                        + javaTypes.name(javaClass) + ", which has no introspection of its own, so it is read through "
+                        + "the introspection of " + javaTypes.name(implementation) + " and a getter only the class "
+                        + "declares binds silently (strict mode). Annotate the interface with @GraphQLType or "
+                        + "@Introspected.", node, javaClass);
+            }
+            return Optional.of(implementation);
+        }
+        if (!models.isIntrospected(javaClass)) {
+            if (isChecked(javaClass)) {
+                problems.error(coordinate, "the object type " + type.getName() + " is mapped to "
+                        + javaTypes.name(javaClass) + ", which has no bean introspection. Annotate it with "
+                        + "@GraphQLType.", node, javaClass);
+            } else {
+                skip(type.getName(), javaTypes.name(javaClass) + " is not in this compilation and carries no "
+                        + "introspection annotation", true);
+            }
+            return Optional.empty();
+        }
+        return Optional.of(javaClass);
+    }
+
+    private boolean implementsContract(TypeElement implementation, TypeElement contract, String coordinate,
+                                       Node<?> node) {
+        if (javaTypes.isA(implementation.asType(), contract.getQualifiedName().toString())) {
+            return true;
+        }
+        problems.error(coordinate, javaTypes.name(implementation) + " is annotated @GraphQLType("
+                + contract.getSimpleName() + ".class) but does not implement " + javaTypes.name(contract) + ".", node,
+                implementation);
+        return false;
+    }
+
+    /**
+     * @return whether the processor can tell that a Java type has no bean introspection: it is in this compilation
+     * (a source, or, in an incremental compilation, an unchanged class of the class output), or a JDK class, which never
+     * has one
+     */
+    private boolean isChecked(TypeElement javaClass) {
+        return types.contains(javaClass) || javaClass.getQualifiedName().toString().startsWith("java.")
+                || javaTypes.isInClassOutput(javaClass);
+    }
+
+    private static boolean isBuiltInJavaClass(String javaName) {
+        return BUILT_IN_SCALARS.values().stream().anyMatch(it -> it.contains(javaName));
+    }
+
+    /**
+     * Checks an enum, as {@code processEnumTypeDefinition}: a Java enum with a constant for every schema value, and in
+     * strict mode no constant without a schema value.
+     */
+    private void checkEnumType(EnumTypeDefinition type, TypeMirror javaType, boolean input, String coordinate,
+                               Node<?> node, Element element) {
+        TypeElement javaClass = javaTypes.element(javaType);
+        if (javaClass == null || javaClass.getKind() != ElementKind.ENUM) {
+            problems.error(coordinate, "the " + (input ? "argument or input field" : "field") + " is mapped to the "
+                    + "incorrect class: the enum " + type.getName() + " needs a Java enum, the Java type is "
+                    + javaTypes.erasedName(javaType) + ".", node, element);
+            return;
+        }
+        if (!mapType(type, javaClass, coordinate, node, element)) {
+            return;
+        }
+        List<Element> constants = javaClass.getEnclosedElements().stream()
+                .filter(it -> it.getKind() == ElementKind.ENUM_CONSTANT)
+                .map(it -> (Element) it)
+                .toList();
+        Set<String> constantNames = constants.stream().map(it -> it.getSimpleName().toString())
+                .collect(Collectors.toCollection(TreeSet::new));
+        Set<String> values = type.getEnumValueDefinitions().stream().map(it -> it.getName())
+                .collect(Collectors.toCollection(TreeSet::new));
+        List<String> missing = values.stream().filter(it -> !constantNames.contains(it)).toList();
+        if (!missing.isEmpty()) {
+            problems.error(type.getName(), "the Java enum " + javaTypes.name(javaClass) + " has no constant for the "
+                    + "schema values " + missing + ".", type, javaClass);
+        }
+        if (options.strict()) {
+            for (Element constant : constants) {
+                if (!values.contains(constant.getSimpleName().toString())) {
+                    problems.error(type.getName(), "the enum constant " + javaTypes.name(javaClass) + "#"
+                            + constant.getSimpleName() + " has no value in the schema enum " + type.getName()
+                            + " (strict mode). Add the value to the schema or remove the constant.", type, constant);
+                }
+            }
+        }
+    }
+
+    /**
+     * Checks a union or interface a field returns: the field must declare a Java interface. Its members come from the
+     * {@code SchemaMappingDictionary}, a runtime bean, so they are not checked here.
+     */
+    private void checkAbstractType(TypeDefinition<?> type, TypeMirror javaType, String coordinate, Node<?> node,
+                                   Element element) {
+        TypeElement javaClass = javaTypes.element(javaType);
+        if (javaClass == null || javaClass.getKind() != ElementKind.INTERFACE) {
+            problems.error(coordinate, "the field is mapped to the incorrect class: the " + SchemaChecks.kind(type)
+                    + " " + type.getName() + " needs a Java interface, the Java type is "
+                    + javaTypes.erasedName(javaType) + ".", node, element);
+            return;
+        }
+        if (mapType(type, javaClass, coordinate, node, element)) {
+            skip(type.getName(), "the Java classes of its object types come from the SchemaMappingDictionary, "
+                    + "a runtime bean", true);
+        }
+    }
+
+    /**
+     * Binds an input type, as {@code processInputObjectTypeDefinition}: an introspected class with a property for every
+     * input field, of a matching type, and, in strict mode or with {@code input.unmappedProperties=fail}, no property
+     * a request can set that the input type does not define.
+     */
+    private void bindInputType(InputObjectTypeDefinition type, TypeMirror javaType, String coordinate, Node<?> node,
+                               Element element) {
+        TypeElement javaClass = javaTypes.element(javaType);
+        if (javaClass == null || javaClass.getKind() != ElementKind.CLASS && javaClass.getKind() != ElementKind.RECORD) {
+            problems.error(coordinate, "the argument or input field is mapped to the incorrect class: the input type "
+                    + type.getName() + " needs a custom class, the Java type is " + javaTypes.erasedName(javaType)
+                    + ".", node, element);
+            return;
+        }
+        if (!mapType(type, javaClass, coordinate, node, element)) {
+            return;
+        }
+        if (!models.isIntrospected(javaClass)) {
+            if (isChecked(javaClass)) {
+                problems.error(coordinate, "the input type " + type.getName() + " is mapped to "
+                        + javaTypes.name(javaClass) + ", which has no bean introspection. Annotate it with "
+                        + "@GraphQLInput.", node, javaClass);
+            } else {
+                skip(type.getName(), javaTypes.name(javaClass) + " is not in this compilation and carries no "
+                        + "introspection annotation", false);
+            }
+            return;
+        }
+        if (models.usesFieldAccess(javaClass)) {
+            skip(type.getName(), javaTypes.name(javaClass) + " is introspected with accessKind = FIELD, which the processor "
+                    + "does not model", false);
+            return;
+        }
+
+        Map<String, Property> properties = models.properties(javaClass);
+        for (InputValueDefinition field : type.getInputValueDefinitions()) {
+            String fieldCoordinate = type.getName() + "." + field.getName();
+            Property property = properties.get(field.getName());
+            if (property == null) {
+                problems.error(fieldCoordinate, "the input class " + javaTypes.name(javaClass) + " has no property "
+                        + field.getName() + ".", field, javaClass);
+                continue;
+            }
+            checkInputType(property.type(), field.getType(), true, fieldCoordinate, field, property.accessor());
+        }
+
+        Set<String> fields = type.getInputValueDefinitions().stream().map(InputValueDefinition::getName)
+                .collect(Collectors.toSet());
+        List<String> unmapped = properties.values().stream()
+                .filter(Property::settable)
+                .map(Property::name)
+                .filter(it -> !fields.contains(it))
+                .sorted()
+                .toList();
+        if (options.failOnUnmappedProperties() && !unmapped.isEmpty()) {
+            problems.error(type.getName(), "the input class " + javaTypes.name(javaClass) + " has properties that "
+                    + "the input type does not define, so no request can set them: " + String.join(", ", unmapped)
+                    + " (" + (options.unmappedProperties() == null ? "strict mode" : ProcessorOptions.UNMAPPED_PROPERTIES
+                    + "=fail") + "). Remove them, add them to the input type, or set "
+                    + ProcessorOptions.UNMAPPED_PROPERTIES + "=ignore.", type, javaClass);
         }
     }
 
@@ -405,7 +665,7 @@ final class BindingChecks {
                 }
                 if (directive == null && options.precedence() == ProcessorOptions.Precedence.PROPERTY_FIRST) {
                     resolvers.forEach(it -> shadowedMethods.put(it, true));
-                    bindMember(type, field, property, fieldMethods);
+                    bindMember(type, field, introspected, property, fieldMethods);
                     return;
                 }
                 bindResolver(type, field, sourceClass, resolvers);
@@ -424,7 +684,7 @@ final class BindingChecks {
                         + "method for " + javaTypes.name(sourceClass) + ".", field, memberElement);
                 return;
             }
-            bindMember(type, field, property, fieldMethods);
+            bindMember(type, field, introspected, property, fieldMethods);
             return;
         }
 
@@ -443,12 +703,11 @@ final class BindingChecks {
         bindResolver(type, field, sourceClass, resolvers);
     }
 
-    private void bindMember(ObjectTypeDefinition type, FieldDefinition field, Optional<Property> property,
-                            List<ExecutableElement> fieldMethods) {
+    private void bindMember(ObjectTypeDefinition type, FieldDefinition field, TypeElement introspected,
+                            Optional<Property> property, List<ExecutableElement> fieldMethods) {
         String coordinate = type.getName() + "." + field.getName();
         if (property.isPresent()) {
             ExecutableElement accessor = property.get().accessor();
-            bindings.add(new Binding(coordinate, Binding.PROPERTY, accessor, property.get().type(), false));
             if (!field.getInputValueDefinitions().isEmpty()) {
                 problems.error(coordinate, "the field has " + field.getInputValueDefinitions().size()
                         + " argument(s), but the property " + javaTypes.describe(accessor) + " takes none. Bind it with "
@@ -459,8 +718,7 @@ final class BindingChecks {
             return;
         }
         ExecutableElement method = fieldMethods.get(0);
-        bindings.add(new Binding(coordinate, Binding.PROPERTY, method, method.getReturnType(), false));
-        checkMethod(method, null, type, field);
+        checkMethod(method, introspected, null, type, field);
     }
 
     private void bindResolver(ObjectTypeDefinition type, FieldDefinition field, TypeElement sourceClass,
@@ -474,9 +732,7 @@ final class BindingChecks {
         }
         Method method = resolvers.get(0);
         bound(method, coordinate);
-        bindings.add(new Binding(coordinate, Binding.RESOLVER, method.element(), method.element().getReturnType(),
-                false));
-        checkMethod(method.element(), sourceClass, type, field);
+        checkMethod(method.element(), method.bean().type(), sourceClass, type, field);
     }
 
     private List<Method> typeResolverMethods(TypeElement sourceClass, String coordinate, String fieldName) {
@@ -530,12 +786,15 @@ final class BindingChecks {
     /**
      * Checks the parameters and the return type of a method that binds a field: the number of parameters besides
      * {@code DataFetchingEnvironment}, the source object first for a type resolver, then one parameter per argument in
-     * the order of the schema.
+     * the order of the schema. The types are those of the method as a member of its bean or introspected class, so that
+     * a method a generic superclass declares is checked with the type arguments the class gives it.
      */
-    private void checkMethod(ExecutableElement method, TypeElement sourceClass, ObjectTypeDefinition type,
-                             FieldDefinition field) {
+    private void checkMethod(ExecutableElement method, TypeElement owner, TypeElement sourceClass,
+                             ObjectTypeDefinition type, FieldDefinition field) {
         String coordinate = type.getName() + "." + field.getName();
         List<? extends VariableElement> parameters = method.getParameters();
+        ExecutableType memberType = javaTypes.memberType(owner, method);
+        List<? extends TypeMirror> parameterTypes = memberType.getParameterTypes();
         List<InputValueDefinition> arguments = field.getInputValueDefinitions();
         int required = arguments.size() + (sourceClass != null ? 1 : 0);
         long current = parameters.stream()
@@ -548,26 +807,23 @@ final class BindingChecks {
             return;
         }
 
-        List<VariableElement> remaining = new ArrayList<>(parameters);
+        int first = 0;
         if (sourceClass != null) {
-            VariableElement source = remaining.remove(0);
-            if (!javaTypes.erasedName(source.asType()).equals(javaTypes.name(sourceClass))) {
+            TypeMirror source = parameterTypes.get(0);
+            if (!javaTypes.erasedName(source).equals(javaTypes.name(sourceClass))) {
                 problems.error(coordinate, "the first parameter of " + javaTypes.describe(method) + " must be the "
-                        + "source object, " + javaTypes.name(sourceClass) + ", not "
-                        + javaTypes.erasedName(source.asType()) + ".", field, source);
+                        + "source object, " + javaTypes.name(sourceClass) + ", not " + javaTypes.erasedName(source)
+                        + ".", field, parameters.get(0));
                 return;
             }
-        }
-        if (!remaining.isEmpty() && javaTypes.erasedName(remaining.get(remaining.size() - 1).asType())
-                .equals(DATA_FETCHING_ENVIRONMENT)) {
-            remaining.remove(remaining.size() - 1);
+            first = 1;
         }
         for (int i = 0; i < arguments.size(); i++) {
             InputValueDefinition argument = arguments.get(i);
-            checkInputType(remaining.get(i).asType(), argument.getType(), true,
-                    coordinate + "(" + argument.getName() + ":)", argument, remaining.get(i));
+            checkInputType(parameterTypes.get(first + i), argument.getType(), true,
+                    coordinate + "(" + argument.getName() + ":)", argument, parameters.get(first + i));
         }
-        checkReturnType(method.getReturnType(), field.getType(), true, type.getName().equals(subscriptionType),
+        checkReturnType(memberType.getReturnType(), field.getType(), true, type.getName().equals(subscriptionType),
                 coordinate, field, method);
     }
 
@@ -612,13 +868,11 @@ final class BindingChecks {
 
         TypeDefinition<?> definition = registry.getType(typeName).orElse(null);
         if (definition instanceof ObjectTypeDefinition object) {
-            TypeElement javaClass = javaTypes.element(type);
-            if (javaClass != null) {
-                bindObjectType(object, javaClass);
-            }
-        } else if (definition instanceof EnumTypeDefinition || definition instanceof UnionTypeDefinition
-                || definition instanceof InterfaceTypeDefinition) {
-            skip(typeName, SchemaChecks.kind(definition) + " types are not checked yet", true);
+            bindObjectType(object, type, coordinate, node, element);
+        } else if (definition instanceof EnumTypeDefinition enumType) {
+            checkEnumType(enumType, type, false, coordinate, node, element);
+        } else if (definition instanceof UnionTypeDefinition || definition instanceof InterfaceTypeDefinition) {
+            checkAbstractType(definition, type, coordinate, node, element);
         } else if (definition instanceof ScalarTypeDefinition) {
             skip(typeName, "the Java classes of a custom scalar are runtime beans (GraphQLScalarMapping)", false);
         }
@@ -756,8 +1010,10 @@ final class BindingChecks {
         String typeName = ((TypeName) nullable).getName();
         TypeDefinition<?> definition = registry.getType(typeName).orElse(null);
         Set<String> scalarClasses = BUILT_IN_SCALARS.get(typeName);
-        if (definition instanceof InputObjectTypeDefinition || definition instanceof EnumTypeDefinition) {
-            skip(typeName, SchemaChecks.kind(definition) + " types are not checked yet", false);
+        if (definition instanceof InputObjectTypeDefinition input) {
+            bindInputType(input, type, coordinate, node, element);
+        } else if (definition instanceof EnumTypeDefinition enumType) {
+            checkEnumType(enumType, type, true, coordinate, node, element);
         } else if (scalarClasses != null) {
             String javaName = javaTypes.erasedName(type);
             if (!scalarClasses.contains(javaName)) {
@@ -908,24 +1164,6 @@ final class BindingChecks {
             return "[" + printType(list.getType()) + "]";
         }
         return ((TypeName) type).getName();
-    }
-
-    /**
-     * What a field is bound to.
-     *
-     * @param coordinate   the field
-     * @param kind         {@link #ROOT}, {@link #RESOLVER} or {@link #PROPERTY}
-     * @param member       the method or property accessor
-     * @param declaredType the declared Java type of the value
-     * @param subscription whether the field belongs to the subscription type
-     */
-    record Binding(String coordinate, String kind, ExecutableElement member, TypeMirror declaredType,
-                   boolean subscription) {
-
-        static final String ROOT = "root";
-        static final String RESOLVER = "resolver";
-        static final String PROPERTY = "property";
-
     }
 
 }

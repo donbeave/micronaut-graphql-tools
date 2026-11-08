@@ -19,10 +19,14 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardLocation;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -38,6 +42,7 @@ final class JavaTypes {
 
     private final Elements elements;
     private final Types types;
+    private final String classOutput;
 
     /**
      * @param processingEnv the processing environment
@@ -45,6 +50,38 @@ final class JavaTypes {
     JavaTypes(ProcessingEnvironment processingEnv) {
         this.elements = processingEnv.getElementUtils();
         this.types = processingEnv.getTypeUtils();
+        this.classOutput = classOutput(processingEnv);
+    }
+
+    private static String classOutput(ProcessingEnvironment processingEnv) {
+        try {
+            String probe = processingEnv.getFiler().getResource(StandardLocation.CLASS_OUTPUT, "", "probe").toUri()
+                    .toString();
+            return probe.substring(0, probe.length() - "probe".length());
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Whether a class belongs to the module being compiled although it is not a source of this compilation: an
+     * incremental compilation (Gradle) compiles only the changed sources and reads the unchanged classes of the module
+     * from the class output, where the processor finds them.
+     *
+     * @param type a class
+     * @return whether its class file is in the class output of this compilation
+     */
+    boolean isInClassOutput(TypeElement type) {
+        if (classOutput == null) {
+            return false;
+        }
+        try {
+            JavaFileObject file = elements.getFileObjectOf(type);
+            return file != null && file.getKind() == JavaFileObject.Kind.CLASS
+                    && file.toUri().toString().startsWith(classOutput);
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     /**
@@ -178,6 +215,26 @@ final class JavaTypes {
                     : elements.getTypeElement("java.lang.Object").asType();
         }
         return argument;
+    }
+
+    /**
+     * The type of a method as a member of a class: the type variables of a generic superclass or interface that the
+     * class binds are replaced, as Micronaut resolves them for the bean or the introspection ({@code List<T>} of a
+     * {@code Base<T>} is {@code List<Book>} in a {@code BookQuery extends Base<Book>}).
+     *
+     * @param owner  the class, which declares or inherits the method
+     * @param method the method
+     * @return the method type as seen from the class
+     */
+    ExecutableType memberType(TypeElement owner, ExecutableElement method) {
+        if (owner.asType() instanceof DeclaredType declaredType) {
+            try {
+                return (ExecutableType) types.asMemberOf(declaredType, method);
+            } catch (IllegalArgumentException e) {
+                // not a member of the class: its own declaration
+            }
+        }
+        return (ExecutableType) method.asType();
     }
 
     /**

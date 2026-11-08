@@ -521,6 +521,50 @@ public class Novel {
         result.success
     }
 
+    void "a method a generic superclass declares is checked with the type arguments the bean gives it, as Micronaut binds it"() {
+        given:
+        def base = '''
+package example;
+
+import java.util.List;
+
+public abstract class BaseQuery<T, I> {
+    public T book(I id) {
+        return null;
+    }
+
+    public List<T> books(Integer limit) {
+        return List.of();
+    }
+}
+'''
+        def baseResolver = '''
+package example;
+
+public abstract class BaseResolver<S> {
+    public String author(S source) {
+        return null;
+    }
+}
+'''
+
+        when:
+        def matching = compilation(['example.BaseQuery'   : base, 'example.BaseResolver': baseResolver,
+                                    'example.BookQuery'   : 'package example; @io.micronaut.graphql.tools.annotation.GraphQLRootResolver public class BookQuery extends BaseQuery<Book, String> { }',
+                                    'example.BookResolver': 'package example; @io.micronaut.graphql.tools.annotation.GraphQLTypeResolver(Book.class) public class BookResolver extends BaseResolver<Book> { }'])
+                .compile()
+        def mismatching = compilation(['example.BaseQuery': base,
+                                       'example.BookQuery': 'package example; @io.micronaut.graphql.tools.annotation.GraphQLRootResolver public class BookQuery extends BaseQuery<Book, Integer> { }'])
+                .compile()
+
+        then:
+        matching.success
+        !mismatching.success
+        mismatching.graphqlErrors == ['BaseQuery.java:7: [graphql] Query.book(id:): the argument or input field is mapped '
+                                              + 'to the incorrect class: ID accepts [java.lang.String], the Java type is '
+                                              + 'java.lang.Integer. (schema.graphqls:6)']
+    }
+
     void "classes another processor generates in this compilation under a \$ name, such as AOP proxies of resolver beans, are not resolver beans"() {
         given:
         def proxy = '''

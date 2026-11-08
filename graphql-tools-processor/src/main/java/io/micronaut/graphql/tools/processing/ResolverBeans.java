@@ -150,8 +150,8 @@ final class ResolverBeans {
             }
             String modelClass = modelClasses.iterator().next();
             if (modelClasses.size() > 1) {
-                List<? extends TypeMirror> parameters = method.element().getParameters().stream()
-                        .map(it -> it.asType()).toList();
+                List<? extends TypeMirror> parameters =
+                        javaTypes.memberType(type, method.element()).getParameterTypes();
                 String first = parameters.isEmpty() ? null : javaTypes.erasedName(parameters.get(0));
                 if (first == null || !modelClasses.contains(first)) {
                     unassigned.add(method);

@@ -20,9 +20,12 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -146,6 +149,54 @@ final class Annotations {
      */
     static Optional<TypeMirror> typeValue(AnnotationMirror mirror) {
         return value(mirror) instanceof TypeMirror type ? Optional.of(type) : Optional.empty();
+    }
+
+    /**
+     * @param mirror an annotation
+     * @param member the name of a member whose value is an array of classes
+     * @return the qualified names of the classes
+     */
+    static List<String> classValues(AnnotationMirror mirror, String member) {
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry
+                : mirror.getElementValues().entrySet()) {
+            if (entry.getKey().getSimpleName().contentEquals(member)
+                    && entry.getValue().getValue() instanceof List<?> values) {
+                for (Object value : values) {
+                    if (value instanceof AnnotationValue annotationValue
+                            && annotationValue.getValue() instanceof DeclaredType declaredType
+                            && declaredType.asElement() instanceof TypeElement type) {
+                        result.add(type.getQualifiedName().toString());
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @param mirror an annotation
+     * @param member the name of a member whose value is a string, an enum constant or an array of them
+     * @return the strings, or the names of the enum constants; empty if the member is not set
+     */
+    static List<String> stringValues(AnnotationMirror mirror, String member) {
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry
+                : mirror.getElementValues().entrySet()) {
+            if (entry.getKey().getSimpleName().contentEquals(member)) {
+                Object value = entry.getValue().getValue();
+                List<?> values = value instanceof List<?> list ? list : List.of(entry.getValue());
+                for (Object item : values) {
+                    Object itemValue = item instanceof AnnotationValue annotationValue ? annotationValue.getValue() : item;
+                    if (itemValue instanceof VariableElement constant) {
+                        result.add(constant.getSimpleName().toString());
+                    } else if (itemValue instanceof String string) {
+                        result.add(string);
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     private static Object value(AnnotationMirror mirror) {
