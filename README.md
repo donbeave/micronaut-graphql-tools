@@ -483,6 +483,67 @@ micronaut:
         - LegacyReport
 ```
 
+## Compile-time checks
+
+The `micronaut-graphql-tools-processor` annotation processor reads the schema files at compile time and fails `javac`
+on drift that the startup would report, so that it fails the build instead. Each error starts with `[graphql]` and the
+schema coordinate, ends with the schema file and line, and is reported on the Java element where there is one:
+
+```
+error: [graphql] Report: the object type is unreachable: no field reachable from a root operation type returns it. Use it, remove it from the schema, or list it in micronaut.graphql.tools.allowUnreachable. (schema.graphqls:9)
+```
+
+Add it next to Micronaut's processor and pass the directory of the schema files as a declared input of the
+compilation, so that a schema change recompiles (a plain `compilerArgs` string would leave `compileJava` up to date):
+
+```kotlin
+dependencies {
+    annotationProcessor("io.micronaut.graphql.tools:micronaut-graphql-tools-processor")
+}
+
+abstract class GraphQLSchemaDir : CommandLineArgumentProvider {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val dir: DirectoryProperty
+
+    override fun asArguments() = listOf("-Amicronaut.graphql.tools.sdlDir=${dir.get().asFile.absolutePath}")
+}
+
+tasks.compileJava {
+    options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDir>().apply {
+        dir.set(layout.projectDirectory.dir("src/main/resources/graphql"))
+    })
+}
+```
+
+The processor is aggregating: it checks the whole compilation once, in the last round. It claims the library's
+annotations and the Micronaut annotations that make a class a bean (`@Singleton`, `@Prototype`, ...), never `*`.
+It reads every `*.graphqls` and `*.graphql` file under the directory. Under kapt, register it with `kapt` instead: a
+processor on `annotationProcessor` does not run when kapt is applied.
+
+Options (`-A<name>=<value>`) have the values and defaults of the runtime options of the same name. They are written
+in camel case because `javac` accepts only dot-separated identifiers as option names (`sdl-dir` is rejected). Boolean
+options are read as Micronaut reads booleans (`true`, `yes`, `y`, `on`, and their opposites); any other value fails the
+compilation, and so does an unknown option under `micronaut.graphql.tools.`, so that a typo cannot switch a check off:
+
+| Option | Runtime option |
+|---|---|
+| `micronaut.graphql.tools.sdlDir` | none: the schema directory, required when the compilation has GraphQL resolvers or types |
+| `micronaut.graphql.tools.strict` | `strict` |
+| `micronaut.graphql.tools.precedence` | `precedence` |
+| `micronaut.graphql.tools.resolverDirectives` | `resolver-directives` (comma-separated) |
+| `micronaut.graphql.tools.allowUnreachable` | `allow-unreachable` (comma-separated) |
+| `micronaut.graphql.tools.unreachableTypes` | `unreachable-types` |
+| `micronaut.graphql.tools.input.unmappedProperties` | `input.unmapped-properties` |
+
+Checked from the schema files and the options alone:
+
+- the schema has a schema definition (`schema { query: ... }`);
+- every applied directive is declared (graphql-java would fail to build the schema);
+- every `resolverDirectives` entry is declared;
+- unreachable types, with `allowUnreachable` and `unreachableTypes` as at startup (in strict mode also enum, input
+  and scalar types), and `allowUnreachable` entries that are not unreachable types.
+
 ## Custom types mapping
 
 GraphQL interfaces and union types often have multiple concrete implementations.
@@ -625,6 +686,7 @@ To build or test against a leg locally:
 | Artifact | Coordinates |
 |---|---|
 | Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
+| Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 
 The version comes from `projectVersion` in `gradle.properties` (`1.0.0-SNAPSHOT` on `master`). To build a fixed
@@ -645,7 +707,8 @@ The `io.micronaut.publishing.*` settings are JVM system properties (`-D`), not G
 the default graphql-java leg only (no `-PgraphqlJavaVersion`): the published POM takes its versions from the build's
 resolved dependencies, so the build refuses to run a publish task on another leg.
 
-Both commands publish the library (jar, sources, javadoc, POM and Gradle module metadata) and the BOM. Consumers then
+Both commands publish the library and the annotation processor (jar, sources, javadoc, POM and Gradle module
+metadata) and the BOM. Consumers then
 add the repository and depend on `io.micronaut.graphql.tools:micronaut-graphql-tools:<version>`.
 
 The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the first version is released; see the
