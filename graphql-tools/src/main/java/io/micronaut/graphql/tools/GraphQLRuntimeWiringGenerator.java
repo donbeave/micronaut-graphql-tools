@@ -16,12 +16,14 @@
 package io.micronaut.graphql.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import graphql.execution.DataFetcherResult;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.EnumValueDefinition;
 import graphql.language.FieldDefinition;
 import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.ListType;
+import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.OperationTypeDefinition;
 import graphql.language.SchemaDefinition;
@@ -57,6 +59,7 @@ import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException;
 import io.micronaut.graphql.tools.exceptions.RootResolverNotFoundException;
 import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException;
+import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
 import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
@@ -76,12 +79,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
 import static io.micronaut.graphql.tools.GraphQLUtils.getType;
 import static io.micronaut.graphql.tools.GraphQLUtils.getTypeName;
+import static io.micronaut.graphql.tools.GraphQLUtils.printType;
 import static io.micronaut.graphql.tools.GraphQLUtils.requireTypeName;
 import static io.micronaut.graphql.tools.GraphQLUtils.unsupportedTypeDefinition;
 import static io.micronaut.graphql.tools.GraphQLUtils.unwrapNonNullType;
@@ -101,6 +106,9 @@ import static io.micronaut.graphql.tools.SystemTypes.isJavaBuiltInClass;
 final class GraphQLRuntimeWiringGenerator {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphQLRuntimeWiringGenerator.class);
+
+    private static final List<Class<?>> RETURN_TYPE_WRAPPERS =
+            List.of(CompletionStage.class, DataFetcherResult.class, Optional.class);
 
     private final ApplicationContext applicationContext;
     private final GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry;
@@ -329,7 +337,12 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     private void processFieldReturnType(Argument<?> argument, Type<?> graphQlType, TypeMappingContext mappingContext) {
-        argument = unwrapArgument(argument);
+        processFieldReturnType(argument, graphQlType, mappingContext, true);
+    }
+
+    private void processFieldReturnType(Argument<?> argument, Type<?> graphQlType, TypeMappingContext mappingContext,
+                                        boolean fieldLevel) {
+        argument = unwrapReturnType(argument, graphQlType, fieldLevel, mappingContext);
         graphQlType = unwrapNonNullType(graphQlType);
 
         Class<?> returnClass = argument.getType();
@@ -348,7 +361,7 @@ final class GraphQLRuntimeWiringGenerator {
             Type<?> listFieldType = (listType).getType();
             Argument<?> listArgument = argument.getFirstTypeVariable().get();
 
-            processFieldReturnType(listArgument, listFieldType, mappingContext);
+            processFieldReturnType(listArgument, listFieldType, mappingContext, false);
             return;
         }
 
@@ -373,6 +386,69 @@ final class GraphQLRuntimeWiringGenerator {
                 throw unsupportedTypeDefinition(typeDefinition);
             }
         }
+    }
+
+    /**
+     * Removes the wrappers graphql-java resolves at runtime from a declared return type, in the order graphql-java
+     * resolves them: {@link CompletionStage} (field level only, graphql-java does not await list elements), then
+     * {@link DataFetcherResult} (its data, errors and local context are applied), then {@link Optional} (an empty one
+     * becomes {@code null}, so it needs a nullable GraphQL type). Each wrapper may appear at most once.
+     *
+     * @param argument       the declared return type
+     * @param graphQlType    the GraphQL type of the field or the list element, before removing non-null
+     * @param fieldLevel     {@code true} for the field type itself, {@code false} for a list element
+     * @param mappingContext the mapping context
+     * @return the type the GraphQL type has to be mapped to
+     */
+    private static Argument<?> unwrapReturnType(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
+                                                TypeMappingContext mappingContext) {
+        Argument<?> result = argument;
+        Class<?> outer = null;
+
+        if (CompletionStage.class.isAssignableFrom(result.getType())) {
+            if (!fieldLevel) {
+                throw new UnsupportedReturnTypeException(mappingContext,
+                        CompletionStage.class.getName() + " is not allowed inside a list.");
+            }
+            outer = CompletionStage.class;
+            result = typeArgument(result, CompletionStage.class, mappingContext);
+        }
+
+        if (DataFetcherResult.class.isAssignableFrom(result.getType())) {
+            outer = DataFetcherResult.class;
+            result = typeArgument(result, DataFetcherResult.class, mappingContext);
+        }
+
+        if (Optional.class.equals(result.getType())) {
+            if (graphQlType instanceof NonNullType) {
+                throw new UnsupportedReturnTypeException(mappingContext, Optional.class.getName()
+                        + " is only allowed for a nullable GraphQL type, the field type is "
+                        + printType(graphQlType) + ".");
+            }
+            outer = Optional.class;
+            result = typeArgument(result, Optional.class, mappingContext);
+        }
+
+        if (outer != null) {
+            Class<?> inner = result.getType();
+
+            for (Class<?> wrapper : RETURN_TYPE_WRAPPERS) {
+                if (wrapper.isAssignableFrom(inner)) {
+                    throw new UnsupportedReturnTypeException(mappingContext, outer.getName() + " cannot wrap "
+                            + wrapper.getName() + ". Supported wrappers, outermost first: CompletionStage "
+                            + "(field level only), DataFetcherResult, Optional (nullable types only), each at most once.");
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static Argument<?> typeArgument(Argument<?> argument, Class<?> wrapper,
+                                            TypeMappingContext mappingContext) {
+        return argument.getFirstTypeVariable()
+                .orElseThrow(() -> new UnsupportedReturnTypeException(mappingContext,
+                        wrapper.getName() + " must declare the type it wraps."));
     }
 
     private void processOperationTypeDefinition(OperationTypeDefinition operationTypeDefinition) {

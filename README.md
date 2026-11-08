@@ -63,6 +63,22 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 
 These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums and unions to Java interfaces without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
 
+## Return types
+
+The declared return type of a field (a resolver method or a bean property) may wrap the mapped class in the
+containers graphql-java resolves at runtime, outermost first and each at most once:
+
+- `CompletionStage<T>`, for the field itself only;
+- `DataFetcherResult<T>`, for the field or each list element; its errors and local context are applied;
+- `Optional<T>`, for the field or each list element, and only where the GraphQL type is nullable (an empty
+  `Optional` becomes `null`).
+
+The mapping then checks `T`. Anything else fails at startup with `UnsupportedReturnTypeException`. In particular:
+
+- `List<CompletionStage<T>>` is rejected: graphql-java does not wait for futures inside a list, and the client would
+  receive the future's `toString()`. Return `CompletionStage<List<T>>` instead.
+- `Optional<T>` on a non-null type (`String!`, `[String!]`) is rejected.
+
 ## Custom types mapping
 
 GraphQL interfaces and union types often have multiple concrete implementations.
