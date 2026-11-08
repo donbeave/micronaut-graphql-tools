@@ -212,6 +212,23 @@ public TypeDefinitionRegistryCustomizer validationDirectives() {
 Use extended-validation 21.0 with graphql-java 21.3 and 24.0 with 25.1 (21.0 calls a `GraphQLCodeRegistry` method
 that graphql-java 25 removed); the library's tests run both.
 
+## Configuring the GraphQL bean
+
+`GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean (created with the
+library's schema) before it is built, lowest order first (`@Order` or `Ordered`): instrumentation, a
+`PreparsedDocumentProvider`, execution strategies, the default `DataFetcherExceptionHandler`, and so on. A builder
+setter keeps one value, so a later customizer replaces what an earlier one set there; chain instrumentations with
+`ChainedInstrumentation`. The library itself never calls `doNotAddDefaultInstrumentations()`, which graphql-java 25
+removed.
+
+```java
+@Bean
+@Singleton
+public GraphQLBuilderCustomizer tracing(MyTracingInstrumentation instrumentation) {
+    return builder -> builder.instrumentation(instrumentation);
+}
+```
+
 ## Building the GraphQL bean yourself
 
 The library creates two beans: the bound `GraphQLSchema`, and the `GraphQL` engine that runs it. Each one is created
@@ -219,7 +236,7 @@ only when the application has no bean of that type:
 
 - An application that configures the engine itself (instrumentation, execution strategies, its own transport)
   provides a `GraphQL` bean built from the library's `GraphQLSchema` bean. The library then creates no `GraphQL`
-  bean, so there is exactly one.
+  bean, so there is exactly one, and `GraphQLBuilderCustomizer` beans are not called.
 - An application that provides its own `GraphQLSchema` bean gets no binding from the library (no
   `TypeDefinitionRegistry` is needed); the library's `GraphQL` bean, unless the application has one too, runs that
   schema.

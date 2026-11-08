@@ -109,8 +109,10 @@ public final class GraphQLFactory {
     @Bean
     @Singleton
     @Requires(missingBeans = GraphQL.class)
-    public GraphQL graphQL(GraphQLSchema graphQLSchema) {
-        return GraphQL.newGraphQL(graphQLSchema).build();
+    public GraphQL graphQL(GraphQLSchema graphQLSchema, List<GraphQLBuilderCustomizer> graphQLBuilderCustomizers) {
+        GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema);
+        graphQLBuilderCustomizers.forEach(customizer -> customizer.customize(builder));
+        return builder.build();
     }
 
 }
