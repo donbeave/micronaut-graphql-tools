@@ -565,6 +565,51 @@ public abstract class BaseResolver<S> {
                                               + 'java.lang.Integer. (schema.graphqls:6)']
     }
 
+    void "a resolver bean is checked whatever its scope, also when its scope is its only annotation: @#scope"() {
+        given:
+        def contract = '''
+package example;
+
+@io.micronaut.graphql.tools.annotation.GraphQLTypeResolver(Book.class)
+public interface BookResolverContract {
+    String author(Book book);
+}
+'''
+        def resolver = { String returnType ->
+            """
+package example;
+
+@${annotation}
+public class BookResolver implements BookResolverContract {
+    public ${returnType} author(Book book) {
+        return null;
+    }
+}
+"""
+        }
+
+        when:
+        def matching = compilation(['example.BookResolverContract': contract,
+                                    'example.BookResolver': resolver('String')]).compile()
+        def mismatching = compilation(['example.BookResolverContract': contract.replace('String author', 'Integer author'),
+                                       'example.BookResolver': resolver('Integer')]).compile()
+
+        then:
+        matching.success
+        !mismatching.success
+        mismatching.graphqlErrors == ['BookResolver.java:6: [graphql] Book.author: the field is mapped to the incorrect class: '
+                                              + 'String accepts [java.lang.String], the Java type is java.lang.Integer. '
+                                              + '(schema.graphqls:12)']
+
+        where:
+        annotation                                      | scope
+        'io.micronaut.context.annotation.Prototype'      | 'Prototype'
+        'io.micronaut.runtime.http.scope.RequestScope'  | 'RequestScope'
+        'io.micronaut.context.annotation.Bean'           | 'Bean'
+        'io.micronaut.context.annotation.Context'        | 'Context'
+        'jakarta.inject.Singleton'                       | 'Singleton'
+    }
+
     void "classes another processor generates in this compilation under a \$ name, such as AOP proxies of resolver beans, are not resolver beans"() {
         given:
         def proxy = '''
