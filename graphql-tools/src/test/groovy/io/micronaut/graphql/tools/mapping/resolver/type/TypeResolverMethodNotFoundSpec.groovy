@@ -60,6 +60,7 @@ type User {
         String firstName
     }
 
+    @Requires(property = 'spec.name', value = SPEC_NAME)
     @GraphQLTypeResolver(User.class)
     static class UserResolver {
         String lastName(User user) {

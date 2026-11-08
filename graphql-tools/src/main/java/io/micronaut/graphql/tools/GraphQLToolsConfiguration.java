@@ -38,10 +38,11 @@ public class GraphQLToolsConfiguration {
     private List<String> allowUnreachable = Collections.emptyList();
     private Precedence precedence = Precedence.STRICT;
     private List<String> resolverDirectives = Collections.emptyList();
+    private boolean strict = true;
 
     /**
      * @return what happens to object, interface and union types of the schema that no field reachable from a root
-     * operation type returns
+     * operation type returns, and in strict mode to enum, input and scalar types that nothing uses
      */
     @NonNull
     public UnreachableTypes getUnreachableTypes() {
@@ -50,7 +51,8 @@ public class GraphQLToolsConfiguration {
 
     /**
      * Sets what happens to object, interface and union types of the schema that no field reachable from a root
-     * operation type returns. Default: {@link UnreachableTypes#FAIL}.
+     * operation type returns, and in strict mode ({@link #isStrict()}) to enum, input and scalar types that no bound
+     * field, argument, input field or directive definition uses. Default: {@link UnreachableTypes#FAIL}.
      *
      * @param unreachableTypes the handling of unreachable types
      */
@@ -70,7 +72,8 @@ public class GraphQLToolsConfiguration {
 
     /**
      * Sets the names of unreachable types that are allowed even when {@link #getUnreachableTypes()} is
-     * {@link UnreachableTypes#FAIL}. Every name must be an unreachable object, interface or union type of the schema;
+     * {@link UnreachableTypes#FAIL}. Every name must be an unreachable type of the schema: an object, interface or
+     * union type, or an enum, input or scalar type (these take effect in strict mode only, see {@link #isStrict()});
      * any other name fails the startup, so the list cannot go stale. Default: empty.
      *
      * @param allowUnreachable the type names
@@ -119,6 +122,27 @@ public class GraphQLToolsConfiguration {
     public void setResolverDirectives(@NonNull List<String> resolverDirectives) {
         ArgumentUtils.requireNonNull("resolverDirectives", resolverDirectives);
         this.resolverDirectives = List.copyOf(resolverDirectives);
+    }
+
+    /**
+     * @return whether binding fails on everything the binding manifest reports as a finding
+     */
+    public boolean isStrict() {
+        return strict;
+    }
+
+    /**
+     * Sets whether binding fails on everything the binding manifest reports as a finding, unless an option allows it:
+     * unreachable types of every kind (also enums, input types and scalars; {@link #getAllowUnreachable()} may then
+     * name them too), public resolver methods that bind no field, root resolver methods without a coordinate that bind
+     * fields of several operation types, Java enum constants without a schema value,
+     * dictionary entries for types that are not bound, and Java interfaces read through an implementation's bean
+     * introspection instead of their own. Default: {@code true}.
+     *
+     * @param strict whether to fail
+     */
+    public void setStrict(boolean strict) {
+        this.strict = strict;
     }
 
     /**
@@ -196,7 +220,8 @@ public class GraphQLToolsConfiguration {
 
     /**
      * The handling of object, interface and union types of the schema that no field reachable from a root
-     * operation type returns, so that no Java class is bound to them.
+     * operation type returns, so that no Java class is bound to them, and in strict mode of enum, input and scalar
+     * types that nothing uses.
      */
     public enum UnreachableTypes {
 

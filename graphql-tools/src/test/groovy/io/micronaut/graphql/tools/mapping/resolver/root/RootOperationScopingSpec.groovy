@@ -109,7 +109,7 @@ type Query {
 type Mutation {
   ping: String!
 }
-""", SPEC_NAME + ".unscoped")
+""", SPEC_NAME + ".unscoped", ['micronaut.graphql.tools.strict': false])
 
         when:
         def query = executeQuery('{ ping }')

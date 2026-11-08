@@ -22,6 +22,10 @@ class UnreachableTypesSpec extends AbstractTest {
 
     static final String SPEC_NAME = "UnreachableTypesSpec"
 
+    // these tests pin the rules for object, interface and union types; strict mode (the default) extends them to
+    // enum, input and scalar types, see StrictModeSpec
+    static final Map NOT_STRICT = ['micronaut.graphql.tools.strict': false]
+
     @Language("GraphQL")
     static final String SCHEMA = """
 schema {
@@ -74,7 +78,7 @@ input Filter {
 
     void "by default all unreachable types fail the startup in one error"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, NOT_STRICT)
 
         when:
         getGraphQLBean()
@@ -160,7 +164,7 @@ type Item implements Node {
 
     void "unreachable-types=fail can be set explicitly"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.unreachable-types': 'fail'])
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.unreachable-types': 'fail'] + NOT_STRICT)
 
         when:
         getGraphQLBean()
@@ -173,7 +177,7 @@ type Item implements Node {
 
     void "allow-unreachable exempts exactly the listed types"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.allow-unreachable': ['Orphan', 'Stray']])
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.allow-unreachable': ['Orphan', 'Stray']] + NOT_STRICT)
 
         when:
         getGraphQLBean()
@@ -187,7 +191,7 @@ type Item implements Node {
     void "allow-unreachable listing every unreachable type lets the schema build, and the exemption is logged"() {
         given:
         startContext(SCHEMA, SPEC_NAME,
-                ['micronaut.graphql.tools.allow-unreachable': ['Stray', 'Orphan', 'Lonely', 'Shape']])
+                ['micronaut.graphql.tools.allow-unreachable': ['Stray', 'Orphan', 'Lonely', 'Shape']] + NOT_STRICT)
 
         when:
         def result = executeQuery("""
@@ -210,7 +214,7 @@ type Item implements Node {
 
     void "unreachable-types=ignore lets the schema build and logs every ignored type"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.unreachable-types': 'ignore'])
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.unreachable-types': 'ignore'] + NOT_STRICT)
 
         when:
         def result = executeQuery("""
@@ -236,7 +240,7 @@ type Item implements Node {
         startContext(SCHEMA, SPEC_NAME, [
                 'micronaut.graphql.tools.unreachable-types': mode,
                 'micronaut.graphql.tools.allow-unreachable': ['Orphan', 'Missing', 'Item', 'Color', 'Filter', 'String']
-        ])
+        ] + NOT_STRICT)
 
         when:
         getGraphQLBean()
@@ -245,8 +249,8 @@ type Item implements Node {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidAllowUnreachableException
         e.cause.undefinedTypeNames == ['Missing']
-        e.cause.notUnreachableTypeNames == ['Color', 'Filter', 'Item', 'String']
-        e.cause.message == """micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface or union types of the schema: Missing (not defined in the schema), Color (not an unreachable object, interface or union type), Filter (not an unreachable object, interface or union type), Item (not an unreachable object, interface or union type), String (not an unreachable object, interface or union type).
+        e.cause.notUnreachableTypeNames == ['Item', 'String']
+        e.cause.message == """micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Missing (not defined in the schema), Item (not an unreachable object, interface, union, enum, input or scalar type), String (not an unreachable object, interface, union, enum, input or scalar type).
   Remove them from the list."""
 
         where:

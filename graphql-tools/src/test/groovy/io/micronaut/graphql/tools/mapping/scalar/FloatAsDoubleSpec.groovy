@@ -38,7 +38,7 @@ type Measurement {
   average: Float
 }
 """
-        startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME, ['micronaut.graphql.tools.strict': false])
 
         when:
         def result = executeQuery("""
@@ -71,7 +71,7 @@ type Query {
   doubles: [Float!]!
 }
 """
-        startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME, ['micronaut.graphql.tools.strict': false])
 
         when:
         def result = executeQuery("""
@@ -109,7 +109,7 @@ input RangeInput {
   max: Float
 }
 """
-        startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME, ['micronaut.graphql.tools.strict': false])
 
         when:
         def result = executeQuery("""

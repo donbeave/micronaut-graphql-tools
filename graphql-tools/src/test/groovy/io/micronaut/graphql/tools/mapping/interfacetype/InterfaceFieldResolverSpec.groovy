@@ -401,7 +401,7 @@ type TextSection implements Section & Node {
 
     void "an interface resolver method may carry the coordinate of the interface field"() {
         given:
-        startContext(SCHEMA, SPEC_NAME + ".coordinate")
+        startContext(SCHEMA, SPEC_NAME + ".coordinate", ['micronaut.graphql.tools.strict': false])
 
         when:
         def result = executeQuery("{ sections { summary } }")

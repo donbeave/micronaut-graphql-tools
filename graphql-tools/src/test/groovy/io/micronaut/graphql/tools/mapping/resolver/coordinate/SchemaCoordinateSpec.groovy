@@ -294,7 +294,10 @@ type Book {
 type Draft {
   note: String
 }
-""", SPEC_NAME + ".unreachable", ['micronaut.graphql.tools.allow-unreachable': ['Draft']])
+""", SPEC_NAME + ".unreachable", [
+                'micronaut.graphql.tools.allow-unreachable': ['Draft'],
+                'micronaut.graphql.tools.strict'           : false
+        ])
 
         when:
         def result = executeQuery('{ book(id: "1") { id } }')

@@ -460,7 +460,7 @@ enum Unused {
 type Query {
   label: String! @restricted(level: HIGH)
 }
-""", SPEC_NAME + ".directives")
+""", SPEC_NAME + ".directives", ['micronaut.graphql.tools.allow-unreachable': ['Unused']])
 
         when:
         BindingManifest manifest = applicationContext.getBean(BindingManifest)

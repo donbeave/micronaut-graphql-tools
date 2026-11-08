@@ -20,8 +20,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Thrown when {@code micronaut.graphql.tools.allow-unreachable} names a type that is not an unreachable object,
- * interface or union type of the schema: the entry is stale or misspelled.
+ * Thrown when {@code micronaut.graphql.tools.allow-unreachable} names a type that is not an unreachable type of the
+ * schema (object, interface or union type; in strict mode also enum, input or scalar type): the entry is stale or
+ * misspelled.
  */
 public final class InvalidAllowUnreachableException extends RuntimeException {
 
@@ -34,12 +35,23 @@ public final class InvalidAllowUnreachableException extends RuntimeException {
      *                                or union types
      */
     public InvalidAllowUnreachableException(List<String> undefinedTypeNames, List<String> notUnreachableTypeNames) {
-        super("micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface or "
-                + "union types of the schema: "
+        this(undefinedTypeNames, notUnreachableTypeNames, "object, interface or union");
+    }
+
+    /**
+     * @param undefinedTypeNames      listed names that the schema does not define
+     * @param notUnreachableTypeNames listed names that the schema defines, but not as unreachable types of the kinds
+     *                                that can be allowed
+     * @param kinds                   the kinds of types that can be allowed, for the message
+     */
+    public InvalidAllowUnreachableException(List<String> undefinedTypeNames, List<String> notUnreachableTypeNames,
+                                            String kinds) {
+        super("micronaut.graphql.tools.allow-unreachable lists types that are not unreachable " + kinds
+                + " types of the schema: "
                 + Stream.concat(
                         undefinedTypeNames.stream().map(it -> it + " (not defined in the schema)"),
                         notUnreachableTypeNames.stream()
-                                .map(it -> it + " (not an unreachable object, interface or union type)"))
+                                .map(it -> it + " (not an unreachable " + kinds + " type)"))
                 .collect(Collectors.joining(", "))
                 + ".\n  Remove them from the list.");
 

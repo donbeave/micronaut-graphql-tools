@@ -291,6 +291,25 @@ public final class GraphQLResolversRegistry {
         return beanType;
     }
 
+    /**
+     * @return every method of the root and type resolver beans that can bind a field: on a bean that uses
+     * {@link GraphQLSchemaCoordinate}, only the methods that carry one
+     */
+    List<BeanDefinitionAndMethod> getResolverMethods() {
+        List<BeanDefinitionAndMethods> items = new ArrayList<>(rootResolvers);
+        typeResolvers.values().forEach(items::addAll);
+
+        List<BeanDefinitionAndMethod> result = new ArrayList<>();
+        for (BeanDefinitionAndMethods item : items) {
+            for (ExecutableMethod<Object, ?> method : item.getExecutableMethods()) {
+                if (isCandidate(item.getBeanDefinition(), method)) {
+                    result.add(new BeanDefinitionAndMethod(item.getBeanDefinition(), method));
+                }
+            }
+        }
+        return result;
+    }
+
     boolean hasRootResolvers() {
         return !rootResolvers.isEmpty();
     }

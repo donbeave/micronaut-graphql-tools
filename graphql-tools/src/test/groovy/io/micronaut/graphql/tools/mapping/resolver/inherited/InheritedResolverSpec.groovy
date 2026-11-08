@@ -137,7 +137,7 @@ schema {
 type Query {
   greeting: String
 }
-""", SUBCLASS_SPEC_NAME)
+""", SUBCLASS_SPEC_NAME, ['micronaut.graphql.tools.strict': false])
 
         when:
         def result = executeQuery("{ greeting }")

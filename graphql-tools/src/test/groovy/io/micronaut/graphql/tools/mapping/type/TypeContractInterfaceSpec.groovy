@@ -242,7 +242,7 @@ type Card implements Face {
 
     void "an interface without its own introspection keeps the implementation-based lookup"() {
         given:
-        startContext(CHAPTER_SCHEMA, NO_CONTRACT_INTROSPECTION)
+        startContext(CHAPTER_SCHEMA, NO_CONTRACT_INTROSPECTION, ['micronaut.graphql.tools.strict': false])
 
         when:
         def result = executeQuery("{ chapter { title wordCount } }")

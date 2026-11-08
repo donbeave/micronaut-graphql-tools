@@ -33,7 +33,6 @@ import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLSchema;
-import graphql.schema.idl.DirectiveInfo;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.ScalarInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -73,6 +72,7 @@ import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException;
 import io.micronaut.graphql.tools.exceptions.ResolverRequiredException;
 import io.micronaut.graphql.tools.exceptions.RootResolverNotFoundException;
 import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedException;
+import io.micronaut.graphql.tools.exceptions.StrictModeException;
 import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException;
 import io.micronaut.graphql.tools.schema.AbstractTypeResolver;
@@ -86,12 +86,10 @@ import jakarta.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -169,6 +167,16 @@ final class GraphQLRuntimeWiringGenerator {
     // interface fields that a member of the class of an implementing object type can bind, decided once the Java types
     // of all reached interfaces are known (precedence resolver-first: an interface resolver wins)
     private final List<InterfaceField> deferredModelMemberFields = new ArrayList<>();
+
+    // key: root resolver method, value: the root fields it is bound to
+    private final Map<String, Set<String>> rootMethodBindings = new TreeMap<>();
+
+    // resolver methods that precedence property-first left unbound in favour of a member of the Java type
+    private final Set<String> shadowedResolverMethods = new HashSet<>();
+
+    // key: object type mapped to a Java interface without a bean introspection of its own, value: the interface and
+    // the implementation class whose introspection is read instead
+    private final Map<String, List<Class<?>>> interfacesReadThroughImplementations = new TreeMap<>();
 
     // failures of fields that cannot be bound, reported together once every field was tried
     private final List<AbstractMappingException> bindingFailures = new ArrayList<>();
@@ -271,6 +279,8 @@ final class GraphQLRuntimeWiringGenerator {
 
             verifySchemaCoordinateBindings(unboundTypes);
 
+            checkStrictMode(unboundTypes);
+
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(unboundTypes));
 
             return rootRuntimeWiringBuilder.build();
@@ -309,28 +319,39 @@ final class GraphQLRuntimeWiringGenerator {
             }
         }
 
+        // enum, input and scalar types: reported in the manifest, and handled like the others in strict mode
+        Map<String, TypeDefinition<?>> unreachableValueTypes = findUnreachableValueTypes();
+        boolean strict = configuration.isStrict();
+        Map<String, TypeDefinition<?>> checked = new TreeMap<>(unreachableTypes);
+        if (strict) {
+            checked.putAll(unreachableValueTypes);
+        }
+
         Set<String> allowed = new TreeSet<>(configuration.getAllowUnreachable());
         List<String> undefined = allowed.stream()
                 .filter(it -> !isDefined(it))
                 .toList();
         List<String> notUnreachable = allowed.stream()
-                .filter(it -> isDefined(it) && !unreachableTypes.containsKey(it))
+                // an unreachable enum, input or scalar type may be listed without strict mode too, without effect
+                .filter(it -> isDefined(it) && !unreachableTypes.containsKey(it)
+                        && !unreachableValueTypes.containsKey(it))
                 .toList();
         if (!undefined.isEmpty() || !notUnreachable.isEmpty()) {
-            throw new InvalidAllowUnreachableException(undefined, notUnreachable);
+            throw new InvalidAllowUnreachableException(undefined, notUnreachable,
+                    "object, interface, union, enum, input or scalar");
         }
 
         Set<String> unbound;
         if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
             unbound = unreachableTypes.keySet();
-            if (!unbound.isEmpty()) {
+            if (!checked.isEmpty()) {
                 LOG.warn("{} is ignore: the schema defines types that no field reachable from a root operation "
                                 + "type returns; they use graphql-java's default data fetchers: {}",
-                        GraphQLToolsConfiguration.PREFIX + ".unreachable-types", String.join(", ", unbound));
+                        GraphQLToolsConfiguration.PREFIX + ".unreachable-types", String.join(", ", checked.keySet()));
             }
         } else {
             Map<String, String> failing = new LinkedHashMap<>();
-            unreachableTypes.forEach((name, typeDefinition) -> {
+            checked.forEach((name, typeDefinition) -> {
                 if (!allowed.contains(name)) {
                     failing.put(name, getType(typeDefinition));
                 }
@@ -338,15 +359,16 @@ final class GraphQLRuntimeWiringGenerator {
             if (!failing.isEmpty()) {
                 throw new UnreachableTypesException(failing);
             }
-            unbound = allowed;
-            if (!unbound.isEmpty()) {
+            unbound = allowed.stream().filter(unreachableTypes::containsKey)
+                    .collect(Collectors.toCollection(TreeSet::new));
+            if (!allowed.isEmpty()) {
                 LOG.info("Unreachable types allowed by {} use graphql-java's default data fetchers: {}",
-                        GraphQLToolsConfiguration.PREFIX + ".allow-unreachable", String.join(", ", unbound));
+                        GraphQLToolsConfiguration.PREFIX + ".allow-unreachable", String.join(", ", allowed));
             }
         }
 
         unbound.forEach(it -> manifestRecorder.diagnostic("unreachable", it));
-        recordUnreachableValueTypes();
+        unreachableValueTypes.keySet().forEach(it -> manifestRecorder.diagnostic("unreachable", it));
 
         for (String name : unbound) {
             TypeDefinition<?> typeDefinition = unreachableTypes.get(name);
@@ -363,45 +385,52 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     /**
-     * Records the enum, input object and scalar types the schema declares that no bound field, argument or input field
-     * uses, as {@code !unreachable} lines of the binding manifest. The scalars graphql-java defines are not declared.
+     * @return the enum, input object and scalar types the schema declares that no bound field, argument or input field
+     * and no argument of a directive definition uses, by name; the scalars graphql-java defines are not declared
      */
-    private void recordUnreachableValueTypes() {
-        Set<String> directiveTypes = findDirectiveArgumentTypes();
+    private Map<String, TypeDefinition<?>> findUnreachableValueTypes() {
+        Set<String> directiveTypes = GraphQLUtils.findDirectiveArgumentTypes(typeDefinitionRegistry);
+        Map<String, TypeDefinition<?>> result = new TreeMap<>();
         for (TypeDefinition<?> typeDefinition : typeDefinitionRegistry.types().values()) {
             boolean valueType = typeDefinition instanceof EnumTypeDefinition
                     || typeDefinition instanceof InputObjectTypeDefinition;
             if (valueType && !processedTypes.containsKey(typeDefinition.getName())
                     && !directiveTypes.contains(typeDefinition.getName())) {
-                manifestRecorder.diagnostic("unreachable", typeDefinition.getName());
+                result.put(typeDefinition.getName(), typeDefinition);
             }
         }
-        for (String scalar : typeDefinitionRegistry.scalars().keySet()) {
-            if (!ScalarInfo.isGraphqlSpecifiedScalar(scalar) && !manifestRecorder.isScalarReached(scalar)
-                    && !directiveTypes.contains(scalar)) {
-                manifestRecorder.diagnostic("unreachable", scalar);
+        typeDefinitionRegistry.scalars().forEach((name, definition) -> {
+            if (!ScalarInfo.isGraphqlSpecifiedScalar(name) && !manifestRecorder.isScalarReached(name)
+                    && !directiveTypes.contains(name)) {
+                result.put(name, definition);
             }
-        }
+        });
+        return result;
     }
 
     /**
-     * @return the enum, input object and scalar types that the arguments of the schema's own directive definitions
-     * use, directly or through input object fields; graphql-java needs them for the directives, so they are reached
+     * Records the strict-mode findings in the binding manifest, and fails with all of them in strict mode.
+     *
+     * @param unboundTypes the unreachable types left unbound on purpose
      */
-    private Set<String> findDirectiveArgumentTypes() {
-        Set<String> result = new HashSet<>();
-        Deque<graphql.language.Type<?>> pending = new ArrayDeque<>();
-        typeDefinitionRegistry.getDirectiveDefinitions().values().stream()
-                .filter(it -> !DirectiveInfo.isGraphqlSpecifiedDirective(it.getName()))
-                .forEach(it -> it.getInputValueDefinitions().forEach(argument -> pending.add(argument.getType())));
-        while (!pending.isEmpty()) {
-            String name = getTypeName(pending.poll()).getName();
-            if (result.add(name)) {
-                typeDefinitionRegistry.getType(name, InputObjectTypeDefinition.class).ifPresent(input ->
-                        input.getInputValueDefinitions().forEach(field -> pending.add(field.getType())));
-            }
+    private void checkStrictMode(Set<String> unboundTypes) {
+        Set<String> allowedTypes = new HashSet<>(configuration.getAllowUnreachable());
+        if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
+            allowedTypes.addAll(unboundTypes);
         }
-        return result;
+
+        StrictModeChecks checks = new StrictModeChecks(manifestRecorder);
+        Set<String> accountedMethods = new HashSet<>(resolverBindings.keySet());
+        accountedMethods.addAll(shadowedResolverMethods);
+        checks.unboundResolverMethods(graphQLResolversRegistry.getResolverMethods(), accountedMethods);
+        checks.rootMethodsOfSeveralOperationTypes(rootMethodBindings);
+        checks.unboundEnumConstants(processedTypes, typeDefinitionRegistry);
+        checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processedTypes.keySet(), allowedTypes);
+        checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
+
+        if (configuration.isStrict() && !checks.getProblems().isEmpty()) {
+            throw new StrictModeException(checks.getProblems());
+        }
     }
 
     /**
@@ -562,7 +591,8 @@ final class GraphQLRuntimeWiringGenerator {
             throw new InvalidSchemaCoordinateException(problems);
         }
 
-        if (!unboundMethods.isEmpty()) {
+        // in strict mode such a method is an error, see checkStrictMode()
+        if (!unboundMethods.isEmpty() && !configuration.isStrict()) {
             LOG.warn("Methods whose @GraphQLSchemaCoordinate names an unreachable type are not bound: {}",
                     String.join("; ", unboundMethods));
         }
@@ -883,6 +913,10 @@ final class GraphQLRuntimeWiringGenerator {
                 mappingContext
         );
 
+        rootMethodBindings.computeIfAbsent(BindingManifestRecorder.methodMember(executable,
+                executable.getDeclaringType()), it -> new TreeSet<>())
+                .add(objectTypeDefinition.getName() + "." + fieldDefinition.getName());
+
         manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_ROOT,
                 BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
                 executable.getReturnType().asArgument(),
@@ -1170,6 +1204,9 @@ final class GraphQLRuntimeWiringGenerator {
                     graphQLBeanIntrospectionRegistry.getGraphQlTypeBeanIntrospection(mappingContext, targetClass);
             if (beanIntrospection.getBeanType().isInterface()) {
                 contractTypes.put(objectTypeDefinition.getName(), beanIntrospection.getBeanType());
+            } else if (targetClass.isInterface()) {
+                interfacesReadThroughImplementations.put(objectTypeDefinition.getName(),
+                        List.of(targetClass, beanIntrospection.getBeanType()));
             }
             manifestRecorder.type(objectTypeDefinition.getName(), "object", beanIntrospection.getBeanType());
 
@@ -1435,6 +1472,11 @@ final class GraphQLRuntimeWiringGenerator {
         String coordinate = mappingContext.getGraphQlObjectType() + "." + mappingContext.getGraphQlField();
         ambiguousBindings.put(coordinate, describeMembers(modelMember.members()) + " | "
                 + describeMembers(toMap(resolvers)));
+        if (configuration.getPrecedence() == Precedence.PROPERTY_FIRST) {
+            // the precedence chose the member: the resolver methods are accounted for by the ambiguous line
+            resolvers.forEach(it -> shadowedResolverMethods.add(GraphQLResolversRegistry.describeMethod(
+                    it.getBeanDefinition(), it.getExecutableMethod())));
+        }
         manifestRecorder.diagnostic("ambiguous", coordinate, Stream.concat(
                         Stream.of(modelMember.manifestMember()),
                         resolvers.stream().map(it -> BindingManifestRecorder.methodMember(it.getExecutableMethod(),
