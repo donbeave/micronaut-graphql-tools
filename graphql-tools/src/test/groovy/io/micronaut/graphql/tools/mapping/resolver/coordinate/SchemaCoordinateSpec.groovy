@@ -174,7 +174,7 @@ type Book {
 
     void "a coordinate the binder does not bind the method to fails the startup (#name)"() {
         given:
-        startContext(schema, SPEC_NAME + "." + name)
+        startContext(schema, SPEC_NAME + "." + name, config)
 
         when:
         getGraphQLBean()
@@ -185,10 +185,11 @@ type Book {
         e.cause.message == "Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
 
         where:
-        name                 | schema                       | problem
-        'typeMappedElsewhere' | AUTHOR_SCHEMA               | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
-        'propertyBinds'      | SCHEMA                       | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${ShadowedBookResolver.name} summary(${BookWithSummary.name} book): the method is not bound to Book.summary, Book.summary is bound to property ${BookWithSummary.name}.getSummary()."
-        'twoOperationTypes'  | TWO_OPERATION_TYPES_SCHEMA   | "@GraphQLSchemaCoordinate(\"Query.book\") on ${ScopedBookQuery.name} book(java.lang.String id): the method is also bound to Mutation.book."
+        name                 | schema                       | config                                                   | problem
+        'typeMappedElsewhere' | AUTHOR_SCHEMA               | [:]                                                      | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
+        // the strict default rejects a property and a type resolver for one field before the coordinate is checked
+        'propertyBinds'      | SCHEMA                       | ['micronaut.graphql.tools.precedence': 'property-first'] | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${ShadowedBookResolver.name} summary(${BookWithSummary.name} book): the method is not bound to Book.summary, Book.summary is bound to property ${BookWithSummary.name}.getSummary()."
+        'twoOperationTypes'  | TWO_OPERATION_TYPES_SCHEMA   | [:]                                                      | "@GraphQLSchemaCoordinate(\"Query.book\") on ${ScopedBookQuery.name} book(java.lang.String id): the method is also bound to Mutation.book."
     }
 
     @Language("GraphQL")

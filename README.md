@@ -118,7 +118,8 @@ method name, and the coordinate is checked at startup, never trusted:
   that differs from the method name, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
   `@GraphQLTypeResolver`, or sits on a bean that is neither.
 - It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
-  class that the `@GraphQLTypeResolver` does not resolve, a property of the mapped class binds the field, or a root
+  class that the `@GraphQLTypeResolver` does not resolve, a property of the mapped class binds the field (with
+  `precedence: property-first`, see [Property or type resolver](#property-or-type-resolver)), or a root
   method of the same name also binds a field of another root operation type. A coordinate whose type is unreachable and
   allowed (see [Configuration](#configuration)) is not bound and is logged as a warning.
 
@@ -141,12 +142,54 @@ keeps its annotation value, and a bean that is a type resolver only through an i
 with `TypeResolverContractsNotFoundException`. Annotate such a bean directly or make the annotations of its contract
 types available to reflection.
 
+## Property or type resolver
+
+A field of an object type is bound by a member of its Java type (a property, or a `@GraphQLField` method) or by a
+type resolver method (of a `@GraphQLTypeResolver` for that type, or for the Java interface of an SDL interface that
+declares the field). When both exist for one field, `micronaut.graphql.tools.precedence` decides:
+
+- `strict` (default): the startup fails with `AmbiguousBindingException`, naming the field and both members.
+- `property-first`: the member of the Java type binds, and the type resolver method is never called. This was the
+  only behaviour before the option existed.
+- `resolver-first`: the type resolver method binds, and the member is not read.
+
+A field may say which one it wants: list directives in `micronaut.graphql.tools.resolver-directives`, and a field
+that carries one of them is bound by its type resolver method whatever the precedence. Such a field fails the startup
+with `ResolverRequiredException` when only a member of the Java type could bind it. Every listed directive must be
+declared in the schema. The directive is read from the field of the object type: graphql-java does not carry
+directives of an SDL interface field over to the implementations, so a directive written only on the interface's
+field has no effect here (the field then follows the precedence).
+
+```graphql
+directive @computed on FIELD_DEFINITION
+
+type Item {
+  name: String!
+  price: Long! @computed
+}
+```
+
+```yaml
+micronaut:
+  graphql:
+    tools:
+      resolver-directives:
+        - computed
+```
+
+With the `strict` default, a getter that happens to have the name of a field a type resolver computes no longer
+shadows the type resolver silently. An application that relied on the getter winning sets `precedence: property-first`
+(and gets a warning that lists the fields where it applies). A field without both members binds as before in every
+mode.
+
 ## Configuration
 
 | Property | Values (default first) | Meaning |
 |---|---|---|
 | `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
+| `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
+| `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
 
 ```yaml
 micronaut:
