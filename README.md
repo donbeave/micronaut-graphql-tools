@@ -519,9 +519,36 @@ tasks.compileJava {
 ```
 
 The processor is aggregating: it checks the whole compilation once, in the last round. It claims the library's
-annotations and the Micronaut annotations that make a class a bean (`@Singleton`, `@Prototype`, ...), never `*`.
-It reads every `*.graphqls` and `*.graphql` file under the directory. Under kapt, register it with `kapt` instead: a
-processor on `annotationProcessor` does not run when kapt is applied.
+annotations and the Micronaut annotations that make a class a bean (`@Singleton`, `@Prototype`, `@RequestScope`, ...),
+never `*`, so Gradle's incremental compilation stays incremental: after a change to one file, Gradle recompiles the
+changed classes and hands every claimed type to the processor again, which checks the whole module as a full
+compilation does (unchanged classes are read from the class output). Errors about unchanged files then have no Java
+file and line (javac did not compile them), but name the coordinate and the class. With Micronaut's processor, set
+`micronaut.processing.incremental=true` (the Micronaut Gradle plugin does), or every compilation is a full one.
+It reads every `*.graphqls` and `*.graphql` file under the directory.
+
+A processor that is not applied does not fail anything, it just does not run: under kapt, `compileJava` runs with
+`-proc:none` and a processor on `annotationProcessor` is ignored, so register it with `kapt` too (and declare the schema
+directory as an input of `kaptKotlin`). Keep a guard in the build that fails when the manifest is missing from the
+class output (under kapt, kapt's class output, `build/tmp/kapt3/classes/main`):
+
+```kotlin
+val checkBindingManifest by tasks.registering {
+    val manifest = tasks.compileJava.flatMap {
+        it.destinationDirectory.file("META-INF/micronaut-graphql-tools/binding-manifest.txt")
+    }
+    inputs.files(tasks.compileJava)
+    doLast {
+        if (!manifest.get().asFile.isFile) {
+            throw GradleException("The GraphQL compile-time checks did not run: ${manifest.get().asFile} is missing.")
+        }
+    }
+}
+tasks.check { dependsOn(checkBindingManifest) }
+```
+
+The library's example application (`test-suite`) is built this way, and its tests compare the manifest the
+processor wrote with the one its startup builds, without what the processor's record of omissions names.
 
 Options (`-A<name>=<value>`) have the values and defaults of the runtime options of the same name. They are written
 in camel case because `javac` accepts only dot-separated identifiers as option names (`sdl-dir` is rejected). Boolean
