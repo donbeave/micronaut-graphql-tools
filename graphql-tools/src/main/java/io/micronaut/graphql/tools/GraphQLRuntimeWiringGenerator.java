@@ -176,6 +176,8 @@ final class GraphQLRuntimeWiringGenerator {
                 throw new RootResolverNotFoundException();
             }
 
+            graphQLResolversRegistry.verifyTypeResolverContracts();
+
             subscriptionTypeName = schemaDefinition.getOperationTypeDefinitions().stream()
                     .filter(it -> "subscription".equals(it.getName()))
                     .map(it -> it.getTypeName().getName())

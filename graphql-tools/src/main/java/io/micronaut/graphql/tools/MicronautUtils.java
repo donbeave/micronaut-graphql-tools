@@ -25,9 +25,10 @@ import io.micronaut.inject.ExecutableMethod;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -78,7 +79,7 @@ final class MicronautUtils {
     }
 
     static Map<Class<?>, List<String>> toMap(List<BeanDefinitionAndMethod> beanDefinitionAndMethods) {
-        Map<Class<?>, List<String>> methods = new HashMap<>();
+        Map<Class<?>, List<String>> methods = new TreeMap<>(Comparator.comparing(Class::getName));
 
         for (BeanDefinitionAndMethod it : beanDefinitionAndMethods) {
             methods.putIfAbsent(it.getBeanDefinition().getBeanType(), new ArrayList<>());
@@ -91,7 +92,7 @@ final class MicronautUtils {
 
     static Map<Class<?>, List<String>> toMap(List<BeanMethod<Object, ?>> beanMethods,
                                              @Nullable BeanProperty<Object, Object> beanProperty) {
-        Map<Class<?>, List<String>> methods = new HashMap<>();
+        Map<Class<?>, List<String>> methods = new TreeMap<>(Comparator.comparing(Class::getName));
 
         if (beanProperty != null) {
             methods.putIfAbsent(beanProperty.getDeclaringBean().getBeanType(), new ArrayList<>());

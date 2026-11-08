@@ -86,6 +86,43 @@ The mapping then checks `T`. Anything else fails at startup with `UnsupportedRet
 - `DataFetcherResult<Publisher<T>>` is not supported on a subscription field, although graphql-java would unwrap it:
   return the `Publisher` and, if needed, a `DataFetcherResult` per event.
 
+## Resolver contracts
+
+`@GraphQLRootResolver` and `@GraphQLTypeResolver` are inherited (`@Inherited`). They may sit on an interface, for
+example one emitted by a code generator, and a bean that implements it is a resolver without a GraphQL annotation of
+its own. Micronaut AOP advice (`@Around`) on the implementation still applies.
+
+```java
+@GraphQLTypeResolver(Book.class)
+public interface BookLabelResolverContract {
+    String label(Book book);
+}
+
+@Singleton
+public class BookLabelResolver implements BookLabelResolverContract {
+    @Override
+    public String label(Book book) { ... }
+}
+```
+
+**Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
+class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both
+then bind the same field, the startup fails with `MultipleMethodsFoundException` naming both classes. Annotate only the
+class that should be the resolver.
+
+**Several contracts on one bean.** A bean may implement type resolver contracts for different classes. The
+annotation metadata keeps only one of the inherited values, so the class hierarchy is read to find every contract, and
+each method binds for the class of its first parameter (the source object). A public method whose first parameter is
+none of those classes fails the startup with `AmbiguousTypeResolverException`, naming the bean and every contract.
+
+This is the one place where the library reads class annotations by reflection
+(`Class.getDeclaredAnnotation(GraphQLTypeResolver.class)` on the bean class, its superclasses and interfaces). The
+annotations are retained at runtime, so this works on the JVM. Where class annotations are not available at runtime,
+for example in a native image without reflection configuration for the contract types, a bean annotated directly
+keeps its annotation value, and a bean that is a type resolver only through an inherited annotation fails the startup
+with `TypeResolverContractsNotFoundException`. Annotate such a bean directly or make the annotations of its contract
+types available to reflection.
+
 ## Configuration
 
 | Property | Values (default first) | Meaning |
@@ -176,7 +213,7 @@ The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the 
 
 ## Why GraphQL Java Tools?
 
-* **Micronaut**:  Leverage the Micronaut framework effectively, ensuring high performance by avoiding reflection, which can slow down applications.
+* **Micronaut**:  Leverage the Micronaut framework effectively, ensuring high performance by avoiding reflection, which can slow down applications. Binding uses Micronaut's compile-time bean and introspection metadata; the one reflective read of class annotations is described in [Resolver contracts](#resolver-contracts).
 * **Minimal Boilerplate**:  Skip manual configuration of GraphQL types, resolvers and options by using annotations like `GraphQLType`, `@GraphQLRootResolver`, and others.
 * **Schema First**:  Micronaut GraphQL Tools allows you to directly use your schema by [GraphQL schema language](http://graphql.org/learn/schema/) instead of code-driven approach.
 * **Class Validation**:  Micronaut GraphQL Tools will warn you if you provide classes/types that you don't need to, as well as erroring if you use the wrong Java class for a certain GraphQL type when it builds the schema.
