@@ -62,7 +62,7 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
-These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums and unions to Java interfaces without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
+These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
 
 ## Return types
 
@@ -172,6 +172,25 @@ return schemaMappingDictionary -> schemaMappingDictionary
         .registerType("ValidationError", ValidationError.class);
 }
 ```
+
+### Unions and interfaces
+
+- A field that returns a GraphQL union or interface declares a Java interface (for example `List<Section>` for
+  `[Section!]!`); a class fails the startup.
+- Every member of the union and every object type that implements the interface needs its class registered as above,
+  otherwise the startup fails (`UnionTypeMappingNotProvidedException`, `InterfaceTypeMappingNotProvidedException`).
+  Each of these object types is bound like any other, so every field of the interface must be bound on every
+  implementation. That an object type declares all fields of its interfaces is checked by graphql-java.
+- At runtime the object type is chosen by the exact class of the returned object. An object of any other class is a
+  GraphQL error on that field (the data of the field is `null`), naming the union or interface, the path and the class:
+
+  ```
+  Can't resolve '/book/sections[1]'. Abstract type 'Section' must resolve to an Object type at runtime for field ...
+  The object of class com.example.UnknownSection is none of the object types of interface Section:
+  MediaSection (com.example.MediaSection), TextSection (com.example.TextSection).
+  ```
+- Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
+  (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
 
 ## Examples
 

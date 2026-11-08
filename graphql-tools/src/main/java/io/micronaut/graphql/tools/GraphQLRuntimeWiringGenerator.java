@@ -56,6 +56,7 @@ import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
 import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException;
+import io.micronaut.graphql.tools.exceptions.InterfaceTypeMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException;
 import io.micronaut.graphql.tools.exceptions.InvalidSourceArgumentException;
 import io.micronaut.graphql.tools.exceptions.MappingConflictException;
@@ -67,10 +68,10 @@ import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedExceptio
 import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
+import io.micronaut.graphql.tools.schema.AbstractTypeResolver;
 import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
-import io.micronaut.graphql.tools.schema.UnionTypeResolver;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
@@ -82,6 +83,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -204,7 +206,9 @@ final class GraphQLRuntimeWiringGenerator {
                 processOperationTypeDefinition(operationTypeDefinition);
             }
 
-            Set<String> unboundTypes = processUnreachableTypes(schemaDefinition);
+            Set<String> implementedInterfaces = wireInterfaceTypeResolvers();
+
+            Set<String> unboundTypes = processUnreachableTypes(schemaDefinition, implementedInterfaces);
 
             verifySchemaCoordinateBindings(unboundTypes);
 
@@ -222,13 +226,16 @@ final class GraphQLRuntimeWiringGenerator {
     /**
      * Finds the object, interface and union types of the schema that no field reachable from a root operation type
      * returns (nothing binds them) and applies {@link GraphQLToolsConfiguration#getUnreachableTypes()} and
-     * {@link GraphQLToolsConfiguration#getAllowUnreachable()} to them.
+     * {@link GraphQLToolsConfiguration#getAllowUnreachable()} to them. An interface that no field returns, but that a
+     * reached object type implements, is reached.
      *
-     * @param schemaDefinition the schema definition
+     * @param schemaDefinition      the schema definition
+     * @param implementedInterfaces the interfaces that no field returns, but that a reached object type implements
      * @return the unreachable object types that stay in the schema with graphql-java's default data fetchers
      */
-    private Set<String> processUnreachableTypes(SchemaDefinition schemaDefinition) {
+    private Set<String> processUnreachableTypes(SchemaDefinition schemaDefinition, Set<String> implementedInterfaces) {
         Set<String> reachedTypeNames = new HashSet<>(processedTypes.keySet());
+        reachedTypeNames.addAll(implementedInterfaces);
         for (OperationTypeDefinition operationTypeDefinition : schemaDefinition.getOperationTypeDefinitions()) {
             reachedTypeNames.add(operationTypeDefinition.getTypeName().getName());
         }
@@ -663,6 +670,8 @@ final class GraphQLRuntimeWiringGenerator {
                 processUnionTypeDefinition(unionTypeDefinition, returnClass, mappingContext);
             } else if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
                 processObjectTypeDefinition(objectTypeDefinition, returnClass, mappingContext);
+            } else if (typeDefinition instanceof InterfaceTypeDefinition interfaceTypeDefinition) {
+                processInterfaceTypeDefinition(interfaceTypeDefinition, returnClass, mappingContext);
             } else {
                 throw unsupportedTypeDefinition(typeDefinition);
             }
@@ -868,10 +877,101 @@ final class GraphQLRuntimeWiringGenerator {
                     }
                 }
 
-                typeRuntimeWiringBuilder.typeResolver(new UnionTypeResolver(graphQLSchemaProvider, objectTypes));
+                typeRuntimeWiringBuilder.typeResolver(new AbstractTypeResolver(
+                        graphQLSchemaProvider, "union", unionTypeDefinition.getName(), objectTypes
+                ));
                 return typeRuntimeWiringBuilder;
             });
         });
+    }
+
+    /**
+     * Maps a GraphQL interface returned by a field to the declared Java interface, and binds every object type that
+     * implements it, each to the class registered for it in the {@link SchemaMappingDictionary}. The type resolver is
+     * registered by {@link #wireInterfaceTypeResolvers()}.
+     *
+     * @param interfaceTypeDefinition the interface
+     * @param targetClass             the declared Java type
+     * @param mappingContext          the field that returns the interface
+     */
+    private void processInterfaceTypeDefinition(InterfaceTypeDefinition interfaceTypeDefinition, Class<?> targetClass,
+                                                TypeMappingContext mappingContext) {
+        processIfNotProcessed(interfaceTypeDefinition, targetClass, mappingContext, () -> {
+            if (!targetClass.isInterface()) {
+                throw IncorrectClassMappingException.forField(
+                        IncorrectClassMappingException.MappingType.DETECT_TYPE,
+                        IncorrectClassMappingException.MappingType.INTERFACE,
+                        mappingContext,
+                        targetClass,
+                        null
+                );
+            }
+
+            for (ObjectTypeDefinition implementation : getImplementations(interfaceTypeDefinition)) {
+                Class<?> clazz = Optional
+                        .ofNullable(schemaMappingDictionary.getTypes().get(implementation.getName()))
+                        .orElseThrow(() -> new InterfaceTypeMappingNotProvidedException(
+                                mappingContext, implementation.getName(), interfaceTypeDefinition.getName()
+                        ));
+
+                processObjectTypeDefinition(implementation, clazz, mappingContext);
+            }
+        });
+    }
+
+    private List<ObjectTypeDefinition> getImplementations(InterfaceTypeDefinition interfaceTypeDefinition) {
+        return typeDefinitionRegistry.getImplementationsOf(interfaceTypeDefinition).stream()
+                .sorted(Comparator.comparing(ObjectTypeDefinition::getName))
+                .toList();
+    }
+
+    /**
+     * Registers the type resolver of every interface that a field returns or that a bound object type implements. Such
+     * an implemented-only interface is never the type of a field, so graphql-java never calls its type resolver, but
+     * the schema requires one. Each type resolver maps the classes of the bound implementations.
+     *
+     * @return the interfaces that no field returns, but that a bound object type implements
+     */
+    private Set<String> wireInterfaceTypeResolvers() {
+        Set<String> implementedInterfaces = new TreeSet<>();
+
+        List<InterfaceTypeDefinition> interfaceTypeDefinitions =
+                typeDefinitionRegistry.getTypes(InterfaceTypeDefinition.class).stream()
+                        .sorted(Comparator.comparing(InterfaceTypeDefinition::getName))
+                        .toList();
+
+        for (InterfaceTypeDefinition interfaceTypeDefinition : interfaceTypeDefinitions) {
+            String name = interfaceTypeDefinition.getName();
+            boolean returned = processedTypes.containsKey(name);
+
+            Map<Class<?>, String> objectTypes = new HashMap<>();
+            Set<Class<?>> sharedClasses = new HashSet<>();
+            boolean implemented = false;
+            for (ObjectTypeDefinition implementation : getImplementations(interfaceTypeDefinition)) {
+                Class<?> clazz = processedTypes.get(implementation.getName());
+                if (clazz != null) {
+                    implemented = true;
+                    if (objectTypes.putIfAbsent(clazz, implementation.getName()) != null) {
+                        // only possible for an implemented-only interface (the dictionary maps each class once):
+                        // its type resolver is never called, and an exact lookup must not pick one of the types
+                        sharedClasses.add(clazz);
+                    }
+                }
+            }
+            sharedClasses.forEach(objectTypes::remove);
+
+            if (!returned && !implemented) {
+                continue;
+            }
+            if (!returned) {
+                implementedInterfaces.add(name);
+            }
+
+            rootRuntimeWiringBuilder.type(name, typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder
+                    .typeResolver(new AbstractTypeResolver(graphQLSchemaProvider, "interface", name, objectTypes)));
+        }
+
+        return implementedInterfaces;
     }
 
     private void processObjectTypeDefinition(ObjectTypeDefinition objectTypeDefinition, Class<?> targetClass,

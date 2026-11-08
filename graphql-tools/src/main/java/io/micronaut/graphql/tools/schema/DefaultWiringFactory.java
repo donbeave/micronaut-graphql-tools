@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.schema;
 
+import graphql.language.InterfaceTypeDefinition;
 import graphql.schema.DataFetcher;
 import graphql.schema.idl.FieldWiringEnvironment;
 import graphql.schema.idl.WiringFactory;
@@ -24,7 +25,9 @@ import java.util.Set;
 
 /**
  * Supplies data fetchers for the fields that no binding covers: those of the unreachable types that are allowed to stay
- * unbound get graphql-java's default ({@code null} here); any other field is a bug in the binding.
+ * unbound get graphql-java's default ({@code null} here), and so do the fields of interfaces, which graphql-java never
+ * calls (a field is always fetched with the data fetcher of the object type the interface resolves to, and each
+ * object type is bound); any other field is a bug in the binding.
  *
  * @author Alexey Zhokhov
  */
@@ -42,7 +45,8 @@ public final class DefaultWiringFactory implements WiringFactory {
 
     @Override
     public DataFetcher getDefaultDataFetcher(FieldWiringEnvironment environment) {
-        if (unboundTypeNames.contains(environment.getParentType().getName())) {
+        if (environment.getParentType() instanceof InterfaceTypeDefinition
+                || unboundTypeNames.contains(environment.getParentType().getName())) {
             return null;
         }
         throw new UnsupportedOperationException("Unprocessed type: " + environment.getParentType().getName());
