@@ -131,6 +131,33 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
         );
     }
 
+    /**
+     * @param mappingContext   the coordinate
+     * @param primitiveClass   the declared primitive Java type
+     * @param scalarName       the name of the nullable built-in scalar type
+     * @param supportedClasses the Java types the scalar accepts
+     * @return the exception for a primitive Java type bound to a nullable built-in scalar, which strict mode rejects
+     */
+    public static IncorrectClassMappingException forNullablePrimitiveInStrictMode(MappingContext mappingContext,
+                                                                                  Class<?> primitiveClass,
+                                                                                  String scalarName,
+                                                                                  Set<Class<?>> supportedClasses) {
+        Set<Class<?>> boxedClasses = supportedClasses.stream()
+                .filter(it -> !it.isPrimitive())
+                .collect(Collectors.toSet());
+        return new IncorrectClassMappingException(
+                String.format("The argument is mapped to the primitive %s, but the GraphQL type %s is nullable, so "
+                                + "null cannot be passed. Use %s or make the GraphQL type non-null. Strict mode "
+                                + "rejects this for built-in scalars too; with micronaut.graphql.tools.strict=false a "
+                                + "null reaches the primitive as its default value or fails the request.",
+                        primitiveClass.getName(), scalarName,
+                        boxedClasses.stream().map(Class::getName).sorted().collect(Collectors.joining(" or "))),
+                mappingContext,
+                primitiveClass,
+                boxedClasses
+        );
+    }
+
     private static String toString(MappingType mappingType, Class<?> providedClass) {
         return switch (mappingType) {
             case BUILT_IN_JAVA_CLASS -> "a built-in class";

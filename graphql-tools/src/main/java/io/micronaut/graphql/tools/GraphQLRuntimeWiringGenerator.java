@@ -316,7 +316,11 @@ final class GraphQLRuntimeWiringGenerator {
             // the checks below would only repeat what partial bindings left out
             throwBindingFailures();
 
-            inputClassChecks.checkCollected();
+            GraphQLToolsConfiguration.UnmappedProperties unmappedProperties =
+                    configuration.getInput().getUnmappedProperties();
+            inputClassChecks.checkCollected(unmappedProperties == null
+                    ? configuration.isStrict()
+                    : unmappedProperties == GraphQLToolsConfiguration.UnmappedProperties.FAIL, manifestRecorder);
 
             if (!ambiguousBindings.isEmpty()) {
                 LOG.warn("{} is {}: fields that both a member of the Java type and a type resolver method can bind: {}",
@@ -1536,6 +1540,9 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             Set<String> settableProperties = inputClassChecks.findSettableProperties(targetClass);
+            if (settableProperties == null) {
+                inputClassChecks.addOwnDeserializer(inputObjectTypeDefinition.getName(), targetClass);
+            }
             boolean detectOmission = configuration.getInput().isDetectOmission();
             List<BeanProperty<Object, Object>> argumentValueProperties = new ArrayList<>();
             List<BeanProperty<Object, Object>> inputObjectProperties = new ArrayList<>();
@@ -1602,9 +1609,7 @@ final class GraphQLRuntimeWiringGenerator {
                         new InputValueConverter.OmissionPlan(argumentValueProperties, inputObjectProperties));
             }
 
-            if (configuration.getInput().getUnmappedProperties() == GraphQLToolsConfiguration.UnmappedProperties.FAIL) {
-                inputClassChecks.collectUnmappedInputProperties(inputObjectTypeDefinition, beanIntrospection);
-            }
+            inputClassChecks.collectUnmappedInputProperties(inputObjectTypeDefinition, beanIntrospection);
 
             manifestRecorder.type(inputObjectTypeDefinition.getName(), "input", targetClass);
         });
@@ -1669,6 +1674,11 @@ final class GraphQLRuntimeWiringGenerator {
 
             if (!supportedClasses.contains(returnType)) {
                 throw IncorrectClassMappingException.forArgument(mappingContext, returnType, supportedClasses);
+            }
+            if (returnType.isPrimitive() && !nonNull && configuration.isStrict()) {
+                // null (omitted or explicit) cannot reach a primitive; without strict mode this stays as it was
+                throw IncorrectClassMappingException.forNullablePrimitiveInStrictMode(mappingContext, returnType,
+                        typeName.getName(), supportedClasses);
             }
         } else if (typeDefinition instanceof ScalarTypeDefinition scalarTypeDefinition) {
             GraphQLScalarMapping scalarMapping = requireScalarMapping(scalarTypeDefinition, mappingContext);

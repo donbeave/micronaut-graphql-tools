@@ -31,6 +31,8 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException;
 import io.micronaut.graphql.tools.schema.InputValueConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,15 +46,18 @@ import java.util.stream.Collectors;
 /**
  * The checks of {@link GraphQLRuntimeWiringGenerator} that compare input classes with what the input
  * {@code ObjectMapper} can set and with their GraphQL input types. Findings are collected while the input types are
- * bound and reported by {@link #checkCollected()}.
+ * bound and reported by {@link #checkCollected}. It logs under the generator's name.
  */
 @Internal
 final class InputClassChecks {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GraphQLRuntimeWiringGenerator.class);
 
     private final InputValueConverter inputValueConverter;
     private final Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans;
     private final List<Map.Entry<InputMappingContext, Class<?>>> writeOnlyInputObjectProperties = new ArrayList<>();
     private final Map<String, Map.Entry<Class<?>, List<String>>> unmappedInputProperties = new TreeMap<>();
+    private final Map<String, Class<?>> ownDeserializers = new TreeMap<>();
 
     /**
      * @param inputValueConverter the converter whose {@code ObjectMapper} converts requests
@@ -75,12 +80,37 @@ final class InputClassChecks {
     }
 
     /**
-     * Fails on the findings collected while the input types were bound.
+     * Records an input class that the input {@code ObjectMapper} converts with a deserializer of its own, so its input
+     * fields cannot be checked for settable properties; {@link #checkCollected} logs them.
+     *
+     * @param inputTypeName the GraphQL input type
+     * @param inputClass    the input class
      */
-    void checkCollected() {
+    void addOwnDeserializer(String inputTypeName, Class<?> inputClass) {
+        ownDeserializers.put(inputTypeName, inputClass);
+    }
+
+    /**
+     * Fails on the findings collected while the input types were bound. Each unmapped input class property is an
+     * {@code !unbound} line of the binding manifest, also when it does not fail.
+     *
+     * @param failOnUnmappedProperties whether unmapped input class properties fail
+     * @param manifestRecorder         the binding manifest
+     */
+    void checkCollected(boolean failOnUnmappedProperties, BindingManifestRecorder manifestRecorder) {
         checkWriteOnlyInputObjectProperties();
 
-        if (!unmappedInputProperties.isEmpty()) {
+        if (!ownDeserializers.isEmpty()) {
+            LOG.info("Input classes converted by a deserializer of their own are not checked for settable input "
+                    + "fields: {}", ownDeserializers.entrySet().stream()
+                    .map(it -> it.getKey() + " (" + it.getValue().getName() + ")")
+                    .collect(Collectors.joining(", ")));
+        }
+
+        unmappedInputProperties.values().forEach(entry -> entry.getValue().forEach(property ->
+                manifestRecorder.diagnostic("unbound", entry.getKey().getTypeName() + "#" + property)));
+
+        if (failOnUnmappedProperties && !unmappedInputProperties.isEmpty()) {
             throw new UnmappedInputPropertiesException(unmappedInputProperties);
         }
     }

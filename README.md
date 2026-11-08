@@ -311,15 +311,28 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
   a getter only the implementation declares binds silently (see [Java interfaces as object types](#java-interfaces-as-object-types)).
   Annotate the interface with `@GraphQLType` or `@Introspected`. This finding has no `!` line of its own in the
   manifest (format version 1 has no kind for it).
+- **Input class properties that the input type does not define** (`!unbound InputClass#property`): a property the
+  class can set (through a setter or the constructor) that no request can ever set. They are reported in one
+  `UnmappedInputPropertiesException`. `input.unmapped-properties` decides on its own when it is set: `fail` fails
+  without strict mode too, `ignore` accepts them in strict mode (see
+  [Input classes and input types](#input-classes-and-input-types)).
+- **A primitive for a nullable built-in scalar.** An argument or input class property declared as a primitive (`int`,
+  `boolean`, `double`, ...) for a nullable built-in scalar (`Int`, `Boolean`, `Float`, `Long`, ...): a `null` (omitted
+  or explicit) cannot reach it, so it arrives as the primitive's default value or fails the request. Use the wrapper
+  class or make the GraphQL type non-null. The startup fails with `IncorrectClassMappingException`. For a custom
+  scalar this fails in every mode. A primitive for a non-null type and a primitive return type are fine. This finding
+  has no `!` line in the manifest.
 
-All findings except unreachable types are reported in one `StrictModeException`. `!ambiguous` lines are allowed by
+All findings except unreachable types, unmapped input class properties and primitives for nullable scalars are
+reported in one `StrictModeException`. `!ambiguous` lines are allowed by
 the `precedence` that produced them. Every schema field must be bound in every mode (`MethodNotFoundException`).
 
 With `strict: false` the library binds as before strict mode existed: only object, interface and union types are
 checked for reachability, and the findings appear in the manifest only. `allow-unreachable` may still name unreachable
 enum, input and scalar types, so switching strict mode off never makes a valid configuration fail; without strict mode
-those entries have no effect.
-Checks of Java input classes against the schema's input fields are not part of this mode.
+those entries have no effect. Unmapped input class properties are accepted (unless `input.unmapped-properties: fail`)
+and primitives for nullable built-in scalars bind as before.
+
 ## Custom scalars
 
 GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`,
@@ -412,11 +425,12 @@ Input classes are checked against their GraphQL input types at startup, in both 
   `InputFieldNotSettableException`, which names the field as `InputType.field`. Such a field would otherwise fail every
   request that sends it, or be dropped silently by a lenient mapper. The check uses the mapper that converts requests,
   including a [named mapper](#arguments-and-input-objects); it is skipped for a class the mapper converts with a
-  deserializer of its own.
+  deserializer of its own, and the startup logs such classes at INFO.
 - A property the class can set (through a setter or the constructor) that the input type does not define fails the
-  startup, all of them in one `UnmappedInputPropertiesException`, because no request can set it. Set
-  `micronaut.graphql.tools.input.unmapped-properties: ignore` to accept such properties. Read-only properties, such as
-  computed getters, are not checked.
+  startup in [strict mode](#strict-mode), all of them in one `UnmappedInputPropertiesException`, because no request can
+  set it. Each one is also an `!unbound InputClass#property` line of the binding manifest.
+  `micronaut.graphql.tools.input.unmapped-properties` overrides strict mode: `ignore` accepts such properties,
+  `fail` rejects them also with `strict: false`. Read-only properties, such as computed getters, are not checked.
 
 Both checks apply wherever the input type is used: an argument, a list, another input type, an `ArgumentValue`.
 
@@ -455,11 +469,11 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
-| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode). `false` binds as before and only lists them in the manifest. |
+| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set) and primitives for nullable built-in scalars. `false` binds as before and only lists them in the manifest. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
 | `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
-| `micronaut.graphql.tools.input.unmapped-properties` | `fail` \| `ignore` | Input class properties that the GraphQL input type does not define. `fail` stops the startup with one error that lists them for every input class; `ignore` accepts them. See [Input classes and input types](#input-classes-and-input-types). |
+| `micronaut.graphql.tools.input.unmapped-properties` | not set \| `fail` \| `ignore` | Input class properties that the GraphQL input type does not define. Not set: they fail in [strict mode](#strict-mode) and are accepted without it. `fail` stops the startup with one error that lists them for every input class, also with `strict: false`; `ignore` accepts them, also in strict mode. See [Input classes and input types](#input-classes-and-input-types). |
 
 ```yaml
 micronaut:

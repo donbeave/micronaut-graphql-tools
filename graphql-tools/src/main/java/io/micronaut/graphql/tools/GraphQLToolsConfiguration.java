@@ -145,8 +145,10 @@ public class GraphQLToolsConfiguration {
      * unreachable types of every kind (also enums, input types and scalars; {@link #getAllowUnreachable()} may then
      * name them too), public resolver methods that bind no field, root resolver methods without a coordinate that bind
      * fields of several operation types, Java enum constants without a schema value,
-     * dictionary entries for types that are not bound, and Java interfaces read through an implementation's bean
-     * introspection instead of their own. Default: {@code true}.
+     * dictionary entries for types that are not bound, Java interfaces read through an implementation's bean
+     * introspection instead of their own, input class properties that the input type does not define (unless
+     * {@link InputConfiguration#getUnmappedProperties()} is set), and primitive arguments or input class properties for
+     * nullable built-in scalars. Default: {@code true}.
      *
      * @param strict whether to fail
      */
@@ -224,7 +226,8 @@ public class GraphQLToolsConfiguration {
     public static class InputConfiguration {
 
         private boolean detectOmission;
-        private UnmappedProperties unmappedProperties = UnmappedProperties.FAIL;
+        @Nullable
+        private UnmappedProperties unmappedProperties;
 
         /**
          * @return whether resolver parameters and input class properties declared as {@link ArgumentValue} tell an
@@ -247,22 +250,25 @@ public class GraphQLToolsConfiguration {
         }
 
         /**
-         * @return what happens to properties of input classes that the GraphQL input type does not define
+         * @return what happens to properties of input classes that the GraphQL input type does not define, or
+         * {@code null} if strict mode decides ({@link GraphQLToolsConfiguration#isStrict()})
          */
-        @NonNull
+        @Nullable
         public UnmappedProperties getUnmappedProperties() {
             return unmappedProperties;
         }
 
         /**
          * Sets what happens to properties of input classes (settable through a setter or the constructor) that the
-         * GraphQL input type does not define, so no request can ever set them. Default:
-         * {@link UnmappedProperties#FAIL}.
+         * GraphQL input type does not define, so no request can ever set them. Either way each of them is an
+         * {@code !unbound} line of the binding manifest. Default: not set, which means {@link UnmappedProperties#FAIL}
+         * in strict mode ({@link GraphQLToolsConfiguration#isStrict()}) and {@link UnmappedProperties#IGNORE} without
+         * it.
          *
-         * @param unmappedProperties the handling of unmapped input class properties
+         * @param unmappedProperties the handling of unmapped input class properties, or {@code null} to follow strict
+         *                           mode
          */
-        public void setUnmappedProperties(@NonNull UnmappedProperties unmappedProperties) {
-            ArgumentUtils.requireNonNull("unmappedProperties", unmappedProperties);
+        public void setUnmappedProperties(@Nullable UnmappedProperties unmappedProperties) {
             this.unmappedProperties = unmappedProperties;
         }
 
