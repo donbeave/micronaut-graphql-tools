@@ -107,8 +107,10 @@ public class BookLabelResolver implements BookLabelResolverContract {
 }
 ```
 
-`@GraphQLSchemaCoordinate` is also inherited and makes the contract methods executable. Fields are still matched by
-method name, and the coordinate is checked at startup, never trusted:
+`@GraphQLSchemaCoordinate` is also inherited and makes the contract methods executable. A method with a coordinate
+binds the field its coordinate names and no other: a type resolver method only on that object type (or, for an
+interface field, on the implementations of that interface), a root resolver method only on that root operation type.
+Methods of beans without coordinates are matched by name. The coordinate is also checked at startup, never trusted:
 
 - On a bean where at least one method carries a coordinate, only those methods bind. Other public methods (helpers)
   are not candidates.
@@ -119,9 +121,32 @@ method name, and the coordinate is checked at startup, never trusted:
   `@GraphQLTypeResolver`, or sits on a bean that is neither.
 - It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
   class that the `@GraphQLTypeResolver` does not resolve, a property of the mapped class binds the field (with
-  `precedence: property-first`, see [Property or type resolver](#property-or-type-resolver)), or a root
-  method of the same name also binds a field of another root operation type. A coordinate whose type is unreachable and
-  allowed (see [Configuration](#configuration)) is not bound and is logged as a warning.
+  `precedence: property-first`, see [Property or type resolver](#property-or-type-resolver)). A coordinate whose type
+  is unreachable and allowed (see [Configuration](#configuration)) is not bound and is logged as a warning.
+
+**Root operation types.** Root resolver methods are scoped per root operation type (`Query`, `Mutation`,
+`Subscription`). A method with `@GraphQLSchemaCoordinate("Subscription.status")` binds only that field, so the same
+field name on two operation types binds two different methods:
+
+```java
+@GraphQLRootResolver
+public class StatusQuery {
+    @GraphQLSchemaCoordinate("Query.status")
+    public String status(String id) { ... }
+}
+
+@GraphQLRootResolver
+public class StatusSubscription {
+    @GraphQLSchemaCoordinate("Subscription.status")
+    public Publisher<String> status(String id) { ... }
+}
+```
+
+A root resolver method of a bean without coordinates binds the field of its name on every root operation type, as it
+always did; give it a coordinate to scope it to one. When more than one method can bind one root field (two beans with
+a method of that name, two methods with one coordinate, or a coordinate method and a method of a bean without
+coordinates), the startup fails with `MultipleMethodsFoundException` naming the field and every method. Before, the
+first bean found won, which depended on the order Micronaut returned the beans in. There is no option to restore that.
 
 **Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
 class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both

@@ -873,7 +873,8 @@ final class GraphQLRuntimeWiringGenerator {
                         TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
 
                 List<BeanDefinitionAndMethod> beanDefinitionAndMethods =
-                        graphQLResolversRegistry.getRootExecutableMethod(fieldDefinition.getName(), mappingContext);
+                        graphQLResolversRegistry.getRootExecutableMethods(objectTypeDefinition.getName(),
+                                fieldDefinition.getName(), mappingContext);
 
                 if (beanDefinitionAndMethods.size() > 1) {
                     throw new MultipleMethodsFoundException(mappingContext, toMap(beanDefinitionAndMethods));
@@ -1227,7 +1228,7 @@ final class GraphQLRuntimeWiringGenerator {
         }
 
         List<BeanDefinitionAndMethod> beanDefinitionAndMethods = graphQLResolversRegistry
-                .findTypeExecutableMethods(sourceClass, fieldDefinition.getName());
+                .findTypeExecutableMethods(sourceClass, objectTypeDefinition.getName(), fieldDefinition.getName());
 
         if (beanDefinitionAndMethods.isEmpty() && !declaringInterfaces.isEmpty()) {
             // an interface resolver may bind it, see bindInterfaceFields()
@@ -1262,7 +1263,8 @@ final class GraphQLRuntimeWiringGenerator {
         List<BeanDefinitionAndMethod> resolvers = sourceClass.isPrimitive() || sourceClass.isEnum()
                 || sourceClass.isAnnotation()
                 ? Collections.emptyList()
-                : graphQLResolversRegistry.findTypeExecutableMethods(sourceClass, fieldDefinition.getName());
+                : graphQLResolversRegistry.findTypeExecutableMethods(sourceClass, objectTypeDefinition.getName(),
+                        fieldDefinition.getName());
 
         if (!resolvers.isEmpty()) {
             if (directive == null && precedence == Precedence.STRICT) {
@@ -1471,7 +1473,8 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             for (BeanDefinitionAndMethod method
-                    : graphQLResolversRegistry.findTypeExecutableMethods(interfaceClass, fieldName)) {
+                    : graphQLResolversRegistry.findTypeExecutableMethods(interfaceClass,
+                    interfaceTypeDefinition.getName(), fieldName)) {
                 result.add(new InterfaceResolverMethod(interfaceTypeDefinition, interfaceClass, method));
             }
         }

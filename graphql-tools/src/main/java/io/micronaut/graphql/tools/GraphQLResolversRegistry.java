@@ -20,7 +20,6 @@ import io.micronaut.context.annotation.Infrastructure;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.exceptions.AmbiguousTypeResolverException;
@@ -73,8 +72,8 @@ public final class GraphQLResolversRegistry {
     private Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader =
             GraphQLResolversRegistry::findTypeResolverContracts;
     private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
-    // key: bean definition, value: the signatures of its methods that carry @GraphQLSchemaCoordinate
-    private final Map<BeanDefinition<?>, Set<String>> schemaCoordinateSignatures = new HashMap<>();
+    // key: bean definition, value: the signatures of its methods that carry @GraphQLSchemaCoordinate, and the coordinates
+    private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
 
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
         rootResolvers.stream()
@@ -180,8 +179,8 @@ public final class GraphQLResolversRegistry {
         String coordinate = method.stringValue(GraphQLSchemaCoordinate.class).orElse("");
 
         schemaCoordinateMethods.add(new SchemaCoordinateMethod(beanDefinition, method, coordinate));
-        schemaCoordinateSignatures.computeIfAbsent(beanDefinition, it -> new HashSet<>())
-                .add(getExecutableMethodFullName(method));
+        schemaCoordinateSignatures.computeIfAbsent(beanDefinition, it -> new HashMap<>())
+                .put(getExecutableMethodFullName(method), coordinate);
     }
 
     /**
@@ -197,14 +196,28 @@ public final class GraphQLResolversRegistry {
      * A method of a bean on which some methods carry {@link GraphQLSchemaCoordinate} binds only if it carries one too.
      */
     private boolean isCandidate(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        Set<String> signatures = schemaCoordinateSignatures.get(beanDefinition);
-        return signatures == null || signatures.contains(getExecutableMethodFullName(method));
+        Map<String, String> signatures = schemaCoordinateSignatures.get(beanDefinition);
+        return signatures == null || signatures.containsKey(getExecutableMethodFullName(method));
     }
 
-    private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String methodName) {
+    /**
+     * Finds the methods of a bean that bind a field. A method that carries {@link GraphQLSchemaCoordinate} is found by
+     * its coordinate, which must be one of {@code coordinates}; on a bean without coordinates, a method is found by
+     * its name.
+     *
+     * @param item        the bean and its methods
+     * @param methodName  the field name
+     * @param coordinates the coordinates ({@code Type.field}) the field can be named by
+     * @return the methods
+     */
+    private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String methodName,
+                                                      Set<String> coordinates) {
+        Map<String, String> signatures = schemaCoordinateSignatures.get(item.getBeanDefinition());
         return item.getExecutableMethods().stream()
                 .filter(executableMethod -> executableMethod.getMethodName().equals(methodName))
-                .filter(executableMethod -> isCandidate(item.getBeanDefinition(), executableMethod))
+                .filter(executableMethod -> signatures == null
+                        || signatures.containsKey(getExecutableMethodFullName(executableMethod))
+                        && coordinates.contains(signatures.get(getExecutableMethodFullName(executableMethod))))
                 .map(executableMethod -> new BeanDefinitionAndMethod(item.getBeanDefinition(), executableMethod))
                 .collect(Collectors.toList());
     }
@@ -283,33 +296,26 @@ public final class GraphQLResolversRegistry {
     }
 
     /**
-     * Finds the root resolver methods for a root field by name. When several beans declare a method of that name, the
-     * first bean wins, unless one of them is a root resolver only through an inherited annotation (an implemented
-     * interface or an extended class): then all candidates are returned, and the caller reports the ambiguity.
+     * Finds the root resolver methods for a field of a root operation type. A method with a
+     * {@link GraphQLSchemaCoordinate} binds the field of exactly that operation type. A method of a bean without
+     * coordinates binds the field of its name on every root operation type. All candidates are returned, from every
+     * bean; more than one is an ambiguity the caller reports.
      *
-     * @param methodName     the field name
-     * @param mappingContext the mapping context, for the error
+     * @param operationTypeName the root operation type, for example {@code Query}
+     * @param methodName        the field name
+     * @param mappingContext    the mapping context, for the error
      * @return the candidate methods, never empty
      */
-    List<BeanDefinitionAndMethod> getRootExecutableMethod(String methodName, MappingContext mappingContext) {
-        List<BeanDefinitionAndMethod> first = null;
+    List<BeanDefinitionAndMethod> getRootExecutableMethods(String operationTypeName, String methodName,
+                                                           MappingContext mappingContext) {
         List<BeanDefinitionAndMethod> all = new ArrayList<>();
-        boolean inherited = false;
 
         for (BeanDefinitionAndMethods item : rootResolvers) {
-            List<BeanDefinitionAndMethod> result = findMethods(item, methodName);
-
-            if (!result.isEmpty()) {
-                if (first == null) {
-                    first = result;
-                }
-                all.addAll(result);
-                inherited |= !item.getBeanDefinition().hasDeclaredStereotype(GraphQLRootResolver.class);
-            }
+            all.addAll(findMethods(item, methodName, Set.of(operationTypeName + "." + methodName)));
         }
 
-        if (first != null) {
-            return inherited ? all : first;
+        if (!all.isEmpty()) {
+            return all;
         }
 
         List<Class<?>> resolvers = rootResolvers.stream()
@@ -322,30 +328,19 @@ public final class GraphQLResolversRegistry {
 
     /**
      * @param beanType   the class the type resolvers are declared for
+     * @param typeName   the object type or interface whose field is bound; a method with a
+     *                   {@link GraphQLSchemaCoordinate} binds only the field its coordinate names
      * @param methodName the field name
      * @return the type resolver methods for the field, possibly none
      */
-    List<BeanDefinitionAndMethod> findTypeExecutableMethods(Class<?> beanType, String methodName) {
+    List<BeanDefinitionAndMethod> findTypeExecutableMethods(Class<?> beanType, String typeName, String methodName) {
         List<BeanDefinitionAndMethod> result = new ArrayList<>();
 
         for (BeanDefinitionAndMethods item : typeResolvers.getOrDefault(beanType, Collections.emptyList())) {
-            result.addAll(findMethods(item, methodName));
+            result.addAll(findMethods(item, methodName, Set.of(typeName + "." + methodName)));
         }
 
         return result;
-    }
-
-    List<BeanDefinitionAndMethod> getTypeExecutableMethod(Class<?> beanType, String methodName,
-                                                          MappingContext mappingContext) {
-        resolveTypeResolverMethods();
-
-        List<BeanDefinitionAndMethod> result = findTypeExecutableMethods(beanType, methodName);
-
-        if (!result.isEmpty()) {
-            return result;
-        }
-
-        throw typeMethodNotFound(beanType, methodName, mappingContext);
     }
 
     /**
