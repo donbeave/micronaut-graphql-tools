@@ -641,6 +641,33 @@ The header is identical when the processor and the library come from the same re
 the version of the jar). The library's tests compile fixtures with the processor, start them, and compare both
 manifests under this rule.
 
+### The strict schema-build test
+
+What the processor cannot decide passes the compilation and fails the startup: a union member or interface
+implementation without a `SchemaMappingDictionary` entry, or mapped to a class that does not implement the Java
+interface the field declares; a class that is the Java type of two members of one union (the dictionary
+decides which class a member type has, so the processor cannot check "one member per class"); a custom scalar without a `GraphQLScalarMapping` bean; directive wirings. So that this
+fails the build too, and not the first deployment, the application keeps one test that builds the schema in strict
+mode (the default), with the application's real beans:
+
+```java
+@MicronautTest(startApplication = false)
+class GraphQLSchemaBuildTest {
+
+    @Inject
+    BindingManifest bindingManifest; // getting it builds the schema
+
+    @Test
+    void theSchemaBuilds() {
+        assertFalse(bindingManifest.getLines().isEmpty());
+    }
+
+}
+```
+
+Values a resolver returns are not checked by either: a `null` for a non-null field and the class of an object that a
+union or interface resolves are errors of the request, reported by graphql-java.
+
 ## Custom types mapping
 
 GraphQL interfaces and union types often have multiple concrete implementations.
