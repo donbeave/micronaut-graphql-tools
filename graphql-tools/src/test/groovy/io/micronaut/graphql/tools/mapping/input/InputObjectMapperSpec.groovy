@@ -16,6 +16,8 @@ import io.micronaut.graphql.tools.GraphQLScalarMapping
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.graphql.tools.exceptions.InputFieldNotSettableException
+import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.inject.qualifiers.Qualifiers
 import io.micronaut.jackson.modules.BeanIntrospectionModule
 import jakarta.inject.Named
@@ -126,17 +128,17 @@ input RegistrationInput {
         result.data.register == 'jane@example.org (Jane) born 2000-02-29 (LocalDate) confirmed 2026-12-24T10:15:30+02:00'
     }
 
-    void "the default mapper fails a request that sends an input field the input class cannot set"() {
+    void "an input field the input class cannot set fails the startup instead of each request"() {
         given:
         startContext(SCHEMA, SPEC_NAME_READ_ONLY)
 
         when:
-        def result = executeQuery(QUERY)
+        getGraphQLBean()
 
         then:
-        result.errors.size() == 1
-        result.errors[0].message.contains('Unrecognized field "displayName"')
-        result.data == null
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof InputFieldNotSettableException
+        e.cause.message.startsWith('The input field RegistrationInput.displayName cannot be set')
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '.*')

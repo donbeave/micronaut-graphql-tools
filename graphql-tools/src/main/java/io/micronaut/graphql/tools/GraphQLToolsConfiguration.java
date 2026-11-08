@@ -109,6 +109,7 @@ public class GraphQLToolsConfiguration {
     public static class InputConfiguration {
 
         private boolean detectOmission;
+        private UnmappedProperties unmappedProperties = UnmappedProperties.FAIL;
 
         /**
          * @return whether resolver parameters and input class properties declared as {@link ArgumentValue} tell an
@@ -129,6 +130,43 @@ public class GraphQLToolsConfiguration {
         public void setDetectOmission(boolean detectOmission) {
             this.detectOmission = detectOmission;
         }
+
+        /**
+         * @return what happens to properties of input classes that the GraphQL input type does not define
+         */
+        @NonNull
+        public UnmappedProperties getUnmappedProperties() {
+            return unmappedProperties;
+        }
+
+        /**
+         * Sets what happens to properties of input classes (settable through a setter or the constructor) that the
+         * GraphQL input type does not define, so no request can ever set them. Default:
+         * {@link UnmappedProperties#FAIL}.
+         *
+         * @param unmappedProperties the handling of unmapped input class properties
+         */
+        public void setUnmappedProperties(@NonNull UnmappedProperties unmappedProperties) {
+            ArgumentUtils.requireNonNull("unmappedProperties", unmappedProperties);
+            this.unmappedProperties = unmappedProperties;
+        }
+
+    }
+
+    /**
+     * The handling of input class properties that the GraphQL input type does not define.
+     */
+    public enum UnmappedProperties {
+
+        /**
+         * Fail the startup with one error that lists them for every input class.
+         */
+        FAIL,
+
+        /**
+         * Accept them (they keep the value the class gives them).
+         */
+        IGNORE
 
     }
 

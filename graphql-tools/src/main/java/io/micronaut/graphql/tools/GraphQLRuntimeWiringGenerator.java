@@ -15,7 +15,12 @@
  */
 package io.micronaut.graphql.tools;
 
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.deser.BeanDeserializerBase;
+import com.fasterxml.jackson.databind.deser.DefaultDeserializationContext;
 import graphql.execution.DataFetcherResult;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.EnumValueDefinition;
@@ -53,6 +58,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
+import io.micronaut.graphql.tools.exceptions.InputFieldNotSettableException;
 import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException;
 import io.micronaut.graphql.tools.exceptions.InvalidScalarMappingException;
 import io.micronaut.graphql.tools.exceptions.InvalidSourceArgumentException;
@@ -64,6 +70,7 @@ import io.micronaut.graphql.tools.exceptions.RootResolverNotFoundException;
 import io.micronaut.graphql.tools.exceptions.ScalarMappingNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException;
+import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException;
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
@@ -136,6 +143,7 @@ final class GraphQLRuntimeWiringGenerator {
     private final InputValueConverter inputValueConverter;
     private final Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans = new ConcurrentHashMap<>();
     private final List<Map.Entry<InputMappingContext, Class<?>>> writeOnlyInputObjectProperties = new ArrayList<>();
+    private final Map<String, Map.Entry<Class<?>, List<String>>> unmappedInputProperties = new TreeMap<>();
     private final GraphQLToolsConfiguration configuration;
     private final Map<String, GraphQLScalarMapping> scalarMappings;
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
@@ -244,6 +252,10 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             checkWriteOnlyInputObjectProperties();
+
+            if (!unmappedInputProperties.isEmpty()) {
+                throw new UnmappedInputPropertiesException(unmappedInputProperties);
+            }
 
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(processUnreachableTypes(schemaDefinition)));
 
@@ -921,6 +933,7 @@ final class GraphQLRuntimeWiringGenerator {
                 );
             }
 
+            Set<String> settableProperties = findSettableProperties(targetClass);
             boolean detectOmission = configuration.getInput().isDetectOmission();
             List<BeanProperty<Object, Object>> argumentValueProperties = new ArrayList<>();
             List<BeanProperty<Object, Object>> inputObjectProperties = new ArrayList<>();
@@ -956,6 +969,10 @@ final class GraphQLRuntimeWiringGenerator {
                             + " needs a writable property: it is set to omitted() when the client leaves it out.");
                 }
 
+                if (settableProperties != null && !settableProperties.contains(inputValueDefinition.getName())) {
+                    throw new InputFieldNotSettableException(inputMappingContext);
+                }
+
                 if (detectOmission) {
                     if (ArgumentValue.class.equals(property.get().getType())) {
                         if (property.get().isWriteOnly()) {
@@ -979,11 +996,47 @@ final class GraphQLRuntimeWiringGenerator {
                 omissionPlans.put(targetClass,
                         new InputValueConverter.OmissionPlan(argumentValueProperties, inputObjectProperties));
             }
+
+            if (configuration.getInput().getUnmappedProperties() == GraphQLToolsConfiguration.UnmappedProperties.FAIL) {
+                collectUnmappedInputProperties(inputObjectTypeDefinition, beanIntrospection);
+            }
         });
     }
 
     private void processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext) {
         processInputType(graphQlType, argument, mappingContext, true);
+    }
+
+    /**
+     * Asks the input {@code ObjectMapper} which properties of an input class it can set, by building the deserializer
+     * that converts requests: properties with a setter, a field or a creator parameter, under the names Jackson uses
+     * (after naming strategies and {@code @JsonProperty}), without ignored ones. An input field that is not among them
+     * would fail every request that sends it, or be dropped by a lenient mapper.
+     *
+     * @param inputClass the input class
+     * @return the names, or {@code null} if the mapper uses a deserializer of its own for the class (then the
+     * application controls the conversion and the check is not possible)
+     */
+    @Nullable
+    private Set<String> findSettableProperties(Class<?> inputClass) {
+        ObjectMapper objectMapper = inputValueConverter.getObjectMapper();
+        DeserializationConfig config = objectMapper.getDeserializationConfig();
+        JsonDeserializer<Object> deserializer;
+        try {
+            deserializer = ((DefaultDeserializationContext) objectMapper.getDeserializationContext())
+                    .createDummyInstance(config)
+                    .findRootValueDeserializer(objectMapper.constructType(inputClass));
+        } catch (JsonMappingException e) {
+            throw new IllegalStateException("The input ObjectMapper cannot convert into the input class "
+                    + inputClass.getName() + ": " + e.getOriginalMessage(), e);
+        }
+        if (!(deserializer instanceof BeanDeserializerBase beanDeserializer)) {
+            return null;
+        }
+        Set<String> result = new HashSet<>();
+        beanDeserializer.properties().forEachRemaining(it -> result.add(it.getName()));
+        beanDeserializer.creatorProperties().forEachRemaining(it -> result.add(it.getName()));
+        return result;
     }
 
     private boolean isInputObjectType(Type<?> graphQlType) {
@@ -1029,6 +1082,31 @@ final class GraphQLRuntimeWiringGenerator {
         }
         return plan.inputObjectProperties().stream()
                 .anyMatch(it -> holdsArgumentValues(elementClass(it.asArgument()), visited));
+    }
+
+
+    /**
+     * Records the properties of an input class that a request can set (through a setter or the constructor) but that
+     * the GraphQL input type does not define. Read-only properties, such as computed getters, are not input.
+     */
+    private void collectUnmappedInputProperties(InputObjectTypeDefinition inputObjectTypeDefinition,
+                                                BeanIntrospection<Object> beanIntrospection) {
+        Set<String> inputFields = inputObjectTypeDefinition.getInputValueDefinitions().stream()
+                .map(InputValueDefinition::getName)
+                .collect(Collectors.toSet());
+        Set<String> constructorArguments = Arrays.stream(beanIntrospection.getConstructorArguments())
+                .map(Argument::getName)
+                .collect(Collectors.toSet());
+        List<String> unmapped = beanIntrospection.getBeanProperties().stream()
+                .filter(it -> !it.isReadOnly() || constructorArguments.contains(it.getName()))
+                .map(BeanProperty::getName)
+                .filter(it -> !inputFields.contains(it))
+                .sorted()
+                .toList();
+        if (!unmapped.isEmpty()) {
+            unmappedInputProperties.put(inputObjectTypeDefinition.getName(),
+                    Map.entry(beanIntrospection.getBeanType(), unmapped));
+        }
     }
 
     private void processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext,

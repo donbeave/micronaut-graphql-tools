@@ -146,8 +146,8 @@ including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<S
 `ObjectMapper`.
 
 By default that is a private mapper with Jackson's defaults plus Micronaut's `BeanIntrospectionModule`. In particular
-`FAIL_ON_UNKNOWN_PROPERTIES` stays `true`: an input field that the input class cannot take fails the request instead of
-being dropped. To convert with your own settings, define an `ObjectMapper` bean named `graphql-tools`
+`FAIL_ON_UNKNOWN_PROPERTIES` stays `true`. An input field that the input class cannot take fails the startup in any
+case (see [Input classes and input types](#input-classes-and-input-types)). To convert with your own settings, define an `ObjectMapper` bean named `graphql-tools`
 (`GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER`):
 
 ```java
@@ -167,6 +167,24 @@ ObjectMapper graphQLToolsObjectMapper() {
   unchanged, see [Custom scalars](#custom-scalars)); the bean itself is not changed.
 - The bean is used as it is otherwise: register `BeanIntrospectionModule` yourself if input classes must be read
   without reflection (GraalVM native image).
+
+### Input classes and input types
+
+Input classes are checked against their GraphQL input types at startup, in both directions:
+
+- Every field of an input type needs a property of the same name that the input `ObjectMapper` can set: a setter, a
+  field or a constructor parameter, under the name Jackson uses. A missing property fails the startup with
+  `MethodNotFoundException`; a read-only, `@JsonIgnore`d or renamed one (naming strategy, `@JsonProperty`) with
+  `InputFieldNotSettableException`, which names the field as `InputType.field`. Such a field would otherwise fail every
+  request that sends it, or be dropped silently by a lenient mapper. The check uses the mapper that converts requests,
+  including a [named mapper](#arguments-and-input-objects); it is skipped for a class the mapper converts with a
+  deserializer of its own.
+- A property the class can set (through a setter or the constructor) that the input type does not define fails the
+  startup, all of them in one `UnmappedInputPropertiesException`, because no request can set it. Set
+  `micronaut.graphql.tools.input.unmapped-properties: ignore` to accept such properties. Read-only properties, such as
+  computed getters, are not checked.
+
+Both checks apply wherever the input type is used: an argument, a list, another input type, an `ArgumentValue`.
 
 ### Omitted values and `null`
 
@@ -202,6 +220,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
 | `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
+| `micronaut.graphql.tools.input.unmapped-properties` | `fail` \| `ignore` | Input class properties that the GraphQL input type does not define. `fail` stops the startup with one error that lists them for every input class; `ignore` accepts them. See [Input classes and input types](#input-classes-and-input-types). |
 
 ```yaml
 micronaut:
