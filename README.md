@@ -15,7 +15,7 @@ See the [Snapshot Documentation](https://micronaut-projects.github.io/micronaut-
 
 ## Quick start
 
-1. Add the necessary dependencies in build.gradle or pom.xml:
+1. Add the necessary dependencies in build.gradle or pom.xml (no version is on Maven Central yet, see [Artifacts and versions](#artifacts-and-versions)):
 
 Gradle:
 
@@ -59,9 +59,47 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLType` Maps a Java class to a GraphQL type.
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
-- `@GraphQLInterface` Declares a GraphQL interface, allowing multiple types to share a common set of fields.
-- `@GraphQLUnion` Defines a GraphQL union type, enabling a field to resolve to more than one type.
-- `@GraphQLEnum` Maps a Java enum to a GraphQL enum type.
+- `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+
+These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums and unions to Java interfaces without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
+
+## Return types
+
+The declared return type of a field (a resolver method or a bean property) may wrap the mapped class in the
+containers graphql-java resolves at runtime, outermost first and each at most once:
+
+- `CompletionStage<T>`, for the field itself only;
+- `Publisher<T>` (`org.reactivestreams.Publisher`, any subtype such as `Flux`), required on fields of the subscription
+  type and allowed nowhere else; the wrappers below then apply to each event;
+- `DataFetcherResult<T>`, for the field or each list element; its errors and local context are applied;
+- `Optional<T>`, for the field or each list element, and only where the GraphQL type is nullable (an empty
+  `Optional` becomes `null`).
+
+The mapping then checks `T`. Anything else fails at startup with `UnsupportedReturnTypeException`. In particular:
+
+- `List<CompletionStage<T>>` is rejected: graphql-java does not wait for futures inside a list, and the client would
+  receive the future's `toString()`. Return `CompletionStage<List<T>>` instead.
+- `Optional<T>` on a non-null type (`String!`, `[String!]`) is rejected.
+- A field of the subscription type must return a `Publisher` (optionally inside a `CompletionStage`); otherwise the
+  startup fails (graphql-java would fail only on the first subscription request). A `Publisher` on any other field,
+  or inside a list, is rejected.
+- `DataFetcherResult<Publisher<T>>` is not supported on a subscription field, although graphql-java would unwrap it:
+  return the `Publisher` and, if needed, a `DataFetcherResult` per event.
+
+## Configuration
+
+| Property | Values (default first) | Meaning |
+|---|---|---|
+| `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
+| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
+
+```yaml
+micronaut:
+  graphql:
+    tools:
+      allow-unreachable:
+        - LegacyReport
+```
 
 ## Custom types mapping
 
@@ -83,7 +121,58 @@ return schemaMappingDictionary -> schemaMappingDictionary
 
 ## Examples
 
-Examples can be found in the [examples](https://github.com/donbeave/micronaut-graphql-tools/tree/master/doc-examples/example-java) directory.
+Examples can be found in the [test-suite](test-suite) directory.
+
+## Compatibility
+
+The library is built and tested on Java 21 against two graphql-java lines (CI runs both):
+
+| graphql-java | graphql-java-extended-scalars | java-dataloader | Micronaut / micronaut-graphql | Java |
+|---|---|---|---|---|
+| 21.3 (default build) | 21.0 | 3.2.1 | 4.10.x / 4.8.0 | 21 |
+| 25.1 | 24.0 | 6.0.0 | 4.10.x / 4.8.0 | 21 |
+
+The published POM does not pin graphql-java: it arrives through `micronaut-graphql` (4.8.0 brings 22.4). Pin
+graphql-java in your build to the line you run, and use the matching extended-scalars version from the table
+(extended-scalars has no 25.x release; 24.0 works with graphql-java 25.1).
+
+To build or test against a leg locally:
+
+```shell
+./gradlew build                            # graphql-java 21.3
+./gradlew build -PgraphqlJavaVersion=25.1  # graphql-java 25.1
+```
+
+## Artifacts and versions
+
+| Artifact | Coordinates |
+|---|---|
+| Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
+| BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
+
+The version comes from `projectVersion` in `gradle.properties` (`1.0.0-SNAPSHOT` on `master`). To build a fixed
+version, override it on the command line; a version without `-SNAPSHOT` is published as a release version:
+
+```shell
+# into the local Maven repository (~/.m2/repository, or -Dmaven.repo.local=<dir>)
+./gradlew publishToMavenLocal -PprojectVersion=1.0.0-internal.1
+
+# into a Maven repository of your own (Nexus, Artifactory, GitHub Packages, ...)
+./gradlew publishAllPublicationsToExternalRepository -PprojectVersion=1.0.0-internal.1 \
+    -Dio.micronaut.publishing.uri=https://repo.example.com/maven-releases \
+    -Dio.micronaut.publishing.username=<user> \
+    -Dio.micronaut.publishing.password=<password>
+```
+
+The `io.micronaut.publishing.*` settings are JVM system properties (`-D`), not Gradle project properties. Publish from
+the default graphql-java leg only (no `-PgraphqlJavaVersion`): the published POM takes its versions from the build's
+resolved dependencies, so the build refuses to run a publish task on another leg.
+
+Both commands publish the library (jar, sources, javadoc, POM and Gradle module metadata) and the BOM. Consumers then
+add the repository and depend on `io.micronaut.graphql.tools:micronaut-graphql-tools:<version>`.
+
+The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the first version is released; see the
+`binaryCompatibility` block in the build files.
 
 ## Why GraphQL Java Tools?
 
@@ -94,7 +183,10 @@ Examples can be found in the [examples](https://github.com/donbeave/micronaut-gr
 
 ## Snapshots and Releases
 
-Snapshots are automatically published to [Sonatype Snapshots](https://s01.oss.sonatype.org/content/repositories/snapshots/io/micronaut/) using [Github Actions](https://github.com/micronaut-projects/micronaut-graphql-tools/actions).
+Snapshots are not published automatically at the moment. The CI workflow (`gradle.yml`) builds and tests only; the
+snapshot workflow (`publish-snapshot.yml`) is started manually and still runs on Java 11, so it cannot build this
+project until it moves to Java 21. Build a version yourself as described in
+[Artifacts and versions](#artifacts-and-versions).
 
 See the documentation in the [Micronaut Docs](https://docs.micronaut.io/latest/guide/index.html#usingsnapshots) for how to configure your build to use snapshots.
 
