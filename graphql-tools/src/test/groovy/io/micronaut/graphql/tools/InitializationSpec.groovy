@@ -15,7 +15,7 @@ class InitializationSpec extends AbstractTest {
 
         then:
         def e = thrown(DependencyInjectionException)
-        e.message.startsWith("Failed to inject value for parameter [typeDefinitionRegistry] of method [graphQL] of class: io.micronaut.graphql.tools.GraphQLFactory")
+        e.message.startsWith("Failed to inject value for parameter [typeDefinitionRegistry] of method [graphQLSchema] of class: io.micronaut.graphql.tools.GraphQLFactory")
         e.cause instanceof NoSuchBeanException
         e.cause.message.startsWith("No bean of type [graphql.schema.idl.TypeDefinitionRegistry] exists")
     }

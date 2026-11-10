@@ -9,14 +9,19 @@ spock = "2.3-groovy-4.0"
 
 apollo = "4.4.1"
 jetbrains-annotations = "24.0.1"
+logback = "1.5.26"
 
-managed-graphql-java-extended-scalars = "20.2"
+managed-graphql-java-extended-scalars = "21.0"
+
+# test scope only; build.gradle.kts moves it with the graphql-java leg
+graphql-java-extended-validation = "21.0"
 
 [libraries]
 # Core
 micronaut-core = { module = "io.micronaut:micronaut-core-bom", version.ref = "micronaut" }
 
 managed-graphql-java-extended-scalars = { module = "com.graphql-java:graphql-java-extended-scalars", version.ref = "managed-graphql-java-extended-scalars" }
+graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-extended-validation", version.ref = "graphql-java-extended-validation" }
 
 # BOMs
 micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", version.ref = "micronaut-graphql" }
@@ -24,3 +29,4 @@ micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", ver
 apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
 apollo-rx3-support = { module = "com.apollographql.apollo:apollo-rx3-support", version.ref = "apollo" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
