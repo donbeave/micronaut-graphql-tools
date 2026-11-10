@@ -15,7 +15,7 @@ See the [Snapshot Documentation](https://micronaut-projects.github.io/micronaut-
 
 ## Quick start
 
-1. Add the necessary dependencies in build.gradle or pom.xml:
+1. Add the necessary dependencies in build.gradle or pom.xml (no version is on Maven Central yet, see [Artifacts and versions](#artifacts-and-versions)):
 
 Gradle:
 
@@ -59,9 +59,176 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLType` Maps a Java class to a GraphQL type.
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
-- `@GraphQLInterface` Declares a GraphQL interface, allowing multiple types to share a common set of fields.
-- `@GraphQLUnion` Defines a GraphQL union type, enabling a field to resolve to more than one type.
-- `@GraphQLEnum` Maps a Java enum to a GraphQL enum type.
+- `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+
+These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums and unions to Java interfaces without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
+
+## Return types
+
+The declared return type of a field (a resolver method or a bean property) may wrap the mapped class in the
+containers graphql-java resolves at runtime, outermost first and each at most once:
+
+- `CompletionStage<T>`, for the field itself only;
+- `Publisher<T>` (`org.reactivestreams.Publisher`, any subtype such as `Flux`), required on fields of the subscription
+  type and allowed nowhere else; the wrappers below then apply to each event;
+- `DataFetcherResult<T>`, for the field or each list element; its errors and local context are applied;
+- `Optional<T>`, for the field or each list element, and only where the GraphQL type is nullable (an empty
+  `Optional` becomes `null`).
+
+The mapping then checks `T`. Anything else fails at startup with `UnsupportedReturnTypeException`. In particular:
+
+- `List<CompletionStage<T>>` is rejected: graphql-java does not wait for futures inside a list, and the client would
+  receive the future's `toString()`. Return `CompletionStage<List<T>>` instead.
+- `Optional<T>` on a non-null type (`String!`, `[String!]`) is rejected.
+- A field of the subscription type must return a `Publisher` (optionally inside a `CompletionStage`); otherwise the
+  startup fails (graphql-java would fail only on the first subscription request). A `Publisher` on any other field,
+  or inside a list, is rejected.
+- `DataFetcherResult<Publisher<T>>` is not supported on a subscription field, although graphql-java would unwrap it:
+  return the `Publisher` and, if needed, a `DataFetcherResult` per event.
+
+## Custom scalars
+
+GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`,
+`BigDecimal` and `BigInteger` are built in. Any other scalar of the schema needs a `GraphQLScalarMapping` bean: the
+graphql-java `GraphQLScalarType` that implements it, and the Java classes that stand for it.
+
+```java
+@Factory
+public class ScalarsFactory {
+
+    @Bean
+    @Singleton
+    GraphQLScalarMapping localDate() {
+        // same Java classes for fields, arguments and input fields
+        return GraphQLScalarMapping.of(myLocalDateScalarType, LocalDate.class);
+    }
+
+    @Bean
+    @Singleton
+    GraphQLScalarMapping json() {
+        // different classes for output and input
+        return GraphQLScalarMapping.builder(ExtendedScalars.Json)
+                .outputClasses(Object.class)
+                .inputClasses(Object.class, Map.class)
+                .build();
+    }
+
+}
+```
+
+- **Output classes** are the classes the scalar's `serialize` accepts. A field of the scalar type may be backed by one
+  of them or a subclass.
+- **Input classes** are the classes the scalar's `parseValue`/`parseLiteral` produce. An argument or an input object
+  field of the scalar type must be declared as exactly one of them.
+- A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type
+  (`Count!`), because `null` cannot be passed to it.
+
+The library ships no scalar implementations of its own beyond the built-in ones; graphql-java-extended-scalars and
+other libraries provide many. A mapping only takes effect for scalars the schema declares.
+
+The startup fails:
+
+- with `ScalarMappingNotProvidedException` when a field, argument or input field uses a scalar that has no mapping;
+  the message names the coordinate;
+- with `IncorrectClassMappingException` when the Java type is not one of the mapping's classes, when the mapping
+  declares no classes for that side, or when a primitive stands for a nullable input;
+- with `InvalidScalarMappingException` when two mappings have the same scalar name, or a mapping names a built-in
+  scalar.
+
+Values of custom scalars inside input objects reach the input class as the instances the scalar parsed, also for
+classes Jackson cannot serialize itself (such as `java.time` types without the JSR-310 module).
+
+## Arguments and input objects
+
+graphql-java hands a data fetcher the coerced argument values: scalar values, enum names, a `Map` per input object
+and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
+including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`), with a Jackson
+`ObjectMapper`.
+
+By default that is a private mapper with Jackson's defaults plus Micronaut's `BeanIntrospectionModule`. In particular
+`FAIL_ON_UNKNOWN_PROPERTIES` stays `true`. An input field that the input class cannot take fails the startup in any
+case (see [Input classes and input types](#input-classes-and-input-types)). To convert with your own settings, define an `ObjectMapper` bean named `graphql-tools`
+(`GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER`):
+
+```java
+@Bean
+@Singleton
+@Named(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER)
+ObjectMapper graphQLToolsObjectMapper() {
+    return new ObjectMapper()
+            .registerModule(new BeanIntrospectionModule())
+            .registerModule(new JavaTimeModule());
+}
+```
+
+- Only a bean with exactly this name is used; the application's default `ObjectMapper` and the `jackson.*`
+  configuration do not affect input conversion.
+- The library works on a copy of the bean and adds its own module to the copy (custom scalar values pass through
+  unchanged, see [Custom scalars](#custom-scalars)); the bean itself is not changed.
+- The bean is used as it is otherwise: register `BeanIntrospectionModule` yourself if input classes must be read
+  without reflection (GraalVM native image).
+
+### Input classes and input types
+
+Input classes are checked against their GraphQL input types at startup, in both directions:
+
+- Every field of an input type needs a property of the same name that the input `ObjectMapper` can set: a setter, a
+  field or a constructor parameter, under the name Jackson uses. A missing property fails the startup with
+  `MethodNotFoundException`; a read-only, `@JsonIgnore`d or renamed one (naming strategy, `@JsonProperty`) with
+  `InputFieldNotSettableException`, which names the field as `InputType.field`. Such a field would otherwise fail every
+  request that sends it, or be dropped silently by a lenient mapper. The check uses the mapper that converts requests,
+  including a [named mapper](#arguments-and-input-objects); it is skipped for a class the mapper converts with a
+  deserializer of its own.
+- A property the class can set (through a setter or the constructor) that the input type does not define fails the
+  startup, all of them in one `UnmappedInputPropertiesException`, because no request can set it. Set
+  `micronaut.graphql.tools.input.unmapped-properties: ignore` to accept such properties. Read-only properties, such as
+  computed getters, are not checked.
+
+Both checks apply wherever the input type is used: an argument, a list, another input type, an `ArgumentValue`.
+
+### Omitted values and `null`
+
+By default an omitted argument and an explicit `null` both reach the resolver as `null` (an input class property the
+client leaves out keeps the value the class gives it). Default values of the schema apply in any case, and enum values
+arrive as the Java enum constants of the same name.
+
+To tell them apart, set `micronaut.graphql.tools.input.detect-omission: true` and declare the resolver parameter or the
+input class property as `ArgumentValue<T>`:
+
+```java
+String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput> profile) {
+    if (nickname.isOmitted()) { /* not sent: keep the stored value */ }
+    else if (nickname.isNull()) { /* sent as null: clear it */ }
+    else { /* nickname.get() */ }
+}
+```
+
+- `isOmitted()`: not provided and no schema default; `isNull()`: an explicit `null`; `isPresent()`: a value (provided
+  or the schema's default).
+- A variable the request does not provide counts as omitted.
+- `ArgumentValue` is allowed only for a nullable GraphQL type, not inside a list, and an input class property of that
+  type needs a getter and a setter (the library sets it to `ArgumentValue.omitted()` when the client leaves it out).
+  Otherwise, and without the option, the startup fails with `UnsupportedInputTypeException`.
+- After a conversion the library reads only the `ArgumentValue` properties and the properties that hold input objects
+  (worked out at startup); it never calls other getters. A write-only property that holds an input class with
+  `ArgumentValue` properties fails the startup, because they could not be set to `omitted()`.
+
+## Configuration
+
+| Property | Values (default first) | Meaning |
+|---|---|---|
+| `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
+| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
+| `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
+| `micronaut.graphql.tools.input.unmapped-properties` | `fail` \| `ignore` | Input class properties that the GraphQL input type does not define. `fail` stops the startup with one error that lists them for every input class; `ignore` accepts them. See [Input classes and input types](#input-classes-and-input-types). |
+
+```yaml
+micronaut:
+  graphql:
+    tools:
+      allow-unreachable:
+        - LegacyReport
+```
 
 ## Custom types mapping
 
@@ -83,7 +250,58 @@ return schemaMappingDictionary -> schemaMappingDictionary
 
 ## Examples
 
-Examples can be found in the [examples](https://github.com/donbeave/micronaut-graphql-tools/tree/master/doc-examples/example-java) directory.
+Examples can be found in the [test-suite](test-suite) directory.
+
+## Compatibility
+
+The library is built and tested on Java 21 against two graphql-java lines (CI runs both):
+
+| graphql-java | graphql-java-extended-scalars | java-dataloader | Micronaut / micronaut-graphql | Java |
+|---|---|---|---|---|
+| 21.3 (default build) | 21.0 | 3.2.1 | 4.10.x / 4.8.0 | 21 |
+| 25.1 | 24.0 | 6.0.0 | 4.10.x / 4.8.0 | 21 |
+
+The published POM does not pin graphql-java: it arrives through `micronaut-graphql` (4.8.0 brings 22.4). Pin
+graphql-java in your build to the line you run, and use the matching extended-scalars version from the table
+(extended-scalars has no 25.x release; 24.0 works with graphql-java 25.1).
+
+To build or test against a leg locally:
+
+```shell
+./gradlew build                            # graphql-java 21.3
+./gradlew build -PgraphqlJavaVersion=25.1  # graphql-java 25.1
+```
+
+## Artifacts and versions
+
+| Artifact | Coordinates |
+|---|---|
+| Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
+| BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
+
+The version comes from `projectVersion` in `gradle.properties` (`1.0.0-SNAPSHOT` on `master`). To build a fixed
+version, override it on the command line; a version without `-SNAPSHOT` is published as a release version:
+
+```shell
+# into the local Maven repository (~/.m2/repository, or -Dmaven.repo.local=<dir>)
+./gradlew publishToMavenLocal -PprojectVersion=1.0.0-internal.1
+
+# into a Maven repository of your own (Nexus, Artifactory, GitHub Packages, ...)
+./gradlew publishAllPublicationsToExternalRepository -PprojectVersion=1.0.0-internal.1 \
+    -Dio.micronaut.publishing.uri=https://repo.example.com/maven-releases \
+    -Dio.micronaut.publishing.username=<user> \
+    -Dio.micronaut.publishing.password=<password>
+```
+
+The `io.micronaut.publishing.*` settings are JVM system properties (`-D`), not Gradle project properties. Publish from
+the default graphql-java leg only (no `-PgraphqlJavaVersion`): the published POM takes its versions from the build's
+resolved dependencies, so the build refuses to run a publish task on another leg.
+
+Both commands publish the library (jar, sources, javadoc, POM and Gradle module metadata) and the BOM. Consumers then
+add the repository and depend on `io.micronaut.graphql.tools:micronaut-graphql-tools:<version>`.
+
+The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the first version is released; see the
+`binaryCompatibility` block in the build files.
 
 ## Why GraphQL Java Tools?
 
@@ -94,7 +312,10 @@ Examples can be found in the [examples](https://github.com/donbeave/micronaut-gr
 
 ## Snapshots and Releases
 
-Snapshots are automatically published to [Sonatype Snapshots](https://s01.oss.sonatype.org/content/repositories/snapshots/io/micronaut/) using [Github Actions](https://github.com/micronaut-projects/micronaut-graphql-tools/actions).
+Snapshots are not published automatically at the moment. The CI workflow (`gradle.yml`) builds and tests only; the
+snapshot workflow (`publish-snapshot.yml`) is started manually and still runs on Java 11, so it cannot build this
+project until it moves to Java 21. Build a version yourself as described in
+[Artifacts and versions](#artifacts-and-versions).
 
 See the documentation in the [Micronaut Docs](https://docs.micronaut.io/latest/guide/index.html#usingsnapshots) for how to configure your build to use snapshots.
 

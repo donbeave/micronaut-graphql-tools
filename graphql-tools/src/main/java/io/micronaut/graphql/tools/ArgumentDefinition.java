@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.ArgumentUtils;
 
 import java.util.Optional;
@@ -31,12 +32,12 @@ public final class ArgumentDefinition {
     private static final String DATA_FETCHING_ENVIRONMENT_ARGUMENT = "* DFE *";
 
     private final String name;
-    private final Class<?> inputValueClass;
+    private final Argument<?> inputValueArgument;
 
-    private ArgumentDefinition(String name, @Nullable Class<?> inputValueClass) {
+    private ArgumentDefinition(String name, @Nullable Argument<?> inputValueArgument) {
         ArgumentUtils.requireNonNull("name", name);
         this.name = name;
-        this.inputValueClass = inputValueClass;
+        this.inputValueArgument = inputValueArgument;
     }
 
     static ArgumentDefinition ofSourceArgument() {
@@ -47,8 +48,9 @@ public final class ArgumentDefinition {
         return new ArgumentDefinition(DATA_FETCHING_ENVIRONMENT_ARGUMENT, null);
     }
 
-    static ArgumentDefinition ofInputValueArgument(String name, Class<?> inputValueClass) {
-        return new ArgumentDefinition(name, inputValueClass);
+    static ArgumentDefinition ofInputValueArgument(String name, Argument<?> inputValueArgument) {
+        ArgumentUtils.requireNonNull("inputValueArgument", inputValueArgument);
+        return new ArgumentDefinition(name, inputValueArgument);
     }
 
     public boolean isSourceArgument() {
@@ -64,7 +66,15 @@ public final class ArgumentDefinition {
     }
 
     public Optional<Class<?>> getInputValueClass() {
-        return Optional.ofNullable(inputValueClass);
+        return getInputValueArgument().map(Argument::getType);
+    }
+
+    /**
+     * @return the declared type of the method parameter, with its type arguments (e.g. {@code List<SomeInput>}), for
+     * an argument of the GraphQL field; empty for the source and the {@code DataFetchingEnvironment}
+     */
+    public Optional<Argument<?>> getInputValueArgument() {
+        return Optional.ofNullable(inputValueArgument);
     }
 
 }

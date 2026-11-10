@@ -9,6 +9,17 @@ dependencies {
 
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)
+    testAnnotationProcessor(mn.micronaut.inject.java) // Java test fixtures (beans, introspections)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(libs.jetbrains.annotations)
+    testImplementation(libs.logback.classic)
+    testImplementation(libs.graphql.java.datetime)
+}
+
+micronautBuild {
+    binaryCompatibility {
+        // No version of this project has been released yet, so `findBaseline` has nothing to compare against.
+        // Switch to `enabledAfter("<first release>")` once the first version is published to Maven Central.
+        enabled.set(false)
+    }
 }
