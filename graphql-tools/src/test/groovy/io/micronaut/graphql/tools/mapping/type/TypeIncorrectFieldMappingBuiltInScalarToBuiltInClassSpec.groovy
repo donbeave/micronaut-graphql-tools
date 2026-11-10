@@ -38,6 +38,7 @@ type User {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """The field is mapped to the incorrect class.
+  GraphQL coordinate: User.username (line 11, column 3)
   GraphQL object type: User
   GraphQL field: username
   Mapped class: ${User.name}
@@ -78,6 +79,7 @@ type User {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """The field is mapped to the incorrect class.
+  GraphQL coordinate: User.username (line 11, column 3)
   GraphQL object type: User
   GraphQL field: username
   Mapped class: ${User.name}

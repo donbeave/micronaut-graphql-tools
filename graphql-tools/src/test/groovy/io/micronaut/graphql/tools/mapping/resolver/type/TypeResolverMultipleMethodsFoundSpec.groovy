@@ -41,6 +41,7 @@ type User {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """Found multiple methods for one GraphQL field.
+  GraphQL coordinate: User.roles (line 12, column 3)
   GraphQL object type: User
   GraphQL field: roles
   Methods: 

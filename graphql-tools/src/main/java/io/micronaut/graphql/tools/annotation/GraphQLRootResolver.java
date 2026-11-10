@@ -22,15 +22,24 @@ import jakarta.inject.Singleton;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
+ * Marks a bean whose public methods bind the fields of the root operation types (query, mutation, subscription) by
+ * method name.
+ *
+ * <p>The annotation is {@link Inherited}: it may sit on an interface (for example a generated resolver contract) or a
+ * superclass, and every bean implementing or extending it is a root resolver without an annotation of its own. Methods
+ * that carry {@link GraphQLSchemaCoordinate} restrict and validate the binding, see there.</p>
+ *
  * @author Alexey Zhokhov
  */
 @Documented
+@Inherited
 @Retention(RUNTIME)
 @Target({ElementType.TYPE})
 @Bean

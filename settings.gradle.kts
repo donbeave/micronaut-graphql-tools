@@ -15,6 +15,7 @@ rootProject.name = "graphql-tools-parent"
 
 include("graphql-tools")
 include("graphql-tools-bom")
+include("graphql-tools-processor")
 include("test-suite")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {

@@ -58,3 +58,37 @@ apollo {
         generateKotlinModels.set(false)
     }
 }
+
+// The compile-time checks of the library, applied to this application as an application would apply them.
+dependencies {
+    annotationProcessor(projects.micronautGraphqlToolsProcessor)
+}
+
+// The schema directory, declared as an input of the compilation: a schema change recompiles. Only its *.graphqls
+// and *.graphql files are read (src/main/graphql holds client operations, not the schema).
+abstract class GraphQLSchemaDir : CommandLineArgumentProvider {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val dir: DirectoryProperty
+
+    override fun asArguments() = listOf("-Amicronaut.graphql.tools.sdlDir=${dir.get().asFile.absolutePath}")
+}
+
+tasks.named<JavaCompile>("compileJava") {
+    options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDir>().apply {
+        dir.set(layout.projectDirectory.dir("src/main/resources"))
+    })
+}
+
+// The guard: the build fails if the checks did not run (a processor that is not applied runs silently not at all).
+val checkBindingManifest by tasks.registering {
+    val manifest = tasks.named<JavaCompile>("compileJava")
+            .flatMap { it.destinationDirectory.file("META-INF/micronaut-graphql-tools/binding-manifest.txt") }
+    inputs.files(tasks.named("compileJava"))
+    doLast {
+        if (!manifest.get().asFile.isFile) {
+            throw GradleException("The GraphQL compile-time checks did not run: ${manifest.get().asFile} is missing.")
+        }
+    }
+}
+tasks.named("check") { dependsOn(checkBindingManifest) }

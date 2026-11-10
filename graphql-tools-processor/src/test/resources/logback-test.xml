@@ -1,0 +1,14 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- the parity tests start compiled applications (Compilation#withMicronaut) -->
+    <!-- micronaut-graphql schedules a websocket keep-alive that cannot start without a server -->
+    <logger name="io.micronaut.scheduling.DefaultTaskExceptionHandler" level="OFF"/>
+    <root level="WARN">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
