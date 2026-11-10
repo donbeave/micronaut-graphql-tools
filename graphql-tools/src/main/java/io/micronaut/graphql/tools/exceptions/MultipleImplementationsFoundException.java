@@ -32,7 +32,8 @@ public final class MultipleImplementationsFoundException extends AbstractMapping
                                                  List<Class<?>> implementationClasses) {
         super(
                 String.format(
-                        "Found multiple implementations for the interface %s.",
+                        "Found multiple implementations for the interface %s. Annotate the interface with "
+                                + "@GraphQLType, so that its own bean introspection reads every implementation.",
                         interfaceClass.getName()
                 ),
                 mappingContext

@@ -38,7 +38,9 @@ public final class GraphQLFactory {
     public GraphQL graphQL(ApplicationContext applicationContext,
                            GraphQLResolversRegistry graphQLResolversRegistry,
                            TypeDefinitionRegistry typeDefinitionRegistry,
-                           SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer) {
+                           SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer,
+                           GraphQLToolsConfiguration configuration,
+                           BindingManifestHolder bindingManifestHolder) {
         SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
         schemaMappingDictionaryCustomizer.customize(schemaMappingDictionary);
 
@@ -50,7 +52,8 @@ public final class GraphQLFactory {
                 graphQLResolversRegistry,
                 typeDefinitionRegistry,
                 schemaMappingDictionary,
-                graphQLSchemaProvider
+                graphQLSchemaProvider,
+                configuration
         );
 
         RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate();
@@ -63,7 +66,21 @@ public final class GraphQLFactory {
 
         graphQLSchemaProvider.init(graphQLSchema);
 
+        bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder()
+                .build(typeDefinitionRegistry, graphQLSchema));
+
         return GraphQL.newGraphQL(graphQLSchema).build();
+    }
+
+    /**
+     * @param graphQL               the GraphQL instance, so that the schema is bound first
+     * @param bindingManifestHolder the manifest recorded while the schema was bound
+     * @return what the schema is bound to
+     */
+    @Bean
+    @Singleton
+    public BindingManifest bindingManifest(GraphQL graphQL, BindingManifestHolder bindingManifestHolder) {
+        return bindingManifestHolder.get();
     }
 
 }

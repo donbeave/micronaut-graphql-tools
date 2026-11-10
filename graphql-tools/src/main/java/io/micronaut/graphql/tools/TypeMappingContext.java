@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools;
 import graphql.language.FieldDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.ObjectTypeDefinition;
+import graphql.language.SourceLocation;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 
@@ -126,9 +127,26 @@ public final class TypeMappingContext implements MappingContext {
     }
 
     @Override
+    public String getCoordinate() {
+        String coordinate = getGraphQlObjectType() + "." + fieldName;
+        return argumentName != null ? coordinate + "(" + argumentName + ":)" : coordinate;
+    }
+
+    @Override
+    @Nullable
+    public SourceLocation getSourceLocation() {
+        if (argumentName != null) {
+            return getInputValueDefinition().map(InputValueDefinition::getSourceLocation).orElse(null);
+        }
+        return getFieldDefinition().getSourceLocation();
+    }
+
+    @Override
     public String getMessage(String superMessage) {
         StringBuilder builder = new StringBuilder(superMessage);
 
+        builder.append("\n  GraphQL coordinate: ").append(MappingContext.describeCoordinate(getCoordinate(),
+                getSourceLocation()));
         builder.append("\n  GraphQL object type: ").append(getGraphQlObjectType());
         builder.append("\n  GraphQL field: ").append(getGraphQlField());
 

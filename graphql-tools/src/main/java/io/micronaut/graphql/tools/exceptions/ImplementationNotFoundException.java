@@ -25,8 +25,10 @@ public final class ImplementationNotFoundException extends AbstractMappingExcept
     public ImplementationNotFoundException(MappingContext mappingContext, Class<?> interfaceClass) {
         super(
                 String.format(
-                        "Can not find implementation class for the interface %s.",
-                        interfaceClass.getName()
+                        "Can not find implementation class for the interface %s. Annotate the interface with "
+                                + "@GraphQLType, or one implementation class with @GraphQLType(%s.class).",
+                        interfaceClass.getName(),
+                        interfaceClass.getSimpleName()
                 ),
                 mappingContext
         );

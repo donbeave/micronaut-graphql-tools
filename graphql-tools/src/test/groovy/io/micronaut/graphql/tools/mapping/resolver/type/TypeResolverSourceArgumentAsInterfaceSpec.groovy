@@ -29,7 +29,7 @@ type User {
 
     void "the source object passed to the GraphQLTypeResolver's method"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.strict': false])
 
         when:
         def result = executeQuery("""
