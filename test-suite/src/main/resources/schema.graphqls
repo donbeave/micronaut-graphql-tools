@@ -79,6 +79,7 @@ type Book {
   title: String!
   year: Int!
   sellers: [BookSeller!]!
+  label: String!
 }
 
 type BookSeller {

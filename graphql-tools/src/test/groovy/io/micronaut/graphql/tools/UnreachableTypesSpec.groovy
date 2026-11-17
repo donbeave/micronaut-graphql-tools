@@ -122,7 +122,7 @@ type Archive {
         e.cause.typeNames == ['Archive', 'Volume']
     }
 
-    void "an interface that a reachable type implements but no field returns is reported"() {
+    void "an interface that a reachable type implements is reached, although no field returns it"() {
         given:
         @Language("GraphQL")
         String schema = """
@@ -145,14 +145,17 @@ type Item implements Node {
         startContext(schema, SPEC_NAME)
 
         when:
-        getGraphQLBean()
+        def result = executeQuery("""
+{
+    item { name }
+    __type(name: "Node") { kind possibleTypes { name } }
+}
+""")
 
         then:
-        def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnreachableTypesException
-        e.cause.typeNames == ['Node']
-        e.cause.message.startsWith("The schema defines types that no field reachable from a root operation type " +
-                "returns, so nothing binds them: Node (interface).")
+        result.errors.isEmpty()
+        result.data.item == [name: 'item']
+        result.data.__type == [kind: 'INTERFACE', possibleTypes: [[name: 'Item']]]
     }
 
     void "unreachable-types=fail can be set explicitly"() {

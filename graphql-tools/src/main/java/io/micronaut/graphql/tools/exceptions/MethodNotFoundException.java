@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.MappingContext;
 
 import java.util.List;
@@ -26,10 +27,12 @@ import java.util.stream.Collectors;
 public final class MethodNotFoundException extends AbstractMappingException {
 
     private final String methodName;
+    private final String reason;
 
     private MethodNotFoundException(String message, MappingContext mappingContext, String methodName) {
         super(message, mappingContext);
         this.methodName = methodName;
+        this.reason = message;
     }
 
     public static MethodNotFoundException forRoot(String methodName, MappingContext mappingContext,
@@ -74,6 +77,23 @@ public final class MethodNotFoundException extends AbstractMappingException {
                         objectTypeClass.getName()
                 ),
                 mappingContext,
+                methodName
+        );
+    }
+
+    /**
+     * The same error for a GraphQL type whose properties are read through the bean introspection of a Java interface,
+     * explaining that getters only an implementation class declares are not candidates.
+     *
+     * @param contractClass the interface whose introspection is read
+     * @return a new exception with the same mapping context
+     */
+    @Internal
+    public MethodNotFoundException forContract(Class<?> contractClass) {
+        return new MethodNotFoundException(
+                reason + " Properties are read from the interface " + contractClass.getName()
+                        + ", so a getter that only an implementation class declares is not a property.",
+                getMappingContext(),
                 methodName
         );
     }

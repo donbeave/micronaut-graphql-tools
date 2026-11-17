@@ -27,6 +27,7 @@ class AllBooksQueryTest extends AbstractTest {
         assertEquals("ab", response.data.allBooks.getFirst().id);
         assertEquals("The Fractured Sage", response.data.allBooks.getFirst().title);
         assertEquals(1982, response.data.allBooks.getFirst().year);
+        assertEquals("The Fractured Sage (1982)", response.data.allBooks.getFirst().label);
 
         assertEquals(2, response.data.allBooks.getFirst().sellers.size());
         assertEquals("Amaz", response.data.allBooks.getFirst().sellers.get(0).name);

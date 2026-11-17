@@ -60,8 +60,9 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
 - `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+- `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
-These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums and unions to Java interfaces without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
+These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
 
 ## Return types
 
@@ -85,6 +86,60 @@ The mapping then checks `T`. Anything else fails at startup with `UnsupportedRet
   or inside a list, is rejected.
 - `DataFetcherResult<Publisher<T>>` is not supported on a subscription field, although graphql-java would unwrap it:
   return the `Publisher` and, if needed, a `DataFetcherResult` per event.
+
+## Resolver contracts
+
+`@GraphQLRootResolver` and `@GraphQLTypeResolver` are inherited (`@Inherited`). They may sit on an interface, for
+example one emitted by a code generator, and a bean that implements it is a resolver without a GraphQL annotation of
+its own. Micronaut AOP advice (`@Around`) on the implementation still applies.
+
+```java
+@GraphQLTypeResolver(Book.class)
+public interface BookLabelResolverContract {
+    @GraphQLSchemaCoordinate("Book.label")
+    String label(Book book);
+}
+
+@Singleton
+public class BookLabelResolver implements BookLabelResolverContract {
+    @Override
+    public String label(Book book) { ... }
+}
+```
+
+`@GraphQLSchemaCoordinate` is also inherited and makes the contract methods executable. Fields are still matched by
+method name, and the coordinate is checked at startup, never trusted:
+
+- On a bean where at least one method carries a coordinate, only those methods bind. Other public methods (helpers)
+  are not candidates.
+- The startup fails with `InvalidSchemaCoordinateException`, listing every problem, when a coordinate is not of the
+  form `Type.field`, names a type or field the schema does not have or a type that is neither an object type nor an
+  interface, names a field
+  that differs from the method name, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
+  `@GraphQLTypeResolver`, or sits on a bean that is neither.
+- It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
+  class that the `@GraphQLTypeResolver` does not resolve, a property of the mapped class binds the field, or a root
+  method of the same name also binds a field of another root operation type. A coordinate whose type is unreachable and
+  allowed (see [Configuration](#configuration)) is not bound and is logged as a warning.
+
+**Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
+class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both
+then bind the same field, the startup fails with `MultipleMethodsFoundException` naming both classes. Annotate only the
+class that should be the resolver.
+
+**Several contracts on one bean.** A bean may implement type resolver contracts for different classes. The
+annotation metadata keeps only one of the inherited values, so the class hierarchy is read to find every contract, and
+each method binds for the class of its first parameter (the source object). A public method whose first parameter is
+none of those classes fails the startup with `AmbiguousTypeResolverException`, naming the bean and every contract (on a
+bean that uses `@GraphQLSchemaCoordinate`, only methods with a coordinate count).
+
+This is the one place where the library reads class annotations by reflection
+(`Class.getDeclaredAnnotation(GraphQLTypeResolver.class)` on the bean class, its superclasses and interfaces). The
+annotations are retained at runtime, so this works on the JVM. Where class annotations are not available at runtime,
+for example in a native image without reflection configuration for the contract types, a bean annotated directly
+keeps its annotation value, and a bean that is a type resolver only through an inherited annotation fails the startup
+with `TypeResolverContractsNotFoundException`. Annotate such a bean directly or make the annotations of its contract
+types available to reflection.
 
 ## Configuration
 
@@ -118,6 +173,100 @@ return schemaMappingDictionary -> schemaMappingDictionary
         .registerType("ValidationError", ValidationError.class);
 }
 ```
+
+A GraphQL type can be mapped to a class or to a Java interface. An interface and the classes annotated with
+`@GraphQLType(TheInterface.class)` are one mapping: for a union member or an implementation of an SDL interface that
+is mapped to `TheInterface`, an object of any of those classes resolves to that object type, and a field may declare
+either the interface or such a class for the same GraphQL type. The rules, each checked at startup:
+
+- A GraphQL type is mapped once, and a Java type to one GraphQL type. Both errors name the GraphQL types and the Java
+  types involved.
+- Mapping one GraphQL object type to an interface and another one to a class (or interface) implementing it fails
+  with `AmbiguousTypeMappingException`, which names both GraphQL types and both Java types: an object of that class
+  would match both.
+- A class and its subclass may be mapped to two GraphQL types. A union or interface resolves an object of either class by
+  its exact class; an object of a further subclass is an instance of both and fails as described below.
+- Two fields that declare different Java types for one GraphQL type fail with `MappingConflictException`, unless the
+  two types are an interface and a class annotated with `@GraphQLType(TheInterface.class)` that is read through the
+  same bean introspection.
+
+### Unions and interfaces
+
+- A field that returns a GraphQL union or interface declares a Java interface (for example `List<Section>` for
+  `[Section!]!`); a class fails the startup.
+- Every member of the union and every object type that implements the interface needs its class registered as above,
+  otherwise the startup fails (`UnionTypeMappingNotProvidedException`, `InterfaceTypeMappingNotProvidedException`).
+  Each of these object types is bound like any other, so every field of the interface must be bound on every
+  implementation. That an object type declares all fields of its interfaces is checked by graphql-java.
+- Each of these object types must be mapped to a subtype of the Java interface the field declares (the class or
+  interface implements or extends it), otherwise the startup fails with `IncorrectMemberMappingException`: no object
+  the field returns could resolve to that object type.
+- At runtime the object type of a returned object is chosen in two steps, and the result is cached per class:
+  1. **Exact class:** the class an object type is mapped to, or, for an object type mapped to a Java interface, a class
+     annotated with `@GraphQLType(TheInterface.class)`.
+  2. **Assignability:** otherwise, the one object type whose Java type the object is an instance of: a subclass of a
+     mapped class (including runtime subclasses such as proxies) or any implementation of a mapped Java interface.
+
+  An object that matches no object type, or more than one in the second step, is a GraphQL error on that field (the
+  data of the field is `null`) that names the union or interface, the path, the class and the candidates; the library
+  never picks one:
+
+  ```
+  Can't resolve '/book/sections[1]'. Abstract type 'Section' must resolve to an Object type at runtime for field ...
+  The object of class com.example.UnknownSection is none of the object types of interface Section:
+  MediaSection (com.example.MediaSection), TextSection (com.example.TextSection).
+
+  Can't resolve '/bundle'. Abstract type 'Item' must resolve to an Object type at runtime for field 'Query.item'.
+  The object of class com.example.BundleModel is an instance of more than one object type of union Item:
+  Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph). Map its class to one of them, or let it
+  implement only one of their Java types.
+  ```
+
+  What can be checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
+  object types) and the member types against the declared Java interface. Whether one object is an instance of two
+  unrelated mapped Java interfaces, or of a subclass of two mapped classes, depends on the runtime class and is
+  reported at runtime.
+- Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
+  (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
+- A `@GraphQLTypeResolver` for the Java interface that an SDL interface is mapped to binds the fields of that interface
+  on every implementing object type that does not bind them itself (the first parameter is the Java interface). Its
+  coordinate, if any, is the interface field (`Section.summary`). When an implementation binds such a field itself as
+  well (a property, a `@GraphQLField` method or its own type resolver), or two interfaces of it have a resolver for the
+  field, the startup fails with `MultipleMethodsFoundException` naming the object type, the field and both members.
+  Only interfaces that a field returns have a Java type, so a resolver for an interface that is only implemented is
+  not applied.
+
+## Java interfaces as object types
+
+A field may declare a Java interface for a GraphQL object type. Where its properties come from depends on whether the
+interface has a bean introspection of its own:
+
+- **The interface is annotated with `@GraphQLType` (or `@Introspected`)**, so that Micronaut generates an
+  introspection for it (the annotation processor has to run where the interface is compiled). The properties are the
+  getters of the interface, read from an object of any class that implements it. Any number of classes may implement
+  it, and they need no annotation; a class annotated with `@GraphQLType(TheInterface.class)` is read through the
+  interface as well. A `@GraphQLTypeResolver(TheInterface.class)` resolver receives the object as `TheInterface`.
+- **The interface has no introspection of its own.** Exactly one class annotated with `@GraphQLType(TheInterface.class)`
+  is read, with all of its getters, including getters that the interface does not declare (the library cannot read
+  the interface's methods without an introspection). No such class fails with `ImplementationNotFoundException` and
+  several with `MultipleImplementationsFoundException`; annotate the interface with `@GraphQLType` to read all of them
+  and to make implementation-only getters non-candidates.
+
+A getter that only an implementation class declares is not a property of an interface that has its own
+introspection. A GraphQL field that only such a getter could back fails at startup with `MethodNotFoundException`,
+which names the GraphQL type, the field and the interface:
+
+```
+The property or method `draftNote` not found in example.ArticleGraph's type. Properties are read from the interface
+example.ArticleGraph, so a getter that only an implementation class declares is not a property.
+  GraphQL object type: Article
+  GraphQL field: draftNote
+```
+
+Declare the getter on the interface, or resolve the field with a `@GraphQLTypeResolver(TheInterface.class)` method.
+**Behaviour change:** before, such an interface was read through its one annotated implementation class, so getters
+of that class bound even when the interface did not declare them. There is no option to keep that: the binding
+silently depended on which class happened to implement the interface.
 
 ## Examples
 
@@ -176,7 +325,7 @@ The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the 
 
 ## Why GraphQL Java Tools?
 
-* **Micronaut**:  Leverage the Micronaut framework effectively, ensuring high performance by avoiding reflection, which can slow down applications.
+* **Micronaut**:  Leverage the Micronaut framework effectively, ensuring high performance by avoiding reflection, which can slow down applications. Binding uses Micronaut's compile-time bean and introspection metadata; the one reflective read of class annotations is described in [Resolver contracts](#resolver-contracts).
 * **Minimal Boilerplate**:  Skip manual configuration of GraphQL types, resolvers and options by using annotations like `GraphQLType`, `@GraphQLRootResolver`, and others.
 * **Schema First**:  Micronaut GraphQL Tools allows you to directly use your schema by [GraphQL schema language](http://graphql.org/learn/schema/) instead of code-driven approach.
 * **Class Validation**:  Micronaut GraphQL Tools will warn you if you provide classes/types that you don't need to, as well as erroring if you use the wrong Java class for a certain GraphQL type when it builds the schema.
