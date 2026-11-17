@@ -7,17 +7,19 @@ on:
       - master
   schedule:
     - cron: '17 4 * * *'
-    # the versions audit runs on this one (see the job's `if`)
+    # the versions audit runs on this one; the canary jobs skip it (see each job's `if`)
     - cron: '47 4 * * 1'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # the weekly audit has its own group, so it never cancels a daily canary run that is still going
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.schedule == '47 4 * * 1' && 'audit' || 'canary' }}
   cancel-in-progress: true
 jobs:
   jdk27:
     name: canary (Java 27, graphql-java default)
+    if: github.event.schedule != '47 4 * * 1'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -43,6 +45,7 @@ jobs:
 
   graphql-java-latest:
     name: canary (Java 25, graphql-java latest)
+    if: github.event.schedule != '47 4 * * 1'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -68,6 +71,7 @@ jobs:
 
   kotlin-latest:
     name: canary (Kotlin latest)
+    if: github.event.schedule != '47 4 * * 1'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -95,6 +99,7 @@ jobs:
 
   native-latest:
     name: canary (GraalVM 25, graphql-java latest)
+    if: github.event.schedule != '47 4 * * 1'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
