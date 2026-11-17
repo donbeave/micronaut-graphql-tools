@@ -121,3 +121,28 @@ val checkSuiteSchemaParity by tasks.registering {
     }
 }
 tasks.named("check") { dependsOn(checkSuiteSchemaParity) }
+
+// The Micronaut Serialization stack (D-03) has its own test source set and task: micronaut-serde-jackson makes its JsonMapper
+// win over Jackson databind, so the two stacks cannot share one test classpath. `check` runs it; its tests are raw-HTTP
+// checks that a response keeps its null fields (#45), and the same queries run on the default stack in `test`, which
+// `nativeTest` also runs. This suite is JVM-only: see CONTRIBUTING.md.
+val serdeTest: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(serdeTest.implementationConfigurationName) { extendsFrom(testImplementation.get()) }
+    named(serdeTest.runtimeOnlyConfigurationName) { extendsFrom(testRuntimeOnly.get()) }
+    named(serdeTest.annotationProcessorConfigurationName) { extendsFrom(testAnnotationProcessor.get()) }
+}
+dependencies {
+    "serdeTestImplementation"("io.micronaut.serde:micronaut-serde-jackson") // the version comes from the Micronaut BOM
+}
+val serdeTestTask = tasks.register<Test>("serdeTest") {
+    description = "Runs the tests on Micronaut Serialization (micronaut-serde-jackson)."
+    group = "verification"
+    testClassesDirs = serdeTest.output.classesDirs
+    classpath = serdeTest.runtimeClasspath
+    useJUnitPlatform()
+}
+tasks.named("check") { dependsOn(serdeTestTask) }
