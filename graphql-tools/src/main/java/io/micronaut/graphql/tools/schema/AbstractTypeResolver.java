@@ -22,6 +22,7 @@ import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.TypeResolver;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import jakarta.inject.Provider;
 
 import java.util.Collection;
@@ -122,20 +123,13 @@ public final class AbstractTypeResolver implements TypeResolver {
             return new Resolution(schema.getObjectType(exact), null);
         }
 
-        List<String> candidates = objectTypes.entrySet().stream()
-                .filter(it -> it.getValue().isAssignableFrom(objectClass))
-                .map(Map.Entry::getKey)
-                .toList();
+        List<String> candidates = candidates(objectClass);
 
         if (candidates.size() == 1) {
             return new Resolution(schema.getObjectType(candidates.get(0)), null);
         }
 
-        // the most specific candidate: its Java type is a subtype of every other candidate's Java type
-        List<String> mostSpecific = candidates.stream()
-                .filter(it -> candidates.stream()
-                        .allMatch(other -> objectTypes.get(other).isAssignableFrom(objectTypes.get(it))))
-                .toList();
+        List<String> mostSpecific = mostSpecific(candidates);
         if (mostSpecific.size() == 1) {
             return new Resolution(schema.getObjectType(mostSpecific.get(0)), null);
         }
@@ -150,6 +144,49 @@ public final class AbstractTypeResolver implements TypeResolver {
                 + "one object type of " + abstractTypeKind + " " + abstractTypeName + ", and none is more specific than the "
                 + "others: " + describe(candidates)
                 + ". Map its class to one of them, or let it implement only one of their Java types.");
+    }
+
+    private List<String> candidates(Class<?> objectClass) {
+        return objectTypes.entrySet().stream()
+                .filter(it -> it.getValue().isAssignableFrom(objectClass))
+                .map(Map.Entry::getKey)
+                .toList();
+    }
+
+    // the most specific candidate: its Java type is a subtype of every other candidate's Java type
+    private List<String> mostSpecific(List<String> candidates) {
+        return candidates.stream()
+                .filter(it -> candidates.stream()
+                        .allMatch(other -> objectTypes.get(other).isAssignableFrom(objectTypes.get(it))))
+                .toList();
+    }
+
+    /**
+     * Finds out, without the schema, whether {@link #getType} would fail for an object of a class for sure: the class
+     * is not mapped by its exact class, and is an instance of several object types of which none is more specific.
+     *
+     * @param objectClass the class of a possible object
+     * @return the description of the ambiguity, with the object types and their Java types, or {@code null} if the
+     * class resolves to one object type or to none
+     */
+    @Nullable
+    public String findAmbiguity(Class<?> objectClass) {
+        if (exactClasses.containsKey(objectClass)) {
+            return null;
+        }
+        List<String> candidates = candidates(objectClass);
+        if (candidates.size() < 2 || mostSpecific(candidates).size() == 1) {
+            return null;
+        }
+        return objectClass.getName() + " is an instance of " + describe(candidates) + " of " + abstractTypeKind + " "
+                + abstractTypeName;
+    }
+
+    /**
+     * @return how many object types the union or interface has a Java type for
+     */
+    public int getObjectTypeCount() {
+        return objectTypes.size();
     }
 
     private String describe(Collection<String> names) {

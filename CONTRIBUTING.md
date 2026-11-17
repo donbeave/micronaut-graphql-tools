@@ -1,10 +1,12 @@
-# Contributing Code or Documentation to Micronaut
+# Contributing Code or Documentation to Micronaut GraphQL Tools
+
+This is not an official Micronaut module yet. It lives in `donbeave/micronaut-graphql-tools` and is intended for later contribution to the Micronaut Foundation.
 
 Contributions are accepted under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/). Sign off each commit with `git commit -s`, which adds a `Signed-off-by` line to the commit message. Commits without a `Signed-off-by` line cannot be accepted.
 
 ## Finding Issues to Work on
 
-If you are interested in contributing to Micronaut and are looking for issues to work on, take a look at the issues tagged with [help wanted](https://github.com/micronaut-projects/micronaut-graphql-tools/issues?q=is%3Aopen+is%3Aissue+label%3A%22status%3A+help+wanted%22).
+Open issues are listed at [donbeave/micronaut-graphql-tools/issues](https://github.com/donbeave/micronaut-graphql-tools/issues). Look for issues labelled [help wanted](https://github.com/donbeave/micronaut-graphql-tools/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) or [good first issue](https://github.com/donbeave/micronaut-graphql-tools/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
 
 ## JDK Setup
 
@@ -12,15 +14,18 @@ Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle Gra
 
 ## IDE Setup
 
-Micronaut GraphQL Tools can be imported into IntelliJ IDEA by opening the `build.gradle` file.
-
-## Docker Setup
-
-Micronaut GraphQL Tools tests currently require Docker to be installed.
+Micronaut GraphQL Tools can be imported into IntelliJ IDEA by opening the project directory (or `settings.gradle.kts`).
 
 ## Running Tests
 
-To run the tests, use `./gradlew check`.
+The tests do not need Docker. These are the commands CI runs (`.github/workflows/gradle.yml` and `.github/workflows/native.yml`):
+
+- `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
+- `./gradlew build -PgraphqlJavaVersion=<leg>` runs the same build on another graphql-java leg. The legs are defined in `build.gradle.kts` and run in `gradle.yml`.
+- `./gradlew :micronaut-graphql-tools:check` checks the library only; this is the one that works on JDK 17.
+- `./gradlew :test-suite:nativeTest` runs the native image tests (Oracle GraalVM 25); add `-PgraphqlJavaVersion=<leg>` for another leg.
+
+`.github/workflows/gradle.yml` and `native.yml` are the source of truth if this list and the workflows ever disagree.
 
 The example applications are three separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
 
@@ -42,15 +47,13 @@ To also build the Javadocs, run `./gradlew docs`.
 
 ## Working on the code base
 
-If you use IntelliJ IDEA, you can import the project using the Intellij Gradle Tooling ("File / Import Project" and selecting the "settings.gradle" file).
-
-To get a local development version of Micronaut GraphQL Tools working, first run the `publishToMavenLocal` task.
+To get a local development version of Micronaut GraphQL Tools working, first run the `publishToMavenLocal` task. This publishes to your local Maven repository only; nothing is published anywhere else.
 
 ```
 ./gradlew pTML
 ```
 
-You can then reference the version specified with `projectVersion` in `gradle.properties` in a test project's `build.gradle` or `pom.xml`. If you use Gradle, add the `mavenLocal` repository (Maven automatically does this):
+You can then reference the version specified with `projectVersion` in `gradle.properties` in a test project's build file or `pom.xml`. If you use Gradle, add the `mavenLocal` repository (Maven automatically does this):
 
 ```
 repositories {
@@ -102,11 +105,12 @@ where the gate is skipped (the module is not built there). Run the update on 21 
 
 ## Creating a pull request
 
-Once you are satisfied with your changes:
+`master` is protected: every change goes through a pull request, and the pull request is squash-merged once the `required checks` status check is green.
 
-- Commit your changes in your local branch
-- Push your changes to your remote branch on GitHub
-- Send us a [pull request](https://help.github.com/articles/creating-a-pull-request)
+- Create a branch, commit with `git commit -s` (DCO sign-off) and push it to your fork or to a branch of the repository.
+- Use a [conventional commit](https://www.conventionalcommits.org/) style title for the pull request (`feat:`, `fix:`, `docs:`, `build:`, `ci:`, `perf:`, `test:`, `chore:`). It becomes the squashed commit message.
+- Run `./gradlew build` before you push, and link the issue the change closes (`Closes #123`).
+- Send us a [pull request](https://help.github.com/articles/creating-a-pull-request).
 
 ## Checkstyle
 
@@ -118,13 +122,9 @@ Micronaut GraphQL Tools uses [Checkstyle](https://checkstyle.sourceforge.io/) to
 ./gradlew <module-name>:checkstyleMain
 ```
 
-Before starting to contribute new code we recommended that you install the IntelliJ [CheckStyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea) plugin and configure it to use Micronaut's checkstyle configuration file.
+Before starting to contribute new code we recommended that you install the IntelliJ [CheckStyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea) plugin and configure it to use `config/checkstyle/checkstyle.xml`.
 
-IntelliJ will mark in red the issues Checkstyle finds. For example:
-
-![](https://github.com/micronaut-projects/micronaut-core/raw/master/src/main/docs/resources/img/checkstyle-issue.png)
-
-In this case, to fix the issues, we need to:
+IntelliJ will mark in red the issues Checkstyle finds. Typical fixes are:
 
 - Add one empty line before `package` in line 16
 - Add the Javadoc for the constructor in line 27
@@ -134,4 +134,4 @@ The plugin also adds a new tab in the bottom of the IDE to run Checkstyle and sh
 
 ## Releases
 
-Nothing is published automatically. There are no release, snapshot or Maven Central workflows; the only CI workflow is `.github/workflows/gradle.yml`, which builds and tests. Releases are cut by the maintainers by hand.
+Nothing is published: there are no release, snapshot or Maven Central workflows. CI has two workflows, `.github/workflows/gradle.yml` (build and tests, plus the `required checks` gate) and `.github/workflows/native.yml` (native image tests). Releases and tags are cut by the maintainers by hand; see [MAINTAINING.md](MAINTAINING.md).

@@ -1,13 +1,14 @@
 # Micronaut GraphQL Tools
 
-[![Build Status](https://github.com/micronaut-projects/micronaut-graphql-tools/workflows/Java%20CI/badge.svg)](https://github.com/micronaut-projects/micronaut-graphql-tools/actions)
-[![Revved up by Gradle Enterprise](https://img.shields.io/badge/Revved%20up%20by-Gradle%20Enterprise-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.micronaut.io/scans)
+[![Build Status](https://github.com/donbeave/micronaut-graphql-tools/actions/workflows/gradle.yml/badge.svg)](https://github.com/donbeave/micronaut-graphql-tools/actions/workflows/gradle.yml)
 
 Schema-first approach for building GraphQL applications with Micronaut.
 
+This is not an official Micronaut module yet: it is developed here and is intended for later contribution to the Micronaut Foundation. Nothing is published to Maven Central (see [Snapshots and Releases](#snapshots-and-releases)).
+
 ## Documentation
 
-See the [Documentation](https://micronaut-projects.github.io/micronaut-graphql-tools/latest/guide/) for more information.
+The guide sources are in `src/main/docs/guide`; build them with `./gradlew publishGuide` (see [CONTRIBUTING.md](CONTRIBUTING.md)). No documentation site is published yet.
 
 ## Quick start
 
@@ -298,8 +299,10 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
 - **Unreachable types of every kind.** Without strict mode, only object, interface and union types that nothing binds
   are checked (`unreachable-types`). Strict mode adds enum, input and scalar types that no bound field, argument or input
   field uses (`!unreachable`); they are reported in the same `UnreachableTypesException`, and `allow-unreachable` may
-  name them. `unreachable-types: ignore` ignores them too. A type that an argument of a directive definition uses,
-  directly or through input fields, is reached.
+  name them. `unreachable-types: ignore` ignores them too. An allowed or ignored unreachable type also covers the enum,
+  input and scalar types its fields and arguments use, and the types that those input types use in turn, so
+  `allow-unreachable: [Legacy]` is enough for `type Legacy { since: Long era: Era }`. A type that an argument of a
+  directive definition uses, directly or through input fields, is reached.
 - **Resolver methods that bind no field** (`!unbound Class#method(...)`): every executable method of a
   `@GraphQLRootResolver` or `@GraphQLTypeResolver` bean, which Micronaut makes of its public methods, must bind a
   field. On a bean that uses `@GraphQLSchemaCoordinate`, only the annotated methods count, so a contract
@@ -513,7 +516,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | Property | Values (default first) | Meaning |
 |---|---|---|
 | `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding; in [strict mode](#strict-mode) (the default) the same holds for enum, input and scalar types that nothing uses. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
-| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. |
+| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. An allowed type also allows the enum, input and scalar types that its fields and arguments use, and that those input types use in turn (transitive); list only the type itself. A type that only a type that is not allowed uses stays unreachable. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
 | `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` turns these checks off, so the startup does not fail on them; the findings that have a manifest representation are listed in the manifest (unwired directives are also logged as a warning). It does not change `precedence`. |
@@ -820,9 +823,23 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   implement only one of their Java types.
   ```
 
-  What can be checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
-  object types) and the member types against the declared Java interface (provably disjoint mappings only). Whether one object is an
-  instance of two unrelated mapped Java interfaces depends on the runtime class and is reported at runtime.
+  What is checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
+  object types), the member types against the declared Java interface (provably disjoint mappings only) and, for every
+  concrete class with a bean introspection, the ambiguity of the members. Such a class that is not mapped by its exact
+  class, and is an instance of the Java types of several members of a returned union or interface of which none is more
+  specific, fails the startup with `AmbiguousAbstractTypeException`, naming the class and the members. A class and its
+  sub-member (`B` mapped to `LongNote extends Note` mapped to `A`) is not ambiguous. The check runs once, from the
+  introspection metadata, which a native image has, and adds nothing per request:
+
+  ```
+  Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type
+  is the most specific one:
+    com.example.BundleModel is an instance of Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph) of union Item
+  Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement only one of their Java types.
+  ```
+
+  A class without an introspection, such as a proxy or a class generated at runtime, can only be checked at runtime,
+  where it is the GraphQL error above.
 - Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
   (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
 - A `@GraphQLTypeResolver` for the Java interface that an SDL interface is mapped to binds the fields of that interface
@@ -1083,7 +1100,7 @@ The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the 
 ## Snapshots and Releases
 
 Nothing is published. No snapshot or release of this library is available from Maven Central or any other repository,
-and no workflow publishes one. The only CI workflow, `.github/workflows/gradle.yml`, builds and tests the project.
+and no workflow publishes one. CI (`.github/workflows/gradle.yml` and `native.yml`) builds and tests the project.
 
 Releases are cut by the maintainers by hand, as described in the [Releases](CONTRIBUTING.md#releases) section of
 CONTRIBUTING.md. To use the library before a release, build it yourself and publish it to a local or private
