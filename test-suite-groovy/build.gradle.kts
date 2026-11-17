@@ -10,6 +10,9 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    // The Groovy runtime of the application classes. Nothing else puts it on the runtime classpath: the tests got it from
+    // Spock, so the application itself (run, shadowJar) was missing it.
+    implementation("org.apache.groovy:groovy")
     runtimeOnly("ch.qos.logback:logback-classic")
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation("io.micronaut:micronaut-http-client")

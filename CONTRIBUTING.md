@@ -23,7 +23,7 @@ The tests do not need Docker. These are the commands CI runs (`.github/workflows
 - `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
 - `./gradlew build -PgraphqlJavaVersion=<leg>` runs the same build on another graphql-java leg. The legs are defined in `build.gradle.kts` and run in `gradle.yml`.
 - `./gradlew :micronaut-graphql-tools:check` checks the library only; this is the one that works on JDK 17.
-- `./gradlew :test-suite:nativeTest` runs the native image tests (Oracle GraalVM 25); add `-PgraphqlJavaVersion=<leg>` for another leg.
+- `./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest` runs the native image tests (Oracle GraalVM 25); add `-PgraphqlJavaVersion=<leg>` for another leg.
 
 `.github/workflows/gradle.yml` and `native.yml` are the source of truth if this list and the workflows ever disagree.
 
@@ -33,9 +33,13 @@ The example applications are three separate Gradle projects with the same schema
 | --- | --- | --- | --- |
 | `test-suite-java` | Java (annotation processors) | `./gradlew :test-suite-java:test` | `./gradlew :test-suite-java:nativeTest` |
 | `test-suite-kotlin` | Kotlin 2.1.21 with KSP2 (Java and Kotlin target 21) | `./gradlew :test-suite-kotlin:test` | `./gradlew :test-suite-kotlin:nativeTest` |
-| `test-suite-groovy` | Groovy (Spock) | `./gradlew :test-suite-groovy:test` | none: Groovy runs on the JVM |
+| `test-suite-groovy` | Groovy (Spock) | `./gradlew :test-suite-groovy:test` | none (see below) |
 
 Each native test takes about 5 to 7 minutes and 5 GB of memory: run them one after another.
+
+The three schemas (`src/main/resources/schema.graphqls`) are copies; `./gradlew :test-suite-java:checkSuiteSchemaParity` (part of `check`) fails when they differ.
+
+Groovy has no native test. `:test-suite-groovy:nativeTest` was tried on Oracle GraalVM 25.0.5.0.3 and Micronaut 4.10: with Spock the native test launcher fails at discovery (`ClassNotFoundException: org.spockframework.runtime.extension.builtin.IncludeExcludeExtension`, Spock loads its extensions reflectively and ships no native metadata). With a JUnit 5 Groovy test instead, the image builds and starts, but the Groovy runtime needs build-time initialisation of `org.codehaus.groovy`, `groovy`, `org.apache.groovy` and `groovyjarjar*`, `indy` off, and reflection metadata for what Groovy's meta-class machinery and AST-generated code call at run time (enum `$INIT`, `ImmutableASTTransformation.checkPropNames`, `org.codehaus.groovy.runtime.dgm$N`); each fix exposed the next, and Groovy 4.0.x ships no GraalVM metadata. So the Groovy suite runs on the JVM only.
 
 ## Building Documentation
 

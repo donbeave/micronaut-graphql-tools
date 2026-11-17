@@ -104,3 +104,20 @@ configurations.configureEach {
         }
     }
 }
+
+// The Kotlin and Groovy suites serve the same schema as this one (#55): one copy per suite, so they cannot drift unnoticed.
+val checkSuiteSchemaParity by tasks.registering {
+    val reference = layout.projectDirectory.file("src/main/resources/schema.graphqls")
+    val copies = listOf("test-suite-kotlin", "test-suite-groovy").map {
+        rootProject.layout.projectDirectory.file("$it/src/main/resources/schema.graphqls")
+    }
+    inputs.files(reference, *copies.toTypedArray())
+    doLast {
+        copies.forEach { copy ->
+            if (copy.asFile.readText() != reference.asFile.readText()) {
+                throw GradleException("${copy.asFile} differs from ${reference.asFile}: the three test suites serve one schema.")
+            }
+        }
+    }
+}
+tasks.named("check") { dependsOn(checkSuiteSchemaParity) }
