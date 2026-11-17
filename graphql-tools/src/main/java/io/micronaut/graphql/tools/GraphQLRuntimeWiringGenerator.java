@@ -50,12 +50,14 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
+import io.micronaut.graphql.tools.annotation.GraphQLArgument;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
 import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException;
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
+import io.micronaut.graphql.tools.exceptions.IncorrectArgumentNameException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
 import io.micronaut.graphql.tools.exceptions.IncorrectMemberMappingException;
 import io.micronaut.graphql.tools.exceptions.InterfaceTypeMappingNotProvidedException;
@@ -538,17 +540,32 @@ final class GraphQLRuntimeWiringGenerator {
             result.add(ArgumentDefinition.ofSourceArgument());
         }
 
-        for (int i = 0; i < inputs.size(); i++) {
-            InputValueDefinition inputValueDefinition = inputs.get(i);
-            Argument<?> argument = arguments.get(i);
+        // Bind by name once, at startup; the per-request path walks the result in method parameter order.
+        Map<String, InputValueDefinition> inputsByName = new HashMap<>();
+        for (InputValueDefinition input : inputs) {
+            inputsByName.put(input.getName(), input);
+        }
+        Set<String> bound = new HashSet<>();
+
+        for (Argument<?> argument : arguments) {
+            String name = argument.getAnnotationMetadata().stringValue(GraphQLArgument.class).orElse(argument.getName());
+            InputValueDefinition inputValueDefinition = inputsByName.get(name);
+
+            if (inputValueDefinition == null) {
+                throw IncorrectArgumentNameException.parameterWithoutArgument(mappingContext, argument.getName(), name,
+                        inputs.stream().map(InputValueDefinition::getName).toList());
+            }
+            if (!bound.add(name)) {
+                throw IncorrectArgumentNameException.duplicateParameter(mappingContext, name);
+            }
 
             processInputType(
                     inputValueDefinition.getType(),
                     argument,
-                    TypeMappingContext.forArgument(mappingContext, inputValueDefinition.getName())
+                    TypeMappingContext.forArgument(mappingContext, name)
             );
 
-            result.add(ArgumentDefinition.ofInputValueArgument(inputs.get(i).getName(), argument));
+            result.add(ArgumentDefinition.ofInputValueArgument(name, argument));
         }
 
         if (containsEnvironmentArgument) {

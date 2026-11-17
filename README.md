@@ -401,6 +401,37 @@ classes Jackson cannot serialize itself (such as `java.time` types without the J
 
 ## Arguments and input objects
 
+### Binding by name
+
+A resolver method parameter is bound to the field argument **with the same name**, not to the argument at the same
+position. The source object (first parameter of a type resolver method) and a trailing `DataFetchingEnvironment`
+keep their places; every other parameter is matched by name. Parameters may be declared in any order. The name-to-
+position plan is built once at startup, so a request does no name lookup.
+
+```java
+// type Query { page(first: Int!, offset: Int!): String! }
+String page(Integer offset, Integer first) { ... }   // page(first: 10, offset: 200) -> first=10, offset=200
+```
+
+Names come from Micronaut's compile-time metadata (`Argument.getName()`), not from reflection, so the Java compiler
+does not need `-parameters`. If a parameter name cannot match the argument name (for example `long` or `short`),
+bind it explicitly:
+
+```java
+String size(@GraphQLArgument("long") Integer length, @GraphQLArgument("short") Integer width) { ... }
+```
+
+The annotation on a parameter of an interface or superclass method also applies to the overriding method.
+
+The startup fails with the schema coordinate and the parameter when a parameter has no argument of that name
+(`IncorrectArgumentNameException`), when two parameters bind to one argument, and (`IncorrectArgumentCountException`)
+when the numbers of parameters and arguments differ. There is no positional opt-out.
+
+**Migration (breaking):** positional matching has ended. A resolver whose parameter names differ from the SDL argument
+names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<argument name>")`.
+
+### Converting input values
+
 graphql-java hands a data fetcher the coerced argument values: scalar values, enum names, a `Map` per input object
 and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
 including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`), with a Jackson
