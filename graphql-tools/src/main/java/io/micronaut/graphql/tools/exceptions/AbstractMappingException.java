@@ -32,7 +32,10 @@ public abstract class AbstractMappingException extends RuntimeException {
         this.mappingContext = mappingContext;
     }
 
-    public final MappingContext getMappingContext() {
+    /**
+     * @return the schema coordinate and Java element the failure is about
+     */
+    public MappingContext getMappingContext() {
         return mappingContext;
     }
 
