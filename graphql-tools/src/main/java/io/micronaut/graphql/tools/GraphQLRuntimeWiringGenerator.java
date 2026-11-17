@@ -86,6 +86,7 @@ import jakarta.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Arrays;
@@ -836,16 +837,28 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     /**
-     * An object a field returns is an instance of the Java type the field declares for the union or interface, so an
-     * object type of it must be mapped to a subtype of that Java type, or no object can ever resolve to it.
+     * An object type is rejected only when no object can be an instance of both the Java type the field declares for
+     * the union or interface and the Java type the object type is mapped to: two classes with no subtype relation, or
+     * a {@code final} class that does not implement the other type. Anything else can hold at runtime, for example an
+     * object whose class implements the declared interface and the mapped one, and is accepted.
      */
     private static void checkMemberClass(String abstractTypeKind, String abstractTypeName, Class<?> declaredClass,
                                          String objectTypeName, Class<?> memberClass,
                                          TypeMappingContext mappingContext) {
-        if (!declaredClass.isAssignableFrom(memberClass)) {
+        if (areDisjoint(declaredClass, memberClass)) {
             throw new IncorrectMemberMappingException(mappingContext, abstractTypeKind, abstractTypeName,
                     declaredClass, objectTypeName, memberClass);
         }
+    }
+
+    private static boolean areDisjoint(Class<?> a, Class<?> b) {
+        if (a.isAssignableFrom(b) || b.isAssignableFrom(a)) {
+            return false;
+        }
+        // not related: a class or interface that could gain the other type in a subclass is not provably disjoint
+        return !a.isInterface() && !b.isInterface()
+                || Modifier.isFinal(a.getModifiers())
+                || Modifier.isFinal(b.getModifiers());
     }
 
     /**

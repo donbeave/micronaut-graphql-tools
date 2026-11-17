@@ -37,11 +37,14 @@ import java.util.stream.Collectors;
  * <ol>
  *     <li>by its exact class: the class an object type is mapped to, or for a Java interface the classes annotated with
  *     {@code @GraphQLType(theInterface)};</li>
- *     <li>otherwise by assignability: the one object type whose Java type the object is an instance of (a subclass, a
- *     runtime subclass such as a proxy, or an implementation of a mapped Java interface).</li>
+ *     <li>otherwise by assignability: the object type whose Java type the object is an instance of (a subclass, a
+ *     runtime subclass such as a proxy, or an implementation of a mapped Java interface). When the object is an
+ *     instance of several, the most specific one wins: the one whose Java type is a subtype of the Java types of all
+ *     the others, whatever the order of the mappings.</li>
  * </ol>
  *
- * <p>An object that matches no object type, or more than one in the second step, is an
+ * <p>An object that matches no object type, or whose candidates have no single most specific one (their Java types
+ * are unrelated, or two object types are mapped to the same Java type), is an
  * {@link UnresolvedTypeException}, which graphql-java reports as an error of that field, with its path; the message
  * names the abstract type, the class and the candidates. The result, with the resolved object type, is
  * cached per class in a {@link ClassValue}: a lookup takes no lock, and the cache does not keep a class, or its class
@@ -128,6 +131,15 @@ public final class AbstractTypeResolver implements TypeResolver {
             return new Resolution(schema.getObjectType(candidates.get(0)), null);
         }
 
+        // the most specific candidate: its Java type is a subtype of every other candidate's Java type
+        List<String> mostSpecific = candidates.stream()
+                .filter(it -> candidates.stream()
+                        .allMatch(other -> objectTypes.get(other).isAssignableFrom(objectTypes.get(it))))
+                .toList();
+        if (mostSpecific.size() == 1) {
+            return new Resolution(schema.getObjectType(mostSpecific.get(0)), null);
+        }
+
         if (candidates.isEmpty()) {
             return new Resolution(null, "The object of class " + objectClass.getName() + " is none of the object "
                     + "types of " + abstractTypeKind + " " + abstractTypeName + ": " + describe(objectTypes.keySet())
@@ -135,7 +147,8 @@ public final class AbstractTypeResolver implements TypeResolver {
         }
 
         return new Resolution(null, "The object of class " + objectClass.getName() + " is an instance of more than "
-                + "one object type of " + abstractTypeKind + " " + abstractTypeName + ": " + describe(candidates)
+                + "one object type of " + abstractTypeKind + " " + abstractTypeName + ", and none is more specific than the "
+                + "others: " + describe(candidates)
                 + ". Map its class to one of them, or let it implement only one of their Java types.");
     }
 

@@ -100,6 +100,45 @@ class AbstractTypeResolverSpec extends Specification {
         e.message.contains("is an instance of more than one object type of union Result")
     }
 
+    def "an object that is an instance of several candidates resolves to the most specific, in any mapping order"() {
+        given:
+        def mappings = [Song: MostSpecificFixture.Base, Album: MostSpecificFixture.Entity]
+        def ordered = new AbstractTypeResolver({ schema }, "union", "Result", [:], mappings)
+        def reversed = new AbstractTypeResolver({ schema }, "union", "Result", [:],
+                new LinkedHashMap(mappings.entrySet().toList().reverse().collectEntries { [(it.key): it.value] }))
+
+        expect:
+        [ordered, reversed].every {
+            it.getType(env(new MostSpecificFixture.Entity())).name == "Album" &&
+                    it.getType(env(new MostSpecificFixture.Proxy())).name == "Album" &&
+                    it.getType(env(new MostSpecificFixture.Base())).name == "Song"
+        }
+    }
+
+    def "candidates without a single most specific one are an error naming them, and the error is not cached for other classes"() {
+        given:
+        def subject = new AbstractTypeResolver({ schema }, "union", "Result", [:],
+                [Song: MostSpecificFixture.Left, Album: MostSpecificFixture.Right])
+
+        when:
+        subject.getType(env(new MostSpecificFixture.Both()))
+
+        then:
+        UnresolvedTypeException e = thrown()
+        e.message.contains("is an instance of more than one object type of union Result, and none is more specific " +
+                "than the others: Album (" + MostSpecificFixture.Right.name + "), Song (" + MostSpecificFixture.Left.name + ")")
+
+        expect:
+        subject.getType(env(new MostSpecificFixture.OnlyLeft())).name == "Song"
+        subject.getType(env(new MostSpecificFixture.OnlyRight())).name == "Album"
+
+        when:
+        subject.getType(env(new MostSpecificFixture.Both()))
+
+        then:
+        thrown(UnresolvedTypeException)
+    }
+
     def "concurrent resolution from several threads is consistent"() {
         given:
         int threads = 8
