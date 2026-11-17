@@ -87,6 +87,7 @@ public final class GraphQLFactory {
         customizers.addAll(runtimeWiringCustomizers);
 
         RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate(customizers);
+        schemaDirectiveWirings.checkUnwrapped(runtimeWiring);
 
         DirectiveWiringCheck.check(registry, runtimeWiring, schemaDirectiveWirings.getEveryElementDirectiveNames(),
                 schemaDirectiveWirings.getDirectiveNames(), configuration,
