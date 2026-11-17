@@ -101,11 +101,14 @@ final class SchemaChecks {
      * @param implementedInterfaces the interfaces that no field returns, but that a reached object type implements
      * @param processedTypes        the types bound so far, by name
      * @param runtimeWiringBuilder  the runtime wiring, which gets a type resolver for unbound abstract types
+     * @param findings              receives the {@link UnreachableTypesException} instead of it being thrown, so that
+     *                              the other checks still run
      * @return the unreachable object types that stay in the schema with graphql-java's default data fetchers
      */
     Set<String> processUnreachableTypes(SchemaDefinition schemaDefinition, Set<String> implementedInterfaces,
                                         Map<String, Class<?>> processedTypes,
-                                        RuntimeWiring.Builder runtimeWiringBuilder) {
+                                        RuntimeWiring.Builder runtimeWiringBuilder,
+                                        List<RuntimeException> findings) {
         Set<String> reachedTypeNames = new HashSet<>(processedTypes.keySet());
         reachedTypeNames.addAll(implementedInterfaces);
         for (OperationTypeDefinition operationTypeDefinition : schemaDefinition.getOperationTypeDefinitions()) {
@@ -163,11 +166,15 @@ final class SchemaChecks {
                     failing.put(name, getType(typeDefinition));
                 }
             });
-            if (!failing.isEmpty()) {
-                throw new UnreachableTypesException(failing);
+            if (failing.isEmpty()) {
+                unbound = allowed.stream().filter(unreachableTypes::containsKey)
+                        .collect(Collectors.toCollection(TreeSet::new));
+            } else {
+                findings.add(new UnreachableTypesException(failing));
+                // the coordinate check must not report the methods of these types again; the strict check still lists their
+                // resolver methods as unbound, which is true: nothing binds them while the type is unreachable
+                unbound = unreachableTypes.keySet();
             }
-            unbound = allowed.stream().filter(unreachableTypes::containsKey)
-                    .collect(Collectors.toCollection(TreeSet::new));
             if (!allowed.isEmpty()) {
                 LOG.info("Unreachable types allowed by {} use graphql-java's default data fetchers: {}",
                         GraphQLToolsConfiguration.PREFIX + ".allow-unreachable", String.join(", ", allowed));
@@ -386,10 +393,12 @@ final class SchemaChecks {
      * @param processedTypes   the bound types, by name
      * @param fieldBindings    what binds each field, by coordinate
      * @param resolverBindings the coordinates each resolver method binds, by method
+     * @param findings         receives the {@link InvalidSchemaCoordinateException} instead of it being thrown
      */
     void verifySchemaCoordinateBindings(Set<String> unboundTypes, Map<String, Class<?>> processedTypes,
                                         Map<String, String> fieldBindings,
-                                        Map<String, Set<String>> resolverBindings) {
+                                        Map<String, Set<String>> resolverBindings,
+                                        List<RuntimeException> findings) {
         List<String> problems = new ArrayList<>();
         List<String> unboundMethods = new ArrayList<>();
 
@@ -421,7 +430,8 @@ final class SchemaChecks {
         }
 
         if (!problems.isEmpty()) {
-            throw new InvalidSchemaCoordinateException(problems);
+            findings.add(new InvalidSchemaCoordinateException(problems));
+            return;
         }
 
         // in strict mode such a method is an error, see checkStrictMode()

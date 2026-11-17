@@ -42,6 +42,8 @@ import java.util.function.Supplier;
  *     <li>{@code Input.field: T → inputField · <Java type>#property · <declared type> · <converted type>}</li>
  *     <li>diagnostics, starting with {@code !}: {@code !unreachable <Type>}, {@code !ambiguous <coordinate> ·
  *     <member> | <member>} and the strict-mode findings</li>
+ *     <li>{@code ~ignored <member>}: a member marked {@code @GraphQLIgnore} that the binding met, which binds no
+ *     field and is not reported</li>
  * </ul>
  * <p>The manifest is rendered when it is first read, not while the schema is bound, and without reflection: it is the
  * same text on the JVM and in a native image. Java types are rendered as {@link java.lang.reflect.Type#getTypeName()}

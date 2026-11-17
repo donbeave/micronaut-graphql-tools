@@ -57,6 +57,7 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
 - `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+- `@GraphQLIgnore` Marks a method, a property or an enum constant that binds no field, so that strict mode does not report it, see [Escape hatches](#escape-hatches).
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
 These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
@@ -224,8 +225,24 @@ that needs the `GraphQLSchema` is created instead, for tests that expect the fai
 cannot be bound is reported; the binding does not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
 `MultipleMethodsFoundException`, `IncorrectClassMappingException`, ...). Several are thrown together as
 `BindingFailuresException`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
-others are suppressed exceptions. The checks that need a complete binding (unreachable types, schema coordinates) run
-only when no field failed.
+others are suppressed exceptions. An unexpected exception of one field (for example an unsupported type definition) is
+reported like the others, named by the field's coordinate, so it does not hide them. The checks that need a complete
+binding (unreachable types, schema coordinates, strict mode) run only when no field failed, and then they report
+together: when more than one finds a problem, the startup fails once with a `BindingFailuresException` that lists each
+finding under the label of its check (`[unreachable-type]`, `[invalid-schema-coordinate]`, `[strict]`), in that order;
+a single finding is thrown as its own exception (`UnreachableTypesException`, `InvalidSchemaCoordinateException`,
+`StrictModeException`).
+
+```
+The schema cannot be bound: 3 errors.
+  1) [unreachable-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Draft (type).
+     Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow-unreachable, or set micronaut.graphql.tools.unreachable-types to ignore.
+  2) [invalid-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:
+       1) @GraphQLSchemaCoordinate("Book.summary") on example.AuthorResolver summary(example.Author author): the method is not bound to Book.summary, ...
+  3) [strict] Strict mode found problems in the binding of the schema:
+       1) The resolver method example.BookQuery#helper(java.lang.String) binds no schema field. Remove it, ...
+       Fix them, or set micronaut.graphql.tools.strict to false.
+```
 
 Each failure names the schema coordinate (`Type.field`, `Type.field(argument:)` or `InputType.field`) and where it is
 declared, as graphql-java parsed it (the source name appears when the schema was parsed with one, for example through
@@ -287,6 +304,8 @@ String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
   [Configuration](#configuration); an enum, input or scalar type that an argument of a directive definition uses,
   directly or through input fields, is reached), `!ambiguous Type.field · member | member` for a field decided by a lenient
   `precedence`, and the findings of [strict mode](#strict-mode) (`!unbound`, `!unusedDictionary`, `!unwiredDirective`).
+- `~ignored Class#member` lines list the members marked `@GraphQLIgnore` that the binding met (see
+  [Escape hatches](#escape-hatches)): they bind no field and are not findings.
 - Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from the reflected method or getter.
   Where reflection cannot find it (for example a native image without reflection configuration), they are written from
   Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
@@ -345,6 +364,25 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
 All findings except unreachable types, unmapped input class properties, primitives for nullable scalars and unwired
 directives are reported in one `StrictModeException`. `!ambiguous` lines are allowed by
 the `precedence` that produced them. Every schema field must be bound in every mode (`MethodNotFoundException`).
+
+### Escape hatches
+
+A member that binds no field on purpose does not need `strict: false`, which turns off every other check too:
+
+- **`@GraphQLIgnore`** (package `io.micronaut.graphql.tools.annotation`) on a resolver method, a getter or property of a
+  type or input class, or an enum constant. The member is not reported as unbound (`!unbound`), and nothing binds it: an
+  ignored method does not bind the field of its name, and an ignored getter does not take part in `precedence`, so a
+  type resolver method may bind that field without an ambiguity. A schema field that only ignored members could
+  bind fails as any unbound field does. On an input class property it suppresses the finding for a property that the
+  input type does not define. On an enum constant it suppresses the finding for a constant without a schema value; the
+  enum needs a bean introspection (`@Introspected`), from which the annotation is read, never by reflection.
+  Every ignored member the binding meets is a `~ignored Class#member` line of the
+  [binding manifest](#binding-manifest), so a review can see what was set aside. Use it sparingly: it hides the
+  mistake that the check exists to find.
+- **Lifecycle methods are not resolver methods.** A method annotated with `@EventListener`, `@Scheduled` or
+  `@PreDestroy` on a resolver bean is not reported as unbound. It still binds a field if it has that field's name.
+
+These apply to the runtime checks; the compile-time checks (`micronaut-graphql-tools-processor`) do not read them yet.
 
 With `strict: false` the library skips these checks and binds as before strict mode existed: only object, interface and
 union types are checked for reachability, and the findings appear in the manifest only. It does not change
