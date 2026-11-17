@@ -139,9 +139,7 @@ public final class InputValueConverter {
                                List<BeanProperty<Object, Object>> inputObjectProperties) {
 
         /**
-         * @param argumentValueProperties the readable and writable properties declared as {@link ArgumentValue}
-         * @param inputObjectProperties   the readable properties whose GraphQL type is an input object type or a
-         *                                list of one
+         * Copies both property lists, so the plan cannot change after it is built.
          */
         public OmissionPlan {
             argumentValueProperties = List.copyOf(argumentValueProperties);
