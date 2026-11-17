@@ -28,7 +28,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -44,7 +43,9 @@ import java.util.stream.Collectors;
  *
  * <p>An object that matches no object type, or more than one in the second step, is an
  * {@link UnresolvedTypeException}, which graphql-java reports as an error of that field, with its path; the message
- * names the abstract type, the class and the candidates. The result is cached per class.</p>
+ * names the abstract type, the class and the candidates. The result, with the resolved object type, is
+ * cached per class in a {@link ClassValue}: a lookup takes no lock, and the cache does not keep a class, or its class
+ * loader, alive.</p>
  *
  * @author Alexey Zhokhov
  */
@@ -61,8 +62,16 @@ public final class AbstractTypeResolver implements TypeResolver {
     // object type name -> the Java type it is mapped to, sorted by name
     private final Map<String, Class<?>> objectTypes;
 
-    // runtime class -> object type name, or the error message
-    private final Map<Class<?>, Resolution> resolutions = new ConcurrentHashMap<>();
+    // runtime class -> object type, or the error message; held by the class itself, so never a strong reference to it
+    private final ClassValue<Resolution> resolutions = new ClassValue<>() {
+        @Override
+        protected Resolution computeValue(Class<?> type) {
+            return resolve(type);
+        }
+    };
+
+    // set once the exact classes are resolved, which needs the schema (not built when this resolver is created)
+    private volatile boolean exactClassesResolved;
 
     /**
      * @param graphQLSchemaProvider the schema, once it is built
@@ -84,24 +93,30 @@ public final class AbstractTypeResolver implements TypeResolver {
     @Override
     public GraphQLObjectType getType(TypeResolutionEnvironment env) {
         Class<?> objectClass = env.getObject().getClass();
-        GraphQLSchema schema = graphQLSchemaProvider.get();
+        if (!exactClassesResolved) {
+            // the schema is available from the first resolution on: resolve the mapped classes once, up front
+            exactClasses.keySet().forEach(resolutions::get);
+            exactClassesResolved = true;
+        }
 
-        Resolution resolution = resolutions.computeIfAbsent(objectClass, this::resolve);
+        Resolution resolution = resolutions.get(objectClass);
 
         if (resolution.objectType() == null) {
             throw new UnresolvedTypeException(
                     resolution.error(),
-                    (GraphQLNamedOutputType) schema.getType(abstractTypeName)
+                    (GraphQLNamedOutputType) graphQLSchemaProvider.get().getType(abstractTypeName)
             );
         }
 
-        return schema.getObjectType(resolution.objectType());
+        return resolution.objectType();
     }
 
     private Resolution resolve(Class<?> objectClass) {
+        GraphQLSchema schema = graphQLSchemaProvider.get();
+
         String exact = exactClasses.get(objectClass);
         if (exact != null) {
-            return new Resolution(exact, null);
+            return new Resolution(schema.getObjectType(exact), null);
         }
 
         List<String> candidates = objectTypes.entrySet().stream()
@@ -110,7 +125,7 @@ public final class AbstractTypeResolver implements TypeResolver {
                 .toList();
 
         if (candidates.size() == 1) {
-            return new Resolution(candidates.get(0), null);
+            return new Resolution(schema.getObjectType(candidates.get(0)), null);
         }
 
         if (candidates.isEmpty()) {
@@ -131,7 +146,7 @@ public final class AbstractTypeResolver implements TypeResolver {
         return result.isEmpty() ? "none is mapped" : result;
     }
 
-    private record Resolution(String objectType, String error) {
+    private record Resolution(GraphQLObjectType objectType, String error) {
     }
 
 }
