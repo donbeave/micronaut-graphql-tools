@@ -90,7 +90,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 
 Use the cheapest model that can do the task well. Small or mechanical changes need only a small model. Core-logic
 changes of medium size or larger, and the review that gates them, need a stronger one. Design questions that need a
-decision are escalated to the strongest model, and its answer is followed. Do not wait on a human for a decision.
+decision are escalated to the strongest model, and its answer is followed. Decision issues are decided by the repository maintainers; an AI agent that needs a decision asks the strongest available model, records the outcome in the issue and follows it; a maintainer can overrule it at any time.
 
 If an issue carries a `model:` label, it names the model the maintainers chose for that issue; follow it.
 
