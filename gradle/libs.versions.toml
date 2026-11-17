@@ -15,10 +15,27 @@ logback = "1.5.38"
 # test oracle for the scalar SPI: the date/time scalars many graphql-java applications use
 graphql-java-datetime = "6.0.0"
 
-managed-graphql-java-extended-scalars = "21.0"
+# what micronaut-graphql 4.8.0 manages: the default leg takes it as is
+managed-graphql-java-extended-scalars = "22.0"
 
-# test scope only; build.gradle.kts moves it with the graphql-java leg
-graphql-java-extended-validation = "21.0"
+# test scope only; the default leg uses it as is (the line of the managed graphql-java 22.4), build.gradle.kts moves it with
+# the floor and ceiling legs
+graphql-java-extended-validation = "22.0"
+
+# graphql-java legs (D-35), selected with -PgraphqlJavaLeg, see build.gradle.kts. The default leg pins nothing: graphql-java
+# is whatever micronaut-graphql manages (22.4 for 4.8.0), the libraries above go with it. `latest` resolves the newest release
+# of each library, see build.gradle.kts (the canary only).
+# floor: the oldest supported line
+floor-graphql-java = "21.5"
+floor-extended-scalars = "21.0"
+floor-java-dataloader = "3.2.1"
+floor-extended-validation = "21.0"
+# ceiling: the newest tested line. graphql-java-extended-scalars has no 25.x release; 24.0 links against 25.2.
+# extended-validation 21.0 calls a GraphQLCodeRegistry overload that 25.x removed; 24.0 does not.
+ceiling-graphql-java = "25.2"
+ceiling-extended-scalars = "24.0"
+ceiling-java-dataloader = "6.0.0"
+ceiling-extended-validation = "24.0"
 
 [libraries]
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }

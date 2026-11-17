@@ -901,8 +901,8 @@ data fetcher or type resolver for a field or type the library wired into a code 
 which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
 and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
-(On graphql-java 25.1 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
-resolver or scalar with `StrictModeWiringException`; 21.3 accepts them silently.) To wrap data fetchers, use a
+(On graphql-java 25.2 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
+resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently.) To wrap data fetchers, use a
 `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
@@ -1021,8 +1021,8 @@ public TypeDefinitionRegistryCustomizer validationDirectives() {
 }
 ```
 
-Use extended-validation 21.0 with graphql-java 21.3 and 24.0 with 25.1 (21.0 calls a `GraphQLCodeRegistry` method
-that graphql-java 25 removed); the library's tests run both.
+Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 25.2 (21.0 calls a
+`GraphQLCodeRegistry` method that graphql-java 22.4 and later removed); the library's tests run all three.
 
 ## Configuring the GraphQL bean
 
@@ -1075,23 +1075,36 @@ Examples can be found in the [test-suite](test-suite) directory.
 
 ## Compatibility
 
-The library is built and tested on Java 21 against two graphql-java lines (CI runs both):
+The library is built and tested against graphql-java by role. The versions of each role live in
+[`gradle/libs.versions.toml`](gradle/libs.versions.toml):
 
-| graphql-java | graphql-java-extended-scalars | java-dataloader | Micronaut / micronaut-graphql | Java |
+| Role | graphql-java | graphql-java-extended-scalars | java-dataloader | Where it runs |
 |---|---|---|---|---|
-| 21.3 (default build) | 21.0 | 3.2.1 | 4.10.x / 4.8.0 | 21 |
-| 25.1 | 24.0 | 6.0.0 | 4.10.x / 4.8.0 | 21 |
+| `floor` | 21.5 | 21.0 | 3.2.1 | full build, JDK 25 |
+| `default` | what `micronaut-graphql` 4.8.0 manages (22.4), not pinned by this build | 22.0 | as graphql-java brings it | full build on JDK 25 and 21, library check on JDK 17, native tests on GraalVM 25; the published POM |
+| `ceiling` | 25.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; binary compatibility (main compiled on `default`, tested on `ceiling`) |
+| `latest` | newest release (`latest.release`) | newest release | newest release | the canary only, never a required check |
+
+The graphql-java axis runs on JDK 25; JDK 21 and JDK 17 run the `default` role only. Micronaut 4.10.x and micronaut-graphql 4.8.0
+are the base of every role.
+
+**Support policy.** The supported graphql-java lines are 21.x up to the ceiling line. They are tested at the newest patch of
+the floor, the default and the ceiling. A new graphql-java major enters through the `latest` canary and becomes the ceiling
+through a promotion issue once it is green. graphql-java-extended-scalars has no 25.x release; 24.0 links against 25.2.
 
 The published POM does not pin graphql-java: it arrives through `micronaut-graphql` (4.8.0 brings 22.4). Pin
-graphql-java in your build to the line you run, and use the matching extended-scalars version from the table
-(extended-scalars has no 25.x release; 24.0 works with graphql-java 25.1).
+graphql-java in your build to the line you run, and use the matching extended-scalars version from the table.
 
-To build or test against a leg locally:
+To build or test against a role locally:
 
 ```shell
-./gradlew build                            # graphql-java 21.3
-./gradlew build -PgraphqlJavaVersion=25.1  # graphql-java 25.1
+./gradlew build                              # default
+./gradlew build -PgraphqlJavaLeg=floor       # graphql-java 21.5
+./gradlew build -PgraphqlJavaLeg=ceiling     # graphql-java 25.2
+./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default   # binary compatibility: main compiled on default
 ```
+
+`-PgraphqlJavaVersion` no longer exists: setting it fails the build with a message that names `-PgraphqlJavaLeg`.
 
 ## Artifacts and versions
 
@@ -1116,7 +1129,7 @@ version, override it on the command line; a version without `-SNAPSHOT` is publi
 ```
 
 The `io.micronaut.publishing.*` settings are JVM system properties (`-D`), not Gradle project properties. Publish from
-the default graphql-java leg only (no `-PgraphqlJavaVersion`): the published POM takes its versions from the build's
+the default graphql-java leg only (no `-PgraphqlJavaLeg` or `-PgraphqlJavaCompileLeg`): the published POM takes its versions from the build's
 resolved dependencies, so the build refuses to run a publish task on another leg.
 
 Both commands publish the library and the annotation processor (jar, sources, javadoc, POM and Gradle module

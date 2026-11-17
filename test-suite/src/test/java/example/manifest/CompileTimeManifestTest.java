@@ -25,6 +25,8 @@ class CompileTimeManifestTest {
 
     private static final String DIRECTORY = "/META-INF/micronaut-graphql-tools/";
 
+    private static final String GRAPHQL_JAVA_LINE = "# graphql-java: ";
+
     @Inject
     BindingManifest bindingManifest;
 
@@ -33,11 +35,18 @@ class CompileTimeManifestTest {
         List<String> compiled = read("binding-manifest.txt");
         List<String> omitted = read("binding-manifest-omitted.txt").stream().filter(it -> !it.startsWith("#")).toList();
 
-        assertEquals(bindingManifest.getHeader(), compiled.subList(0, 4));
+        // The processor records the graphql-java it compiled against. The binary compatibility build runs the tests on
+        // another graphql-java than the one main code and processor were compiled on, so that line is not compared.
+        assertEquals(withoutGraphqlJavaLine(bindingManifest.getHeader()), withoutGraphqlJavaLine(compiled.subList(0, 4)));
+        assertTrue(compiled.subList(0, 4).stream().anyMatch(it -> it.startsWith(GRAPHQL_JAVA_LINE)), String.valueOf(compiled));
         assertEquals(bindingManifest.getLines().stream().filter(line -> !isOmitted(line, omitted)).toList(),
                 compiled.subList(4, compiled.size()));
         // the processor left out only what runtime beans decide: the dictionary's union members
         assertTrue(omitted.contains("type SecurityError"), String.valueOf(omitted));
+    }
+
+    private static List<String> withoutGraphqlJavaLine(List<String> header) {
+        return header.stream().filter(it -> !it.startsWith(GRAPHQL_JAVA_LINE)).toList();
     }
 
     private List<String> read(String file) throws IOException {
