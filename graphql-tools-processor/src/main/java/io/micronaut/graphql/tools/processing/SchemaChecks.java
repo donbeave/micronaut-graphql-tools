@@ -33,7 +33,6 @@ import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
-import graphql.schema.idl.DirectiveInfo;
 import graphql.schema.idl.ScalarInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
 
@@ -165,7 +164,7 @@ final class SchemaChecks {
 
     private void checkDirectives(String coordinate, DirectivesContainer<?> container) {
         for (Directive directive : container.getDirectives()) {
-            if (!DirectiveInfo.isGraphqlSpecifiedDirective(directive.getName())
+            if (!GraphQLSpecifiedDirectives.isSpecified(directive.getName())
                     && registry.getDirectiveDefinition(directive.getName()).isEmpty()) {
                 problems.error(coordinate, "the directive @" + directive.getName()
                         + " is applied but not declared; declare it with directive @" + directive.getName()
@@ -273,7 +272,7 @@ final class SchemaChecks {
         Set<String> result = new HashSet<>();
         Deque<String> pending = new ArrayDeque<>();
         registry.getDirectiveDefinitions().values().stream()
-                .filter(it -> !DirectiveInfo.isGraphqlSpecifiedDirective(it.getName()))
+                .filter(it -> !GraphQLSpecifiedDirectives.isSpecified(it.getName()))
                 .forEach(it -> it.getInputValueDefinitions().forEach(argument -> pending.add(typeName(argument.getType()))));
         while (!pending.isEmpty()) {
             String name = pending.poll();

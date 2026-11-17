@@ -30,9 +30,9 @@ floor-graphql-java = "21.5"
 floor-extended-scalars = "21.0"
 floor-java-dataloader = "3.2.1"
 floor-extended-validation = "21.0"
-# ceiling: the newest tested line. graphql-java-extended-scalars has no 25.x release; 24.0 links against 25.2.
+# ceiling: the newest tested line. graphql-java-extended-scalars has no 25.x or 26.x release; 24.0 links against 26.2.
 # extended-validation 21.0 calls a GraphQLCodeRegistry overload that 25.x removed; 24.0 does not.
-ceiling-graphql-java = "25.2"
+ceiling-graphql-java = "26.2"
 ceiling-extended-scalars = "24.0"
 ceiling-java-dataloader = "6.0.0"
 ceiling-extended-validation = "24.0"

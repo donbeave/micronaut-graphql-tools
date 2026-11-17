@@ -26,7 +26,6 @@ import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
-import graphql.schema.idl.DirectiveInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 
@@ -108,7 +107,7 @@ final class GraphQLUtils {
         Set<String> result = new HashSet<>();
         Deque<graphql.language.Type<?>> pending = new ArrayDeque<>();
         typeDefinitionRegistry.getDirectiveDefinitions().values().stream()
-                .filter(it -> !DirectiveInfo.isGraphqlSpecifiedDirective(it.getName()))
+                .filter(it -> !GraphQLSpecifiedDirectives.isSpecified(it.getName()))
                 .forEach(it -> it.getInputValueDefinitions().forEach(argument -> pending.add(argument.getType())));
         while (!pending.isEmpty()) {
             String name = getTypeName(pending.poll()).getName();

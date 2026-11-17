@@ -22,7 +22,6 @@ import graphql.language.ObjectTypeDefinition;
 import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
-import graphql.schema.idl.DirectiveInfo;
 import graphql.schema.idl.ScalarInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.aop.Intercepted;
@@ -328,7 +327,7 @@ final class BindingManifestRecorder {
                 .filter(it -> !ScalarInfo.isGraphqlSpecifiedScalar(it.getName()))
                 .forEach(it -> add(named, it.getName(), it));
         registry.getDirectiveDefinitions().values().stream()
-                .filter(it -> !DirectiveInfo.isGraphqlSpecifiedDirective(it.getName()))
+                .filter(it -> !GraphQLSpecifiedDirectives.isSpecified(it.getName()))
                 .forEach(it -> add(named, it.getName(), it));
         addExtensions(named, registry.objectTypeExtensions());
         addExtensions(named, registry.interfaceTypeExtensions());

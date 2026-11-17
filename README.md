@@ -1070,7 +1070,7 @@ public TypeDefinitionRegistryCustomizer validationDirectives() {
 }
 ```
 
-Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 25.2 (21.0 calls a
+Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 26.2 (21.0 calls a
 `GraphQLCodeRegistry` method that graphql-java 22.4 and later removed); the library's tests run all three.
 
 ## Configuring the GraphQL bean
@@ -1134,7 +1134,7 @@ The library is built and tested against graphql-java by role. The versions of ea
 |---|---|---|---|---|
 | `floor` | 21.5 | 21.0 | 3.2.1 | full build, JDK 25 |
 | `default` | what `micronaut-graphql` 4.8.0 manages (22.4), not pinned by this build | 22.0 | as graphql-java brings it | full build on JDK 25 and 21, library check on JDK 17, native tests on GraalVM 25; the published POM |
-| `ceiling` | 25.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; binary compatibility (main compiled on `default`, tested on `ceiling`) |
+| `ceiling` | 26.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; binary compatibility (main compiled on `default`, tested on `ceiling`) |
 | `latest` | newest release (`latest.release`) | newest release | newest release | the canary only, never a required check |
 
 The graphql-java axis runs on JDK 25; JDK 21 and JDK 17 run the `default` role only. Micronaut 4.10.x and micronaut-graphql 4.8.0
@@ -1142,7 +1142,7 @@ are the base of every role.
 
 **Support policy.** The supported graphql-java lines are 21.x up to the ceiling line. They are tested at the newest patch of
 the floor, the default and the ceiling. A new graphql-java major enters through the `latest` canary and becomes the ceiling
-through a promotion issue once it is green. graphql-java-extended-scalars has no 25.x release; 24.0 links against 25.2.
+through a promotion issue once it is green. graphql-java-extended-scalars has no 25.x or 26.x release; 24.0 links against 26.2.
 
 The published POM does not pin graphql-java: it arrives through `micronaut-graphql` (4.8.0 brings 22.4). Pin
 graphql-java in your build to the line you run, and use the matching extended-scalars version from the table.
@@ -1152,7 +1152,7 @@ To build or test against a role locally:
 ```shell
 ./gradlew build                              # default
 ./gradlew build -PgraphqlJavaLeg=floor       # graphql-java 21.5
-./gradlew build -PgraphqlJavaLeg=ceiling     # graphql-java 25.2
+./gradlew build -PgraphqlJavaLeg=ceiling     # graphql-java 26.2
 ./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default   # binary compatibility: main compiled on default
 ```
 
