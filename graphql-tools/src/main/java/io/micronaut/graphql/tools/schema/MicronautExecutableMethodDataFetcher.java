@@ -15,13 +15,15 @@
  */
 package io.micronaut.graphql.tools.schema;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JavaType;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.graphql.tools.ArgumentDefinition;
+import io.micronaut.graphql.tools.ArgumentValue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,20 +35,33 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Internal
 public final class MicronautExecutableMethodDataFetcher implements DataFetcher<Object> {
 
-    private final ObjectMapper objectMapper;
+    private final InputValueConverter inputValueConverter;
     private final Executable<Object, ?> executable;
     private final List<ArgumentDefinition> argumentDefinitions;
+    private final JavaType[] javaTypes;
+    private final boolean[] argumentValues;
     private final Object instance;
 
     public MicronautExecutableMethodDataFetcher(
-            ObjectMapper objectMapper,
+            InputValueConverter inputValueConverter,
             Executable<Object, ?> executable,
             List<ArgumentDefinition> argumentDefinitions,
             @Nullable Object instance
     ) {
-        this.objectMapper = objectMapper;
+        this.inputValueConverter = inputValueConverter;
         this.executable = executable;
         this.argumentDefinitions = new CopyOnWriteArrayList<>(argumentDefinitions);
+        this.javaTypes = new JavaType[argumentDefinitions.size()];
+        this.argumentValues = new boolean[argumentDefinitions.size()];
+        for (int i = 0; i < argumentDefinitions.size(); i++) {
+            Argument<?> argument = argumentDefinitions.get(i).getInputValueArgument().orElse(null);
+            if (argument != null) {
+                // the binding allows ArgumentValue only with a declared type argument
+                argumentValues[i] = ArgumentValue.class.equals(argument.getType());
+                javaTypes[i] = inputValueConverter.toJavaType(
+                        argumentValues[i] ? argument.getFirstTypeVariable().orElseThrow() : argument);
+            }
+        }
         this.instance = instance;
     }
 
@@ -54,27 +69,25 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     public Object get(DataFetchingEnvironment environment) {
         List<Object> arguments = new ArrayList<>();
 
-        for (ArgumentDefinition argumentDefinition : argumentDefinitions) {
+        for (int i = 0; i < argumentDefinitions.size(); i++) {
+            ArgumentDefinition argumentDefinition = argumentDefinitions.get(i);
             if (argumentDefinition.isSourceArgument()) {
                 arguments.add(environment.getSource());
             } else if (argumentDefinition.isDataFetchingEnvironmentArgument()) {
                 arguments.add(environment);
+            } else if (argumentValues[i]) {
+                // graphql-java leaves an argument out of the map only if the client did not provide it and the
+                // schema declares no default value for it
+                if (environment.containsArgument(argumentDefinition.getName())) {
+                    Object argumentValue = environment.getArgument(argumentDefinition.getName());
+                    arguments.add(ArgumentValue.ofNullable(inputValueConverter.convert(argumentValue, javaTypes[i])));
+                } else {
+                    arguments.add(ArgumentValue.omitted());
+                }
             } else {
                 Object argumentValue = environment.getArgument(argumentDefinition.getName());
 
-                if (argumentValue != null) {
-                    Class<?> inputValueClass = argumentDefinition.getInputValueClass().get();
-
-                    if (argumentValue.getClass().isAssignableFrom(inputValueClass)) {
-                        arguments.add(argumentValue);
-                    } else {
-                        Object convertedValue = objectMapper.convertValue(argumentValue, inputValueClass);
-
-                        arguments.add(convertedValue);
-                    }
-                } else {
-                    arguments.add(null);
-                }
+                arguments.add(inputValueConverter.convert(argumentValue, javaTypes[i]));
             }
         }
 

@@ -75,7 +75,7 @@ input HelloInput {
     @Unroll
     void "use extended graphql-java scalars as input's properties"() {
         given:
-        startContext(schema, SPEC_NAME)
+        startContext(schema, SPEC_NAME, config)
 
         when:
         def result = executeQuery("""
@@ -98,7 +98,10 @@ input HelloInput {
         result.data.test.hello == 'World'
 
         where:
-        schema << [SCHEMA1, SCHEMA2]
+        // SCHEMA1 binds primitives to nullable scalars, which strict mode rejects (a null could not reach them)
+        schema  | config
+        SCHEMA1 | ['micronaut.graphql.tools.strict': false]
+        SCHEMA2 | [:]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

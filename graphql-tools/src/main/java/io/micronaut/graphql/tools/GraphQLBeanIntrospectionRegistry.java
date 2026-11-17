@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author Alexey Zhokhov
@@ -77,11 +78,46 @@ final class GraphQLBeanIntrospectionRegistry {
         typeIntrospectionsLoaded = true;
     }
 
+    /**
+     * Finds the bean introspection that the properties of a GraphQL object type mapped to {@code clazz} are read
+     * through.
+     *
+     * <ul>
+     *     <li>An interface with a bean introspection of its own (annotated with {@code @GraphQLType} or
+     *     {@code @Introspected}), and a class annotated with {@code @GraphQLType(thatInterface)}: the interface's
+     *     introspection. It reads an object of any class implementing the interface, and getters that only an
+     *     implementation declares are not properties.</li>
+     *     <li>An interface without an introspection of its own: the introspection of the one class annotated with
+     *     {@code @GraphQLType(thatInterface)}.</li>
+     *     <li>Any other class: its own introspection.</li>
+     * </ul>
+     *
+     * @param mappingContext the mapping context for errors
+     * @param clazz          the declared Java type
+     * @return the bean introspection
+     */
     BeanIntrospection<Object> getGraphQlTypeBeanIntrospection(
             MappingContext mappingContext,
             Class<?> clazz
     ) {
         loadTypeIntrospections();
+
+        Class<?> contractClass = clazz.isInterface() ? clazz : implementationToInterface.get(clazz);
+
+        if (contractClass != null) {
+            Optional<BeanIntrospection<Object>> contractIntrospection = findContractIntrospection(contractClass);
+
+            if (contractIntrospection.isPresent()) {
+                for (Class<?> implementationClass
+                        : interfaceToImplementation.getOrDefault(contractClass, List.of())) {
+                    if (!contractClass.isAssignableFrom(implementationClass)) {
+                        throw new IncorrectImplementationException(mappingContext, contractClass, implementationClass);
+                    }
+                }
+
+                return contractIntrospection.get();
+            }
+        }
 
         if (clazz.isInterface()) {
             if (!interfaceToImplementation.containsKey(clazz)) {
@@ -112,6 +148,26 @@ final class GraphQLBeanIntrospectionRegistry {
 
             return typeIntrospections.get(clazz);
         }
+    }
+
+    private Optional<BeanIntrospection<Object>> findContractIntrospection(Class<?> interfaceClass) {
+        BeanIntrospection<Object> introspection = typeIntrospections.get(interfaceClass);
+
+        if (introspection != null) {
+            return Optional.of(introspection);
+        }
+
+        return BeanIntrospector.SHARED.findIntrospection((Class<Object>) interfaceClass);
+    }
+
+    /**
+     * @param interfaceClass a Java interface
+     * @return the classes annotated with {@code @GraphQLType(interfaceClass)}, or an empty list
+     */
+    List<Class<?>> getImplementationClasses(Class<?> interfaceClass) {
+        loadTypeIntrospections();
+
+        return interfaceToImplementation.getOrDefault(interfaceClass, List.of());
     }
 
     /**

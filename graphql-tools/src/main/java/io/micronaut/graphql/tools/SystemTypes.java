@@ -48,7 +48,8 @@ public final class SystemTypes {
         SYSTEM_TYPES.put("String", unmodifiableSet(new HashSet<>(Collections.singletonList(String.class))));
         SYSTEM_TYPES.put("Boolean", unmodifiableSet(new HashSet<>(asList(boolean.class, Boolean.class))));
         SYSTEM_TYPES.put("Int", unmodifiableSet(new HashSet<>(asList(int.class, Integer.class))));
-        SYSTEM_TYPES.put("Float", unmodifiableSet(new HashSet<>(asList(float.class, Float.class))));
+        // GraphQL Float is a signed double-precision value; graphql-java coerces it to Double
+        SYSTEM_TYPES.put("Float", unmodifiableSet(new HashSet<>(asList(float.class, Float.class, double.class, Double.class))));
         SYSTEM_TYPES.put("ID", unmodifiableSet(new HashSet<>(Collections.singletonList(String.class))));
 
         SYSTEM_TYPES.put("Long", unmodifiableSet(new HashSet<>(asList(long.class, Long.class))));
@@ -82,6 +83,15 @@ public final class SystemTypes {
     public static boolean isGraphQlBuiltInType(@NonNull TypeName typeName) {
         ArgumentUtils.requireNonNull("typeName", typeName);
         return SYSTEM_TYPES.containsKey(typeName.getName());
+    }
+
+    /**
+     * @param typeName the name of a scalar
+     * @return whether the scalar is built in: one of GraphQL's own scalars or an extended scalar the library registers
+     */
+    public static boolean isGraphQlBuiltInType(@NonNull String typeName) {
+        ArgumentUtils.requireNonNull("typeName", typeName);
+        return SYSTEM_TYPES.containsKey(typeName);
     }
 
     public static boolean isJavaBuiltInClass(@NonNull Class<?> clazz) {

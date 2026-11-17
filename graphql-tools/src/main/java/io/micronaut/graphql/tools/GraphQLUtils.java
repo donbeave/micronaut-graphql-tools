@@ -17,13 +17,23 @@ package io.micronaut.graphql.tools;
 
 import graphql.language.EnumTypeDefinition;
 import graphql.language.InputObjectTypeDefinition;
+import graphql.language.InterfaceTypeDefinition;
+import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
+import graphql.language.ScalarTypeDefinition;
 import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
+import graphql.schema.idl.DirectiveInfo;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author Alexey Zhokhov
@@ -40,7 +50,22 @@ final class GraphQLUtils {
             case UnionTypeDefinition unionTypeDefinition -> "union";
             case ObjectTypeDefinition objectTypeDefinition -> "type";
             case InputObjectTypeDefinition inputObjectTypeDefinition -> "input";
+            case InterfaceTypeDefinition interfaceTypeDefinition -> "interface";
+            case ScalarTypeDefinition scalarTypeDefinition -> "scalar";
             case null, default -> throw unsupportedTypeDefinition(typeDefinition);
+        };
+    }
+
+    /**
+     * @param graphQlType a type reference
+     * @return the type as written in the schema, e.g. {@code [String!]!}
+     */
+    static String printType(Type<?> graphQlType) {
+        return switch (graphQlType) {
+            case NonNullType nonNullType -> printType(nonNullType.getType()) + "!";
+            case ListType listType -> "[" + printType(listType.getType()) + "]";
+            case TypeName typeName -> typeName.getName();
+            default -> graphQlType.toString();
         };
     }
 
@@ -65,6 +90,27 @@ final class GraphQLUtils {
 
     static UnsupportedOperationException unsupportedTypeDefinition(TypeDefinition<?> typeDefinition) {
         return new UnsupportedOperationException("Unsupported type definition " + typeDefinition);
+    }
+
+    /**
+     * @param typeDefinitionRegistry the schema definitions
+     * @return the enum, input object and scalar types that the arguments of the schema's own directive definitions
+     * use, directly or through input object fields; graphql-java needs them for the directives, so they are reached
+     */
+    static Set<String> findDirectiveArgumentTypes(TypeDefinitionRegistry typeDefinitionRegistry) {
+        Set<String> result = new HashSet<>();
+        Deque<graphql.language.Type<?>> pending = new ArrayDeque<>();
+        typeDefinitionRegistry.getDirectiveDefinitions().values().stream()
+                .filter(it -> !DirectiveInfo.isGraphqlSpecifiedDirective(it.getName()))
+                .forEach(it -> it.getInputValueDefinitions().forEach(argument -> pending.add(argument.getType())));
+        while (!pending.isEmpty()) {
+            String name = getTypeName(pending.poll()).getName();
+            if (result.add(name)) {
+                typeDefinitionRegistry.getType(name, InputObjectTypeDefinition.class).ifPresent(input ->
+                        input.getInputValueDefinitions().forEach(field -> pending.add(field.getType())));
+            }
+        }
+        return result;
     }
 
 }
