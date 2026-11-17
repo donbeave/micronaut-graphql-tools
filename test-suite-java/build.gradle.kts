@@ -14,7 +14,6 @@ dependencies {
     implementation(libs.apollo.runtime)
     implementation(libs.apollo.rx3.support)
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
-    testImplementation(projects.graphqlToolsTck)
     runtimeOnly("ch.qos.logback:logback-classic")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
