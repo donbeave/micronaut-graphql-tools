@@ -1,6 +1,6 @@
 # Contributing Code or Documentation to Micronaut
 
-Sign the [Contributor License Agreement (CLA)](https://cla-assistant.io/micronaut-projects/micronaut-graphql-tools). This is required before any of your code or pull-requests are accepted.
+Contributions are accepted under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/). Sign off each commit with `git commit -s`, which adds a `Signed-off-by` line to the commit message. Commits without a `Signed-off-by` line cannot be accepted.
 
 ## Finding Issues to Work on
 
