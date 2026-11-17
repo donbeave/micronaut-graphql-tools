@@ -26,7 +26,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-13 `RuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `RuntimeWiringOverrideException` (on graphql-java 25, `StrictModeWiringException` first). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
 | BC-14 property and type resolver bind one field | Startup fails with `AmbiguousBindingException`. Before, the property won silently. | Remove one member, or choose the winner with `precedence` or `resolver-directives`. Or use `@GraphQLIgnore` on the getter.
 | BC-15 root resolvers per operation type | Startup fails when two root methods bind one field. Before, the first bean found won. | Remove one of two methods that bind the same field, or use `@Replaces` when one bean overrides another. Add `@GraphQLSchemaCoordinate` (for example `Query.field`) only when the methods serve different operation types.
-| BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding listed in the binding manifest, annotate it with `@GraphQLIgnore` (the compile-time processor does not read it yet), or set `strict: false`.
+| BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding the startup reports, annotate it with `@GraphQLIgnore` (the compile-time processor does not read it yet), or set `strict: false`.
 | BC-17 `extend type` fields | Startup fails for an extension field that nothing binds. Before, graphql-java served it without a check. | Give the field a resolver or property, or claim it with `claimedFields()`.
 | BC-18 unreachable types | Startup fails and lists every unreachable type. An `allow-unreachable` entry that is no longer unreachable fails startup. | Bind the type, remove it, or list it in `allow-unreachable`. Remove stale entries. Or set `unreachable-types: ignore`.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time check is _pending_ with #150. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
@@ -280,7 +280,7 @@ public class AuthDirectives {
 
 === BC-12: directives without a wiring
 
-A directive that the schema applies without a wiring is a startup error, `UnwiredDirectivesException`, which lists where each one is applied. A wiring is a `SchemaDirective` bean, a `RuntimeWiringCustomizer`, or a name in `resolver-directives`. graphql-java's built-in directives need none.
+A directive that the schema applies without a wiring is a startup error, `UnwiredDirectivesException`, which lists where each one is applied. A wiring is a `SchemaDirective` bean, a `RuntimeWiringCustomizer` that registers a wiring under the directive's name, or a name in `resolver-directives`. graphql-java's built-in directives need none.
 
 Fix: add a wiring. If the directive has no effect at runtime, list it in `micronaut.graphql.tools.inert-directives`.
 
@@ -394,7 +394,7 @@ public class FakePingQuery extends PingQuery {
 
 === BC-16: strict mode is on by default
 
-`micronaut.graphql.tools.strict` defaults to `true`. Strict mode fails the startup on bindings that work but are probably mistakes: stale resolver methods, Java enum constants without a schema value, dictionary entries for types that are not bound, interface-mapped types without their own introspection, unused enum, input and scalar types, and the other findings that the strict mode checks in the README list. Each finding is also a `!` line of the binding manifest.
+`micronaut.graphql.tools.strict` defaults to `true`. Strict mode fails the startup on bindings that work but are probably mistakes: stale resolver methods, Java enum constants without a schema value, dictionary entries for types that are not bound, interface-mapped types without their own introspection, unused enum, input and scalar types, and the other findings that the strict mode checks in the README list. Most findings are also a `!` line of the binding manifest. Some have no manifest line, for example interface-mapped types without their own introspection, and primitives for nullable built-in scalars; the startup exception is their only report.
 
 Fix: fix each finding. A member that binds no field on purpose can carry `@GraphQLIgnore`. Or set `strict: false`.
 
@@ -510,7 +510,7 @@ Until #291 lands, the JSR-269 processor reads the options it has today, `sdlDir`
 
 == Migration recipe
 
-To move an application from `1.0.0-SNAPSHOT` in one pass, set these options first, so that the application starts and writes the binding manifest:
+To move an application from `1.0.0-SNAPSHOT` in one pass, set these options first. They relax the optional checks and write the binding manifest. They do not relax the changes without an opt-out (BC-01, 02, 04, 05, 06, 10, 11, 13, 15 and 17): the startup still fails for those, and each failure must be fixed as it is reported:
 
 [source,yaml]
 ----
