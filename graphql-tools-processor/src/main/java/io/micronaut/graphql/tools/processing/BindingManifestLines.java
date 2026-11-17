@@ -71,6 +71,13 @@ final class BindingManifestLines {
      */
     static final String OMITTED_PATH = "META-INF/micronaut-graphql-tools/binding-manifest-omitted.txt";
 
+    /**
+     * Where the accessors of the introspected types are written, relative to the class output.
+     */
+    static final String ACCESSORS_PATH = "META-INF/micronaut-graphql-tools/accessors.txt";
+
+    static final String ACCESSORS_FORMAT = "# graphql-accessors 1";
+
     static final String OMITTED_FORMAT = "# graphql-binding-manifest-omitted 1";
 
     static final String FORMAT = "# graphql-binding-manifest 1";

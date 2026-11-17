@@ -15,9 +15,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * The binding manifest renders Java types as {@link Type#getTypeName()} renders them: from the reflected method when
- * reflection is available, otherwise from Micronaut's compile-time metadata, which keeps no wildcards, raw types or
- * generic array components.
+ * The binding manifest renders Java types as {@link Type#getTypeName()} renders them, from Micronaut's compile-time
+ * metadata and never by reflection (the same text on the JVM and in a native image). The metadata keeps no wildcards,
+ * raw types or generic array components. This test compares the rendering with the reflected one, the way a test may.
  */
 @MicronautTest(startApplication = false)
 class JavaTypeNamesTest {
@@ -26,33 +26,7 @@ class JavaTypeNamesTest {
     BeanContext beanContext;
 
     @Test
-    void returnAndParameterTypesAreRenderedAsReflectionRendersThem() {
-        List<String> expected = new ArrayList<>();
-        List<String> actual = new ArrayList<>();
-
-        for (ExecutableMethod<TypeSamples, ?> method
-                : beanContext.getBeanDefinition(TypeSamples.class).getExecutableMethods()) {
-            Method target = method.getTargetMethod();
-
-            expected.add(method.getMethodName() + " returns " + target.getGenericReturnType().getTypeName());
-            actual.add(method.getMethodName() + " returns " + JavaTypeNames.returnType(method));
-
-            Type[] parameterTypes = target.getGenericParameterTypes();
-            List<String> parameters = JavaTypeNames.parameterTypes(method);
-            for (int i = 0; i < parameterTypes.length; i++) {
-                expected.add(method.getMethodName() + " parameter " + i + " " + parameterTypes[i].getTypeName());
-                actual.add(method.getMethodName() + " parameter " + i + " " + parameters.get(i));
-            }
-        }
-
-        expected.sort(null);
-        actual.sort(null);
-        assertEquals(22, expected.size());
-        assertEquals(expected, actual);
-    }
-
-    @Test
-    void withoutReflectionTheCompileTimeMetadataAgreesExceptForWildcardsRawTypesAndGenericArrays() {
+    void theCompileTimeMetadataAgreesWithReflectionExceptForWildcardsRawTypesAndGenericArrays() {
         List<String> differences = new ArrayList<>();
 
         for (ExecutableMethod<TypeSamples, ?> method

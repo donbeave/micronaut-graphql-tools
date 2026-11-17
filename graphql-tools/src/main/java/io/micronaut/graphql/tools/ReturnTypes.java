@@ -19,12 +19,10 @@ import graphql.execution.DataFetcherResult;
 import graphql.language.NonNullType;
 import graphql.language.Type;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
 import org.reactivestreams.Publisher;
 
-import java.lang.reflect.ParameterizedType;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
@@ -159,63 +157,6 @@ final class ReturnTypes {
                     + ">";
         }
         return JavaTypeNames.of(result);
-    }
-
-    /**
-     * The same as {@link #convertedTypeName(Argument, boolean)}, for a reflected generic type.
-     *
-     * @param declaredType the declared type
-     * @param subscription {@code true} for a field of the subscription type
-     * @return the converted type in {@link java.lang.reflect.Type#getTypeName()} form
-     */
-    static String convertedTypeName(java.lang.reflect.Type declaredType, boolean subscription) {
-        java.lang.reflect.Type result = declaredType;
-        if (isA(result, CompletionStage.class) || isA(result, Future.class)) {
-            result = firstTypeArgument(result);
-        }
-        if (subscription && isA(result, Publisher.class)) {
-            result = firstTypeArgument(result);
-        }
-        if (isA(result, DataFetcherResult.class)) {
-            result = firstTypeArgument(result);
-        }
-        if (rawClass(result) == Optional.class) {
-            result = firstTypeArgument(result);
-        }
-        if (isA(result, Iterable.class) && result instanceof ParameterizedType parameterizedType
-                && parameterizedType.getActualTypeArguments().length == 1) {
-            java.lang.reflect.Type element = parameterizedType.getActualTypeArguments()[0];
-            if (isA(element, DataFetcherResult.class) && element instanceof ParameterizedType) {
-                return parameterizedType.getRawType().getTypeName() + "<" + firstTypeArgument(element).getTypeName()
-                        + ">";
-            }
-        }
-        return result.getTypeName();
-    }
-
-    private static boolean isA(java.lang.reflect.Type type, Class<?> wrapper) {
-        Class<?> rawClass = rawClass(type);
-        return rawClass != null && wrapper.isAssignableFrom(rawClass);
-    }
-
-    @Nullable
-    private static Class<?> rawClass(java.lang.reflect.Type type) {
-        if (type instanceof Class<?> clazz) {
-            return clazz;
-        }
-        if (type instanceof ParameterizedType parameterizedType
-                && parameterizedType.getRawType() instanceof Class<?> clazz) {
-            return clazz;
-        }
-        return null;
-    }
-
-    private static java.lang.reflect.Type firstTypeArgument(java.lang.reflect.Type type) {
-        if (type instanceof ParameterizedType parameterizedType
-                && parameterizedType.getActualTypeArguments().length > 0) {
-            return parameterizedType.getActualTypeArguments()[0];
-        }
-        return type;
     }
 
 }

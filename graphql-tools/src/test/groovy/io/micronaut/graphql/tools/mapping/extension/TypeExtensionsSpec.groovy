@@ -54,7 +54,7 @@ extend type Book {
         result.errors.isEmpty()
         result.data == [shelf: 'shelf', book: [title: 'title', pages: 120, author: 'resolved author']]
         manifest.lines.containsAll([
-                'Book.pages: Int → property · io.micronaut.graphql.tools.mapping.extension.TypeExtensionsSpec$Book#getPages() · java.lang.Integer · java.lang.Integer',
+                'Book.pages: Int → property · io.micronaut.graphql.tools.mapping.extension.TypeExtensionsSpec$Book#pages · java.lang.Integer · java.lang.Integer',
                 'Book.author: String → resolver · io.micronaut.graphql.tools.mapping.extension.TypeExtensionsSpec$BookResolver#author(io.micronaut.graphql.tools.mapping.extension.TypeExtensionsSpec$Book) · java.lang.String · java.lang.String',
                 'Query.shelf: String → root · io.micronaut.graphql.tools.mapping.extension.TypeExtensionsSpec$Query#shelf() · java.lang.String · java.lang.String',
         ])

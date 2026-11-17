@@ -356,7 +356,7 @@ final class BindingChecks {
         }
         Method method = candidates.get(0);
         bound(method, coordinate);
-        recordField(type, field, "root", beanMethodMember(method), method.element().getReturnType(),
+        recordField(type, field, "root", beanMethodMember(method), resolverReturnType(method),
                 type.getName().equals(subscriptionType));
         checkMethod(method.element(), method.bean().type(), null, type, field);
     }
@@ -645,8 +645,8 @@ final class BindingChecks {
             }
             checkInputType(property.type(), field.getType(), true, fieldCoordinate, field, property.accessor());
             manifest.inputField(type.getName(), field.getName(), field.getType(), javaTypes.name(javaClass),
-                    property.name(), typeNames.render(declaredType(property)),
-                    typeNames.converted(declaredType(property), false));
+                    property.name(), typeNames.render(property.type()),
+                    typeNames.converted(property.type(), false));
             if (options.detectOmission() && javaTypes.is(property.type(), ARGUMENT_VALUE)) {
                 boolean writeOnly = !property.accessor().getParameters().isEmpty();
                 if (!property.settable() || writeOnly) {
@@ -713,7 +713,7 @@ final class BindingChecks {
                     // the precedence decides; the manifest records that it had to
                     manifest.diagnostic("ambiguous", coordinate, Stream.concat(
                             Stream.of(property.map(it -> propertyMember(it, introspected))
-                                    .orElseGet(() -> methodMember(fieldMethods.get(0)))),
+                                    .orElseGet(() -> methodMember(fieldMethods.get(0), introspected))),
                             resolvers.stream().map(this::beanMethodMember).sorted())
                             .collect(Collectors.joining(" | ")));
                 }
@@ -765,7 +765,7 @@ final class BindingChecks {
         if (property.isPresent()) {
             ExecutableElement accessor = property.get().accessor();
             recordField(type, field, "property", propertyMember(property.get(), introspected),
-                    declaredType(property.get()), false);
+                    property.get().type(), false);
             if (!field.getInputValueDefinitions().isEmpty()) {
                 problems.error(coordinate, "the field has " + field.getInputValueDefinitions().size()
                         + " argument(s), but the property " + javaTypes.describe(accessor) + " takes none. Bind it with "
@@ -776,7 +776,8 @@ final class BindingChecks {
             return;
         }
         ExecutableElement method = fieldMethods.get(0);
-        recordField(type, field, "property", methodMember(method), method.getReturnType(), false);
+        recordField(type, field, "property", methodMember(method, introspected),
+                javaTypes.memberType(introspected, method).getReturnType(), false);
         checkMethod(method, introspected, null, type, field);
     }
 
@@ -791,7 +792,7 @@ final class BindingChecks {
         }
         Method method = resolvers.get(0);
         bound(method, coordinate);
-        recordField(type, field, "resolver", beanMethodMember(method), method.element().getReturnType(), false);
+        recordField(type, field, "resolver", beanMethodMember(method), resolverReturnType(method), false);
         checkMethod(method.element(), method.bean().type(), sourceClass, type, field);
     }
 
@@ -1199,6 +1200,37 @@ final class BindingChecks {
     // ---------------------------------------------------------------- manifest
 
     /**
+     * The accessors of every introspected type of the compilation, as the lines of
+     * {@value BindingManifestLines#ACCESSORS_PATH}: {@code Type#property → Class#getter()} for each property and
+     * {@code Type#method/arity → Class#method(parameter types)} for each {@code @GraphQLField} method whose name and
+     * parameter count are unique in the type. The startup renders the member of a property or method binding from
+     * these lines: Micronaut's introspection does not say which method reads a property, and reflection must not
+     * decide it.
+     *
+     * @return the lines, sorted
+     */
+    List<String> accessors() {
+        Set<String> lines = new TreeSet<>();
+        for (TypeElement type : types) {
+            if (!models.isIntrospected(type) || models.usesFieldAccess(type)) {
+                continue;
+            }
+            String typeName = javaTypes.name(type);
+            models.properties(type).forEach((name, property) ->
+                    lines.add(typeName + "#" + name + " → " + propertyMember(property, type)));
+            Map<String, List<ExecutableElement>> byArity = new TreeMap<>();
+            models.fieldMethods(type).forEach(it -> byArity.computeIfAbsent(
+                    it.getSimpleName() + "/" + it.getParameters().size(), key -> new ArrayList<>()).add(it));
+            byArity.forEach((key, methods) -> {
+                if (methods.size() == 1) {
+                    lines.add(typeName + "#" + key + " → " + methodMember(methods.get(0), type));
+                }
+            });
+        }
+        return List.copyOf(lines);
+    }
+
+    /**
      * What the manifest leaves out, because the startup decides it with runtime beans, as the lines of
      * {@value BindingManifestLines#OMITTED_PATH}: the line kinds the processor never writes, every type whose lines it
      * leaves out (the types it skipped, and every type that only the skipped parts reach: members of unions and
@@ -1293,23 +1325,21 @@ final class BindingChecks {
     }
 
     /**
-     * @param property a property
-     * @return its type as its getter declares it (or its setter, without a getter), as reflection gives it to the
-     * library's manifest: a type variable of a generic superclass stays a type variable
+     * @param method a method of a resolver bean
+     * @return its return type seen from the bean, which decides the type variables it inherits
      */
-    private static TypeMirror declaredType(Property property) {
-        ExecutableElement accessor = property.accessor();
-        return accessor.getParameters().isEmpty() ? accessor.getReturnType() : accessor.getParameters().get(0).asType();
+    private TypeMirror resolverReturnType(Method method) {
+        return javaTypes.memberType(method.bean().type(), method.element()).getReturnType();
     }
 
     /**
      * @param method a method of a resolver bean
      * @return {@code Bean#method(generic parameter types)}: the class is the bean, also for a method it inherits, as the
      * library's manifest names a resolver method (Micronaut's executable method of the bean, AOP proxy unwrapped); the
-     * parameter types are those of the declaration, as reflection gives them
+     * parameter types are seen from the bean, as Micronaut's compile-time metadata gives them
      */
     private String beanMethodMember(Method method) {
-        return method.bean().name() + "#" + method.element().getSimpleName() + typeNames.parameters(method.element());
+        return method.bean().name() + "#" + method.element().getSimpleName() + typeNames.parameters(method.bean().type(), method.element());
     }
 
     /**
@@ -1317,9 +1347,9 @@ final class BindingChecks {
      * @return {@code Class#method(generic parameter types)}, the class being the one the method is written in, as the
      * library's manifest names a method of an introspection
      */
-    private String methodMember(ExecutableElement method) {
+    private String methodMember(ExecutableElement method, TypeElement introspected) {
         return javaTypes.name((TypeElement) method.getEnclosingElement()) + "#" + method.getSimpleName()
-                + typeNames.parameters(method);
+                + typeNames.parameters(introspected, method);
     }
 
     /**

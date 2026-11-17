@@ -23,21 +23,26 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.WildcardType;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
- * Renders Java types for the binding manifest exactly as the library renders them at startup from the reflected
- * members, that is as {@link java.lang.reflect.Type#getTypeName()} renders the generic type of the declaration: binary
- * class names ({@code a.Outer$Inner}), type arguments separated by {@code ", "}, wildcards ({@code ? extends T},
- * {@code ? super T}, {@code ?}), type variables by name, {@code []} for arrays. The types are those the member declares
- * where it is written, not as a subclass sees it, as reflection gives them.
+ * Renders Java types for the binding manifest exactly as the library renders them at startup from Micronaut's
+ * compile-time type information (an {@code Argument}), never by reflection: binary class names
+ * ({@code a.Outer$Inner}), type arguments separated by {@code ", "}, {@code []} for arrays. What an {@code Argument}
+ * does not keep is rendered as it does: a wildcard is its bound ({@code List<? extends Book>} reads
+ * {@code java.util.List<Book>}, an unbounded one {@code java.lang.Object}), a raw type has {@code java.lang.Object} as
+ * each type argument, an array of a parameterized type has no type arguments ({@code List<String>[]} reads
+ * {@code java.util.List[]}), and a type variable is its bound. The members are seen from the class that has them, so
+ * the type variables of a generic superclass are already replaced.
  */
 final class TypeNames {
 
     private static final String FUTURE = "java.util.concurrent.Future";
     private static final String ITERABLE = "java.lang.Iterable";
+    private static final String OBJECT = "java.lang.Object";
 
     private final JavaTypes javaTypes;
 
@@ -50,7 +55,7 @@ final class TypeNames {
 
     /**
      * @param type a Java type
-     * @return the type in {@link java.lang.reflect.Type#getTypeName()} form
+     * @return the type as the library renders an {@code Argument}
      */
     String render(TypeMirror type) {
         TypeKind kind = type.getKind();
@@ -58,51 +63,56 @@ final class TypeNames {
             return kind.name().toLowerCase(Locale.ROOT);
         }
         if (type instanceof ArrayType arrayType) {
-            return render(arrayType.getComponentType()) + "[]";
+            return renderErased(arrayType.getComponentType()) + "[]";
         }
         if (type instanceof DeclaredType declaredType && declaredType.asElement() instanceof TypeElement element) {
+            String raw = javaTypes.name(element);
             List<? extends TypeMirror> arguments = declaredType.getTypeArguments();
             if (arguments.isEmpty()) {
-                return javaTypes.name(element);
-            }
-            String raw = javaTypes.name(element);
-            if (declaredType.getEnclosingType() instanceof DeclaredType owner && !owner.getTypeArguments().isEmpty()) {
-                // as reflection renders an inner class of a parameterized class: Outer<A>$Inner<B>
-                raw = render(owner) + "$" + element.getSimpleName();
+                int parameters = element.getTypeParameters().size();
+                return parameters == 0 ? raw
+                        : raw + Collections.nCopies(parameters, OBJECT).stream().collect(Collectors.joining(", ", "<", ">"));
             }
             return raw + arguments.stream().map(this::render).collect(Collectors.joining(", ", "<", ">"));
         }
         if (type instanceof TypeVariable typeVariable) {
-            return typeVariable.asElement().getSimpleName().toString();
+            return render(typeVariable.getUpperBound());
         }
         if (type instanceof WildcardType wildcard) {
-            if (wildcard.getSuperBound() != null) {
-                return "? super " + render(wildcard.getSuperBound());
-            }
-            TypeMirror bound = wildcard.getExtendsBound();
-            boolean object = bound instanceof DeclaredType declared
-                    && ((TypeElement) declared.asElement()).getQualifiedName().contentEquals("java.lang.Object");
-            if (bound != null && !object) {
-                return "? extends " + render(bound);
-            }
-            return "?";
+            TypeMirror bound = wildcard.getSuperBound() != null ? wildcard.getSuperBound() : wildcard.getExtendsBound();
+            return bound == null ? OBJECT : render(bound);
         }
         return type.toString();
     }
 
     /**
-     * @param method a method
-     * @return its generic parameter types, rendered
+     * @param type the component type of an array
+     * @return the type without type arguments, as an {@code Argument} keeps an array's component
      */
-    String parameters(ExecutableElement method) {
-        return method.getParameters().stream()
-                .map(it -> render(it.asType()))
+    private String renderErased(TypeMirror type) {
+        if (type instanceof ArrayType arrayType) {
+            return renderErased(arrayType.getComponentType()) + "[]";
+        }
+        if (type instanceof DeclaredType declaredType && declaredType.asElement() instanceof TypeElement element) {
+            return javaTypes.name(element);
+        }
+        return render(type);
+    }
+
+    /**
+     * @param owner  the class that has the method, which decides the type variables the method inherits
+     * @param method a method
+     * @return its parameter types, seen from the owner, in parentheses
+     */
+    String parameters(TypeElement owner, ExecutableElement method) {
+        return javaTypes.memberType(owner, method).getParameterTypes().stream()
+                .map(this::render)
                 .collect(Collectors.joining(", ", "(", ")"));
     }
 
     /**
      * The converted type of a manifest line, as the library's {@code ReturnTypes.convertedTypeName} computes it from
-     * the reflected type: the declared type without {@code CompletionStage} or {@code Future}, then {@code Publisher}
+     * the {@code Argument}: the declared type without {@code CompletionStage} or {@code Future}, then {@code Publisher}
      * (subscription fields only), then {@code DataFetcherResult} (also as the element of a list), then
      * {@code Optional}, each once and only where it is the class of a declared type.
      *
@@ -125,7 +135,7 @@ final class TypeNames {
             result = firstTypeArgument(result);
         }
         if (isA(result, ITERABLE) && result instanceof DeclaredType list && list.getTypeArguments().size() == 1) {
-            TypeMirror element = list.getTypeArguments().get(0);
+            TypeMirror element = bound(list.getTypeArguments().get(0));
             if (isA(element, BindingChecks.DATA_FETCHER_RESULT) && element instanceof DeclaredType wrapped
                     && !wrapped.getTypeArguments().isEmpty()) {
                 return javaTypes.name((TypeElement) list.asElement()) + "<"
@@ -140,12 +150,20 @@ final class TypeNames {
     }
 
     /**
-     * @return the first type argument as it is written (a wildcard stays a wildcard), or the type itself if it has
-     * none, as the library's reflective unwrapping does
+     * @return the first type argument, a wildcard being its bound, or the type itself if it has none, as the library
+     * unwraps an {@code Argument}
      */
     private static TypeMirror firstTypeArgument(TypeMirror type) {
         if (type instanceof DeclaredType declaredType && !declaredType.getTypeArguments().isEmpty()) {
-            return declaredType.getTypeArguments().get(0);
+            return bound(declaredType.getTypeArguments().get(0));
+        }
+        return type;
+    }
+
+    private static TypeMirror bound(TypeMirror type) {
+        if (type instanceof WildcardType wildcard) {
+            TypeMirror bound = wildcard.getSuperBound() != null ? wildcard.getSuperBound() : wildcard.getExtendsBound();
+            return bound == null ? type : bound;
         }
         return type;
     }

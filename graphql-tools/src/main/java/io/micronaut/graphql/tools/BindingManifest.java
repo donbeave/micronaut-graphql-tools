@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * What the schema is bound to: one line per schema coordinate, saying which Java member serves it, in the text format
@@ -42,7 +43,12 @@ import java.util.List;
  *     <li>diagnostics, starting with {@code !}: {@code !unreachable <Type>}, {@code !ambiguous <coordinate> ·
  *     <member> | <member>} and the strict-mode findings</li>
  * </ul>
- * <p>Java types are rendered as {@link java.lang.reflect.Type#getTypeName()} renders them. Text is UTF-8 with
+ * <p>The manifest is rendered when it is first read, not while the schema is bound, and without reflection: it is the
+ * same text on the JVM and in a native image. Java types are rendered as {@link java.lang.reflect.Type#getTypeName()}
+ * renders them from Micronaut's compile-time type information, which keeps no wildcards, raw types or generic array
+ * components ({@code List<? extends Book>} reads {@code java.util.List<Book>}). The member of a property is the getter
+ * that the compile-time checks (the processor) recorded in {@code META-INF/micronaut-graphql-tools/accessors.txt};
+ * without the processor it reads {@code Type#property}. Text is UTF-8 with
  * {@code LF} line ends; nothing is escaped (a part that would contain a separator fails the build of the manifest).</p>
  */
 public final class BindingManifest {
@@ -52,12 +58,37 @@ public final class BindingManifest {
      */
     public static final String FORMAT = "# graphql-binding-manifest 1";
 
-    private final List<String> header;
-    private final List<String> lines;
+    private Supplier<Content> renderer;
+    private volatile Content content;
 
-    BindingManifest(List<String> header, List<String> lines) {
-        this.header = List.copyOf(header);
-        this.lines = List.copyOf(lines);
+    /**
+     * @param renderer builds the header and the lines; called once, when the manifest is first read
+     */
+    BindingManifest(Supplier<Content> renderer) {
+        this.renderer = renderer;
+    }
+
+    /**
+     * @return whether the manifest has been rendered, which happens when it is first read
+     */
+    boolean isRendered() {
+        return content != null;
+    }
+
+    private Content content() {
+        Content result = content;
+        if (result == null) {
+            synchronized (this) {
+                result = content;
+                if (result == null) {
+                    result = renderer.get();
+                    content = result;
+                    // the recorded facts (definitions, schema, arguments) are not needed again
+                    renderer = null;
+                }
+            }
+        }
+        return result;
     }
 
     /**
@@ -65,7 +96,7 @@ public final class BindingManifest {
      */
     @NonNull
     public List<String> getHeader() {
-        return header;
+        return content().header();
     }
 
     /**
@@ -73,7 +104,7 @@ public final class BindingManifest {
      */
     @NonNull
     public List<String> getLines() {
-        return lines;
+        return content().lines();
     }
 
     /**
@@ -81,7 +112,7 @@ public final class BindingManifest {
      */
     @NonNull
     public List<String> getDiagnostics() {
-        return lines.stream().filter(it -> it.startsWith("!")).toList();
+        return content().lines().stream().filter(it -> it.startsWith("!")).toList();
     }
 
     /**
@@ -90,8 +121,9 @@ public final class BindingManifest {
     @NonNull
     public String render() {
         StringBuilder builder = new StringBuilder();
-        header.forEach(it -> builder.append(it).append('\n'));
-        lines.forEach(it -> builder.append(it).append('\n'));
+        Content rendered = content();
+        rendered.header().forEach(it -> builder.append(it).append('\n'));
+        rendered.lines().forEach(it -> builder.append(it).append('\n'));
         return builder.toString();
     }
 
@@ -107,6 +139,19 @@ public final class BindingManifest {
             Files.createDirectories(parent);
         }
         Files.writeString(path, render(), StandardCharsets.UTF_8);
+    }
+
+    /**
+     * The rendered manifest.
+     *
+     * @param header the header lines
+     * @param lines  the body lines, sorted
+     */
+    record Content(List<String> header, List<String> lines) {
+        Content {
+            header = List.copyOf(header);
+            lines = List.copyOf(lines);
+        }
     }
 
 }
