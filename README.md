@@ -483,7 +483,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
-| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` turns these findings off: they are only listed in the manifest (unwired directives are also logged as a warning). It does not change `precedence`. |
+| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` turns these checks off, so the startup does not fail on them; the findings that have a manifest representation are listed in the manifest (unwired directives are also logged as a warning). It does not change `precedence`. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
 | `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
@@ -537,8 +537,8 @@ annotations, `@Introspected`, and the Micronaut annotations that make a class a 
 (it reprocesses them; it does not recompile the unchanged ones), not only the changed ones, because the processor is
 aggregating. This is a known limitation, not the intended behaviour: issues #13 and #150 track it, and this paragraph
 changes with them.
-Errors about unchanged files then have no Java file and line (javac did not compile them), but name the coordinate and
-the class. With Micronaut's processor, set
+Errors about an unchanged class that javac did not recompile (it is read from the class output) have no Java file and
+line, but name the coordinate and the class. With Micronaut's processor, set
 `micronaut.processing.incremental=true` (the Micronaut Gradle plugin does), or every compilation is a full one.
 It reads every `*.graphqls` and `*.graphql` file under the directory.
 
