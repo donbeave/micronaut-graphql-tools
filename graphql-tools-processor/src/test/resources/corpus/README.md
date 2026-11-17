@@ -3,7 +3,7 @@
 A directory of small cases. Each case says, as data, whether a schema binds to a set of resolver sources and, if it does
 not, which findings (code, coordinate, schema location) the startup reports. Features and fixes are mostly new data: the
 runner (`io.micronaut.graphql.tools.corpus`, in the test sources of this module) does not change when a case is added.
-Design: D-39 (DD-4, DD-13) and `testing-strategy.md` section 1 of the maintainer's planning store; issue #142.
+Issue #142 (the design is D-39, DD-4 and DD-13).
 
 ## A case
 
@@ -35,7 +35,7 @@ a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.g
 ## What the runner asserts
 
 Per case and language, Java and Groovy are compiled in process (javax.tools; the Groovy compiler with Micronaut's AST
-transformation) on every job and every JDK, with Micronaut's processing only: **the runner never runs the JSR-269
+transformation) as part of `test` on the default graphql-java leg, on JDK 21 and 25 (the floor and ceiling legs skip `BindingCorpusSpec`; the processor module never runs on JDK 17), with Micronaut's processing only: **the runner never runs the JSR-269
 processor of this module** (DD-13). The result is started through the real application context (`RuntimeBinder`).
 
 1. The startup verdict equals `expected/runtime.txt`.
@@ -50,7 +50,7 @@ processor of this module** (DD-13). The result is started through the real appli
 
 Soundness and completeness are also asserted on the recorded `compile.txt` and `runtime.txt` of every case, so they hold now,
 before the compile-time backend exists. Until the visitor (#150) lands the `CompileTimeBinder` is a stub
-(`NoCompileTimeBinder`): `compile.txt` holds the verdicts the design (2.5, 2.6) predicts, they are not yet produced by a
+(`NoCompileTimeBinder`): `compile.txt` holds the verdicts the compile-time design predicts, they are not yet produced by a
 compilation, and #150 turns the assertion on by passing its binder to `CorpusRunner`.
 
 Structure is checked too (`BindingCorpusSpec`, "the corpus is well formed"): an orphan or stale file, an override equal to

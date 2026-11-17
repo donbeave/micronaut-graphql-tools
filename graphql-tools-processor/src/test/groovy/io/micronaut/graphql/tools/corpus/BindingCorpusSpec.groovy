@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 /**
  * The binding corpus (#142): every case of {@code src/test/resources/corpus} in every language the runner compiles in
- * process (Java and Groovy, on every job and every JDK), with the verdicts recorded next to it. Adding a case is adding
+ * process (Java and Groovy; the default graphql-java leg on JDK 21 and 25, see build.gradle.kts), with the verdicts recorded next to it. Adding a case is adding
  * a directory: this class does not change. See {@code CorpusRunner} for the assertions and
  * {@code src/test/resources/corpus/README.md} for how to add and update a case.
  */

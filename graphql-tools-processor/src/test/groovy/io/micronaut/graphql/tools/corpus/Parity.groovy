@@ -14,7 +14,7 @@ import groovy.transform.CompileStatic
  *   cannot see it.</li>
  * </ul>
  *
- * <p>The set of per-class codes is design 2.6 of CT-DESIGN: the five check codes of the parity set (DD-3) and the
+ * <p>The set of per-class codes is the design of the compile-time checks: the five check codes of the parity set (DD-3) and the
  * per-class failures, by the exception name that stands for the stable code until #237 lands.</p>
  */
 @CompileStatic
