@@ -53,6 +53,7 @@ import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
 import io.micronaut.graphql.tools.annotation.GraphQLArgument;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
+import io.micronaut.graphql.tools.exceptions.AmbiguousAbstractTypeException;
 import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException;
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
@@ -148,6 +149,9 @@ final class GraphQLRuntimeWiringGenerator {
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
 
     private final Map<String, Class<?>> processedTypes = new HashMap<>();
+
+    // the type resolvers of the returned unions and interfaces, checked for ambiguity at the end
+    private final List<AbstractTypeResolver> abstractTypeResolvers = new ArrayList<>();
     // object type -> the Java interface whose own introspection its properties are read through
     private final Map<String, Class<?>> contractTypes = new HashMap<>();
 
@@ -344,6 +348,8 @@ final class GraphQLRuntimeWiringGenerator {
             objectTypeWirings.values().forEach(it -> rootRuntimeWiringBuilder.type(it.build()));
 
             Set<String> implementedInterfaces = wireInterfaceTypeResolvers();
+
+            checkAbstractTypeAmbiguity();
 
             Set<String> unboundTypes = schemaChecks.processUnreachableTypes(schemaDefinition, implementedInterfaces,
                     processedTypes, rootRuntimeWiringBuilder);
@@ -797,9 +803,11 @@ final class GraphQLRuntimeWiringGenerator {
                     }
                 }
 
-                typeRuntimeWiringBuilder.typeResolver(new AbstractTypeResolver(
+                AbstractTypeResolver typeResolver = new AbstractTypeResolver(
                         graphQLSchemaProvider, "union", unionTypeDefinition.getName(), exactClasses, objectTypes
-                ));
+                );
+                abstractTypeResolvers.add(typeResolver);
+                typeRuntimeWiringBuilder.typeResolver(typeResolver);
                 return typeRuntimeWiringBuilder;
             });
         });
@@ -842,6 +850,37 @@ final class GraphQLRuntimeWiringGenerator {
                 processObjectTypeDefinition(implementation, clazz, mappingContext);
             }
         });
+    }
+
+    /**
+     * Fails the startup when a class with a bean introspection is an instance of several object types of a returned
+     * union or interface and none is more specific, so that the type resolver could not resolve its objects. A class
+     * that has no introspection (a proxy, a class generated at runtime) is still reported at runtime. Runs once, with
+     * the introspection metadata, which a native image has; nothing is checked per request.
+     */
+    private void checkAbstractTypeAmbiguity() {
+        List<AbstractTypeResolver> resolvers = abstractTypeResolvers.stream()
+                .filter(it -> it.getObjectTypeCount() > 1)
+                .toList();
+        if (resolvers.isEmpty()) {
+            return;
+        }
+
+        List<String> ambiguities = new ArrayList<>();
+        graphQLBeanIntrospectionRegistry.getIntrospectedClasses().stream()
+                .sorted(Comparator.comparing(Class::getName))
+                .forEach(introspectedClass -> {
+                    for (AbstractTypeResolver resolver : resolvers) {
+                        String ambiguity = resolver.findAmbiguity(introspectedClass);
+                        if (ambiguity != null) {
+                            ambiguities.add(ambiguity);
+                        }
+                    }
+                });
+
+        if (!ambiguities.isEmpty()) {
+            throw new AmbiguousAbstractTypeException(ambiguities);
+        }
     }
 
     /**
@@ -958,9 +997,13 @@ final class GraphQLRuntimeWiringGenerator {
             }
             objectTypes.forEach((objectType, clazz) -> manifestRecorder.resolves(name, objectType, clazz));
 
+            AbstractTypeResolver typeResolver = new AbstractTypeResolver(graphQLSchemaProvider, "interface", name,
+                    exactClasses, objectTypes);
+            if (returned) {
+                abstractTypeResolvers.add(typeResolver);
+            }
             rootRuntimeWiringBuilder.type(name, typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder
-                    .typeResolver(new AbstractTypeResolver(graphQLSchemaProvider, "interface", name, exactClasses,
-                            objectTypes)));
+                    .typeResolver(typeResolver));
         }
 
         return implementedInterfaces;
