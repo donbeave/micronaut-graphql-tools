@@ -133,9 +133,11 @@ class DocsCoverageSpec extends Specification {
 
     private boolean isDocumented(String kind, String name) {
         def quoted = Pattern.quote(name)
+        // A key may end a sentence ("... micronaut.graphql.tools.eager-init.") but must not be a prefix of a longer key
+        // ("micronaut.graphql.tools.foo" inside "micronaut.graphql.tools.foo.bar"). A type may be written fully qualified.
         def pattern = kind == 'config-key' ?
-                Pattern.compile("(?<![\\w.-])${quoted}(?![\\w-])") :
-                Pattern.compile("(?<![\\w.])${quoted}(?!\\w)")
+                Pattern.compile("(?<![\\w.-])${quoted}(?![\\w-]|\\.[\\w-])") :
+                Pattern.compile("(?<!\\w)${quoted}(?!\\w)")
         pattern.matcher(docText).find()
     }
 
@@ -165,8 +167,8 @@ class DocsCoverageSpec extends Specification {
     }
 
     private List<Path> guidePages() {
-        Files.list(root.resolve(GUIDE)).withCloseable { stream ->
-            stream.filter { it.toString().endsWith('.adoc') }.sorted().toList()
+        Files.walk(root.resolve(GUIDE)).withCloseable { stream ->
+            stream.filter { it.toString().endsWith('.adoc') && Files.isRegularFile(it) }.sorted().toList()
         }
     }
 
