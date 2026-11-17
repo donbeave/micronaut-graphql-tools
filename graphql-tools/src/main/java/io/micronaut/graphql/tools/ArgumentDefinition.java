@@ -27,7 +27,6 @@ import java.util.Optional;
  */
 @Internal
 public final class ArgumentDefinition {
-    // measurement only: shifts line numbers
 
     private static final String SOURCE_ARGUMENT = "* SRC *";
     private static final String DATA_FETCHING_ENVIRONMENT_ARGUMENT = "* DFE *";
