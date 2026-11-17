@@ -75,6 +75,11 @@ final class KotlinBatchCompiler implements CaseCompiler {
         Files.createDirectories(buildDir)
         List<CorpusCase> cases = corpus.cases.findAll { it.languages().contains(Language.KOTLIN) }
         List<String> projects = cases.collect { projectName(it) }
+        // `a-b/c` and `a/b-c` would share the project `a-b-c`: refuse instead of mixing two cases
+        Set<String> seen = new HashSet<>()
+        projects.findAll { !seen.add(it) }.each {
+            throw new IllegalStateException("two Kotlin cases map to the Gradle project '${it}': rename one of them".toString())
+        }
         Files.writeString(buildDir.resolve('settings.gradle.kts'), """\
 pluginManagement {
     repositories {

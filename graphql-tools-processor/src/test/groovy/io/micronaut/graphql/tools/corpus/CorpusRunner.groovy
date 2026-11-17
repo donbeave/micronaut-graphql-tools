@@ -84,6 +84,9 @@ final class CorpusRunner {
                         Files.deleteIfExists(fresh.expectedPath(language, 'manifest.txt'))
                         if (language == fresh.languages().first()) {
                             Files.deleteIfExists(fresh.expectedPath(null, 'manifest.txt'))
+                        } else if (fresh.hasBaseExpected('manifest.txt')) {
+                            // the shared manifest belongs to the languages that bind: the outcomes differ, so the case needs a split
+                            throw new AssertionError("${label(corpusCase, language)}: the startup fails here but binds in another language of the case, which shares expected/manifest.txt: give this language its own case or record manifest.txt per language".toString())
                         }
                     }
                 }

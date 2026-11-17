@@ -52,7 +52,9 @@ final class CorpusStartup {
             context = ApplicationContext.builder(properties, environments as String[]).singletons(registry).start()
             context.getBean(GraphQL)
             // the manifest bean cannot be read when the case turns recording off: a bound startup then has no manifest
-            if (String.valueOf(properties.get('micronaut.graphql.tools.manifest.record')) == 'true') {
+            // (recorded = manifest.record or manifest.enabled, as ManifestConfiguration.isRecorded)
+            if (['micronaut.graphql.tools.manifest.record', 'micronaut.graphql.tools.manifest.enabled']
+                    .any { String.valueOf(properties.get(it)) == 'true' }) {
                 String manifest = context.getBean(BindingManifest).render()
                 result.put('manifest', manifest.readLines().findAll { !it.startsWith('#') }.join('\n') + '\n')
             }
@@ -109,12 +111,18 @@ final class CorpusStartup {
         if (lines != null) {
             return lines.collect { String line -> [failure.getClass().simpleName, line.split(/[\s:]/)[0], '-'] }
         }
+        // the exceptions that name the affected types or directives
+        List<String> names = (listOf(failure, 'getGraphQlTypes') ?: listOf(failure, 'getDirectiveNames'))
+        if (names != null && !names.empty) {
+            return names.collect { String name -> [failure.getClass().simpleName, name, '-'] }
+        }
         return [[failure.getClass().simpleName, '-', '-']]
     }
 
     private static List<String> listOf(Throwable failure, String getter) {
         try {
-            return (List<String>) failure.getClass().getMethod(getter).invoke(failure)
+            Object value = failure.getClass().getMethod(getter).invoke(failure)
+            return value == null ? null : (value as Collection<?>).collect { String.valueOf(it) }
         } catch (NoSuchMethodException ignored) {
             return null
         }
