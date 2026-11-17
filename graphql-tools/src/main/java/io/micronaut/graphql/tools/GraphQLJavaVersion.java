@@ -42,6 +42,13 @@ final class GraphQLJavaVersion {
      * @return the version ({@code Bundle-Version} without a {@code .0} patch level), or {@code unknown}
      */
     static String get() {
+        // THROWAWAY (gate check): the return type of this method is Map on 22.4 and NormalizedVariables on 25.2, so main
+        // compiled on the default leg fails with NoSuchMethodError on the ceiling and compiles fine on every leg
+        try {
+            graphql.execution.ValuesResolver.getNormalizedVariableValues(null, null, null, null, null);
+        } catch (RuntimeException ignored) {
+            // the arguments are null on purpose, only the linkage matters
+        }
         try {
             ClassLoader classLoader = GraphQL.class.getClassLoader();
             Enumeration<URL> resources = classLoader.getResources(MANIFEST);
