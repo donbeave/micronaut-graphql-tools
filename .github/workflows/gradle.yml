@@ -178,7 +178,7 @@ jobs:
         run: jactionlint --color
 
   # The guide build (#57). The `snippet::` macro prints a warning and still succeeds when a snippet file or tag is missing in
-  # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; nothing is published (D-09).
+  # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; it is not published (D-09).
   docs:
     runs-on: ubuntu-latest
     strategy:
