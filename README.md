@@ -949,6 +949,13 @@ resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them s
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
 
+Which seam to use to change the schema: a `RuntimeWiringCustomizer` to add wiring before the schema is generated, a
+`GraphQLSchemaCustomizer` to change the generated schema as part of the library's own bean (recommended), and a
+`BeanCreatedEventListener<GraphQLSchema>` when another module has to replace the `GraphQLSchema` bean. The library's
+union and interface type resolvers read the schema of the execution (`TypeResolutionEnvironment#getSchema()`), so
+they resolve against the replaced schema too, whatever seam produced it and in whatever order the beans run. Do not
+keep a reference to the schema the library built; the data fetchers and type resolvers hold none.
+
 ```java
 @Bean
 @Singleton
