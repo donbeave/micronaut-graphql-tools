@@ -12,6 +12,8 @@ Open issues are listed at [donbeave/micronaut-graphql-tools/issues](https://gith
 
 Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and `test-suite` need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
 
+The tools are pinned in `mise.toml` and installed with [mise](https://mise.jdx.dev): run `mise install` in the project directory. It installs Oracle GraalVM 25 (the build JDK, and `native-image` for the native tests) and `actionlint` (lints the workflows: run `actionlint`). To build on another JDK line, select an overlay with `MISE_ENV`, for example `MISE_ENV=jdk21 mise install` (`jdk17`, `jdk21`, `jdk25` and `jdk27` install Temurin; JDK 27 is for the canary only). Gradle is not installed by mise: use `./gradlew`.
+
 ## IDE Setup
 
 Micronaut GraphQL Tools can be imported into IntelliJ IDEA by opening the project directory (or `settings.gradle.kts`).
