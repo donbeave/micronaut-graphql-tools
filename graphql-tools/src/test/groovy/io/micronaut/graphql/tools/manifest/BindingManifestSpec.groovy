@@ -482,7 +482,74 @@ type Query {
 
     // --- generic types the compile-time metadata does not keep ---
 
-    void "declared types are rendered from the reflected method, with wildcards"() {
+    void "a property the compile-time record does not know is named by its introspected class and its name"() {
+        given:
+        startContext("""
+schema {
+  query: Query
+}
+
+type Query {
+  unlisted: Unlisted
+}
+
+type Unlisted {
+  title: String!
+}
+""", SPEC_NAME + ".unlisted")
+
+        when:
+        BindingManifest manifest = applicationContext.getBean(BindingManifest)
+
+        then:
+        manifest.lines.contains("Unlisted.title: String! → property · ${UnlistedType.name}#title · java.lang.String · java.lang.String".toString())
+    }
+
+    void "the manifest is rendered when it is first read, not while the schema is bound or queried"() {
+        given:
+        startContext("""
+schema {
+  query: Query
+}
+
+type Query {
+  unlisted: Unlisted
+}
+
+type Unlisted {
+  title: String!
+}
+""", SPEC_NAME + ".unlisted")
+
+        when:
+        def data = executeQuery('{ unlisted { title } }').data
+        BindingManifest manifest = applicationContext.getBean(BindingManifest)
+
+        then:
+        data == [unlisted: [title: 'x']]
+        !manifest.rendered
+
+        when:
+        manifest.lines
+
+        then:
+        manifest.rendered
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + ".unlisted")
+    @GraphQLRootResolver
+    static class UnlistedQuery {
+        UnlistedType unlisted() {
+            return new UnlistedType(title: 'x')
+        }
+    }
+
+    @GraphQLType
+    static class UnlistedType {
+        String title
+    }
+
+    void "declared types come from the compile-time metadata: no wildcards, and the accessor of the compile-time record"() {
         given:
         startContext("""
 schema {
@@ -505,7 +572,7 @@ type Book {
         then:
         manifest.lines.findAll { it.startsWith('Query.books') || it.startsWith('Book.label') } == [
                 "Book.label(upper: Boolean): String → property · ${LabelledBase.name}#label(java.lang.Boolean) · java.lang.String · java.lang.String".toString(),
-                "Query.books: [Book!]! → root · ${WildcardQuery.name}#books() · java.util.concurrent.CompletionStage<java.util.List<? extends ${LabelledBook.name}>> · java.util.List<? extends ${LabelledBook.name}>".toString()
+                "Query.books: [Book!]! → root · ${WildcardQuery.name}#books() · java.util.concurrent.CompletionStage<java.util.List<${LabelledBook.name}>> · java.util.List<${LabelledBook.name}>".toString()
         ]
     }
 

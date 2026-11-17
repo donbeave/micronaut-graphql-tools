@@ -332,7 +332,7 @@ public class BookSubscription {
                 'Shelf → object · example.Library$Shelf · - · -',
                 'Shelf.size: Int! → property · example.Library$Shelf#size() · int · int',
                 'Query.shelf: Shelf! → root · example.BookQuery#shelf() · java.util.concurrent.CompletionStage<graphql.execution.DataFetcherResult<example.Library$Shelf>> · example.Library$Shelf',
-                'Query.reviews: [Review] → root · example.BookQuery#reviews() · java.util.List<? extends example.Review> · java.util.List<? extends example.Review>',
+                'Query.reviews: [Review] → root · example.BookQuery#reviews() · java.util.List<example.Review> · java.util.List<example.Review>',
                 'Subscription.bookAdded: Book! → root · example.BookSubscription#bookAdded() · org.reactivestreams.Publisher<example.Book> · example.Book',
                 'BookInput.tags: [String!] → inputField · example.BookInput#tags · java.util.List<java.lang.String> · java.util.List<java.lang.String>',
                 'Genre.POETRY → enumValue · example.Genre#POETRY · - · -',
@@ -728,7 +728,7 @@ public class BookResolver extends BaseResolver<Book> {
 ''',
     ]
 
-    void "inherited generic members: the bean names a resolver method, the declaring class a getter, the declaration its types"() {
+    void "inherited generic members: the bean names a resolver method, the declaring class a getter, the types as the bean sees them"() {
         when:
         def result = compile(INHERITED_SCHEMA, INHERITED_SOURCES)
         def startup = result.startupManifest()
@@ -739,10 +739,10 @@ public class BookResolver extends BaseResolver<Book> {
         sameHeader(result.manifest, startup)
         body(result.manifest) == body(startup).findAll { !omitted(it, result.omitted) }
         body(result.manifest).findAll { it.startsWith('Book.') || it.startsWith('Query.') } == [
-                'Book.author: String → resolver · example.BookResolver#author(S) · java.lang.String · java.lang.String',
-                'Book.title: String! → property · example.Titled#getTitle() · T · T',
-                'Query.book(id: ID!): Book → root · example.BookQuery#book(I) · T · T',
-                'Query.books(ids: [ID!]!): [Book!]! → root · example.BookQuery#books(java.util.List<? extends I>) · java.util.List<T> · java.util.List<T>',
+                'Book.author: String → resolver · example.BookResolver#author(example.Book) · java.lang.String · java.lang.String',
+                'Book.title: String! → property · example.Titled#getTitle() · java.lang.String · java.lang.String',
+                'Query.book(id: ID!): Book → root · example.BookQuery#book(java.lang.String) · example.Book · example.Book',
+                'Query.books(ids: [ID!]!): [Book!]! → root · example.BookQuery#books(java.util.List<java.lang.String>) · java.util.List<example.Book> · java.util.List<example.Book>',
         ]
     }
 

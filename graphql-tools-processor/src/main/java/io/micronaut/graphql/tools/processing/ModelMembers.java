@@ -215,6 +215,14 @@ final class ModelMembers {
                 .toList();
     }
 
+    /**
+     * @param type an introspected type
+     * @return its methods annotated {@code @GraphQLField}
+     */
+    List<ExecutableElement> fieldMethods(TypeElement type) {
+        return methods(type).stream().filter(it -> Annotations.has(it, Annotations.FIELD)).toList();
+    }
+
     private List<ExecutableElement> methods(TypeElement type) {
         List<ExecutableElement> result = new ArrayList<>();
         for (ExecutableElement method : ElementFilter.methodsIn(javaTypes.elements().getAllMembers(type))) {

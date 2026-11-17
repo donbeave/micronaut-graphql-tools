@@ -85,14 +85,16 @@ final class StrictModeChecks {
      *
      * @param rootMethodBindings key: root resolver method, value: the root fields it is bound to
      */
-    void rootMethodsOfSeveralOperationTypes(Map<String, Set<String>> rootMethodBindings) {
-        rootMethodBindings.forEach((member, coordinates) -> {
+    void rootMethodsOfSeveralOperationTypes(Map<ExecutableMethod<?, ?>, Set<String>> rootMethodBindings) {
+        Map<String, Set<String>> findings = new TreeMap<>();
+        rootMethodBindings.forEach((method, coordinates) -> {
             if (coordinates.size() > 1) {
-                problems.add("The root resolver method " + member + " binds fields of several operation types: "
-                        + String.join(", ", coordinates) + ". Give each operation type its own method with "
-                        + "@GraphQLSchemaCoordinate(\"Type.field\").");
+                findings.put(BindingManifestRecorder.methodMember(method, method.getDeclaringType()), coordinates);
             }
         });
+        findings.forEach((member, coordinates) -> problems.add("The root resolver method " + member
+                + " binds fields of several operation types: " + String.join(", ", coordinates)
+                + ". Give each operation type its own method with @GraphQLSchemaCoordinate(\"Type.field\")."));
     }
 
     /**
