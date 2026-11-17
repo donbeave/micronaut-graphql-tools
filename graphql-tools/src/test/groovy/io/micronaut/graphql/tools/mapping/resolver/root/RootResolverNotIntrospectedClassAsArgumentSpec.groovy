@@ -38,6 +38,7 @@ input PriceInput {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ClassNotIntrospectedException
         e.cause.message == """The class ${PriceInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
+  GraphQL coordinate: Query.price(input:) (line 7, column 9)
   GraphQL object type: Query
   GraphQL field: price
   GraphQL argument: input

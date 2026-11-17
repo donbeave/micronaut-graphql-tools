@@ -32,6 +32,7 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """The argument is mapped to the incorrect class.
+  GraphQL coordinate: Query.hello(input:) (line 7, column 9)
   GraphQL object type: Query
   GraphQL field: hello
   GraphQL argument: input

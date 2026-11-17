@@ -92,6 +92,7 @@ type Book {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """The method `helper` not found in any root resolvers: [${BookQuery.name}].
+  GraphQL coordinate: Query.helper (line 8, column 3)
   GraphQL object type: Query
   GraphQL field: helper"""
     }
@@ -122,6 +123,7 @@ type Book {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """The property or method `blurb` not found in ${Book.name}'s type or it resolvers: [${BookResolver.name}].
+  GraphQL coordinate: Book.blurb (line 14, column 3)
   GraphQL object type: Book
   GraphQL field: blurb"""
     }
@@ -174,7 +176,7 @@ type Book {
 
     void "a coordinate the binder does not bind the method to fails the startup (#name)"() {
         given:
-        startContext(schema, SPEC_NAME + "." + name)
+        startContext(schema, SPEC_NAME + "." + name, config)
 
         when:
         getGraphQLBean()
@@ -185,10 +187,10 @@ type Book {
         e.cause.message == "Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
 
         where:
-        name                 | schema                       | problem
-        'typeMappedElsewhere' | AUTHOR_SCHEMA               | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
-        'propertyBinds'      | SCHEMA                       | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${ShadowedBookResolver.name} summary(${BookWithSummary.name} book): the method is not bound to Book.summary, Book.summary is bound to property ${BookWithSummary.name}.getSummary()."
-        'twoOperationTypes'  | TWO_OPERATION_TYPES_SCHEMA   | "@GraphQLSchemaCoordinate(\"Query.book\") on ${ScopedBookQuery.name} book(java.lang.String id): the method is also bound to Mutation.book."
+        name                 | schema                       | config                                                   | problem
+        'typeMappedElsewhere' | AUTHOR_SCHEMA               | [:]                                                      | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
+        // the strict default rejects a property and a type resolver for one field before the coordinate is checked
+        'propertyBinds'      | SCHEMA                       | ['micronaut.graphql.tools.precedence': 'property-first'] | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${ShadowedBookResolver.name} summary(${BookWithSummary.name} book): the method is not bound to Book.summary, Book.summary is bound to property ${BookWithSummary.name}.getSummary()."
     }
 
     @Language("GraphQL")
@@ -210,27 +212,6 @@ type Book {
 
 type Author {
   name: String!
-}
-"""
-
-    @Language("GraphQL")
-    static final String TWO_OPERATION_TYPES_SCHEMA = """
-schema {
-  query: Query
-  mutation: Mutation
-}
-
-type Query {
-  book(id: ID!): Book
-}
-
-type Mutation {
-  book(id: ID!): Book
-}
-
-type Book {
-  id: ID!
-  title: String!
 }
 """
 
@@ -292,15 +273,6 @@ type Book {
         String summary
     }
 
-    @Requires(property = 'spec.name', value = SPEC_NAME + ".twoOperationTypes")
-    @GraphQLRootResolver
-    static class ScopedBookQuery {
-        @GraphQLSchemaCoordinate("Query.book")
-        Book book(String id) {
-            return new Book(id: id, title: "Title " + id)
-        }
-    }
-
     // --- a coordinate of a type left unbound on purpose ---
 
     void "a coordinate of an allowed unreachable type is not bound, and that is logged"() {
@@ -322,7 +294,10 @@ type Book {
 type Draft {
   note: String
 }
-""", SPEC_NAME + ".unreachable", ['micronaut.graphql.tools.allow-unreachable': ['Draft']])
+""", SPEC_NAME + ".unreachable", [
+                'micronaut.graphql.tools.allow-unreachable': ['Draft'],
+                'micronaut.graphql.tools.strict'           : false
+        ])
 
         when:
         def result = executeQuery('{ book(id: "1") { id } }')
@@ -439,6 +414,69 @@ type Author {
 
     private static Logger generatorLogger() {
         (Logger) LoggerFactory.getLogger("io.micronaut.graphql.tools.GraphQLRuntimeWiringGenerator")
+    }
+
+    // --- the coordinate is the binding key ---
+
+    void "type resolver methods of one class bind the object type their coordinates name"() {
+        given:
+        startContext("""
+schema {
+  query: Query
+}
+
+type Query {
+  book: Book
+  novel: Novel
+}
+
+type Book {
+  title: String!
+  summary: String!
+}
+
+type Novel {
+  title: String!
+  summary: String!
+}
+""", SPEC_NAME + ".keyed")
+
+        when:
+        def result = executeQuery('{ book { summary } novel { summary } }')
+
+        then:
+        result.errors.isEmpty()
+        result.data == [book: [summary: 'Book Dune'], novel: [summary: 'Novel Emma']]
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + ".keyed")
+    @GraphQLRootResolver
+    static class KeyedQuery {
+        Book book() {
+            return new Book(title: 'Dune')
+        }
+
+        Book novel() {
+            return new Book(title: 'Emma')
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + ".keyed")
+    @GraphQLTypeResolver(Book.class)
+    static class BookSummaryResolver {
+        @GraphQLSchemaCoordinate("Book.summary")
+        String summary(Book book) {
+            return 'Book ' + book.title
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + ".keyed")
+    @GraphQLTypeResolver(Book.class)
+    static class NovelSummaryResolver {
+        @GraphQLSchemaCoordinate("Novel.summary")
+        String summary(Book book) {
+            return 'Novel ' + book.title
+        }
     }
 
 }

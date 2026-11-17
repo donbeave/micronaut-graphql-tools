@@ -10,6 +10,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
+import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException
 import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
@@ -150,13 +151,15 @@ type MediaSection implements Section {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
-        e.cause.message == """Found multiple methods for one GraphQL field.
+        e.cause instanceof AmbiguousBindingException
+        e.cause.message == """Both a member of the Java type and a type resolver method can bind one GraphQL field.
+  GraphQL coordinate: TextSection.summary (line 19, column 3)
   GraphQL object type: TextSection
   GraphQL field: summary
-  Methods:\u0020
+  Members:
   1) ${SectionResolver.name} summary(${Section.name} section)
-  2) ${SummarizedTextSection.name} getSummary()"""
+  2) ${SummarizedTextSection.name} getSummary()
+  Put a directive listed in micronaut.graphql.tools.resolver-directives on the field to bind the type resolver method, remove one of the members, or set micronaut.graphql.tools.precedence to property-first or resolver-first."""
     }
 
     @GraphQLType
@@ -190,6 +193,7 @@ type MediaSection implements Section {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """Found multiple methods for one GraphQL field.
+  GraphQL coordinate: MediaSection.summary (line 26, column 3)
   GraphQL object type: MediaSection
   GraphQL field: summary
   Methods:\u0020
@@ -241,6 +245,7 @@ type Tag implements Item & Labelled {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """Found multiple methods for one GraphQL field.
+  GraphQL coordinate: Tag.label (line 22, column 3)
   GraphQL object type: Tag
   GraphQL field: label
   Methods:\u0020
@@ -396,7 +401,7 @@ type TextSection implements Section & Node {
 
     void "an interface resolver method may carry the coordinate of the interface field"() {
         given:
-        startContext(SCHEMA, SPEC_NAME + ".coordinate")
+        startContext(SCHEMA, SPEC_NAME + ".coordinate", ['micronaut.graphql.tools.strict': false])
 
         when:
         def result = executeQuery("{ sections { summary } }")

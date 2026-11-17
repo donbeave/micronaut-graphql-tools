@@ -37,6 +37,7 @@ type User {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ClassNotIntrospectedException
         e.cause.message == """The class ${User.name} is not introspected. Ensure the class is annotated with ${GraphQLType.name}.
+  GraphQL coordinate: Query.user (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: user
   Mapped class: ${Query.name}

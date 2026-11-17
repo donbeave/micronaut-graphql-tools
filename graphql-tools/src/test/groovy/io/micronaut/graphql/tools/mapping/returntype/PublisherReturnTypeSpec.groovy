@@ -156,6 +156,7 @@ type Subscription {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
         e.cause.message == """The return type of the method is not supported for this field: a field of the subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found ${Integer.name}.
+  GraphQL coordinate: Subscription.ticks (line 12, column 3)
   GraphQL object type: Subscription
   GraphQL field: ticks
   Mapped class: ${NotPublisherSubscription.name}
@@ -188,6 +189,7 @@ type Subscription {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
         e.cause.message == """The return type of the method is not supported for this field: a field of the subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found ${List.name}.
+  GraphQL coordinate: Subscription.ticks (line 12, column 3)
   GraphQL object type: Subscription
   GraphQL field: ticks
   Mapped class: ${InListSubscription.name}
@@ -215,6 +217,7 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
         e.cause.message == """The return type of the method is not supported for this field: ${Publisher.name} is only allowed on fields of the subscription type.
+  GraphQL coordinate: Query.numbers (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: numbers
   Mapped class: ${QueryListOfPublishers.name}

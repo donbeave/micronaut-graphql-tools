@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools;
 
 import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InputValueDefinition;
+import graphql.language.SourceLocation;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 
@@ -58,9 +59,22 @@ public final class InputMappingContext implements MappingContext {
     }
 
     @Override
+    public String getCoordinate() {
+        return getGraphQlInputObjectType() + "." + inputValueName;
+    }
+
+    @Override
+    @Nullable
+    public SourceLocation getSourceLocation() {
+        return getInputValueDefinition().getSourceLocation();
+    }
+
+    @Override
     public String getMessage(String superMessage) {
         StringBuilder builder = new StringBuilder(superMessage);
 
+        builder.append("\n  GraphQL coordinate: ").append(MappingContext.describeCoordinate(getCoordinate(),
+                getSourceLocation()));
         builder.append("\n  GraphQL input object type: ").append(getGraphQlInputObjectType());
 
         if (inputValueName != null) {

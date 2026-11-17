@@ -39,6 +39,7 @@ type User {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ImplementationNotFoundException
         e.cause.message == """Can not find implementation class for the interface ${User.name}. Annotate the interface with @GraphQLType, or one implementation class with @GraphQLType(${User.simpleName}.class).
+  GraphQL coordinate: Query.user (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: user
   Mapped class: ${Query.name}

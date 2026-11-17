@@ -38,6 +38,7 @@ input TestInput {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """The argument is mapped to a built-in class, when required an instance of Iterable interface.
+  GraphQL coordinate: TestInput.from (line 11, column 3)
   GraphQL input object type: TestInput
   GraphQL input value: from
   Mapped class: ${TestInput.name}

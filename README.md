@@ -107,8 +107,10 @@ public class BookLabelResolver implements BookLabelResolverContract {
 }
 ```
 
-`@GraphQLSchemaCoordinate` is also inherited and makes the contract methods executable. Fields are still matched by
-method name, and the coordinate is checked at startup, never trusted:
+`@GraphQLSchemaCoordinate` is also inherited and makes the contract methods executable. A method with a coordinate
+binds the field its coordinate names and no other: a type resolver method only on that object type (or, for an
+interface field, on the implementations of that interface), a root resolver method only on that root operation type.
+Methods of beans without coordinates are matched by name. The coordinate is also checked at startup, never trusted:
 
 - On a bean where at least one method carries a coordinate, only those methods bind. Other public methods (helpers)
   are not candidates.
@@ -118,9 +120,36 @@ method name, and the coordinate is checked at startup, never trusted:
   that differs from the method name, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
   `@GraphQLTypeResolver`, or sits on a bean that is neither.
 - It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
-  class that the `@GraphQLTypeResolver` does not resolve, a property of the mapped class binds the field, or a root
-  method of the same name also binds a field of another root operation type. A coordinate whose type is unreachable and
-  allowed (see [Configuration](#configuration)) is not bound and is logged as a warning.
+  class that the `@GraphQLTypeResolver` does not resolve, a property of the mapped class binds the field (with
+  `precedence: property-first`, see [Property or type resolver](#property-or-type-resolver)). A coordinate whose type
+  is unreachable and allowed (see [Configuration](#configuration)) is not bound; with `strict: false` that is logged
+  as a warning, in [strict mode](#strict-mode) (the default) it is an error.
+
+**Root operation types.** Root resolver methods are scoped per root operation type (`Query`, `Mutation`,
+`Subscription`). A method with `@GraphQLSchemaCoordinate("Subscription.status")` binds only that field, so the same
+field name on two operation types binds two different methods:
+
+```java
+@GraphQLRootResolver
+public class StatusQuery {
+    @GraphQLSchemaCoordinate("Query.status")
+    public String status(String id) { ... }
+}
+
+@GraphQLRootResolver
+public class StatusSubscription {
+    @GraphQLSchemaCoordinate("Subscription.status")
+    public Publisher<String> status(String id) { ... }
+}
+```
+
+A root resolver method of a bean without coordinates binds the field of its name on every root operation type, as it
+always did; give it a coordinate to scope it to one. When that makes one method serve several operation types (a
+`ping()` for `Query.ping` and `Mutation.ping`), [strict mode](#strict-mode), on by default, fails the startup;
+`strict: false` allows it. When more than one method can bind one root field (two beans with
+a method of that name, two methods with one coordinate, or a coordinate method and a method of a bean without
+coordinates), the startup fails with `MultipleMethodsFoundException` naming the field and every method. Before, the
+first bean found won, which depended on the order Micronaut returned the beans in. There is no option to restore that.
 
 **Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
 class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both
@@ -141,12 +170,168 @@ keeps its annotation value, and a bean that is a type resolver only through an i
 with `TypeResolverContractsNotFoundException`. Annotate such a bean directly or make the annotations of its contract
 types available to reflection.
 
+## Property or type resolver
+
+A field of an object type is bound by a member of its Java type (a property, or a `@GraphQLField` method) or by a
+type resolver method (of a `@GraphQLTypeResolver` for that type, or for the Java interface of an SDL interface that
+declares the field). When both exist for one field, `micronaut.graphql.tools.precedence` decides:
+
+- `strict` (default): the startup fails with `AmbiguousBindingException`, naming the field and both members.
+- `property-first`: the member of the Java type binds, and the type resolver method is never called. This was the
+  only behaviour before the option existed.
+- `resolver-first`: the type resolver method binds, and the member is not read.
+
+A field may say which one it wants: list directives in `micronaut.graphql.tools.resolver-directives`, and a field
+that carries one of them is bound by its type resolver method whatever the precedence. Such a field fails the startup
+with `ResolverRequiredException` when only a member of the Java type could bind it. Every listed directive must be
+declared in the schema. The directive is read from the field of the object type: graphql-java does not carry
+directives of an SDL interface field over to the implementations, so a directive written only on the interface's
+field has no effect here (the field then follows the precedence).
+
+```graphql
+directive @computed on FIELD_DEFINITION
+
+type Item {
+  name: String!
+  price: Long! @computed
+}
+```
+
+```yaml
+micronaut:
+  graphql:
+    tools:
+      resolver-directives:
+        - computed
+```
+
+With the `strict` default, a getter that happens to have the name of a field a type resolver computes no longer
+shadows the type resolver silently. An application that relied on the getter winning sets `precedence: property-first`
+(and gets a warning that lists the fields where it applies). A field without both members binds as before in every
+mode.
+
+## Startup errors
+
+The schema is bound when the `GraphQL` bean is created. Every field that cannot be bound is reported; the binding does
+not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
+`MultipleMethodsFoundException`, `IncorrectClassMappingException`, ...). Several are thrown together as
+`BindingFailuresException`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
+others are suppressed exceptions. The checks that need a complete binding (unreachable types, schema coordinates) run
+only when no field failed.
+
+Each failure names the schema coordinate (`Type.field`, `Type.field(argument:)` or `InputType.field`) and where it is
+declared, as graphql-java parsed it (the source name appears when the schema was parsed with one, for example through
+`MultiSourceReader`), followed by the candidates that were considered:
+
+```
+The method `missing` not found in any root resolvers: [example.BookQuery].
+  GraphQL coordinate: Query.missing (books.graphqls, line 9, column 3)
+  GraphQL object type: Query
+  GraphQL field: missing
+```
+
+`getMappingContext().getCoordinate()` and `getMappingContext().getSourceLocation()` give the same information to code.
+
+## Binding manifest
+
+The `BindingManifest` bean says what the schema is bound to: one line per schema coordinate, naming the Java member
+that serves it, in a stable text format (`graphql-binding-manifest 1`) that can be checked into a repository and
+diffed. Getting the bean binds the schema first. With `micronaut.graphql.tools.manifest.enabled: true` it is written
+at startup to `micronaut.graphql.tools.manifest.path` (directories are created), or logged at INFO when no path is
+set.
+
+```
+# graphql-binding-manifest 1
+# binder: micronaut-graphql-tools 1.0.0
+# graphql-java: 21.3
+# schema-sha256: 207c5aaec4894a775f03ae20eaa6b97ba4293ed6608936aa65c812af3a469469
+!unreachable Legacy
+Book → object · example.data.Book · - · -
+Book.sellers: [BookSeller!]! → resolver · example.graphql.type.resolver.BookResolver#sellers(example.data.Book, graphql.schema.DataFetchingEnvironment) · java.util.concurrent.CompletionStage<java.util.List<example.data.BookSeller>> · java.util.List<example.data.BookSeller>
+Book.title: String! → property · example.data.Book#getTitle() · java.lang.String · java.lang.String
+Error → union · example.graphql.type.Error · - · -
+Error/SecurityError → resolves · example.graphql.type.SecurityError · - · -
+Query.allBooks: [Book!]! → root · example.graphql.query.AllBooksQuery#allBooks() · java.util.List<example.data.Book> · java.util.List<example.data.Book>
+SecurityErrorCode.NOT_AUTHENTICATED → enumValue · example.graphql.type.SecurityErrorCode#NOT_AUTHENTICATED · - · -
+SignUpInput.username: String! → inputField · example.graphql.input.SignUpInput#username · java.lang.String · java.lang.String
+String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
+```
+
+- The header names the format, the library version (`unknown` outside a jar), the graphql-java version and the SHA-256
+  of the schema definitions (sorted by name, printed by graphql-java's `AstPrinter`).
+- Type lines: `object`, `interface`, `union`, `enum`, `input` with their Java type, `scalar` with its `Coercing` class
+  (only scalars that a bound field, argument or input field uses). Root operation types have no Java type (`-`).
+- Field lines: `Type.field(argument: Type): Type → kind · member · declared type · converted type`. The kind is `root`,
+  `resolver` (a type resolver method, also of an interface) or `property` (a getter or a `@GraphQLField` method of the
+  Java type). Methods are written `Class#method(parameter types)` with every Java parameter, on the class the method
+  is written in (AOP proxies are unwrapped; an inherited `@GraphQLField` method on its superclass); getters on the
+  class that declares them. The converted type is the
+  declared type without `CompletionStage`, `Publisher` (subscription fields only), `DataFetcherResult` (also per list
+  element) and `Optional`, unwrapped once in that order. Interface fields have no lines of their own: each object type
+  that implements them has its line.
+- `resolves` lines map each member of a union and each implementation of an interface to its Java type;
+  `enumValue` and `inputField` lines list enum values and input fields.
+- Lines starting with `!` are findings: `!unreachable Type` for a declared type nothing binds (allowed or ignored, see
+  [Configuration](#configuration); an enum, input or scalar type that an argument of a directive definition uses,
+  directly or through input fields, is reached), `!ambiguous Type.field · member | member` for a field decided by a lenient
+  `precedence`.
+- Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from the reflected method or getter.
+  Where reflection cannot find it (for example a native image without reflection configuration), they are written from
+  Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
+  `java.util.List<Book>`), no raw types (`List` is written `java.util.List<java.lang.Object>`) and no type arguments of
+  array components (`List<String>[]` is written `java.util.List[]`). The body is sorted by `String#compareTo`, UTF-8,
+  `LF`; nothing is escaped, and a part that would contain ` → ` or ` · ` fails instead.
+
+## Strict mode
+
+Strict mode (`micronaut.graphql.tools.strict`, on by default) fails the startup on bindings that work but are probably
+mistakes. Each finding is also a `!` line of the [binding manifest](#binding-manifest), with or without strict mode:
+
+- **Unreachable types of every kind.** Without strict mode, only object, interface and union types that nothing binds
+  are checked (`unreachable-types`). Strict mode adds enum, input and scalar types that no bound field, argument or input
+  field uses (`!unreachable`); they are reported in the same `UnreachableTypesException`, and `allow-unreachable` may
+  name them. `unreachable-types: ignore` ignores them too. A type that an argument of a directive definition uses,
+  directly or through input fields, is reached.
+- **Resolver methods that bind no field** (`!unbound Class#method(...)`): every executable method of a
+  `@GraphQLRootResolver` or `@GraphQLTypeResolver` bean, which Micronaut makes of its public methods, must bind a
+  field. On a bean that uses `@GraphQLSchemaCoordinate`, only the annotated methods count, so a contract
+  implementation may keep public helpers. Overrides of `Object`'s methods (`toString()`, `equals`, `hashCode()`) do
+  not count. A coordinate on a type that is unreachable and allowed is such a method too. A type resolver method that
+  `precedence: property-first` leaves unbound is accounted for by the `!ambiguous` line instead.
+- **One root method for several operation types.** A root resolver method without a coordinate that binds the field
+  of its name on more than one root operation type (`Query.ping` and `Mutation.ping`). Give each operation type its
+  own method with `@GraphQLSchemaCoordinate`. This finding has no `!` line of its own in the manifest (its field lines
+  show the shared method).
+- **Java enum constants without a schema value** (`!unbound Enum#CONSTANT`): such a constant cannot be returned
+  (graphql-java fails to serialize it) and never arrives as an argument.
+- **Dictionary entries for types that are not bound** (`!unusedDictionary Type = Class`), except for allowed
+  unreachable types.
+- **Java interfaces read through an implementation.** An object type mapped to a Java interface that has no bean
+  introspection of its own is read through the introspection of its one `@GraphQLType(TheInterface.class)` class, so
+  a getter only the implementation declares binds silently (see [Java interfaces as object types](#java-interfaces-as-object-types)).
+  Annotate the interface with `@GraphQLType` or `@Introspected`. This finding has no `!` line of its own in the
+  manifest (format version 1 has no kind for it).
+
+All findings except unreachable types are reported in one `StrictModeException`. `!ambiguous` lines are allowed by
+the `precedence` that produced them. Every schema field must be bound in every mode (`MethodNotFoundException`).
+
+With `strict: false` the library binds as before strict mode existed: only object, interface and union types are
+checked for reachability, and the findings appear in the manifest only. `allow-unreachable` may still name unreachable
+enum, input and scalar types, so switching strict mode off never makes a valid configuration fail; without strict mode
+those entries have no effect.
+Checks of Java input classes against the schema's input fields are not part of this mode.
+
 ## Configuration
 
 | Property | Values (default first) | Meaning |
 |---|---|---|
-| `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
-| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable object, interface or union type of the schema, otherwise the startup fails, so the list cannot go stale. |
+| `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding; in [strict mode](#strict-mode) (the default) the same holds for enum, input and scalar types that nothing uses. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
+| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. |
+| `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
+| `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
+| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode). `false` binds as before and only lists them in the manifest. |
+| `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). |
+| `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
 
 ```yaml
 micronaut:
@@ -250,7 +435,8 @@ interface has a bean introspection of its own:
   is read, with all of its getters, including getters that the interface does not declare (the library cannot read
   the interface's methods without an introspection). No such class fails with `ImplementationNotFoundException` and
   several with `MultipleImplementationsFoundException`; annotate the interface with `@GraphQLType` to read all of them
-  and to make implementation-only getters non-candidates.
+  and to make implementation-only getters non-candidates. [Strict mode](#strict-mode), on by default, rejects this
+  case; it binds only with `strict: false`.
 
 A getter that only an implementation class declares is not a property of an interface that has its own
 introspection. A GraphQL field that only such a getter could back fails at startup with `MethodNotFoundException`,

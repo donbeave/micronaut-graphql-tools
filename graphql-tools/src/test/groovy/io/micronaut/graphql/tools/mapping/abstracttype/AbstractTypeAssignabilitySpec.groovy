@@ -356,6 +356,7 @@ type Stray implements Coded {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectMemberMappingException
         e.cause.message == """The union Payload is returned as ${PayloadGraph.name}, but its object type Stray is mapped to ${StrayModel.name}, which is not a ${PayloadGraph.name}, so no object the field returns can resolve to Stray.
+  GraphQL coordinate: Query.payload (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: payload
   Mapped class: ${StrayQuery.name}

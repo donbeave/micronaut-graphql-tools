@@ -90,6 +90,7 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
         e.cause.message == """The return type of the method is not supported for this field: ${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!.
+  GraphQL coordinate: Query.name (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: name
   Mapped class: ${NonNullQuery.name}
@@ -124,6 +125,7 @@ type Holder {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
         e.cause.message == """The return type of the method is not supported for this field: ${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!.
+  GraphQL coordinate: Holder.note (line 11, column 3)
   GraphQL object type: Holder
   GraphQL field: note
   Mapped class: ${Holder.name}

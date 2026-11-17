@@ -18,6 +18,9 @@ import org.intellij.lang.annotations.Language
  */
 class DictionaryJavaInterfaceSpec extends AbstractTest {
 
+    // these Java interfaces have no bean introspection of their own, which strict mode rejects
+    static final Map NOT_STRICT = ['micronaut.graphql.tools.strict': false]
+
     static final String UNION_MEMBER = "DictionaryJavaInterfaceSpec.unionMember"
     static final String INTERFACE_IMPLEMENTATION = "DictionaryJavaInterfaceSpec.interfaceImplementation"
     static final String FIELD_IMPLEMENTATION = "DictionaryJavaInterfaceSpec.fieldImplementation"
@@ -146,7 +149,7 @@ type LongEssay {
 
     void "a union member mapped to a Java interface resolves to the class annotated with @GraphQLType(interface)"() {
         given:
-        startContext(UNION_SCHEMA, UNION_MEMBER)
+        startContext(UNION_SCHEMA, UNION_MEMBER, NOT_STRICT)
 
         when:
         def result = executeQuery("""
@@ -170,7 +173,7 @@ type LongEssay {
 
     void "an implementation of an SDL interface mapped to a Java interface resolves to the class annotated with @GraphQLType(interface)"() {
         given:
-        startContext(INTERFACE_SCHEMA, INTERFACE_IMPLEMENTATION)
+        startContext(INTERFACE_SCHEMA, INTERFACE_IMPLEMENTATION, NOT_STRICT)
 
         when:
         def result = executeQuery("{ shelf { __typename title } }")
@@ -194,7 +197,7 @@ type LongEssay {
 
     void "a field declares the interface and the dictionary maps the GraphQL type to its implementation"() {
         given:
-        startContext(BOOK_SCHEMA, FIELD_INTERFACE)
+        startContext(BOOK_SCHEMA, FIELD_INTERFACE, NOT_STRICT)
 
         when:
         def result = executeQuery("{ book { title } }")
@@ -206,7 +209,7 @@ type LongEssay {
 
     void "one field declares the interface and another its implementation for one GraphQL type"() {
         given:
-        startContext(TWO_FIELDS_SCHEMA, BOTH_FIELDS)
+        startContext(TWO_FIELDS_SCHEMA, BOTH_FIELDS, NOT_STRICT)
 
         when:
         def result = executeQuery("{ book { title } latestBook { title } }")
