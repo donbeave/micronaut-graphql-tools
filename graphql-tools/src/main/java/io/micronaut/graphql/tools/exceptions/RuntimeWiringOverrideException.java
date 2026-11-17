@@ -34,7 +34,7 @@ public final class RuntimeWiringOverrideException extends RuntimeException {
         super("RuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library "
                 + "wired:\n  "
                 + String.join("\n  ", replacements)
-                + "\n  Bind these fields with the library, wrap data fetchers with a SchemaDirectiveWiring, or change "
+                + "\n  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, or change "
                 + "the built schema with a GraphQLSchemaCustomizer.");
 
         this.replacements = List.copyOf(replacements);
