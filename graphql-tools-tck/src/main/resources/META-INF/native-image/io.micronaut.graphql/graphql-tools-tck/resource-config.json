@@ -1,7 +1,8 @@
 {
   "resources": {
     "includes": [
-      { "pattern": "\\Qtck/\\E.*" }
+      { "pattern": "\\Qtck/\\E.*" },
+      { "pattern": "\\Qtck-exemptions.txt\\E" }
     ]
   }
 }
