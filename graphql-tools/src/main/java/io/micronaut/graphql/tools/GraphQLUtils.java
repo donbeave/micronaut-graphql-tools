@@ -26,7 +26,6 @@ import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
-import graphql.schema.idl.DirectiveInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 
@@ -35,9 +34,6 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * @author Alexey Zhokhov
- */
 @Internal
 final class GraphQLUtils {
 
@@ -61,10 +57,6 @@ final class GraphQLUtils {
         throw unsupportedTypeDefinition(typeDefinition);
     }
 
-    /**
-     * @param graphQlType a type reference
-     * @return the type as written in the schema, e.g. {@code [String!]!}
-     */
     static String printType(Type<?> graphQlType) {
         if (graphQlType instanceof NonNullType nonNullType) {
             return printType(nonNullType.getType()) + "!";
@@ -99,16 +91,11 @@ final class GraphQLUtils {
         return new UnsupportedOperationException("Unsupported type definition " + typeDefinition);
     }
 
-    /**
-     * @param typeDefinitionRegistry the schema definitions
-     * @return the enum, input object and scalar types that the arguments of the schema's own directive definitions
-     * use, directly or through input object fields; graphql-java needs them for the directives, so they are reached
-     */
     static Set<String> findDirectiveArgumentTypes(TypeDefinitionRegistry typeDefinitionRegistry) {
         Set<String> result = new HashSet<>();
         Deque<graphql.language.Type<?>> pending = new ArrayDeque<>();
         typeDefinitionRegistry.getDirectiveDefinitions().values().stream()
-                .filter(it -> !DirectiveInfo.isGraphqlSpecifiedDirective(it.getName()))
+                .filter(it -> !GraphQLSpecifiedDirectives.isSpecified(it.getName()))
                 .forEach(it -> it.getInputValueDefinitions().forEach(argument -> pending.add(argument.getType())));
         while (!pending.isEmpty()) {
             String name = getTypeName(pending.poll()).getName();

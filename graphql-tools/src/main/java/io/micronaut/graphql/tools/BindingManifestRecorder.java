@@ -22,7 +22,6 @@ import graphql.language.ObjectTypeDefinition;
 import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
-import graphql.schema.idl.DirectiveInfo;
 import graphql.schema.idl.ScalarInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.aop.Intercepted;
@@ -50,12 +49,6 @@ import java.util.stream.Collectors;
 
 import static io.micronaut.graphql.tools.GraphQLUtils.printType;
 
-/**
- * Records, while the schema is bound, what each manifest line is made of, and renders the lines only when the
- * {@link BindingManifest} is read. Binding records cheap facts (a class, an {@link Argument}, a definition); the text
- * is built from them on the first read, never by reflection, so a start that does not read the manifest does not
- * render it.
- */
 @Internal
 final class BindingManifestRecorder {
 
@@ -68,24 +61,16 @@ final class BindingManifestRecorder {
     private static final String DOT = " · ";
     private static final String NONE = "-";
 
-    // key: what the line describes (a type, a coordinate), so that a later binding of the same coordinate replaces it
     private final Map<String, Supplier<String>> lines = new HashMap<>();
     private final Set<String> diagnostics = new TreeSet<>();
     private final Set<String> ignored = new TreeSet<>();
     private final Set<String> scalars = new TreeSet<>();
     private final boolean recording;
 
-    /**
-     * @param recording whether the facts the manifest is made of are recorded; when {@code false} only the reached
-     *                  scalars are kept, which the unreachable-type check needs, and {@link #build} returns nothing
-     */
     BindingManifestRecorder(boolean recording) {
         this.recording = recording;
     }
 
-    /**
-     * @return whether the manifest facts are recorded; call sites that would allocate to describe a fact ask first
-     */
     boolean isRecording() {
         return recording;
     }
@@ -101,14 +86,6 @@ final class BindingManifestRecorder {
         scalars.add(typeName);
     }
 
-    /**
-     * @param objectTypeDefinition the object type of the field
-     * @param fieldDefinition      the field
-     * @param kind                 {@code root}, {@code resolver} or {@code property}
-     * @param member               the member that binds the field, rendered when the manifest is read
-     * @param declaredType         the declared type of the member
-     * @param subscription         {@code true} for a field of the subscription type
-     */
     void field(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String kind,
                Supplier<String> member, Argument<?> declaredType, boolean subscription) {
         if (!recording) {
@@ -119,14 +96,6 @@ final class BindingManifestRecorder {
                         JavaTypeNames.of(declaredType), ReturnTypes.convertedTypeName(declaredType, subscription)));
     }
 
-    /**
-     * Records a field that a {@link RuntimeWiringCustomizer} claims: the library does not bind it, so it has no Java
-     * member.
-     *
-     * @param objectTypeDefinition the object type of the field
-     * @param fieldDefinition      the field
-     * @param customizer           the class name of the customizer that claims it
-     */
     void claimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String customizer) {
         if (!recording) {
             return;
@@ -173,10 +142,6 @@ final class BindingManifestRecorder {
                 JavaTypeNames.of(property.asArgument()), ReturnTypes.convertedTypeName(property.asArgument(), false)));
     }
 
-    /**
-     * @param kind  the kind of finding, for example {@code unreachable}
-     * @param parts what it is about, separated by {@code " · "} in the line
-     */
     void diagnostic(String kind, String... parts) {
         if (!recording) {
             return;
@@ -186,11 +151,6 @@ final class BindingManifestRecorder {
                 .collect(Collectors.joining(DOT)));
     }
 
-    /**
-     * Records a member marked {@code @GraphQLIgnore}, as an {@code ~ignored} line.
-     *
-     * @param member the member, as the other manifest lines name members
-     */
     void ignored(String member) {
         if (!recording) {
             return;
@@ -198,27 +158,14 @@ final class BindingManifestRecorder {
         ignored.add("~ignored " + requirePart(member));
     }
 
-    /**
-     * @param typeName a scalar
-     * @return {@code true} if a bound field, argument or input field uses it
-     */
     boolean isScalarReached(String typeName) {
         return scalars.contains(typeName);
     }
 
-    /**
-     * @return the diagnostic lines recorded so far
-     */
     Set<String> getDiagnostics() {
         return diagnostics;
     }
 
-    /**
-     * @param registry the schema definitions
-     * @param schema   the schema built from them
-     * @return {@code null} when nothing is recorded, otherwise the manifest, which renders its header, and the
-     * recorded lines plus the scalar lines, sorted, when it is first read
-     */
     @Nullable
     BindingManifest build(TypeDefinitionRegistry registry, GraphQLSchema schema) {
         if (!recording) {
@@ -252,33 +199,17 @@ final class BindingManifestRecorder {
         });
     }
 
-    /**
-     * @param executable a method
-     * @param ownerType  the class the method is declared on, possibly an AOP proxy
-     * @return {@code Class#method(parameter types)}, the types as Micronaut's compile-time metadata describes them
-     */
     static String methodMember(Executable<?, ?> executable, Class<?> ownerType) {
         return userClass(ownerType).getTypeName() + "#" + MicronautUtils.getMethodName(executable)
                 + JavaTypeNames.parameters(executable);
     }
 
-    /**
-     * @param executable a method of a bean introspection ({@code @GraphQLField})
-     * @param beanType   the introspected class
-     * @return {@code Class#method(parameter types)}, the class being the one the method is written in when the
-     * compile-time accessors say so, otherwise the introspected class
-     */
     static String introspectedMethodMember(Executable<?, ?> executable, Class<?> beanType) {
         String member = CompileTimeAccessors.get().get(beanType.getTypeName() + "#"
                 + MicronautUtils.getMethodName(executable) + "/" + executable.getArguments().length);
         return member != null ? member : methodMember(executable, beanType);
     }
 
-    /**
-     * @param beanProperty a bean property
-     * @return {@code Class#getter()}, the class being the one that declares the getter, as the compile-time accessors
-     * say; {@code Class#property} when they do not know the property
-     */
     static String propertyMember(BeanProperty<?, ?> beanProperty) {
         String beanType = beanProperty.getDeclaringBean().getBeanType().getTypeName();
         String member = CompileTimeAccessors.get().get(beanType + "#" + beanProperty.getName());
@@ -297,9 +228,6 @@ final class BindingManifestRecorder {
                 + requirePart(convertedType);
     }
 
-    /**
-     * The manifest is not escaped: a part that contains a separator or a line break cannot be written.
-     */
     private static String requirePart(String part) {
         if (part.contains(ARROW) || part.contains(DOT) || part.contains("\n") || part.contains("\r")) {
             throw new IllegalStateException("Cannot write the binding manifest: \"" + part
@@ -312,11 +240,6 @@ final class BindingManifestRecorder {
         return version == null || version.isBlank() ? "unknown" : version;
     }
 
-    /**
-     * @return the SHA-256 of the definitions of the registry (schema definition first, then every definition by name,
-     * without the scalars and directives graphql-java defines), each printed by {@link AstPrinter}, joined by
-     * {@code LF}
-     */
     private static String schemaSha256(TypeDefinitionRegistry registry) {
         List<Definition<?>> definitions = new ArrayList<>();
         registry.schemaDefinition().ifPresent(definitions::add);
@@ -328,7 +251,7 @@ final class BindingManifestRecorder {
                 .filter(it -> !ScalarInfo.isGraphqlSpecifiedScalar(it.getName()))
                 .forEach(it -> add(named, it.getName(), it));
         registry.getDirectiveDefinitions().values().stream()
-                .filter(it -> !DirectiveInfo.isGraphqlSpecifiedDirective(it.getName()))
+                .filter(it -> !GraphQLSpecifiedDirectives.isProvided(it.getName()))
                 .forEach(it -> add(named, it.getName(), it));
         addExtensions(named, registry.objectTypeExtensions());
         addExtensions(named, registry.interfaceTypeExtensions());

@@ -17,10 +17,6 @@ package io.micronaut.graphql.tools
 
 import spock.lang.Specification
 
-/**
- * The fixed set of {@link Object} signatures that strict mode compares resolver methods against must match the
- * public methods of {@link Object} on the running JDK. Reflection is used here, in the test only.
- */
 class StrictModeChecksSpec extends Specification {
 
     def "the fixed set is the public methods of Object on this JDK"() {

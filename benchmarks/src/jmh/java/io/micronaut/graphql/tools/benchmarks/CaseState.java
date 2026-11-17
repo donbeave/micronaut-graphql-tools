@@ -4,9 +4,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
-/**
- * One application context for all the operations of a benchmark class.
- */
 @State(Scope.Benchmark)
 public class CaseState {
 

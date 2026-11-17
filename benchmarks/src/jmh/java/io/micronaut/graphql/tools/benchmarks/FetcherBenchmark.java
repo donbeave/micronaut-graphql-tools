@@ -10,11 +10,6 @@ import org.openjdk.jmh.annotations.Scope;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Data fetchers the library builds, called with a prepared environment: property fetch (against graphql-java's own
- * {@code PropertyDataFetcher}), root method, type resolver method with its source, a directive-wrapped fetcher and
- * the conversion of arguments.
- */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)

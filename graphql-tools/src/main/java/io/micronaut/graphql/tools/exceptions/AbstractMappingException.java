@@ -33,9 +33,7 @@ public abstract class AbstractMappingException extends RuntimeException {
     }
 
     /**
-     * TODO.
-     *
-     * @return TODO
+     * @return the schema coordinate and Java element the failure is about
      */
     public MappingContext getMappingContext() {
         return mappingContext;

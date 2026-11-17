@@ -13,10 +13,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * A list of an interface type returned as a list of {@link DataFetcherResult}s: each element resolves to its object
- * type, and the local context of each element reaches the resolvers of that object.
- */
 class InterfaceListDataFetcherResultSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InterfaceListDataFetcherResultSpec"

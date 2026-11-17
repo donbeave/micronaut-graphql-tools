@@ -33,25 +33,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * The members of a Java type that Micronaut's bean introspection, which the library reads at runtime, gives it, and
- * which Java type is introspected for a type the schema maps to a Java type:
- * <ul>
- *     <li>properties: public getters {@code getX()} and, for {@code boolean} and {@code Boolean}, {@code isX()}, record
- *     components, and public setters {@code setX(value)} (write-only properties), inherited ones included;</li>
- *     <li>methods annotated {@code @GraphQLField}.</li>
- * </ul>
- */
 final class ModelMembers {
 
     private final JavaTypes javaTypes;
     private final Map<String, List<TypeElement>> implementations = new LinkedHashMap<>();
     private final Set<String> introspectedClasses = new HashSet<>();
 
-    /**
-     * @param javaTypes the type helpers
-     * @param types     the types of the compilation, where implementations of contracts are looked up
-     */
     ModelMembers(JavaTypes javaTypes, Collection<TypeElement> types) {
         this.javaTypes = javaTypes;
         for (TypeElement type : types) {
@@ -64,45 +51,22 @@ final class ModelMembers {
         }
     }
 
-    /**
-     * @param type a class
-     * @return the interface its {@code @GraphQLType(TheInterface.class)} names, if any
-     */
     Optional<TypeElement> contractOf(TypeElement type) {
         return Annotations.find(type, Annotations.TYPE)
                 .flatMap(Annotations::classValue)
                 .filter(it -> it.getKind() == ElementKind.INTERFACE);
     }
 
-    /**
-     * @param contract an interface
-     * @return the classes of the compilation annotated {@code @GraphQLType(contract)}
-     */
     List<TypeElement> implementations(TypeElement contract) {
         return implementations.getOrDefault(javaTypes.name(contract), List.of());
     }
 
-    /**
-     * @param type a Java type
-     * @return whether it has a bean introspection: {@code @GraphQLType}, {@code @GraphQLInput} or {@code @Introspected}
-     * (also as a meta-annotation), or a class of the compilation lists it in {@code @Introspected(classes = ...)}
-     */
     boolean isIntrospected(TypeElement type) {
         return Annotations.has(type, Annotations.TYPE) || Annotations.has(type, Annotations.INPUT)
                 || Annotations.hasStereotype(type, Set.of(Annotations.INTROSPECTED))
                 || introspectedClasses.contains(type.getQualifiedName().toString());
     }
 
-    /**
-     * The Java type whose introspection the library reads for a Java type that a field returns, as
-     * {@code GraphQLBeanIntrospectionRegistry} decides at startup: the contract interface of the class (or the interface
-     * itself) if it has its own introspection; for an interface without one, its single implementation; otherwise the
-     * class itself.
-     *
-     * @param type the Java type a field returns
-     * @return the introspected type, or empty if it cannot be decided here (an interface whose implementations are not
-     * all in this compilation, or that has none or several)
-     */
     Optional<TypeElement> introspectedType(TypeElement type) {
         TypeElement contract = type.getKind() == ElementKind.INTERFACE ? type : contractOf(type).orElse(null);
         if (contract != null && isIntrospected(contract)) {
@@ -115,28 +79,14 @@ final class ModelMembers {
         return Optional.of(type);
     }
 
-    /**
-     * @param type an introspected type
-     * @return the type the library looks type resolvers up for: its contract interface for a class annotated
-     * {@code @GraphQLType(TheInterface.class)}, otherwise the type itself
-     */
     TypeElement sourceClass(TypeElement type) {
         return contractOf(type).orElse(type);
     }
 
-    /**
-     * @param type an introspected type
-     * @param name a property name
-     * @return the property, if the introspection has it
-     */
     Optional<Property> property(TypeElement type, String name) {
         return Optional.ofNullable(properties(type).get(name));
     }
 
-    /**
-     * @param type an introspected type
-     * @return its properties by name, in the order of their accessors
-     */
     Map<String, Property> properties(TypeElement type) {
         Map<String, ExecutableElement> getters = new LinkedHashMap<>();
         Map<String, ExecutableElement> setters = new LinkedHashMap<>();
@@ -168,27 +118,16 @@ final class ModelMembers {
                 setters.containsKey(name) || settable.contains(name))));
         setters.forEach((name, setter) -> result.putIfAbsent(name, new Property(name, setter,
                 javaTypes.memberType(type, setter).getParameterTypes().get(0), true)));
-        // as Micronaut builds the introspection: @Introspected(includes = ...) keeps, excludes = ... drops properties
         result.keySet().removeIf(it -> !includes.isEmpty() && !includes.contains(it) || excludes.contains(it));
         return result;
     }
 
-    /**
-     * @param type an introspected type
-     * @return whether its {@code @Introspected} reads fields ({@code accessKind = FIELD}), which the checks do not
-     * model: such a type is left to the startup
-     */
     boolean usesFieldAccess(TypeElement type) {
         return Annotations.find(type, Annotations.INTROSPECTED)
                 .map(it -> Annotations.stringValues(it, "accessKind").contains("FIELD"))
                 .orElse(false);
     }
 
-    /**
-     * @param type a class
-     * @return the parameter names of the constructor its introspection uses: the one annotated {@code @Creator}, or
-     * the only public one
-     */
     private List<String> constructorParameters(TypeElement type) {
         List<ExecutableElement> constructors = ElementFilter.constructorsIn(type.getEnclosedElements()).stream()
                 .filter(it -> it.getModifiers().contains(Modifier.PUBLIC))
@@ -203,11 +142,6 @@ final class ModelMembers {
         return constructor.getParameters().stream().map(it -> it.getSimpleName().toString()).toList();
     }
 
-    /**
-     * @param type an introspected type
-     * @param name a field name
-     * @return its methods annotated {@code @GraphQLField} of that name
-     */
     List<ExecutableElement> fieldMethods(TypeElement type, String name) {
         return methods(type).stream()
                 .filter(it -> it.getSimpleName().contentEquals(name))
@@ -215,10 +149,6 @@ final class ModelMembers {
                 .toList();
     }
 
-    /**
-     * @param type an introspected type
-     * @return its methods annotated {@code @GraphQLField}
-     */
     List<ExecutableElement> fieldMethods(TypeElement type) {
         return methods(type).stream().filter(it -> Annotations.has(it, Annotations.FIELD)).toList();
     }
@@ -240,11 +170,6 @@ final class ModelMembers {
         return type.getKind() == TypeKind.BOOLEAN || type.toString().equals("java.lang.Boolean");
     }
 
-    /**
-     * @param name a property name after {@code get}, {@code is} or {@code set}
-     * @return the name as a bean property: the first character in lower case, unless the first two are upper case
-     * ({@code URL} stays {@code URL})
-     */
     static String decapitalize(String name) {
         if (name.length() > 1 && Character.isUpperCase(name.charAt(0)) && Character.isUpperCase(name.charAt(1))) {
             return name;
@@ -252,14 +177,6 @@ final class ModelMembers {
         return Character.toLowerCase(name.charAt(0)) + name.substring(1);
     }
 
-    /**
-     * A property of an introspected type.
-     *
-     * @param name     its name
-     * @param accessor its getter, record accessor, or (write-only) setter
-     * @param type     its type, as a member of the introspected type (type variables of a generic superclass replaced)
-     * @param settable whether a request can set it: through a setter, a record component or a constructor parameter
-     */
     record Property(String name, ExecutableElement accessor, TypeMirror type, boolean settable) {
     }
 

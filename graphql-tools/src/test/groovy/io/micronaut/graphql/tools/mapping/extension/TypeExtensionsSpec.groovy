@@ -9,11 +9,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import org.intellij.lang.annotations.Language
 
-/**
- * A field of a type extension ({@code extend type}) is bound and checked like a field of the type itself: by a
- * property, a type resolver or a root resolver, with the same errors, and with its line in the manifest. It is never
- * left to graphql-java's default data fetcher.
- */
 class TypeExtensionsSpec extends AbstractTest {
 
     static final String SPEC_NAME = "TypeExtensionsSpec"

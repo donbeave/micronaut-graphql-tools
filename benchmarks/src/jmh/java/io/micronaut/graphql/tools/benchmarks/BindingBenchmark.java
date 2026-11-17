@@ -15,13 +15,6 @@ import org.openjdk.jmh.annotations.State;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Start-up: binds a generated schema of {@code fields} fields (see {@code generateLargeSchema} in build.gradle.kts) when
- * the application context starts and the {@code GraphQL} bean is created, with the binding manifest recorded or not
- * ({@code micronaut.graphql.tools.manifest.record}). One invocation is one fresh context, started and closed, so the
- * figure includes the part of the start-up that does not depend on the manifest; the difference between the two
- * parameters is what recording costs.
- */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.SingleShotTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -41,7 +34,6 @@ public class BindingBenchmark {
         check();
     }
 
-    // once, outside the measurement: the benchmark measures what it says
     private void check() {
         try (ApplicationContext context = start()) {
             LargeSchema.checkBound(context);

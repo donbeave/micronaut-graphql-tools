@@ -27,9 +27,6 @@ public final class DuplicateDirectiveWiringException extends RuntimeException {
 
     private final List<String> directiveNames;
 
-    /**
-     * @param wirings directive name to the classes of its wirings, in the order to report them
-     */
     public DuplicateDirectiveWiringException(Map<String, List<String>> wirings) {
         super(wirings.entrySet().stream()
                 .map(it -> "More than one SchemaDirective bean wires directive @" + it.getKey() + ": "
@@ -40,9 +37,6 @@ public final class DuplicateDirectiveWiringException extends RuntimeException {
         this.directiveNames = List.copyOf(wirings.keySet());
     }
 
-    /**
-     * @return the directive names that have more than one wiring
-     */
     public List<String> getDirectiveNames() {
         return directiveNames;
     }

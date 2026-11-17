@@ -16,9 +16,6 @@ import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * Every field that cannot be bound is reported at once, each failure with its schema coordinate and source location.
- */
 class BindingFailuresSpec extends AbstractTest {
 
     static final String SPEC_NAME = "BindingFailuresSpec"
@@ -124,8 +121,6 @@ type Book {
     static class Book {
         String title
     }
-
-    // --- interface fields that nothing binds, on several implementations ---
 
     void "interface fields that nothing binds are all reported"() {
         given:

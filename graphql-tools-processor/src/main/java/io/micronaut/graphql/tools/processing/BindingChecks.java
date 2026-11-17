@@ -61,18 +61,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * The checks of the Java code against the schema. They walk the schema from the root operation types the way the
- * library binds it at startup ({@code GraphQLRuntimeWiringGenerator}): a root field binds the root resolver method of
- * its name; the Java type a method or property returns is the Java type of the field's GraphQL type; a field of an
- * object type binds a property or {@code @GraphQLField} method of the introspected Java type, or a type resolver
- * method, as {@code precedence} and {@code resolverDirectives} decide.
- *
- * <p>Where the startup decides with something the compilation does not have, the checks do not guess: they skip that
- * part and record it, so that they never reject what the startup accepts. Such parts are runtime beans (the Java
- * classes of custom scalars, the {@code SchemaMappingDictionary}, and with it the members of unions and interfaces) and
- * implementations of contracts that are not in this compilation.</p>
- */
 final class BindingChecks {
 
     static final String DATA_FETCHING_ENVIRONMENT = "graphql.schema.DataFetchingEnvironment";
@@ -82,9 +70,6 @@ final class BindingChecks {
     static final String OPTIONAL = "java.util.Optional";
     static final String ARGUMENT_VALUE = "io.micronaut.graphql.tools.ArgumentValue";
 
-    /**
-     * The Java types of the built-in scalars, as the library's {@code SystemTypes} lists them.
-     */
     static final Map<String, Set<String>> BUILT_IN_SCALARS = Map.of(
             "String", Set.of("java.lang.String"),
             "ID", Set.of("java.lang.String"),
@@ -120,21 +105,11 @@ final class BindingChecks {
     private final TypeNames typeNames;
     private final Map<String, String> skipped = new TreeMap<>();
     private boolean objectTypesSkipped;
-    // what the manifest leaves out: types whose lines are left out, types to leave out with what only they reach, fields,
-    // and resolver methods whose !unbound line cannot be decided
     private final Set<String> omittedTypes = new TreeSet<>();
     private final Set<String> omissionRoots = new TreeSet<>();
     private final Set<String> omittedFields = new TreeSet<>();
     private final Set<String> undecidedMembers = new TreeSet<>();
 
-    /**
-     * @param registry  the schema
-     * @param options   the options
-     * @param problems  where errors are reported
-     * @param javaTypes the type helpers
-     * @param types     the types of the compilation
-     * @param manifest  where the lines of the binding manifest are recorded
-     */
     BindingChecks(TypeDefinitionRegistry registry, ProcessorOptions options, Problems problems, JavaTypes javaTypes,
                   Collection<TypeElement> types, BindingManifestLines manifest) {
         this.registry = registry;
@@ -148,33 +123,15 @@ final class BindingChecks {
         this.typeNames = new TypeNames(javaTypes);
     }
 
-    /**
-     * @return the parts of the schema the checks could not decide at compile time and left to the startup, by
-     * coordinate, with the reason; the processor reports each as a note
-     */
     Map<String, String> skipped() {
         return skipped;
     }
 
-    /**
-     * Records a part of the schema the checks leave to the startup.
-     *
-     * @param coordinate         the type or field
-     * @param reason             why it cannot be decided here
-     * @param mayReachObjectTypes whether the startup may bind object types through it that the checks therefore do not
-     *                           reach (members of unions and interfaces, fields of unchecked types); a custom scalar or
-     *                           an unchecked input class cannot
-     */
     private void skip(String coordinate, String reason, boolean mayReachObjectTypes) {
         skipped.merge(coordinate, reason, (first, second) -> first.equals(second) ? first : first + "; " + second);
         objectTypesSkipped |= mayReachObjectTypes;
     }
 
-    /**
-     * Runs the checks.
-     *
-     * @param schemaDefinition the schema definition
-     */
     void check(SchemaDefinition schemaDefinition) {
         for (OperationTypeDefinition operation : schemaDefinition.getOperationTypeDefinitions()) {
             operationTypes.add(operation.getTypeName().getName());
@@ -207,12 +164,6 @@ final class BindingChecks {
         recordImplementedInterfaces();
     }
 
-    // ---------------------------------------------------------------- contracts and coordinates (before binding)
-
-    /**
-     * An interface of the compilation that carries a resolver annotation is a contract: exactly one bean must
-     * implement it. Without one its fields are not bound; with two, every field it declares has two methods.
-     */
     private void checkContracts() {
         Map<String, List<Bean>> implementors = new LinkedHashMap<>();
         for (Bean bean : beans.beans()) {
@@ -244,9 +195,6 @@ final class BindingChecks {
         return Annotations.has(type, Annotations.ROOT_RESOLVER) || Annotations.has(type, Annotations.TYPE_RESOLVER);
     }
 
-    /**
-     * Every {@code @GraphQLSchemaCoordinate} is validated, never trusted, as at startup.
-     */
     private void checkSchemaCoordinates() {
         for (Bean bean : beans.beans()) {
             for (Method method : bean.methods()) {
@@ -310,10 +258,6 @@ final class BindingChecks {
         return null;
     }
 
-    /**
-     * A type resolver of several classes binds each method for the class of its first parameter; a method whose first
-     * parameter is none of them fails, as at startup.
-     */
     private void checkTypeResolverAssignments() {
         for (Bean bean : beans.beans()) {
             for (Method method : bean.unassigned()) {
@@ -328,8 +272,6 @@ final class BindingChecks {
         }
     }
 
-    // ---------------------------------------------------------------- binding
-
     private void bindRootField(ObjectTypeDefinition type, FieldDefinition field) {
         String coordinate = type.getName() + "." + field.getName();
         List<Method> candidates = new ArrayList<>();
@@ -343,14 +285,12 @@ final class BindingChecks {
             return;
         }
         if (candidates.size() > 1) {
-            // one finding, reported once, on a method javac compiles in this round where there is one
             Method reported = candidates.stream().filter(it -> types.contains(it.bean().type())).findFirst()
                     .orElse(candidates.get(0));
             problems.error(coordinate, "several root resolver methods can bind the field: "
                     + candidates.stream().map(it -> javaTypes.describe(it.element())).collect(Collectors.joining(", "))
                     + ". Keep one, or scope each to its root operation type with @GraphQLSchemaCoordinate.",
                     field, reported.element());
-            // the error accounts for the methods; they are not also reported as binding no field
             candidates.forEach(it -> shadowedMethods.put(it, true));
             return;
         }
@@ -361,11 +301,6 @@ final class BindingChecks {
         checkMethod(method.element(), method.bean().type(), null, type, field);
     }
 
-    /**
-     * Binds an object type to the Java type a field returns, as {@code processObjectTypeDefinition}: a custom class or
-     * interface, the same (or an alike) Java type wherever the type is reached, with a bean introspection, then each
-     * of its fields.
-     */
     private void bindObjectType(ObjectTypeDefinition type, TypeMirror javaType, String coordinate, Node<?> node,
                                 Element element) {
         TypeElement javaClass = javaTypes.element(javaType);
@@ -399,13 +334,6 @@ final class BindingChecks {
         }
     }
 
-    /**
-     * Records the Java type of a schema type, or checks it against the Java type recorded before: one schema type has
-     * one Java type wherever it is reached. Two Java types bind an object type alike when they have the same contract
-     * and the same introspection.
-     *
-     * @return whether the type is reached for the first time, so that it still has to be checked
-     */
     private boolean mapType(TypeDefinition<?> type, TypeElement javaClass, String coordinate, Node<?> node,
                             Element element) {
         TypeElement previous = processedTypes.get(type.getName());
@@ -434,14 +362,6 @@ final class BindingChecks {
         return firstIntrospection.isPresent() && firstIntrospection.equals(models.introspectedType(second));
     }
 
-    /**
-     * The Java type whose bean introspection binds an object type, as {@code GraphQLBeanIntrospectionRegistry}
-     * decides, with its errors: a contract interface with its own introspection (every class annotated
-     * {@code @GraphQLType(contract)} must implement it); a Java interface without one is read through its single
-     * implementation (a strict-mode finding); a class needs an introspection.
-     *
-     * @return the introspected type, or empty after an error or if it cannot be decided in this compilation
-     */
     private Optional<TypeElement> introspection(ObjectTypeDefinition type, TypeElement javaClass, String coordinate,
                                                 Node<?> node, Element element) {
         TypeElement contract = javaClass.getKind() == ElementKind.INTERFACE ? javaClass
@@ -458,7 +378,6 @@ final class BindingChecks {
             List<TypeElement> implementations = models.implementations(javaClass);
             if (implementations.isEmpty()) {
                 if (isChecked(javaClass)) {
-                    // a JDK interface, or one of this compilation, which no class of a dependency can implement
                     problems.error(coordinate, "the object type " + type.getName() + " is mapped to the Java interface "
                             + javaTypes.name(javaClass) + ", which has no introspection of its own and no class "
                             + "annotated @GraphQLType(" + javaClass.getSimpleName() + ".class). Return a class with a bean "
@@ -517,11 +436,6 @@ final class BindingChecks {
         return false;
     }
 
-    /**
-     * @return whether the processor can tell that a Java type has no bean introspection: it is in this compilation
-     * (a source, or, in an incremental compilation, an unchanged class of the class output), or a JDK class, which never
-     * has one
-     */
     private boolean isChecked(TypeElement javaClass) {
         return types.contains(javaClass) || javaClass.getQualifiedName().toString().startsWith("java.")
                 || javaTypes.isInClassOutput(javaClass);
@@ -531,10 +445,6 @@ final class BindingChecks {
         return BUILT_IN_SCALARS.values().stream().anyMatch(it -> it.contains(javaName));
     }
 
-    /**
-     * Checks an enum, as {@code processEnumTypeDefinition}: a Java enum with a constant for every schema value, and in
-     * strict mode no constant without a schema value.
-     */
     private void checkEnumType(EnumTypeDefinition type, TypeMirror javaType, boolean input, String coordinate,
                                Node<?> node, Element element) {
         TypeElement javaClass = javaTypes.element(javaType);
@@ -576,10 +486,6 @@ final class BindingChecks {
         }
     }
 
-    /**
-     * Checks a union or interface a field returns: the field must declare a Java interface. Its members come from the
-     * {@code SchemaMappingDictionary}, a runtime bean, so they are not checked here.
-     */
     private void checkAbstractType(TypeDefinition<?> type, TypeMirror javaType, String coordinate, Node<?> node,
                                    Element element) {
         TypeElement javaClass = javaTypes.element(javaType);
@@ -598,11 +504,6 @@ final class BindingChecks {
         }
     }
 
-    /**
-     * Binds an input type, as {@code processInputObjectTypeDefinition}: an introspected class with a property for every
-     * input field, of a matching type, and, in strict mode or with {@code input.unmappedProperties=fail}, no property
-     * a request can set that the input type does not define.
-     */
     private void bindInputType(InputObjectTypeDefinition type, TypeMirror javaType, String coordinate, Node<?> node,
                                Element element) {
         TypeElement javaClass = javaTypes.element(javaType);
@@ -705,12 +606,10 @@ final class BindingChecks {
                             + "field. Remove one, mark the field with a directive listed in "
                             + ProcessorOptions.RESOLVER_DIRECTIVES + ", or set " + ProcessorOptions.PRECEDENCE + ".",
                             field, resolvers.get(0).element());
-                    // the error accounts for the method; it is not also reported as binding no field
                     resolvers.forEach(it -> shadowedMethods.put(it, true));
                     return;
                 }
                 if (directive == null) {
-                    // the precedence decides; the manifest records that it had to
                     manifest.diagnostic("ambiguous", coordinate, Stream.concat(
                             Stream.of(property.map(it -> propertyMember(it, introspected))
                                     .orElseGet(() -> methodMember(fieldMethods.get(0), introspected))),
@@ -804,10 +703,6 @@ final class BindingChecks {
         return result;
     }
 
-    /**
-     * @return whether a type resolver of a Java interface that the introspected type implements has a method of the
-     * field's name: only then can the startup bind a field an SDL interface declares through that interface
-     */
     private boolean hasInterfaceResolver(TypeElement introspected, String fieldName) {
         for (Bean bean : beans.beans()) {
             for (TypeElement modelClass : bean.contracts().values()) {
@@ -842,14 +737,6 @@ final class BindingChecks {
         boundMethods.computeIfAbsent(method, it -> new TreeSet<>()).add(coordinate);
     }
 
-    // ---------------------------------------------------------------- methods, arguments and return types
-
-    /**
-     * Checks the parameters and the return type of a method that binds a field: the number of parameters besides
-     * {@code DataFetchingEnvironment}, the source object first for a type resolver, then one parameter per argument in
-     * the order of the schema. The types are those of the method as a member of its bean or introspected class, so that
-     * a method a generic superclass declares is checked with the type arguments the class gives it.
-     */
     private void checkMethod(ExecutableElement method, TypeElement owner, TypeElement sourceClass,
                              ObjectTypeDefinition type, FieldDefinition field) {
         String coordinate = type.getName() + "." + field.getName();
@@ -888,10 +775,6 @@ final class BindingChecks {
                 coordinate, field, method);
     }
 
-    /**
-     * Checks the Java type of a field: the wrappers graphql-java resolves (as the library's {@code ReturnTypes}), lists,
-     * built-in scalars, and object types, which it then binds.
-     */
     private void checkReturnType(TypeMirror javaType, Type<?> graphQlType, boolean fieldLevel, boolean subscription,
                                  String coordinate, Node<?> node, Element element) {
         TypeMirror type = unwrapReturnType(javaType, graphQlType, fieldLevel, subscription, coordinate, node, element);
@@ -939,14 +822,6 @@ final class BindingChecks {
         }
     }
 
-    /**
-     * Removes the wrappers graphql-java resolves around the value of a field, in its order, as the library's
-     * {@code ReturnTypes.unwrap}: {@code CompletionStage} (field level only), {@code Publisher} (required on fields of the
-     * subscription type, allowed nowhere else), {@code DataFetcherResult}, {@code Optional} (nullable types only), each
-     * at most once.
-     *
-     * @return the unwrapped type, or {@code null} after an error
-     */
     private TypeMirror unwrapReturnType(TypeMirror javaType, Type<?> graphQlType, boolean fieldLevel,
                                         boolean subscription, String coordinate, Node<?> node, Element element) {
         TypeMirror result = javaType;
@@ -1027,10 +902,6 @@ final class BindingChecks {
         return result;
     }
 
-    /**
-     * Checks the Java type of an argument or an input field: {@code ArgumentValue}, lists and built-in scalars, and a
-     * primitive for a nullable type (always an error for a custom scalar, in strict mode for a built-in one).
-     */
     private void checkInputType(TypeMirror javaType, Type<?> graphQlType, boolean fieldLevel, String coordinate,
                                 Node<?> node, Element element) {
         TypeMirror type = javaType;
@@ -1097,12 +968,6 @@ final class BindingChecks {
         }
     }
 
-    // ---------------------------------------------------------------- after binding
-
-    /**
-     * Every method of a resolver bean that can bind a field must bind one: a strict-mode error, and an
-     * {@code !unbound} line of the manifest without strict mode.
-     */
     private void checkUnboundMethods() {
         for (Bean bean : beans.beans()) {
             for (Method method : bean.methods()) {
@@ -1125,10 +990,6 @@ final class BindingChecks {
         }
     }
 
-    /**
-     * @return whether the class the type resolver method resolves was bound, or the checks covered the whole schema;
-     * otherwise its type may be bound through a part the checks skip, and the method may bind there
-     */
     private boolean reachedModelClass(Bean bean, Method method) {
         if (!objectTypesSkipped) {
             return true;
@@ -1137,10 +998,6 @@ final class BindingChecks {
                 .anyMatch(it -> it.getValue().contains(method) && traversedModelClasses.contains(it.getKey()));
     }
 
-    /**
-     * Strict mode: a root resolver method without a coordinate that binds the field of its name on several root
-     * operation types.
-     */
     private void checkSharedRootMethods() {
         if (!options.strict()) {
             return;
@@ -1154,9 +1011,6 @@ final class BindingChecks {
         });
     }
 
-    /**
-     * A method with a coordinate must bind exactly the field it names.
-     */
     private void checkSchemaCoordinateBindings(SchemaDefinition schemaDefinition) {
         Set<String> reachable = new SchemaChecks(registry, options, problems).reachableTypes(schemaDefinition);
         for (Bean bean : beans.beans()) {
@@ -1197,18 +1051,6 @@ final class BindingChecks {
         return javaType == null ? "" : " (" + typeName + " is mapped to " + javaTypes.name(javaType) + ")";
     }
 
-    // ---------------------------------------------------------------- manifest
-
-    /**
-     * The accessors of every introspected type of the compilation, as the lines of
-     * {@value BindingManifestLines#ACCESSORS_PATH}: {@code Type#property → Class#getter()} for each property and
-     * {@code Type#method/arity → Class#method(parameter types)} for each {@code @GraphQLField} method whose name and
-     * parameter count are unique in the type. The startup renders the member of a property or method binding from
-     * these lines: Micronaut's introspection does not say which method reads a property, and reflection must not
-     * decide it.
-     *
-     * @return the lines, sorted
-     */
     List<String> accessors() {
         Set<String> lines = new TreeSet<>();
         for (TypeElement type : types) {
@@ -1230,14 +1072,6 @@ final class BindingChecks {
         return List.copyOf(lines);
     }
 
-    /**
-     * What the manifest leaves out, because the startup decides it with runtime beans, as the lines of
-     * {@value BindingManifestLines#OMITTED_PATH}: the line kinds the processor never writes, every type whose lines it
-     * leaves out (the types it skipped, and every type that only the skipped parts reach: members of unions and
-     * interfaces and what they reach), fields, and resolver methods whose {@code !unbound} line it cannot decide.
-     *
-     * @return the lines, sorted within each kind
-     */
     List<String> omissions() {
         Set<String> types = new TreeSet<>(omittedTypes);
         Deque<String> pending = new ArrayDeque<>(omissionRoots);
@@ -1250,17 +1084,14 @@ final class BindingChecks {
             }
             if (!processedTypes.containsKey(name) && !operationTypes.contains(name) && !manifest.hasType(name)
                     && registry.getType(name).filter(it -> !(it instanceof ScalarTypeDefinition)).isPresent()) {
-                // scalar lines are left out as a kind
                 types.add(name);
             }
             if (processedTypes.containsKey(name) && !omittedTypes.contains(name)) {
-                // bound here: what it reaches was bound or omitted on its own
                 continue;
             }
             pending.addAll(reachedTypes(name));
         }
         List<String> result = new ArrayList<>(List.of("kind resolves", "kind scalar", "kind unusedDictionary",
-                // directive wirings are runtime beans
                 "kind unwiredDirective"));
         types.forEach(it -> result.add("type " + it));
         omittedFields.forEach(it -> result.add("field " + it));
@@ -1284,10 +1115,6 @@ final class BindingChecks {
         field.getInputValueDefinitions().forEach(it -> omissionRoots.add(SchemaChecks.typeName(it.getType())));
     }
 
-    /**
-     * @return the types the binding of a type reaches: of its fields, arguments and input fields, its members or
-     * implementations, and the interfaces it implements
-     */
     private List<String> reachedTypes(String name) {
         List<String> result = new ArrayList<>();
         TypeDefinition<?> type = registry.getType(name).orElse(null);
@@ -1305,11 +1132,6 @@ final class BindingChecks {
         return result;
     }
 
-    /**
-     * An interface that no field returns but that a bound object type implements, as the library's
-     * {@code wireInterfaceTypeResolvers}. The object types bound through the {@code SchemaMappingDictionary} are not
-     * known here, so an interface only they implement has no line.
-     */
     private void recordImplementedInterfaces() {
         registry.getTypes(InterfaceTypeDefinition.class).stream()
                 .filter(it -> !processedTypes.containsKey(it.getName()))
@@ -1324,40 +1146,19 @@ final class BindingChecks {
                 typeNames.converted(declaredType, subscription));
     }
 
-    /**
-     * @param method a method of a resolver bean
-     * @return its return type seen from the bean, which decides the type variables it inherits
-     */
     private TypeMirror resolverReturnType(Method method) {
         return javaTypes.memberType(method.bean().type(), method.element()).getReturnType();
     }
 
-    /**
-     * @param method a method of a resolver bean
-     * @return {@code Bean#method(generic parameter types)}: the class is the bean, also for a method it inherits, as the
-     * library's manifest names a resolver method (Micronaut's executable method of the bean, AOP proxy unwrapped); the
-     * parameter types are seen from the bean, as Micronaut's compile-time metadata gives them
-     */
     private String beanMethodMember(Method method) {
         return method.bean().name() + "#" + method.element().getSimpleName() + typeNames.parameters(method.bean().type(), method.element());
     }
 
-    /**
-     * @param method a {@code @GraphQLField} method of a model
-     * @return {@code Class#method(generic parameter types)}, the class being the one the method is written in, as the
-     * library's manifest names a method of an introspection
-     */
     private String methodMember(ExecutableElement method, TypeElement introspected) {
         return javaTypes.name((TypeElement) method.getEnclosingElement()) + "#" + method.getSimpleName()
                 + typeNames.parameters(introspected, method);
     }
 
-    /**
-     * @param property     a property
-     * @param introspected the introspected type
-     * @return {@code Class#getter()}, the class being the one that declares the getter (or record accessor); for a
-     * property without one, {@code IntrospectedType#property}, as the library's manifest names a property
-     */
     private String propertyMember(Property property, TypeElement introspected) {
         ExecutableElement accessor = property.accessor();
         if (accessor.getParameters().isEmpty()) {
@@ -1365,8 +1166,6 @@ final class BindingChecks {
         }
         return javaTypes.name(introspected) + "#" + property.name();
     }
-
-    // ---------------------------------------------------------------- messages
 
     private String describeMember(Optional<Property> property, List<ExecutableElement> fieldMethods) {
         return property.map(it -> "the property " + javaTypes.describe(it.accessor()))
@@ -1387,10 +1186,6 @@ final class BindingChecks {
         return "(" + String.join(", ", parameters) + ")";
     }
 
-    /**
-     * @param type a type reference
-     * @return the type as the schema language writes it
-     */
     static String printType(Type<?> type) {
         if (type instanceof NonNullType nonNull) {
             return printType(nonNull.getType()) + "!";

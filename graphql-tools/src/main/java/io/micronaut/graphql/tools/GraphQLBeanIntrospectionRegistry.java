@@ -33,20 +33,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * @author Alexey Zhokhov
- */
 @Internal
 final class GraphQLBeanIntrospectionRegistry {
 
     private final Map<Class<?>, BeanIntrospection<Object>> typeIntrospections = new HashMap<>();
 
-    // key: key interface
-    // value: implemented classes
     private final Map<Class<?>, List<Class<?>>> interfaceToImplementation = new HashMap<>();
 
-    // key: key interface
-    // value: implemented classes
     private final Map<Class<?>, Class<?>> implementationToInterface = new HashMap<>();
 
     private boolean typeIntrospectionsLoaded = false;
@@ -79,24 +72,6 @@ final class GraphQLBeanIntrospectionRegistry {
         typeIntrospectionsLoaded = true;
     }
 
-    /**
-     * Finds the bean introspection that the properties of a GraphQL object type mapped to {@code clazz} are read
-     * through.
-     *
-     * <ul>
-     *     <li>An interface with a bean introspection of its own (annotated with {@code @GraphQLType} or
-     *     {@code @Introspected}), and a class annotated with {@code @GraphQLType(thatInterface)}: the interface's
-     *     introspection. It reads an object of any class implementing the interface, and getters that only an
-     *     implementation declares are not properties.</li>
-     *     <li>An interface without an introspection of its own: the introspection of the one class annotated with
-     *     {@code @GraphQLType(thatInterface)}.</li>
-     *     <li>Any other class: its own introspection.</li>
-     * </ul>
-     *
-     * @param mappingContext the mapping context for errors
-     * @param clazz          the declared Java type
-     * @return the bean introspection
-     */
     BeanIntrospection<Object> getGraphQlTypeBeanIntrospection(
             MappingContext mappingContext,
             Class<?> clazz
@@ -161,32 +136,18 @@ final class GraphQLBeanIntrospectionRegistry {
         return BeanIntrospector.SHARED.findIntrospection((Class<Object>) interfaceClass);
     }
 
-    /**
-     * @param interfaceClass a Java interface
-     * @return the classes annotated with {@code @GraphQLType(interfaceClass)}, or an empty list
-     */
     List<Class<?>> getImplementationClasses(Class<?> interfaceClass) {
         loadTypeIntrospections();
 
         return interfaceToImplementation.getOrDefault(interfaceClass, List.of());
     }
 
-    /**
-     * @return the concrete classes with a bean introspection (of any annotation), from the introspection metadata that
-     * the compiler generated, which a native image has too
-     */
     List<Class<?>> getIntrospectedClasses() {
         return BeanIntrospector.SHARED.findIntrospectedTypes(reference -> true).stream()
                 .filter(it -> !it.isInterface() && !Modifier.isAbstract(it.getModifiers()))
                 .toList();
     }
 
-    /**
-     * Get interface by class implementation or return the current class if it's not implement any interfaces.
-     *
-     * @param implementationClass the implementation class
-     * @return original class or interface class
-     */
     Class getInterfaceClass(Class implementationClass) {
         loadTypeIntrospections();
 

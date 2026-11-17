@@ -14,12 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The binding manifest that the compile-time checks wrote to the class output equals the one the startup builds,
- * without exactly the lines the processor says it left out (binding-manifest-omitted.txt): here the scalar and
- * resolves lines, and the members of the {@code Error} union, which the {@code SchemaMappingDictionary} binds, with the
- * enums only they use. The test names no type itself.
- */
 @MicronautTest(startApplication = false)
 class CompileTimeManifestTest {
 
@@ -41,7 +35,6 @@ class CompileTimeManifestTest {
         assertTrue(compiled.subList(0, 4).stream().anyMatch(it -> it.startsWith(GRAPHQL_JAVA_LINE)), String.valueOf(compiled));
         assertEquals(bindingManifest.getLines().stream().filter(line -> !isOmitted(line, omitted)).toList(),
                 compiled.subList(4, compiled.size()));
-        // the processor left out only what runtime beans decide: the dictionary's union members
         assertTrue(omitted.contains("type SecurityError"), String.valueOf(omitted));
     }
 
@@ -56,11 +49,6 @@ class CompileTimeManifestTest {
         }
     }
 
-    /**
-     * The rule of the record: {@code kind K} every line of kind K (a binding line or a {@code !K} line),
-     * {@code type T} every line about T, {@code field T.f} the line of the field, {@code unbound M} the line
-     * {@code !unbound M}.
-     */
     private static boolean isOmitted(String line, List<String> omitted) {
         for (String entry : omitted) {
             String kind = entry.substring(0, entry.indexOf(' '));

@@ -27,18 +27,12 @@ public final class InvalidSchemaCoordinateException extends RuntimeException {
 
     private final List<String> problems;
 
-    /**
-     * @param problems one line per invalid coordinate, in the order to report them
-     */
     public InvalidSchemaCoordinateException(List<String> problems) {
         super(buildMessage(problems));
 
         this.problems = List.copyOf(problems);
     }
 
-    /**
-     * @return one line per invalid coordinate
-     */
     public List<String> getProblems() {
         return problems;
     }

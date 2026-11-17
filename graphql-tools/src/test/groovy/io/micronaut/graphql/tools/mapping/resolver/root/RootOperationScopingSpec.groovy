@@ -14,11 +14,6 @@ import reactor.core.publisher.Flux
 
 import java.time.Duration
 
-/**
- * Root resolver methods are scoped per root operation type: a method with a {@link GraphQLSchemaCoordinate} binds the
- * field of exactly that operation type, a method of a bean without coordinates binds the field of its name on every
- * operation type, and more than one candidate for one root field is an error, never "first bean wins".
- */
 class RootOperationScopingSpec extends AbstractTest {
 
     static final String SPEC_NAME = "RootOperationScopingSpec"
@@ -92,8 +87,6 @@ type Subscription {
         }
     }
 
-    // --- a method without a coordinate binds the field of its name on every operation type ---
-
     void "a root method without a coordinate binds the field of its name on every operation type"() {
         given:
         startContext("""
@@ -128,8 +121,6 @@ type Mutation {
         }
     }
 
-    // --- a coordinate method does not bind the field of the same name on another operation type ---
-
     void "a field whose name only a coordinate of another operation type matches is not bound"() {
         given:
         startContext(SCHEMA.replace('\ntype Subscription {\n  status(id: ID!): String!\n}\n', '')
@@ -155,8 +146,6 @@ type Mutation {
             return 'query ' + id
         }
     }
-
-    // --- two candidates for one root field ---
 
     void "two root resolver beans with a method of one field name fail the startup, whatever the bean order"() {
         given:

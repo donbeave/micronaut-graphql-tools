@@ -34,17 +34,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-/**
- * The checks of strict mode that need the complete binding: each finding becomes a {@code !} line of the binding
- * manifest, whether or not strict mode is on, and a problem that strict mode fails on.
- */
 @Internal
 final class StrictModeChecks {
 
-    /**
-     * The public methods of {@link Object}, as {@link #signature(String, Class[])} names them. A fixed set, so that
-     * the check neither reflects on {@link Object} nor throws.
-     */
     static final Set<String> OBJECT_METHOD_SIGNATURES = Set.of(
             "equals(java.lang.Object)",
             "hashCode()",
@@ -63,21 +55,10 @@ final class StrictModeChecks {
         this.manifestRecorder = manifestRecorder;
     }
 
-    /**
-     * @return one line per finding, in the order the checks ran, each sorted
-     */
     List<String> getProblems() {
         return problems;
     }
 
-    /**
-     * A public method of a resolver bean that binds no field is either dead or bound by a name that no longer matches
-     * the schema. On a bean that uses {@code @GraphQLSchemaCoordinate}, only the annotated methods count.
-     *
-     * @param methods      the methods that can bind a field
-     * @param boundMethods the methods bound to a field or left unbound by the precedence, as
-     *                     {@link GraphQLResolversRegistry#describeMethod} names them
-     */
     void unboundResolverMethods(List<BeanDefinitionAndMethod> methods, Set<String> boundMethods) {
         Map<String, String> findings = new TreeMap<>();
         for (BeanDefinitionAndMethod method : methods) {
@@ -98,11 +79,6 @@ final class StrictModeChecks {
         });
     }
 
-    /**
-     * Lists the resolver methods marked {@code @GraphQLIgnore} in the manifest.
-     *
-     * @param methods the ignored methods
-     */
     void ignoredResolverMethods(List<BeanDefinitionAndMethod> methods) {
         for (BeanDefinitionAndMethod method : methods) {
             manifestRecorder.ignored(BindingManifestRecorder.methodMember(method.getExecutableMethod(),
@@ -110,12 +86,6 @@ final class StrictModeChecks {
         }
     }
 
-    /**
-     * One root resolver method without a coordinate binds the field of its name on every root operation type; a
-     * subscription and a query rarely want the same method.
-     *
-     * @param rootMethodBindings key: root resolver method, value: the root fields it is bound to
-     */
     void rootMethodsOfSeveralOperationTypes(Map<ExecutableMethod<?, ?>, Set<String>> rootMethodBindings) {
         Map<String, Set<String>> findings = new TreeMap<>();
         rootMethodBindings.forEach((method, coordinates) -> {
@@ -128,42 +98,21 @@ final class StrictModeChecks {
                 + ". Give each operation type its own method with @GraphQLSchemaCoordinate(\"Type.field\")."));
     }
 
-    /**
-     * @return {@code true} for a method that overrides or is a public method of {@link Object}, such as
-     * {@code toString()}: it cannot be made non-public and binds no field by design
-     */
     private static boolean isObjectMethod(ExecutableMethod<?, ?> method) {
         return method.getDeclaringType() == Object.class
                 || isObjectSignature(method.getMethodName(), method.getArgumentTypes());
     }
 
-    /**
-     * @param name           the method name
-     * @param parameterTypes the parameter types, erased
-     * @return {@code true} when {@link Object} has a public method with this name and these parameter types
-     */
     static boolean isObjectSignature(String name, Class<?>[] parameterTypes) {
         return OBJECT_METHOD_SIGNATURES.contains(signature(name, parameterTypes));
     }
 
-    /**
-     * @param name           the method name
-     * @param parameterTypes the parameter types, erased
-     * @return the method name and its parameter type names, such as {@code wait(long,int)}
-     */
     static String signature(String name, Class<?>[] parameterTypes) {
         return Arrays.stream(parameterTypes)
                 .map(Class::getName)
                 .collect(Collectors.joining(",", name + "(", ")"));
     }
 
-    /**
-     * A Java enum constant without a value of the schema enum cannot be returned (graphql-java fails to serialize it)
-     * and never arrives as an argument.
-     *
-     * @param boundTypes the bound types and their Java types, by name
-     * @param registry   the schema definitions
-     */
     void unboundEnumConstants(Map<String, Class<?>> boundTypes, TypeDefinitionRegistry registry) {
         new TreeMap<>(boundTypes).forEach((name, enumClass) -> {
             EnumTypeDefinition enumDefinition = registry.getType(name, EnumTypeDefinition.class).orElse(null);
@@ -196,11 +145,6 @@ final class StrictModeChecks {
         });
     }
 
-    /**
-     * @param enumClass a Java enum
-     * @return the names of its constants marked {@code @GraphQLIgnore}, read from the annotation metadata of its bean
-     * introspection (empty without one)
-     */
     private static Set<String> ignoredEnumConstants(Class<?> enumClass) {
         Set<String> names = new HashSet<>();
         BeanIntrospector.SHARED.findIntrospection((Class<Object>) enumClass).ifPresent(introspection -> {
@@ -213,14 +157,6 @@ final class StrictModeChecks {
         return names;
     }
 
-    /**
-     * A {@link SchemaMappingDictionary} entry for a type that is not bound is stale or misspelled. Entries for types
-     * that are unreachable and allowed are expected.
-     *
-     * @param dictionary   the dictionary entries
-     * @param boundTypes   the names of the bound types
-     * @param allowedTypes the unreachable types that are allowed
-     */
     void unusedDictionaryEntries(Map<String, Class<?>> dictionary, Collection<String> boundTypes,
                                  Set<String> allowedTypes) {
         new TreeMap<>(dictionary).forEach((name, clazz) -> {
@@ -232,12 +168,6 @@ final class StrictModeChecks {
         });
     }
 
-    /**
-     * An object type mapped to a Java interface that has no bean introspection of its own is read through the
-     * introspection of its one implementation, so a getter that only the implementation declares binds silently.
-     *
-     * @param interfaces key: object type, value: the interface and the implementation whose introspection is read
-     */
     void interfacesReadThroughImplementations(Map<String, List<Class<?>>> interfaces) {
         interfaces.forEach((name, classes) -> problems.add("The type " + name + " is mapped to the interface "
                 + classes.get(0).getName() + ", which has no bean introspection of its own, so its properties are "

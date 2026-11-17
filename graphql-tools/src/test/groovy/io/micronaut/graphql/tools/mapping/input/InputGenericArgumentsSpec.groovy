@@ -9,11 +9,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import org.intellij.lang.annotations.Language
 
-/**
- * Arguments whose Java type is generic ({@code List<Input>}, {@code List<Enum>}, nested lists, {@code Set<Input>}) are
- * converted with their full generic type, so the resolver receives instances of the declared element classes. Input
- * objects with generic fields keep working.
- */
 class InputGenericArgumentsSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InputGenericArgumentsSpec"

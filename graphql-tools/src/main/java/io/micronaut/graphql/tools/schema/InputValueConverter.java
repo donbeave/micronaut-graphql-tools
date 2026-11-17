@@ -51,9 +51,6 @@ public final class InputValueConverter {
         this.omissionPlans = omissionPlans;
     }
 
-    /**
-     * @return the mapper that converts the values
-     */
     public ObjectMapper getObjectMapper() {
         return objectMapper;
     }
@@ -96,9 +93,6 @@ public final class InputValueConverter {
         return converted;
     }
 
-    /**
-     * Visits only what the plans name: no other getter of an input class is called.
-     */
     private void fillOmitted(@Nullable Object value) {
         if (value == null) {
             return;

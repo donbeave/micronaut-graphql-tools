@@ -29,9 +29,6 @@ import java.util.List;
 @ConfigurationProperties(GraphQLToolsConfiguration.PREFIX)
 public class GraphQLToolsConfiguration {
 
-    /**
-     * The prefix of all options.
-     */
     public static final String PREFIX = "micronaut.graphql.tools";
 
     /**

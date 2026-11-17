@@ -1,1 +1,6 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+The library's runtime bytecode targets Java 17. The annotation processor module, `graphql-tools-processor`, targets Java 21 for now, so its javac must run on JDK 21 or later. The library is tested on JDK 17, 21 and 25, with the graphql-java floor, default and ceiling legs on 25, and natively on Oracle GraalVM 25.
+
+Required versus canary:
+
+* Required (blocks merges): JDK 17, 21 and 25, the graphql-java floor, default and ceiling legs.
+* Canary (never blocks a merge, runs on `master`, daily and on demand): JDK 27, the newest graphql-java, the newest Kotlin and native on the newest graphql-java.

@@ -39,9 +39,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * The binding manifest: one line per schema coordinate, saying which Java member serves it.
- */
 class BindingManifestSpec extends AbstractTest {
 
     static final String SPEC_NAME = "BindingManifestSpec"
@@ -137,7 +134,8 @@ type Legacy {
         manifest.header.size() == 4
         manifest.header[0] == '# graphql-binding-manifest 1'
         manifest.header[1] == '# binder: micronaut-graphql-tools unknown'
-        manifest.header[2] ==~ /# graphql-java: \d+\.\d+(\.\d+)?/
+        // graphql-java 26 declares no version in its jar (no Bundle-Version), and the header says unknown then
+        manifest.header[2] ==~ (hasBundleVersion() ? /# graphql-java: \d+\.\d+(\.\d+)?/ : /# graphql-java: unknown/)
         manifest.header[3] ==~ /# schema-sha256: [0-9a-f]{64}/
         manifest.render() == manifest.header.join('\n') + '\n' + manifest.lines.join('\n') + '\n'
         manifest.lines == manifest.lines.toSorted()
@@ -286,8 +284,6 @@ type Legacy {
         ]
     }
 
-    // --- AOP proxies ---
-
     void "a method of an intercepted resolver is named on the class the user wrote, not on the proxy"() {
         given:
         startContext("""
@@ -372,8 +368,6 @@ type Book {
         }
     }
 
-    // --- writing at startup ---
-
     void "with manifest.enabled the manifest is written to manifest.path at startup"() {
         given:
         Path path = Files.createTempDirectory('manifest').resolve('out/binding-manifest.txt')
@@ -427,8 +421,6 @@ type Book {
         e.message == 'Cannot write the binding manifest: "a · b" contains a separator ("→" or "·") or a line break.'
     }
 
-    // --- types that only directive definitions use ---
-
     void "enum, input and scalar types that only directive definitions use are not unreachable"() {
         given:
         startContext("""
@@ -479,8 +471,6 @@ type Query {
             return 'label'
         }
     }
-
-    // --- generic types the compile-time metadata does not keep ---
 
     void "a property the compile-time record does not know is named by its introspected class and its name"() {
         given:
@@ -596,4 +586,11 @@ type Book {
         String title
     }
 
+
+    private static boolean hasBundleVersion() {
+        Collections.list(graphql.GraphQL.classLoader.getResources("META-INF/MANIFEST.MF")).any {
+            def attributes = it.openStream().withCloseable { new java.util.jar.Manifest(it) }.mainAttributes
+            attributes.getValue("Bundle-SymbolicName") == "graphql-java" && attributes.getValue("Bundle-Version")
+        }
+    }
 }

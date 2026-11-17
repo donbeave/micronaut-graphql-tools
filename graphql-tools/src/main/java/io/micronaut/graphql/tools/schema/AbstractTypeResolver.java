@@ -58,10 +58,8 @@ public final class AbstractTypeResolver implements TypeResolver {
     private final String abstractTypeKind;
     private final String abstractTypeName;
 
-    // exact class -> object type name
     private final Map<Class<?>, String> exactClasses;
 
-    // object type name -> the Java type it is mapped to, sorted by name
     private final Map<String, Class<?>> objectTypes;
 
     // runtime class -> object type name, or the error message; held by the class itself, so never a strong reference
@@ -90,7 +88,6 @@ public final class AbstractTypeResolver implements TypeResolver {
 
     @Override
     public GraphQLObjectType getType(TypeResolutionEnvironment env) {
-        // the schema of the execution, not the one the binding saw: a replaced schema has its own object types
         GraphQLSchema schema = env.getSchema();
         Resolution resolution = resolutions.get(env.getObject().getClass());
 
@@ -144,7 +141,6 @@ public final class AbstractTypeResolver implements TypeResolver {
                 .toList();
     }
 
-    // the most specific candidate: its Java type is a subtype of every other candidate's Java type
     private List<String> mostSpecific(List<String> candidates) {
         return candidates.stream()
                 .filter(it -> candidates.stream()
@@ -173,9 +169,6 @@ public final class AbstractTypeResolver implements TypeResolver {
                 + abstractTypeName;
     }
 
-    /**
-     * @return how many object types the union or interface has a Java type for
-     */
     public int getObjectTypeCount() {
         return objectTypes.size();
     }

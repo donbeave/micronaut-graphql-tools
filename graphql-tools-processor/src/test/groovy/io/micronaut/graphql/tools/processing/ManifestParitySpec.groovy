@@ -2,32 +2,9 @@ package io.micronaut.graphql.tools.processing
 
 import spock.lang.Specification
 
-/**
- * The binding manifest the processor writes equals the manifest the library builds at startup for the same code,
- * schema and options. Each case compiles its fixtures with this processor and Micronaut's, as a build does, then starts
- * the compiled application with the library and compares the two manifests.
- *
- * <p><b>The parity rule.</b></p>
- * <ul>
- *     <li>Header: the four lines are the same. The {@code # binder:} line names the version of the jar the code runs
- *     from; here the processor runs from its class directory, so it says {@code unknown} where the library jar says
- *     its version. Built from jars of one release, the headers are identical.</li>
- *     <li>Body: every line the processor writes is a line of the startup manifest, byte for byte. The startup manifest
- *     has additional lines only of the kinds that depend on runtime beans the processor cannot see:
- *     {@code scalar} lines (they name the {@code Coercing} of the scalar's runtime wiring), {@code resolves} lines and
- *     every line of a type bound only through the {@code SchemaMappingDictionary} (object types of unions and
- *     interfaces, and what only they reach), {@code !unusedDictionary} and {@code !unwiredDirective} lines
- *     (directive wirings are runtime beans), and fields that a type resolver of an interface binds. The processor
- *     records each of them in {@code binding-manifest-omitted.txt}, and the test filters the startup manifest by that
- *     record ({@link #omitted}), never by a list of its own; the cases below pin each
- *     kind.</li>
- * </ul>
- */
 class ManifestParitySpec extends Specification {
 
     static final String HEADER_BINDER = '# binder: '
-
-    // ---------------------------------------------------------------- case 1: everything is known at compile time
 
     static final String SCHEMA = '''schema {
   query: Query
@@ -341,8 +318,6 @@ public class BookSubscription {
         ])
     }
 
-    // ---------------------------------------------------------------- case 2: the diagnostics of a lenient configuration
-
     static final String LENIENT_SCHEMA = '''schema {
   query: Query
 }
@@ -469,8 +444,6 @@ public class BookQuery {
         ]
         body(startup).findAll { omitted(it, result.omitted) } == ['String → scalar · graphql.scalar.GraphqlStringCoercing · - · -']
     }
-
-    // ---------------------------------------------------------------- case 3: what only the startup knows
 
     static final String RUNTIME_SCHEMA = '''schema {
   query: Query
@@ -654,8 +627,6 @@ public class DateCoercing implements Coercing<LocalDate, String> {
         ]
     }
 
-    // ---------------------------------------------------------------- case 4: inherited and generic members
-
     static final String INHERITED_SCHEMA = '''schema {
   query: Query
 }
@@ -746,8 +717,6 @@ public class BookResolver extends BaseResolver<Book> {
         ]
     }
 
-    // ---------------------------------------------------------------- case 6: directives without a wiring
-
     static final String DIRECTIVE_SCHEMA = '''schema {
   query: Query
 }
@@ -797,18 +766,6 @@ public class GreetingQuery {
         ]
     }
 
-    // ---------------------------------------------------------------- helpers
-
-    /**
-     * The parity rule, read from the record the processor wrote next to its manifest, never from a list the test
-     * writes.
-     *
-     * @param line   a line of the startup manifest
-     * @param record the content of {@code binding-manifest-omitted.txt}
-     * @return whether the processor left the line out, as its record says: a line kind it never writes ({@code kind}),
-     * a line of a type it left out ({@code type}), of a field ({@code field}), or an {@code !unbound} line it could not
-     * decide ({@code unbound})
-     */
     static boolean omitted(String line, String record) {
         return record.readLines().findAll { !it.startsWith('#') }.any { String entry ->
             String kind = entry.substring(0, entry.indexOf(' '))
@@ -851,7 +808,6 @@ public class GreetingQuery {
         List<String> startupHeader = startup.readLines().findAll { it.startsWith('#') }
         assert processorHeader.size() == 4
         assert processorHeader.findAll { !it.startsWith(HEADER_BINDER) } == startupHeader.findAll { !it.startsWith(HEADER_BINDER) }
-        // the processor runs from its class directory here, which has no jar manifest to read the version from
         assert processorHeader.find { it.startsWith(HEADER_BINDER) } == HEADER_BINDER + 'micronaut-graphql-tools unknown'
         assert startupHeader.find { it.startsWith(HEADER_BINDER) }.startsWith(HEADER_BINDER + 'micronaut-graphql-tools ')
         return true

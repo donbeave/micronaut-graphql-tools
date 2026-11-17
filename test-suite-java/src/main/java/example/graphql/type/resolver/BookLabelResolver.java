@@ -4,9 +4,6 @@ import example.ElapsedTime;
 import example.data.Book;
 import jakarta.inject.Singleton;
 
-/**
- * Implements a resolver contract: a type resolver for {@code Book} through {@link BookLabelResolverContract}.
- */
 @Singleton
 public class BookLabelResolver implements BookLabelResolverContract {
 

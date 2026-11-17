@@ -25,9 +25,6 @@ import java.util.Set;
 
 import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
 
-/**
- * @author Alexey Zhokhov
- */
 @Internal
 final class BeanDefinitionAndMethods {
 

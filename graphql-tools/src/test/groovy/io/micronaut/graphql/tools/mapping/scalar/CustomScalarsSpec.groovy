@@ -19,15 +19,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 
-/**
- * Custom scalars registered as {@link GraphQLScalarMapping} beans, on the output and the input side.
- *
- * The oracle is the serialisation of the scalars that graphql-java applications commonly use today:
- * {@code com.tailrocks.graphql:graphql-java-datetime} 6.0.0 ({@code LocalDate}, {@code LocalDateTime},
- * {@code YearMonth}, created with that library's defaults: no zone conversion, default formats) and
- * graphql-java-extended-scalars' {@code Json}. The tests use those scalar implementations as they are and assert the
- * exact strings they produce, so a change in how the library hands values to a scalar shows up here.
- */
 class CustomScalarsSpec extends AbstractTest {
 
     static final String SPEC_NAME = "CustomScalarsSpec"

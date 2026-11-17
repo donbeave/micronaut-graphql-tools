@@ -18,15 +18,10 @@ package io.micronaut.graphql.tools;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
 
-/**
- * An unexpected failure while binding one field, named by the field's coordinate so that it is reported together with
- * the other binding failures instead of hiding them.
- */
 @Internal
 final class UnexpectedBindingException extends AbstractMappingException {
 
     UnexpectedBindingException(MappingContext mappingContext, RuntimeException cause) {
-        // getMessage() adds the mapping context, so only the description of the cause goes here
         super(cause.getClass().getSimpleName() + ": " + cause.getMessage(), mappingContext);
         initCause(cause);
     }

@@ -3,20 +3,15 @@ package io.micronaut.graphql.tools.benchmarks;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 
-/**
- * The Java types the benchmarked schema is bound to.
- */
 public final class Fixtures {
 
     private Fixtures() {
     }
 
-    /** An enum argument. */
     public enum Color {
         RED, GREEN, BLUE
     }
 
-    /** An input object argument. */
     @GraphQLInput
     public static class PointInput {
 
@@ -49,7 +44,6 @@ public final class Fixtures {
         }
     }
 
-    /** The object the query benchmarks list; its fields are read by property fetchers. */
     @GraphQLType
     public static class Item {
 
@@ -76,11 +70,9 @@ public final class Fixtures {
         }
     }
 
-    /** A union with two members, resolved by the exact class. */
     public interface Shape {
     }
 
-    /** A member of {@link Shape}. */
     @GraphQLType
     public static class Circle implements Shape {
 
@@ -89,7 +81,6 @@ public final class Fixtures {
         }
     }
 
-    /** A member of {@link Shape}. */
     @GraphQLType
     public static class Square implements Shape {
 
@@ -98,13 +89,11 @@ public final class Fixtures {
         }
     }
 
-    /** An interface with two implementations, resolved by the exact class. */
     public interface Figure {
 
         String getName();
     }
 
-    /** An implementation of {@link Figure}. */
     @GraphQLType
     public static class Triangle implements Figure {
 
@@ -114,7 +103,6 @@ public final class Fixtures {
         }
     }
 
-    /** An implementation of {@link Figure}. */
     @GraphQLType
     public static class Rectangle implements Figure {
 
@@ -124,7 +112,6 @@ public final class Fixtures {
         }
     }
 
-    /** A plain class read by graphql-java's own {@code PropertyDataFetcher}, for comparison. */
     public static class PlainItem {
 
         private final String name;

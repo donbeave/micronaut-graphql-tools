@@ -90,7 +90,6 @@ type Mutation {
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @GraphQLRootResolver
     static class Mutation {
-        // ignored as no methods was found inside this class
     }
 
 }

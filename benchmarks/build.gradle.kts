@@ -3,19 +3,10 @@ plugins {
     id("me.champeau.jmh") version "0.7.4"
 }
 
-// Benchmarks of the request hot path and the allocation gates (D-02). Nothing here is published.
-//   src/main                 the benchmarked schema, resolvers and operations, shared by everything below
-//   build/generated/large-schema   the generated large schemas of 100, 1,600 and 10,000 fields and the classes they are bound to (generateLargeSchema)
-//   src/jmh                  the JMH benchmarks: ./gradlew :benchmarks:jmh
-//   src/jmhSmokeTest         jmhSmokeTest: the JMH benchmarks as a JUnit test (no fork, single shot), part of `check`
-//   src/allocationTest       allocationTest: bytes per operation against allocation-baselines.properties, part of `check`
-
 repositories {
     mavenCentral()
 }
 
-// Compiled with the JDK that runs the build (21 and 25 are the two full CI legs, D-32), like the test-suite-* modules; no toolchain, so
-// the allocation baselines are recorded and checked on the same JDK that built them.
 java {
     sourceCompatibility = JavaVersion.toVersion("21")
     targetCompatibility = JavaVersion.toVersion("21")
@@ -31,14 +22,10 @@ dependencies {
     jmhAnnotationProcessor(libs.jmh.generator.annprocess)
 }
 
-// the graphql-java leg by role (floor, default, ceiling, latest), selected as in the root build.gradle.kts
 val graphqlJavaLeg = providers.gradleProperty("graphqlJavaLeg").getOrElse("default")
 
-// Realistic large schemas for the start-up benchmarks: object types of 10 fields each (seven properties, a link to the
-// next type, a method bound through a type resolver with an argument, and one more property), reached by a chain from
-// the root, so that strict mode accepts them. The classes are generated so that there is no hand-written bulk. Each size
-// is a package of its own (large.f<fields>) and is selected at run time by benchmarks.large.fields, so that the sizes
-// never meet in one context.
+// Each size is a package of its own (large.f<fields>), selected by benchmarks.large.fields, so the sizes never
+// meet in one context.
 val largeTypeCounts = listOf(10, 160, 1000) // 100, 1,600 and 10,000 fields
 val generatedLargeSchema = layout.buildDirectory.dir("generated/large-schema")
 
@@ -178,7 +165,7 @@ val allocationTestTask = tasks.register<Test>("allocationTest") {
     systemProperty("allocation.graphqlJavaLeg", graphqlJavaLeg)
     systemProperty("allocation.update", providers.gradleProperty("allocation.update").isPresent)
     inputs.file(allocationBaselines).withPropertyName("allocationBaselines")
-    outputs.upToDateWhen { false } // a measurement, never up to date
+    outputs.upToDateWhen { false }
     testLogging {
         events("passed", "failed")
         showStandardStreams = true
@@ -202,12 +189,9 @@ tasks.named("check") {
     dependsOn(allocationTestTask, jmhSmokeTestTask)
 }
 
-// -Pjmh.profile=quick is a short run (one fork, a few seconds per benchmark) for a first look. The default profile is the
-// measuring run: two forks, five warmup and five measured iterations of one second each.
 val quickProfile = providers.gradleProperty("jmh.profile").orNull == "quick"
 
 jmh {
-    // The allocation figure is the gc profiler's gc.alloc.rate.norm, in bytes per operation.
     jmhVersion = libs.versions.jmh
     fork = if (quickProfile) 1 else 2
     warmupIterations = if (quickProfile) 2 else 5

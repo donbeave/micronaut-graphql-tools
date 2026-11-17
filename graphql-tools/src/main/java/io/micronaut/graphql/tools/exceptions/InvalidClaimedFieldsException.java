@@ -25,9 +25,6 @@ public final class InvalidClaimedFieldsException extends RuntimeException {
 
     private final List<String> problems;
 
-    /**
-     * @param problems one line per invalid claim, as {@code "<coordinate>: <reason> (<customizer class>)"}
-     */
     public InvalidClaimedFieldsException(List<String> problems) {
         super("RuntimeWiringCustomizer beans claim fields that the schema does not define:\n  "
                 + String.join("\n  ", problems)
@@ -36,9 +33,6 @@ public final class InvalidClaimedFieldsException extends RuntimeException {
         this.problems = List.copyOf(problems);
     }
 
-    /**
-     * @return one line per invalid claim, as {@code "<coordinate>: <reason> (<customizer class>)"}
-     */
     public List<String> getProblems() {
         return problems;
     }

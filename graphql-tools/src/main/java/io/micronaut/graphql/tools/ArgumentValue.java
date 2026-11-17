@@ -47,10 +47,6 @@ public final class ArgumentValue<T> {
         this.value = value;
     }
 
-    /**
-     * @param <T> the Java type of the value
-     * @return a value the client did not provide
-     */
     @SuppressWarnings("unchecked")
     @NonNull
     public static <T> ArgumentValue<T> omitted() {
@@ -68,30 +64,18 @@ public final class ArgumentValue<T> {
         return value == null ? (ArgumentValue<T>) NULL : new ArgumentValue<>(false, value);
     }
 
-    /**
-     * @return whether the client did not provide the value
-     */
     public boolean isOmitted() {
         return omitted;
     }
 
-    /**
-     * @return whether the client provided an explicit {@code null}
-     */
     public boolean isNull() {
         return !omitted && value == null;
     }
 
-    /**
-     * @return whether the client provided a value other than {@code null}
-     */
     public boolean isPresent() {
         return value != null;
     }
 
-    /**
-     * @return the provided value, {@code null} if it is omitted or an explicit {@code null}
-     */
     @Nullable
     public T getValue() {
         return value;
@@ -109,10 +93,6 @@ public final class ArgumentValue<T> {
         return value;
     }
 
-    /**
-     * @param other the value to return if no value other than {@code null} is provided
-     * @return the provided value or {@code other}
-     */
     @Nullable
     public T orElse(@Nullable T other) {
         return value != null ? value : other;
