@@ -45,7 +45,9 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanMethod;
+import io.micronaut.core.annotation.AnnotationMetadataProvider;
 import io.micronaut.core.beans.BeanProperty;
+import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
@@ -403,6 +405,7 @@ final class GraphQLRuntimeWiringGenerator {
         Set<String> accountedMethods = new HashSet<>(resolverBindings.keySet());
         accountedMethods.addAll(shadowedResolverMethods);
         checks.unboundResolverMethods(graphQLResolversRegistry.getResolverMethods(), accountedMethods);
+        checks.ignoredResolverMethods(graphQLResolversRegistry.getIgnoredMethods());
         checks.rootMethodsOfSeveralOperationTypes(rootMethodBindings);
         checks.unboundEnumConstants(processedTypes, typeDefinitionRegistry);
         checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processedTypes.keySet(), allowedTypes);
@@ -1095,6 +1098,20 @@ final class GraphQLRuntimeWiringGenerator {
         });
     }
 
+    /**
+     * @param member a property or method of a bean introspection
+     * @param name   what the manifest calls it
+     * @return {@code true} when it carries {@code @GraphQLIgnore}, so that it binds no field; it is listed in the
+     * manifest
+     */
+    private boolean isIgnored(AnnotationMetadataProvider member, String name) {
+        if (!member.getAnnotationMetadata().hasAnnotation(GraphQLIgnore.class)) {
+            return false;
+        }
+        manifestRecorder.ignored(name);
+        return true;
+    }
+
     private void processFieldDefinition(FieldDefinition fieldDefinition, ObjectTypeDefinition objectTypeDefinition,
                                         TypeRuntimeWiring.Builder typeRuntimeWiringBuilder,
                                         BeanIntrospection<Object> beanIntrospection) {
@@ -1105,9 +1122,12 @@ final class GraphQLRuntimeWiringGenerator {
         TypeMappingContext mappingContext = TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
 
         Optional<BeanProperty<Object, Object>> beanProperty =
-                beanIntrospection.getProperty(fieldDefinition.getName());
+                beanIntrospection.getProperty(fieldDefinition.getName())
+                        .filter(it -> !isIgnored(it, BindingManifestRecorder.propertyMember(it)));
         List<BeanMethod<Object, ?>> beanMethods = beanIntrospection.getBeanMethods().stream()
                 .filter(it -> it.getName().equals(fieldDefinition.getName()))
+                .filter(it -> !isIgnored(it, BindingManifestRecorder.introspectedMethodMember(it,
+                        beanIntrospection.getBeanType())))
                 .collect(Collectors.toList());
 
         if (beanProperty.isPresent() && !beanMethods.isEmpty()) {

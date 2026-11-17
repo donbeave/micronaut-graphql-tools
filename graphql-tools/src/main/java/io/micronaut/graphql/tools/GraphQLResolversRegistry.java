@@ -20,6 +20,7 @@ import io.micronaut.context.annotation.Infrastructure;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.exceptions.AmbiguousTypeResolverException;
@@ -197,6 +198,7 @@ public final class GraphQLResolversRegistry {
      */
     List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
         return schemaCoordinateMethods.stream()
+                .filter(it -> !isIgnored(it.method()))
                 .sorted(Comparator.comparing(SchemaCoordinateMethod::describe))
                 .toList();
     }
@@ -205,8 +207,32 @@ public final class GraphQLResolversRegistry {
      * A method of a bean on which some methods carry {@link GraphQLSchemaCoordinate} binds only if it carries one too.
      */
     private boolean isCandidate(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
+        if (isIgnored(method)) {
+            return false;
+        }
         Map<String, String> signatures = schemaCoordinateSignatures.get(beanDefinition);
         return signatures == null || signatures.containsKey(getExecutableMethodFullName(method));
+    }
+
+    /**
+     * @param method a method of a resolver bean
+     * @return {@code true} when it carries {@link GraphQLIgnore}: it never binds a field
+     */
+    private static boolean isIgnored(ExecutableMethod<?, ?> method) {
+        return method.hasAnnotation(GraphQLIgnore.class);
+    }
+
+    /**
+     * @param method a method of a resolver bean
+     * @return {@code true} for an event listener, a scheduled method or a pre-destroy callback: the application calls
+     * it, so no finding is made of it
+     */
+    private static boolean isLifecycleMethod(ExecutableMethod<?, ?> method) {
+        return method.hasAnnotation("io.micronaut.runtime.event.annotation.EventListener")
+                || method.hasAnnotation("io.micronaut.scheduling.annotation.Scheduled")
+                // Scheduled is repeatable: Micronaut keeps its metadata under the container
+                || method.hasAnnotation("io.micronaut.scheduling.annotation.Schedules")
+                || method.hasAnnotation("jakarta.annotation.PreDestroy");
     }
 
     /**
@@ -224,6 +250,7 @@ public final class GraphQLResolversRegistry {
         Map<String, String> signatures = schemaCoordinateSignatures.get(item.getBeanDefinition());
         return item.getExecutableMethods().stream()
                 .filter(executableMethod -> executableMethod.getMethodName().equals(methodName))
+                .filter(executableMethod -> !isIgnored(executableMethod))
                 .filter(executableMethod -> signatures == null
                         || signatures.containsKey(getExecutableMethodFullName(executableMethod))
                         && coordinates.contains(signatures.get(getExecutableMethodFullName(executableMethod))))
@@ -302,7 +329,8 @@ public final class GraphQLResolversRegistry {
 
     /**
      * @return every method of the root and type resolver beans that can bind a field: on a bean that uses
-     * {@link GraphQLSchemaCoordinate}, only the methods that carry one
+     * {@link GraphQLSchemaCoordinate}, only the methods that carry one; without the methods marked
+     * {@link GraphQLIgnore} and the lifecycle methods (event listeners, scheduled methods, pre-destroy callbacks)
      */
     List<BeanDefinitionAndMethod> getResolverMethods() {
         List<BeanDefinitionAndMethods> items = new ArrayList<>(rootResolvers);
@@ -311,7 +339,25 @@ public final class GraphQLResolversRegistry {
         List<BeanDefinitionAndMethod> result = new ArrayList<>();
         for (BeanDefinitionAndMethods item : items) {
             for (ExecutableMethod<Object, ?> method : item.getExecutableMethods()) {
-                if (isCandidate(item.getBeanDefinition(), method)) {
+                if (isCandidate(item.getBeanDefinition(), method) && !isLifecycleMethod(method)) {
+                    result.add(new BeanDefinitionAndMethod(item.getBeanDefinition(), method));
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @return the methods of the root and type resolver beans that carry {@link GraphQLIgnore}
+     */
+    List<BeanDefinitionAndMethod> getIgnoredMethods() {
+        List<BeanDefinitionAndMethods> items = new ArrayList<>(rootResolvers);
+        typeResolvers.values().forEach(items::addAll);
+
+        List<BeanDefinitionAndMethod> result = new ArrayList<>();
+        for (BeanDefinitionAndMethods item : items) {
+            for (ExecutableMethod<Object, ?> method : item.getExecutableMethods()) {
+                if (isIgnored(method)) {
                     result.add(new BeanDefinitionAndMethod(item.getBeanDefinition(), method));
                 }
             }

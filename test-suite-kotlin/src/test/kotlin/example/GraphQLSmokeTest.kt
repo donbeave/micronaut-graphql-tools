@@ -3,6 +3,7 @@ package example
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
+import io.micronaut.graphql.tools.BindingManifest
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.MethodOrderer
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 /** Smoke test over HTTP: the real application, one request per resolver kind. The tests share one application state. */
 @MicronautTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class GraphQLSmokeTest(@Client("/") private val client: HttpClient) {
+class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val manifest: BindingManifest) {
 
     @Suppress("UNCHECKED_CAST")
     private fun execute(query: String, variables: Map<String, Any> = HashMap()): Map<String, Any?> {
@@ -117,5 +118,16 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient) {
         assertEquals("bob", current["username"])
         assertEquals(listOf("ax"), current.list("books").map { it["id"] })
         assertNotNull(current.list("books").first()["label"])
+    }
+
+    @Test
+    @Order(7)
+    fun ignoredAndEventListenerMethodsPassStrictModeAndTheManifestListsTheIgnoredOne() {
+        // the application started in strict mode with an event listener and an ignored helper on a resolver
+        assertTrue(manifest.diagnostics.none { it.contains("onStartup") || it.contains("helper") }, manifest.diagnostics.toString())
+        assertEquals(
+            listOf("~ignored example.graphql.query.AllBooksQuery#helper(java.lang.String)"),
+            manifest.lines.filter { it.startsWith("~ignored ") },
+        )
     }
 }
