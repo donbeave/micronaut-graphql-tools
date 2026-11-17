@@ -64,8 +64,6 @@ public final class GraphQLFactory {
         TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(typeDefinitionRegistry);
         typeDefinitionRegistryCustomizers.forEach(customizer -> customizer.customize(registry));
 
-        GraphQLSchemaProvider graphQLSchemaProvider = new GraphQLSchemaProvider();
-
         GraphQLRuntimeWiringGenerator graphQLRuntimeWiringGenerator = new GraphQLRuntimeWiringGenerator(
                 applicationContext,
                 new GraphQLBeanIntrospectionRegistry(),
@@ -73,7 +71,6 @@ public final class GraphQLFactory {
                 // bound with the fields of their extensions; the schema is generated from the registry as parsed
                 TypeExtensions.merge(registry),
                 schemaMappingDictionary,
-                graphQLSchemaProvider,
                 configuration,
                 TypeExtensions.objectExtensionFields(registry)
         );
@@ -105,8 +102,6 @@ public final class GraphQLFactory {
                     () -> "GraphQLSchemaCustomizer " + customizer.getClass().getName()
                             + " returned null instead of a schema");
         }
-
-        graphQLSchemaProvider.init(graphQLSchema);
 
         // from the customized registry and the final schema: the manifest describes what is served
         bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder().build(registry, graphQLSchema));

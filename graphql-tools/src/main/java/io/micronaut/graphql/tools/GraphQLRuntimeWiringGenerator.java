@@ -34,7 +34,6 @@ import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetchingEnvironment;
-import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.TypeRuntimeWiring;
@@ -84,10 +83,10 @@ import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
 import io.micronaut.graphql.tools.schema.InputValueConverter;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
+import io.micronaut.graphql.tools.schema.MicronautPropertyDataFetcher;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
-import jakarta.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,7 +141,6 @@ final class GraphQLRuntimeWiringGenerator {
     private final GraphQLResolversRegistry graphQLResolversRegistry;
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final SchemaMappingDictionary schemaMappingDictionary;
-    private final Provider<GraphQLSchema> graphQLSchemaProvider;
     private final InputValueConverter inputValueConverter;
     private final Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans = new ConcurrentHashMap<>();
     private final InputClassChecks inputClassChecks;
@@ -217,7 +215,6 @@ final class GraphQLRuntimeWiringGenerator {
                                   GraphQLResolversRegistry graphQLResolversRegistry,
                                   TypeDefinitionRegistry typeDefinitionRegistry,
                                   SchemaMappingDictionary schemaMappingDictionary,
-                                  Provider<GraphQLSchema> graphQLSchemaProvider,
                                   GraphQLToolsConfiguration configuration,
                                   Set<String> extensionFields) {
         requireNonNull("applicationContext", applicationContext);
@@ -225,7 +222,6 @@ final class GraphQLRuntimeWiringGenerator {
         requireNonNull("graphQLResolversRegistry", graphQLResolversRegistry);
         requireNonNull("typeDefinitionRegistry", typeDefinitionRegistry);
         requireNonNull("schemaParserDictionary", schemaMappingDictionary);
-        requireNonNull("graphQLSchemaProvider", graphQLSchemaProvider);
         requireNonNull("configuration", configuration);
 
         this.applicationContext = applicationContext;
@@ -233,7 +229,6 @@ final class GraphQLRuntimeWiringGenerator {
         this.graphQLResolversRegistry = graphQLResolversRegistry;
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.schemaMappingDictionary = schemaMappingDictionary;
-        this.graphQLSchemaProvider = graphQLSchemaProvider;
         this.configuration = configuration;
         this.extensionFields = extensionFields;
         this.manifestRecorder = new BindingManifestRecorder(configuration.getManifest().isRecorded());
@@ -865,7 +860,7 @@ final class GraphQLRuntimeWiringGenerator {
                 }
 
                 AbstractTypeResolver typeResolver = new AbstractTypeResolver(
-                        graphQLSchemaProvider, "union", unionTypeDefinition.getName(), exactClasses, objectTypes
+                        "union", unionTypeDefinition.getName(), exactClasses, objectTypes
                 );
                 abstractTypeResolvers.add(typeResolver);
                 typeRuntimeWiringBuilder.typeResolver(typeResolver);
@@ -1058,7 +1053,7 @@ final class GraphQLRuntimeWiringGenerator {
             }
             objectTypes.forEach((objectType, clazz) -> manifestRecorder.resolves(name, objectType, clazz));
 
-            AbstractTypeResolver typeResolver = new AbstractTypeResolver(graphQLSchemaProvider, "interface", name,
+            AbstractTypeResolver typeResolver = new AbstractTypeResolver("interface", name,
                     exactClasses, objectTypes);
             if (returned) {
                 abstractTypeResolvers.add(typeResolver);
@@ -1286,6 +1281,9 @@ final class GraphQLRuntimeWiringGenerator {
 
             // the bean property don't have arguments, that's why we only validates arguments count, not exact types
             checkArgumentCount(beanProperty, mappingContext);
+
+            // bound once, here: the fetcher holds the property, nothing is looked up per request
+            typeRuntimeWiringBuilder.dataFetcher(fieldDefinition.getName(), new MicronautPropertyDataFetcher(beanProperty));
 
             processFieldReturnType(beanProperty.asArgument(), fieldDefinition.getType(), mappingContext);
 
