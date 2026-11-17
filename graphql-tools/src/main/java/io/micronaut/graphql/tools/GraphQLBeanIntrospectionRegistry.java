@@ -26,6 +26,7 @@ import io.micronaut.graphql.tools.exceptions.ImplementationNotFoundException;
 import io.micronaut.graphql.tools.exceptions.IncorrectImplementationException;
 import io.micronaut.graphql.tools.exceptions.MultipleImplementationsFoundException;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -139,6 +140,12 @@ final class GraphQLBeanIntrospectionRegistry {
         loadTypeIntrospections();
 
         return interfaceToImplementation.getOrDefault(interfaceClass, List.of());
+    }
+
+    List<Class<?>> getIntrospectedClasses() {
+        return BeanIntrospector.SHARED.findIntrospectedTypes(reference -> true).stream()
+                .filter(it -> !it.isInterface() && !Modifier.isAbstract(it.getModifiers()))
+                .toList();
     }
 
     Class getInterfaceClass(Class implementationClass) {

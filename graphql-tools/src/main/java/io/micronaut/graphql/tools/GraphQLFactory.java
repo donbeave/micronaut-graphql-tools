@@ -63,16 +63,14 @@ public final class GraphQLFactory {
         TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(typeDefinitionRegistry);
         typeDefinitionRegistryCustomizers.forEach(customizer -> customizer.customize(registry));
 
-        GraphQLSchemaProvider graphQLSchemaProvider = new GraphQLSchemaProvider();
-
         GraphQLRuntimeWiringGenerator graphQLRuntimeWiringGenerator = new GraphQLRuntimeWiringGenerator(
                 applicationContext,
                 new GraphQLBeanIntrospectionRegistry(),
                 graphQLResolversRegistry,
                 TypeExtensions.merge(registry),
                 schemaMappingDictionary,
-                graphQLSchemaProvider,
-                configuration
+                configuration,
+                TypeExtensions.objectExtensionFields(registry)
         );
 
         List<RuntimeWiringCustomizer> customizers = new ArrayList<>();
@@ -100,8 +98,6 @@ public final class GraphQLFactory {
                     () -> "GraphQLSchemaCustomizer " + customizer.getClass().getName()
                             + " returned null instead of a schema");
         }
-
-        graphQLSchemaProvider.init(graphQLSchema);
 
         bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder().build(registry, graphQLSchema));
 

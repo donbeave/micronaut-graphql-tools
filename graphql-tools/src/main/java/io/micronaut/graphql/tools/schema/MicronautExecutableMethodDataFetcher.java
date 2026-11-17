@@ -25,9 +25,7 @@ import io.micronaut.core.type.Executable;
 import io.micronaut.graphql.tools.ArgumentDefinition;
 import io.micronaut.graphql.tools.ArgumentValue;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author Alexey Zhokhov
@@ -35,11 +33,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Internal
 public final class MicronautExecutableMethodDataFetcher implements DataFetcher<Object> {
 
+    private static final Object[] NO_ARGUMENTS = new Object[0];
+
+    private static final int SOURCE = 0;
+    private static final int DATA_FETCHING_ENVIRONMENT = 1;
+    private static final int ARGUMENT_VALUE = 2;
+    private static final int INPUT_VALUE = 3;
+
     private final InputValueConverter inputValueConverter;
     private final Executable<Object, ?> executable;
-    private final List<ArgumentDefinition> argumentDefinitions;
+    private final int[] kinds;
+    private final String[] names;
     private final JavaType[] javaTypes;
-    private final boolean[] argumentValues;
     private final Object instance;
 
     public MicronautExecutableMethodDataFetcher(
@@ -50,15 +55,23 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     ) {
         this.inputValueConverter = inputValueConverter;
         this.executable = executable;
-        this.argumentDefinitions = new CopyOnWriteArrayList<>(argumentDefinitions);
-        this.javaTypes = new JavaType[argumentDefinitions.size()];
-        this.argumentValues = new boolean[argumentDefinitions.size()];
-        for (int i = 0; i < argumentDefinitions.size(); i++) {
-            Argument<?> argument = argumentDefinitions.get(i).getInputValueArgument().orElse(null);
-            if (argument != null) {
-                argumentValues[i] = ArgumentValue.class.equals(argument.getType());
+        int size = argumentDefinitions.size();
+        this.kinds = new int[size];
+        this.names = new String[size];
+        this.javaTypes = new JavaType[size];
+        for (int i = 0; i < size; i++) {
+            ArgumentDefinition argumentDefinition = argumentDefinitions.get(i);
+            names[i] = argumentDefinition.getName();
+            if (argumentDefinition.isSourceArgument()) {
+                kinds[i] = SOURCE;
+            } else if (argumentDefinition.isDataFetchingEnvironmentArgument()) {
+                kinds[i] = DATA_FETCHING_ENVIRONMENT;
+            } else {
+                Argument<?> argument = argumentDefinition.getInputValueArgument().orElseThrow();
+                boolean argumentValue = ArgumentValue.class.equals(argument.getType());
+                kinds[i] = argumentValue ? ARGUMENT_VALUE : INPUT_VALUE;
                 javaTypes[i] = inputValueConverter.toJavaType(
-                        argumentValues[i] ? argument.getFirstTypeVariable().orElseThrow() : argument);
+                        argumentValue ? argument.getFirstTypeVariable().orElseThrow() : argument);
             }
         }
         this.instance = instance;
@@ -66,35 +79,31 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
 
     @Override
     public Object get(DataFetchingEnvironment environment) {
-        List<Object> arguments = new ArrayList<>();
+        int size = kinds.length;
+        Object[] arguments = size == 0 ? NO_ARGUMENTS : new Object[size];
 
-        for (int i = 0; i < argumentDefinitions.size(); i++) {
-            ArgumentDefinition argumentDefinition = argumentDefinitions.get(i);
-            if (argumentDefinition.isSourceArgument()) {
-                arguments.add(environment.getSource());
-            } else if (argumentDefinition.isDataFetchingEnvironmentArgument()) {
-                arguments.add(environment);
-            } else if (argumentValues[i]) {
+        for (int i = 0; i < size; i++) {
+            arguments[i] = argument(environment, i);
+        }
+
+        return executable.invoke(instance != null ? instance : environment.getSource(), arguments);
+    }
+
+    private Object argument(DataFetchingEnvironment environment, int index) {
+        return switch (kinds[index]) {
+            case SOURCE -> environment.getSource();
+            case DATA_FETCHING_ENVIRONMENT -> environment;
+            case ARGUMENT_VALUE -> {
                 // graphql-java leaves an argument out of the map only if the client did not provide it and the
                 // schema declares no default value for it
-                if (environment.containsArgument(argumentDefinition.getName())) {
-                    Object argumentValue = environment.getArgument(argumentDefinition.getName());
-                    arguments.add(ArgumentValue.ofNullable(inputValueConverter.convert(argumentValue, javaTypes[i])));
-                } else {
-                    arguments.add(ArgumentValue.omitted());
+                if (environment.containsArgument(names[index])) {
+                    Object argumentValue = environment.getArgument(names[index]);
+                    yield ArgumentValue.ofNullable(inputValueConverter.convert(argumentValue, javaTypes[index]));
                 }
-            } else {
-                Object argumentValue = environment.getArgument(argumentDefinition.getName());
-
-                arguments.add(inputValueConverter.convert(argumentValue, javaTypes[i]));
+                yield ArgumentValue.omitted();
             }
-        }
-
-        if (instance != null) {
-            return executable.invoke(instance, arguments.toArray());
-        } else {
-            return executable.invoke(environment.getSource(), arguments.toArray());
-        }
+            default -> inputValueConverter.convert(environment.getArgument(names[index]), javaTypes[index]);
+        };
     }
 
 }

@@ -69,10 +69,6 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
         return directives.stream().map(it -> it.getBean().getWiring()).toList();
     }
 
-    /**
-     * Fails on {@link SchemaDirectiveWiring} beans that nothing registered. A prototype bean is matched by its class, so
-     * an unwrapped one is missed when another wired instance has the same class.
-     */
     void checkUnwrapped(RuntimeWiring runtimeWiring) {
         List<SchemaDirectiveWiring> registered = new ArrayList<>(wrappedWirings);
         registered.addAll(runtimeWiring.getRegisteredDirectiveWiring().values());

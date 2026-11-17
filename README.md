@@ -1,13 +1,14 @@
 # Micronaut GraphQL Tools
 
-[![Build Status](https://github.com/micronaut-projects/micronaut-graphql-tools/workflows/Java%20CI/badge.svg)](https://github.com/micronaut-projects/micronaut-graphql-tools/actions)
-[![Revved up by Gradle Enterprise](https://img.shields.io/badge/Revved%20up%20by-Gradle%20Enterprise-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.micronaut.io/scans)
+[![Build Status](https://github.com/donbeave/micronaut-graphql-tools/actions/workflows/gradle.yml/badge.svg)](https://github.com/donbeave/micronaut-graphql-tools/actions/workflows/gradle.yml)
 
 Schema-first approach for building GraphQL applications with Micronaut.
 
+This is not an official Micronaut module yet: it is developed here and is intended for later contribution to the Micronaut Foundation. Nothing is published to Maven Central (see [Snapshots and Releases](#snapshots-and-releases)).
+
 ## Documentation
 
-See the [Documentation](https://micronaut-projects.github.io/micronaut-graphql-tools/latest/guide/) for more information.
+The guide sources are in `src/main/docs/guide`; build them with `./gradlew docs` (see [CONTRIBUTING.md](CONTRIBUTING.md)). No documentation site is published yet.
 
 ## Quick start
 
@@ -56,6 +57,7 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
 - `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+- `@GraphQLIgnore` Marks a method, a property or an enum constant that binds no field, so that strict mode does not report it, see [Escape hatches](#escape-hatches).
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
 These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
@@ -216,12 +218,31 @@ mode.
 
 ## Startup errors
 
-The schema is bound when the `GraphQL` bean is created. Every field that cannot be bound is reported; the binding does
-not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
+The schema is bound when the application context starts, whether the library or the application creates the
+`GraphQL` bean: a field that cannot be bound fails the startup (of the `ApplicationContext` and of the embedded server),
+and the first request does no binding work. `micronaut.graphql.tools.eager-init: false` binds it when the first bean
+that needs the `GraphQLSchema` is created instead, for tests that expect the failure on a bean lookup. Every field that
+cannot be bound is reported; the binding does not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
 `MultipleMethodsFoundException`, `IncorrectClassMappingException`, ...). Several are thrown together as
 `BindingFailuresException`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
-others are suppressed exceptions. The checks that need a complete binding (unreachable types, schema coordinates) run
-only when no field failed.
+others are suppressed exceptions. An unexpected exception of one field (for example an unsupported type definition) is
+reported like the others, named by the field's coordinate, so it does not hide them. The checks that need a complete
+binding (unreachable types, schema coordinates, strict mode) run only when no field failed, and then they report
+together: when more than one finds a problem, the startup fails once with a `BindingFailuresException` that lists each
+finding under the label of its check (`[unreachable-type]`, `[invalid-schema-coordinate]`, `[strict]`), in that order;
+a single finding is thrown as its own exception (`UnreachableTypesException`, `InvalidSchemaCoordinateException`,
+`StrictModeException`).
+
+```
+The schema cannot be bound: 3 errors.
+  1) [unreachable-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Draft (type).
+     Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow-unreachable, or set micronaut.graphql.tools.unreachable-types to ignore.
+  2) [invalid-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:
+       1) @GraphQLSchemaCoordinate("Book.summary") on example.AuthorResolver summary(example.Author author): the method is not bound to Book.summary, ...
+  3) [strict] Strict mode found problems in the binding of the schema:
+       1) The resolver method example.BookQuery#helper(java.lang.String) binds no schema field. Remove it, ...
+       Fix them, or set micronaut.graphql.tools.strict to false.
+```
 
 Each failure names the schema coordinate (`Type.field`, `Type.field(argument:)` or `InputType.field`) and where it is
 declared, as graphql-java parsed it (the source name appears when the schema was parsed with one, for example through
@@ -268,8 +289,9 @@ String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
 - Type lines: `object`, `interface`, `union`, `enum`, `input` with their Java type, `scalar` with its `Coercing` class
   (only scalars that a bound field, argument or input field uses). Root operation types have no Java type (`-`).
 - Field lines: `Type.field(argument: Type): Type → kind · member · declared type · converted type`. The kind is `root`,
-  `resolver` (a type resolver method, also of an interface) or `property` (a getter or a `@GraphQLField` method of the
-  Java type). Methods are written `Class#method(parameter types)` with every Java parameter: a root or type resolver
+  `resolver` (a type resolver method, also of an interface), `property` (a getter or a `@GraphQLField` method of the
+  Java type) or `claimed` (a field a [`RuntimeWiringCustomizer` claims](#fields-a-customizer-serves); the member is the
+  class name of the customizer, the declared and converted types are `-`). Methods are written `Class#method(parameter types)` with every Java parameter: a root or type resolver
   method on its bean class, also when the bean inherits it (AOP proxies are unwrapped), a `@GraphQLField` method on the
   class it is written in; getters on the class that declares them. Parameter and declared types are those of the
   declaration, so a type variable of a generic superclass stays a type variable (`T`). The converted type is the
@@ -282,6 +304,8 @@ String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
   [Configuration](#configuration); an enum, input or scalar type that an argument of a directive definition uses,
   directly or through input fields, is reached), `!ambiguous Type.field · member | member` for a field decided by a lenient
   `precedence`, and the findings of [strict mode](#strict-mode) (`!unbound`, `!unusedDictionary`, `!unwiredDirective`).
+- `~ignored Class#member` lines list the members marked `@GraphQLIgnore` that the binding met (see
+  [Escape hatches](#escape-hatches)): they bind no field and are not findings.
 - Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from the reflected method or getter.
   Where reflection cannot find it (for example a native image without reflection configuration), they are written from
   Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
@@ -298,8 +322,10 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
 - **Unreachable types of every kind.** Without strict mode, only object, interface and union types that nothing binds
   are checked (`unreachable-types`). Strict mode adds enum, input and scalar types that no bound field, argument or input
   field uses (`!unreachable`); they are reported in the same `UnreachableTypesException`, and `allow-unreachable` may
-  name them. `unreachable-types: ignore` ignores them too. A type that an argument of a directive definition uses,
-  directly or through input fields, is reached.
+  name them. `unreachable-types: ignore` ignores them too. An allowed or ignored unreachable type also covers the enum,
+  input and scalar types its fields and arguments use, and the types that those input types use in turn, so
+  `allow-unreachable: [Legacy]` is enough for `type Legacy { since: Long era: Era }`. A type that an argument of a
+  directive definition uses, directly or through input fields, is reached.
 - **Resolver methods that bind no field** (`!unbound Class#method(...)`): every executable method of a
   `@GraphQLRootResolver` or `@GraphQLTypeResolver` bean, which Micronaut makes of its public methods, must bind a
   field. On a bean that uses `@GraphQLSchemaCoordinate`, only the annotated methods count, so a contract
@@ -338,6 +364,25 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
 All findings except unreachable types, unmapped input class properties, primitives for nullable scalars and unwired
 directives are reported in one `StrictModeException`. `!ambiguous` lines are allowed by
 the `precedence` that produced them. Every schema field must be bound in every mode (`MethodNotFoundException`).
+
+### Escape hatches
+
+A member that binds no field on purpose does not need `strict: false`, which turns off every other check too:
+
+- **`@GraphQLIgnore`** (package `io.micronaut.graphql.tools.annotation`) on a resolver method, a getter or property of a
+  type or input class, or an enum constant. The member is not reported as unbound (`!unbound`), and nothing binds it: an
+  ignored method does not bind the field of its name, and an ignored getter does not take part in `precedence`, so a
+  type resolver method may bind that field without an ambiguity. A schema field that only ignored members could
+  bind fails as any unbound field does. On an input class property it suppresses the finding for a property that the
+  input type does not define. On an enum constant it suppresses the finding for a constant without a schema value; the
+  enum needs a bean introspection (`@Introspected`), from which the annotation is read, never by reflection.
+  Every ignored member the binding meets is a `~ignored Class#member` line of the
+  [binding manifest](#binding-manifest), so a review can see what was set aside. Use it sparingly: it hides the
+  mistake that the check exists to find.
+- **Lifecycle methods are not resolver methods.** A method annotated with `@EventListener`, `@Scheduled` or
+  `@PreDestroy` on a resolver bean is not reported as unbound. It still binds a field if it has that field's name.
+
+These apply to the runtime checks; the compile-time checks (`micronaut-graphql-tools-processor`) do not read them yet.
 
 With `strict: false` the library skips these checks and binds as before strict mode existed: only object, interface and
 union types are checked for reachability, and the findings appear in the manifest only. It does not change
@@ -513,10 +558,11 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | Property | Values (default first) | Meaning |
 |---|---|---|
 | `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding; in [strict mode](#strict-mode) (the default) the same holds for enum, input and scalar types that nothing uses. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
-| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. |
+| `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. An allowed type also allows the enum, input and scalar types that its fields and arguments use, and that those input types use in turn (transitive); list only the type itself. A type that only a type that is not allowed uses stays unreachable. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
 | `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` turns these checks off, so the startup does not fail on them; the findings that have a manifest representation are listed in the manifest (unwired directives are also logged as a warning). It does not change `precedence`. |
+| `micronaut.graphql.tools.eager-init` | `true` \| `false` | Bind the schema when the application context starts, so that a broken binding fails the startup (also when the application defines its own `GraphQL` bean) and the first request does no binding work. `false` binds it when the first bean that needs the `GraphQLSchema` is created. |
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded, and with `strict: false` the strict-mode checks that only feed the manifest are skipped. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
@@ -596,7 +642,7 @@ val checkBindingManifest by tasks.registering {
 tasks.check { dependsOn(checkBindingManifest) }
 ```
 
-The library's example application (`test-suite`) is built this way, and its tests compare the manifest the
+The library's example application (`test-suite-java`) is built this way, and its tests compare the manifest the
 processor wrote with the one its startup builds, without what the processor's record of omissions names.
 
 Options (`-A<name>=<value>`) have the values and defaults of the runtime options of the same name. They are written
@@ -820,9 +866,23 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   implement only one of their Java types.
   ```
 
-  What can be checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
-  object types) and the member types against the declared Java interface (provably disjoint mappings only). Whether one object is an
-  instance of two unrelated mapped Java interfaces depends on the runtime class and is reported at runtime.
+  What is checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
+  object types), the member types against the declared Java interface (provably disjoint mappings only) and, for every
+  concrete class with a bean introspection, the ambiguity of the members. Such a class that is not mapped by its exact
+  class, and is an instance of the Java types of several members of a returned union or interface of which none is more
+  specific, fails the startup with `AmbiguousAbstractTypeException`, naming the class and the members. A class and its
+  sub-member (`B` mapped to `LongNote extends Note` mapped to `A`) is not ambiguous. The check runs once, from the
+  introspection metadata, which a native image has, and adds nothing per request:
+
+  ```
+  Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type
+  is the most specific one:
+    com.example.BundleModel is an instance of Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph) of union Item
+  Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement only one of their Java types.
+  ```
+
+  A class without an introspection, such as a proxy or a class generated at runtime, can only be checked at runtime,
+  where it is the GraphQL error above.
 - Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
   (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
 - A `@GraphQLTypeResolver` for the Java interface that an SDL interface is mapped to binds the fields of that interface
@@ -883,11 +943,18 @@ data fetcher or type resolver for a field or type the library wired into a code 
 which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
 and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
-(On graphql-java 25.1 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
-resolver or scalar with `StrictModeWiringException`; 21.3 accepts them silently.) To wrap data fetchers, use a
+(On graphql-java 25.2 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
+resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently.) To wrap data fetchers, use a
 `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
+
+Which seam to use to change the schema: a `RuntimeWiringCustomizer` to add wiring before the schema is generated, a
+`GraphQLSchemaCustomizer` to change the generated schema as part of the library's own bean (recommended), and a
+`BeanCreatedEventListener<GraphQLSchema>` when another module has to replace the `GraphQLSchema` bean. The library's
+union and interface type resolvers read the schema of the execution (`TypeResolutionEnvironment#getSchema()`), so
+they resolve against the replaced schema too, whatever seam produced it and in whatever order the beans run. Do not
+keep a reference to the schema the library built; the data fetchers and type resolvers hold none.
 
 ```java
 @Bean
@@ -897,6 +964,44 @@ public RuntimeWiringCustomizer hideInternalFields() {
     return builder -> builder.fieldVisibility(BlockedFields.newBlock().addPattern("Query.internal.*").build());
 }
 ```
+
+### Fields a customizer serves
+
+A field that only a hand-written `DataFetcher` serves has no Java member, so the library would fail the startup with
+`MethodNotFoundException`. The customizer declares such a field by **claiming** it in `claimedFields()` and registers the
+data fetcher in `customize`:
+
+```java
+@Singleton
+class ServerVersionCustomizer implements RuntimeWiringCustomizer {
+
+    @Override
+    public Set<FieldCoordinates> claimedFields() {
+        return Set.of(FieldCoordinates.coordinates("Query", "serverVersion"));
+    }
+
+    @Override
+    public void customize(RuntimeWiring.Builder builder) {
+        builder.type("Query", type -> type.dataFetcher("serverVersion", new StaticDataFetcher("1.0")));
+    }
+
+}
+```
+
+- The library does not bind or check a claimed field, even when the Java type has a member of that name, and a data
+  fetcher the customizer registers for it is not a replacement. Fields it does not claim stay protected: replacing one
+  still fails with `RuntimeWiringOverrideException`.
+- A claim must name a field of an **object** type of the schema (the fields of `extend type` included). A claim for a type
+  or field the schema does not define, or for an interface, fails the startup with `InvalidClaimedFieldsException`, which
+  names every such coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
+- `RuntimeWiringOverrideException`, and the `MethodNotFoundException` of a field added by `extend type`, name
+  `claimedFields()` as the way out.
+- `claimedFields()` is read once, at startup, before any field is bound. Claimed fields have a line in the
+  [binding manifest](#binding-manifest) of kind `claimed`, naming the customizer.
+- Types that only a claimed field returns are not reached by the binding: list them in `allow-unreachable`, or bind
+  them through another field.
+- Customizers are runtime beans, so the compile-time checks cannot see a claim; they report a field that nothing in the
+  sources binds.
 
 ## Schema directives
 
@@ -965,8 +1070,8 @@ public TypeDefinitionRegistryCustomizer validationDirectives() {
 }
 ```
 
-Use extended-validation 21.0 with graphql-java 21.3 and 24.0 with 25.1 (21.0 calls a `GraphQLCodeRegistry` method
-that graphql-java 25 removed); the library's tests run both.
+Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 25.2 (21.0 calls a
+`GraphQLCodeRegistry` method that graphql-java 22.4 and later removed); the library's tests run all three.
 
 ## Configuring the GraphQL bean
 
@@ -1005,7 +1110,7 @@ public GraphQL graphQL(GraphQLSchema schema, MyInstrumentation instrumentation) 
 }
 ```
 
-[`test-suite/src/test/java/example/host`](test-suite/src/test/java/example/host) is such an application: it supplies the
+[`test-suite-java/src/test/java/example/host`](test-suite-java/src/test/java/example/host) is such an application: it supplies the
 `TypeDefinitionRegistry`, consumes only the library's `GraphQLSchema` and builds its own `GraphQL` with its own
 instrumentation, which then serves the HTTP requests.
 
@@ -1015,27 +1120,43 @@ can exclude that dependency.
 
 ## Examples
 
-Examples can be found in the [test-suite](test-suite) directory.
+Three example applications serve the same schema (the same resolvers, types and data) in each language:
+[test-suite-java](test-suite-java), [test-suite-kotlin](test-suite-kotlin) (KSP) and
+[test-suite-groovy](test-suite-groovy). Their classes have the same fully qualified names, so a documentation snippet can
+include a language's source by path.
 
 ## Compatibility
 
-The library is built and tested on Java 21 against two graphql-java lines (CI runs both):
+The library is built and tested against graphql-java by role. The versions of each role live in
+[`gradle/libs.versions.toml`](gradle/libs.versions.toml):
 
-| graphql-java | graphql-java-extended-scalars | java-dataloader | Micronaut / micronaut-graphql | Java |
+| Role | graphql-java | graphql-java-extended-scalars | java-dataloader | Where it runs |
 |---|---|---|---|---|
-| 21.3 (default build) | 21.0 | 3.2.1 | 4.10.x / 4.8.0 | 21 |
-| 25.1 | 24.0 | 6.0.0 | 4.10.x / 4.8.0 | 21 |
+| `floor` | 21.5 | 21.0 | 3.2.1 | full build, JDK 25 |
+| `default` | what `micronaut-graphql` 4.8.0 manages (22.4), not pinned by this build | 22.0 | as graphql-java brings it | full build on JDK 25 and 21, library check on JDK 17, native tests on GraalVM 25; the published POM |
+| `ceiling` | 25.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; binary compatibility (main compiled on `default`, tested on `ceiling`) |
+| `latest` | newest release (`latest.release`) | newest release | newest release | the canary only, never a required check |
+
+The graphql-java axis runs on JDK 25; JDK 21 and JDK 17 run the `default` role only. Micronaut 4.10.x and micronaut-graphql 4.8.0
+are the base of every role.
+
+**Support policy.** The supported graphql-java lines are 21.x up to the ceiling line. They are tested at the newest patch of
+the floor, the default and the ceiling. A new graphql-java major enters through the `latest` canary and becomes the ceiling
+through a promotion issue once it is green. graphql-java-extended-scalars has no 25.x release; 24.0 links against 25.2.
 
 The published POM does not pin graphql-java: it arrives through `micronaut-graphql` (4.8.0 brings 22.4). Pin
-graphql-java in your build to the line you run, and use the matching extended-scalars version from the table
-(extended-scalars has no 25.x release; 24.0 works with graphql-java 25.1).
+graphql-java in your build to the line you run, and use the matching extended-scalars version from the table.
 
-To build or test against a leg locally:
+To build or test against a role locally:
 
 ```shell
-./gradlew build                            # graphql-java 21.3
-./gradlew build -PgraphqlJavaVersion=25.1  # graphql-java 25.1
+./gradlew build                              # default
+./gradlew build -PgraphqlJavaLeg=floor       # graphql-java 21.5
+./gradlew build -PgraphqlJavaLeg=ceiling     # graphql-java 25.2
+./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default   # binary compatibility: main compiled on default
 ```
+
+`-PgraphqlJavaVersion` no longer exists: setting it fails the build with a message that names `-PgraphqlJavaLeg`.
 
 ## Artifacts and versions
 
@@ -1060,7 +1181,7 @@ version, override it on the command line; a version without `-SNAPSHOT` is publi
 ```
 
 The `io.micronaut.publishing.*` settings are JVM system properties (`-D`), not Gradle project properties. Publish from
-the default graphql-java leg only (no `-PgraphqlJavaVersion`): the published POM takes its versions from the build's
+the default graphql-java leg only (no `-PgraphqlJavaLeg` or `-PgraphqlJavaCompileLeg`): the published POM takes its versions from the build's
 resolved dependencies, so the build refuses to run a publish task on another leg.
 
 Both commands publish the library and the annotation processor (jar, sources, javadoc, POM and Gradle module
@@ -1080,7 +1201,7 @@ The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the 
 ## Snapshots and Releases
 
 Nothing is published. No snapshot or release of this library is available from Maven Central or any other repository,
-and no workflow publishes one. The only CI workflow, `.github/workflows/gradle.yml`, builds and tests the project.
+and no workflow publishes one. CI (`.github/workflows/gradle.yml`) builds and tests the project.
 
 Releases are cut by the maintainers by hand, as described in the [Releases](CONTRIBUTING.md#releases) section of
 CONTRIBUTING.md. To use the library before a release, build it yourself and publish it to a local or private

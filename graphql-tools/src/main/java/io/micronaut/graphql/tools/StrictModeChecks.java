@@ -19,11 +19,15 @@ import graphql.language.EnumTypeDefinition;
 import graphql.language.EnumValueDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.beans.BeanIntrospector;
+import io.micronaut.core.beans.EnumBeanIntrospection;
+import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.inject.ExecutableMethod;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,6 +79,13 @@ final class StrictModeChecks {
         });
     }
 
+    void ignoredResolverMethods(List<BeanDefinitionAndMethod> methods) {
+        for (BeanDefinitionAndMethod method : methods) {
+            manifestRecorder.ignored(BindingManifestRecorder.methodMember(method.getExecutableMethod(),
+                    method.getExecutableMethod().getDeclaringType()));
+        }
+    }
+
     void rootMethodsOfSeveralOperationTypes(Map<ExecutableMethod<?, ?>, Set<String>> rootMethodBindings) {
         Map<String, Set<String>> findings = new TreeMap<>();
         rootMethodBindings.forEach((method, coordinates) -> {
@@ -111,9 +122,19 @@ final class StrictModeChecks {
             Set<String> values = enumDefinition.getEnumValueDefinitions().stream()
                     .map(EnumValueDefinition::getName)
                     .collect(Collectors.toSet());
-            Arrays.stream(enumClass.getEnumConstants())
+            List<String> missing = Arrays.stream(enumClass.getEnumConstants())
                     .map(it -> ((Enum<?>) it).name())
                     .filter(it -> !values.contains(it))
+                    .toList();
+            Set<String> ignored = missing.isEmpty() ? Set.of() : ignoredEnumConstants(enumClass);
+            missing.stream()
+                    .filter(it -> {
+                        if (!ignored.contains(it)) {
+                            return true;
+                        }
+                        manifestRecorder.ignored(enumClass.getTypeName() + "#" + it);
+                        return false;
+                    })
                     .sorted()
                     .forEach(constant -> {
                         String member = enumClass.getTypeName() + "#" + constant;
@@ -122,6 +143,18 @@ final class StrictModeChecks {
                                 + ". Add the value to the schema or remove the constant.");
                     });
         });
+    }
+
+    private static Set<String> ignoredEnumConstants(Class<?> enumClass) {
+        Set<String> names = new HashSet<>();
+        BeanIntrospector.SHARED.findIntrospection((Class<Object>) enumClass).ifPresent(introspection -> {
+            if (introspection instanceof EnumBeanIntrospection<?> enumIntrospection) {
+                enumIntrospection.getConstants().stream()
+                        .filter(it -> it.hasAnnotation(GraphQLIgnore.class))
+                        .forEach(it -> names.add(((Enum<?>) it.getValue()).name()));
+            }
+        });
+        return names;
     }
 
     void unusedDictionaryEntries(Map<String, Class<?>> dictionary, Collection<String> boundTypes,

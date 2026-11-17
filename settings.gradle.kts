@@ -17,7 +17,9 @@ include("graphql-tools")
 include("graphql-tools-bom")
 include("graphql-tools-processor")
 include("benchmarks")
-include("test-suite")
+include("test-suite-java")
+include("test-suite-kotlin")
+include("test-suite-groovy")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true

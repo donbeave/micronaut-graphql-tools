@@ -31,10 +31,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Keeps the values of custom scalars intact when Jackson converts graphql-java's input map into an input class:
- * Jackson cannot serialize some of them (for example {@code java.time} types without the JSR-310 module).
- */
 @Internal
 final class ScalarValuesModule extends SimpleModule {
 

@@ -56,6 +56,7 @@ final class BindingManifestRecorder {
     static final String KIND_ROOT = "root";
     static final String KIND_RESOLVER = "resolver";
     static final String KIND_PROPERTY = "property";
+    static final String KIND_CLAIMED = "claimed";
 
     private static final String ARROW = " → ";
     private static final String DOT = " · ";
@@ -63,6 +64,7 @@ final class BindingManifestRecorder {
 
     private final Map<String, Supplier<String>> lines = new HashMap<>();
     private final Set<String> diagnostics = new TreeSet<>();
+    private final Set<String> ignored = new TreeSet<>();
     private final Set<String> scalars = new TreeSet<>();
     private final boolean recording;
 
@@ -90,18 +92,28 @@ final class BindingManifestRecorder {
         if (!recording) {
             return;
         }
-        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(), () -> {
-            StringBuilder coordinate = new StringBuilder(objectTypeDefinition.getName()).append('.')
-                    .append(fieldDefinition.getName());
-            if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
-                coordinate.append(fieldDefinition.getInputValueDefinitions().stream()
-                        .map(it -> it.getName() + ": " + printType(it.getType()))
-                        .collect(Collectors.joining(", ", "(", ")")));
-            }
-            coordinate.append(": ").append(printType(fieldDefinition.getType()));
-            return line(coordinate.toString(), kind, member.get(), JavaTypeNames.of(declaredType),
-                    ReturnTypes.convertedTypeName(declaredType, subscription));
-        });
+        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                () -> line(coordinate(objectTypeDefinition, fieldDefinition), kind, member.get(),
+                        JavaTypeNames.of(declaredType), ReturnTypes.convertedTypeName(declaredType, subscription)));
+    }
+
+    void claimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String customizer) {
+        if (!recording) {
+            return;
+        }
+        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                () -> line(coordinate(objectTypeDefinition, fieldDefinition), KIND_CLAIMED, customizer, NONE, NONE));
+    }
+
+    private static String coordinate(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition) {
+        StringBuilder coordinate = new StringBuilder(objectTypeDefinition.getName()).append('.')
+                .append(fieldDefinition.getName());
+        if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
+            coordinate.append(fieldDefinition.getInputValueDefinitions().stream()
+                    .map(it -> it.getName() + ": " + printType(it.getType()))
+                    .collect(Collectors.joining(", ", "(", ")")));
+        }
+        return coordinate.append(": ").append(printType(fieldDefinition.getType())).toString();
     }
 
     void resolves(String abstractTypeName, String objectTypeName, Class<?> javaType) {
@@ -140,6 +152,13 @@ final class BindingManifestRecorder {
                 .collect(Collectors.joining(DOT)));
     }
 
+    void ignored(String member) {
+        if (!recording) {
+            return;
+        }
+        ignored.add("~ignored " + requirePart(member));
+    }
+
     boolean isScalarReached(String typeName) {
         return scalars.contains(typeName);
     }
@@ -156,10 +175,12 @@ final class BindingManifestRecorder {
         Map<String, Supplier<String>> recorded = new HashMap<>(lines);
         Set<String> recordedDiagnostics = new TreeSet<>(diagnostics);
         Set<String> recordedScalars = new TreeSet<>(scalars);
+        Set<String> recordedIgnored = new TreeSet<>(ignored);
         return new BindingManifest(() -> {
             List<String> body = new ArrayList<>(recorded.size() + recordedDiagnostics.size() + recordedScalars.size());
             recorded.values().forEach(it -> body.add(it.get()));
             body.addAll(recordedDiagnostics);
+            body.addAll(recordedIgnored);
             for (String scalar : recordedScalars) {
                 GraphQLType type = schema.getType(scalar);
                 Class<?> coercing = type instanceof GraphQLScalarType scalarType

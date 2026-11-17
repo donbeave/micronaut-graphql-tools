@@ -13,7 +13,6 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
 class AbstractTypeResolverSpec extends Specification {
 
@@ -39,13 +38,15 @@ class AbstractTypeResolverSpec extends Specification {
             .codeRegistry(GraphQLCodeRegistry.newCodeRegistry().typeResolver("Result") { env -> resolver.getType(env) }.build())
             .build()
 
-    AtomicInteger schemaReads = new AtomicInteger()
-
-    AbstractTypeResolver resolver = new AbstractTypeResolver({ schemaReads.incrementAndGet(); schema }, "union",
+    AbstractTypeResolver resolver = new AbstractTypeResolver("union",
             "Result", [(Song): "Song"], [Song: Song, Album: Album])
 
-    static TypeResolutionEnvironment env(Object object) {
-        return TypeResolutionParameters.newParameters().value(object).build()
+    TypeResolutionEnvironment env(Object object) {
+        return envOf(object, schema)
+    }
+
+    static TypeResolutionEnvironment envOf(Object object, GraphQLSchema schema) {
+        return TypeResolutionParameters.newParameters().value(object).schema(schema).build()
     }
 
     def "resolves by the exact class, by assignability and returns the cached object type of the schema"() {
@@ -56,14 +57,23 @@ class AbstractTypeResolverSpec extends Specification {
         resolver.getType(env(new LiveAlbum())).is(schema.getObjectType("Album"))
     }
 
-    def "the schema is read once per class, not once per call"() {
-        when:
-        10.times { resolver.getType(env(new Album())) }
-        int afterFirstClass = schemaReads.get()
-        100.times { resolver.getType(env(new Album())) }
+    def "the object type comes from the schema of the execution, also when another component replaced the schema"() {
+        given:
+        def replacedSong = GraphQLObjectType.newObject().name("Song").field(field()).build()
+        def replacedAlbum = GraphQLObjectType.newObject().name("Album").field(field()).build()
+        GraphQLSchema replaced = GraphQLSchema.newSchema()
+                .query(GraphQLObjectType.newObject().name("Query").field(field()).build())
+                .additionalType(GraphQLUnionType.newUnionType().name("Result").possibleType(replacedSong)
+                        .possibleType(replacedAlbum).build())
+                .codeRegistry(GraphQLCodeRegistry.newCodeRegistry().typeResolver("Result") { env -> resolver.getType(env) }.build())
+                .build()
 
-        then:
-        schemaReads.get() == afterFirstClass
+        expect: "the same resolver answers for either schema, whichever it saw first"
+        resolver.getType(envOf(new Song(), schema)).is(schema.getObjectType("Song"))
+        resolver.getType(envOf(new Song(), replaced)).is(replaced.getObjectType("Song"))
+        resolver.getType(envOf(new LiveAlbum(), replaced)).is(replaced.getObjectType("Album"))
+        resolver.getType(envOf(new LiveAlbum(), schema)).is(schema.getObjectType("Album"))
+        !replaced.getObjectType("Song").is(schema.getObjectType("Song"))
     }
 
     def "an unresolvable class is still reported, on every call, with the abstract type"() {
@@ -86,7 +96,7 @@ class AbstractTypeResolverSpec extends Specification {
 
     def "an ambiguous class is still reported"() {
         given:
-        def ambiguous = new AbstractTypeResolver({ schema }, "union", "Result", [:], [Song: Object, Album: Object])
+        def ambiguous = new AbstractTypeResolver("union", "Result", [:], [Song: Object, Album: Object])
 
         when:
         ambiguous.getType(env(new Stray()))
@@ -99,8 +109,8 @@ class AbstractTypeResolverSpec extends Specification {
     def "an object that is an instance of several candidates resolves to the most specific, in any mapping order"() {
         given:
         def mappings = [Song: MostSpecificFixture.Base, Album: MostSpecificFixture.Entity]
-        def ordered = new AbstractTypeResolver({ schema }, "union", "Result", [:], mappings)
-        def reversed = new AbstractTypeResolver({ schema }, "union", "Result", [:],
+        def ordered = new AbstractTypeResolver("union", "Result", [:], mappings)
+        def reversed = new AbstractTypeResolver("union", "Result", [:],
                 new LinkedHashMap(mappings.entrySet().toList().reverse().collectEntries { [(it.key): it.value] }))
 
         expect:
@@ -113,7 +123,7 @@ class AbstractTypeResolverSpec extends Specification {
 
     def "candidates without a single most specific one are an error naming them, and the error is not cached for other classes"() {
         given:
-        def subject = new AbstractTypeResolver({ schema }, "union", "Result", [:],
+        def subject = new AbstractTypeResolver("union", "Result", [:],
                 [Song: MostSpecificFixture.Left, Album: MostSpecificFixture.Right])
 
         when:
@@ -175,11 +185,11 @@ class AbstractTypeResolverSpec extends Specification {
 
     def "a class of a discarded class loader is not retained by the cache"() {
         given:
-        def subject = new AbstractTypeResolver({ schema }, "union", "Result", [:],
+        def subject = new AbstractTypeResolver("union", "Result", [:],
                 [Song: Song, Album: DiscardableClassLoaderFixture.Album])
 
         when:
-        def references = DiscardableClassLoaderFixture.resolveFromDiscardableLoader(subject, "Album")
+        def references = DiscardableClassLoaderFixture.resolveFromDiscardableLoader(subject, schema, "Album")
         for (int i = 0; i < 100 && references.any { it.get() != null }; i++) {
             System.gc()
             Thread.sleep(50)

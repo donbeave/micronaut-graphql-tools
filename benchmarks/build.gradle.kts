@@ -22,7 +22,7 @@ dependencies {
     jmhAnnotationProcessor(libs.jmh.generator.annprocess)
 }
 
-val graphqlJavaVersion = providers.gradleProperty("graphqlJavaVersion").getOrElse("21.3")
+val graphqlJavaLeg = providers.gradleProperty("graphqlJavaLeg").getOrElse("default")
 
 val largeTypes = 160
 val generatedLargeSchema = layout.buildDirectory.dir("generated/large-schema")
@@ -145,13 +145,17 @@ val allocationTestTask = tasks.register<Test>("allocationTest") {
     testClassesDirs = allocationTest.output.classesDirs
     classpath = allocationTest.runtimeClasspath
     useJUnitPlatform()
+    // Its own JVM per operation, with a heap that does not grow during a measurement. C1 only: without the escape
+    // analysis of C2 the figure is every allocation the code performs, which does not depend on the JIT's choices, the
+    // machine or the JDK patch level (C2 figures for one operation differed between two identical runs). JMH's gc
+    // profiler reports the C2 steady state.
     forkEvery = 1
     maxParallelForks = 1
     minHeapSize = "512m"
     maxHeapSize = "512m"
     jvmArgs("-XX:+UseG1GC", "-XX:TieredStopAtLevel=1")
     systemProperty("allocation.baselines", allocationBaselines.asFile.absolutePath)
-    systemProperty("allocation.graphqlJavaVersion", graphqlJavaVersion)
+    systemProperty("allocation.graphqlJavaLeg", graphqlJavaLeg)
     systemProperty("allocation.update", providers.gradleProperty("allocation.update").isPresent)
     inputs.file(allocationBaselines).withPropertyName("allocationBaselines")
     outputs.upToDateWhen { false }

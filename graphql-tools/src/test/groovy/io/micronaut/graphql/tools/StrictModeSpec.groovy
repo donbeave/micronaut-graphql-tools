@@ -624,6 +624,122 @@ type Mutation {
         }
     }
 
+    @Language("GraphQL")
+    static final String TRANSITIVE_SCHEMA = """
+schema {
+  query: Query
+}
+
+scalar Long
+
+type Query {
+  label: String
+}
+
+type Legacy {
+  since: Long
+  era: Era
+  search(filter: Filter): String
+}
+
+type Stray {
+  size: Size
+}
+
+enum Era {
+  OLD
+}
+
+enum Grade {
+  A
+}
+
+enum Size {
+  SMALL
+}
+
+input Filter {
+  grade: Grade
+  nested: Nested
+}
+
+input Nested {
+  era: Era
+}
+"""
+
+    void "allowing only an unreachable object type covers the enums, scalars and inputs its fields and arguments use"() {
+        given:
+        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive",
+                ['micronaut.graphql.tools.allow-unreachable': ['Legacy', 'Stray']])
+
+        when:
+        def result = executeQuery('{ label }')
+
+        then:
+        result.data == [label: 'label']
+    }
+
+    void "with unreachable-types ignore the value types of ignored types need no entry"() {
+        given:
+        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive", ['micronaut.graphql.tools.unreachable-types': 'ignore'])
+
+        when:
+        def result = executeQuery('{ label }')
+
+        then:
+        result.data == [label: 'label']
+    }
+
+    void "a type that only a non-allowed unreachable type uses still fails"() {
+        given:
+        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive", ['micronaut.graphql.tools.allow-unreachable': ['Legacy']])
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof UnreachableTypesException
+        e.cause.typeNames == ['Size', 'Stray']
+    }
+
+    void "a stale allow-unreachable entry still fails, also next to an allowed type that covers others"() {
+        given:
+        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive",
+                ['micronaut.graphql.tools.allow-unreachable': ['Legacy', 'Stray', 'Query', 'Missing']])
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof InvalidAllowUnreachableException
+        e.cause.undefinedTypeNames == ['Missing']
+        e.cause.notUnreachableTypeNames == ['Query']
+    }
+
+    void "a value type that an allowed type covers may still be listed itself, and the manifest still reports it"() {
+        given:
+        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive",
+                ['micronaut.graphql.tools.allow-unreachable': ['Legacy', 'Stray', 'Era']])
+
+        when:
+        def result = executeQuery('{ label }')
+
+        then:
+        result.data == [label: 'label']
+        applicationContext.getBean(BindingManifest).diagnostics.contains('!unreachable Era')
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + ".transitive")
+    @GraphQLRootResolver
+    static class TransitiveQuery {
+        String label() {
+            return 'label'
+        }
+    }
+
     void "with strict false allow-unreachable may still name unreachable enum, input and scalar types, without effect"() {
         given:
         startContext(VALUE_TYPES_SCHEMA, SPEC_NAME + ".valueTypes",

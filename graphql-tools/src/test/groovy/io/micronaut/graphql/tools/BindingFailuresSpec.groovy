@@ -93,7 +93,7 @@ type Book {
         TypeDefinitionRegistry registry = new SchemaParser().parse(MultiSourceReader.newMultiSourceReader()
                 .string(SCHEMA.replace('  count: Int\n  missing: String\n', ''), 'books.graphqls')
                 .build())
-        applicationContext = ApplicationContext.builder(['spec.name': SPEC_NAME], 'test')
+        applicationContext = ApplicationContext.builder(['spec.name': SPEC_NAME, 'micronaut.graphql.tools.eager-init': false], 'test')
                 .singletons(registry)
                 .start()
 

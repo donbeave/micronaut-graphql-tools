@@ -34,7 +34,6 @@ import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetchingEnvironment;
-import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.TypeRuntimeWiring;
@@ -45,7 +44,9 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanMethod;
+import io.micronaut.core.annotation.AnnotationMetadataProvider;
 import io.micronaut.core.beans.BeanProperty;
+import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
@@ -53,6 +54,7 @@ import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
 import io.micronaut.graphql.tools.annotation.GraphQLArgument;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
+import io.micronaut.graphql.tools.exceptions.AmbiguousAbstractTypeException;
 import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException;
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
@@ -81,10 +83,10 @@ import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
 import io.micronaut.graphql.tools.schema.InputValueConverter;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
+import io.micronaut.graphql.tools.schema.MicronautPropertyDataFetcher;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.jackson.modules.BeanIntrospectionModule;
-import jakarta.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,7 +138,6 @@ final class GraphQLRuntimeWiringGenerator {
     private final GraphQLResolversRegistry graphQLResolversRegistry;
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final SchemaMappingDictionary schemaMappingDictionary;
-    private final Provider<GraphQLSchema> graphQLSchemaProvider;
     private final InputValueConverter inputValueConverter;
     private final Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans = new ConcurrentHashMap<>();
     private final InputClassChecks inputClassChecks;
@@ -145,6 +146,8 @@ final class GraphQLRuntimeWiringGenerator {
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
 
     private final Map<String, Class<?>> processedTypes = new HashMap<>();
+
+    private final List<AbstractTypeResolver> abstractTypeResolvers = new ArrayList<>();
     private final Map<String, Class<?>> contractTypes = new HashMap<>();
 
     private final Map<String, String> fieldBindings = new HashMap<>();
@@ -173,6 +176,10 @@ final class GraphQLRuntimeWiringGenerator {
 
     private final Map<String, String> ambiguousBindings = new TreeMap<>();
 
+    private Map<String, String> claimedFields = Map.of();
+
+    private final Set<String> extensionFields;
+
     private final BindingManifestRecorder manifestRecorder;
 
     private final SchemaChecks schemaChecks;
@@ -185,14 +192,13 @@ final class GraphQLRuntimeWiringGenerator {
                                   GraphQLResolversRegistry graphQLResolversRegistry,
                                   TypeDefinitionRegistry typeDefinitionRegistry,
                                   SchemaMappingDictionary schemaMappingDictionary,
-                                  Provider<GraphQLSchema> graphQLSchemaProvider,
-                                  GraphQLToolsConfiguration configuration) {
+                                  GraphQLToolsConfiguration configuration,
+                                  Set<String> extensionFields) {
         requireNonNull("applicationContext", applicationContext);
         requireNonNull("graphQLBeanIntrospectionRegistry", graphQLBeanIntrospectionRegistry);
         requireNonNull("graphQLResolversRegistry", graphQLResolversRegistry);
         requireNonNull("typeDefinitionRegistry", typeDefinitionRegistry);
         requireNonNull("schemaParserDictionary", schemaMappingDictionary);
-        requireNonNull("graphQLSchemaProvider", graphQLSchemaProvider);
         requireNonNull("configuration", configuration);
 
         this.applicationContext = applicationContext;
@@ -200,8 +206,8 @@ final class GraphQLRuntimeWiringGenerator {
         this.graphQLResolversRegistry = graphQLResolversRegistry;
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.schemaMappingDictionary = schemaMappingDictionary;
-        this.graphQLSchemaProvider = graphQLSchemaProvider;
         this.configuration = configuration;
+        this.extensionFields = extensionFields;
         this.manifestRecorder = new BindingManifestRecorder(configuration.getManifest().isRecorded());
         this.schemaChecks = new SchemaChecks(typeDefinitionRegistry, graphQLResolversRegistry,
                 graphQLBeanIntrospectionRegistry, schemaMappingDictionary, configuration, manifestRecorder);
@@ -279,6 +285,8 @@ final class GraphQLRuntimeWiringGenerator {
 
             validateResolverDirectives();
 
+            claimedFields = RuntimeWiringCustomizers.claims(customizers, typeDefinitionRegistry);
+
             subscriptionTypeName = schemaDefinition.getOperationTypeDefinitions().stream()
                     .filter(it -> "subscription".equals(it.getName()))
                     .map(it -> it.getTypeName().getName())
@@ -311,16 +319,23 @@ final class GraphQLRuntimeWiringGenerator {
 
             Set<String> implementedInterfaces = wireInterfaceTypeResolvers();
 
+            checkAbstractTypeAmbiguity();
+
+            List<RuntimeException> findings = new ArrayList<>();
+
             Set<String> unboundTypes = schemaChecks.processUnreachableTypes(schemaDefinition, implementedInterfaces,
-                    processedTypes, rootRuntimeWiringBuilder);
+                    processedTypes, rootRuntimeWiringBuilder, findings);
 
-            schemaChecks.verifySchemaCoordinateBindings(unboundTypes, processedTypes, fieldBindings, resolverBindings);
+            schemaChecks.verifySchemaCoordinateBindings(unboundTypes, processedTypes, fieldBindings, resolverBindings,
+                    findings);
 
-            checkStrictMode(unboundTypes);
+            checkStrictMode(unboundTypes, findings);
+
+            throwFindings(findings);
 
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(unboundTypes));
 
-            RuntimeWiringCustomizers.apply(rootRuntimeWiringBuilder, customizers, typeDefinitionRegistry);
+            RuntimeWiringCustomizers.apply(rootRuntimeWiringBuilder, customizers, typeDefinitionRegistry, claimedFields);
 
             return rootRuntimeWiringBuilder.build();
         } finally {
@@ -331,7 +346,7 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
-    private void checkStrictMode(Set<String> unboundTypes) {
+    private void checkStrictMode(Set<String> unboundTypes, List<RuntimeException> findings) {
         Set<String> allowedTypes = new HashSet<>(configuration.getAllowUnreachable());
         if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
             allowedTypes.addAll(unboundTypes);
@@ -345,13 +360,23 @@ final class GraphQLRuntimeWiringGenerator {
         Set<String> accountedMethods = new HashSet<>(resolverBindings.keySet());
         accountedMethods.addAll(shadowedResolverMethods);
         checks.unboundResolverMethods(graphQLResolversRegistry.getResolverMethods(), accountedMethods);
+        checks.ignoredResolverMethods(graphQLResolversRegistry.getIgnoredMethods());
         checks.rootMethodsOfSeveralOperationTypes(rootMethodBindings);
         checks.unboundEnumConstants(processedTypes, typeDefinitionRegistry);
         checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processedTypes.keySet(), allowedTypes);
         checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
 
         if (configuration.isStrict() && !checks.getProblems().isEmpty()) {
-            throw new StrictModeException(checks.getProblems());
+            findings.add(new StrictModeException(checks.getProblems()));
+        }
+    }
+
+    private static void throwFindings(List<RuntimeException> findings) {
+        if (findings.size() == 1) {
+            throw findings.get(0);
+        }
+        if (!findings.isEmpty()) {
+            throw new BindingFailuresException(findings);
         }
     }
 
@@ -615,7 +640,8 @@ final class GraphQLRuntimeWiringGenerator {
 
         rootRuntimeWiringBuilder.type(operationTypeDefinition.getTypeName().getName(), typeRuntimeWiringBuilder -> {
             for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
-                collectFailure(() -> processRootFieldDefinition(objectTypeDefinition, fieldDefinition,
+                collectFailure(TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName()),
+                        () -> processRootFieldDefinition(objectTypeDefinition, fieldDefinition,
                         typeRuntimeWiringBuilder));
             }
 
@@ -625,12 +651,20 @@ final class GraphQLRuntimeWiringGenerator {
 
     private void processRootFieldDefinition(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,
                                             TypeRuntimeWiring.Builder typeRuntimeWiringBuilder) {
+        if (isClaimed(objectTypeDefinition, fieldDefinition)) {
+            return;
+        }
+
         TypeMappingContext mappingContext =
                 TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
 
-        List<BeanDefinitionAndMethod> beanDefinitionAndMethods =
-                graphQLResolversRegistry.getRootExecutableMethods(objectTypeDefinition.getName(),
-                        fieldDefinition.getName(), mappingContext);
+        List<BeanDefinitionAndMethod> beanDefinitionAndMethods;
+        try {
+            beanDefinitionAndMethods = graphQLResolversRegistry.getRootExecutableMethods(
+                    objectTypeDefinition.getName(), fieldDefinition.getName(), mappingContext);
+        } catch (MethodNotFoundException e) {
+            throw hintClaimedFields(e, objectTypeDefinition.getName(), fieldDefinition.getName());
+        }
 
         if (beanDefinitionAndMethods.size() > 1) {
             throw new MultipleMethodsFoundException(mappingContext, toMap(beanDefinitionAndMethods));
@@ -660,6 +694,20 @@ final class GraphQLRuntimeWiringGenerator {
                     executable.getReturnType().asArgument(),
                     objectTypeDefinition.getName().equals(subscriptionTypeName));
         }
+    }
+
+    private boolean isClaimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition) {
+        String customizer = claimedFields.get(objectTypeDefinition.getName() + "." + fieldDefinition.getName());
+        if (customizer == null) {
+            return false;
+        }
+        manifestRecorder.claimed(objectTypeDefinition, fieldDefinition, customizer);
+        return true;
+    }
+
+    private MethodNotFoundException hintClaimedFields(MethodNotFoundException exception, String objectTypeName,
+                                                      String fieldName) {
+        return extensionFields.contains(objectTypeName + "." + fieldName) ? exception.forExtensionField() : exception;
     }
 
     private void processEnumTypeDefinition(EnumTypeDefinition enumTypeDefinition, Class<?> targetClass, boolean input,
@@ -755,9 +803,11 @@ final class GraphQLRuntimeWiringGenerator {
                     }
                 }
 
-                typeRuntimeWiringBuilder.typeResolver(new AbstractTypeResolver(
-                        graphQLSchemaProvider, "union", unionTypeDefinition.getName(), exactClasses, objectTypes
-                ));
+                AbstractTypeResolver typeResolver = new AbstractTypeResolver(
+                        "union", unionTypeDefinition.getName(), exactClasses, objectTypes
+                );
+                abstractTypeResolvers.add(typeResolver);
+                typeRuntimeWiringBuilder.typeResolver(typeResolver);
                 return typeRuntimeWiringBuilder;
             });
         });
@@ -791,6 +841,31 @@ final class GraphQLRuntimeWiringGenerator {
                 processObjectTypeDefinition(implementation, clazz, mappingContext);
             }
         });
+    }
+
+    private void checkAbstractTypeAmbiguity() {
+        List<AbstractTypeResolver> resolvers = abstractTypeResolvers.stream()
+                .filter(it -> it.getObjectTypeCount() > 1)
+                .toList();
+        if (resolvers.isEmpty()) {
+            return;
+        }
+
+        List<String> ambiguities = new ArrayList<>();
+        graphQLBeanIntrospectionRegistry.getIntrospectedClasses().stream()
+                .sorted(Comparator.comparing(Class::getName))
+                .forEach(introspectedClass -> {
+                    for (AbstractTypeResolver resolver : resolvers) {
+                        String ambiguity = resolver.findAmbiguity(introspectedClass);
+                        if (ambiguity != null) {
+                            ambiguities.add(ambiguity);
+                        }
+                    }
+                });
+
+        if (!ambiguities.isEmpty()) {
+            throw new AmbiguousAbstractTypeException(ambiguities);
+        }
     }
 
     @Nullable
@@ -876,9 +951,13 @@ final class GraphQLRuntimeWiringGenerator {
             }
             objectTypes.forEach((objectType, clazz) -> manifestRecorder.resolves(name, objectType, clazz));
 
+            AbstractTypeResolver typeResolver = new AbstractTypeResolver("interface", name,
+                    exactClasses, objectTypes);
+            if (returned) {
+                abstractTypeResolvers.add(typeResolver);
+            }
             rootRuntimeWiringBuilder.type(name, typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder
-                    .typeResolver(new AbstractTypeResolver(graphQLSchemaProvider, "interface", name, exactClasses,
-                            objectTypes)));
+                    .typeResolver(typeResolver));
         }
 
         return implementedInterfaces;
@@ -926,22 +1005,37 @@ final class GraphQLRuntimeWiringGenerator {
             objectTypeWirings.put(objectTypeDefinition.getName(), typeRuntimeWiringBuilder);
 
             for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
-                collectFailure(() -> processFieldDefinition(
-                        fieldDefinition, objectTypeDefinition, typeRuntimeWiringBuilder, beanIntrospection
-                ));
+                collectFailure(TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName()),
+                        () -> processFieldDefinition(
+                                fieldDefinition, objectTypeDefinition, typeRuntimeWiringBuilder, beanIntrospection));
             }
         });
+    }
+
+    private boolean isIgnored(AnnotationMetadataProvider member, String name) {
+        if (!member.getAnnotationMetadata().hasAnnotation(GraphQLIgnore.class)) {
+            return false;
+        }
+        manifestRecorder.ignored(name);
+        return true;
     }
 
     private void processFieldDefinition(FieldDefinition fieldDefinition, ObjectTypeDefinition objectTypeDefinition,
                                         TypeRuntimeWiring.Builder typeRuntimeWiringBuilder,
                                         BeanIntrospection<Object> beanIntrospection) {
+        if (isClaimed(objectTypeDefinition, fieldDefinition)) {
+            return;
+        }
+
         TypeMappingContext mappingContext = TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
 
         Optional<BeanProperty<Object, Object>> beanProperty =
-                beanIntrospection.getProperty(fieldDefinition.getName());
+                beanIntrospection.getProperty(fieldDefinition.getName())
+                        .filter(it -> !isIgnored(it, BindingManifestRecorder.propertyMember(it)));
         List<BeanMethod<Object, ?>> beanMethods = beanIntrospection.getBeanMethods().stream()
                 .filter(it -> it.getName().equals(fieldDefinition.getName()))
+                .filter(it -> !isIgnored(it, BindingManifestRecorder.introspectedMethodMember(it,
+                        beanIntrospection.getBeanType())))
                 .collect(Collectors.toList());
 
         if (beanProperty.isPresent() && !beanMethods.isEmpty()) {
@@ -1068,6 +1162,8 @@ final class GraphQLRuntimeWiringGenerator {
                     + getPropertyMethodName(beanProperty));
 
             checkArgumentCount(beanProperty, mappingContext);
+
+            typeRuntimeWiringBuilder.dataFetcher(fieldDefinition.getName(), new MicronautPropertyDataFetcher(beanProperty));
 
             processFieldReturnType(beanProperty.asArgument(), fieldDefinition.getType(), mappingContext);
 
@@ -1246,7 +1342,7 @@ final class GraphQLRuntimeWiringGenerator {
                 }
 
                 interfaceResolverFields.add(field);
-                collectFailure(() -> bindInterfaceField(field, methods.get(0)));
+                collectFailure(field.mappingContext(), () -> bindInterfaceField(field, methods.get(0)));
             }
 
             if (progress) {
@@ -1261,10 +1357,11 @@ final class GraphQLRuntimeWiringGenerator {
                 List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
                 if (methods.isEmpty()) {
                     ownInterfaceFields.add(field);
-                    collectFailure(() -> bindModelMember(field.objectTypeDefinition(), field.fieldDefinition(),
-                            objectTypeWirings.get(field.objectTypeDefinition().getName()), field.modelMember()));
+                    collectFailure(field.mappingContext(), () -> bindModelMember(field.objectTypeDefinition(),
+                            field.fieldDefinition(), objectTypeWirings.get(field.objectTypeDefinition().getName()),
+                            field.modelMember()));
                 } else {
-                    collectFailure(() -> bindResolverOverModelMember(field, methods));
+                    collectFailure(field.mappingContext(), () -> bindResolverOverModelMember(field, methods));
                 }
             }
         }
@@ -1315,7 +1412,7 @@ final class GraphQLRuntimeWiringGenerator {
                         methods.stream().map(InterfaceResolverMethod::method).toList());
                 case RESOLVER_FIRST -> {
                     ownInterfaceFields.remove(field);
-                    collectFailure(() -> bindResolverOverModelMember(field, methods));
+                    collectFailure(field.mappingContext(), () -> bindResolverOverModelMember(field, methods));
                     rebound = true;
                 }
                 default -> throw new IllegalStateException("Unknown precedence " + configuration.getPrecedence());
@@ -1325,11 +1422,13 @@ final class GraphQLRuntimeWiringGenerator {
         return rebound;
     }
 
-    private void collectFailure(Runnable action) {
+    private void collectFailure(MappingContext mappingContext, Runnable action) {
         try {
             action.run();
         } catch (AbstractMappingException e) {
             bindingFailures.add(e);
+        } catch (RuntimeException e) {
+            bindingFailures.add(new UnexpectedBindingException(mappingContext, e));
         }
     }
 
@@ -1402,14 +1501,14 @@ final class GraphQLRuntimeWiringGenerator {
         Class<?> contractClass = contractTypes.get(objectTypeName);
 
         if (contractClass == null) {
-            return exception;
+            return hintClaimedFields(exception, objectTypeName, fieldName);
         }
         List<Class<?>> declaring = graphQLBeanIntrospectionRegistry.getImplementationClasses(contractClass).stream()
                 .filter(it -> BeanIntrospector.SHARED.findIntrospection(it)
                         .map(introspection -> introspection.getProperty(fieldName).isPresent()).orElse(false))
                 .toList();
 
-        return exception.forContract(contractClass, declaring);
+        return hintClaimedFields(exception.forContract(contractClass, declaring), objectTypeName, fieldName);
     }
 
     private void processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,

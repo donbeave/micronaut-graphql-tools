@@ -1,0 +1,39 @@
+name: Set up build tools
+description: >-
+  Installs the tools in mise.toml with mise (the JDK, and the CLI tools) and, optionally, sets up Gradle with its cache.
+  The cache is written from master only: a pull request restores master's cache and never writes one, so a pull request
+  cannot put anything into the cache that master or a later run reads.
+inputs:
+  jdk:
+    description: >-
+      Temurin line to use (17, 21, 25 or 27), selected with MISE_ENV through mise.jdk<N>.toml. Empty selects the Oracle
+      GraalVM of mise.toml, which also provides native-image.
+    default: ''
+  tools:
+    description: Tools to install, as arguments to `mise install`. Empty installs everything that mise.toml and the overlay request.
+    default: ''
+  gradle:
+    description: Set up Gradle (cache and the Gradle home) as well.
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - name: Select the JDK
+      if: inputs.jdk != ''
+      shell: bash
+      run: echo "MISE_ENV=jdk${INPUT_JDK}" >> "$GITHUB_ENV"
+      env:
+        INPUT_JDK: ${{ inputs.jdk }}
+    - name: Install tools with mise
+      uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
+      with:
+        install: true
+        install_args: ${{ inputs.tools }}
+        cache: true
+        cache_save: ${{ github.ref == 'refs/heads/master' }}
+        cache_key_prefix: mise-${{ inputs.jdk != '' && format('jdk{0}', inputs.jdk) || 'default' }}-${{ inputs.tools }}
+    - name: Set up Gradle
+      if: inputs.gradle == 'true'
+      uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      with:
+        cache-read-only: ${{ github.ref != 'refs/heads/master' }}

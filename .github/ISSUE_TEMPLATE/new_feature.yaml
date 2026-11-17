@@ -1,14 +1,37 @@
 name: Feature request
-description: Create a new feature request
+description: Propose a generic feature for micronaut-graphql-tools
+labels: ["type: enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Please describe the feature you want for Micronaut to implement, before that check if there is already an existing issue to add it.
+        Check the existing issues first. Features must be generic: do not name applications, companies or products in this form. Every feature is judged by its performance first (the request hot path, then startup, then build time), so state the performance impact.
   - type: textarea
+    id: feature-description
     attributes:
       label: Feature description
-      placeholder: Tell us what feature you would like for Micronaut to have and what problem is it going to solve
+      description: What the library should do, and the problem it solves.
+      placeholder: Tell us what feature you would like and what problem it is going to solve
     validations:
       required: true
-
+  - type: textarea
+    id: generic-motivation
+    attributes:
+      label: Generic motivation (no application names)
+      description: The use case in general terms. Do not name any application, company or product.
+    validations:
+      required: true
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Prior art
+      description: How graphql-java-tools, Spring for GraphQL or micronaut-graphql handle this, if they do.
+    validations:
+      required: false
+  - type: textarea
+    id: performance-impact
+    attributes:
+      label: Performance impact (hot path, startup, build)
+      description: The expected effect on the request hot path, on startup and on build time, and how it would be measured (JMH and allocation figures, see `benchmarks/`). Say so if there is no effect.
+    validations:
+      required: true

@@ -28,6 +28,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
+import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException;
 import io.micronaut.graphql.tools.schema.InputValueConverter;
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 @Internal
@@ -53,6 +55,7 @@ final class InputClassChecks {
     private final List<Map.Entry<InputMappingContext, Class<?>>> writeOnlyInputObjectProperties = new ArrayList<>();
     private final Map<String, Map.Entry<Class<?>, List<String>>> unmappedInputProperties = new TreeMap<>();
     private final Map<String, Class<?>> ownDeserializers = new TreeMap<>();
+    private final Set<String> ignoredInputProperties = new TreeSet<>();
 
     InputClassChecks(InputValueConverter inputValueConverter,
                      Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans) {
@@ -77,6 +80,8 @@ final class InputClassChecks {
                     .map(it -> it.getKey() + " (" + it.getValue().getName() + ")")
                     .collect(Collectors.joining(", ")));
         }
+
+        ignoredInputProperties.forEach(manifestRecorder::ignored);
 
         unmappedInputProperties.values().forEach(entry -> entry.getValue().forEach(property ->
                 manifestRecorder.diagnostic("unbound", entry.getKey().getTypeName() + "#" + property)));
@@ -149,6 +154,13 @@ final class InputClassChecks {
                 .collect(Collectors.toSet());
         List<String> unmapped = beanIntrospection.getBeanProperties().stream()
                 .filter(it -> !it.isReadOnly() || constructorArguments.contains(it.getName()))
+                .filter(it -> {
+                    if (!it.hasAnnotation(GraphQLIgnore.class) || inputFields.contains(it.getName())) {
+                        return true;
+                    }
+                    ignoredInputProperties.add(beanIntrospection.getBeanType().getTypeName() + "#" + it.getName());
+                    return false;
+                })
                 .map(BeanProperty::getName)
                 .filter(it -> !inputFields.contains(it))
                 .sorted()

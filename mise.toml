@@ -1,2 +1,5 @@
+# Tools for developers and CI. `mise install` installs them; the Gradle wrapper stays the build entry point.
+# CI selects a Temurin JDK with MISE_ENV=jdk17|jdk21|jdk25|jdk27 (mise.jdk<N>.toml overrides `java`).
 [tools]
 java = "oracle-graalvm-25.0.5.0.3"
+actionlint = "1.7.12"

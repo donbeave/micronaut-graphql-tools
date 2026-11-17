@@ -1,9 +1,16 @@
 package io.micronaut.graphql.tools.customizer
 
+import graphql.schema.GraphQLObjectType
 import graphql.schema.GraphQLSchema
+import graphql.schema.SchemaTransformer
+import graphql.util.TraversalControl
+import graphql.util.TraverserContext
+import graphql.schema.GraphQLTypeVisitorStub
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
+import io.micronaut.context.event.BeanCreatedEvent
+import io.micronaut.context.event.BeanCreatedEventListener
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
 import io.micronaut.graphql.tools.AbstractTest
@@ -18,6 +25,7 @@ class GraphQLSchemaCustomizerSpec extends AbstractTest {
 
     static final String SPEC_NAME = "GraphQLSchemaCustomizerSpec"
     static final String SPEC_NAME_NULL = "GraphQLSchemaCustomizerSpec.null"
+    static final String SPEC_NAME_LISTENER = "GraphQLSchemaCustomizerSpec.listener"
 
     @Language("GraphQL")
     static final String SCHEMA = """
@@ -51,6 +59,18 @@ type Other {
         then:
         result.errors.isEmpty()
         result.data == [__schema: [description: 'first, second'], hello: 'world', payload: [name: 'item']]
+    }
+
+    void "a type resolver resolves against the schema a BeanCreatedEventListener replaced it with"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME_LISTENER)
+
+        when: "the listener rebuilt every object type, so none of them is the one the library bound"
+        def result = executeQuery('{ payload { ... on Item { name } ... on Other { code } } item: __type(name: "Item") { description } }')
+
+        then:
+        result.errors.isEmpty()
+        result.data == [payload: [name: 'item'], item: [description: 'replaced']]
     }
 
     void "a customizer that returns null fails the startup"() {
@@ -93,6 +113,20 @@ type Other {
         @Override
         GraphQLSchema customize(GraphQLSchema schema) {
             return null
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_LISTENER)
+    @Singleton
+    static class ReplaceSchema implements BeanCreatedEventListener<GraphQLSchema> {
+        @Override
+        GraphQLSchema onCreated(BeanCreatedEvent<GraphQLSchema> event) {
+            return new SchemaTransformer().transformSchema(event.bean, new GraphQLTypeVisitorStub() {
+                @Override
+                TraversalControl visitGraphQLObjectType(GraphQLObjectType node, TraverserContext<graphql.schema.GraphQLSchemaElement> context) {
+                    return changeNode(context, node.transform { it.description('replaced') })
+                }
+            })
         }
     }
 

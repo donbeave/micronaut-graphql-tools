@@ -1,9 +1,32 @@
 introduction:
   title: Introduction
-releaseHistory: Release History
 quickStart:
   title: Quick Start
+languageSupport: Language Support
+why: Why This Library
+schema: Schema
+binding: Binding
+typeSystem: Type System
+inputs: Inputs
+scalars: Scalars
+directives: Directives
+dataLoaders: Data Loaders
+errors: Errors
+subscriptions: Subscriptions
+context: Context
 threadSelection:
   title: Thread Selection
-repository: Repository
+customization: Customization
+safety: Safety
 manifest: Binding Manifest
+compileTime: Compile-Time Verification
+codegen: Code Generation
+nativeImage: Native Image
+testing: Testing
+performance: Performance
+configuration: Configuration
+exceptions: Exceptions
+migration: Migration
+compatibility: Compatibility
+releaseHistory: Release History
+repository: Repository

@@ -44,9 +44,21 @@ public final class BindingFailuresException extends RuntimeException {
         int position = 0;
         for (RuntimeException failure : failures) {
             builder.append("\n  ").append(++position).append(") ")
+                    .append(label(failure))
                     .append(failure.getMessage().replace("\n", "\n   "));
         }
         return builder.toString();
+    }
+
+    private static String label(RuntimeException failure) {
+        if (failure instanceof UnreachableTypesException) {
+            return "[unreachable-type] ";
+        } else if (failure instanceof InvalidSchemaCoordinateException) {
+            return "[invalid-schema-coordinate] ";
+        } else if (failure instanceof StrictModeException) {
+            return "[strict] ";
+        }
+        return "";
     }
 
 }

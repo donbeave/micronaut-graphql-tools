@@ -22,6 +22,7 @@ import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.OperationTypeDefinition;
 import graphql.language.SchemaDefinition;
+import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.RuntimeWiring;
@@ -40,8 +41,10 @@ import io.micronaut.inject.BeanDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -85,7 +88,8 @@ final class SchemaChecks {
 
     Set<String> processUnreachableTypes(SchemaDefinition schemaDefinition, Set<String> implementedInterfaces,
                                         Map<String, Class<?>> processedTypes,
-                                        RuntimeWiring.Builder runtimeWiringBuilder) {
+                                        RuntimeWiring.Builder runtimeWiringBuilder,
+                                        List<RuntimeException> findings) {
         Set<String> reachedTypeNames = new HashSet<>(processedTypes.keySet());
         reachedTypeNames.addAll(implementedInterfaces);
         for (OperationTypeDefinition operationTypeDefinition : schemaDefinition.getOperationTypeDefinitions()) {
@@ -110,6 +114,9 @@ final class SchemaChecks {
         }
 
         Set<String> allowed = new TreeSet<>(configuration.getAllowUnreachable());
+        boolean ignoring = configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE;
+        Set<String> covered = findCoveredValueTypes(ignoring ? unreachableTypes.keySet() : allowed);
+        checked.keySet().removeAll(covered);
         List<String> undefined = allowed.stream()
                 .filter(it -> !isDefined(it))
                 .toList();
@@ -123,7 +130,7 @@ final class SchemaChecks {
         }
 
         Set<String> unbound;
-        if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
+        if (ignoring) {
             unbound = unreachableTypes.keySet();
             if (!checked.isEmpty()) {
                 LOG.warn("{} is ignore: the schema defines types that no field reachable from a root operation "
@@ -137,11 +144,13 @@ final class SchemaChecks {
                     failing.put(name, getType(typeDefinition));
                 }
             });
-            if (!failing.isEmpty()) {
-                throw new UnreachableTypesException(failing);
+            if (failing.isEmpty()) {
+                unbound = allowed.stream().filter(unreachableTypes::containsKey)
+                        .collect(Collectors.toCollection(TreeSet::new));
+            } else {
+                findings.add(new UnreachableTypesException(failing));
+                unbound = unreachableTypes.keySet();
             }
-            unbound = allowed.stream().filter(unreachableTypes::containsKey)
-                    .collect(Collectors.toCollection(TreeSet::new));
             if (!allowed.isEmpty()) {
                 LOG.info("Unreachable types allowed by {} use graphql-java's default data fetchers: {}",
                         GraphQLToolsConfiguration.PREFIX + ".allow-unreachable", String.join(", ", allowed));
@@ -162,6 +171,44 @@ final class SchemaChecks {
         }
 
         return unbound;
+    }
+
+    private Set<String> findCoveredValueTypes(Set<String> roots) {
+        Set<String> covered = new TreeSet<>();
+        Deque<String> pending = new ArrayDeque<>(roots);
+        Set<String> visited = new HashSet<>();
+        while (!pending.isEmpty()) {
+            String name = pending.poll();
+            if (!visited.add(name)) {
+                continue;
+            }
+            TypeDefinition<?> typeDefinition = typeDefinitionRegistry.getType(name).orElse(null);
+            List<Type<?>> usedTypes = new ArrayList<>();
+            if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
+                collectFields(objectTypeDefinition.getFieldDefinitions(), usedTypes);
+            } else if (typeDefinition instanceof InterfaceTypeDefinition interfaceTypeDefinition) {
+                collectFields(interfaceTypeDefinition.getFieldDefinitions(), usedTypes);
+            } else if (typeDefinition instanceof InputObjectTypeDefinition inputObjectTypeDefinition) {
+                inputObjectTypeDefinition.getInputValueDefinitions().forEach(it -> usedTypes.add(it.getType()));
+            }
+            for (Type<?> usedType : usedTypes) {
+                String usedName = GraphQLUtils.getTypeName(usedType).getName();
+                TypeDefinition<?> used = typeDefinitionRegistry.getType(usedName).orElse(null);
+                boolean valueType = used instanceof EnumTypeDefinition || used instanceof InputObjectTypeDefinition
+                        || typeDefinitionRegistry.scalars().containsKey(usedName);
+                if (valueType && covered.add(usedName)) {
+                    pending.add(usedName);
+                }
+            }
+        }
+        return covered;
+    }
+
+    private static void collectFields(List<FieldDefinition> fieldDefinitions, List<Type<?>> usedTypes) {
+        for (FieldDefinition fieldDefinition : fieldDefinitions) {
+            usedTypes.add(fieldDefinition.getType());
+            fieldDefinition.getInputValueDefinitions().forEach(it -> usedTypes.add(it.getType()));
+        }
     }
 
     private Map<String, TypeDefinition<?>> findUnreachableValueTypes(Map<String, Class<?>> processedTypes) {
@@ -290,7 +337,8 @@ final class SchemaChecks {
 
     void verifySchemaCoordinateBindings(Set<String> unboundTypes, Map<String, Class<?>> processedTypes,
                                         Map<String, String> fieldBindings,
-                                        Map<String, Set<String>> resolverBindings) {
+                                        Map<String, Set<String>> resolverBindings,
+                                        List<RuntimeException> findings) {
         List<String> problems = new ArrayList<>();
         List<String> unboundMethods = new ArrayList<>();
 
@@ -322,7 +370,8 @@ final class SchemaChecks {
         }
 
         if (!problems.isEmpty()) {
-            throw new InvalidSchemaCoordinateException(problems);
+            findings.add(new InvalidSchemaCoordinateException(problems));
+            return;
         }
 
         if (!unboundMethods.isEmpty() && !configuration.isStrict()) {

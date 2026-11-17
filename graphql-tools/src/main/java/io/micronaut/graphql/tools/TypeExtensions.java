@@ -28,8 +28,10 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 @Internal
@@ -49,6 +51,13 @@ final class TypeExtensions {
             add(result, mergeType(type, registry));
         }
         return result;
+    }
+
+    static Set<String> objectExtensionFields(TypeDefinitionRegistry registry) {
+        Set<String> coordinates = new HashSet<>();
+        registry.objectTypeExtensions().forEach((name, extensions) -> extensions.forEach(extension ->
+                extension.getFieldDefinitions().forEach(field -> coordinates.add(name + "." + field.getName()))));
+        return coordinates;
     }
 
     private static SchemaDefinition mergeSchema(SchemaDefinition schema, TypeDefinitionRegistry registry) {

@@ -106,6 +106,21 @@ public final class MethodNotFoundException extends AbstractMappingException {
         );
     }
 
+    /**
+     * The same error for a field of an {@code extend type}, which nothing binds: adds that a customizer may claim it.
+     *
+     * @return a new exception with the same mapping context
+     */
+    @Internal
+    public MethodNotFoundException forExtensionField() {
+        return new MethodNotFoundException(
+                getMessage() + " If a RuntimeWiringCustomizer serves the field with a data fetcher of its own, return "
+                        + "its coordinate from RuntimeWiringCustomizer#claimedFields().",
+                getMappingContext(),
+                methodName
+        );
+    }
+
     public String getMethodName() {
         return methodName;
     }

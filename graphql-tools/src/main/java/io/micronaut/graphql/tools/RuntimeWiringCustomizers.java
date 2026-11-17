@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools;
 
 import graphql.language.FieldDefinition;
+import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.TypeDefinition;
 import graphql.schema.DataFetcher;
@@ -26,12 +27,15 @@ import graphql.schema.TypeResolver;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import graphql.schema.idl.TypeRuntimeWiring;
 import graphql.schema.idl.WiringFactory;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.graphql.tools.exceptions.InvalidClaimedFieldsException;
 import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,9 +48,48 @@ final class RuntimeWiringCustomizers {
     private RuntimeWiringCustomizers() {
     }
 
+    static Map<String, String> claims(List<RuntimeWiringCustomizer> customizers, TypeDefinitionRegistry registry) {
+        Map<String, String> claims = new TreeMap<>();
+        List<String> problems = new ArrayList<>();
+        for (RuntimeWiringCustomizer customizer : customizers) {
+            for (FieldCoordinates claim : customizer.claimedFields()) {
+                String coordinate = claim.getTypeName() + "." + claim.getFieldName();
+                String problem = claimProblem(claim, registry);
+                if (problem == null) {
+                    claims.putIfAbsent(coordinate, customizer.getClass().getName());
+                } else {
+                    problems.add(coordinate + ": " + problem + " (" + customizer.getClass().getName() + ")");
+                }
+            }
+        }
+        if (!problems.isEmpty()) {
+            Collections.sort(problems);
+            throw new InvalidClaimedFieldsException(problems);
+        }
+        return claims;
+    }
+
+    @Nullable
+    private static String claimProblem(FieldCoordinates claim, TypeDefinitionRegistry registry) {
+        TypeDefinition<?> type = registry.getType(claim.getTypeName()).orElse(null);
+        if (type == null) {
+            return "the schema defines no type " + claim.getTypeName();
+        }
+        if (!(type instanceof ObjectTypeDefinition objectType)) {
+            return claim.getTypeName() + " is not an object type"
+                    + (type instanceof InterfaceTypeDefinition
+                    ? ": claim the field of each object type that implements it" : "");
+        }
+        if (objectType.getFieldDefinitions().stream().noneMatch(it -> it.getName().equals(claim.getFieldName()))) {
+            return claim.getTypeName() + " defines no field " + claim.getFieldName();
+        }
+        return null;
+    }
+
     static void apply(RuntimeWiring.Builder builder,
                       List<RuntimeWiringCustomizer> customizers,
-                      TypeDefinitionRegistry registry) {
+                      TypeDefinitionRegistry registry,
+                      Map<String, String> claimed) {
         if (customizers.isEmpty()) {
             return;
         }
@@ -56,8 +99,11 @@ final class RuntimeWiringCustomizers {
         for (RuntimeWiringCustomizer customizer : customizers) {
             customizer.customize(builder);
             Snapshot after = Snapshot.of(builder.build(), fieldsByType.keySet());
+            if (before.restoreClearedDefaultDataFetchers(builder, after)) {
+                after = Snapshot.of(builder.build(), fieldsByType.keySet());
+            }
             String by = " (" + customizer.getClass().getName() + ")";
-            before.replacedIn(after, fieldsByType).forEach(it -> replacements.add(it + by));
+            before.replacedIn(after, fieldsByType, claimed.keySet()).forEach(it -> replacements.add(it + by));
             before = after;
         }
         if (!replacements.isEmpty()) {
@@ -115,7 +161,19 @@ final class RuntimeWiringCustomizers {
             );
         }
 
-        List<String> replacedIn(Snapshot after, Map<String, Set<String>> fieldsByType) {
+        boolean restoreClearedDefaultDataFetchers(RuntimeWiring.Builder builder, Snapshot after) {
+            boolean restored = false;
+            for (Map.Entry<String, DataFetcher> entry : defaultDataFetchers.entrySet()) {
+                if (after.defaultDataFetchers.get(entry.getKey()) == null) {
+                    builder.type(TypeRuntimeWiring.newTypeWiring(entry.getKey())
+                            .defaultDataFetcher(entry.getValue()).build());
+                    restored = true;
+                }
+            }
+            return restored;
+        }
+
+        List<String> replacedIn(Snapshot after, Map<String, Set<String>> fieldsByType, Set<String> claimed) {
             List<String> replaced = new ArrayList<>();
             dataFetchers.forEach((type, fields) -> fields.forEach((field, dataFetcher) -> {
                 if (after.dataFetchers.getOrDefault(type, Map.of()).get(field) != dataFetcher) {
@@ -145,11 +203,12 @@ final class RuntimeWiringCustomizers {
                     replaced.add("directive wiring @" + name);
                 }
             });
-            replaced.addAll(replacedThroughCodeRegistry(after, fieldsByType));
+            replaced.addAll(replacedThroughCodeRegistry(after, fieldsByType, claimed));
             return replaced;
         }
 
-        private List<String> replacedThroughCodeRegistry(Snapshot after, Map<String, Set<String>> fieldsByType) {
+        private List<String> replacedThroughCodeRegistry(Snapshot after, Map<String, Set<String>> fieldsByType,
+                                                         Set<String> claimed) {
             List<String> replaced = new ArrayList<>();
             GraphQLCodeRegistry.Builder now = GraphQLCodeRegistry.newCodeRegistry(after.codeRegistry);
             GraphQLCodeRegistry.Builder then = GraphQLCodeRegistry.newCodeRegistry(codeRegistry);
@@ -157,6 +216,7 @@ final class RuntimeWiringCustomizers {
             dataFetchers.forEach((type, fields) -> fields.keySet().forEach(field -> wiredFields.add(type + "." + field)));
             defaultDataFetchers.keySet().forEach(type -> fieldsByType.getOrDefault(type, Set.of())
                     .forEach(field -> wiredFields.add(type + "." + field)));
+            wiredFields.removeAll(claimed);
             for (String coordinate : wiredFields) {
                 int dot = coordinate.indexOf('.');
                 FieldCoordinates coordinates = FieldCoordinates.coordinates(

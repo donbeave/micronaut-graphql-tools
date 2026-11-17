@@ -1,1 +1,12 @@
-TODO
+Micronaut GraphQL Tools is the schema-first approach for building GraphQL applications with Micronaut. You write the schema in the https://graphql.org/learn/schema/[GraphQL schema language] and bind it to your classes with annotations.
+
+NOTE: This is not an official Micronaut module yet: it is developed in https://github.com/donbeave/micronaut-graphql-tools[its own repository] and is intended for later contribution to the Micronaut Foundation. Nothing is published to Maven Central.
+
+== Why GraphQL Java Tools?
+
+* *Micronaut*: it leverages the Micronaut framework and avoids reflection, which can slow down applications. Binding uses Micronaut's compile-time bean and introspection metadata.
+* *Minimal boilerplate*: skip the manual configuration of GraphQL types, resolvers and options by using annotations such as `@GraphQLType` and `@GraphQLRootResolver`.
+* *Schema first*: use your schema directly instead of a code-driven approach.
+* *Class validation*: the library warns you about classes and types you provide that the schema does not need, and fails when you use the wrong Java class for a GraphQL type while the schema is built.
+
+The examples in this guide are Java, Kotlin and Groovy, and each one is taken from a compiled application in the repository.

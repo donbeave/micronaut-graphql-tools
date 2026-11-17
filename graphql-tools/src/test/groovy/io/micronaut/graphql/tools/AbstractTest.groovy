@@ -14,10 +14,11 @@ abstract class AbstractTest extends Specification {
     protected ApplicationContext applicationContext
 
     protected void startContext(@Nullable String graphQlSchema, @Nullable String specName = null, Map additionalConfig = [:]) {
+        Map defaults = lazyBinding() ? ["micronaut.graphql.tools.eager-init": false] : [:]
         def ctxBuilder = ApplicationContext
                 .builder(
                         ["spec.name": specName ?: getClass().simpleName,
-                         "micronaut.graphql.tools.manifest.record": true] << additionalConfig,
+                         "micronaut.graphql.tools.manifest.record": true] << defaults << additionalConfig,
                         "test"
                 )
 
@@ -28,6 +29,10 @@ abstract class AbstractTest extends Specification {
         }
 
         applicationContext = ctxBuilder.start()
+    }
+
+    protected boolean lazyBinding() {
+        true
     }
 
     GraphQL getGraphQLBean() {

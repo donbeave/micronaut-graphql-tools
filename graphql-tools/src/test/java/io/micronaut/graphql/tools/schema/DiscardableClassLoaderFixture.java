@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.schema;
 
 import graphql.TypeResolutionEnvironment;
 import graphql.execution.TypeResolutionParameters;
+import graphql.schema.GraphQLSchema;
 import graphql.schema.TypeResolver;
 
 import java.io.IOException;
@@ -40,7 +41,8 @@ final class DiscardableClassLoaderFixture {
     private DiscardableClassLoaderFixture() {
     }
 
-    static List<WeakReference<?>> resolveFromDiscardableLoader(TypeResolver resolver, String expectedType)
+    static List<WeakReference<?>> resolveFromDiscardableLoader(TypeResolver resolver, GraphQLSchema schema,
+                                                                           String expectedType)
             throws ReflectiveOperationException {
         ChildFirstLoader loader = new ChildFirstLoader();
         Class<?> loaded = loader.loadClass(LiveAlbum.class.getName());
@@ -48,7 +50,7 @@ final class DiscardableClassLoaderFixture {
             throw new IllegalStateException("the class was not loaded by its own class loader");
         }
         Object instance = loaded.getDeclaredConstructor().newInstance();
-        TypeResolutionEnvironment env = TypeResolutionParameters.newParameters().value(instance).build();
+        TypeResolutionEnvironment env = TypeResolutionParameters.newParameters().value(instance).schema(schema).build();
         String resolved = resolver.getType(env).getName();
         if (!expectedType.equals(resolved)) {
             throw new IllegalStateException("resolved " + resolved + ", expected " + expectedType);
