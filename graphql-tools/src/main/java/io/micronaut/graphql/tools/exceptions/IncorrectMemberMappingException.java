@@ -18,8 +18,10 @@ package io.micronaut.graphql.tools.exceptions;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
- * Thrown when an object type of a union or interface is mapped to a Java type that is not a subtype of the Java type
- * the field declares for the union or interface, so that no object the field returns can resolve to it.
+ * Thrown when an object type of a union or interface is mapped to a Java type that is provably disjoint from the Java
+ * type the field declares for the union or interface (no object can be an instance of both, because the two are
+ * unrelated classes or one is a {@code final} class that does not implement the other), so that no object the field
+ * returns can resolve to it.
  *
  * @since 1.0.0
  */
@@ -43,10 +45,12 @@ public final class IncorrectMemberMappingException extends AbstractMappingExcept
                                            Class<?> memberClass) {
         super(
                 String.format(
-                        "The %s %s is returned as %s, but its object type %s is mapped to %s, which is not a %s, so no "
-                                + "object the field returns can resolve to %s.",
+                        "The %s %s is returned as %s, but its object type %s is mapped to %s, and no object can be an "
+                                + "instance of both %s and %s, so no object the field returns can resolve to %s. Map "
+                                + "%s to a Java type that %s can implement or extend.",
                         abstractTypeKind, abstractTypeName, declaredClass.getName(), objectTypeName,
-                        memberClass.getName(), declaredClass.getName(), objectTypeName
+                        memberClass.getName(), declaredClass.getName(), memberClass.getName(), objectTypeName,
+                        objectTypeName, declaredClass.getName()
                 ),
                 mappingContext
         );

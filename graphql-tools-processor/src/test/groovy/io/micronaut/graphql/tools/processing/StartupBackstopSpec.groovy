@@ -147,15 +147,18 @@ ${scalar ? '''
                 + 'io.micronaut.graphql.tools.SchemaMappingDictionary.', 'Query.search (line 6, column 3)')
     }
 
-    void "a union member mapped to a class that does not implement the union's Java interface compiles and fails the startup"() {
+    void "a union member mapped to a final class that does not implement the union's Java interface compiles and fails the startup"() {
         when:
-        def result = compile(beans('.registerType("Book", Book.class).registerType("Magazine", Magazine.class)', true))
+        def result = compile(beans('.registerType("Book", Book.class).registerType("Magazine", Magazine.class)', true),
+                SOURCES + ['example.Magazine': SOURCES['example.Magazine'].replace('public class Magazine {',
+                        'public final class Magazine {')])
 
         then:
         result.success
         startupFails(result, 'The union SearchResult is returned as example.SearchResult, but its object type Magazine '
-                + 'is mapped to example.Magazine, which is not a example.SearchResult, so no object the field returns '
-                + 'can resolve to Magazine.', 'Query.search (line 6, column 3)')
+                + 'is mapped to example.Magazine, and no object can be an instance of both example.SearchResult and '
+                + 'example.Magazine, so no object the field returns can resolve to Magazine. Map Magazine to a Java '
+                + 'type that example.SearchResult can implement or extend.', 'Query.search (line 6, column 3)')
     }
 
     void "a custom scalar without a mapping compiles and fails the startup"() {
