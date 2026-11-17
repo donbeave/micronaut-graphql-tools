@@ -229,8 +229,12 @@ final class BindingManifestRecorder {
         for (String candidate : List.of("get" + capitalized, "is" + capitalized, name)) {
             try {
                 return beanType.getMethod(candidate);
-            } catch (NoSuchMethodException | RuntimeException | LinkageError e) {
+            } catch (NoSuchMethodException e) {
                 // try the next accessor name
+            } catch (SecurityException | LinkageError e) {
+                // no reflection (a native image without reflection configuration): use the compile-time metadata
+                JavaTypeNames.fallback(beanType.getTypeName() + "#" + name, e);
+                return null;
             }
         }
         return null;

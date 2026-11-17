@@ -20,8 +20,11 @@ import io.micronaut.core.beans.BeanMethod;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.inject.ExecutableMethod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -33,10 +36,15 @@ import java.util.stream.Collectors;
  * reflected method when reflection is available. Otherwise, and for {@link #of(Argument)}, they are rendered from
  * Micronaut's compile-time {@link Argument}, which keeps no wildcards ({@code List<? extends Book>} is rendered as
  * {@code java.util.List<Book>}), no raw types ({@code List} as {@code java.util.List<java.lang.Object>}) and no type
- * arguments of array components ({@code List<String>[]} as {@code java.util.List[]}).
+  * arguments of array components ({@code List<String>[]} as {@code java.util.List[]}). The first time reflection fails
+ * (a {@link LinkageError} or {@link SecurityException}, as in a native image without reflection configuration) is logged
+ * at INFO, naming the member, so that a manifest that differs from one rendered with reflection can be explained.
  */
 @Internal
 public final class JavaTypeNames {
+
+    private static final Logger LOG = LoggerFactory.getLogger(JavaTypeNames.class);
+    private static final AtomicBoolean FALLBACK_LOGGED = new AtomicBoolean();
 
     private JavaTypeNames() {
     }
@@ -84,10 +92,25 @@ public final class JavaTypeNames {
                     }
                 }
             }
-        } catch (RuntimeException | LinkageError e) {
-            // no reflection: use the compile-time metadata
+        } catch (SecurityException | LinkageError e) {
+            // no reflection (a native image without reflection configuration): use the compile-time metadata
+            fallback(executable.toString(), e);
         }
         return Optional.empty();
+    }
+
+    /**
+     * Records that a member is rendered from the compile-time metadata because reflection failed: logged once.
+     *
+     * @param member the member, for the log
+     * @param error  why reflection failed
+     */
+    static void fallback(String member, Throwable error) {
+        if (FALLBACK_LOGGED.compareAndSet(false, true)) {
+            LOG.info("The binding manifest renders Java types from Micronaut's compile-time metadata, without "
+                    + "wildcards, raw types and generic array components, because reflection is not available "
+                    + "(first for {}: {}). Further members are not logged.", member, error.toString());
+        }
     }
 
     /**

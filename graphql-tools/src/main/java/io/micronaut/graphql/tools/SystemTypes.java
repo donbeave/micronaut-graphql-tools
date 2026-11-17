@@ -85,6 +85,15 @@ public final class SystemTypes {
         return SYSTEM_TYPES.containsKey(typeName.getName());
     }
 
+    /**
+     * @param typeName the name of a scalar
+     * @return whether the scalar is built in: one of GraphQL's own scalars or an extended scalar the library registers
+     */
+    public static boolean isGraphQlBuiltInType(@NonNull String typeName) {
+        ArgumentUtils.requireNonNull("typeName", typeName);
+        return SYSTEM_TYPES.containsKey(typeName);
+    }
+
     public static boolean isJavaBuiltInClass(@NonNull Class<?> clazz) {
         ArgumentUtils.requireNonNull("clazz", clazz);
         return SYSTEM_TYPE_CLASSES.contains(clazz);
