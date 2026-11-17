@@ -30,9 +30,6 @@ jobs:
     name: build (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     steps:
       - uses: actions/checkout@v4
-      - name: Forced red for gate check (reverted in next commit)
-        if: matrix.java == '21' && matrix.graphql-java == '25.1'
-        run: exit 1
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
