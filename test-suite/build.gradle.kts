@@ -1,8 +1,8 @@
 plugins {
     id("io.micronaut.application") version "4.6.2"
-    id("com.gradleup.shadow") version "8.3.9"
+    id("com.gradleup.shadow") version "8.3.11"
     id("io.micronaut.aot") version "4.6.2"
-    id("com.apollographql.apollo").version("4.4.1")
+    id("com.apollographql.apollo").version("4.4.4")
 }
 
 repositories {
@@ -29,6 +29,8 @@ java {
 graalvmNative.toolchainDetection = false
 
 micronaut {
+    // The platform version: micronaut-build reads `micronaut` as the core BOM version, which has no platform of the same number.
+    version.set(libs.versions.micronaut.platform)
     runtime("netty")
     testRuntime("junit5")
     processing {
@@ -48,7 +50,7 @@ micronaut {
 }
 
 tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative") {
-    jdkVersion = "21"
+    jdkVersion = "25"
 }
 
 apollo {
@@ -92,3 +94,13 @@ val checkBindingManifest by tasks.registering {
     }
 }
 tasks.named("check") { dependsOn(checkBindingManifest) }
+
+// The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x (D-34).
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.apache.groovy") {
+            useVersion(libs.versions.groovy.get())
+            because("Groovy 4.0.33 reads JDK 27 class files; the BOM's 4.0.28 does not")
+        }
+    }
+}

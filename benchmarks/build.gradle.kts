@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("me.champeau.jmh") version "0.7.3"
+    id("me.champeau.jmh") version "0.7.4"
 }
 
 // Benchmarks of the request hot path and the allocation gates (D-02). Nothing here is published.

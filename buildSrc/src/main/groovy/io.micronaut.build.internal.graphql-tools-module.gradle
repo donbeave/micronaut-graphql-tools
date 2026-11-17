@@ -12,3 +12,13 @@ tasks.withType(JavaCompile).configureEach {
 dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
+
+// The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x (D-34).
+configurations.configureEach {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.apache.groovy') {
+            details.useVersion(libs.versions.groovy.get())
+            details.because('Groovy 4.0.33 reads JDK 27 class files; the BOM\'s 4.0.28 does not')
+        }
+    }
+}
