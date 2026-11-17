@@ -163,9 +163,7 @@ val allocationTestTask = tasks.register<Test>("allocationTest") {
     // machine or the JDK patch level (C2 figures for one operation differed between two identical runs). JMH's gc
     // profiler reports the C2 steady state.
     forkEvery = 1
-    // Half the cores, in parallel: the figure counts allocated bytes, not time, so it does not depend on what runs beside it
-    // (the figures were identical to the serial run's on all 13 operations).
-    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+    maxParallelForks = 1
     minHeapSize = "512m"
     maxHeapSize = "512m"
     jvmArgs("-XX:+UseG1GC", "-XX:TieredStopAtLevel=1")
