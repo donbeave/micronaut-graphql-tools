@@ -134,7 +134,8 @@ type Legacy {
         manifest.header.size() == 4
         manifest.header[0] == '# graphql-binding-manifest 1'
         manifest.header[1] == '# binder: micronaut-graphql-tools unknown'
-        manifest.header[2] ==~ /# graphql-java: \d+\.\d+(\.\d+)?/
+        // graphql-java 26 declares no version in its jar (no Bundle-Version), and the header says unknown then
+        manifest.header[2] ==~ (hasBundleVersion() ? /# graphql-java: \d+\.\d+(\.\d+)?/ : /# graphql-java: unknown/)
         manifest.header[3] ==~ /# schema-sha256: [0-9a-f]{64}/
         manifest.render() == manifest.header.join('\n') + '\n' + manifest.lines.join('\n') + '\n'
         manifest.lines == manifest.lines.toSorted()
@@ -585,4 +586,11 @@ type Book {
         String title
     }
 
+
+    private static boolean hasBundleVersion() {
+        Collections.list(graphql.GraphQL.classLoader.getResources("META-INF/MANIFEST.MF")).any {
+            def attributes = it.openStream().withCloseable { new java.util.jar.Manifest(it) }.mainAttributes
+            attributes.getValue("Bundle-SymbolicName") == "graphql-java" && attributes.getValue("Bundle-Version")
+        }
+    }
 }

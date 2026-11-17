@@ -20,7 +20,7 @@ When it is recorded, the manifest is recorded as cheap facts and rendered the fi
 Rendering never uses reflection, so *the text is identical on the JVM and in a native image*:
 
 * the member of a property is the getter that the compile-time checks (the annotation processor) recorded in `META-INF/micronaut-graphql-tools/accessors.txt`, because Micronaut's bean introspection does not say which method reads a property. Without the processor, or for a class it did not see, the member reads `Type#property`;
-* the graphql-java version is the `Bundle-Version` of the manifest of its jar, read when the manifest is rendered. The library registers `META-INF/MANIFEST.MF` and `META-INF/micronaut-graphql-tools/*` as native image resources.
+* the graphql-java version is the `Bundle-Version` of the manifest of its jar, read when the manifest is rendered; graphql-java 26 declares no version there, and the header says `unknown` on it. The library registers `META-INF/MANIFEST.MF` and `META-INF/micronaut-graphql-tools/*` as native image resources.
 
 == Options
 
