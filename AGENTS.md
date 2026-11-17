@@ -7,7 +7,7 @@ disagree, the workflow wins, and you should fix this file in the same change.
 
 ## Setup
 
-- Tools: `mise install` installs Oracle GraalVM 25 (the default JDK and `native-image`) and `actionlint`. If mise reports
+- Tools: `mise install` installs Oracle GraalVM 25 (the default JDK and `native-image`) and `jactionlint`. If mise reports
   that the configuration is not trusted, run `mise trust` first.
   For another JDK line, run `MISE_ENV=jdk17 mise install`, `MISE_ENV=jdk21 mise install` or `MISE_ENV=jdk25 mise install` once (Temurin).
 - Run Gradle through mise: `mise exec -- ./gradlew <task>` uses the default JDK. For another JDK line, set the same
@@ -29,7 +29,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
 | Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |
 | Benchmarks | `./gradlew :benchmarks:check` | Hot path, allocation or startup changes |
-| Workflow lint | `mise exec -- actionlint` | Any change under `.github/` |
+| Workflow lint | `mise exec -- jactionlint` | Any change under `.github/` |
 
 - Leg values are roles (`floor`, `default`, `ceiling`, `latest`). The floor and ceiling versions are in
   `gradle/libs.versions.toml`; the default leg takes the graphql-java that micronaut-graphql manages; `latest` is resolved in `build.gradle.kts`.
