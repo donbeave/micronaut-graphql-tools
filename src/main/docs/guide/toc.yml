@@ -26,7 +26,10 @@ testing: Testing
 performance: Performance
 configuration: Configuration
 exceptions: Exceptions
-migration: Migration
+migration:
+  title: Migration
+  fromSnapshot: Migrating from 1.0.0-SNAPSHOT
+breaks: Breaking Changes
 compatibility: Compatibility
 releaseHistory: Release History
 repository: Repository
