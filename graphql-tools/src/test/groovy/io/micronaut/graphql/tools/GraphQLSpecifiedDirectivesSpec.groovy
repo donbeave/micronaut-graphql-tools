@@ -49,6 +49,16 @@ class GraphQLSpecifiedDirectivesSpec extends Specification {
         GraphQLUtils.findDirectiveArgumentTypes(registry).contains("DeferOptions")
     }
 
+    def "the provided names are the specified ones plus what a new registry of this leg registers"() {
+        given:
+        def registered = new graphql.schema.idl.TypeDefinitionRegistry().directiveDefinitions.keySet()
+
+        expect:
+        GraphQLSpecifiedDirectives.SPECIFIED.every { GraphQLSpecifiedDirectives.isProvided(it) }
+        registered.every { GraphQLSpecifiedDirectives.isProvided(it) }
+        GraphQLSpecifiedDirectives.isProvided("defer") == registered.contains("defer")
+    }
+
     def "other names, a different case, an empty name and null are not specified"() {
         expect:
         !GraphQLSpecifiedDirectives.isSpecified(name)

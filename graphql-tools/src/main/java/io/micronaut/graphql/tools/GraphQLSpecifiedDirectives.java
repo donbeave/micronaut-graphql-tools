@@ -17,6 +17,8 @@ package io.micronaut.graphql.tools;
 
 import io.micronaut.core.annotation.Internal;
 
+import graphql.schema.idl.TypeDefinitionRegistry;
+
 import java.util.Set;
 
 /**
@@ -25,7 +27,7 @@ import java.util.Set;
  * {@code DirectiveInfo.GRAPHQL_SPECIFICATION_DIRECTIVES} on 25.x and of {@code Directives.BUILT_IN_DIRECTIVES} on 26.x;
  * 21.x and 22.x do not list {@code defer} and {@code experimental_disableErrorPropagation} there. {@link #isSpecified}
  * is the set graphql-java lists on every line (reachability, undeclared checks); {@link #isBuiltIn} adds
- * those two (the wiring check and the schema hash: graphql-java 25 and later register them in every registry).
+ * those two (the wiring check); {@link #isProvided} is the active line's own set (the schema hash).
  */
 @Internal
 final class GraphQLSpecifiedDirectives {
@@ -41,6 +43,9 @@ final class GraphQLSpecifiedDirectives {
     );
 
     static final Set<String> SPECIFIED = Set.of("include", "skip", "deprecated", "specifiedBy", "oneOf");
+
+    private static final Set<String> PROVIDED =
+            Set.copyOf(new TypeDefinitionRegistry().getDirectiveDefinitions().keySet());
 
     private GraphQLSpecifiedDirectives() {
     }
@@ -59,5 +64,14 @@ final class GraphQLSpecifiedDirectives {
      */
     static boolean isBuiltIn(String name) {
         return name != null && NAMES.contains(name);
+    }
+
+    /**
+     * @param name the name of a directive, without the {@code @}
+     * @return true if the active graphql-java line registers a definition with this name in every registry,
+     * or lists it as specified
+     */
+    static boolean isProvided(String name) {
+        return name != null && (SPECIFIED.contains(name) || PROVIDED.contains(name));
     }
 }
