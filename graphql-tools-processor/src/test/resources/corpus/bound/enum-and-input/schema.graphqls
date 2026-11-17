@@ -1,0 +1,17 @@
+schema {
+  query: Query
+}
+
+type Query {
+  level: Level
+  describe(filter: Filter!): String
+}
+
+enum Level {
+  LOW
+  HIGH
+}
+
+input Filter {
+  text: String!
+}
