@@ -135,6 +135,42 @@ jobs:
             **/build/reports/tests/test/
           if-no-files-found: ignore
 
+  # The guide build (#57). The `snippet::` macro prints a warning and still succeeds when a snippet file or tag is missing in
+  # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; nothing is published (D-09).
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['25']
+    name: docs (Java ${{ matrix.java }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up JDK
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Build the guide
+        run: |
+          set -o pipefail
+          ./gradlew docs --no-daemon 2>&1 | tee docs.log
+      - name: Fail on a missing snippet
+        run: |
+          if grep -E 'NO FILE FOUND|not found in include file|include file not found|unexpected end tag|detected unclosed tag|mismatched end tag|unterminated .* block|Unresolved directive' docs.log; then
+            echo "The guide has a missing snippet file or tag (test-suite-java, test-suite-kotlin, test-suite-groovy) or a broken block" >&2
+            exit 1
+          fi
+      - name: Upload the guide
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: guide
+          path: build/docs
+          retention-days: 7
+          if-no-files-found: error
+
   # D-04 guard: fails when the working tree or the PR title/body contains a forbidden consumer name. The pattern list
   # is the FORBIDDEN_NAMES secret (one fixed string per line) and is never written to the repository or to the log.
   # Fork PRs get no secrets: the job reports that it did not run and passes. Any other run without a pattern list fails.
@@ -210,7 +246,7 @@ jobs:
   required:
     name: required checks
     if: always()
-    needs: [build, check-library, binary-compatibility, consumer-name-guard]
+    needs: [build, check-library, binary-compatibility, docs, consumer-name-guard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

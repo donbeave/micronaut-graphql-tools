@@ -1,1 +1,43 @@
-TODO
+This page binds a small schema to a resolver. Every code example is shown in Java, Kotlin and Groovy; pick a tab.
+
+1. Add the dependency. No version is on Maven Central yet, so publish the library to your local Maven repository first: run `./gradlew publishToMavenLocal` in a clone of https://github.com/donbeave/micronaut-graphql-tools[the repository] (nothing leaves your machine), and add `mavenLocal()` to the `repositories` of your build. The version of the current development line is `1.0.0-SNAPSHOT`:
++
+[source,groovy]
+----
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-SNAPSHOT")
+----
+
+2. Define the GraphQL schema in a `schema.graphqls` file, for example in the `src/main/resources` folder:
++
+[source,graphql]
+----
+type Query {
+  allBooks: [Book!]!
+}
+
+type Book {
+  id: ID!
+  title: String!
+}
+----
+
+3. Define a `TypeDefinitionRegistry` bean that loads the schema. Put the bean method in a class annotated with `@Factory` (`io.micronaut.context.annotation.Factory`):
++
+snippet::example.graphql.GraphQLFactory[project-base="test-suite", source="main", tags="registry", indent="0"]
+
+4. Add a root resolver. The method name is the field name in the schema, and the class is bound by `@GraphQLRootResolver`. The resolver reads from a `BookRepository` that returns `Book` objects with an `id` and a `title`; they are classes of the example application, so replace them with your own data source and model. `@ElapsedTime` is a timing aspect of the example application; leave it out:
++
+snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="main", tags="resolver", indent="0"]
+
+== Annotations
+
+The library provides these annotations (package `io.micronaut.graphql.tools.annotation`):
+
+* `@GraphQLRootResolver` defines a root-level resolver, a GraphQL entry point such as a query or mutation.
+* `@GraphQLType` maps a Java class to a GraphQL type.
+* `@GraphQLTypeResolver` specifies a resolver for a field of a specific GraphQL type, to map nested or complex fields.
+* `@GraphQLInput` defines a GraphQL input type, structured input data for mutations or queries.
+* `@GraphQLField` marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+* `@GraphQLSchemaCoordinate("Type.field")` names the field a resolver method binds; it is meant for resolver contracts (interfaces).
+
+GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own.

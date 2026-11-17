@@ -1,0 +1,7 @@
+NOTE: This page is pending: the prose will be written with the user guide (epic #97). The reference below is generated from the configuration class.
+
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration.adoc[]
+
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$InputConfiguration.adoc[]
+
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$ManifestConfiguration.adoc[]
