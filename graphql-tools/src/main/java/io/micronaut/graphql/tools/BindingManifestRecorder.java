@@ -62,6 +62,7 @@ final class BindingManifestRecorder {
     static final String KIND_ROOT = "root";
     static final String KIND_RESOLVER = "resolver";
     static final String KIND_PROPERTY = "property";
+    static final String KIND_CLAIMED = "claimed";
 
     private static final String ARROW = " → ";
     private static final String DOT = " · ";
@@ -112,18 +113,36 @@ final class BindingManifestRecorder {
         if (!recording) {
             return;
         }
-        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(), () -> {
-            StringBuilder coordinate = new StringBuilder(objectTypeDefinition.getName()).append('.')
-                    .append(fieldDefinition.getName());
-            if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
-                coordinate.append(fieldDefinition.getInputValueDefinitions().stream()
-                        .map(it -> it.getName() + ": " + printType(it.getType()))
-                        .collect(Collectors.joining(", ", "(", ")")));
-            }
-            coordinate.append(": ").append(printType(fieldDefinition.getType()));
-            return line(coordinate.toString(), kind, member.get(), JavaTypeNames.of(declaredType),
-                    ReturnTypes.convertedTypeName(declaredType, subscription));
-        });
+        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                () -> line(coordinate(objectTypeDefinition, fieldDefinition), kind, member.get(),
+                        JavaTypeNames.of(declaredType), ReturnTypes.convertedTypeName(declaredType, subscription)));
+    }
+
+    /**
+     * Records a field that a {@link RuntimeWiringCustomizer} claims: the library does not bind it, so it has no Java
+     * member.
+     *
+     * @param objectTypeDefinition the object type of the field
+     * @param fieldDefinition      the field
+     * @param customizer           the class name of the customizer that claims it
+     */
+    void claimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String customizer) {
+        if (!recording) {
+            return;
+        }
+        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                () -> line(coordinate(objectTypeDefinition, fieldDefinition), KIND_CLAIMED, customizer, NONE, NONE));
+    }
+
+    private static String coordinate(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition) {
+        StringBuilder coordinate = new StringBuilder(objectTypeDefinition.getName()).append('.')
+                .append(fieldDefinition.getName());
+        if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
+            coordinate.append(fieldDefinition.getInputValueDefinitions().stream()
+                    .map(it -> it.getName() + ": " + printType(it.getType()))
+                    .collect(Collectors.joining(", ", "(", ")")));
+        }
+        return coordinate.append(": ").append(printType(fieldDefinition.getType())).toString();
     }
 
     void resolves(String abstractTypeName, String objectTypeName, Class<?> javaType) {

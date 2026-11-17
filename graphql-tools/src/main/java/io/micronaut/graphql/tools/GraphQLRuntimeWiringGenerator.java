@@ -192,6 +192,13 @@ final class GraphQLRuntimeWiringGenerator {
     // value: the members
     private final Map<String, String> ambiguousBindings = new TreeMap<>();
 
+    // key: schema coordinate (Type.field) of a field that a RuntimeWiringCustomizer claims, value: the customizer's class
+    // name; read once at the start of generate()
+    private Map<String, String> claimedFields = Map.of();
+
+    // schema coordinates (Type.field) of the fields that an extend type adds, for the hint of a failure
+    private final Set<String> extensionFields;
+
     private final BindingManifestRecorder manifestRecorder;
 
     private final SchemaChecks schemaChecks;
@@ -205,7 +212,8 @@ final class GraphQLRuntimeWiringGenerator {
                                   TypeDefinitionRegistry typeDefinitionRegistry,
                                   SchemaMappingDictionary schemaMappingDictionary,
                                   Provider<GraphQLSchema> graphQLSchemaProvider,
-                                  GraphQLToolsConfiguration configuration) {
+                                  GraphQLToolsConfiguration configuration,
+                                  Set<String> extensionFields) {
         requireNonNull("applicationContext", applicationContext);
         requireNonNull("graphQLBeanIntrospectionRegistry", graphQLBeanIntrospectionRegistry);
         requireNonNull("graphQLResolversRegistry", graphQLResolversRegistry);
@@ -221,6 +229,7 @@ final class GraphQLRuntimeWiringGenerator {
         this.schemaMappingDictionary = schemaMappingDictionary;
         this.graphQLSchemaProvider = graphQLSchemaProvider;
         this.configuration = configuration;
+        this.extensionFields = extensionFields;
         this.manifestRecorder = new BindingManifestRecorder(configuration.getManifest().isRecorded());
         this.schemaChecks = new SchemaChecks(typeDefinitionRegistry, graphQLResolversRegistry,
                 graphQLBeanIntrospectionRegistry, schemaMappingDictionary, configuration, manifestRecorder);
@@ -312,6 +321,8 @@ final class GraphQLRuntimeWiringGenerator {
 
             validateResolverDirectives();
 
+            claimedFields = RuntimeWiringCustomizers.claims(customizers, typeDefinitionRegistry);
+
             subscriptionTypeName = schemaDefinition.getOperationTypeDefinitions().stream()
                     .filter(it -> "subscription".equals(it.getName()))
                     .map(it -> it.getTypeName().getName())
@@ -354,7 +365,7 @@ final class GraphQLRuntimeWiringGenerator {
 
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(unboundTypes));
 
-            RuntimeWiringCustomizers.apply(rootRuntimeWiringBuilder, customizers, typeDefinitionRegistry);
+            RuntimeWiringCustomizers.apply(rootRuntimeWiringBuilder, customizers, typeDefinitionRegistry, claimedFields);
 
             return rootRuntimeWiringBuilder.build();
         } finally {
@@ -667,12 +678,20 @@ final class GraphQLRuntimeWiringGenerator {
 
     private void processRootFieldDefinition(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,
                                             TypeRuntimeWiring.Builder typeRuntimeWiringBuilder) {
+        if (isClaimed(objectTypeDefinition, fieldDefinition)) {
+            return;
+        }
+
         TypeMappingContext mappingContext =
                 TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
 
-        List<BeanDefinitionAndMethod> beanDefinitionAndMethods =
-                graphQLResolversRegistry.getRootExecutableMethods(objectTypeDefinition.getName(),
-                        fieldDefinition.getName(), mappingContext);
+        List<BeanDefinitionAndMethod> beanDefinitionAndMethods;
+        try {
+            beanDefinitionAndMethods = graphQLResolversRegistry.getRootExecutableMethods(
+                    objectTypeDefinition.getName(), fieldDefinition.getName(), mappingContext);
+        } catch (MethodNotFoundException e) {
+            throw hintClaimedFields(e, objectTypeDefinition.getName(), fieldDefinition.getName());
+        }
 
         if (beanDefinitionAndMethods.size() > 1) {
             throw new MultipleMethodsFoundException(mappingContext, toMap(beanDefinitionAndMethods));
@@ -702,6 +721,24 @@ final class GraphQLRuntimeWiringGenerator {
                     executable.getReturnType().asArgument(),
                     objectTypeDefinition.getName().equals(subscriptionTypeName));
         }
+    }
+
+    /**
+     * @return {@code true} if a customizer claims the field, so that the library does not bind it; the manifest lists
+     * it
+     */
+    private boolean isClaimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition) {
+        String customizer = claimedFields.get(objectTypeDefinition.getName() + "." + fieldDefinition.getName());
+        if (customizer == null) {
+            return false;
+        }
+        manifestRecorder.claimed(objectTypeDefinition, fieldDefinition, customizer);
+        return true;
+    }
+
+    private MethodNotFoundException hintClaimedFields(MethodNotFoundException exception, String objectTypeName,
+                                                      String fieldName) {
+        return extensionFields.contains(objectTypeName + "." + fieldName) ? exception.forExtensionField() : exception;
     }
 
     private void processEnumTypeDefinition(EnumTypeDefinition enumTypeDefinition, Class<?> targetClass, boolean input,
@@ -1018,6 +1055,10 @@ final class GraphQLRuntimeWiringGenerator {
     private void processFieldDefinition(FieldDefinition fieldDefinition, ObjectTypeDefinition objectTypeDefinition,
                                         TypeRuntimeWiring.Builder typeRuntimeWiringBuilder,
                                         BeanIntrospection<Object> beanIntrospection) {
+        if (isClaimed(objectTypeDefinition, fieldDefinition)) {
+            return;
+        }
+
         TypeMappingContext mappingContext = TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
 
         Optional<BeanProperty<Object, Object>> beanProperty =
@@ -1558,14 +1599,14 @@ final class GraphQLRuntimeWiringGenerator {
         Class<?> contractClass = contractTypes.get(objectTypeName);
 
         if (contractClass == null) {
-            return exception;
+            return hintClaimedFields(exception, objectTypeName, fieldName);
         }
         List<Class<?>> declaring = graphQLBeanIntrospectionRegistry.getImplementationClasses(contractClass).stream()
                 .filter(it -> BeanIntrospector.SHARED.findIntrospection(it)
                         .map(introspection -> introspection.getProperty(fieldName).isPresent()).orElse(false))
                 .toList();
 
-        return exception.forContract(contractClass, declaring);
+        return hintClaimedFields(exception.forContract(contractClass, declaring), objectTypeName, fieldName);
     }
 
     private void processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,

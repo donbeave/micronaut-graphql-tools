@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools;
 
 import graphql.language.FieldDefinition;
+import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.TypeDefinition;
 import graphql.schema.DataFetcher;
@@ -26,12 +27,15 @@ import graphql.schema.TypeResolver;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import graphql.schema.idl.TypeRuntimeWiring;
 import graphql.schema.idl.WiringFactory;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.graphql.tools.exceptions.InvalidClaimedFieldsException;
 import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,16 +53,65 @@ final class RuntimeWiringCustomizers {
     }
 
     /**
+     * Reads {@link RuntimeWiringCustomizer#claimedFields()} of every customizer, once, and validates the claims.
+     *
+     * @param customizers the customizers
+     * @param registry    the registry the schema is generated from
+     * @return the coordinate ({@code Type.field}) of every claimed field to the class name of the customizer that
+     * claims it
+     * @throws InvalidClaimedFieldsException if a claim is not a field of an object type of the schema
+     */
+    static Map<String, String> claims(List<RuntimeWiringCustomizer> customizers, TypeDefinitionRegistry registry) {
+        Map<String, String> claims = new TreeMap<>();
+        List<String> problems = new ArrayList<>();
+        for (RuntimeWiringCustomizer customizer : customizers) {
+            for (FieldCoordinates claim : customizer.claimedFields()) {
+                String coordinate = claim.getTypeName() + "." + claim.getFieldName();
+                String problem = claimProblem(claim, registry);
+                if (problem == null) {
+                    claims.putIfAbsent(coordinate, customizer.getClass().getName());
+                } else {
+                    problems.add(coordinate + ": " + problem + " (" + customizer.getClass().getName() + ")");
+                }
+            }
+        }
+        if (!problems.isEmpty()) {
+            Collections.sort(problems);
+            throw new InvalidClaimedFieldsException(problems);
+        }
+        return claims;
+    }
+
+    @Nullable
+    private static String claimProblem(FieldCoordinates claim, TypeDefinitionRegistry registry) {
+        TypeDefinition<?> type = registry.getType(claim.getTypeName()).orElse(null);
+        if (type == null) {
+            return "the schema defines no type " + claim.getTypeName();
+        }
+        if (!(type instanceof ObjectTypeDefinition objectType)) {
+            return claim.getTypeName() + " is not an object type"
+                    + (type instanceof InterfaceTypeDefinition
+                    ? ": claim the field of each object type that implements it" : "");
+        }
+        if (objectType.getFieldDefinitions().stream().noneMatch(it -> it.getName().equals(claim.getFieldName()))) {
+            return claim.getTypeName() + " defines no field " + claim.getFieldName();
+        }
+        return null;
+    }
+
+    /**
      * Applies the customizers in the given order.
      *
      * @param builder     the builder that holds the library's wiring
      * @param customizers the customizers, in {@code Ordered} order
      * @param registry    the registry the schema is generated from, for the types and fields of the schema
+     * @param claimed     the claimed fields, see {@link #claims}: the library wired none of them
      * @throws RuntimeWiringOverrideException if a customizer replaced what the library wired
      */
     static void apply(RuntimeWiring.Builder builder,
                       List<RuntimeWiringCustomizer> customizers,
-                      TypeDefinitionRegistry registry) {
+                      TypeDefinitionRegistry registry,
+                      Map<String, String> claimed) {
         if (customizers.isEmpty()) {
             return;
         }
@@ -68,8 +121,11 @@ final class RuntimeWiringCustomizers {
         for (RuntimeWiringCustomizer customizer : customizers) {
             customizer.customize(builder);
             Snapshot after = Snapshot.of(builder.build(), fieldsByType.keySet());
+            if (before.restoreClearedDefaultDataFetchers(builder, after)) {
+                after = Snapshot.of(builder.build(), fieldsByType.keySet());
+            }
             String by = " (" + customizer.getClass().getName() + ")";
-            before.replacedIn(after, fieldsByType).forEach(it -> replacements.add(it + by));
+            before.replacedIn(after, fieldsByType, claimed.keySet()).forEach(it -> replacements.add(it + by));
             before = after;
         }
         if (!replacements.isEmpty()) {
@@ -144,11 +200,34 @@ final class RuntimeWiringCustomizers {
         }
 
         /**
+         * {@code RuntimeWiring.Builder#type} of a {@code TypeRuntimeWiring} that sets no default data fetcher, which is
+         * how a customizer adds a data fetcher for one field, clears the default data fetcher the library registered
+         * for the type (graphql-java 21.3). That is not a replacement, and it would silently turn off the library's
+         * binding of the type's other fields, so the library's default data fetcher is put back.
+         *
+         * @param builder the builder
+         * @param after   the wiring after a customizer ran
+         * @return {@code true} if a default data fetcher was put back
+         */
+        boolean restoreClearedDefaultDataFetchers(RuntimeWiring.Builder builder, Snapshot after) {
+            boolean restored = false;
+            for (Map.Entry<String, DataFetcher> entry : defaultDataFetchers.entrySet()) {
+                if (after.defaultDataFetchers.get(entry.getKey()) == null) {
+                    builder.type(TypeRuntimeWiring.newTypeWiring(entry.getKey())
+                            .defaultDataFetcher(entry.getValue()).build());
+                    restored = true;
+                }
+            }
+            return restored;
+        }
+
+        /**
          * @param after        the wiring after a customizer ran
          * @param fieldsByType the fields of every object type
+         * @param claimed      the claimed coordinates, which the library did not wire
          * @return what this snapshot wires that {@code after} wires differently
          */
-        List<String> replacedIn(Snapshot after, Map<String, Set<String>> fieldsByType) {
+        List<String> replacedIn(Snapshot after, Map<String, Set<String>> fieldsByType, Set<String> claimed) {
             List<String> replaced = new ArrayList<>();
             dataFetchers.forEach((type, fields) -> fields.forEach((field, dataFetcher) -> {
                 if (after.dataFetchers.getOrDefault(type, Map.of()).get(field) != dataFetcher) {
@@ -178,7 +257,7 @@ final class RuntimeWiringCustomizers {
                     replaced.add("directive wiring @" + name);
                 }
             });
-            replaced.addAll(replacedThroughCodeRegistry(after, fieldsByType));
+            replaced.addAll(replacedThroughCodeRegistry(after, fieldsByType, claimed));
             return replaced;
         }
 
@@ -186,7 +265,8 @@ final class RuntimeWiringCustomizers {
          * graphql-java's schema generator keeps a data fetcher or type resolver that the code registry of the runtime
          * wiring already holds, so one there for a field or type the library wired would win over the library.
          */
-        private List<String> replacedThroughCodeRegistry(Snapshot after, Map<String, Set<String>> fieldsByType) {
+        private List<String> replacedThroughCodeRegistry(Snapshot after, Map<String, Set<String>> fieldsByType,
+                                                         Set<String> claimed) {
             List<String> replaced = new ArrayList<>();
             GraphQLCodeRegistry.Builder now = GraphQLCodeRegistry.newCodeRegistry(after.codeRegistry);
             GraphQLCodeRegistry.Builder then = GraphQLCodeRegistry.newCodeRegistry(codeRegistry);
@@ -194,6 +274,7 @@ final class RuntimeWiringCustomizers {
             dataFetchers.forEach((type, fields) -> fields.keySet().forEach(field -> wiredFields.add(type + "." + field)));
             defaultDataFetchers.keySet().forEach(type -> fieldsByType.getOrDefault(type, Set.of())
                     .forEach(field -> wiredFields.add(type + "." + field)));
+            wiredFields.removeAll(claimed);
             for (String coordinate : wiredFields) {
                 int dot = coordinate.indexOf('.');
                 FieldCoordinates coordinates = FieldCoordinates.coordinates(
