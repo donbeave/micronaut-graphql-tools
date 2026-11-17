@@ -15,7 +15,6 @@
  */
 package io.micronaut.graphql.tools;
 
-import graphql.Directives;
 import graphql.language.Directive;
 import graphql.language.DirectiveDefinition;
 import graphql.language.DirectivesContainer;
@@ -27,7 +26,6 @@ import graphql.language.InputValueDefinition;
 import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.TypeDefinition;
-import graphql.schema.idl.DirectiveInfo;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
@@ -47,15 +45,6 @@ import java.util.TreeSet;
 final class DirectiveWiringCheck {
 
     private static final Logger LOG = LoggerFactory.getLogger(DirectiveWiringCheck.class);
-
-    // graphql-java implements these itself; @include and @skip cannot be applied in a schema, but are built in as well
-    private static final Set<String> BUILT_IN = Set.of(
-            Directives.IncludeDirective.getName(),
-            Directives.SkipDirective.getName(),
-            Directives.DeprecatedDirective.getName(),
-            Directives.SpecifiedByDirective.getName(),
-            Directives.OneOfDirective.getName()
-    );
 
     private DirectiveWiringCheck() {
     }
@@ -119,8 +108,9 @@ final class DirectiveWiringCheck {
         }
     }
 
+    // graphql-java implements these itself; @include and @skip cannot be applied in a schema, but are built in as well
     private static boolean isBuiltIn(String name) {
-        return BUILT_IN.contains(name) || DirectiveInfo.isGraphqlSpecifiedDirective(name);
+        return GraphQLSpecifiedDirectives.isBuiltIn(name);
     }
 
     static Map<String, Set<String>> appliedDirectives(TypeDefinitionRegistry registry) {
