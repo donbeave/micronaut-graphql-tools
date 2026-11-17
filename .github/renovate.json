@@ -33,7 +33,8 @@
         "digest",
         "pin"
       ],
-      "automerge": true
+      "automerge": true,
+      "minimumReleaseAge": "3 days"
     },
     {
       "description": "Micronaut 4 only (D-36): core, platform, test, graphql, docs and the Gradle plugins stay below Micronaut 5.",
@@ -113,6 +114,14 @@
         "mise"
       ],
       "groupName": "mise tools"
+    },
+    {
+      "description": "Renovate commits and PR titles use the repo's conventional form build(deps): (overrides the preset's chore/fix types).",
+      "matchPackageNames": [
+        "*"
+      ],
+      "semanticCommitType": "build",
+      "semanticCommitScope": "deps"
     }
   ]
 }
