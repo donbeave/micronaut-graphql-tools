@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// measurement: shifts the line numbers
 package io.micronaut.graphql.tools;
 
 import io.micronaut.core.annotation.Internal;
@@ -28,6 +27,7 @@ import java.util.Optional;
  */
 @Internal
 public final class ArgumentDefinition {
+    // measurement only: shifts line numbers
 
     private static final String SOURCE_ARGUMENT = "* SRC *";
     private static final String DATA_FETCHING_ENVIRONMENT_ARGUMENT = "* DFE *";
