@@ -13,7 +13,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | Change | What breaks | How to fix
 | BC-01 `List<CompletionStage<T>>` | Startup fails with `UnsupportedReturnTypeException`. Before, the client received the future's `toString()`. | Return `CompletionStage<List<T>>`.
 | BC-02 wrapper, `Optional` and `Publisher` placement | Startup fails for `Optional` on a non-null type, misplaced or repeated wrappers, `Publisher` on a field that is not a subscription field, and a subscription field that does not return `Publisher`. | Remove `Optional` from non-null types. Return `Publisher` only on subscription fields; elsewhere return a `CompletionStage`.
-| BC-03 build and publishing | The library compiles to Java 17 bytecode, and nothing is published to Maven Central. The published POM and the extended-scalars version changed. | Build with JDK 21 or newer. Build and publish the library yourself. If you pin extended-scalars, pin the version your build resolves.
+| BC-03 build and publishing | The library compiles to Java 17 bytecode, and nothing is published to Maven Central. The published POM and the extended-scalars version changed. | Use JDK 17 or newer. Build and publish the library yourself. If you pin extended-scalars, pin the version your build resolves.
 | BC-04 `@Inherited` resolver stereotypes | A subclass of a resolver bean is a resolver too, which can make two resolvers bind one field. | Annotate the subclass with `@Replaces(<original>.class)`.
 | BC-05 interface with its own introspection | A getter that only an implementation declares no longer binds. Startup fails. | Declare the getter on the interface, or remove the interface's own introspection.
 | BC-06 member mapped outside the declared Java type | Startup fails when a union member or implementation maps to a Java type that cannot be the field's Java interface. | Map the member to a class that fits the field's declared Java interface.
@@ -29,12 +29,12 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding listed in the binding manifest, annotate it with `@GraphQLIgnore`, or set `strict: false`.
 | BC-17 `extend type` fields | Startup fails for an extension field that nothing binds. Before, graphql-java served it without a check. | Give the field a resolver or property, or claim it with `claimedFields()`.
 | BC-18 unreachable types | Startup fails and lists every unreachable type. An `allow-unreachable` entry that is no longer unreachable fails startup. | Bind the type, remove it, or list it in `allow-unreachable`. Remove stale entries. Or set `unreachable-types: ignore`.
-| BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
+| BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time check is _pending_ with #150. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
 | #173 `@Named("graphql-tools")` mapper seam | _Pending._ The mapper becomes internal and is removed from the documented API. | Do not depend on it. Its replacement is planned with #37.
 | #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. Jackson annotations stop being the input contract. | Plan for Micronaut Serialization and introspection annotations.
 | #37 input conversion | _Pending._ Arguments and input objects are converted from `BeanIntrospection` instead of Jackson. | Plan for introspection-based conversion and the scalar SPI.
-| #86 check severity and removed keys | _Pending._ Four keys are removed and their replacements named. `strict: false` also warns on unreachable object, interface and union types. | Use the replacement keys in the table in the configuration section below.
-| #105 precedence default | _Pending._ The default `strict` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
+| #86 check severity and removed keys | _Pending._ Four keys are removed and their replacements named. `strict: false` also warns on unreachable object, interface and union types. | Use the replacement keys listed under #86 in the pending changes below.
+| #105 precedence default | _Pending._ The default value `strict` of `precedence` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
 | #109 public exceptions | _Pending._ Startup exceptions collapse into one `SchemaBindingException` with error codes. | Match on the error code, not on the exception subclass.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
 | #236 ambiguity exception | _Pending._ `AmbiguousBindingException` becomes internal. | Match on the error code.
@@ -102,7 +102,7 @@ Now the library compiles to Java 17 bytecode (`--release 17`). The project's CI 
 
 Status: not covered by #79; the release notes list it.
 
-Fix: build the project on JDK 21 or newer. To use the library, build and publish it to a local or private repository. If you pin `graphql-java-extended-scalars`, pin the version your build resolves: check it with `./gradlew dependencies`.
+Fix: use JDK 17 or newer to build and run the library. To use the library, build and publish it to a local or private repository. If you pin `graphql-java-extended-scalars`, pin the version your build resolves: check it with `./gradlew dependencies`.
 
 === BC-04: `@Inherited` resolver stereotypes
 
@@ -153,6 +153,25 @@ public interface Book {
 A union member or an interface implementation that is mapped to a Java type which cannot be the field's declared Java interface fails the startup with `IncorrectMemberMappingException`. The check is narrowed: only provably disjoint pairs fail, that is a `final` class that does not implement the interface, or classes that are unrelated. Other mappings are accepted.
 
 Fix: map the member to a class that matches the field's declared Java interface.
+
+[source,java]
+----
+public interface Coded {
+    String getCode();
+}
+
+// Before: Stray is final and does not implement Coded, so no object can be both.
+// Startup fails with IncorrectMemberMappingException.
+public final class Stray {
+    public String getCode() { return "stray"; }
+}
+
+// After: Stray implements the Java interface that the field declares
+public class Stray implements Coded {
+    @Override
+    public String getCode() { return "stray"; }
+}
+----
 
 Status: approved, no opt-out; narrowed to provably disjoint mappings.
 
@@ -306,6 +325,27 @@ public class BookFetcherCustomizer implements RuntimeWiringCustomizer {
 
 When a member of the Java type (a property or a `@GraphQLField` method) and a type resolver method can both bind a field, the startup fails with `AmbiguousBindingException`, which names the field and both members. Before, the property won silently.
 
+[source,java]
+----
+// Schema: type Book { id: ID! }. The getter and the type resolver method both bind Book.id,
+// so startup fails with AmbiguousBindingException.
+public class Book {
+    public String getId() { return "1"; }
+}
+
+@GraphQLTypeResolver(Book.class)
+@Singleton
+public class BookResolver {
+    public String id(Book book) { return book.getId(); }
+}
+
+// After: the getter is ignored, so the type resolver method alone binds the field
+public class Book {
+    @GraphQLIgnore
+    public String getId() { return "1"; }
+}
+----
+
 Fix: remove one of the two members. Or choose the winner: set `micronaut.graphql.tools.precedence` to `property-first` (the old behaviour) or `resolver-first`, or mark the field with a schema directive that is listed in `resolver-directives`, so that the type resolver method binds it. A getter can also carry `@GraphQLIgnore`, so the type resolver binds the field without an ambiguity.
 
 Opt-out: `micronaut.graphql.tools.precedence: property-first`. `strict: false` does not change this outcome.
@@ -340,6 +380,15 @@ public class PingQuery {
 public class PingMutation {
     @GraphQLSchemaCoordinate("Mutation.ping")
     public String ping() { return "pong"; }
+}
+
+// A test fake that overrides PingQuery: @Replaces drops the original bean, so only the fake binds Query.ping
+@Replaces(PingQuery.class)
+@GraphQLRootResolver
+public class FakePingQuery extends PingQuery {
+    @Override
+    @GraphQLSchemaCoordinate("Query.ping")
+    public String ping() { return "test pong"; }
 }
 ----
 
@@ -396,7 +445,7 @@ Resolver parameters are bound to field arguments by name, not by position. A par
 
 Fix: rename the parameter to the argument name, or add `@GraphQLArgument("<argument name>")`.
 
-Status: breaking by design; no opt-out. The change is on `master`; issue #15 is still open.
+Status: breaking by design; no opt-out. The runtime half is on `master` (PR #257). The compile-time half is _pending_ with #150, so a build does not yet catch a misnamed parameter.
 
 [source,java]
 ----
@@ -455,7 +504,7 @@ Check codes, error codes and manifest lines will share one code system. The star
 The visitor replaces the JSR-269 processor of `graphql-tools-processor`. #291 registers the visitor, removes the JSR-269 service files, and renames the options:
 
 * `micronaut.graphql.tools.sdlDir` is replaced by `micronaut.graphql.tools.processor.schema.dirs`;
-* `micronaut.graphql.tools.processor.checks` switches the compile-time checks off.
+* `micronaut.graphql.tools.processor.checks` (`true` by default) switches the compile-time checks off when it is `false`.
 
 Until #291 lands, the JSR-269 processor reads the options it has today, `sdlDir` among them. #144 then deletes the JSR-269 code. Builds that pass the old options fail once their names are removed.
 
