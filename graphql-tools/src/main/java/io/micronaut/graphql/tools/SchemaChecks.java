@@ -22,6 +22,7 @@ import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.OperationTypeDefinition;
 import graphql.language.SchemaDefinition;
+import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.RuntimeWiring;
@@ -40,8 +41,10 @@ import io.micronaut.inject.BeanDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -128,6 +131,10 @@ final class SchemaChecks {
         }
 
         Set<String> allowed = new TreeSet<>(configuration.getAllowUnreachable());
+        boolean ignoring = configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE;
+        // the enum, input and scalar types that an allowed (or, when ignoring, any) unreachable type uses are allowed too
+        Set<String> covered = findCoveredValueTypes(ignoring ? unreachableTypes.keySet() : allowed);
+        checked.keySet().removeAll(covered);
         List<String> undefined = allowed.stream()
                 .filter(it -> !isDefined(it))
                 .toList();
@@ -142,7 +149,7 @@ final class SchemaChecks {
         }
 
         Set<String> unbound;
-        if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
+        if (ignoring) {
             unbound = unreachableTypes.keySet();
             if (!checked.isEmpty()) {
                 LOG.warn("{} is ignore: the schema defines types that no field reachable from a root operation "
@@ -182,6 +189,52 @@ final class SchemaChecks {
         }
 
         return unbound;
+    }
+
+    /**
+     * @param roots the names of unreachable types that are allowed or ignored
+     * @return the enum, input object and scalar types that the fields and arguments of the roots use, and that the
+     * input fields of those input object types use, transitively. Like the argument types of directive definitions,
+     * they are reached through a type that nothing binds, so they are not unreachable on their own. A type that only a
+     * root that is not allowed uses is not covered; object, interface and union types are never covered here.
+     */
+    private Set<String> findCoveredValueTypes(Set<String> roots) {
+        Set<String> covered = new TreeSet<>();
+        Deque<String> pending = new ArrayDeque<>(roots);
+        Set<String> visited = new HashSet<>();
+        while (!pending.isEmpty()) {
+            String name = pending.poll();
+            if (!visited.add(name)) {
+                continue;
+            }
+            TypeDefinition<?> typeDefinition = typeDefinitionRegistry.getType(name).orElse(null);
+            List<Type<?>> usedTypes = new ArrayList<>();
+            if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
+                collectFields(objectTypeDefinition.getFieldDefinitions(), usedTypes);
+            } else if (typeDefinition instanceof InterfaceTypeDefinition interfaceTypeDefinition) {
+                collectFields(interfaceTypeDefinition.getFieldDefinitions(), usedTypes);
+            } else if (typeDefinition instanceof InputObjectTypeDefinition inputObjectTypeDefinition) {
+                inputObjectTypeDefinition.getInputValueDefinitions().forEach(it -> usedTypes.add(it.getType()));
+            }
+            for (Type<?> usedType : usedTypes) {
+                String usedName = GraphQLUtils.getTypeName(usedType).getName();
+                TypeDefinition<?> used = typeDefinitionRegistry.getType(usedName).orElse(null);
+                boolean valueType = used instanceof EnumTypeDefinition || used instanceof InputObjectTypeDefinition
+                        || typeDefinitionRegistry.scalars().containsKey(usedName);
+                if (valueType && covered.add(usedName)) {
+                    // only input object types use further types
+                    pending.add(usedName);
+                }
+            }
+        }
+        return covered;
+    }
+
+    private static void collectFields(List<FieldDefinition> fieldDefinitions, List<Type<?>> usedTypes) {
+        for (FieldDefinition fieldDefinition : fieldDefinitions) {
+            usedTypes.add(fieldDefinition.getType());
+            fieldDefinition.getInputValueDefinitions().forEach(it -> usedTypes.add(it.getType()));
+        }
     }
 
     /**
