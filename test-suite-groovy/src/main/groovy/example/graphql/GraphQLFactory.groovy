@@ -15,6 +15,7 @@ import jakarta.inject.Singleton
 @Factory
 class GraphQLFactory {
 
+    // tag::registry[]
     @Bean
     @Singleton
     TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceResolver) {
@@ -22,6 +23,7 @@ class GraphQLFactory {
         return new TypeDefinitionRegistry()
                 .merge(new SchemaParser().parse(new BufferedReader(new InputStreamReader(inputStream))))
     }
+    // end::registry[]
 
     @Bean
     @Singleton
