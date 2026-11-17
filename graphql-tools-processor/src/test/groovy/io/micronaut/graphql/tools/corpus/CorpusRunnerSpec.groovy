@@ -360,4 +360,12 @@ class CorpusRunnerSpec extends Specification {
         new Corpus(root).problems == []
     }
 
+    void "a duplicated divergence entry is a problem"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 2\na all MethodNotFoundException Query.x\na all MethodNotFoundException Query.x\n')
+
+        expect:
+        new Corpus(root).problems.any { it.contains('is listed twice') }
+    }
+
 }

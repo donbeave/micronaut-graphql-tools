@@ -71,7 +71,12 @@ final class Divergences {
                 problems.add("${Corpus.DIVERGENCES}:${index + 1}: expected '<case> <java|groovy|kotlin|all> <code> <coordinate>'".toString())
                 return
             }
-            entries.add(new Entry(parts[0], parts[1], parts[2], parts[3]))
+            Entry entry = new Entry(parts[0], parts[1], parts[2], parts[3])
+            if (entries.any { it.toString() == entry.toString() }) {
+                problems.add("${Corpus.DIVERGENCES}:${index + 1}: '${entry}' is listed twice".toString())
+                return
+            }
+            entries.add(entry)
         }
         if (ceiling < 0) {
             problems.add("${Corpus.DIVERGENCES}: the header 'max-entries: N' is missing".toString())
