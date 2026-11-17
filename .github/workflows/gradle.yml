@@ -147,7 +147,7 @@ jobs:
         with:
           tools: java
       - name: Run native tests
-        run: ./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --configuration-cache --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: ./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           GRAALVM_QUICK_BUILD: 'true'
           PREDICTIVE_TEST_SELECTION: 'false'
