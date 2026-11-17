@@ -20,14 +20,31 @@ import graphql.schema.idl.FieldWiringEnvironment;
 import graphql.schema.idl.WiringFactory;
 import io.micronaut.core.annotation.Internal;
 
+import java.util.Set;
+
 /**
+ * Supplies data fetchers for the fields that no binding covers: those of the unreachable types that are allowed to stay
+ * unbound get graphql-java's default ({@code null} here); any other field is a bug in the binding.
+ *
  * @author Alexey Zhokhov
  */
 @Internal
 public final class DefaultWiringFactory implements WiringFactory {
 
+    private final Set<String> unboundTypeNames;
+
+    /**
+     * @param unboundTypeNames the object types whose fields use graphql-java's default data fetcher
+     */
+    public DefaultWiringFactory(Set<String> unboundTypeNames) {
+        this.unboundTypeNames = Set.copyOf(unboundTypeNames);
+    }
+
     @Override
     public DataFetcher getDefaultDataFetcher(FieldWiringEnvironment environment) {
+        if (unboundTypeNames.contains(environment.getParentType().getName())) {
+            return null;
+        }
         throw new UnsupportedOperationException("Unprocessed type: " + environment.getParentType().getName());
     }
 
