@@ -1,0 +1,17 @@
+schema {
+  query: Query
+}
+
+type Query {
+  item: Item
+  paint(color: Color!): String
+}
+
+type Item {
+  name: String!
+}
+
+enum Color {
+  RED
+  GREEN
+}

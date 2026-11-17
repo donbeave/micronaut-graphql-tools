@@ -1,0 +1,3 @@
+unbound-enum-constant example.Color#BLUE -
+unbound-resolver-method example.ItemResolver#legacyName(example.Item) -
+unbound-resolver-method example.Query#helper(java.lang.String) -

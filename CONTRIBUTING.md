@@ -29,6 +29,8 @@ The tests do not need Docker. These are the commands CI runs (all in `.github/wo
 
 `.github/workflows/gradle.yml` is the source of truth if this list and the workflow ever disagree.
 
+The binding corpus (#142) is a directory of data cases under `graphql-tools-processor/src/test/resources/corpus/`; its README says how to add and update a case (`./gradlew :micronaut-graphql-tools-processor:corpusUpdate`, and read the diff). It runs as part of `test` on the default graphql-java leg, on JDK 21 and 25 (about 70 s); the floor and ceiling legs skip it with a message, because its verdicts do not depend on the leg. It never runs on JDK 17 (the processor module needs JDK 21). The Kotlin cases are a separate task, `./gradlew :micronaut-graphql-tools-processor:corpusKotlin`, not part of `check` or CI: it runs one Gradle TestKit build (Kotlin 2.1.21, KSP2 2.1.21-2.0.2) that downloads the Kotlin and KSP Gradle plugins from the Gradle plugin portal and the processor from Maven Central, so it needs the network (about 2 to 3 minutes with a warm Gradle home).
+
 The example applications are three separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
 
 | Suite | Language | Run the JVM tests | Run the native tests (Oracle GraalVM 25) |
