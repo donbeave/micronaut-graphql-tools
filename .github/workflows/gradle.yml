@@ -172,7 +172,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-build
         with:
-          tools: jactionlint
+          tools: github:jdx/jactionlint
           gradle: 'false'
       - name: Lint the workflows and composite actions
         run: jactionlint --color
