@@ -1,10 +1,10 @@
 contact_links:
-  - name: Not an official Micronaut module yet
-    url: https://github.com/donbeave/micronaut-graphql-tools#micronaut-graphql-tools
-    about: This is not an official Micronaut module yet. Report problems with this library here; report Micronaut itself to the Micronaut projects.
-  - name: Micronaut Core Discussions
-    url: https://github.com/micronaut-projects/micronaut-core/discussions
-    about: Ask general questions about Micronaut (a dependency of this library)
-  - name: GraphQL Java Discussions
-    url: https://github.com/graphql-java/graphql-java/discussions
-    about: Ask questions about GraphQL Java (a dependency of this library)
+  - name: Security vulnerability
+    url: https://github.com/donbeave/micronaut-graphql-tools/security/advisories/new
+    about: Report a suspected vulnerability privately. Do not open a public issue for it.
+  - name: Documentation
+    url: https://github.com/donbeave/micronaut-graphql-tools#readme
+    about: The usage guide and the compatibility table. Check them before you report a problem.
+  - name: Contributing
+    url: https://github.com/donbeave/micronaut-graphql-tools/blob/master/CONTRIBUTING.md
+    about: How to build, test and sign off commits (DCO) before you open a pull request.
