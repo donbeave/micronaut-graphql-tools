@@ -1,0 +1,5 @@
+{
+  plain
+  { message }
+  again: plain { text: message }
+}

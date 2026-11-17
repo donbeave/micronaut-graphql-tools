@@ -1,0 +1,3 @@
+query ($value: Int!) {
+  echo(value: $value)
+}

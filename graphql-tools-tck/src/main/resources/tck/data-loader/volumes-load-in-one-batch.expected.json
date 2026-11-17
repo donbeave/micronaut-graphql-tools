@@ -1,0 +1,9 @@
+{
+  "data": {
+    "authors": [
+      { "name": "ada", "volumes": [{ "title": "ada-1" }, { "title": "ada-2" }] },
+      { "name": "grace", "volumes": [{ "title": "grace-1" }, { "title": "grace-2" }] },
+      { "name": "lin", "volumes": [{ "title": "lin-1" }, { "title": "lin-2" }] }
+    ]
+  }
+}

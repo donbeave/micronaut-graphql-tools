@@ -1,0 +1,10 @@
+{
+  __type(name: "Shape") {
+    kind
+    inputFields {
+      name
+      defaultValue
+      type { kind name ofType { kind name ofType { kind name } } }
+    }
+  }
+}

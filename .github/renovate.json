@@ -1,18 +1,142 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":gitSignOff"
   ],
-  "addLabels": ["dependency-upgrade"],
+  "ignorePresets": [
+    "workarounds:javaLTSVersions"
+  ],
+  "timezone": "Europe/Prague",
   "schedule": [
     "every weekend"
   ],
-  "prHourlyLimit": 1,
+  "dependencyDashboard": {
+    "enabled": true
+  },
+  "labels": [
+    "type: dependency-upgrade"
+  ],
   "prConcurrentLimit": 20,
-  "timezone": "Europe/Prague",
+  "vulnerabilityAlerts": {
+    "schedule": [
+      "at any time"
+    ]
+  },
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "platformAutomerge": false,
+  "ignoreTests": false,
   "packageRules": [
     {
-      "matchPackagePatterns": ["actions.*"],
-      "dependencyDashboardApproval": true
+      "description": "D-36 automerge: patch, minor, digest and pin updates inside the bounds merge by squash once required checks is green; majors open a PR.",
+      "matchUpdateTypes": [
+        "patch",
+        "minor",
+        "digest",
+        "pin"
+      ],
+      "automerge": true,
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Micronaut 4 only (D-36): core, platform, test, graphql, docs and the Gradle plugins stay below Micronaut 5.",
+      "matchPackageNames": [
+        "/^io\\.micronaut/"
+      ],
+      "allowedVersions": "< 5",
+      "groupName": "micronaut"
+    },
+    {
+      "description": "micronaut-build (io.micronaut.build.shared.settings) stays on the 7.x line that Micronaut 4 uses (D-34, D-36).",
+      "matchPackageNames": [
+        "io.micronaut.build.shared.settings"
+      ],
+      "allowedVersions": "< 8",
+      "groupName": "micronaut"
+    },
+    {
+      "description": "Groovy stays on the 4.0.x line that Micronaut 4 supports (D-36).",
+      "matchPackageNames": [
+        "/^org\\.apache\\.groovy/"
+      ],
+      "allowedVersions": "/^4\\.0\\./"
+    },
+    {
+      "description": "Shadow stays below 9, the line after the one micronaut-gradle-plugin 4.x builds against (D-36).",
+      "matchPackageNames": [
+        "/^com\\.gradleup\\.shadow/"
+      ],
+      "allowedVersions": "< 9"
+    },
+    {
+      "description": "Kotlin and KSP follow the core BOM's kotlin2 line; minor and major moves are made by hand (D-36).",
+      "matchPackageNames": [
+        "/^org\\.jetbrains\\.kotlin/",
+        "/^com\\.google\\.devtools\\.ksp/"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "graphql-java majors are promoted by an issue after the latest canary is green (D-35, D-36).",
+      "matchPackageNames": [
+        "/^com\\.graphql-java/"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "java-dataloader pins are the floor's 3.2.x and the ceiling's 6.0.x lines (versions audit, #295); only patch updates apply.",
+      "matchPackageNames": [
+        "com.graphql-java:java-dataloader"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Each mise overlay is one JDK line; a new GA JDK replaces it through the versions audit (D-36).",
+      "matchManagers": [
+        "mise"
+      ],
+      "matchDepNames": [
+        "java"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Actions digests and tags go in one PR per week.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github actions"
+    },
+    {
+      "description": "mise tools (java overlays, actionlint) go in one PR per week.",
+      "matchManagers": [
+        "mise"
+      ],
+      "groupName": "mise tools"
+    },
+    {
+      "description": "Renovate commits and PR titles use the repo's conventional form build(deps): (overrides the preset's chore/fix types).",
+      "matchPackageNames": [
+        "*"
+      ],
+      "semanticCommitType": "build",
+      "semanticCommitScope": "deps"
     }
   ]
 }

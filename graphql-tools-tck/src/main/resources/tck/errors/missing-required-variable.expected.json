@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "message": "@any",
+      "locations": [{ "line": 1, "column": 8 }],
+      "extensions": { "classification": "ValidationError" }
+    }
+  ]
+}

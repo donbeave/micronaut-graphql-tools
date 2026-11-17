@@ -1,0 +1,4 @@
+{
+  futureList { message }
+  futureAbsent { message }
+}

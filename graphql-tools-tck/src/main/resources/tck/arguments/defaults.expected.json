@@ -1,0 +1,9 @@
+{
+  "data": {
+    "none": "text=fallback count=3 color=BLUE",
+    "text": "text=given count=3 color=BLUE",
+    "count": "text=fallback count=9 color=BLUE",
+    "color": "text=fallback count=3 color=RED",
+    "all": "text=t count=0 color=GREEN"
+  }
+}

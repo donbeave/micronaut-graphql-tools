@@ -1,0 +1,3 @@
+query ($shape: Shape!) {
+  shape(shape: $shape)
+}

@@ -1,0 +1,3 @@
+{
+  explicitNull: defaults(text: null)
+}

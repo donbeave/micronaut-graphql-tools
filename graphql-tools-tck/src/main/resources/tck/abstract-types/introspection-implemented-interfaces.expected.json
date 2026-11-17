@@ -1,0 +1,5 @@
+{
+  "data": {
+    "song": { "interfaces": [{ "name": "Media" }] }
+  }
+}
