@@ -7,3 +7,8 @@ plugins {
 tasks.withType(JavaCompile).configureEach {
     options.release = provider { micronautBuild.javaVersion.get() as Integer }
 }
+
+// Gradle 9 does not put junit-platform-launcher on the test runtime classpath by itself.
+dependencies {
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
