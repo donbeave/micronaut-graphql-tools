@@ -15,7 +15,6 @@
  */
 package io.micronaut.graphql.tools;
 
-import graphql.GraphQL;
 import graphql.language.AstPrinter;
 import graphql.language.Definition;
 import graphql.language.FieldDefinition;
@@ -33,18 +32,12 @@ import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
@@ -52,13 +45,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.jar.Manifest;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static io.micronaut.graphql.tools.GraphQLUtils.printType;
 
 /**
- * Collects the lines of the {@link BindingManifest} while the schema is bound.
+ * Records, while the schema is bound, what each manifest line is made of, and renders the lines only when the
+ * {@link BindingManifest} is read. Binding records cheap facts (a class, an {@link Argument}, a definition); the text
+ * is built from them on the first read, never by reflection, so a start that does not read the manifest does not
+ * render it.
  */
 @Internal
 final class BindingManifestRecorder {
@@ -72,49 +68,58 @@ final class BindingManifestRecorder {
     private static final String NONE = "-";
 
     // key: what the line describes (a type, a coordinate), so that a later binding of the same coordinate replaces it
-    private final Map<String, String> lines = new HashMap<>();
+    private final Map<String, Supplier<String>> lines = new HashMap<>();
     private final Set<String> diagnostics = new TreeSet<>();
     private final Set<String> scalars = new TreeSet<>();
 
     void type(String typeName, String kind, @Nullable Class<?> javaType) {
-        lines.put(typeName, line(typeName, kind, javaType == null ? NONE : javaType.getTypeName(), NONE, NONE));
+        lines.put(typeName, () -> line(typeName, kind, javaType == null ? NONE : javaType.getTypeName(), NONE, NONE));
     }
 
     void scalar(String typeName) {
         scalars.add(typeName);
     }
 
-    void field(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String kind, String member,
-               Argument<?> declaredType, @Nullable Type genericType, boolean subscription) {
-        StringBuilder coordinate = new StringBuilder(objectTypeDefinition.getName()).append('.')
-                .append(fieldDefinition.getName());
-        if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
-            coordinate.append(fieldDefinition.getInputValueDefinitions().stream()
-                    .map(it -> it.getName() + ": " + printType(it.getType()))
-                    .collect(Collectors.joining(", ", "(", ")")));
-        }
-        coordinate.append(": ").append(printType(fieldDefinition.getType()));
-
-        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(), line(coordinate.toString(), kind,
-                member, typeName(declaredType, genericType), convertedTypeName(declaredType, genericType, subscription)));
+    /**
+     * @param objectTypeDefinition the object type of the field
+     * @param fieldDefinition      the field
+     * @param kind                 {@code root}, {@code resolver} or {@code property}
+     * @param member               the member that binds the field, rendered when the manifest is read
+     * @param declaredType         the declared type of the member
+     * @param subscription         {@code true} for a field of the subscription type
+     */
+    void field(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String kind,
+               Supplier<String> member, Argument<?> declaredType, boolean subscription) {
+        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(), () -> {
+            StringBuilder coordinate = new StringBuilder(objectTypeDefinition.getName()).append('.')
+                    .append(fieldDefinition.getName());
+            if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
+                coordinate.append(fieldDefinition.getInputValueDefinitions().stream()
+                        .map(it -> it.getName() + ": " + printType(it.getType()))
+                        .collect(Collectors.joining(", ", "(", ")")));
+            }
+            coordinate.append(": ").append(printType(fieldDefinition.getType()));
+            return line(coordinate.toString(), kind, member.get(), JavaTypeNames.of(declaredType),
+                    ReturnTypes.convertedTypeName(declaredType, subscription));
+        });
     }
 
     void resolves(String abstractTypeName, String objectTypeName, Class<?> javaType) {
         lines.put(abstractTypeName + "/" + objectTypeName,
-                line(abstractTypeName + "/" + objectTypeName, "resolves", javaType.getTypeName(), NONE, NONE));
+                () -> line(abstractTypeName + "/" + objectTypeName, "resolves", javaType.getTypeName(), NONE, NONE));
     }
 
     void enumValue(String enumTypeName, String value, Class<?> enumClass) {
         lines.put(enumTypeName + "." + value,
-                line(enumTypeName + "." + value, "enumValue", enumClass.getTypeName() + "#" + value, NONE, NONE));
+                () -> line(enumTypeName + "." + value, "enumValue", enumClass.getTypeName() + "#" + value, NONE,
+                        NONE));
     }
 
     void inputField(String inputTypeName, String fieldName, graphql.language.Type<?> graphQlType, Class<?> inputClass,
                     BeanProperty<?, ?> property) {
-        Type genericType = genericType(property);
-        lines.put(inputTypeName + "." + fieldName, line(inputTypeName + "." + fieldName + ": " + printType(graphQlType),
-                "inputField", inputClass.getTypeName() + "#" + property.getName(),
-                typeName(property.asArgument(), genericType), convertedTypeName(property.asArgument(), genericType, false)));
+        lines.put(inputTypeName + "." + fieldName, () -> line(inputTypeName + "." + fieldName + ": "
+                        + printType(graphQlType), "inputField", inputClass.getTypeName() + "#" + property.getName(),
+                JavaTypeNames.of(property.asArgument()), ReturnTypes.convertedTypeName(property.asArgument(), false)));
     }
 
     /**
@@ -145,109 +150,67 @@ final class BindingManifestRecorder {
     /**
      * @param registry the schema definitions
      * @param schema   the schema built from them
-     * @return the manifest: header, and the recorded lines plus the scalar lines, sorted
+     * @return the manifest, which renders its header, and the recorded lines plus the scalar lines, sorted, when it is
+     * first read
      */
     BindingManifest build(TypeDefinitionRegistry registry, GraphQLSchema schema) {
-        List<String> body = new ArrayList<>(lines.values());
-        body.addAll(diagnostics);
-        for (String scalar : scalars) {
-            GraphQLType type = schema.getType(scalar);
-            Class<?> coercing = type instanceof GraphQLScalarType scalarType ? scalarType.getCoercing().getClass() : null;
-            body.add(line(scalar, "scalar", coercing == null ? NONE : coercing.getTypeName(), NONE, NONE));
-        }
-        body.sort(Comparator.naturalOrder());
+        Map<String, Supplier<String>> recorded = new HashMap<>(lines);
+        Set<String> recordedDiagnostics = new TreeSet<>(diagnostics);
+        Set<String> recordedScalars = new TreeSet<>(scalars);
+        return new BindingManifest(() -> {
+            List<String> body = new ArrayList<>(recorded.size() + recordedDiagnostics.size() + recordedScalars.size());
+            recorded.values().forEach(it -> body.add(it.get()));
+            body.addAll(recordedDiagnostics);
+            for (String scalar : recordedScalars) {
+                GraphQLType type = schema.getType(scalar);
+                Class<?> coercing = type instanceof GraphQLScalarType scalarType
+                        ? scalarType.getCoercing().getClass() : null;
+                body.add(line(scalar, "scalar", coercing == null ? NONE : coercing.getTypeName(), NONE, NONE));
+            }
+            body.sort(Comparator.naturalOrder());
 
-        List<String> header = List.of(
-                BindingManifest.FORMAT,
-                "# binder: micronaut-graphql-tools " + version(BindingManifestRecorder.class.getPackage()
-                        .getImplementationVersion()),
-                "# graphql-java: " + graphQlJavaVersion(),
-                "# schema-sha256: " + schemaSha256(registry)
-        );
-
-        return new BindingManifest(header, body);
+            List<String> header = List.of(
+                    BindingManifest.FORMAT,
+                    "# binder: micronaut-graphql-tools " + version(BindingManifestRecorder.class.getPackage()
+                            .getImplementationVersion()),
+                    "# graphql-java: " + GraphQLJavaVersion.get(),
+                    "# schema-sha256: " + schemaSha256(registry)
+            );
+            return new BindingManifest.Content(header, body);
+        });
     }
 
     /**
      * @param executable a method
      * @param ownerType  the class the method is declared on, possibly an AOP proxy
-     * @return {@code Class#method(parameter types)}
+     * @return {@code Class#method(parameter types)}, the types as Micronaut's compile-time metadata describes them
      */
     static String methodMember(Executable<?, ?> executable, Class<?> ownerType) {
         return userClass(ownerType).getTypeName() + "#" + MicronautUtils.getMethodName(executable)
-                + String.join(", ", JavaTypeNames.parameterTypes(executable)).transform(it -> "(" + it + ")");
+                + JavaTypeNames.parameters(executable);
     }
 
     /**
      * @param executable a method of a bean introspection ({@code @GraphQLField})
-     * @param beanType   the introspected class, used when reflection cannot find the method
-     * @return {@code Class#method(parameter types)}, the class being the one the method is written in
+     * @param beanType   the introspected class
+     * @return {@code Class#method(parameter types)}, the class being the one the method is written in when the
+     * compile-time accessors say so, otherwise the introspected class
      */
     static String introspectedMethodMember(Executable<?, ?> executable, Class<?> beanType) {
-        return methodMember(executable, JavaTypeNames.reflect(executable)
-                .<Class<?>>map(Method::getDeclaringClass)
-                .orElse(beanType));
-    }
-
-    /**
-     * @param executable a method
-     * @return its generic return type by reflection, or {@code null} without reflection
-     */
-    @Nullable
-    static Type genericReturnType(Executable<?, ?> executable) {
-        return JavaTypeNames.reflect(executable).map(Method::getGenericReturnType).orElse(null);
+        String member = CompileTimeAccessors.get().get(beanType.getTypeName() + "#"
+                + MicronautUtils.getMethodName(executable) + "/" + executable.getArguments().length);
+        return member != null ? member : methodMember(executable, beanType);
     }
 
     /**
      * @param beanProperty a bean property
-     * @return the generic return type of its getter by reflection, or {@code null}
-     */
-    @Nullable
-    static Type genericType(BeanProperty<?, ?> beanProperty) {
-        Method getter = getter(beanProperty);
-        return getter == null ? null : getter.getGenericReturnType();
-    }
-
-    /**
-     * @param beanProperty a bean property
-     * @return {@code Class#getter()}, the class being the one that declares the getter; {@code Class#property} when the
-     * getter cannot be found by reflection
+     * @return {@code Class#getter()}, the class being the one that declares the getter, as the compile-time accessors
+     * say; {@code Class#property} when they do not know the property
      */
     static String propertyMember(BeanProperty<?, ?> beanProperty) {
-        Method getter = getter(beanProperty);
-        if (getter != null) {
-            return getter.getDeclaringClass().getTypeName() + "#" + getter.getName() + "()";
-        }
-        return beanProperty.getDeclaringBean().getBeanType().getTypeName() + "#" + beanProperty.getName();
-    }
-
-    @Nullable
-    private static Method getter(BeanProperty<?, ?> beanProperty) {
-        Class<?> beanType = beanProperty.getDeclaringBean().getBeanType();
-        String name = beanProperty.getName();
-        String capitalized = Character.toUpperCase(name.charAt(0)) + name.substring(1);
-        for (String candidate : List.of("get" + capitalized, "is" + capitalized, name)) {
-            try {
-                return beanType.getMethod(candidate);
-            } catch (NoSuchMethodException e) {
-                // try the next accessor name
-            } catch (SecurityException | LinkageError e) {
-                // no reflection (a native image without reflection configuration): use the compile-time metadata
-                JavaTypeNames.fallback(beanType.getTypeName() + "#" + name, e);
-                return null;
-            }
-        }
-        return null;
-    }
-
-    private static String typeName(Argument<?> argument, @Nullable Type genericType) {
-        return genericType != null ? genericType.getTypeName() : JavaTypeNames.of(argument);
-    }
-
-    private static String convertedTypeName(Argument<?> argument, @Nullable Type genericType, boolean subscription) {
-        return genericType != null
-                ? ReturnTypes.convertedTypeName(genericType, subscription)
-                : ReturnTypes.convertedTypeName(argument, subscription);
+        String beanType = beanProperty.getDeclaringBean().getBeanType().getTypeName();
+        String member = CompileTimeAccessors.get().get(beanType + "#" + beanProperty.getName());
+        return member != null ? member : beanType + "#" + beanProperty.getName();
     }
 
     private static Class<?> userClass(Class<?> type) {
@@ -275,29 +238,6 @@ final class BindingManifestRecorder {
 
     private static String version(@Nullable String version) {
         return version == null || version.isBlank() ? "unknown" : version;
-    }
-
-    /**
-     * @return the version graphql-java's jar manifest declares ({@code Bundle-Version}, without a {@code .0} patch
-     * level), or {@code unknown}
-     */
-    private static String graphQlJavaVersion() {
-        try {
-            ClassLoader classLoader = GraphQL.class.getClassLoader();
-            Enumeration<URL> resources = classLoader.getResources("META-INF/MANIFEST.MF");
-            while (resources.hasMoreElements()) {
-                try (InputStream inputStream = resources.nextElement().openStream()) {
-                    Manifest manifest = new Manifest(inputStream);
-                    if ("graphql-java".equals(manifest.getMainAttributes().getValue("Bundle-SymbolicName"))) {
-                        String version = manifest.getMainAttributes().getValue("Bundle-Version");
-                        return version(version == null ? null : version.replaceFirst("^(\\d+\\.\\d+)\\.0$", "$1"));
-                    }
-                }
-            }
-        } catch (IOException | RuntimeException e) {
-            // fall through
-        }
-        return "unknown";
     }
 
     /**

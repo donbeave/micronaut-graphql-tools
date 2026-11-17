@@ -134,12 +134,14 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
         SchemaChecks schemaChecks = new SchemaChecks(checked, options, problems);
         BindingManifestLines manifest = new BindingManifestLines();
         List<String> omissions = null;
+        List<String> accessors = List.of();
         if (schemaChecks.check()) {
             if (types.stream().anyMatch(javaTypes::isResolver)) {
                 BindingChecks bindingChecks = new BindingChecks(checked, options, problems, javaTypes, types, manifest);
                 bindingChecks.check(checked.schemaDefinition().orElseThrow());
                 bindingChecks.skipped().forEach(problems::note);
                 omissions = bindingChecks.omissions();
+                accessors = bindingChecks.accessors();
             } else {
                 problems.error(ProcessorOptions.SDL_DIR + " is set, but the compilation has no root or type resolver to "
                         + "check against the schema. Apply the processor in the module that holds the resolver beans, or "
@@ -148,7 +150,7 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
         }
         if (omissions != null && options.manifest() && !problems.hasErrors() && !errorRaised) {
             schemaChecks.unreachableLines().forEach(it -> manifest.diagnostic("unreachable", it));
-            writeManifest(manifest, omissions, registry, problems);
+            writeManifest(manifest, omissions, accessors, registry, problems);
         }
         problems.report(processingEnv.getMessager());
     }
@@ -157,8 +159,8 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
      * Writes the binding manifest once, after the last round, and only when the compilation has no error, so that a
      * manifest in the class output always belongs to code that passed the checks.
      */
-    private void writeManifest(BindingManifestLines manifest, List<String> omissions, TypeDefinitionRegistry registry,
-                               Problems problems) {
+    private void writeManifest(BindingManifestLines manifest, List<String> omissions, List<String> accessors,
+                               TypeDefinitionRegistry registry, Problems problems) {
         String content = manifest.render(registry);
         if (!manifest.invalidParts().isEmpty()) {
             problems.error("cannot write the binding manifest: " + String.join(", ", manifest.invalidParts())
@@ -167,7 +169,10 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
         }
         StringBuilder omitted = new StringBuilder(BindingManifestLines.OMITTED_FORMAT).append('\n');
         omissions.forEach(it -> omitted.append(it).append('\n'));
+        StringBuilder accessorLines = new StringBuilder(BindingManifestLines.ACCESSORS_FORMAT).append('\n');
+        accessors.forEach(it -> accessorLines.append(it).append('\n'));
         write(BindingManifestLines.PATH, content, problems);
+        write(BindingManifestLines.ACCESSORS_PATH, accessorLines.toString(), problems);
         write(BindingManifestLines.OMITTED_PATH, omitted.toString(), problems);
     }
 

@@ -198,7 +198,8 @@ type MediaSection implements Section {
   GraphQL field: summary
   Methods:\u0020
   1) ${MediaSectionResolver.name} summary(${MediaSection.name} section)
-  2) ${SectionResolver.name} summary(${Section.name} section)"""
+  2) ${SectionResolver.name} summary(${Section.name} section)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("MediaSection.summary") on one of them (two methods with the same coordinate still conflict)."""
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".ownResolver")
@@ -250,7 +251,8 @@ type Tag implements Item & Labelled {
   GraphQL field: label
   Methods:\u0020
   1) ${ItemResolver.name} label(${Item.name} item)
-  2) ${LabelledResolver.name} label(${Labelled.name} labelled)"""
+  2) ${LabelledResolver.name} label(${Labelled.name} labelled)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("Tag.label") on one of them (two methods with the same coordinate still conflict)."""
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".twoInterfaces")

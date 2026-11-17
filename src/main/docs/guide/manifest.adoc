@@ -1,0 +1,35 @@
+The binding manifest says what every schema coordinate is bound to: which Java member serves a field, which Java type an object type maps to, which class coerces a scalar. It is one text, sorted, so that a change of binding shows up as a change of a line.
+
+== What it contains
+
+The first lines are the header: the format (`# graphql-binding-manifest 1`), the binder and its version, the graphql-java version and a SHA-256 of the schema definitions. Every other line has the shape `subject → kind · member · declared type · converted type`:
+
+* object, interface, union, enum, input and scalar types: the Java type or `Coercing` class that serves them;
+* fields: `root`, `resolver` or `property`, the member, the declared Java type and the converted type (the declared type without `CompletionStage`, `Publisher`, `DataFetcherResult` and `Optional`);
+* `resolves`, `enumValue` and `inputField` lines;
+* diagnostics, which start with `!`: unreachable types, ambiguous bindings and the findings of strict mode.
+
+Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from Micronaut's compile-time type information. That information keeps no wildcards, raw types or type arguments of array components: `List<? extends Book>` reads `java.util.List<Book>`, a raw `List` reads `java.util.List<java.lang.Object>` and `List<String>[]` reads `java.util.List[]`.
+
+== Where the text comes from
+
+The manifest is recorded while the schema is bound, as cheap facts, and rendered the first time it is read: by the `BindingManifest` bean, or by the startup writer when `micronaut.graphql.tools.manifest.enabled` is `true`. A start that does not read the manifest renders nothing.
+
+Rendering never uses reflection, so *the text is identical on the JVM and in a native image*:
+
+* the member of a property is the getter that the compile-time checks (the annotation processor) recorded in `META-INF/micronaut-graphql-tools/accessors.txt`, because Micronaut's bean introspection does not say which method reads a property. Without the processor, or for a class it did not see, the member reads `Type#property`;
+* the graphql-java version is the `Bundle-Version` of the manifest of its jar, read when the manifest is rendered. The library registers `META-INF/MANIFEST.MF` and `META-INF/micronaut-graphql-tools/*` as native image resources.
+
+== Options
+
+[configuration]
+----
+micronaut:
+  graphql:
+    tools:
+      manifest:
+        enabled: true
+        path: build/graphql-binding-manifest.txt
+----
+
+Without `path` the manifest is logged at INFO.

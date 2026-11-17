@@ -179,7 +179,7 @@ type Chapter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `draftNote` not found in ${ArticleGraph.name}'s type. Properties are read from the interface ${ArticleGraph.name}, so a getter that only an implementation class declares is not a property.
+        e.cause.message == """The property or method `draftNote` not found in ${ArticleGraph.name}'s type. Properties are read from the interface ${ArticleGraph.name}, which has an introspection of its own, so a getter that only an implementation class declares is not a property. `draftNote` is declared by ${ArticleModel.name}. Fix: declare the getter on ${ArticleGraph.name}, or remove the interface's own introspection (the @GraphQLType or @Introspected annotation on it).
   GraphQL coordinate: Article.draftNote (line 12, column 3)
   GraphQL object type: Article
   GraphQL field: draftNote"""
@@ -197,7 +197,7 @@ type Chapter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `subtitle` not found in ${MemoGraph.name}'s type. Properties are read from the interface ${MemoGraph.name}, so a getter that only an implementation class declares is not a property.
+        e.cause.message == """The property or method `subtitle` not found in ${MemoGraph.name}'s type. Properties are read from the interface ${MemoGraph.name}, which has an introspection of its own, so a getter that only an implementation class declares is not a property. Fix: declare the getter on ${MemoGraph.name}, or remove the interface's own introspection (the @GraphQLType or @Introspected annotation on it).
   GraphQL coordinate: Memo.subtitle (line 17, column 3)
   GraphQL object type: Memo
   GraphQL field: subtitle"""

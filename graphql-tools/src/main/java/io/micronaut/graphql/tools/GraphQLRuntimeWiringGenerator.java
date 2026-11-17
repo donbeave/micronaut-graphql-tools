@@ -86,6 +86,7 @@ import jakarta.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Arrays;
@@ -93,6 +94,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -172,7 +174,7 @@ final class GraphQLRuntimeWiringGenerator {
     private final List<InterfaceField> deferredModelMemberFields = new ArrayList<>();
 
     // key: root resolver method, value: the root fields it is bound to
-    private final Map<String, Set<String>> rootMethodBindings = new TreeMap<>();
+    private final Map<ExecutableMethod<?, ?>, Set<String>> rootMethodBindings = new IdentityHashMap<>();
 
     // resolver methods that precedence property-first left unbound in favour of a member of the Java type
     private final Set<String> shadowedResolverMethods = new HashSet<>();
@@ -667,14 +669,12 @@ final class GraphQLRuntimeWiringGenerator {
                 mappingContext
         );
 
-        rootMethodBindings.computeIfAbsent(BindingManifestRecorder.methodMember(executable,
-                executable.getDeclaringType()), it -> new TreeSet<>())
+        rootMethodBindings.computeIfAbsent(executable, it -> new TreeSet<>())
                 .add(objectTypeDefinition.getName() + "." + fieldDefinition.getName());
 
         manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_ROOT,
-                BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
+                () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
                 executable.getReturnType().asArgument(),
-                BindingManifestRecorder.genericReturnType(executable),
                 objectTypeDefinition.getName().equals(subscriptionTypeName));
     }
 
@@ -837,16 +837,28 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     /**
-     * An object a field returns is an instance of the Java type the field declares for the union or interface, so an
-     * object type of it must be mapped to a subtype of that Java type, or no object can ever resolve to it.
+     * An object type is rejected only when no object can be an instance of both the Java type the field declares for
+     * the union or interface and the Java type the object type is mapped to: two classes with no subtype relation, or
+     * a {@code final} class that does not implement the other type. Anything else can hold at runtime, for example an
+     * object whose class implements the declared interface and the mapped one, and is accepted.
      */
     private static void checkMemberClass(String abstractTypeKind, String abstractTypeName, Class<?> declaredClass,
                                          String objectTypeName, Class<?> memberClass,
                                          TypeMappingContext mappingContext) {
-        if (!declaredClass.isAssignableFrom(memberClass)) {
+        if (areDisjoint(declaredClass, memberClass)) {
             throw new IncorrectMemberMappingException(mappingContext, abstractTypeKind, abstractTypeName,
                     declaredClass, objectTypeName, memberClass);
         }
+    }
+
+    private static boolean areDisjoint(Class<?> a, Class<?> b) {
+        if (a.isAssignableFrom(b) || b.isAssignableFrom(a)) {
+            return false;
+        }
+        // not related: a class or interface that could gain the other type in a subclass is not provably disjoint
+        return !a.isInterface() && !b.isInterface()
+                || Modifier.isFinal(a.getModifiers())
+                || Modifier.isFinal(b.getModifiers());
     }
 
     /**
@@ -1127,8 +1139,7 @@ final class GraphQLRuntimeWiringGenerator {
             processFieldReturnType(beanProperty.asArgument(), fieldDefinition.getType(), mappingContext);
 
             manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_PROPERTY,
-                    BindingManifestRecorder.propertyMember(beanProperty), beanProperty.asArgument(),
-                    BindingManifestRecorder.genericType(beanProperty), false);
+                    () -> BindingManifestRecorder.propertyMember(beanProperty), beanProperty.asArgument(), false);
             return;
         }
 
@@ -1147,8 +1158,7 @@ final class GraphQLRuntimeWiringGenerator {
         );
 
         manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_PROPERTY,
-                modelMember.manifestMember(), beanMethod.getReturnType().asArgument(),
-                BindingManifestRecorder.genericReturnType(beanMethod), false);
+                modelMember::manifestMember, beanMethod.getReturnType().asArgument(), false);
     }
 
     private void bindTypeResolver(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,
@@ -1182,9 +1192,8 @@ final class GraphQLRuntimeWiringGenerator {
         );
 
         manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_RESOLVER,
-                BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
-                executable.getReturnType().asArgument(),
-                BindingManifestRecorder.genericReturnType(executable), false);
+                () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
+                executable.getReturnType().asArgument(), false);
     }
 
     /**
@@ -1489,9 +1498,8 @@ final class GraphQLRuntimeWiringGenerator {
 
         manifestRecorder.field(field.objectTypeDefinition(), field.fieldDefinition(),
                 BindingManifestRecorder.KIND_RESOLVER,
-                BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
-                executable.getReturnType().asArgument(),
-                BindingManifestRecorder.genericReturnType(executable), false);
+                () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
+                executable.getReturnType().asArgument(), false);
     }
 
     private static Map<Class<?>, List<String>> toInterfaceMethodsMap(List<InterfaceResolverMethod> methods) {
@@ -1513,7 +1521,15 @@ final class GraphQLRuntimeWiringGenerator {
                 graphQLResolversRegistry.typeMethodNotFound(sourceClass, fieldName, mappingContext);
         Class<?> contractClass = contractTypes.get(objectTypeName);
 
-        return contractClass != null ? exception.forContract(contractClass) : exception;
+        if (contractClass == null) {
+            return exception;
+        }
+        List<Class<?>> declaring = graphQLBeanIntrospectionRegistry.getImplementationClasses(contractClass).stream()
+                .filter(it -> BeanIntrospector.SHARED.findIntrospection(it)
+                        .map(introspection -> introspection.getProperty(fieldName).isPresent()).orElse(false))
+                .toList();
+
+        return exception.forContract(contractClass, declaring);
     }
 
     private void processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,

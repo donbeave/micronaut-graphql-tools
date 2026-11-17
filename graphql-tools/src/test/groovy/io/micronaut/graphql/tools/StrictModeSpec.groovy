@@ -240,7 +240,7 @@ type Item {
         then:
         result.data == [item: [name: 'pen']]
         applicationContext.getBean(BindingManifest).diagnostics == [
-                "!ambiguous Item.name · ${Item.name}#getName() | ${ShadowingResolver.name}#name(${Item.name})".toString()
+                "!ambiguous Item.name · ${Item.name}#name | ${ShadowingResolver.name}#name(${Item.name})".toString()
         ]
     }
 

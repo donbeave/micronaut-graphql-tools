@@ -182,7 +182,8 @@ type Query {
   GraphQL field: status
   Methods:\u0020
   1) ${FirstStatusQuery.name} status(java.lang.String id)
-  2) ${SecondStatusQuery.name} status(java.lang.String id)"""
+  2) ${SecondStatusQuery.name} status(java.lang.String id)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("Query.status") on one of them (two methods with the same coordinate still conflict)."""
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(twoBeans|mixed)')
@@ -217,7 +218,8 @@ type Query {
   GraphQL field: status
   Methods:\u0020
   1) ${DuplicateStatusQuery.name} status(java.lang.String id)
-  2) ${StatusQuery.name} status(java.lang.String id)"""
+  2) ${StatusQuery.name} status(java.lang.String id)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("Query.status") on one of them (two methods with the same coordinate still conflict)."""
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".twoCoordinates")
@@ -253,7 +255,8 @@ type Query {
   GraphQL field: status
   Methods:\u0020
   1) ${FirstStatusQuery.name} status(java.lang.String id)
-  2) ${StatusQuery.name} status(java.lang.String id)"""
+  2) ${StatusQuery.name} status(java.lang.String id)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("Query.status") on one of them (two methods with the same coordinate still conflict)."""
     }
 
 }

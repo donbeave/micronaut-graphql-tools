@@ -46,7 +46,15 @@ public final class MultipleMethodsFoundException extends AbstractMappingExceptio
             }
         }
 
-        return super.getMessage() + "\n  Methods: " + result;
+        String coordinate = getMappingContext().getCoordinate();
+
+        return super.getMessage() + "\n  Methods: " + result
+                + "\n  Fix: if one bean is meant to override another, annotate the overriding bean with "
+                + "@Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); "
+                + "if the methods serve different operation types, annotate each with the "
+                + "@GraphQLSchemaCoordinate(\"<Operation>.<field>\") of its own operation type, for this field "
+                + "@GraphQLSchemaCoordinate(\"" + coordinate + "\") on one of them (two methods with the same "
+                + "coordinate still conflict).";
     }
 
 }

@@ -150,7 +150,11 @@ first bean found won, which depended on the order Micronaut returned the beans i
 **Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
 class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both
 then bind the same field, the startup fails with `MultipleMethodsFoundException` naming both classes. Annotate only the
-class that should be the resolver.
+class that should be the resolver, or annotate the subclass with `@Replaces(<original>.class)`: the original is then
+dropped and only the subclass binds. `@Requires(env = "test")` alone does not help, because both beans are active in the
+test environment. The same applies to two beans of different packages that bind one root field: the message names the
+operation field, each bean, and both fixes (`@Replaces`, or `@GraphQLSchemaCoordinate` when the methods serve different
+operation types).
 
 **Several contracts on one bean.** A bean may implement type resolver contracts for different classes. The
 annotation metadata keeps only one of the inherited values, so the class hierarchy is read to find every contract, and
@@ -732,7 +736,7 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   with `AmbiguousTypeMappingException`, which names both GraphQL types and both Java types: an object of that class
   would match both.
 - A class and its subclass may be mapped to two GraphQL types. A union or interface resolves an object of either class by
-  its exact class; an object of a further subclass is an instance of both and fails as described below.
+  its exact class; an object of a further subclass (such as a proxy) resolves to the most specific of them, as described below.
 - Two fields that declare different Java types for one GraphQL type fail with `MappingConflictException`, unless the
   two types are an interface and a class annotated with `@GraphQLType(TheInterface.class)` that is read through the
   same bean introspection.
@@ -745,18 +749,23 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   otherwise the startup fails (`UnionTypeMappingNotProvidedException`, `InterfaceTypeMappingNotProvidedException`).
   Each of these object types is bound like any other, so every field of the interface must be bound on every
   implementation. That an object type declares all fields of its interfaces is checked by graphql-java.
-- Each of these object types must be mapped to a subtype of the Java interface the field declares (the class or
-  interface implements or extends it), otherwise the startup fails with `IncorrectMemberMappingException`: no object
-  the field returns could resolve to that object type.
+- Each of these object types must be mapped to a Java type that an object the field returns could be an instance of.
+  The startup fails with `IncorrectMemberMappingException` only for a provably disjoint mapping: a `final` class that
+  does not implement the declared Java interface, or two classes with no subtype relation. A mapped Java interface
+  that does not extend the declared one is accepted, because one class can implement both.
 - At runtime the object type of a returned object is chosen in two steps, and the result is cached per class:
   1. **Exact class:** the class an object type is mapped to, or, for an object type mapped to a Java interface, a class
      annotated with `@GraphQLType(TheInterface.class)`.
-  2. **Assignability:** otherwise, the one object type whose Java type the object is an instance of: a subclass of a
+  2. **Assignability:** otherwise, the object type whose Java type the object is an instance of: a subclass of a
      mapped class (including runtime subclasses such as proxies) or any implementation of a mapped Java interface.
+     When the object is an instance of several, the **most specific** one wins: the object type whose Java type is a
+     subtype of the Java types of all the others (for `A` mapped to `Note` and `B` mapped to `LongNote extends Note`,
+     a proxy of `LongNote` resolves to `B`). The order of the mappings does not matter.
 
-  An object that matches no object type, or more than one in the second step, is a GraphQL error on that field (the
-  data of the field is `null`) that names the union or interface, the path, the class and the candidates; the library
-  never picks one:
+  An object that matches no object type is a GraphQL error on that field (the data of the field is `null`), and so is
+  an object whose candidates have no single most specific one (unrelated Java types, such as a class that implements
+  two mapped interfaces, or two object types mapped to the same Java type). The error names the union or interface,
+  the path, the class and the candidates; the library never guesses between them:
 
   ```
   Can't resolve '/book/sections[1]'. Abstract type 'Section' must resolve to an Object type at runtime for field ...
@@ -764,15 +773,14 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   MediaSection (com.example.MediaSection), TextSection (com.example.TextSection).
 
   Can't resolve '/bundle'. Abstract type 'Item' must resolve to an Object type at runtime for field 'Query.item'.
-  The object of class com.example.BundleModel is an instance of more than one object type of union Item:
-  Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph). Map its class to one of them, or let it
+  The object of class com.example.BundleModel is an instance of more than one object type of union Item, and none is
+  more specific than the others: Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph). Map its class to one of them, or let it
   implement only one of their Java types.
   ```
 
   What can be checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
-  object types) and the member types against the declared Java interface. Whether one object is an instance of two
-  unrelated mapped Java interfaces, or of a subclass of two mapped classes, depends on the runtime class and is
-  reported at runtime.
+  object types) and the member types against the declared Java interface (provably disjoint mappings only). Whether one object is an
+  instance of two unrelated mapped Java interfaces depends on the runtime class and is reported at runtime.
 - Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
   (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
 - A `@GraphQLTypeResolver` for the Java interface that an SDL interface is mapped to binds the fields of that interface
