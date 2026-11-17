@@ -29,11 +29,12 @@ runs:
       with:
         install: true
         install_args: ${{ inputs.tools }}
-        cache: true
+        cache: false
         cache_save: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci/mise-and-caching' }}
         cache_key_prefix: mise-${{ inputs.jdk != '' && format('jdk{0}', inputs.jdk) || 'default' }}-${{ inputs.tools }}
     - name: Set up Gradle
       if: inputs.gradle == 'true'
       uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       with:
+        cache-disabled: true
         cache-read-only: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/ci/mise-and-caching' }}
