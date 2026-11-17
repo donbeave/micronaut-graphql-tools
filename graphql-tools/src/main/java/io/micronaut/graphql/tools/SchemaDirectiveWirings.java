@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -35,8 +36,8 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * Registers the {@link SchemaDirective} beans with the runtime wiring, and fails on {@link SchemaDirectiveWiring}
- * beans that no {@code SchemaDirective} wraps. It runs before the application's {@link RuntimeWiringCustomizer} beans,
+ * Registers the {@link SchemaDirective} beans with the runtime wiring, and finds the {@link SchemaDirectiveWiring}
+ * beans that nothing wires. It runs before the application's {@link RuntimeWiringCustomizer} beans,
  * so these cannot replace a {@code SchemaDirective} bean's wiring unnoticed.
  */
 @Internal
@@ -44,7 +45,8 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
 
     private final List<SchemaDirective> namedDirectives = new ArrayList<>();
     private final List<SchemaDirectiveWiring> everyElementWirings;
-    private final List<String> unwrappedWirings = new ArrayList<>();
+    private final List<BeanRegistration<SchemaDirectiveWiring>> wirings;
+    private final List<SchemaDirectiveWiring> wrappedWirings;
     private final Set<String> everyElementDirectiveNames = new LinkedHashSet<>();
     private final Set<String> directiveNames = new LinkedHashSet<>();
 
@@ -54,11 +56,9 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
      */
     SchemaDirectiveWirings(Collection<BeanRegistration<SchemaDirectiveWiring>> wirings,
                            Collection<BeanRegistration<SchemaDirective>> directives) {
-        Set<SchemaDirectiveWiring> wrapped = Collections.newSetFromMap(new IdentityHashMap<>());
         List<BeanRegistration<SchemaDirective>> everyElement = new ArrayList<>();
         for (BeanRegistration<SchemaDirective> registration : directives) {
             SchemaDirective directive = registration.getBean();
-            wrapped.add(directive.getWiring());
             directiveNames.addAll(directive.getDirectiveNames());
             if (directive.isEveryElement()) {
                 everyElement.add(registration);
@@ -71,12 +71,49 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
         everyElement.sort(Comparator.comparingInt(BeanRegistration::getOrder));
         this.everyElementWirings = everyElement.stream().map(it -> it.getBean().getWiring()).toList();
 
+        this.wirings = List.copyOf(wirings);
+        this.wrappedWirings = namedAndEveryElement(directives);
+    }
+
+    private static List<SchemaDirectiveWiring> namedAndEveryElement(Collection<BeanRegistration<SchemaDirective>> directives) {
+        return directives.stream().map(it -> it.getBean().getWiring()).toList();
+    }
+
+    /**
+     * Fails on the {@link SchemaDirectiveWiring} beans that neither a {@link SchemaDirective} bean nor a
+     * {@link RuntimeWiringCustomizer} registered. It runs after the customizers, which may register a bean's wiring with
+     * {@code RuntimeWiring.Builder#directive}. A singleton is matched by instance. A prototype bean is a new instance for
+     * every injection point, so it is matched by its class. Limitation: an unwrapped prototype bean is therefore missed when
+     * another wired instance has the same class.
+     *
+     * @param runtimeWiring the runtime wiring after every customizer
+     * @throws UnwrappedDirectiveWiringException if a bean is wired by nothing
+     */
+    void checkUnwrapped(RuntimeWiring runtimeWiring) {
+        List<SchemaDirectiveWiring> registered = new ArrayList<>(wrappedWirings);
+        registered.addAll(runtimeWiring.getRegisteredDirectiveWiring().values());
+        registered.addAll(runtimeWiring.getDirectiveWiring());
+        Set<SchemaDirectiveWiring> byInstance = Collections.newSetFromMap(new IdentityHashMap<>());
+        Set<Class<?>> byClass = new HashSet<>();
+        for (SchemaDirectiveWiring wiring : registered) {
+            byInstance.add(wiring);
+            byClass.add(wiring.getClass());
+        }
+
+        List<String> unwrappedWirings = new ArrayList<>();
         for (BeanRegistration<SchemaDirectiveWiring> registration : wirings) {
-            if (!wrapped.contains(registration.getBean())) {
-                unwrappedWirings.add(registration.getBean().getClass().getName() + " (" + registration.getBeanDefinition() + ")");
+            SchemaDirectiveWiring bean = registration.getBean();
+            boolean wired = registration.getBeanDefinition().isSingleton()
+                    ? byInstance.contains(bean)
+                    : byClass.contains(bean.getClass());
+            if (!wired) {
+                unwrappedWirings.add(bean.getClass().getName() + " (" + registration.getBeanDefinition() + ")");
             }
         }
-        Collections.sort(unwrappedWirings);
+        if (!unwrappedWirings.isEmpty()) {
+            Collections.sort(unwrappedWirings);
+            throw new UnwrappedDirectiveWiringException(unwrappedWirings);
+        }
     }
 
     /**
@@ -96,10 +133,6 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
 
     @Override
     public void customize(RuntimeWiring.Builder builder) {
-        if (!unwrappedWirings.isEmpty()) {
-            throw new UnwrappedDirectiveWiringException(unwrappedWirings);
-        }
-
         Map<String, List<SchemaDirective>> byName = new LinkedHashMap<>();
         for (SchemaDirective directive : namedDirectives) {
             byName.computeIfAbsent(directive.getName(), it -> new ArrayList<>()).add(directive);

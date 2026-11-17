@@ -132,7 +132,7 @@ scalar Long
   wiring factory (${ReplaceFetchers.name})
   scalar Long (${ReplaceScalarAndTypeResolver.name})
   type resolver of Payload (${ReplaceScalarAndTypeResolver.name})
-  Bind these fields with the library, wrap data fetchers with a SchemaDirectiveWiring, or change the built schema with a GraphQLSchemaCustomizer."""
+  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, or change the built schema with a GraphQLSchemaCustomizer."""
         }
     }
 

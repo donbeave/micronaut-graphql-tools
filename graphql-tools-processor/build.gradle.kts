@@ -15,6 +15,9 @@ dependencies {
 }
 
 micronautBuild {
+    // Java 21 until #144 deletes the JSR-269 `processing/` package: it uses Elements.getFileObjectOf (JDK 18+) and no
+    // JDK 17 fallback is written for code that is going away. #144 moves this module to the default (release 17).
+    javaVersion = 21
     binaryCompatibility {
         // No version of this project has been released yet, so `findBaseline` has nothing to compare against.
         // Switch to `enabledAfter("<first release>")` once the first version is published to Maven Central.

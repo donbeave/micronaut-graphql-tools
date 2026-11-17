@@ -1,3 +1,14 @@
 plugins {
     id "io.micronaut.build.internal.module"
 }
+
+// micronaut-build 7.6.6 sets only sourceCompatibility and targetCompatibility from micronautBuild.javaVersion
+// (default 17). Set `release` too, so the shipped modules cannot use APIs newer than that Java version.
+tasks.withType(JavaCompile).configureEach {
+    options.release = provider { micronautBuild.javaVersion.get() as Integer }
+}
+
+// Gradle 9 does not put junit-platform-launcher on the test runtime classpath by itself.
+dependencies {
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}

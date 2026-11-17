@@ -87,7 +87,10 @@ The mapping then checks `T`. Anything else fails at startup with `UnsupportedRet
 
 `@GraphQLRootResolver` and `@GraphQLTypeResolver` are inherited (`@Inherited`). They may sit on an interface, for
 example one emitted by a code generator, and a bean that implements it is a resolver without a GraphQL annotation of
-its own. Micronaut AOP advice (`@Around`) on the implementation still applies.
+its own. The implementing class still needs a bean annotation such as `@Singleton`: the contract's annotation does not
+make the class a bean, and the compile-time checks report a contract that no bean class implements. Every bean that
+implements the contract is a resolver, so a hand-written fake or delegating adapter that implements it and is a bean is
+registered too. Micronaut AOP advice (`@Around`) on the implementation still applies.
 
 ```java
 @GraphQLTypeResolver(Book.class)
@@ -103,9 +106,10 @@ public class BookLabelResolver implements BookLabelResolverContract {
 }
 ```
 
-`@GraphQLSchemaCoordinate` is also inherited and makes the contract methods executable. A method with a coordinate
-binds the field its coordinate names and no other: a type resolver method only on that object type (or, for an
-interface field, on the implementations of that interface), a root resolver method only on that root operation type.
+`@GraphQLSchemaCoordinate` makes the contract methods executable: Micronaut carries the method annotations from the
+contract method over to the implementation. A method with a coordinate binds the field its coordinate names and no
+other: a type resolver method only on that object type (or, for an interface field, on the implementations of that
+interface), a root resolver method only on that root operation type.
 Methods of beans without coordinates are matched by name. The coordinate is also checked at startup, never trusted:
 
 - On a bean where at least one method carries a coordinate, only those methods bind. Other public methods (helpers)
@@ -335,8 +339,10 @@ All findings except unreachable types, unmapped input class properties, primitiv
 directives are reported in one `StrictModeException`. `!ambiguous` lines are allowed by
 the `precedence` that produced them. Every schema field must be bound in every mode (`MethodNotFoundException`).
 
-With `strict: false` the library binds as before strict mode existed: only object, interface and union types are
-checked for reachability, and the findings appear in the manifest only. `allow-unreachable` may still name unreachable
+With `strict: false` the library skips these checks and binds as before strict mode existed: only object, interface and
+union types are checked for reachability, and the findings appear in the manifest only. It does not change
+`precedence`: with the default `strict` precedence, a field that both a getter and a type resolver can bind still fails
+the startup (`AmbiguousBindingException`). `allow-unreachable` may still name unreachable
 enum, input and scalar types, so switching strict mode off never makes a valid configuration fail; without strict mode
 those entries have no effect. Unmapped input class properties are accepted (unless `input.unmapped-properties: fail`)
 and primitives for nullable built-in scalars bind as before. Applied directives without a wiring are logged as one
@@ -479,7 +485,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
-| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` binds as before and only lists them in the manifest (unwired directives are also logged as a warning). |
+| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` turns these checks off, so the startup does not fail on them; the findings that have a manifest representation are listed in the manifest (unwired directives are also logged as a warning). It does not change `precedence`. |
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded, and with `strict: false` the strict-mode checks that only feed the manifest are skipped. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
@@ -529,11 +535,13 @@ tasks.compileJava {
 ```
 
 The processor is aggregating: it checks the whole compilation once, in the last round. It claims the library's
-annotations and the Micronaut annotations that make a class a bean (`@Singleton`, `@Prototype`, `@RequestScope`, ...),
-never `*`, so Gradle's incremental compilation stays incremental: after a change to one file, Gradle recompiles the
-changed classes and hands every claimed type to the processor again, which checks the whole module as a full
-compilation does (unchanged classes are read from the class output). Errors about unchanged files then have no Java
-file and line (javac did not compile them), but name the coordinate and the class. With Micronaut's processor, set
+annotations, `@Introspected`, and the Micronaut annotations that make a class a bean (`@Singleton`, `@Prototype`,
+`@RequestScope`, ...), never `*`. On an incremental compilation Gradle hands every claimed type to the processor again
+(it reprocesses them; it does not recompile the unchanged ones), not only the changed ones, because the processor is
+aggregating. This is a known limitation, not the intended behaviour: issues #13 and #150 track it, and this paragraph
+changes with them.
+Errors about an unchanged class that javac did not recompile (it is read from the class output) have no Java file and
+line, but name the coordinate and the class. With Micronaut's processor, set
 `micronaut.processing.incremental=true` (the Micronaut Gradle plugin does), or every compilation is a full one.
 It reads every `*.graphqls` and `*.graphql` file under the directory.
 
@@ -716,7 +724,7 @@ GraphQL interfaces and union types often have multiple concrete implementations.
 
 Define a `SchemaMappingDictionaryCustomizer` bean to register custom types if any.
 
-In the example below, the `SchemaMappingDictionaryCustomizer` bean is used to register the custom implementations of the `Error` interface type. This associates the GraphQL types `SecurityError` and `ValidationError` with their respective Java implementations (`SecurityError.class` and `ValidationError.class`).
+In the example below, the `SchemaMappingDictionaryCustomizer` bean is used to register the Java classes of the members of the `Error` union type. This associates the GraphQL types `SecurityError` and `ValidationError` with their respective Java implementations (`SecurityError.class` and `ValidationError.class`).
 
 ```java
 @Bean
@@ -846,7 +854,7 @@ and the customizer that made it. Code registry entries for fields the library do
 providers, are allowed.
 (On graphql-java 25.1 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
 resolver or scalar with `StrictModeWiringException`; 21.3 accepts them silently.) To wrap data fetchers, use a
-`SchemaDirectiveWiring`; to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
+`SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
 
@@ -870,13 +878,21 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
   it with `RuntimeWiringOverrideException`.
 - `SchemaDirective.everyElement(names, wiring)` registers a wiring that graphql-java calls for **every** schema element
   and that decides itself what to do (`RuntimeWiring.Builder#directiveWiring`); the names say which directives it
-  implements. These run lowest order first (`@Order` or `Ordered` on the `SchemaDirective` bean), so the first one
-  wraps a data fetcher innermost.
+  implements. It must return the element unchanged unless the element carries one of those directives, because a
+  wiring that wraps the data fetchers of every element adds a call to each of them on every request. Prefer `named`
+  when one directive is enough. Among the `everyElement` beans, these run lowest order first (`@Order` or `Ordered` on
+  the `SchemaDirective` bean), so the first one wraps a data fetcher innermost.
+- All `named` wirings run before every `everyElement` wiring, so they are always innermost. `@Order` on a `named` bean
+  has no effect: the library does not sort them, and they run in the order the SDL applies the directives to the
+  element.
 
-A `SchemaDirectiveWiring` bean is **not** applied on its own: if no `SchemaDirective` bean wraps that instance, the
-startup fails with `UnwrappedDirectiveWiringException`, which names the bean. A wiring therefore never runs on every
-element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of its
-`SchemaDirective`.
+A `SchemaDirectiveWiring` bean is **not** applied on its own: if neither a `SchemaDirective` bean wraps it nor a
+`RuntimeWiringCustomizer` registers it (`RuntimeWiring.Builder#directive` or `#directiveWiring`), the startup fails with
+`UnwrappedDirectiveWiringException`, which names the bean. The check runs after every customizer. A wiring therefore
+never runs on every element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of
+its `SchemaDirective`. A singleton is matched by instance; a `@Prototype` bean (a new instance per injection point) by
+its class, so it may be wrapped too. Because of that, an unwrapped `@Prototype` bean goes undetected when some wired
+instance (of any bean) has the same class; the check then cannot tell the two instances apart.
 
 **Every directive the schema applies must have a wiring**, or the startup fails with `UnwiredDirectivesException`,
 which lists every such directive and where the schema applies it. With `strict: false` (see [Strict mode](#strict-mode)) the
