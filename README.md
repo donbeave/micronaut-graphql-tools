@@ -1194,7 +1194,7 @@ The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the 
 ## Snapshots and Releases
 
 Nothing is published. No snapshot or release of this library is available from Maven Central or any other repository,
-and no workflow publishes one. CI (`.github/workflows/gradle.yml` and `native.yml`) builds and tests the project.
+and no workflow publishes one. CI (`.github/workflows/gradle.yml`) builds and tests the project.
 
 Releases are cut by the maintainers by hand, as described in the [Releases](CONTRIBUTING.md#releases) section of
 CONTRIBUTING.md. To use the library before a release, build it yourself and publish it to a local or private
