@@ -21,10 +21,6 @@ import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembe
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Stamped
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Wrapped
 
-/**
- * A class with a bean introspection that is an instance of the Java types of two unrelated members of a union or
- * interface fails the startup, naming the class and the members. A member and its more specific sub-member do not.
- */
 class AbstractTypeAmbiguitySpec extends AbstractTest {
 
     static final String UNION = "AbstractTypeAmbiguitySpec.union"

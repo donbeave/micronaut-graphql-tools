@@ -12,10 +12,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * A field that a {@code RuntimeWiringCustomizer} claims has no Java member, and is served by the customizer's data
- * fetcher: on the JVM and in a native image.
- */
 @MicronautTest(environments = ClaimedFieldCustomizers.ENVIRONMENT)
 class ClaimedFieldTest {
 

@@ -10,17 +10,11 @@ import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.List;
 
-/**
- * Resolves an object whose class belongs to a class loader that is discarded right after, and hands back weak
- * references to the class and the loader. Plain Java: nothing here keeps a stray reference to either.
- */
 final class DiscardableClassLoaderFixture {
 
-    /** The class a resolver maps; the discardable class extends it. */
     public static class Album {
     }
 
-    /** Loaded a second time, by {@link ChildFirstLoader}, as a subclass of the shared {@link Album}. */
     public static class LiveAlbum extends Album {
     }
 
@@ -47,9 +41,6 @@ final class DiscardableClassLoaderFixture {
     private DiscardableClassLoaderFixture() {
     }
 
-    /**
-     * @return weak references to the class and to its class loader, after {@code resolver} resolved an instance
-     */
     static List<WeakReference<?>> resolveFromDiscardableLoader(TypeResolver resolver, GraphQLSchema schema,
                                                                            String expectedType)
             throws ReflectiveOperationException {

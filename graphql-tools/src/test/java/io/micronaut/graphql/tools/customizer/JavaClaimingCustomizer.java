@@ -9,10 +9,6 @@ import jakarta.inject.Singleton;
 
 import java.util.Set;
 
-/**
- * A Java customizer for {@code ClaimedFieldsSpec}: it serves {@code Query.version} and {@code Book.isbn}, which no
- * Java member binds.
- */
 @Requires(property = "spec.name", value = "ClaimedFieldsSpecJava")
 @Singleton
 public class JavaClaimingCustomizer implements RuntimeWiringCustomizer {

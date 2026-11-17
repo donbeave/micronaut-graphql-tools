@@ -26,18 +26,11 @@ public final class UnsupportedInputTypeException extends AbstractMappingExceptio
 
     private final String reason;
 
-    /**
-     * @param mappingContext the coordinate of the argument or input field
-     * @param reason         why the type is not supported
-     */
     public UnsupportedInputTypeException(MappingContext mappingContext, String reason) {
         super("The Java type is not supported for this argument or input field: " + reason, mappingContext);
         this.reason = reason;
     }
 
-    /**
-     * @return why the type is not supported
-     */
     public String getReason() {
         return reason;
     }

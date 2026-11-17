@@ -88,18 +88,10 @@ public final class UnwiredDirectivesException extends RuntimeException {
                 + " and " + (coordinates.size() - MAX_COORDINATES) + " more";
     }
 
-    /**
-     * @return the names of the applied directives that have no wiring and are not listed as inert; empty when
-     * strict mode is off
-     */
     public List<String> getUnwiredDirectives() {
         return unwiredDirectives;
     }
 
-    /**
-     * @return the names listed in {@code micronaut.graphql.tools.inert-directives} that the schema does not declare or
-     * that have a wiring
-     */
     public List<String> getInvalidInertDirectives() {
         return invalidInertDirectives;
     }

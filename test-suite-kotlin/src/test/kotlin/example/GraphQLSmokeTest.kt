@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 
-/** Smoke test over HTTP: the real application, one request per resolver kind. The tests share one application state. */
 @MicronautTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val manifest: BindingManifest) {
@@ -123,7 +122,6 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     @Test
     @Order(7)
     fun ignoredAndEventListenerMethodsPassStrictModeAndTheManifestListsTheIgnoredOne() {
-        // the application started in strict mode with an event listener and an ignored helper on a resolver
         assertTrue(manifest.diagnostics.none { it.contains("onStartup") || it.contains("helper") }, manifest.diagnostics.toString())
         assertEquals(
             listOf("~ignored example.graphql.query.AllBooksQuery#helper(java.lang.String)"),

@@ -24,12 +24,6 @@ import java.net.URL;
 import java.util.Enumeration;
 import java.util.jar.Manifest;
 
-/**
- * Reads the version of graphql-java for the header of the binding manifest. It is read when the manifest is rendered,
- * never at startup. graphql-java declares its version only in the {@code Bundle-Version} of the manifest of its jar
- * (it has no {@code Implementation-Version} and no {@code pom.properties}); the library registers
- * {@code META-INF/MANIFEST.MF} as a native image resource, so that the version is found in a native image too.
- */
 @Internal
 final class GraphQLJavaVersion {
 
@@ -38,9 +32,6 @@ final class GraphQLJavaVersion {
     private GraphQLJavaVersion() {
     }
 
-    /**
-     * @return the version ({@code Bundle-Version} without a {@code .0} patch level), or {@code unknown}
-     */
     static String get() {
         try {
             ClassLoader classLoader = GraphQL.class.getClassLoader();
@@ -57,7 +48,6 @@ final class GraphQLJavaVersion {
                 }
             }
         } catch (IOException | RuntimeException e) {
-            // fall through: the header says unknown
         }
         return "unknown";
     }

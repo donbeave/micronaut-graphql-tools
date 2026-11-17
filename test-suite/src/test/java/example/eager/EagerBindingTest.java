@@ -13,10 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The schema is bound when the application starts: a field no resolver binds fails the server start, whether the
- * library or the application builds the {@code GraphQL} bean.
- */
 class EagerBindingTest {
 
     private static final Map<String, Object> PORT = Map.of("micronaut.server.port", -1);

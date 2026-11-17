@@ -13,10 +13,6 @@ import org.intellij.lang.annotations.Language
 
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * The schema is bound when the application context starts, unless {@code micronaut.graphql.tools.eager-init} is
- * {@code false}.
- */
 class EagerInitSpec extends AbstractTest {
 
     static final String SPEC_NAME = "EagerInitSpec"

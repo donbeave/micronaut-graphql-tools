@@ -1,2 +1,3 @@
 [tools]
-java = "temurin-27.0.1+1"
+# the patch line, not a build: Temurin publishes 27.0.1 as +1 for macOS and +0 for Linux
+java = "temurin-27.0.1"

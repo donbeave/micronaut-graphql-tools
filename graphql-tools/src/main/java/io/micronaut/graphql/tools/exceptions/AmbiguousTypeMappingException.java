@@ -39,9 +39,6 @@ public final class AmbiguousTypeMappingException extends RuntimeException {
         this.graphQlTypes = List.copyOf(graphQlTypes);
     }
 
-    /**
-     * @return the GraphQL types involved, sorted
-     */
     public List<String> getGraphQlTypes() {
         return graphQlTypes;
     }

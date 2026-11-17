@@ -27,18 +27,12 @@ public final class StrictModeException extends RuntimeException {
 
     private final List<String> problems;
 
-    /**
-     * @param problems one line per finding
-     */
     public StrictModeException(List<String> problems) {
         super(buildMessage(problems));
 
         this.problems = List.copyOf(problems);
     }
 
-    /**
-     * @return one line per finding
-     */
     public List<String> getProblems() {
         return problems;
     }

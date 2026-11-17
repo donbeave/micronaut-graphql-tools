@@ -15,10 +15,6 @@ import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * Strict mode (on by default) fails the startup on what the binding manifest reports as a finding and no option
- * allows; {@code micronaut.graphql.tools.strict=false} keeps the findings in the manifest only.
- */
 class StrictModeSpec extends AbstractTest {
 
     static final String SPEC_NAME = "StrictModeSpec"
@@ -183,8 +179,6 @@ enum Color {
         }
     }
 
-    // --- resolver contracts ---
-
     void "on a bean that uses coordinates only the methods with a coordinate must bind"() {
         given:
         startContext("""
@@ -264,8 +258,6 @@ type Draft {
         }
     }
 
-    // --- a resolver method that the precedence leaves unbound ---
-
     void "a type resolver method that precedence property-first leaves unbound is not reported"() {
         given:
         startContext("""
@@ -307,8 +299,6 @@ type Item {
             return 'resolved'
         }
     }
-
-    // --- unreachable enum, input and scalar types ---
 
     @Language("GraphQL")
     static final String VALUE_TYPES_SCHEMA = """
@@ -411,8 +401,6 @@ input Filter {
         }
     }
 
-    // --- Java interfaces without their own introspection ---
-
     @Language("GraphQL")
     static final String NOTE_SCHEMA = """
 schema {
@@ -497,8 +485,6 @@ type Note {
         String text
     }
 
-    // --- types that only directive definitions use ---
-
     void "enum, input and scalar types that only directive definitions use are reached"() {
         given:
         startContext("""
@@ -545,8 +531,6 @@ type Query {
         }
     }
 
-    // --- methods of java.lang.Object ---
-
     void "overrides of toString, equals and hashCode on a resolver bean are no finding"() {
         given:
         startContext("""
@@ -589,8 +573,6 @@ type Query {
             return 1
         }
     }
-
-    // --- one root method for several operation types ---
 
     @Language("GraphQL")
     static final String PING_SCHEMA = """
@@ -641,8 +623,6 @@ type Mutation {
             return 'pong'
         }
     }
-
-    // --- allow-unreachable is transitive to the value types an allowed type uses ---
 
     @Language("GraphQL")
     static final String TRANSITIVE_SCHEMA = """
@@ -759,8 +739,6 @@ input Nested {
             return 'label'
         }
     }
-
-    // --- allow-unreachable without strict mode ---
 
     void "with strict false allow-unreachable may still name unreachable enum, input and scalar types, without effect"() {
         given:

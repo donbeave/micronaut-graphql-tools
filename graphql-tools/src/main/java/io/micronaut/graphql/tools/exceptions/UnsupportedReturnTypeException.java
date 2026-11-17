@@ -32,9 +32,6 @@ public final class UnsupportedReturnTypeException extends AbstractMappingExcepti
         this.reason = reason;
     }
 
-    /**
-     * @return why the return type is not supported
-     */
     public String getReason() {
         return reason;
     }

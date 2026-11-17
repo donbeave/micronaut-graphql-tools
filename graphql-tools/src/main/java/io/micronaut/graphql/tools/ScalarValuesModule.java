@@ -31,22 +31,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Carries the values that custom scalars parsed through the {@code ObjectMapper} conversion of input objects
- * unchanged.
- * <p>
- * graphql-java hands an input object to a data fetcher as a {@code Map} whose leaves are already coerced: a
- * {@code LocalDate} scalar yields a {@code LocalDate}. The library converts that map into the input class with Jackson,
- * which writes the map into a token buffer and reads the class back. Without this module a scalar value whose class
- * Jackson cannot (or not losslessly) serialize, such as {@code java.time} types without the JSR-310 module, fails the
- * request. The module writes each value of a declared input class as an embedded object and reads it back as the same
- * instance.
- * <p>
- * Classes Jackson already converts losslessly (strings, numbers, booleans, maps, collections, arrays, enums and
- * {@code Object}) are left alone, so that, for example, a JSON scalar's maps are still converted as maps.
- *
- * @since 1.0.0
- */
 @Internal
 final class ScalarValuesModule extends SimpleModule {
 

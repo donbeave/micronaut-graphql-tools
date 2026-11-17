@@ -10,9 +10,6 @@ import jakarta.inject.Singleton;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * The application's own instrumentation: counts the operations its {@code GraphQL} bean executes.
- */
 @Singleton
 @Requires(env = HostGraphQLFactory.ENVIRONMENT)
 public class OperationCounter extends SimplePerformantInstrumentation {

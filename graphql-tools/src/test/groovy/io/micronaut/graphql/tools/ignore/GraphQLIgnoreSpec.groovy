@@ -21,11 +21,6 @@ import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.annotation.PreDestroy
 import org.intellij.lang.annotations.Language
 
-/**
- * {@code @GraphQLIgnore} marks a member that binds no field: strict mode does not report it and nothing binds it. A
- * method annotated with {@code @EventListener}, {@code @Scheduled} or {@code @PreDestroy} is not reported either. The
- * Java fixtures ({@code JavaIgnore*}) are the Java side of the same cases.
- */
 class GraphQLIgnoreSpec extends AbstractTest {
 
     static final String SPEC_JAVA = "IgnoreSpec"

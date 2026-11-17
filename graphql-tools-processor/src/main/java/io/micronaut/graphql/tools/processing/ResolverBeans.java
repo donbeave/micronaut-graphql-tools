@@ -32,22 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * The root and type resolver beans of the compilation and their methods, found the way the library registers them at
- * startup:
- * <ul>
- *     <li>a bean is a concrete class with a bean-defining annotation ({@code @Singleton}, ..., or the resolver
- *     annotation itself, which is one), or a concrete class that inherits the resolver annotation from a superclass;
- *     it is a root or type resolver when it or one of its supertypes, classes or interfaces, carries
- *     {@code @GraphQLRootResolver} or {@code @GraphQLTypeResolver};</li>
- *     <li>its executable methods are its public instance methods, inherited ones included, without those of
- *     {@code Object};</li>
- *     <li>a method has a schema coordinate when it, or a method it overrides, carries {@code @GraphQLSchemaCoordinate};
- *     on a bean where any method has one, only those methods bind;</li>
- *     <li>a type resolver resolves the class named by each {@code @GraphQLTypeResolver} of its class hierarchy; with
- *     several such classes, each method resolves the class of its first parameter.</li>
- * </ul>
- */
 final class ResolverBeans {
 
     private static final Set<String> OBJECT_METHODS = Set.of("toString()", "hashCode()", "equals(java.lang.Object)",
@@ -56,10 +40,6 @@ final class ResolverBeans {
     private final JavaTypes javaTypes;
     private final List<Bean> beans = new ArrayList<>();
 
-    /**
-     * @param javaTypes the type helpers
-     * @param types     the types of the compilation
-     */
     ResolverBeans(JavaTypes javaTypes, Collection<TypeElement> types) {
         this.javaTypes = javaTypes;
         for (TypeElement type : types) {
@@ -73,32 +53,18 @@ final class ResolverBeans {
         beans.sort(Comparator.comparing(it -> it.name()));
     }
 
-    /**
-     * @return every resolver bean
-     */
     List<Bean> beans() {
         return beans;
     }
 
-    /**
-     * @return the root resolver beans
-     */
     List<Bean> rootBeans() {
         return beans.stream().filter(Bean::root).toList();
     }
 
-    /**
-     * @param modelClass a Java type
-     * @return the type resolver beans with methods for it
-     */
     List<Bean> typeBeans(TypeElement modelClass) {
         return beans.stream().filter(it -> it.methodsByModelClass().containsKey(javaTypes.name(modelClass))).toList();
     }
 
-    /**
-     * @param type a class of the compilation
-     * @return whether Micronaut makes it a bean
-     */
     boolean isBean(TypeElement type) {
         if (type.getKind() != ElementKind.CLASS || type.getModifiers().contains(Modifier.ABSTRACT)) {
             return false;
@@ -106,7 +72,6 @@ final class ResolverBeans {
         if (Annotations.hasStereotype(type, Annotations.BEAN_DEFINING)) {
             return true;
         }
-        // @GraphQLRootResolver and @GraphQLTypeResolver are @Inherited: a subclass of an annotated class carries them
         return javaTypes.superclasses(type).stream().anyMatch(it -> Annotations.has(it, Annotations.ROOT_RESOLVER)
                 || Annotations.has(it, Annotations.TYPE_RESOLVER));
     }
@@ -187,20 +152,6 @@ final class ResolverBeans {
         return Optional.empty();
     }
 
-    /**
-     * A root or type resolver bean.
-     *
-     * @param type                its class
-     * @param name                the binary name of its class
-     * @param root                whether it is a root resolver
-     * @param contracts           the binary names of the types of its hierarchy that carry {@code @GraphQLTypeResolver},
-     *                            and the class each names
-     * @param methods             its executable methods
-     * @param usesCoordinates     whether one of its methods has a schema coordinate
-     * @param methodsByModelClass for a type resolver, its methods by the binary name of the class they resolve
-     * @param unassigned          for a type resolver of several classes, the methods whose first parameter is none of
-     *                            them
-     */
     record Bean(TypeElement type,
                 String name,
                 boolean root,
@@ -210,20 +161,10 @@ final class ResolverBeans {
                 Map<String, List<Method>> methodsByModelClass,
                 List<Method> unassigned) {
 
-        /**
-         * @param method a method of the bean
-         * @return whether it can bind a field: on a bean that uses schema coordinates only the methods with one can
-         */
         boolean isCandidate(Method method) {
             return !usesCoordinates || method.coordinate() != null;
         }
 
-        /**
-         * @param methods    methods of the bean
-         * @param name       a field name
-         * @param coordinate the coordinate of the field
-         * @return the methods that can bind the field
-         */
         List<Method> find(List<Method> methods, String name, String coordinate) {
             return methods.stream()
                     .filter(it -> it.element().getSimpleName().contentEquals(name))
@@ -233,9 +174,6 @@ final class ResolverBeans {
 
     }
 
-    /**
-     * An executable method of a resolver bean.
-     */
     static final class Method {
 
         private final ExecutableElement element;
@@ -249,30 +187,18 @@ final class ResolverBeans {
             this.objectMethod = objectMethod;
         }
 
-        /**
-         * @return the method
-         */
         ExecutableElement element() {
             return element;
         }
 
-        /**
-         * @return its schema coordinate, or {@code null}
-         */
         String coordinate() {
             return coordinate;
         }
 
-        /**
-         * @return whether it overrides a method of {@code Object}
-         */
         boolean objectMethod() {
             return objectMethod;
         }
 
-        /**
-         * @return its bean
-         */
         Bean bean() {
             return bean;
         }

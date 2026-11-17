@@ -36,19 +36,11 @@ public final class JavaTypeNames {
     private JavaTypeNames() {
     }
 
-    /**
-     * @param executable a method
-     * @return its parameter types, in parentheses and separated by {@code ", "}
-     */
     static String parameters(Executable<?, ?> executable) {
         return Arrays.stream(executable.getArguments()).map(JavaTypeNames::of)
                 .collect(Collectors.joining(", ", "(", ")"));
     }
 
-    /**
-     * @param argument a type with its type arguments
-     * @return the type in {@link java.lang.reflect.Type#getTypeName()} form
-     */
     public static String of(Argument<?> argument) {
         Class<?> type = argument.getType();
         Argument<?>[] typeParameters = argument.getTypeParameters();

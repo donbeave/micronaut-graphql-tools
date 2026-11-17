@@ -25,14 +25,8 @@ import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The resolvers and wiring of the benchmarked schema. Every method does the least work that keeps the call from being
- * optimised away, so the benchmarks measure the library's path, not the resolver. The beans are off in the context of
- * the large-schema benchmark ({@code benchmarks.large}), which has resolvers of its own.
- */
 public final class Resolvers {
 
-    /** The most objects a query benchmark lists. */
     public static final int MAX_ITEMS = 10_000;
 
     private static final List<Item> ITEMS = items();
@@ -48,7 +42,6 @@ public final class Resolvers {
         return List.copyOf(items);
     }
 
-    /** The root resolver. */
     @Requires(property = "benchmarks.large", notEquals = "true")
     @GraphQLRootResolver
     public static class Query {
@@ -90,7 +83,6 @@ public final class Resolvers {
         }
     }
 
-    /** A field of {@code Item} bound to a method that takes the source. */
     @Requires(property = "benchmarks.large", notEquals = "true")
     @GraphQLTypeResolver(Item.class)
     public static class ItemResolver {
@@ -104,7 +96,6 @@ public final class Resolvers {
         }
     }
 
-    /** The classes of the object types of the union and the interface. */
     @Requires(property = "benchmarks.large", notEquals = "true")
     @Factory
     public static class Wiring {
@@ -126,7 +117,6 @@ public final class Resolvers {
         }
     }
 
-    /** A directive wiring that wraps the fetcher of the field and delegates to it. */
     static final class PassThrough implements SchemaDirectiveWiring {
 
         @Override

@@ -9,9 +9,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 
-/**
- * The checked-in allocation baselines: bytes per operation, keyed by {@code case@graphql-java-leg@jdk}.
- */
 final class Baselines {
 
     private final Path file;
@@ -32,13 +29,11 @@ final class Baselines {
         return caseName + "@" + leg + "@" + jdk;
     }
 
-    /** The baseline, or null when the case has none for this leg and JDK. */
     Double get(String key) {
         String value = values.get(key);
         return value == null ? null : Double.valueOf(value);
     }
 
-    /** Whether any baseline is recorded for this JDK feature version. */
     boolean hasJdk(String jdk) {
         return values.keySet().stream().anyMatch(key -> key.endsWith("@" + jdk));
     }

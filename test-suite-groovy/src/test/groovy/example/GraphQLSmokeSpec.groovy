@@ -9,7 +9,6 @@ import jakarta.inject.Inject
 import spock.lang.Specification
 import spock.lang.Stepwise
 
-/** Smoke test over HTTP: the real application, one request per resolver kind. The features share one application state. */
 @MicronautTest
 @Stepwise
 class GraphQLSmokeSpec extends Specification {

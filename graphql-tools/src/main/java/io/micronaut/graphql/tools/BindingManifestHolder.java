@@ -29,11 +29,6 @@ public final class BindingManifestHolder {
 
     private BindingManifest bindingManifest;
 
-    /**
-     * @return the binding manifest
-     * @throws NoSuchElementException if the schema is not bound yet, never is because the application provides its
-     *                                own {@code GraphQLSchema}, or the manifest is not recorded
-     */
     BindingManifest get() {
         if (bindingManifest == null) {
             throw new NoSuchElementException("There is no binding manifest: the schema is not bound yet, "

@@ -59,16 +59,10 @@ public final class InvalidAllowUnreachableException extends RuntimeException {
         this.notUnreachableTypeNames = List.copyOf(notUnreachableTypeNames);
     }
 
-    /**
-     * @return listed names that the schema does not define
-     */
     public List<String> getUndefinedTypeNames() {
         return undefinedTypeNames;
     }
 
-    /**
-     * @return listed names that the schema defines, but not as unreachable object, interface or union types
-     */
     public List<String> getNotUnreachableTypeNames() {
         return notUnreachableTypeNames;
     }

@@ -11,17 +11,12 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * {@link TypeDefinitionRegistryCustomizer} beans change the registry the library binds, lowest order first,
- * before the binding starts; the application's own {@link TypeDefinitionRegistry} bean stays unchanged.
- */
 class TypeDefinitionRegistryCustomizerSpec extends AbstractTest {
 
     static final String SPEC_NAME = "TypeDefinitionRegistryCustomizerSpec"
 
     static final List<String> CALLS = Collections.synchronizedList([])
 
-    // no schema definition: without the customizers the startup fails with SchemaDefinitionNotProvidedException
     @Language("GraphQL")
     static final String SCHEMA = """
 type Query {
@@ -58,7 +53,6 @@ type Query {
         applicationContext.getBean(TypeDefinitionRegistry).schemaDefinition().isEmpty()
     }
 
-    // declared first, runs second: @Order(20) against getOrder() == 10
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     @Order(20)

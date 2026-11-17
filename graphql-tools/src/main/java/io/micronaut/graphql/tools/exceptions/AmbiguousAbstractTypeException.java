@@ -28,9 +28,6 @@ public final class AmbiguousAbstractTypeException extends RuntimeException {
 
     private final transient List<String> ambiguities;
 
-    /**
-     * @param ambiguities one line per ambiguous class, naming the class, the object types and their Java types
-     */
     public AmbiguousAbstractTypeException(List<String> ambiguities) {
         super("Objects of these classes cannot be resolved to one object type of a union or interface, because no "
                 + "single object type is the most specific one:\n  "
@@ -40,9 +37,6 @@ public final class AmbiguousAbstractTypeException extends RuntimeException {
         this.ambiguities = List.copyOf(ambiguities);
     }
 
-    /**
-     * @return one line per ambiguous class, naming the class, the object types and their Java types
-     */
     public List<String> getAmbiguities() {
         return ambiguities;
     }

@@ -26,7 +26,6 @@ application {
     mainClass.set("example.Application")
 }
 
-// D-23, D-32: Java and Kotlin target 21, whatever JDK runs the build.
 java {
     sourceCompatibility = JavaVersion.toVersion("21")
     targetCompatibility = JavaVersion.toVersion("21")

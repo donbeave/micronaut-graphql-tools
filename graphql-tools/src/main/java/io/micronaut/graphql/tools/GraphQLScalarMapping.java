@@ -105,33 +105,21 @@ public final class GraphQLScalarMapping {
         return new Builder(scalarType);
     }
 
-    /**
-     * @return the name of the scalar in the schema
-     */
     @NonNull
     public String getName() {
         return scalarType.getName();
     }
 
-    /**
-     * @return the scalar implementation
-     */
     @NonNull
     public GraphQLScalarType getScalarType() {
         return scalarType;
     }
 
-    /**
-     * @return the classes the scalar serializes (primitives are given as their wrapper classes)
-     */
     @NonNull
     public Set<Class<?>> getOutputClasses() {
         return outputClasses;
     }
 
-    /**
-     * @return the classes the scalar parses input values into (primitives are given as their wrapper classes)
-     */
     @NonNull
     public Set<Class<?>> getInputClasses() {
         return inputClasses;
@@ -146,10 +134,6 @@ public final class GraphQLScalarMapping {
         return outputClasses.stream().anyMatch(it -> it.isAssignableFrom(wrapped));
     }
 
-    /**
-     * @param javaClass the declared Java type of an argument or an input object field
-     * @return whether the type is exactly one of the input classes
-     */
     public boolean isInputClass(@NonNull Class<?> javaClass) {
         return inputClasses.contains(wrap(javaClass));
     }
@@ -211,9 +195,6 @@ public final class GraphQLScalarMapping {
             return this;
         }
 
-        /**
-         * @return the mapping
-         */
         @NonNull
         public GraphQLScalarMapping build() {
             if (outputClasses.isEmpty() && inputClasses.isEmpty()) {
