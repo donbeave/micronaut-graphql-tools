@@ -157,6 +157,8 @@ type Query {
         failures.failures[0] instanceof MethodNotFoundException
         failures.failures[1].message.contains('Unsupported type definition')
         failures.failures[1].message.contains('GraphQL coordinate: Query.b')
+        // the mapping context is added once
+        failures.failures[1].message.count('GraphQL coordinate:') == 1
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".scalar")

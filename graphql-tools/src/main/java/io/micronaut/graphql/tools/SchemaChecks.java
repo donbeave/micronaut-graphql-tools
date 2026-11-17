@@ -171,7 +171,8 @@ final class SchemaChecks {
                         .collect(Collectors.toCollection(TreeSet::new));
             } else {
                 findings.add(new UnreachableTypesException(failing));
-                // the later checks must not report the methods of these types again
+                // the coordinate check must not report the methods of these types again; the strict check still lists their
+                // resolver methods as unbound, which is true: nothing binds them while the type is unreachable
                 unbound = unreachableTypes.keySet();
             }
             if (!allowed.isEmpty()) {

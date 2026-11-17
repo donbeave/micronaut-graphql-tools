@@ -26,8 +26,8 @@ import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
 final class UnexpectedBindingException extends AbstractMappingException {
 
     UnexpectedBindingException(MappingContext mappingContext, RuntimeException cause) {
-        super(mappingContext.getMessage(cause.getClass().getSimpleName() + ": " + cause.getMessage()),
-                mappingContext);
+        // getMessage() adds the mapping context, so only the description of the cause goes here
+        super(cause.getClass().getSimpleName() + ": " + cause.getMessage(), mappingContext);
         initCause(cause);
     }
 
