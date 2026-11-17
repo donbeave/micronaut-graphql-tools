@@ -46,8 +46,18 @@ tasks.register<Test>("corpusUpdate") {
     outputs.upToDateWhen { false }
 }
 
+// The corpus compiles 31 units in process (about 70 s of a 2 minute job). Its verdicts do not depend on the graphql-java leg
+// (the floor and ceiling runs record the same verdicts as the default leg), so it runs on the default leg only, on JDK 21 and 25;
+// the floor and ceiling legs run every other test of this module unchanged. CorpusRunnerSpec (the runner's own tests, 3 s) runs on every leg.
+val corpusOnThisLeg = providers.gradleProperty("graphqlJavaLeg").orElse("default").get() == "default"
 tasks.named<Test>("test") {
     exclude("**/KotlinCorpusSpec*")
+    if (!corpusOnThisLeg && !project.hasProperty("corpus.update")) {
+        exclude("**/BindingCorpusSpec*")
+        doFirst {
+            logger.lifecycle("BindingCorpusSpec skipped: the binding corpus runs on the default graphql-java leg only (-PgraphqlJavaLeg=default).")
+        }
+    }
 }
 // The Kotlin corpus (DD-13): one batched Gradle TestKit build with the production toolchain, budget 3 minutes on JDK 25.
 // Not part of `check` until the CI job for it exists (CT-WIRING, #143).
