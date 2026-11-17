@@ -6,6 +6,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.annotation.GraphQLArgument
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.exceptions.AmbiguousTypeMappingException
@@ -444,7 +445,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     @Requires(property = 'spec.name', value = SUBCLASS)
     @GraphQLRootResolver
     static class SubclassQuery {
-        EssayResult essay(boolean isLong) {
+        EssayResult essay(@GraphQLArgument('long') boolean isLong) {
             return isLong ? new LongEssayModel(title: 'On Method') : new EssayModel(title: 'On Style')
         }
     }

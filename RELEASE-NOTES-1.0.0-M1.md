@@ -13,7 +13,7 @@ The stack makes the binding between the SDL schema and the Java code safe: drift
 - Binding safety: explicit precedence, root resolvers per operation type, every binding failure reported at once, binding manifest, strict mode (#6).
 - Compile-time verification: new module `micronaut-graphql-tools-processor` checks the SDL against the Java bindings (#7).
 
-## Behaviour changes (BC-01 to BC-18)
+## Behaviour changes (BC-01 to BC-19)
 
 "Opt-out" names the setting that restores the old behaviour. Keys are under `micronaut.graphql.tools.`; see [Opt-outs](#opt-outs). "Status" is the state after issue #79, which is still open: the status column shows its recommendation, and no decision is recorded yet.
 
@@ -37,6 +37,7 @@ The stack makes the binding between the SDL schema and the Java code safe: drift
 | BC-16 | #6 `a18f948` | `strict: true` is the default. Stale resolver methods, missing enum constants, stale dictionary entries, unused enum, input and scalar types, and interface-mapped types without their own introspection are startup errors. | `micronaut.graphql.tools.strict: false` | Fix each finding listed in [Strict mode](README.md#strict-mode), or set `strict: false`. | Opt-out exists; not covered by #79 |
 | BC-17 | #7 `d2e5ae7` | Fields of `extend type` are bound and checked. Before, graphql-java's default fetcher served them without any check. | none | Give each extended field a resolver or property. The startup names the coordinate. | Pending #79; recommended: approve as is |
 | BC-18 | #2 `3be0c73` | Unreachable types: the startup still fails by default, and now lists all of them. Entries in `allow-unreachable` that are no longer unreachable fail the startup. | `micronaut.graphql.tools.unreachable-types: ignore` | Remove stale entries from `allow-unreachable`. | Opt-out exists; not covered by #79 |
+| BC-19 | #15 | Resolver parameters are bound to field arguments by name, not by position. A parameter without an argument of that name, or two parameters bound to one argument, is a startup error (`IncorrectArgumentNameException`). | none | Rename the parameter to the argument name, or add `@GraphQLArgument("<argument name>")`. | Breaking, by design |
 
 ## Opt-outs
 
