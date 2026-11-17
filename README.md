@@ -224,8 +224,24 @@ that needs the `GraphQLSchema` is created instead, for tests that expect the fai
 cannot be bound is reported; the binding does not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
 `MultipleMethodsFoundException`, `IncorrectClassMappingException`, ...). Several are thrown together as
 `BindingFailuresException`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
-others are suppressed exceptions. The checks that need a complete binding (unreachable types, schema coordinates) run
-only when no field failed.
+others are suppressed exceptions. An unexpected exception of one field (for example an unsupported type definition) is
+reported like the others, named by the field's coordinate, so it does not hide them. The checks that need a complete
+binding (unreachable types, schema coordinates, strict mode) run only when no field failed, and then they report
+together: when more than one finds a problem, the startup fails once with a `BindingFailuresException` that lists each
+finding under the label of its check (`[unreachable-type]`, `[invalid-schema-coordinate]`, `[strict]`), in that order;
+a single finding is thrown as its own exception (`UnreachableTypesException`, `InvalidSchemaCoordinateException`,
+`StrictModeException`).
+
+```
+The schema cannot be bound: 3 errors.
+  1) [unreachable-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Draft (type).
+     Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow-unreachable, or set micronaut.graphql.tools.unreachable-types to ignore.
+  2) [invalid-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:
+       1) @GraphQLSchemaCoordinate("Book.summary") on example.AuthorResolver summary(example.Author author): the method is not bound to Book.summary, ...
+  3) [strict] Strict mode found problems in the binding of the schema:
+       1) The resolver method example.BookQuery#helper(java.lang.String) binds no schema field. Remove it, ...
+       Fix them, or set micronaut.graphql.tools.strict to false.
+```
 
 Each failure names the schema coordinate (`Type.field`, `Type.field(argument:)` or `InputType.field`) and where it is
 declared, as graphql-java parsed it (the source name appears when the schema was parsed with one, for example through
