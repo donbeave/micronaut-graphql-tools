@@ -35,7 +35,6 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
 
     private static final Object[] NO_ARGUMENTS = new Object[0];
 
-    // the argument plan, computed once from the argument definitions: one entry per method parameter
     private static final int SOURCE = 0;
     private static final int DATA_FETCHING_ENVIRONMENT = 1;
     private static final int ARGUMENT_VALUE = 2;
@@ -69,7 +68,6 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                 kinds[i] = DATA_FETCHING_ENVIRONMENT;
             } else {
                 Argument<?> argument = argumentDefinition.getInputValueArgument().orElseThrow();
-                // the binding allows ArgumentValue only with a declared type argument
                 boolean argumentValue = ArgumentValue.class.equals(argument.getType());
                 kinds[i] = argumentValue ? ARGUMENT_VALUE : INPUT_VALUE;
                 javaTypes[i] = inputValueConverter.toJavaType(
@@ -88,7 +86,6 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             arguments[i] = argument(environment, i);
         }
 
-        // a root resolver is invoked on its bean, a type resolver on the source of the field
         return executable.invoke(instance != null ? instance : environment.getSource(), arguments);
     }
 

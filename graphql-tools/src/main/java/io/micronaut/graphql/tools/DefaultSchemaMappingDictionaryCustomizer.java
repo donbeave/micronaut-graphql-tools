@@ -29,7 +29,6 @@ public class DefaultSchemaMappingDictionaryCustomizer implements SchemaMappingDi
 
     @Override
     public void customize(SchemaMappingDictionary schemaMappingDictionary) {
-        // do nothing, can be overridden with another implementation
     }
 
 }

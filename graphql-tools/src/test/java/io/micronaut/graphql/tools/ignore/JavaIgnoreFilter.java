@@ -3,9 +3,6 @@ package io.micronaut.graphql.tools.ignore;
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 
-/**
- * An input class with a settable property that the input type does not define, marked {@code @GraphQLIgnore}.
- */
 @GraphQLInput
 public class JavaIgnoreFilter {
 

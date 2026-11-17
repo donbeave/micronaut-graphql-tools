@@ -13,13 +13,8 @@ import io.micronaut.graphql.tools.exceptions.AmbiguousTypeMappingException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * The SchemaMappingDictionary maps GraphQL types to Java interfaces, and an interface and the classes annotated with
- * {@code @GraphQLType(interface)} are one mapping, not two.
- */
 class DictionaryJavaInterfaceSpec extends AbstractTest {
 
-    // these Java interfaces have no bean introspection of their own, which strict mode rejects
     static final Map NOT_STRICT = ['micronaut.graphql.tools.strict': false]
 
     static final String UNION_MEMBER = "DictionaryJavaInterfaceSpec.unionMember"

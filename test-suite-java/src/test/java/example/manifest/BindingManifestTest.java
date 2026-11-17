@@ -12,11 +12,6 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The binding manifest of the sample application, against a golden file. Some resolvers of the sample are
- * intercepted ({@code @ElapsedTime}) and one is bound through a contract interface; the manifest names the classes
- * the methods are written in.
- */
 @MicronautTest(startApplication = false)
 class BindingManifestTest {
 
@@ -33,7 +28,6 @@ class BindingManifestTest {
 
     @Test
     void aResolverOverridingObjectMethodsHasNoUnboundFinding() {
-        // BookResolver overrides toString, equals and hashCode
         assertTrue(bindingManifest.getLines().stream().noneMatch(it -> it.startsWith("!unbound ")
                 && (it.contains("toString") || it.contains("equals") || it.contains("hashCode"))),
                 String.valueOf(bindingManifest.getLines()));

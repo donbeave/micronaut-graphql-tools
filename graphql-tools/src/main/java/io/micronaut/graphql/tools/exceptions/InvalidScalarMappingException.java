@@ -52,16 +52,10 @@ public final class InvalidScalarMappingException extends RuntimeException {
         return "Invalid " + GraphQLScalarMapping.class.getName() + " beans: " + String.join("; ", problems) + ".";
     }
 
-    /**
-     * @return the names of scalars that are mapped more than once, with the number of mappings
-     */
     public Map<String, Integer> getDuplicates() {
         return duplicates;
     }
 
-    /**
-     * @return the names of built-in scalars that are mapped
-     */
     public List<String> getBuiltIn() {
         return builtIn;
     }

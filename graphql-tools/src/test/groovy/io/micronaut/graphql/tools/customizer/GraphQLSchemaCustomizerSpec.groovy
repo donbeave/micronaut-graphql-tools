@@ -21,10 +21,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * {@link GraphQLSchemaCustomizer} beans change the schema the library built, lowest order first, each one
- * receiving the result of the previous one; the {@code GraphQL} bean runs the last result.
- */
 class GraphQLSchemaCustomizerSpec extends AbstractTest {
 
     static final String SPEC_NAME = "GraphQLSchemaCustomizerSpec"
@@ -90,7 +86,6 @@ type Other {
         e.cause.message == "GraphQLSchemaCustomizer ${ReturnNull.name} returned null instead of a schema".toString()
     }
 
-    // declared first, runs second
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     @Order(20)

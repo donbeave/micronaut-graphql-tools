@@ -19,10 +19,6 @@ import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
-/**
- * Fields of the subscription type return a {@link Publisher} of events (graphql-java's subscription contract). The
- * mapping checks the event type; a {@link Publisher} anywhere else fails at startup.
- */
 class PublisherReturnTypeSpec extends AbstractTest {
 
     static final String SPEC_NAME = "PublisherReturnTypeSpec"

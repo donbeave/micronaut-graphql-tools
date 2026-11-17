@@ -215,7 +215,7 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
     }
 
     /**
-     * TODO.
+     * The kind of Java type a GraphQL field or argument is mapped to.
      */
     public enum MappingType {
         DETECT_TYPE,

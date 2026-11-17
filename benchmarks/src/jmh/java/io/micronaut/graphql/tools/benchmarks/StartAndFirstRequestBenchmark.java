@@ -10,11 +10,6 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Context start plus the first query, with the schema bound at the start or not
- * ({@code micronaut.graphql.tools.eager-init}): the time until the first response, which is what a request that arrives
- * right after the start waits for. One invocation is one fresh context.
- */
 @BenchmarkMode(Mode.SingleShotTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class StartAndFirstRequestBenchmark extends AbstractEagerInitState {

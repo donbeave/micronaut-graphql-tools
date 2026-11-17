@@ -14,10 +14,6 @@ import io.micronaut.graphql.tools.exceptions.ResolverRequiredException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * The precedence between a getter of an implementation and a type resolver of the Java interface an SDL interface is
- * mapped to, for a field that the interface declares.
- */
 class InterfaceFieldPrecedenceSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InterfaceFieldPrecedenceSpec"
@@ -182,8 +178,6 @@ type MediaSection implements Section {
                     .registerType("MediaSection", MediaSection.class)
         }
     }
-
-    // --- a field marked with the directive that no resolver binds ---
 
     void "a field marked with a resolver directive fails the startup when only a getter of the implementation binds it"() {
         given:

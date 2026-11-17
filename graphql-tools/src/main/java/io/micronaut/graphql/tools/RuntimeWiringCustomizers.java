@@ -42,25 +42,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-/**
- * Applies the {@link RuntimeWiringCustomizer} beans to the library's runtime wiring and fails if one of them replaced
- * what the library wired, directly in the builder or through a code registry.
- */
 @Internal
 final class RuntimeWiringCustomizers {
 
     private RuntimeWiringCustomizers() {
     }
 
-    /**
-     * Reads {@link RuntimeWiringCustomizer#claimedFields()} of every customizer, once, and validates the claims.
-     *
-     * @param customizers the customizers
-     * @param registry    the registry the schema is generated from
-     * @return the coordinate ({@code Type.field}) of every claimed field to the class name of the customizer that
-     * claims it
-     * @throws InvalidClaimedFieldsException if a claim is not a field of an object type of the schema
-     */
     static Map<String, String> claims(List<RuntimeWiringCustomizer> customizers, TypeDefinitionRegistry registry) {
         Map<String, String> claims = new TreeMap<>();
         List<String> problems = new ArrayList<>();
@@ -99,15 +86,6 @@ final class RuntimeWiringCustomizers {
         return null;
     }
 
-    /**
-     * Applies the customizers in the given order.
-     *
-     * @param builder     the builder that holds the library's wiring
-     * @param customizers the customizers, in {@code Ordered} order
-     * @param registry    the registry the schema is generated from, for the types and fields of the schema
-     * @param claimed     the claimed fields, see {@link #claims}: the library wired none of them
-     * @throws RuntimeWiringOverrideException if a customizer replaced what the library wired
-     */
     static void apply(RuntimeWiring.Builder builder,
                       List<RuntimeWiringCustomizer> customizers,
                       TypeDefinitionRegistry registry,
@@ -133,10 +111,6 @@ final class RuntimeWiringCustomizers {
         }
     }
 
-    /**
-     * @param registry the registry
-     * @return the name of every object type (extensions included) to the names of its fields
-     */
     private static Map<String, Set<String>> objectTypeFields(TypeDefinitionRegistry registry) {
         Map<String, Set<String>> fieldsByType = new TreeMap<>();
         List<ObjectTypeDefinition> objectTypes = new ArrayList<>();
@@ -156,18 +130,6 @@ final class RuntimeWiringCustomizers {
         return fieldsByType;
     }
 
-    /**
-     * What a runtime wiring holds at one moment. The maps of a {@link RuntimeWiring} are those of its builder, so they
-     * are copied.
-     *
-     * @param dataFetchers        type name to field name to data fetcher
-     * @param defaultDataFetchers type name to default data fetcher
-     * @param wiringFactory       the wiring factory
-     * @param scalars             scalar name to scalar
-     * @param typeResolvers       type name to type resolver
-     * @param directiveWirings    directive name to the wiring registered for it
-     * @param codeRegistry        the code registry the schema generator starts from
-     */
     private record Snapshot(
             Map<String, Map<String, DataFetcher>> dataFetchers,
             Map<String, DataFetcher> defaultDataFetchers,
@@ -199,16 +161,6 @@ final class RuntimeWiringCustomizers {
             );
         }
 
-        /**
-         * {@code RuntimeWiring.Builder#type} of a {@code TypeRuntimeWiring} that sets no default data fetcher, which is
-         * how a customizer adds a data fetcher for one field, clears the default data fetcher the library registered
-         * for the type (graphql-java 21.3). That is not a replacement, and it would silently turn off the library's
-         * binding of the type's other fields, so the library's default data fetcher is put back.
-         *
-         * @param builder the builder
-         * @param after   the wiring after a customizer ran
-         * @return {@code true} if a default data fetcher was put back
-         */
         boolean restoreClearedDefaultDataFetchers(RuntimeWiring.Builder builder, Snapshot after) {
             boolean restored = false;
             for (Map.Entry<String, DataFetcher> entry : defaultDataFetchers.entrySet()) {
@@ -221,12 +173,6 @@ final class RuntimeWiringCustomizers {
             return restored;
         }
 
-        /**
-         * @param after        the wiring after a customizer ran
-         * @param fieldsByType the fields of every object type
-         * @param claimed      the claimed coordinates, which the library did not wire
-         * @return what this snapshot wires that {@code after} wires differently
-         */
         List<String> replacedIn(Snapshot after, Map<String, Set<String>> fieldsByType, Set<String> claimed) {
             List<String> replaced = new ArrayList<>();
             dataFetchers.forEach((type, fields) -> fields.forEach((field, dataFetcher) -> {
@@ -261,10 +207,6 @@ final class RuntimeWiringCustomizers {
             return replaced;
         }
 
-        /**
-         * graphql-java's schema generator keeps a data fetcher or type resolver that the code registry of the runtime
-         * wiring already holds, so one there for a field or type the library wired would win over the library.
-         */
         private List<String> replacedThroughCodeRegistry(Snapshot after, Map<String, Set<String>> fieldsByType,
                                                          Set<String> claimed) {
             List<String> replaced = new ArrayList<>();

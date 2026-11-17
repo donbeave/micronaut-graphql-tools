@@ -14,11 +14,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * The binding manifest renders Java types as {@link Type#getTypeName()} renders them, from Micronaut's compile-time
- * metadata and never by reflection (the same text on the JVM and in a native image). The metadata keeps no wildcards,
- * raw types or generic array components. This test compares the rendering with the reflected one, the way a test may.
- */
 @MicronautTest(startApplication = false)
 class JavaTypeNamesTest {
 

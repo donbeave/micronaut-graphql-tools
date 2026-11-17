@@ -27,7 +27,6 @@ java {
     targetCompatibility = JavaVersion.toVersion("21")
 }
 
-// The Groovy suite runs on the JVM only (#55); there is no native test.
 micronaut {
     // The platform version: micronaut-build reads `micronaut` as the core BOM version, which has no platform of the same number.
     version.set(libs.versions.micronaut.platform)

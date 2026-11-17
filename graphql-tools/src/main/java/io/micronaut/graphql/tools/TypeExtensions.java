@@ -34,23 +34,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-/**
- * Folds the type extensions of a schema ({@code extend type}, {@code extend interface}, {@code extend union},
- * {@code extend enum}, {@code extend input}, {@code extend schema}) into the definitions they extend, so that the
- * library binds an extension field like any other field: checked, bound and listed in the manifest, never left to
- * graphql-java's default data fetcher. The schema itself is still built from the registry as parsed.
- */
 @Internal
 final class TypeExtensions {
 
     private TypeExtensions() {
     }
 
-    /**
-     * @param registry the schema as parsed
-     * @return a registry with the same definitions, each type with the fields, values, members and interfaces of its
-     * extensions, and no extensions
-     */
     static TypeDefinitionRegistry merge(TypeDefinitionRegistry registry) {
         TypeDefinitionRegistry result = new TypeDefinitionRegistry();
         registry.schemaDefinition().ifPresent(schema -> add(result, mergeSchema(schema, registry)));
@@ -64,10 +53,6 @@ final class TypeExtensions {
         return result;
     }
 
-    /**
-     * @param registry the schema as parsed
-     * @return the coordinate ({@code Type.field}) of every field that an {@code extend type} adds to an object type
-     */
     static Set<String> objectExtensionFields(TypeDefinitionRegistry registry) {
         Set<String> coordinates = new HashSet<>();
         registry.objectTypeExtensions().forEach((name, extensions) -> extensions.forEach(extension ->

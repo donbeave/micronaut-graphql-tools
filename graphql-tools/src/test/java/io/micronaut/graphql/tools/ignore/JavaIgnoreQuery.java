@@ -8,10 +8,6 @@ import io.micronaut.context.event.StartupEvent;
 import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.annotation.PreDestroy;
 
-/**
- * A root resolver with a method of each kind that binds no field: an event listener, a scheduled method, a pre-destroy
- * callback and a helper marked {@code @GraphQLIgnore}.
- */
 @Requires(property = "spec.name", value = "IgnoreSpec")
 @GraphQLRootResolver
 public class JavaIgnoreQuery {

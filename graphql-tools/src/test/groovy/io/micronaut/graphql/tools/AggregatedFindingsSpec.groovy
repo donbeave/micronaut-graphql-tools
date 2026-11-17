@@ -13,10 +13,6 @@ import io.micronaut.graphql.tools.exceptions.StrictModeException
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
 import org.intellij.lang.annotations.Language
 
-/**
- * After a clean binding the unreachable types, the schema coordinate problems and the strict-mode findings are
- * reported in one error, and an unexpected failure of one field does not hide the failures of the others.
- */
 class AggregatedFindingsSpec extends AbstractTest {
 
     static final String SPEC_NAME = "AggregatedFindingsSpec"
@@ -123,8 +119,6 @@ type Draft {
         String name
     }
 
-    // --- an unexpected failure of one field ---
-
     @Language("GraphQL")
     static final String SCALAR_SCHEMA = """
 schema {
@@ -157,7 +151,6 @@ type Query {
         failures.failures[0] instanceof MethodNotFoundException
         failures.failures[1].message.contains('Unsupported type definition')
         failures.failures[1].message.contains('GraphQL coordinate: Query.b')
-        // the mapping context is added once
         failures.failures[1].message.count('GraphQL coordinate:') == 1
     }
 

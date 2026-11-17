@@ -31,9 +31,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-/**
- * @author Alexey Zhokhov
- */
 @Internal
 final class MicronautUtils {
 

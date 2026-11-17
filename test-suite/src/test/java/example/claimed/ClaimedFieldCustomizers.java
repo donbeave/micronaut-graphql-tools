@@ -14,10 +14,6 @@ import jakarta.inject.Singleton;
 
 import java.util.Set;
 
-/**
- * Adds {@code Query.serverVersion} to the schema, which no Java member binds, and serves it with a data fetcher
- * of a customizer that claims it. The field is added at run time, as the compile-time checks cannot know claims.
- */
 @Factory
 @Requires(env = ClaimedFieldCustomizers.ENVIRONMENT)
 class ClaimedFieldCustomizers {

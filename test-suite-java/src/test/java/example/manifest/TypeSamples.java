@@ -9,10 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
-/**
- * Methods whose return and parameter types the binding manifest renders: primitives, arrays, nested classes and
- * generics.
- */
 @Singleton
 @Executable
 public class TypeSamples {
@@ -76,14 +72,8 @@ public class TypeSamples {
     public void unusual(List<? super Integer> lower, @SuppressWarnings("rawtypes") Map raw, List<Long>[] arrays) {
     }
 
-    /**
-     * A class with a nested class.
-     */
     public static final class Outer {
 
-        /**
-         * A nested class.
-         */
         public static final class Inner {
         }
 

@@ -27,10 +27,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Function
 
-/**
- * {@link GraphQLBuilderCustomizer} beans configure the library's {@link GraphQL} bean, lowest order first:
- * instrumentation, a {@link PreparsedDocumentProvider}, execution strategies, the data fetcher exception handler.
- */
 class GraphQLBuilderCustomizerSpec extends AbstractTest {
 
     static final String SPEC_NAME = "GraphQLBuilderCustomizerSpec"
@@ -115,7 +111,6 @@ type Query {
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Factory
     static class CustomizerFactory {
-        // declared first, run last
         @Bean
         @Singleton
         @Order(30)

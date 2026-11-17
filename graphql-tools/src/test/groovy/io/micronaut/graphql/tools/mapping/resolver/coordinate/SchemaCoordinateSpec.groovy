@@ -17,10 +17,6 @@ import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 
-/**
- * {@link GraphQLSchemaCoordinate} on resolver contract methods: only annotated methods of such a bean bind, and each
- * of them must end up bound to exactly the field its coordinate names.
- */
 class SchemaCoordinateSpec extends AbstractTest {
 
     static final String SPEC_NAME = "SchemaCoordinateSpec"
@@ -172,8 +168,6 @@ type Book {
         String title
     }
 
-    // --- the method must end up bound to exactly its coordinate ---
-
     void "a coordinate the binder does not bind the method to fails the startup (#name)"() {
         given:
         startContext(schema, SPEC_NAME + "." + name, config)
@@ -189,8 +183,6 @@ type Book {
         where:
         name                 | schema                       | config                                                   | problem
         'typeMappedElsewhere' | AUTHOR_SCHEMA               | ['micronaut.graphql.tools.strict': false]                                               | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
-        // strict mode is off in the first row: its finding for the unbound method would be reported beside the coordinate
-        // the strict default rejects a property and a type resolver for one field before the coordinate is checked
         'propertyBinds'      | SCHEMA                       | ['micronaut.graphql.tools.precedence': 'property-first'] | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${ShadowedBookResolver.name} summary(${BookWithSummary.name} book): the method is not bound to Book.summary, Book.summary is bound to property ${BookWithSummary.name}.getSummary()."
     }
 
@@ -274,8 +266,6 @@ type Author {
         String summary
     }
 
-    // --- a coordinate of a type left unbound on purpose ---
-
     void "a coordinate of an allowed unreachable type is not bound, and that is logged"() {
         given:
         startContext("""
@@ -333,8 +323,6 @@ type Draft {
     @GraphQLType
     static class Draft {
     }
-
-    // --- several contracts on one bean: only coordinate methods have to be assignable to a contract ---
 
     void "a helper without a coordinate on a bean with several type resolver contracts is not a candidate"() {
         given:
@@ -416,8 +404,6 @@ type Author {
     private static Logger generatorLogger() {
         (Logger) LoggerFactory.getLogger("io.micronaut.graphql.tools.GraphQLRuntimeWiringGenerator")
     }
-
-    // --- the coordinate is the binding key ---
 
     void "type resolver methods of one class bind the object type their coordinates name"() {
         given:

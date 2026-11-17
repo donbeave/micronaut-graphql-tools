@@ -12,9 +12,6 @@ import jakarta.inject.Singleton;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
-/**
- * The application's schema plus a field that no resolver binds, in the {@value #ENVIRONMENT} environment only.
- */
 @Factory
 @Requires(env = BrokenBindingFactory.ENVIRONMENT)
 public class BrokenBindingFactory {

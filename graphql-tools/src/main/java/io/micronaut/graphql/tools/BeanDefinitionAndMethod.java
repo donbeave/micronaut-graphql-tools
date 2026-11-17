@@ -22,9 +22,6 @@ import io.micronaut.inject.ExecutableMethod;
 
 import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
 
-/**
- * @author Alexey Zhokhov
- */
 @Internal
 final class BeanDefinitionAndMethod {
 

@@ -108,25 +108,15 @@ public final class SchemaDirective {
         return everyElement ? null : directiveNames.iterator().next();
     }
 
-    /**
-     * @return the directives the wiring implements, without {@code @}
-     */
     @NonNull
     public Set<String> getDirectiveNames() {
         return directiveNames;
     }
 
-    /**
-     * @return whether graphql-java calls the wiring for every schema element rather than only where the directive is
-     * applied
-     */
     public boolean isEveryElement() {
         return everyElement;
     }
 
-    /**
-     * @return the wiring
-     */
     @NonNull
     public SchemaDirectiveWiring getWiring() {
         return wiring;

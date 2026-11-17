@@ -2,22 +2,6 @@ package io.micronaut.graphql.tools.processing
 
 import spock.lang.Specification
 
-/**
- * The drift the processor cannot decide, because runtime beans decide it, passes the compilation and fails the strict
- * startup. A build catches it with a test that starts the application context and builds the schema (gets the
- * {@code GraphQL} or {@code BindingManifest} bean) in strict mode, which is what each case does after compiling with
- * this processor and Micronaut's:
- * <ul>
- *     <li>a union member or interface implementation without a Java class (the {@code SchemaMappingDictionary} has no
- *     entry), so the abstract type cannot resolve to it;</li>
- *     <li>a member mapped to a class that is not an instance of the Java interface the field declares, so no object can
- *     resolve to it;</li>
- *     <li>a custom scalar without a {@code GraphQLScalarMapping} bean.</li>
- * </ul>
- * <p>Directive wirings are checked by the library's directive support, not here. A {@code null} for a non-null field
- * and the class an object of a union actually has are values, which only a request shows; graphql-java reports
- * them as errors of that request.</p>
- */
 class StartupBackstopSpec extends Specification {
 
     static final String SCHEMA = '''schema {

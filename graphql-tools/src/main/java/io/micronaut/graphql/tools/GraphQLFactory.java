@@ -60,7 +60,6 @@ public final class GraphQLFactory {
         SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
         schemaMappingDictionaryCustomizer.customize(schemaMappingDictionary);
 
-        // a copy: the customizers must not change the application's bean
         TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(typeDefinitionRegistry);
         typeDefinitionRegistryCustomizers.forEach(customizer -> customizer.customize(registry));
 
@@ -68,14 +67,12 @@ public final class GraphQLFactory {
                 applicationContext,
                 new GraphQLBeanIntrospectionRegistry(),
                 graphQLResolversRegistry,
-                // bound with the fields of their extensions; the schema is generated from the registry as parsed
                 TypeExtensions.merge(registry),
                 schemaMappingDictionary,
                 configuration,
                 TypeExtensions.objectExtensionFields(registry)
         );
 
-        // the directive beans first: an application's customizer then cannot replace them unnoticed
         List<RuntimeWiringCustomizer> customizers = new ArrayList<>();
         SchemaDirectiveWirings schemaDirectiveWirings = new SchemaDirectiveWirings(
                 applicationContext.getBeanRegistrations(SchemaDirectiveWiring.class),
@@ -91,7 +88,6 @@ public final class GraphQLFactory {
                 schemaDirectiveWirings.getDirectiveNames(), configuration,
                 graphQLRuntimeWiringGenerator.getManifestRecorder());
 
-        // destroys GraphQLResolversRegistry as it no use in runtime after we initialized RuntimeWiring successfully
         applicationContext.destroyBean(graphQLResolversRegistry);
 
         SchemaGenerator schemaGenerator = new SchemaGenerator();
@@ -103,7 +99,6 @@ public final class GraphQLFactory {
                             + " returned null instead of a schema");
         }
 
-        // from the customized registry and the final schema: the manifest describes what is served
         bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder().build(registry, graphQLSchema));
 
         return graphQLSchema;

@@ -58,11 +58,6 @@ import java.util.stream.Collectors;
 
 import static io.micronaut.graphql.tools.GraphQLUtils.getType;
 
-/**
- * The checks of {@link GraphQLRuntimeWiringGenerator} that look at the schema as a whole rather than at one binding:
- * schema coordinates and dictionary entries before anything is bound, and unreachable types and the bindings of
- * schema coordinates afterwards. They log under the generator's name.
- */
 @Internal
 final class SchemaChecks {
 
@@ -91,20 +86,6 @@ final class SchemaChecks {
         this.manifestRecorder = manifestRecorder;
     }
 
-    /**
-     * Finds the object, interface and union types of the schema that no field reachable from a root operation type
-     * returns (nothing binds them) and applies {@link GraphQLToolsConfiguration#getUnreachableTypes()} and
-     * {@link GraphQLToolsConfiguration#getAllowUnreachable()} to them. An interface that no field returns, but that a
-     * reached object type implements, is reached.
-     *
-     * @param schemaDefinition      the schema definition
-     * @param implementedInterfaces the interfaces that no field returns, but that a reached object type implements
-     * @param processedTypes        the types bound so far, by name
-     * @param runtimeWiringBuilder  the runtime wiring, which gets a type resolver for unbound abstract types
-     * @param findings              receives the {@link UnreachableTypesException} instead of it being thrown, so that
-     *                              the other checks still run
-     * @return the unreachable object types that stay in the schema with graphql-java's default data fetchers
-     */
     Set<String> processUnreachableTypes(SchemaDefinition schemaDefinition, Set<String> implementedInterfaces,
                                         Map<String, Class<?>> processedTypes,
                                         RuntimeWiring.Builder runtimeWiringBuilder,
@@ -125,7 +106,6 @@ final class SchemaChecks {
             }
         }
 
-        // enum, input and scalar types: reported in the manifest, and handled like the others in strict mode
         Map<String, TypeDefinition<?>> unreachableValueTypes = findUnreachableValueTypes(processedTypes);
         boolean strict = configuration.isStrict();
         Map<String, TypeDefinition<?>> checked = new TreeMap<>(unreachableTypes);
@@ -135,14 +115,12 @@ final class SchemaChecks {
 
         Set<String> allowed = new TreeSet<>(configuration.getAllowUnreachable());
         boolean ignoring = configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE;
-        // the enum, input and scalar types that an allowed (or, when ignoring, any) unreachable type uses are allowed too
         Set<String> covered = findCoveredValueTypes(ignoring ? unreachableTypes.keySet() : allowed);
         checked.keySet().removeAll(covered);
         List<String> undefined = allowed.stream()
                 .filter(it -> !isDefined(it))
                 .toList();
         List<String> notUnreachable = allowed.stream()
-                // an unreachable enum, input or scalar type may be listed without strict mode too, without effect
                 .filter(it -> isDefined(it) && !unreachableTypes.containsKey(it)
                         && !unreachableValueTypes.containsKey(it))
                 .toList();
@@ -171,8 +149,6 @@ final class SchemaChecks {
                         .collect(Collectors.toCollection(TreeSet::new));
             } else {
                 findings.add(new UnreachableTypesException(failing));
-                // the coordinate check must not report the methods of these types again; the strict check still lists their
-                // resolver methods as unbound, which is true: nothing binds them while the type is unreachable
                 unbound = unreachableTypes.keySet();
             }
             if (!allowed.isEmpty()) {
@@ -187,7 +163,6 @@ final class SchemaChecks {
         for (String name : unbound) {
             TypeDefinition<?> typeDefinition = unreachableTypes.get(name);
             if (!(typeDefinition instanceof ObjectTypeDefinition)) {
-                // nothing returns an unreachable interface or union, so its type resolver is never called
                 runtimeWiringBuilder.type(name, typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder
                         .typeResolver(env -> {
                             throw new IllegalStateException("No type resolver for the unreachable type " + name);
@@ -198,13 +173,6 @@ final class SchemaChecks {
         return unbound;
     }
 
-    /**
-     * @param roots the names of unreachable types that are allowed or ignored
-     * @return the enum, input object and scalar types that the fields and arguments of the roots use, and that the
-     * input fields of those input object types use, transitively. Like the argument types of directive definitions,
-     * they are reached through a type that nothing binds, so they are not unreachable on their own. A type that only a
-     * root that is not allowed uses is not covered; object, interface and union types are never covered here.
-     */
     private Set<String> findCoveredValueTypes(Set<String> roots) {
         Set<String> covered = new TreeSet<>();
         Deque<String> pending = new ArrayDeque<>(roots);
@@ -229,7 +197,6 @@ final class SchemaChecks {
                 boolean valueType = used instanceof EnumTypeDefinition || used instanceof InputObjectTypeDefinition
                         || typeDefinitionRegistry.scalars().containsKey(usedName);
                 if (valueType && covered.add(usedName)) {
-                    // only input object types use further types
                     pending.add(usedName);
                 }
             }
@@ -244,10 +211,6 @@ final class SchemaChecks {
         }
     }
 
-    /**
-     * @return the enum, input object and scalar types the schema declares that no bound field, argument or input field
-     * and no argument of a directive definition uses, by name; the scalars graphql-java defines are not declared
-     */
     private Map<String, TypeDefinition<?>> findUnreachableValueTypes(Map<String, Class<?>> processedTypes) {
         Set<String> directiveTypes = GraphQLUtils.findDirectiveArgumentTypes(typeDefinitionRegistry);
         Map<String, TypeDefinition<?>> result = new TreeMap<>();
@@ -268,12 +231,6 @@ final class SchemaChecks {
         return result;
     }
 
-    /**
-     * Checks every {@link io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate} against the schema, its method
-     * and its bean, before anything is bound.
-     *
-     * @param schemaDefinition the schema definition
-     */
     void validateSchemaCoordinates(SchemaDefinition schemaDefinition) {
         Set<String> operationTypeNames = schemaDefinition.getOperationTypeDefinitions().stream()
                 .map(it -> it.getTypeName().getName())
@@ -292,11 +249,6 @@ final class SchemaChecks {
         }
     }
 
-    /**
-     * Rejects dictionary entries that map one GraphQL object type to a Java interface and another one to a class or
-     * interface that implements it: an object of that class would match both types. Entries for names that are not
-     * object types of the schema are left to the code that uses them.
-     */
     void validateSchemaMappingDictionary() {
         List<Map.Entry<String, Class<?>>> entries = schemaMappingDictionary.getTypes().entrySet().stream()
                 .filter(it -> typeDefinitionRegistry.getType(it.getKey())
@@ -383,18 +335,6 @@ final class SchemaChecks {
         return null;
     }
 
-    /**
-     * Checks that every method that carries {@link io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate} is
-     * bound to exactly the field its coordinate names. A method whose type is unbound on purpose
-     * ({@link GraphQLToolsConfiguration#getAllowUnreachable()}, {@link GraphQLToolsConfiguration#getUnreachableTypes()})
-     * is not bound and is logged.
-     *
-     * @param unboundTypes     the types left unbound on purpose
-     * @param processedTypes   the bound types, by name
-     * @param fieldBindings    what binds each field, by coordinate
-     * @param resolverBindings the coordinates each resolver method binds, by method
-     * @param findings         receives the {@link InvalidSchemaCoordinateException} instead of it being thrown
-     */
     void verifySchemaCoordinateBindings(Set<String> unboundTypes, Map<String, Class<?>> processedTypes,
                                         Map<String, String> fieldBindings,
                                         Map<String, Set<String>> resolverBindings,
@@ -434,7 +374,6 @@ final class SchemaChecks {
             return;
         }
 
-        // in strict mode such a method is an error, see checkStrictMode()
         if (!unboundMethods.isEmpty() && !configuration.isStrict()) {
             LOG.warn("Methods whose @GraphQLSchemaCoordinate names an unreachable type are not bound: {}",
                     String.join("; ", unboundMethods));

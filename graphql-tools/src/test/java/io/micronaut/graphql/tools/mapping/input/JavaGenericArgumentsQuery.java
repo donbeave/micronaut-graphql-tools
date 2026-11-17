@@ -7,10 +7,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * A Java resolver for {@code InputGenericArgumentsSpec}: unlike a Groovy fixture, it casts list elements to the
- * declared class, so a wrong element type shows up as the {@link ClassCastException} a Java application gets.
- */
 @Requires(property = "spec.name", value = "InputGenericArgumentsSpecJava")
 @GraphQLRootResolver
 public class JavaGenericArgumentsQuery {

@@ -2,10 +2,6 @@ package io.micronaut.graphql.tools.processing
 
 import spock.lang.Specification
 
-/**
- * The checks that need only the schema files and the options: the processor fails javac on what the startup would
- * report for the same schema and options, naming the schema coordinate and the schema file and line.
- */
 class SchemaChecksSpec extends Specification {
 
     static final String HELLO_QUERY = '''
