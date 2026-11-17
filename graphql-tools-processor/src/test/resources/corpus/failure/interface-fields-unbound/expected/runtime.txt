@@ -1,0 +1,2 @@
+MethodNotFoundException MediaSection.summary schema.graphqls:21:3
+MethodNotFoundException TextSection.summary schema.graphqls:16:3
