@@ -39,7 +39,8 @@ type Query {
   GraphQL field: hello
   Methods: 
   1) ${Query.name} hello()
-  2) ${Query.name} hello(${DataFetchingEnvironment.name} env)"""
+  2) ${Query.name} hello(${DataFetchingEnvironment.name} env)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("Query.hello") on one of them (two methods with the same coordinate still conflict)."""
         e.cause.mappingContext.graphQlObjectType == 'Query'
         e.cause.mappingContext.graphQlField == 'hello'
         e.cause.mappingContext.mappedClass == null
