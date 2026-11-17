@@ -184,8 +184,8 @@ final class BindingManifestRecorder {
     /**
      * @param registry the schema definitions
      * @param schema   the schema built from them
-     * @return {@code null} when nothing is recorded, otherwise the manifest, which renders its header, and the recorded lines plus the scalar lines, sorted, when it is
-     * first read
+     * @return {@code null} when nothing is recorded, otherwise the manifest, which renders its header, and the
+     * recorded lines plus the scalar lines, sorted, when it is first read
      */
     @Nullable
     BindingManifest build(TypeDefinitionRegistry registry, GraphQLSchema schema) {
