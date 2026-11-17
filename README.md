@@ -150,7 +150,11 @@ first bean found won, which depended on the order Micronaut returned the beans i
 **Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
 class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both
 then bind the same field, the startup fails with `MultipleMethodsFoundException` naming both classes. Annotate only the
-class that should be the resolver.
+class that should be the resolver, or annotate the subclass with `@Replaces(<original>.class)`: the original is then
+dropped and only the subclass binds. `@Requires(env = "test")` alone does not help, because both beans are active in the
+test environment. The same applies to two beans of different packages that bind one root field: the message names the
+operation field, each bean, and both fixes (`@Replaces`, or `@GraphQLSchemaCoordinate` when the methods serve different
+operation types).
 
 **Several contracts on one bean.** A bean may implement type resolver contracts for different classes. The
 annotation metadata keeps only one of the inherited values, so the class hierarchy is read to find every contract, and

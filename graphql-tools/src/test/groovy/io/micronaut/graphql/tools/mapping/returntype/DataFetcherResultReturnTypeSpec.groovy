@@ -105,7 +105,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message == """The return type of the method is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), Publisher (subscription fields only), DataFetcherResult, Optional (nullable types only), each at most once.
+        e.cause.message == """The return type of the method is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), Publisher (subscription fields only), DataFetcherResult, Optional (nullable types only), each at most once. Fix: remove the inner ${DataFetcherResult.simpleName} or declare the wrappers in that order.
   GraphQL coordinate: Query.greeting (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: greeting
@@ -136,7 +136,9 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
         e.cause.message.startsWith("The return type of the method is not supported for this field: " +
-                "${CompletionStage.name} is not allowed inside a list.")
+                "${CompletionStage.name} is not allowed inside a list. Fix: return CompletionStage<List<T>> instead " +
+                "(for example, combine the element futures with CompletableFuture.allOf), or load the elements " +
+                "with a DataLoader.")
         e.cause.message.contains("GraphQL field: names")
     }
 

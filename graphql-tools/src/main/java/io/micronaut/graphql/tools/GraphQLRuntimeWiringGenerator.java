@@ -1508,7 +1508,15 @@ final class GraphQLRuntimeWiringGenerator {
                 graphQLResolversRegistry.typeMethodNotFound(sourceClass, fieldName, mappingContext);
         Class<?> contractClass = contractTypes.get(objectTypeName);
 
-        return contractClass != null ? exception.forContract(contractClass) : exception;
+        if (contractClass == null) {
+            return exception;
+        }
+        List<Class<?>> declaring = graphQLBeanIntrospectionRegistry.getImplementationClasses(contractClass).stream()
+                .filter(it -> BeanIntrospector.SHARED.findIntrospection(it)
+                        .map(introspection -> introspection.getProperty(fieldName).isPresent()).orElse(false))
+                .toList();
+
+        return exception.forContract(contractClass, declaring);
     }
 
     private void processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,

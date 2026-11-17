@@ -83,16 +83,25 @@ public final class MethodNotFoundException extends AbstractMappingException {
 
     /**
      * The same error for a GraphQL type whose properties are read through the bean introspection of a Java interface,
-     * explaining that getters only an implementation class declares are not candidates.
+     * explaining that getters only an implementation class declares are not candidates, naming the implementations
+     * that declare the property and the fix.
      *
-     * @param contractClass the interface whose introspection is read
+     * @param contractClass   the interface whose introspection is read
+     * @param implementations the implementation classes that declare the missing property, may be empty
      * @return a new exception with the same mapping context
      */
     @Internal
-    public MethodNotFoundException forContract(Class<?> contractClass) {
+    public MethodNotFoundException forContract(Class<?> contractClass, List<Class<?>> implementations) {
+        String declaredBy = implementations.isEmpty() ? "an implementation class" : implementations.stream()
+                .map(Class::getName)
+                .collect(Collectors.joining(", "));
         return new MethodNotFoundException(
                 reason + " Properties are read from the interface " + contractClass.getName()
-                        + ", so a getter that only an implementation class declares is not a property.",
+                        + ", which has an introspection of its own, so a getter that only an implementation class "
+                        + "declares is not a property. `" + methodName + "` is declared by " + declaredBy
+                        + ". Fix: declare the getter on " + contractClass.getName()
+                        + ", or remove the interface's own introspection (the @GraphQLType or @Introspected "
+                        + "annotation on it).",
                 getMappingContext(),
                 methodName
         );

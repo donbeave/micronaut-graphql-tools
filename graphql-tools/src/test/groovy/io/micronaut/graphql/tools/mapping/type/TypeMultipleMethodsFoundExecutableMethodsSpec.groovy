@@ -45,7 +45,8 @@ type User {
   GraphQL field: username
   Methods: 
   1) ${User.name} username()
-  2) ${User.name} username(${DataFetchingEnvironment.name} env)"""
+  2) ${User.name} username(${DataFetchingEnvironment.name} env)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with @GraphQLSchemaCoordinate("<Operation>.<field>"), for this field @GraphQLSchemaCoordinate("User.username")."""
         e.cause.mappingContext.graphQlObjectType == 'User'
         e.cause.mappingContext.graphQlField == 'username'
         e.cause.mappingContext.mappedClass == null

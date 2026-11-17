@@ -67,7 +67,9 @@ final class ReturnTypes {
         if (CompletionStage.class.isAssignableFrom(result.getType())) {
             if (!fieldLevel) {
                 throw new UnsupportedReturnTypeException(mappingContext,
-                        CompletionStage.class.getName() + " is not allowed inside a list.");
+                        CompletionStage.class.getName() + " is not allowed inside a list. Fix: return "
+                                + "CompletionStage<List<T>> instead (for example, combine the element futures with "
+                                + "CompletableFuture.allOf), or load the elements with a DataLoader.");
             }
             outer = CompletionStage.class;
             result = typeArgument(result, CompletionStage.class, mappingContext);
@@ -79,13 +81,15 @@ final class ReturnTypes {
             if (!publisher) {
                 throw new UnsupportedReturnTypeException(mappingContext, "a field of the subscription type must return "
                         + Publisher.class.getName() + " (optionally inside a CompletionStage), found "
-                        + result.getType().getName() + ".");
+                        + result.getType().getName() + ". Fix: change the return type to Publisher<T> (for example "
+                        + "Flux<T>).");
             }
             outer = Publisher.class;
             result = typeArgument(result, Publisher.class, mappingContext);
         } else if (publisher) {
             throw new UnsupportedReturnTypeException(mappingContext,
-                    Publisher.class.getName() + " is only allowed on fields of the subscription type.");
+                    Publisher.class.getName() + " is only allowed on fields of the subscription type. Fix: "
+                            + "return a CompletionStage instead (for example Mono#toFuture()).");
         }
 
         if (DataFetcherResult.class.isAssignableFrom(result.getType())) {
@@ -97,7 +101,8 @@ final class ReturnTypes {
             if (graphQlType instanceof NonNullType) {
                 throw new UnsupportedReturnTypeException(mappingContext, Optional.class.getName()
                         + " is only allowed for a nullable GraphQL type, the field type is "
-                        + printType(graphQlType) + ".");
+                        + printType(graphQlType) + ". Fix: make the GraphQL field type nullable (remove the "
+                        + "trailing '!'), or return the value itself instead of an Optional.");
             }
             outer = Optional.class;
             result = typeArgument(result, Optional.class, mappingContext);
@@ -111,7 +116,8 @@ final class ReturnTypes {
                     throw new UnsupportedReturnTypeException(mappingContext, outer.getName() + " cannot wrap "
                             + wrapper.getName() + ". Supported wrappers, outermost first: CompletionStage "
                             + "(field level only), Publisher (subscription fields only), DataFetcherResult, Optional "
-                            + "(nullable types only), each at most once.");
+                            + "(nullable types only), each at most once. Fix: remove the inner "
+                            + wrapper.getSimpleName() + " or declare the wrappers in that order.");
                 }
             }
         }
@@ -123,7 +129,8 @@ final class ReturnTypes {
                                             TypeMappingContext mappingContext) {
         return argument.getFirstTypeVariable()
                 .orElseThrow(() -> new UnsupportedReturnTypeException(mappingContext,
-                        wrapper.getName() + " must declare the type it wraps."));
+                        wrapper.getName() + " must declare the type it wraps. Fix: add the type argument, "
+                                + "for example " + wrapper.getSimpleName() + "<String>."));
     }
 
     /**

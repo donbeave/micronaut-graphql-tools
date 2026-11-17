@@ -176,7 +176,8 @@ type Book {
   GraphQL field: book
   Methods:\u0020
   1) ${AnnotatedQuery.name} book(java.lang.String id)
-  2) ${SubclassQuery.name} book(java.lang.String id)"""
+  2) ${SubclassQuery.name} book(java.lang.String id)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with @GraphQLSchemaCoordinate("<Operation>.<field>"), for this field @GraphQLSchemaCoordinate("Query.book")."""
     }
 
     void "an annotated type resolver class and its @Singleton subclass binding the same field is an error"() {
@@ -195,7 +196,8 @@ type Book {
   GraphQL field: summary
   Methods:\u0020
   1) ${AnnotatedBookResolver.name} summary(${Book.name} book)
-  2) ${SubclassBookResolver.name} summary(${Book.name} book)"""
+  2) ${SubclassBookResolver.name} summary(${Book.name} book)
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with @GraphQLSchemaCoordinate("<Operation>.<field>"), for this field @GraphQLSchemaCoordinate("Book.summary")."""
     }
 
     @Requires(property = 'spec.name', value = SUBCLASS_SPEC_NAME)
