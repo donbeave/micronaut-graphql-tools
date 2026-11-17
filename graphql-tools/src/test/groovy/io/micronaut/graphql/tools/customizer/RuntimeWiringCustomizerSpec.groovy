@@ -37,9 +37,10 @@ class RuntimeWiringCustomizerSpec extends AbstractTest {
     static final String SPEC_NAME_CODE_REGISTRY = "RuntimeWiringCustomizerSpec.codeRegistry"
     static final String SPEC_NAME_CODE_REGISTRY_UNWIRED = "RuntimeWiringCustomizerSpec.codeRegistryUnwired"
 
-    // newer graphql-java lines make RuntimeWiring.Builder reject a replaced data fetcher, default data fetcher, type
-    // resolver or scalar itself, at the first one; 21.3 accepts them silently
-    static final boolean BUILDER_REJECTS_REPLACEMENTS = isPresent('graphql.schema.idl.errors.StrictModeWiringException')
+    // Some graphql-java lines make RuntimeWiring.Builder reject a replaced data fetcher itself, at the first one; others
+    // accept it silently. Whether a class exists says nothing about that (StrictModeWiringException exists on 22.4,
+    // whose builder still accepts replacements), so the spec asks the builder.
+    static final boolean BUILDER_REJECTS_REPLACEMENTS = builderRejectsReplacedDataFetcher()
 
     static final List<String> CALLS = Collections.synchronizedList([])
 
@@ -70,12 +71,16 @@ type Other {
 scalar Long
 """
 
-    static boolean isPresent(String className) {
+    static boolean builderRejectsReplacedDataFetcher() {
+        DataFetcher first = new StaticDataFetcher('first')
+        DataFetcher second = new StaticDataFetcher('second')
         try {
-            Class.forName(className)
-            return true
-        } catch (ClassNotFoundException ignored) {
+            RuntimeWiring.newRuntimeWiring()
+                    .type('Query', { it.dataFetcher('hello', first) })
+                    .type('Query', { it.dataFetcher('hello', second) })
             return false
+        } catch (RuntimeException ignored) {
+            return true
         }
     }
 
@@ -114,7 +119,7 @@ scalar Long
         then:
         def e = thrown(BeanInstantiationException)
         if (BUILDER_REJECTS_REPLACEMENTS) {
-            // graphql-java 25.1: RuntimeWiring.Builder itself rejects the first replaced data fetcher
+            // RuntimeWiring.Builder itself rejects the first replaced data fetcher
             assert e.cause.class.name == 'graphql.schema.idl.errors.StrictModeWiringException'
             assert e.cause.message == 'The field hello on type Query has already been defined'
         } else {

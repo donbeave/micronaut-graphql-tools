@@ -21,8 +21,8 @@ jobs:
       fail-fast: false
       matrix:
         graalvm: ['25']
-        # graphql-java compatibility legs, see build.gradle.kts
-        graphql-java: ['21.3', '25.1']
+        # graphql-java legs by role, see build.gradle.kts
+        graphql-java: [default, ceiling]
     name: native (GraalVM ${{ matrix.graalvm }}, graphql-java ${{ matrix.graphql-java }})
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,7 +37,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Run native tests
-        run: ./gradlew :test-suite:nativeTest --no-daemon -PgraphqlJavaVersion=${{ matrix.graphql-java }}
+        run: ./gradlew :test-suite:nativeTest --no-daemon -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           GRAALVM_QUICK_BUILD: 'true'
           PREDICTIVE_TEST_SELECTION: 'false'

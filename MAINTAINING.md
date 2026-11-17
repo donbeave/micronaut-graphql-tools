@@ -6,7 +6,7 @@ This is not an official Micronaut module yet. This file describes how this repos
 
 - `master` is protected by a ruleset. Direct pushes, force pushes and deletion are not allowed, and history is linear.
 - Every change is a pull request. Only **squash merge** is enabled (merge commits and rebase merges are off).
-- The only required status check is `required checks`, the gate job in `.github/workflows/gradle.yml`. It is green only when every job it lists under `needs:` succeeded. A new gated job goes into that `needs:` list, never into the ruleset.
+- The only required status check is `required checks`, the gate job in `.github/workflows/gradle.yml`. It is green only when every job it lists under `needs:` succeeded. A new gated job goes into that `needs:` list, never into the ruleset: renaming a job or adding a graphql-java leg needs no ruleset edit.
 - There is no admin bypass. A red, cancelled, pending or missing check blocks the merge. Review conversations must be resolved.
 - `.github/workflows/native.yml` (Native Image CI) runs on every pull request too, but it is not part of the gate yet.
 
