@@ -177,6 +177,12 @@ jobs:
       - name: Lint the workflows and composite actions
         run: jactionlint --color
 
+  p280-broken:
+    runs-on: ubuntu-24.04
+    needs: [no-such-job]
+    steps:
+      - run: echo broken
+
   # The guide build (#57). The `snippet::` macro prints a warning and still succeeds when a snippet file or tag is missing in
   # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; nothing is published (D-09).
   docs:
