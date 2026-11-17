@@ -1,13 +1,73 @@
 name: Bug Report
-description: File a bug report
+description: Report a defect in micronaut-graphql-tools
+labels: ["type: bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting an issue, please review the task list below before submitting the issue. Your issue report will be closed if the issue is incomplete and the below tasks not completed.
+        Thanks for reporting a problem. Search the existing issues first, then fill in the fields below. A report without the versions and a way to reproduce it cannot be acted on, and it may be closed.
 
-        NOTE: If you are unsure about something and the issue is more of a question a better place to ask questions is on Github Discussions :arrow_up:, [Stack Overflow](https://stackoverflow.com/tags/micronaut) or [Gitter](https://gitter.im/micronautfw/).
+        Do not report a security problem here. Use the private report described in [SECURITY.md](https://github.com/donbeave/micronaut-graphql-tools/blob/master/SECURITY.md).
+
+        If your question is about usage rather than a defect, check the [README](https://github.com/donbeave/micronaut-graphql-tools#readme) first.
+  - type: input
+    id: library-version
+    attributes:
+      label: micronaut-graphql-tools version
+      description: The version or the commit SHA you use. The library is not published yet, so this is usually a commit on `master`.
+      placeholder: "1.0.0-SNAPSHOT or a commit SHA"
+    validations:
+      required: true
+  - type: input
+    id: micronaut-version
+    attributes:
+      label: Micronaut version
+      description: The Micronaut 4.10.x line is the supported one (the version in `gradle/libs.versions.toml` is the newest tested). Micronaut 5 is not supported.
+      placeholder: "4.10.x"
+    validations:
+      required: true
+  - type: input
+    id: graphql-java-version
+    attributes:
+      label: graphql-java version
+      description: The exact graphql-java version your build resolves. The Compatibility table in the README lists the `floor`, `default` and `ceiling` roles.
+      placeholder: "for example 22.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: jdk
+    attributes:
+      label: JDK
+      description: The supported lines are 17, 21 and 25. Use the newest patch of your line and give the exact version under Environment Information.
+      options:
+        - "17"
+        - "21"
+        - "25"
+        - "Other (say which in Environment Information)"
+    validations:
+      required: true
+  - type: dropdown
+    id: build-tool
+    attributes:
+      label: Build tool
+      options:
+        - Gradle
+        - Maven
+        - Other (say which in Environment Information)
+    validations:
+      required: true
+  - type: dropdown
+    id: native-image
+    attributes:
+      label: Native image?
+      description: Is the problem seen in a GraalVM native image build?
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: true
   - type: textarea
+    id: expected-behaviour
     attributes:
       label: Expected Behavior
       description: A concise description of what you expected to happen.
@@ -15,6 +75,7 @@ body:
     validations:
       required: false
   - type: textarea
+    id: actual-behaviour
     attributes:
       label: Actual Behaviour
       description: A concise description of what you're experiencing.
@@ -22,9 +83,10 @@ body:
     validations:
       required: false
   - type: textarea
+    id: steps-to-reproduce
     attributes:
       label: Steps To Reproduce
-      description: Steps to reproduce the behavior.
+      description: Steps to reproduce the behavior. Say whether it also happens on the latest `master`.
       placeholder: |
         1. In this environment...
         2. With this config...
@@ -33,28 +95,21 @@ body:
     validations:
       required: false
   - type: textarea
+    id: environment
     attributes:
       label: Environment Information
-      description: Environment information where the problem occurs.
+      description: Operating system, the exact JDK and build tool versions, and anything else that differs from a default setup.
       placeholder: |
         - Operating System:
-        - JDK Version:
+        - JDK version (exact):
+        - Build tool and version:
     validations:
       required: false
   - type: input
     id: example
     attributes:
       label: Example Application
-      description: Example application link.
-      placeholder: |
-        Link to GitHub repository with an example that reproduces the issue
+      description: Link to a repository with a minimal example that reproduces the issue.
+      placeholder: Link to a GitHub repository with an example that reproduces the issue
     validations:
       required: false
-  - type: input
-    id: version
-    attributes:
-      label: Version
-      description: Micronaut version
-    validations:
-      required: true
-
