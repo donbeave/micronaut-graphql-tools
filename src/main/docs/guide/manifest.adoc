@@ -13,7 +13,9 @@ Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, fr
 
 == Where the text comes from
 
-The manifest is recorded while the schema is bound, as cheap facts, and rendered the first time it is read: by the `BindingManifest` bean, or by the startup writer when `micronaut.graphql.tools.manifest.enabled` is `true`. A start that does not read the manifest renders nothing.
+Recording is opt-in: set `micronaut.graphql.tools.manifest.record` to `true`, or `micronaut.graphql.tools.manifest.enabled` (which implies it). Without either, nothing is recorded while the schema is bound, the `BindingManifest` bean cannot be created (it fails with a message that names `manifest.record`), and with `strict` set to `false` the strict-mode checks that only feed the manifest are skipped. Strict mode itself does not need the manifest and fails on the same findings either way.
+
+When it is recorded, the manifest is recorded as cheap facts and rendered the first time it is read: by the `BindingManifest` bean, or by the startup writer when `micronaut.graphql.tools.manifest.enabled` is `true`. A start that does not read the manifest renders nothing.
 
 Rendering never uses reflection, so *the text is identical on the JVM and in a native image*:
 
@@ -28,6 +30,7 @@ micronaut:
   graphql:
     tools:
       manifest:
+        record: true # enabled implies it
         enabled: true
         path: build/graphql-binding-manifest.txt
 ----

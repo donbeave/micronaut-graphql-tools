@@ -71,8 +71,27 @@ final class BindingManifestRecorder {
     private final Map<String, Supplier<String>> lines = new HashMap<>();
     private final Set<String> diagnostics = new TreeSet<>();
     private final Set<String> scalars = new TreeSet<>();
+    private final boolean recording;
+
+    /**
+     * @param recording whether the facts the manifest is made of are recorded; when {@code false} only the reached
+     *                  scalars are kept, which the unreachable-type check needs, and {@link #build} returns nothing
+     */
+    BindingManifestRecorder(boolean recording) {
+        this.recording = recording;
+    }
+
+    /**
+     * @return whether the manifest facts are recorded; call sites that would allocate to describe a fact ask first
+     */
+    boolean isRecording() {
+        return recording;
+    }
 
     void type(String typeName, String kind, @Nullable Class<?> javaType) {
+        if (!recording) {
+            return;
+        }
         lines.put(typeName, () -> line(typeName, kind, javaType == null ? NONE : javaType.getTypeName(), NONE, NONE));
     }
 
@@ -90,6 +109,9 @@ final class BindingManifestRecorder {
      */
     void field(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String kind,
                Supplier<String> member, Argument<?> declaredType, boolean subscription) {
+        if (!recording) {
+            return;
+        }
         lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(), () -> {
             StringBuilder coordinate = new StringBuilder(objectTypeDefinition.getName()).append('.')
                     .append(fieldDefinition.getName());
@@ -105,11 +127,17 @@ final class BindingManifestRecorder {
     }
 
     void resolves(String abstractTypeName, String objectTypeName, Class<?> javaType) {
+        if (!recording) {
+            return;
+        }
         lines.put(abstractTypeName + "/" + objectTypeName,
                 () -> line(abstractTypeName + "/" + objectTypeName, "resolves", javaType.getTypeName(), NONE, NONE));
     }
 
     void enumValue(String enumTypeName, String value, Class<?> enumClass) {
+        if (!recording) {
+            return;
+        }
         lines.put(enumTypeName + "." + value,
                 () -> line(enumTypeName + "." + value, "enumValue", enumClass.getTypeName() + "#" + value, NONE,
                         NONE));
@@ -117,6 +145,9 @@ final class BindingManifestRecorder {
 
     void inputField(String inputTypeName, String fieldName, graphql.language.Type<?> graphQlType, Class<?> inputClass,
                     BeanProperty<?, ?> property) {
+        if (!recording) {
+            return;
+        }
         lines.put(inputTypeName + "." + fieldName, () -> line(inputTypeName + "." + fieldName + ": "
                         + printType(graphQlType), "inputField", inputClass.getTypeName() + "#" + property.getName(),
                 JavaTypeNames.of(property.asArgument()), ReturnTypes.convertedTypeName(property.asArgument(), false)));
@@ -127,6 +158,9 @@ final class BindingManifestRecorder {
      * @param parts what it is about, separated by {@code " · "} in the line
      */
     void diagnostic(String kind, String... parts) {
+        if (!recording) {
+            return;
+        }
         diagnostics.add("!" + kind + " " + Arrays.stream(parts)
                 .map(BindingManifestRecorder::requirePart)
                 .collect(Collectors.joining(DOT)));
@@ -150,10 +184,14 @@ final class BindingManifestRecorder {
     /**
      * @param registry the schema definitions
      * @param schema   the schema built from them
-     * @return the manifest, which renders its header, and the recorded lines plus the scalar lines, sorted, when it is
+     * @return {@code null} when nothing is recorded, otherwise the manifest, which renders its header, and the recorded lines plus the scalar lines, sorted, when it is
      * first read
      */
+    @Nullable
     BindingManifest build(TypeDefinitionRegistry registry, GraphQLSchema schema) {
+        if (!recording) {
+            return null;
+        }
         Map<String, Supplier<String>> recorded = new HashMap<>(lines);
         Set<String> recordedDiagnostics = new TreeSet<>(diagnostics);
         Set<String> recordedScalars = new TreeSet<>(scalars);

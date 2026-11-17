@@ -95,6 +95,54 @@ enum Color {
         ]
     }
 
+    void "with the manifest not recorded strict mode still fails with the same problems"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.manifest.record': false])
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof StrictModeException
+        e.cause.problems.size() == 4
+    }
+
+    void "with strict false and the manifest not recorded the schema binds, and the manifest bean says how to get it"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, NOT_STRICT + ['micronaut.graphql.tools.manifest.record': false])
+
+        when:
+        def result = executeQuery('{ item { name color } }')
+
+        then:
+        result.errors.isEmpty()
+        result.data == [item: [name: 'pen', color: 'GREEN']]
+
+        when:
+        applicationContext.getBean(BindingManifest)
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof NoSuchElementException
+        e.cause.message.contains('micronaut.graphql.tools.manifest.record')
+    }
+
+    void "the manifest is recorded by manifest.record, or by manifest.enabled"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, NOT_STRICT + config)
+
+        expect:
+        !applicationContext.getBean(BindingManifest).lines.isEmpty()
+
+        where:
+        config << [
+                ['micronaut.graphql.tools.manifest.record': true],
+                ['micronaut.graphql.tools.manifest.record': false, 'micronaut.graphql.tools.manifest.enabled': true,
+                 'micronaut.graphql.tools.manifest.path'  : File.createTempFile('manifest', '.txt').absolutePath]
+        ]
+    }
+
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @GraphQLRootResolver
     static class Query {

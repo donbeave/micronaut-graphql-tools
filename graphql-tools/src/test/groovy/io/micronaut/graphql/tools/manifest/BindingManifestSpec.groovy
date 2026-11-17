@@ -420,7 +420,7 @@ type Book {
 
     void "a part that contains a separator cannot be written"() {
         when:
-        new BindingManifestRecorder().diagnostic('unreachable', 'a · b')
+        new BindingManifestRecorder(true).diagnostic('unreachable', 'a · b')
 
         then:
         def e = thrown(IllegalStateException)
