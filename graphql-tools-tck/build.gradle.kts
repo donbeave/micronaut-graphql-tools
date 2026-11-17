@@ -23,7 +23,7 @@ dependencies {
     api(mn.micronaut.runtime)
     api(mn.micronaut.json.core)
 
-    testImplementation(platform(libs.junit.bom))
+    testImplementation(platform(libs.micronaut.platform))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testRuntimeOnly(mn.micronaut.jackson.databind)
