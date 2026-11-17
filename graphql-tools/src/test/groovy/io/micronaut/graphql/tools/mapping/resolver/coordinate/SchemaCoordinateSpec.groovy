@@ -188,7 +188,8 @@ type Book {
 
         where:
         name                 | schema                       | config                                                   | problem
-        'typeMappedElsewhere' | AUTHOR_SCHEMA               | [:]                                                      | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
+        'typeMappedElsewhere' | AUTHOR_SCHEMA               | ['micronaut.graphql.tools.strict': false]                                               | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
+        // strict mode is off in the first row: its finding for the unbound method would be reported beside the coordinate
         // the strict default rejects a property and a type resolver for one field before the coordinate is checked
         'propertyBinds'      | SCHEMA                       | ['micronaut.graphql.tools.precedence': 'property-first'] | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${ShadowedBookResolver.name} summary(${BookWithSummary.name} book): the method is not bound to Book.summary, Book.summary is bound to property ${BookWithSummary.name}.getSummary()."
     }

@@ -362,12 +362,18 @@ final class GraphQLRuntimeWiringGenerator {
 
             checkAbstractTypeAmbiguity();
 
+            // after a clean binding these checks are independent: all their findings are reported at once
+            List<RuntimeException> findings = new ArrayList<>();
+
             Set<String> unboundTypes = schemaChecks.processUnreachableTypes(schemaDefinition, implementedInterfaces,
-                    processedTypes, rootRuntimeWiringBuilder);
+                    processedTypes, rootRuntimeWiringBuilder, findings);
 
-            schemaChecks.verifySchemaCoordinateBindings(unboundTypes, processedTypes, fieldBindings, resolverBindings);
+            schemaChecks.verifySchemaCoordinateBindings(unboundTypes, processedTypes, fieldBindings, resolverBindings,
+                    findings);
 
-            checkStrictMode(unboundTypes);
+            checkStrictMode(unboundTypes, findings);
+
+            throwFindings(findings);
 
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(unboundTypes));
 
@@ -387,8 +393,9 @@ final class GraphQLRuntimeWiringGenerator {
      * when strict mode is off and the manifest is not recorded.
      *
      * @param unboundTypes the unreachable types left unbound on purpose
+     * @param findings     receives the {@link StrictModeException} instead of it being thrown
      */
-    private void checkStrictMode(Set<String> unboundTypes) {
+    private void checkStrictMode(Set<String> unboundTypes, List<RuntimeException> findings) {
         Set<String> allowedTypes = new HashSet<>(configuration.getAllowUnreachable());
         if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
             allowedTypes.addAll(unboundTypes);
@@ -409,7 +416,20 @@ final class GraphQLRuntimeWiringGenerator {
         checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
 
         if (configuration.isStrict() && !checks.getProblems().isEmpty()) {
-            throw new StrictModeException(checks.getProblems());
+            findings.add(new StrictModeException(checks.getProblems()));
+        }
+    }
+
+    /**
+     * Throws the findings of the checks that run after a clean binding: a single one as is, several as a
+     * {@link BindingFailuresException}.
+     */
+    private static void throwFindings(List<RuntimeException> findings) {
+        if (findings.size() == 1) {
+            throw findings.get(0);
+        }
+        if (!findings.isEmpty()) {
+            throw new BindingFailuresException(findings);
         }
     }
 
@@ -674,7 +694,8 @@ final class GraphQLRuntimeWiringGenerator {
 
         rootRuntimeWiringBuilder.type(operationTypeDefinition.getTypeName().getName(), typeRuntimeWiringBuilder -> {
             for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
-                collectFailure(() -> processRootFieldDefinition(objectTypeDefinition, fieldDefinition,
+                collectFailure(TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName()),
+                        () -> processRootFieldDefinition(objectTypeDefinition, fieldDefinition,
                         typeRuntimeWiringBuilder));
             }
 
@@ -1088,9 +1109,9 @@ final class GraphQLRuntimeWiringGenerator {
             objectTypeWirings.put(objectTypeDefinition.getName(), typeRuntimeWiringBuilder);
 
             for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
-                collectFailure(() -> processFieldDefinition(
-                        fieldDefinition, objectTypeDefinition, typeRuntimeWiringBuilder, beanIntrospection
-                ));
+                collectFailure(TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName()),
+                        () -> processFieldDefinition(
+                                fieldDefinition, objectTypeDefinition, typeRuntimeWiringBuilder, beanIntrospection));
             }
         });
     }
@@ -1468,7 +1489,7 @@ final class GraphQLRuntimeWiringGenerator {
                 }
 
                 interfaceResolverFields.add(field);
-                collectFailure(() -> bindInterfaceField(field, methods.get(0)));
+                collectFailure(field.mappingContext(), () -> bindInterfaceField(field, methods.get(0)));
             }
 
             if (progress) {
@@ -1484,10 +1505,11 @@ final class GraphQLRuntimeWiringGenerator {
                 List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
                 if (methods.isEmpty()) {
                     ownInterfaceFields.add(field);
-                    collectFailure(() -> bindModelMember(field.objectTypeDefinition(), field.fieldDefinition(),
-                            objectTypeWirings.get(field.objectTypeDefinition().getName()), field.modelMember()));
+                    collectFailure(field.mappingContext(), () -> bindModelMember(field.objectTypeDefinition(),
+                            field.fieldDefinition(), objectTypeWirings.get(field.objectTypeDefinition().getName()),
+                            field.modelMember()));
                 } else {
-                    collectFailure(() -> bindResolverOverModelMember(field, methods));
+                    collectFailure(field.mappingContext(), () -> bindResolverOverModelMember(field, methods));
                 }
             }
         }
@@ -1540,7 +1562,7 @@ final class GraphQLRuntimeWiringGenerator {
                 case RESOLVER_FIRST -> {
                     // the interface's Java type became known only after the member was bound: bind the resolver
                     ownInterfaceFields.remove(field);
-                    collectFailure(() -> bindResolverOverModelMember(field, methods));
+                    collectFailure(field.mappingContext(), () -> bindResolverOverModelMember(field, methods));
                     rebound = true;
                 }
                 default -> throw new IllegalStateException("Unknown precedence " + configuration.getPrecedence());
@@ -1554,13 +1576,16 @@ final class GraphQLRuntimeWiringGenerator {
      * Runs the binding of one field and records a failure instead of stopping at it, so that every field that cannot
      * be bound is reported at once.
      *
-     * @param action the binding of one field
+     * @param mappingContext the field, to name it in the failure of an exception that carries no mapping context
+     * @param action         the binding of one field
      */
-    private void collectFailure(Runnable action) {
+    private void collectFailure(MappingContext mappingContext, Runnable action) {
         try {
             action.run();
         } catch (AbstractMappingException e) {
             bindingFailures.add(e);
+        } catch (RuntimeException e) {
+            bindingFailures.add(new UnexpectedBindingException(mappingContext, e));
         }
     }
 
