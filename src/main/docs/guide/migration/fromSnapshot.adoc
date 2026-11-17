@@ -13,9 +13,9 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | Change | What breaks | How to fix
 | BC-01 `List<CompletionStage<T>>` | Startup fails with `UnsupportedReturnTypeException`. Before, the client received the future's `toString()`. | Return `CompletionStage<List<T>>`.
 | BC-02 wrapper, `Optional` and `Publisher` placement | Startup fails for `Optional` on a non-null type, misplaced or repeated wrappers, `Publisher` on a field that is not a subscription field, and a subscription field that does not return `Publisher`. | Remove `Optional` from non-null types. Return `Publisher` only on subscription fields; elsewhere return a `CompletionStage`.
-| BC-03 build and publishing | The library compiles to Java 17 bytecode, and nothing is published to Maven Central. The published POM and the extended-scalars version changed. | Use JDK 17 or newer. Build and publish the library yourself. If you pin extended-scalars, pin the version your build resolves.
+| BC-03 build and publishing | The library compiles to Java 17 bytecode, and nothing is published to Maven Central. The published POM and the extended-scalars version changed. | Run the library on Java 17 or newer. Build the full project on JDK 21 or newer, because the processor module needs it. Build and publish the library yourself. If you pin extended-scalars, pin the version your build resolves.
 | BC-04 `@Inherited` resolver stereotypes | A subclass of a resolver bean is a resolver too, which can make two resolvers bind one field. | Annotate the subclass with `@Replaces(<original>.class)`.
-| BC-05 interface with its own introspection | A getter that only an implementation declares no longer binds. Startup fails. | Declare the getter on the interface, or remove the interface's own introspection.
+| BC-05 interface with its own introspection | A getter that only an implementation declares no longer binds. Startup fails. | Declare the getter on the interface.
 | BC-06 member mapped outside the declared Java type | Startup fails when a union member or implementation maps to a Java type that cannot be the field's Java interface. | Map the member to a class that fits the field's declared Java interface.
 | BC-07 `UnionTypeResolver` renamed | The class no longer exists. | Use `AbstractTypeResolver` from `io.micronaut.graphql.tools.schema`.
 | BC-08 input class properties | Startup fails for a settable property that the input type does not define, and for an input field the class cannot set. | Add the field to the input type or remove the property. Make the field settable. The unmapped-property part can be accepted with `input.unmapped-properties: ignore`.
@@ -23,10 +23,10 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-10 `GraphQL` bean | The library creates its `GraphQL` bean only when the application has none. | Define your own `GraphQL` bean, or change the library's one with `GraphQLBuilderCustomizer`.
 | BC-11 bare `SchemaDirectiveWiring` bean | Startup fails with `UnwrappedDirectiveWiringException`. | Wrap the wiring in a `SchemaDirective` bean.
 | BC-12 directive without a wiring | Startup fails with `UnwiredDirectivesException`. | Add a wiring, or list the directive in `inert-directives`. Or set `strict: false`, which logs a warning.
-| BC-13 `RuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `RuntimeWiringOverrideException`. | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
+| BC-13 `RuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `RuntimeWiringOverrideException` (on graphql-java 25, `StrictModeWiringException` first). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
 | BC-14 property and type resolver bind one field | Startup fails with `AmbiguousBindingException`. Before, the property won silently. | Remove one member, or choose the winner with `precedence` or `resolver-directives`. Or use `@GraphQLIgnore` on the getter.
-| BC-15 root resolvers per operation type | Startup fails when two root methods bind one field. Before, the first bean found won. | Add `@GraphQLSchemaCoordinate("Query.field")` (or `Mutation`, `Subscription`) to each method.
-| BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding listed in the binding manifest, annotate it with `@GraphQLIgnore`, or set `strict: false`.
+| BC-15 root resolvers per operation type | Startup fails when two root methods bind one field. Before, the first bean found won. | Remove one of two methods that bind the same field, or use `@Replaces` when one bean overrides another. Add `@GraphQLSchemaCoordinate` (for example `Query.field`) only when the methods serve different operation types.
+| BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding listed in the binding manifest, annotate it with `@GraphQLIgnore` (the compile-time processor does not read it yet), or set `strict: false`.
 | BC-17 `extend type` fields | Startup fails for an extension field that nothing binds. Before, graphql-java served it without a check. | Give the field a resolver or property, or claim it with `claimedFields()`.
 | BC-18 unreachable types | Startup fails and lists every unreachable type. An `allow-unreachable` entry that is no longer unreachable fails startup. | Bind the type, remove it, or list it in `allow-unreachable`. Remove stale entries. Or set `unreachable-types: ignore`.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time check is _pending_ with #150. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
@@ -102,7 +102,7 @@ Now the library compiles to Java 17 bytecode (`--release 17`). The project's CI 
 
 Status: not covered by #79; the release notes list it.
 
-Fix: use JDK 17 or newer to build and run the library. To use the library, build and publish it to a local or private repository. If you pin `graphql-java-extended-scalars`, pin the version your build resolves: check it with `./gradlew dependencies`.
+Fix: run the library on Java 17 or newer. Build the full project, including `graphql-tools-processor`, on JDK 21 or newer; on JDK 17 only the library module can be checked. To use the library, build and publish it to a local or private repository. If you pin `graphql-java-extended-scalars`, pin the version your build resolves: check it with `./gradlew dependencies`.
 
 === BC-04: `@Inherited` resolver stereotypes
 
@@ -133,7 +133,7 @@ public class FakeBookLabelResolver extends BookLabelResolver {
 
 An object type mapped to a Java interface that has its own introspection reads its properties through that introspection. A getter that only an implementation class declares does not bind any more. Before, it bound silently. Now the startup fails with `MethodNotFoundException`, which names the interface, the implementation that declares the getter, and the fix.
 
-Fix: declare the getter on the interface, or remove the interface's own introspection (the `@GraphQLType` or `@Introspected` annotation on the interface).
+Fix: declare the getter on the interface. Removing the interface's own introspection (the `@GraphQLType` or `@Introspected` annotation on the interface) is not a complete fix in strict mode, so declare the getter.
 
 Status: approved, no opt-out.
 
@@ -258,7 +258,7 @@ public class GraphQLTuning implements GraphQLBuilderCustomizer {
 
 A `SchemaDirectiveWiring` bean that no `SchemaDirective` bean wraps was ignored before. It is a startup error now, `UnwrappedDirectiveWiringException`. The message names the two wrappers.
 
-Fix: wrap the wiring. Use `SchemaDirective.named(name, wiring)` for one directive, or `SchemaDirective.everyElement(names, wiring)` for several.
+Fix: wrap the wiring. Use `SchemaDirective.named(name, wiring)` for one directive. Use `SchemaDirective.everyElement(names, wiring)` only for a wiring that must see every schema element: graphql-java calls it for each element, so it must check the directives itself.
 
 Status: approved, no opt-out.
 
@@ -299,9 +299,9 @@ micronaut:
 
 === BC-13: a `RuntimeWiringCustomizer` that replaces the library's wiring
 
-A `RuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `RuntimeWiringOverrideException`.
+A `RuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `RuntimeWiringOverrideException`. On graphql-java 25 the builder rejects the first replacement itself, with `StrictModeWiringException`, so the startup fails with that exception instead.
 
-Fix: add to the library's wiring in the customizer. To serve a field with a hand-written `DataFetcher`, return its coordinate from `claimedFields()`. The library then does not bind the field.
+Fix: add to the library's wiring in the customizer. To serve a field with a hand-written `DataFetcher`, return its coordinate from `claimedFields()`. The library then does not bind the field. The library does not traverse the return type of a claimed field, so that type must also be reached through another bound field, or listed in `allow-unreachable`.
 
 Status: approved, no opt-out. `claimedFields()` is on `master`.
 
@@ -364,7 +364,7 @@ micronaut:
 
 Root resolver methods are scoped to one root operation type (`Query`, `Mutation` or `Subscription`). Before, the first bean found won when two root methods bound one field. Now two root methods for one field are a startup error, `MultipleMethodsFoundException`. A method without a coordinate binds the field of its name on every root operation type. Strict mode also fails on a method without a coordinate that binds the same field name on several operation types.
 
-Fix: add a `@GraphQLSchemaCoordinate` to each method, for example `Query.ping` and `Mutation.ping`. When one bean is meant to override another, annotate the overriding bean with `@Replaces`.
+Fix: when the methods serve different operation types, give each one its own coordinate, for example `Query.ping` and `Mutation.ping`. Two methods with the same coordinate still conflict, so remove one of them. When one bean is meant to override another, annotate the overriding bean with `@Replaces`.
 
 Status: approved, no opt-out.
 
@@ -404,7 +404,7 @@ Opt-out: `micronaut.graphql.tools.strict: false`. This turns off every other che
 
 Fields of an `extend type` definition are bound and checked like any other field. Before, graphql-java's default data fetcher served them without any check. The startup now names the coordinate of an extension field that nothing binds.
 
-Fix: give the field a resolver or a property. If a `RuntimeWiringCustomizer` serves it, return its coordinate from `claimedFields()`.
+Fix: give the field a resolver or a property. If a `RuntimeWiringCustomizer` serves it, return its coordinate from `claimedFields()`. A type that such a field returns must still be reached through another bound field, or listed in `allow-unreachable`.
 
 Status: approved, no opt-out.
 
@@ -518,9 +518,16 @@ micronaut:
   graphql:
     tools:
       strict: false
+      unreachable-types: ignore
       precedence: resolver-first
       manifest:
         enabled: true
 ----
 
-Then read the `!` lines of the binding manifest, and fix, annotate with `@GraphQLIgnore`, or allow each one. Once the runtime findings are fixed, add `graphql-tools-processor` to the build so that the compile-time checks run. Until #86 lands, `strict: false` still fails on unreachable object, interface and union types that are not allowed.
+`unreachable-types: ignore` keeps unreachable object, interface and union types from failing the startup. Until #86 lands, `strict: false` alone does not do that.
+
+`resolver-first` is the migration setting, but it is not the snapshot's behaviour. On object types the property used to win silently, so `resolver-first` can return a different value for a field that a property and a type resolver method both bind. Read the ambiguities in the manifest first, or use `precedence: property-first` to keep the old values while you fix them.
+
+Then read the `!` lines of the binding manifest, and fix, annotate with `@GraphQLIgnore`, or allow each one. `@GraphQLIgnore` is read at runtime; the compile-time processor does not read it yet, so a member that carries it can still fail the build.
+
+When the runtime findings are fixed, add `graphql-tools-processor` to the build. It needs its own build option, `-Amicronaut.graphql.tools.sdlDir=<directory of the SDL files>` (see the Compile-Time Verification page). It does not read the runtime settings above, and it needs JDK 21 or newer to build.
