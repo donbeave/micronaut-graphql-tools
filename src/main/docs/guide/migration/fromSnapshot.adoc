@@ -184,6 +184,21 @@ Fix: add the field to the input type, or remove the property. Make the field set
 
 Status: the unmapped-property check has an opt-out, the unsettable field has none.
 
+[source,java]
+----
+// Schema: input CreateBook { title: String! }
+// Fails at startup in strict mode: the input type does not define isbn
+@GraphQLInput
+public class CreateBook {
+    private String title;
+    private String isbn;
+
+    // getters and setters for title and isbn
+}
+
+// Fix: add `isbn: String` to the input type, or remove the property
+----
+
 === BC-09: primitive for a nullable built-in scalar
 
 In strict mode, an argument or an input class property declared as a primitive (`int`, `boolean`, `double`, ...) for a nullable built-in scalar (`Int`, `Boolean`, `Float`, `Long`, ...) fails the startup with `IncorrectClassMappingException`. A `null` cannot reach a primitive, so the value would be the primitive's default.
@@ -343,6 +358,18 @@ Fields of an `extend type` definition are bound and checked like any other field
 Fix: give the field a resolver or a property. If a `RuntimeWiringCustomizer` serves it, return its coordinate from `claimedFields()`.
 
 Status: approved, no opt-out.
+
+[source,java]
+----
+// Schema: extend type Query { latestBook: Book }
+// Before: served by graphql-java's default data fetcher, without a check.
+// Now: give it a root resolver method like any other field
+@GraphQLRootResolver
+public class LatestBookQuery {
+    @GraphQLSchemaCoordinate("Query.latestBook")
+    public Book latestBook() { ... }
+}
+----
 
 === BC-18: unreachable types
 
