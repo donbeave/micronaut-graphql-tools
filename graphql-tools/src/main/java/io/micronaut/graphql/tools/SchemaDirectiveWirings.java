@@ -83,7 +83,8 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
      * Fails on the {@link SchemaDirectiveWiring} beans that neither a {@link SchemaDirective} bean nor a
      * {@link RuntimeWiringCustomizer} registered. It runs after the customizers, which may register a bean's wiring with
      * {@code RuntimeWiring.Builder#directive}. A singleton is matched by instance. A prototype bean is a new instance for
-     * every injection point, so it is matched by its class.
+     * every injection point, so it is matched by its class. Limitation: an unwrapped prototype bean is therefore missed when
+     * another wired instance has the same class.
      *
      * @param runtimeWiring the runtime wiring after every customizer
      * @throws UnwrappedDirectiveWiringException if a bean is wired by nothing
