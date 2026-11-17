@@ -8,6 +8,8 @@ groovy = "4.0.24"
 spock = "2.3-groovy-4.0"
 
 apollo = "4.4.1"
+jmh = "1.37"
+junit = "5.13.4"
 jetbrains-annotations = "24.0.1"
 logback = "1.5.26"
 # test oracle for the scalar SPI: the date/time scalars many graphql-java applications use
@@ -19,6 +21,9 @@ managed-graphql-java-extended-scalars = "21.0"
 graphql-java-extended-validation = "21.0"
 
 [libraries]
+jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
+jmh-generator-annprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 # Core
 micronaut-core = { module = "io.micronaut:micronaut-core-bom", version.ref = "micronaut" }
 
