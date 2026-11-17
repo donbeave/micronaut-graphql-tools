@@ -1,0 +1,17 @@
+schema {
+  query: Query
+}
+
+type Query {
+  wrapped: Holder
+}
+
+union Holder = Boxed | Bagged
+
+type Boxed {
+  label: String!
+}
+
+type Bagged {
+  label: String!
+}

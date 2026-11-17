@@ -8,6 +8,10 @@ dependencies {
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.java)
+    // the corpus compiles Groovy cases in process, and Micronaut's AST transformation writes their bean definitions
+    testImplementation(mn.micronaut.inject.groovy)
+    // the Kotlin side of the corpus compiles its cases in a batched TestKit build
+    testImplementation(gradleTestKit())
     testRuntimeOnly(libs.logback.classic)
 }
 
@@ -18,4 +22,53 @@ micronautBuild {
     binaryCompatibility {
         enabled.set(false)
     }
+}
+
+// The binding corpus (#142): the cases are data under src/test/resources/corpus, read from the project directory.
+// `-Pcorpus.update` (task corpusUpdate) rewrites the expected files instead of comparing; the diff is the review.
+val corpusDir = layout.projectDirectory.dir("src/test/resources/corpus")
+tasks.withType<Test>().configureEach {
+    inputs.files(corpusDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("corpus")
+    // the Kotlin batch is its own task (corpusKotlin): it needs the network and has its own budget
+    systemProperty("corpus.dir", corpusDir.asFile.absolutePath)
+    systemProperty("corpus.report", layout.buildDirectory.file("corpus/timings.txt").get().asFile.absolutePath)
+    if (project.hasProperty("corpus.update")) {
+        systemProperty("corpus.update", "true")
+    }
+}
+tasks.register<Test>("corpusUpdate") {
+    description = "Rewrites the expected files of the binding corpus from what the binders say; review the diff."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    filter.includeTestsMatching("*BindingCorpusSpec")
+    systemProperty("corpus.update", "true")
+    outputs.upToDateWhen { false }
+}
+
+// The corpus compiles 31 units in process (about 70 s of a 2 minute job). Its verdicts do not depend on the graphql-java leg
+// (the floor and ceiling runs record the same verdicts as the default leg), so it runs on the default leg only, on JDK 21 and 25;
+// the floor and ceiling legs run every other test of this module unchanged. CorpusRunnerSpec (the runner's own tests, 3 s) runs on every leg.
+val corpusOnThisLeg = providers.gradleProperty("graphqlJavaLeg").orElse("default").get() == "default"
+tasks.named<Test>("test") {
+    exclude("**/KotlinCorpusSpec*")
+    if (!corpusOnThisLeg && !project.hasProperty("corpus.update")) {
+        exclude("**/BindingCorpusSpec*")
+        doFirst {
+            logger.lifecycle("BindingCorpusSpec skipped: the binding corpus runs on the default graphql-java leg only (-PgraphqlJavaLeg=default).")
+        }
+    }
+}
+// The Kotlin corpus (DD-13): one batched Gradle TestKit build with the production toolchain, budget 3 minutes on JDK 25.
+// Not part of `check` until the CI job for it exists (CT-WIRING, #143).
+tasks.register<Test>("corpusKotlin") {
+    description = "Compiles the Kotlin cases of the binding corpus in one TestKit build (Kotlin, KSP2) and judges them."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    filter.includeTestsMatching("*KotlinCorpusSpec")
+    systemProperty("corpus.gradle-user-home", gradle.gradleUserHomeDir.absolutePath)
+    systemProperty("corpus.micronaut.platform", libs.versions.micronaut.platform.get())
+    systemProperty("corpus.kotlin.dir", layout.buildDirectory.dir("corpus-kotlin").get().asFile.absolutePath)
+    outputs.upToDateWhen { false }
 }

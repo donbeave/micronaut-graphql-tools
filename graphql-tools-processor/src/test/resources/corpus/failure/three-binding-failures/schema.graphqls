@@ -1,0 +1,14 @@
+schema {
+  query: Query
+}
+
+type Query {
+  book: Book
+  count: Int
+  missing: String
+}
+
+type Book {
+  title: String!
+  isbn: String!
+}
