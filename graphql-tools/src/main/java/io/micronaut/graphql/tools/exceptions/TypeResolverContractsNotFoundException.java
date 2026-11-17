@@ -27,9 +27,6 @@ public final class TypeResolverContractsNotFoundException extends RuntimeExcepti
 
     private final Class<?> beanType;
 
-    /**
-     * @param beanType the bean class
-     */
     public TypeResolverContractsNotFoundException(Class<?> beanType) {
         super("The bean " + beanType.getName() + " is a @" + GraphQLTypeResolver.class.getSimpleName()
                 + " only through an inherited annotation, but no type of its class hierarchy declares the annotation "
@@ -40,9 +37,6 @@ public final class TypeResolverContractsNotFoundException extends RuntimeExcepti
         this.beanType = beanType;
     }
 
-    /**
-     * @return the bean class
-     */
     public Class<?> getBeanType() {
         return beanType;
     }

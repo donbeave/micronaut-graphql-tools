@@ -13,10 +13,6 @@ import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
 
-/**
- * Unions and interfaces resolve the object type of a runtime object by its exact class first, and otherwise by the
- * one member whose Java type the object is an instance of.
- */
 class AbstractTypeAssignabilitySpec extends AbstractTest {
 
     static final String UNION_SUBCLASS = "AbstractTypeAssignabilitySpec.unionSubclass"
@@ -410,8 +406,6 @@ type Stray implements Coded {
                 "${StrayModel.name}, so no object the field returns can resolve to Stray.")
     }
 
-    // Payload: classes, a subclass and a runtime subclass
-
     static interface PayloadGraph {
     }
 
@@ -456,8 +450,6 @@ type Stray implements Coded {
                     .registerType("Failure", FailureModel)
         }
     }
-
-    // Result / Track: a contract interface with unannotated implementations
 
     static interface ResultGraph {
         String getName()
@@ -513,8 +505,6 @@ type Stray implements Coded {
         }
     }
 
-    // Item / Media: one class implements the Java types of two members
-
     static interface ItemGraph {
         String getTitle()
     }
@@ -555,8 +545,6 @@ type Stray implements Coded {
         }
     }
 
-    // Text: a class, its subclass, and a subclass of both
-
     static interface TextGraph {
     }
 
@@ -591,8 +579,6 @@ type Stray implements Coded {
                     .registerType("LongNote", LongNoteModel)
         }
     }
-
-    // Shelved: a field that declares the annotated implementation of a contract, and an unannotated implementation
 
     static interface ShelvedGraph {
         String getTitle()
@@ -640,8 +626,6 @@ type Stray implements Coded {
         }
     }
 
-    // Pay: a member mapped to a Java interface that is not a subtype of the declared one
-
     static interface PayGraph {
     }
 
@@ -678,8 +662,6 @@ type Stray implements Coded {
                     .registerType("Refund", RefundModel)
         }
     }
-
-    // Stray: a member mapped to a class outside the declared Java type
 
     @GraphQLType
     static final class StrayModel {

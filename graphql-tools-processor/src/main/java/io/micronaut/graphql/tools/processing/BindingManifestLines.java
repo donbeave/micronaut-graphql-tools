@@ -45,35 +45,12 @@ import java.util.TreeSet;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
-/**
- * The lines of the binding manifest the processor writes: the format {@code graphql-binding-manifest 1} of the library's
- * {@code BindingManifest}, with the same header and, for the same code, schema and options, the same body lines,
- * except for the lines that only the running application can know, which are left out:
- * <ul>
- *     <li>{@code scalar} lines, which name the {@code Coercing} class of the scalar's runtime wiring;</li>
- *     <li>{@code resolves} lines and everything bound through the {@code SchemaMappingDictionary}, a runtime bean: the
- *     object types of unions and interfaces that fields return, what only they reach, and interfaces only they
- *     implement;</li>
- *     <li>fields that a type resolver of an interface binds, and {@code !unusedDictionary} lines;</li>
- *     <li>{@code !unwiredDirective} lines: directive wirings are runtime beans (and an unwired directive fails the
- *     startup in strict mode, so these lines appear only with {@code strict: false}).</li>
- * </ul>
- */
 final class BindingManifestLines {
 
-    /**
-     * Where the manifest is written, relative to the class output.
-     */
     static final String PATH = "META-INF/micronaut-graphql-tools/binding-manifest.txt";
 
-    /**
-     * Where the record of what the manifest leaves out is written, relative to the class output.
-     */
     static final String OMITTED_PATH = "META-INF/micronaut-graphql-tools/binding-manifest-omitted.txt";
 
-    /**
-     * Where the accessors of the introspected types are written, relative to the class output.
-     */
     static final String ACCESSORS_PATH = "META-INF/micronaut-graphql-tools/accessors.txt";
 
     static final String ACCESSORS_FORMAT = "# graphql-accessors 1";
@@ -86,28 +63,14 @@ final class BindingManifestLines {
     private static final String DOT = " · ";
     private static final String NONE = "-";
 
-    // key: what the line describes, as the library keys it
     private final Map<String, String> lines = new HashMap<>();
     private final Set<String> diagnostics = new TreeSet<>();
     private final Set<String> invalidParts = new TreeSet<>();
 
-    /**
-     * @param typeName a schema type
-     * @param kind     {@code object}, {@code interface}, {@code union}, {@code enum} or {@code input}
-     * @param javaType the binary name of its Java type, or {@code null}
-     */
     void type(String typeName, String kind, String javaType) {
         lines.put(typeName, line(typeName, kind, javaType == null ? NONE : javaType, NONE, NONE));
     }
 
-    /**
-     * @param type          the object type
-     * @param field         the field
-     * @param kind          {@code root}, {@code resolver} or {@code property}
-     * @param member        the Java member, as {@code Class#method(parameter types)}
-     * @param declaredType  the declared Java type, rendered
-     * @param convertedType the converted Java type, rendered
-     */
     void field(ObjectTypeDefinition type, FieldDefinition field, String kind, String member, String declaredType,
                String convertedType) {
         StringBuilder coordinate = new StringBuilder(type.getName()).append('.').append(field.getName());
@@ -121,25 +84,11 @@ final class BindingManifestLines {
                 line(coordinate.toString(), kind, member, declaredType, convertedType));
     }
 
-    /**
-     * @param enumTypeName the schema enum
-     * @param value        one of its values
-     * @param enumClass    the binary name of the Java enum
-     */
     void enumValue(String enumTypeName, String value, String enumClass) {
         lines.put(enumTypeName + "." + value,
                 line(enumTypeName + "." + value, "enumValue", enumClass + "#" + value, NONE, NONE));
     }
 
-    /**
-     * @param inputTypeName the input type
-     * @param fieldName     the input field
-     * @param graphQlType   its type
-     * @param inputClass    the binary name of the input class
-     * @param property      the property name
-     * @param declaredType  the declared Java type of the property, rendered
-     * @param convertedType the converted Java type, rendered
-     */
     void inputField(String inputTypeName, String fieldName, Type<?> graphQlType, String inputClass, String property,
                     String declaredType, String convertedType) {
         lines.put(inputTypeName + "." + fieldName, line(inputTypeName + "." + fieldName + ": "
@@ -147,32 +96,18 @@ final class BindingManifestLines {
                 convertedType));
     }
 
-    /**
-     * @param kind  the kind of finding, for example {@code unreachable}
-     * @param parts what it is about, separated by {@code " · "} in the line
-     */
     void diagnostic(String kind, String... parts) {
         diagnostics.add("!" + kind + " " + Arrays.stream(parts).map(this::requirePart).collect(Collectors.joining(DOT)));
     }
 
-    /**
-     * @param typeName a schema type
-     * @return whether the manifest has a type line for it
-     */
     boolean hasType(String typeName) {
         return lines.containsKey(typeName);
     }
 
-    /**
-     * @return the parts that contain a separator or a line break, so that the manifest cannot be written
-     */
     Set<String> invalidParts() {
         return invalidParts;
     }
 
-    /**
-     * @return the body lines, sorted by {@link String#compareTo(String)}
-     */
     List<String> body() {
         List<String> body = new ArrayList<>(lines.values());
         body.addAll(diagnostics);
@@ -180,10 +115,6 @@ final class BindingManifestLines {
         return body;
     }
 
-    /**
-     * @param registry the schema
-     * @return the header and the body, each line ended by {@code LF}, as the library's {@code BindingManifest#render()}
-     */
     String render(TypeDefinitionRegistry registry) {
         StringBuilder builder = new StringBuilder();
         List.of(FORMAT,
@@ -201,9 +132,6 @@ final class BindingManifestLines {
                 + requirePart(convertedType);
     }
 
-    /**
-     * The manifest is not escaped: a part that contains a separator or a line break cannot be written.
-     */
     private String requirePart(String part) {
         if (part.contains(ARROW) || part.contains(DOT) || part.contains("\n") || part.contains("\r")) {
             invalidParts.add(part);
@@ -215,10 +143,6 @@ final class BindingManifestLines {
         return version == null || version.isBlank() ? "unknown" : version;
     }
 
-    /**
-     * @return the version graphql-java's jar manifest declares ({@code Bundle-Version}, without a {@code .0} patch
-     * level), or {@code unknown}, as the library's manifest header
-     */
     private static String graphQlJavaVersion() {
         try {
             ClassLoader classLoader = GraphQL.class.getClassLoader();
@@ -233,17 +157,10 @@ final class BindingManifestLines {
                 }
             }
         } catch (IOException | RuntimeException e) {
-            // fall through
         }
         return "unknown";
     }
 
-    /**
-     * @param registry the schema
-     * @return the SHA-256 of the definitions of the registry, computed as the library's manifest header does: the
-     * schema definition and its extensions first, then every definition by name (types, scalars and directives that
-     * graphql-java does not define, type extensions), each printed by {@link AstPrinter}, joined by {@code LF}
-     */
     static String schemaSha256(TypeDefinitionRegistry registry) {
         List<Definition<?>> definitions = new ArrayList<>();
         registry.schemaDefinition().ifPresent(definitions::add);

@@ -12,14 +12,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
-/**
- * The documentation names every configuration key, public exception and public annotation (#56). The guide is the
- * documentation home (D-18) and the README is its entry point, so a name in either one counts.
- *
- * A failure names the missing item and the page to edit. A gap that is deliberate goes into
- * {@code docs-coverage-allowlist.txt} with a tracker issue; the list may only shrink, so this spec also fails when an
- * entry is stale.
- */
 class DocsCoverageSpec extends Specification {
 
     static final String KEY_PREFIX = 'micronaut.graphql.tools.'
@@ -75,7 +67,7 @@ class DocsCoverageSpec extends Specification {
                 }
                 def attrs = parseAttributes(m.group(2))
                 if (attrs.containsKey('project')) {
-                    return // another project owns its sources
+                    return
                 }
                 checked++
                 def where = "${root.relativize(page)}:${i + 1}"
@@ -133,8 +125,6 @@ class DocsCoverageSpec extends Specification {
 
     private boolean isDocumented(String kind, String name) {
         def quoted = Pattern.quote(name)
-        // A key may end a sentence ("... micronaut.graphql.tools.eager-init.") but must not be a prefix of a longer key
-        // ("micronaut.graphql.tools.foo" inside "micronaut.graphql.tools.foo.bar"). A type may be written fully qualified.
         def pattern = kind == 'config-key' ?
                 Pattern.compile("(?<![\\w.-])${quoted}(?![\\w-]|\\.[\\w-])") :
                 Pattern.compile("(?<!\\w)${quoted}(?!\\w)")

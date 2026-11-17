@@ -2,9 +2,6 @@ package io.micronaut.graphql.tools.mapping.input;
 
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 
-/**
- * A Java input class for {@code InputGenericArgumentsSpec}.
- */
 @GraphQLInput
 public class JavaPriceSelection {
 

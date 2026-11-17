@@ -16,10 +16,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * A field that both a getter of the Java type and a type resolver method can bind: the getter returns {@code null}
- * (the value is computed elsewhere), the type resolver method computes it, and the field is non-null.
- */
 class FieldBindingPrecedenceSpec extends AbstractTest {
 
     static final String SPEC_NAME = "FieldBindingPrecedenceSpec"
@@ -195,8 +191,6 @@ type Item {
         }
     }
 
-    // --- a field marked with the directive that only a getter binds ---
-
     void "a field marked with a resolver directive fails the startup when only a getter binds it"() {
         given:
         startContext(MARKED_SCHEMA, SPEC_NAME + ".getterOnly", ['micronaut.graphql.tools.resolver-directives': ['computed']])
@@ -236,8 +230,6 @@ type Item {
             return [new Item(name: 'pen', price: 1L), new Item(name: 'ink', price: 2L)]
         }
     }
-
-    // --- a @GraphQLField method of the Java type and a type resolver method ---
 
     void "a @GraphQLField method and a type resolver method for one field fail the startup"() {
         given:
@@ -290,8 +282,6 @@ type Label {
             return 'resolved'
         }
     }
-
-    // --- configuration ---
 
     void "a resolver directive that the schema does not declare fails the startup"() {
         given:

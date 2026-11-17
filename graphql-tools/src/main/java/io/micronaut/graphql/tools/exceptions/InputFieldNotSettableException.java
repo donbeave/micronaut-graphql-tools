@@ -24,9 +24,6 @@ import io.micronaut.graphql.tools.InputMappingContext;
  */
 public final class InputFieldNotSettableException extends AbstractMappingException {
 
-    /**
-     * @param mappingContext the input field and the mapped property
-     */
     public InputFieldNotSettableException(InputMappingContext mappingContext) {
         super(
                 String.format(

@@ -20,10 +20,6 @@ import org.intellij.lang.annotations.Language
 import java.time.LocalDate
 import java.time.temporal.Temporal
 
-/**
- * A custom scalar that a field, an argument or an input field uses needs a {@link GraphQLScalarMapping}, and the Java
- * type must be one of its declared classes; otherwise the startup fails and names the coordinate.
- */
 class CustomScalarMappingErrorsSpec extends AbstractTest {
 
     static final String SPEC_UNMAPPED = "CustomScalarMappingErrorsSpecUnmapped"
@@ -210,7 +206,6 @@ type Query {
   attributes: JSON
 }
 """
-        // MappedQuery also has the methods the failing cases above bind; strict mode would reject them as unbound
         startContext(schema, SPEC_MAPPED, ['micronaut.graphql.tools.strict': false])
 
         when:

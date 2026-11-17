@@ -58,9 +58,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Executable(processOnStartup = true)
 public @interface GraphQLSchemaCoordinate {
 
-    /**
-     * @return the schema coordinate of the bound field, {@code Type.field}
-     */
     String value();
 
 }

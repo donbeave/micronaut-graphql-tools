@@ -50,16 +50,10 @@ public final class AmbiguousTypeResolverException extends RuntimeException {
         this.methods = List.copyOf(methods);
     }
 
-    /**
-     * @return the bean class
-     */
     public Class<?> getBeanType() {
         return beanType;
     }
 
-    /**
-     * @return the methods that cannot be assigned to one contract
-     */
     public List<String> getMethods() {
         return methods;
     }

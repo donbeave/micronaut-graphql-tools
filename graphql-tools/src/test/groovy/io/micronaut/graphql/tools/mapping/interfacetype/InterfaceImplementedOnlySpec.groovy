@@ -10,10 +10,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * Union members that implement an interface no field returns: the interface is bound through its reachable
- * implementations. Unions whose members implement no interface (and share a member) keep working.
- */
 class InterfaceImplementedOnlySpec extends AbstractTest {
 
     static final String SPEC_NAME = "InterfaceImplementedOnlySpec"
@@ -122,8 +118,6 @@ enum AccessErrorCode { DENIED }
                     .registerType("AccessError", AccessError.class)
         }
     }
-
-    // --- unions without interfaces, sharing a member, one of them nested in a payload type ---
 
     static final String UNIONS_SPEC_NAME = SPEC_NAME + ".unions"
 

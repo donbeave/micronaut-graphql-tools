@@ -21,12 +21,6 @@ import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 
-/**
- * Every directive the schema applies needs a wiring, or must be declared inert in
- * {@code micronaut.graphql.tools.inert-directives}: otherwise the directive is in the schema and has no effect, which
- * nobody notices. graphql-java's built-in directives ({@code @deprecated}, {@code @specifiedBy}, {@code @oneOf}) are
- * exempt; declared directives that the schema never applies need nothing.
- */
 class UnwiredDirectivesSpec extends AbstractTest {
 
     static final String SPEC_NAME = "UnwiredDirectivesSpec"
@@ -75,7 +69,6 @@ input Pick @oneOf {
 scalar Long @specifiedBy(url: "https://example.com/long")
 """
 
-    // strict mode: the input and enum types that carry directives here are reached by no field
     static final Map ALLOW = ['micronaut.graphql.tools.allow-unreachable': ['Filter', 'Pick', 'Role']]
 
     static final String UNWIRED_MESSAGE = """The schema applies directives that have no wiring: @auth (Filter.name, Query.me, Query.users, Role.ADMIN, User and 1 more), @cached (Query.items(limit:)).

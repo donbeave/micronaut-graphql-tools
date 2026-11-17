@@ -60,30 +60,18 @@ public final class IncorrectMemberMappingException extends AbstractMappingExcept
         this.memberClass = memberClass;
     }
 
-    /**
-     * @return the name of the union or interface
-     */
     public String getAbstractTypeName() {
         return abstractTypeName;
     }
 
-    /**
-     * @return the object type
-     */
     public String getObjectTypeName() {
         return objectTypeName;
     }
 
-    /**
-     * @return the Java type the field declares for the union or interface
-     */
     public Class<?> getDeclaredClass() {
         return declaredClass;
     }
 
-    /**
-     * @return the Java type the object type is mapped to
-     */
     public Class<?> getMemberClass() {
         return memberClass;
     }

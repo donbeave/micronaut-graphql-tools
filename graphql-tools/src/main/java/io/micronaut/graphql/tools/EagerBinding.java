@@ -23,12 +23,6 @@ import io.micronaut.context.event.StartupEvent;
 import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
 
-/**
- * Binds the schema when the application context starts: it resolves the {@link GraphQLSchema} bean, which the library
- * creates by binding (and which an application that defines its own {@code GraphQL} bean consumes too). A broken
- * binding then fails the startup, and the first request does no binding work. It runs on the startup event, once the
- * resolvers are registered. It steps aside with {@code micronaut.graphql.tools.eager-init: false}.
- */
 @Internal
 @Singleton
 @Requires(property = GraphQLToolsConfiguration.PREFIX + ".eager-init", notEquals = "false")

@@ -20,14 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * A GraphQL response keeps the fields whose value is null: {@code {"data":{"currentUser":null}}}, not {@code {"data":{}}}.
- * A client reads a missing key and an explicit null differently, so the response must carry the key. The subclasses run
- * these checks under each JSON configuration of this stack, over raw HTTP (the typed Apollo client would hide a missing
- * key behind a null field).
- *
- * <p>Stack: Jackson databind (micronaut-jackson-databind, the default of the library today).
- */
 abstract class AbstractNullFieldsTest {
 
     @Inject
@@ -39,13 +31,11 @@ abstract class AbstractNullFieldsTest {
     @Inject
     AuthenticationService authenticationService;
 
-    /** A successful signIn logs the user in for the whole application: a guest is what the null checks need. */
     @AfterEach
     void logout() {
         authenticationService.logout();
     }
 
-    /** The {@link JsonMapper} implementation the configuration must select: a guard that the test runs the stack it names. */
     abstract String expectedMapperClassName();
 
     @Test
@@ -89,7 +79,6 @@ abstract class AbstractNullFieldsTest {
 
     @Test
     void fetcherErrorKeepsTheDataKey() throws Exception {
-        // a non-null field that fails: the null bubbles up to data, which is then null, and the key stays
         Map<String, Object> response = post("{ searchProfile(contains: \"t\", limit: -1) { username } }");
 
         assertTrue(response.containsKey("errors"), "response: " + response);

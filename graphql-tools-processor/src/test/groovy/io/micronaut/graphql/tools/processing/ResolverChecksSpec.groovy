@@ -2,12 +2,6 @@ package io.micronaut.graphql.tools.processing
 
 import spock.lang.Specification
 
-/**
- * The checks of resolver beans against the schema: every field has exactly one method or property, methods take the
- * arguments in the schema's order with matching types, return types fit (wrappers, lists, built-in scalars),
- * properties and type resolvers follow the precedence, and schema coordinates are valid and bound. The processor
- * rejects what the startup rejects for the same code and options, and accepts what it accepts.
- */
 class ResolverChecksSpec extends Specification {
 
     static final String SCHEMA = '''schema {
@@ -419,7 +413,6 @@ public class OtherQuery {
 
         then:
         !result.success
-        // one finding, reported once; the methods are not also reported as binding no field (strict mode)
         result.graphqlErrors == ['BookQuery.java:12: [graphql] Query.book: several root resolver methods can bind the '
                                          + 'field: example.BookQuery#book(java.lang.String), example.OtherQuery#book(java.lang.String). '
                                          + 'Keep one, or scope each to its root operation type with @GraphQLSchemaCoordinate. '

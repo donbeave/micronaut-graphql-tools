@@ -17,10 +17,6 @@ import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * A field that returns an SDL interface binds every object type implementing it, each through the class registered
- * in the {@link SchemaMappingDictionary}; the runtime object is resolved by its exact class.
- */
 class InterfaceTypeSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InterfaceTypeSpec"
@@ -184,8 +180,6 @@ type MediaSection implements Section {
         }
     }
 
-    // --- startup errors ---
-
     void "an interface field mapped to a class instead of a Java interface fails the startup"() {
         given:
         startContext(SCHEMA, SPEC_NAME + ".wrongJavaType")
@@ -286,7 +280,6 @@ type MediaSection implements Section {
         }
     }
 
-    // the field declares IdentifiedSection, so that each implementation is mapped to a subtype of it
     @GraphQLType
     static class UntitledSection implements IdentifiedSection {
         String id

@@ -22,24 +22,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * The options of {@link GraphQLSchemaBindingProcessor}, passed as {@code -A<name>=<value>}. Except for
- * {@link #SDL_DIR}, each has the values and the default of the runtime option of the same name under
- * {@code micronaut.graphql.tools}, so that one configuration means the same at compile time and at startup. The names
- * are written in camel case ({@code allowUnreachable} for {@code allow-unreachable}) because javac accepts only
- * dot-separated identifiers as option names; Micronaut accepts both spellings for the runtime options.
- *
- * @param sdlDir             the directory of the schema files, or {@code null} if not set
- * @param strict             whether strict mode is on
- * @param precedence         how a field that a property and a type resolver method can both bind is bound
- * @param resolverDirectives the directives that mark a field as bound by a type resolver method
- * @param allowUnreachable   the unreachable types that are allowed
- * @param ignoreUnreachable  whether unreachable types are ignored ({@code unreachable-types=ignore})
- * @param unmappedProperties how input class properties without an input field are handled: {@code fail},
- *                           {@code ignore} or {@code null} to follow strict mode
- * @param detectOmission     whether {@code ArgumentValue} parameters and input properties are enabled
- * @param manifest           whether the binding manifest is written
- */
 record ProcessorOptions(String sdlDir,
                         boolean strict,
                         Precedence precedence,
@@ -50,93 +32,38 @@ record ProcessorOptions(String sdlDir,
                         boolean detectOmission,
                         boolean manifest) {
 
-    /**
-     * The prefix of every option.
-     */
     static final String PREFIX = "micronaut.graphql.tools.";
 
-    /**
-     * The directory of the schema files ({@code *.graphqls}, {@code *.graphql}), read recursively. Required when the
-     * compilation has anything to check. Declare it as an input of the compile task (for Gradle, a
-     * {@code CommandLineArgumentProvider} with {@code @InputDirectory}), or a schema change does not recompile.
-     */
     static final String SDL_DIR = PREFIX + "sdlDir";
 
-    /**
-     * Strict mode, {@code true} or {@code false}; default {@code true}.
-     */
     static final String STRICT = PREFIX + "strict";
 
-    /**
-     * {@code strict}, {@code property-first} or {@code resolver-first}; default {@code strict}.
-     */
     static final String PRECEDENCE = PREFIX + "precedence";
 
-    /**
-     * Comma-separated directive names; default none.
-     */
     static final String RESOLVER_DIRECTIVES = PREFIX + "resolverDirectives";
 
-    /**
-     * Comma-separated type names; default none.
-     */
     static final String ALLOW_UNREACHABLE = PREFIX + "allowUnreachable";
 
-    /**
-     * {@code fail} or {@code ignore}; default {@code fail}.
-     */
     static final String UNREACHABLE_TYPES = PREFIX + "unreachableTypes";
 
-    /**
-     * {@code fail} or {@code ignore}; default: not set, which follows strict mode.
-     */
     static final String UNMAPPED_PROPERTIES = PREFIX + "input.unmappedProperties";
 
-    /**
-     * {@code true} or {@code false}; default {@code false}.
-     */
     static final String DETECT_OMISSION = PREFIX + "input.detectOmission";
 
-    /**
-     * {@code true} or {@code false}; default {@code true}: the binding manifest is written to the class output, as
-     * {@code META-INF/micronaut-graphql-tools/binding-manifest.txt}.
-     */
     static final String MANIFEST = PREFIX + "manifest";
 
-    /**
-     * Every option name.
-     */
     static final Set<String> NAMES = Set.of(SDL_DIR, STRICT, PRECEDENCE, RESOLVER_DIRECTIVES, ALLOW_UNREACHABLE,
             UNREACHABLE_TYPES, UNMAPPED_PROPERTIES, DETECT_OMISSION, MANIFEST);
 
-    /**
-     * How a field is bound when both a member of its Java type and a type resolver method can bind it.
-     */
     enum Precedence {
 
-        /**
-         * Neither: an error.
-         */
         STRICT,
 
-        /**
-         * The member of the Java type.
-         */
         PROPERTY_FIRST,
 
-        /**
-         * The type resolver method.
-         */
         RESOLVER_FIRST
     }
 
-    /**
-     * Reads the options.
-     *
-     * @param options  the processor options
-     * @param problems where invalid values are reported
-     * @return the options, with defaults for invalid values
-     */
     static ProcessorOptions read(Map<String, String> options, Problems problems) {
         options.keySet().stream()
                 .filter(it -> it.startsWith(PREFIX) && !NAMES.contains(it))
@@ -188,18 +115,10 @@ record ProcessorOptions(String sdlDir,
         );
     }
 
-    /**
-     * @return whether input class properties without an input field fail the compilation
-     */
     boolean failOnUnmappedProperties() {
         return unmappedProperties == null ? strict : unmappedProperties.equals("fail");
     }
 
-    /**
-     * Reads a boolean option as Micronaut converts a boolean property: {@code true}, {@code yes}, {@code y} and
-     * {@code on} are true, {@code false}, {@code no}, {@code n} and {@code off} are false, in any case. Micronaut
-     * reads any other value as false; here it is an error, so that a typo does not silently switch a check off.
-     */
     private static boolean bool(Map<String, String> options, String name, boolean defaultValue, Problems problems) {
         String value = options.get(name);
         if (value == null) {

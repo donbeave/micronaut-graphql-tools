@@ -7,10 +7,6 @@ import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
 
-/**
- * A processor that generates one source file in the first round, as Micronaut's processor generates bean definitions
- * and AOP proxies: the generated class is a root element of the second round.
- */
 @CompileStatic
 class GeneratingProcessor extends AbstractProcessor {
 

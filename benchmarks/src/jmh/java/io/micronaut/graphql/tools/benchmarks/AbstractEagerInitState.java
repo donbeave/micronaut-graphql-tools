@@ -15,12 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * What {@code micronaut.graphql.tools.eager-init} moves: the generated schema of 1,600 fields (see
- * {@code generateLargeSchema} in build.gradle.kts), bound when the context starts ({@code true}) or when the first
- * query needs the {@code GraphQL} bean ({@code false}). A counting schema customizer, which runs once per binding,
- * lets each benchmark check that it measures the side it says.
- */
 @State(Scope.Benchmark)
 public abstract class AbstractEagerInitState {
 
@@ -56,7 +50,6 @@ public abstract class AbstractEagerInitState {
                 .start();
     }
 
-    /** Throws when the schema was bound (or not) at the wrong time for this parameter. */
     void checkBoundAtStart() {
         int expected = eagerInit ? 1 : 0;
         if (bindings.get() != expected) {

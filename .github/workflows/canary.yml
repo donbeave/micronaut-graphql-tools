@@ -1,0 +1,142 @@
+name: Canary
+# Runs what Micronaut 4 does not support yet (JDK 27, the newest graphql-java and Kotlin) and audits the pinned versions.
+# Never on pull_request and never in the `required checks` gate of gradle.yml: a red canary blocks no merge (D-35).
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: '17 4 * * *'
+    # the versions audit runs on this one; the canary jobs skip it (see each job's `if`)
+    - cron: '47 4 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  # the weekly audit has its own group, so it never cancels a daily canary run that is still going
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.schedule == '47 4 * * 1' && 'audit' || 'canary' }}
+  cancel-in-progress: true
+jobs:
+  jdk27:
+    name: canary (Java 27, graphql-java default)
+    if: github.event.schedule != '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '27'
+          tools: java
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=default
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-canary-java27
+          path: |
+            **/build/test-results/test/TEST-*.xml
+            **/build/reports/tests/test/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  graphql-java-latest:
+    name: canary (Java 25, graphql-java latest)
+    if: github.event.schedule != '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=latest
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-canary-graphql-java-latest
+          path: |
+            **/build/test-results/test/TEST-*.xml
+            **/build/reports/tests/test/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  kotlin-latest:
+    name: canary (Kotlin latest)
+    if: github.event.schedule != '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Move Kotlin and KSP to the newest releases
+        run: .github/scripts/kotlin-latest.sh
+      - name: Test the Kotlin suite
+        run: ./gradlew :test-suite-kotlin:check --no-daemon --continue
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-canary-kotlin-latest
+          path: |
+            test-suite-kotlin/build/test-results/test/TEST-*.xml
+            test-suite-kotlin/build/reports/tests/test/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  native-latest:
+    name: canary (GraalVM 25, graphql-java latest)
+    if: github.event.schedule != '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          tools: java
+      - name: Run native tests
+        run: ./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --no-daemon --no-parallel -PgraphqlJavaLeg=latest
+        env:
+          GRAALVM_QUICK_BUILD: 'true'
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-canary-native-latest
+          path: |
+            test-suite-*/build/test-results/test-native/TEST-*.xml
+            test-suite-*/build/test-results/test-native/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Weekly (the Monday cron) and on demand. A pin behind the newest supported release fails the job and lists it
+  # in the job summary: the loop turns each behind item into one issue.
+  versions-audit:
+    name: versions audit
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          tools: actionlint
+          gradle: 'false'
+      - name: Compare the pins with the newest supported releases
+        run: .github/scripts/versions-audit.sh
+        env:
+          GH_TOKEN: ${{ github.token }}

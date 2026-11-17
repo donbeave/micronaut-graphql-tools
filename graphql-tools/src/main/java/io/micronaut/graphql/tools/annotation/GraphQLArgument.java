@@ -37,9 +37,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Target({ElementType.PARAMETER})
 public @interface GraphQLArgument {
 
-    /**
-     * @return the name of the GraphQL field argument the parameter is bound to
-     */
     String value();
 
 }

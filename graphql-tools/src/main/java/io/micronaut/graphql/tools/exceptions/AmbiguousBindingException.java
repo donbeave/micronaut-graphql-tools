@@ -29,19 +29,12 @@ public final class AmbiguousBindingException extends AbstractMappingException {
 
     private final Map<Class<?>, List<String>> members;
 
-    /**
-     * @param mappingContext the field
-     * @param members        the members that can bind the field, by class
-     */
     public AmbiguousBindingException(MappingContext mappingContext, Map<Class<?>, List<String>> members) {
         super("Both a member of the Java type and a type resolver method can bind one GraphQL field.", mappingContext);
 
         this.members = members;
     }
 
-    /**
-     * @return the members that can bind the field, by class
-     */
     public Map<Class<?>, List<String>> getMembers() {
         return members;
     }

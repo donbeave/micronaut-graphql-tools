@@ -14,10 +14,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * The per-class cache of {@link AbstractTypeResolver}: consistent under concurrency, the same object type instance
- * on every hit, errors still reported, and no strong reference to the classes it has seen.
- */
 class AbstractTypeResolverSpec extends Specification {
 
     static class Song {}

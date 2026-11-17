@@ -11,11 +11,6 @@ import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * The documented fix for a resolver subclass next to its original (resolver stereotypes are inherited):
- * {@code @Replaces(<original>.class)} on the subclass drops the original from the resolver collection, whereas
- * {@code @Requires(env = "test")} alone does not, because both beans are active in that environment.
- */
 class ReplacesResolverSpec extends AbstractTest {
 
     static final String SPEC_NAME = "ReplacesResolverSpec"

@@ -22,15 +22,6 @@ import jakarta.inject.Singleton
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
 import org.intellij.lang.annotations.Language
 
-/**
- * Input classes are checked against their GraphQL input types in both directions:
- * <ul>
- *     <li>an input field without a Java property, or with one the input {@code ObjectMapper} cannot set (read-only,
- *     ignored, renamed), always fails the startup, wherever the input type is used;</li>
- *     <li>a settable Java property without an input field fails it too, unless
- *     {@code micronaut.graphql.tools.input.unmapped-properties=ignore}.</li>
- * </ul>
- */
 class InputPropertiesSpec extends AbstractTest {
 
     static final String SPEC_LIST_ARGUMENT = "InputPropertiesSpecListArgument"
@@ -411,7 +402,6 @@ type Query {
         String sku
         Integer quantity
 
-        // read-only, so not an input property
         int getTotal() {
             return quantity
         }

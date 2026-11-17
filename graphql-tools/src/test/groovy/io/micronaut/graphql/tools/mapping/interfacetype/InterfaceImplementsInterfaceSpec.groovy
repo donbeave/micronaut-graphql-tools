@@ -10,10 +10,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * An interface that implements another interface: fields returning either of them bind the object types that
- * implement them.
- */
 class InterfaceImplementsInterfaceSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InterfaceImplementsInterfaceSpec"

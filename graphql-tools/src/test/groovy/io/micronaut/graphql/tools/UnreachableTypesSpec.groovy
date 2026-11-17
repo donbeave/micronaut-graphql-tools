@@ -13,17 +13,10 @@ import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 
-/**
- * SDL object, interface and union types that no field reachable from a root operation type returns have no binding.
- * By default they fail the startup, all of them in one error; {@code micronaut.graphql.tools.allow-unreachable} exempts named types and
- * {@code micronaut.graphql.tools.unreachable-types=ignore} exempts all of them.
- */
 class UnreachableTypesSpec extends AbstractTest {
 
     static final String SPEC_NAME = "UnreachableTypesSpec"
 
-    // these tests pin the rules for object, interface and union types; strict mode (the default) extends them to
-    // enum, input and scalar types, see StrictModeSpec
     static final Map NOT_STRICT = ['micronaut.graphql.tools.strict': false]
 
     @Language("GraphQL")

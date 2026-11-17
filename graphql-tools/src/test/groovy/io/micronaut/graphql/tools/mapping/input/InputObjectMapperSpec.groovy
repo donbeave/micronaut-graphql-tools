@@ -27,11 +27,6 @@ import org.intellij.lang.annotations.Language
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
-/**
- * Arguments and input objects are converted with a private {@link ObjectMapper} unless the application provides one
- * named {@value GraphQLToolsConfiguration#INPUT_OBJECT_MAPPER}. The private mapper keeps Jackson's default
- * {@code FAIL_ON_UNKNOWN_PROPERTIES=true}.
- */
 class InputObjectMapperSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InputObjectMapperSpec"
@@ -164,7 +159,6 @@ input RegistrationInput {
         @Singleton
         @Named(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER)
         ObjectMapper graphQLToolsObjectMapper() {
-            // no JSR-310 module: LocalDate and OffsetDateTime values still reach the input class
             return new ObjectMapper().registerModule(new SimpleModule('upper-case-strings')
                     .addDeserializer(String, new UpperCaseDeserializer()))
         }
@@ -225,7 +219,6 @@ input RegistrationInput {
         LocalDate birthday
         OffsetDateTime confirmedAt
 
-        // read-only: the binding finds the property, but Jackson cannot set it
         String getDisplayName() {
             return email
         }

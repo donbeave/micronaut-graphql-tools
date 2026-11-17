@@ -26,9 +26,6 @@ public final class UnwrappedDirectiveWiringException extends RuntimeException {
 
     private final List<String> beans;
 
-    /**
-     * @param beans the unwrapped beans, described by their bean definitions
-     */
     public UnwrappedDirectiveWiringException(List<String> beans) {
         super("SchemaDirectiveWiring beans that no SchemaDirective bean wraps: " + String.join(", ", beans)
                 + ".\n  The library applies a wiring only through a SchemaDirective: wrap each one in "
@@ -39,9 +36,6 @@ public final class UnwrappedDirectiveWiringException extends RuntimeException {
         this.beans = List.copyOf(beans);
     }
 
-    /**
-     * @return the unwrapped beans, described by their bean definitions
-     */
     public List<String> getBeans() {
         return beans;
     }

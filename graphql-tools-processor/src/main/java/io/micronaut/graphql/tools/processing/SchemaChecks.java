@@ -50,19 +50,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 
-/**
- * The checks that need the schema files and the options only, not the Java code. They report what the startup
- * reports for the same schema and options:
- * <ul>
- *     <li>no schema definition ({@code schema { query: ... }});</li>
- *     <li>an entry of {@code resolverDirectives} that the schema does not declare;</li>
- *     <li>an applied directive that the schema does not declare (graphql-java would fail to build the schema);</li>
- *     <li>unreachable types: object, interface and union types that no field reachable from a root operation type
- *     returns, and in strict mode enum, input and scalar types that no reachable field, argument, input field or
- *     directive definition uses, unless {@code allowUnreachable} names them or {@code unreachableTypes} is
- *     {@code ignore}; and {@code allowUnreachable} entries that are not unreachable types.</li>
- * </ul>
- */
 final class SchemaChecks {
 
     private final TypeDefinitionRegistry registry;
@@ -70,22 +57,12 @@ final class SchemaChecks {
     private final Problems problems;
     private final Set<String> unreachableLines = new TreeSet<>();
 
-    /**
-     * @param registry the schema
-     * @param options  the options
-     * @param problems where errors are reported
-     */
     SchemaChecks(TypeDefinitionRegistry registry, ProcessorOptions options, Problems problems) {
         this.registry = registry;
         this.options = options;
         this.problems = problems;
     }
 
-    /**
-     * Runs every check.
-     *
-     * @return whether the schema has a schema definition, which the checks of the Java code need
-     */
     boolean check() {
         checkAppliedDirectives();
         checkResolverDirectives();
@@ -99,11 +76,6 @@ final class SchemaChecks {
         return true;
     }
 
-    /**
-     * @return the types the binding manifest lists as {@code !unreachable}, as at startup: the unreachable object,
-     * interface and union types that are allowed (all of them with {@code unreachableTypes=ignore}) and every unused
-     * enum, input and scalar type
-     */
     Set<String> unreachableLines() {
         return unreachableLines;
     }
@@ -231,12 +203,6 @@ final class SchemaChecks {
         });
     }
 
-    /**
-     * @param schemaDefinition the schema definition
-     * @return the types the binding reaches from the root operation types: the types of their fields, arguments and
-     * input fields, transitively; for an interface every implementation, for a union every member, for an object type
-     * every interface it implements
-     */
     Set<String> reachableTypes(SchemaDefinition schemaDefinition) {
         Set<String> reached = new HashSet<>();
         Deque<String> pending = new ArrayDeque<>();
@@ -292,10 +258,6 @@ final class SchemaChecks {
         return result;
     }
 
-    /**
-     * @param type a type definition
-     * @return its kind as the schema language writes it
-     */
     static String kind(TypeDefinition<?> type) {
         if (type instanceof ObjectTypeDefinition) {
             return "object type";
@@ -313,10 +275,6 @@ final class SchemaChecks {
         return "type";
     }
 
-    /**
-     * @param type a type reference
-     * @return the name of the named type inside it
-     */
     static String typeName(Type<?> type) {
         Type<?> result = type;
         while (!(result instanceof TypeName)) {

@@ -13,12 +13,6 @@ import org.openjdk.jmh.annotations.TearDown;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Time of the first query after the context started (the start is outside the measurement), with the schema bound at
- * the start or not ({@code micronaut.graphql.tools.eager-init}): the query looks up the {@code GraphQL} bean and
- * executes. One invocation is one fresh context, so the figure includes the first use of the classes the request
- * needs, with the binding added when it was not done at the start.
- */
 @BenchmarkMode(Mode.SingleShotTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class FirstRequestBenchmark extends AbstractEagerInitState {

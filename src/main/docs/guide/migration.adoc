@@ -1,1 +1,1 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+Migration notes for each release line. The page for applications that run `1.0.0-SNAPSHOT` lists every breaking change with its fix, and the breaking changes of each release are listed on the Breaking Changes page.

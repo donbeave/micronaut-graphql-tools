@@ -10,10 +10,6 @@ import org.openjdk.jmh.annotations.State;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * A whole query: parse, validate and execute a list of 1,000 or 10,000 objects with four fields each (three property
- * fetches and one type resolver method).
- */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)

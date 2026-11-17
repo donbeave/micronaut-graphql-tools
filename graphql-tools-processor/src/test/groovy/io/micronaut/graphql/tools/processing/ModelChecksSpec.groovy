@@ -2,11 +2,6 @@ package io.micronaut.graphql.tools.processing
 
 import spock.lang.Specification
 
-/**
- * The checks of model classes, enums, input classes and abstract types against the schema: one Java type per schema
- * type, bean introspections, enum constants in both directions, input class properties in both directions with their
- * types, and Java interfaces for unions and interfaces.
- */
 class ModelChecksSpec extends Specification {
 
     static final String SCHEMA = '''schema {

@@ -44,16 +44,10 @@ public final class ResolverRequiredException extends AbstractMappingException {
         this.members = members;
     }
 
-    /**
-     * @return the directive on the field that requires a type resolver method
-     */
     public String getDirective() {
         return directive;
     }
 
-    /**
-     * @return the members of the Java type that could bind the field instead, by class
-     */
     public Map<Class<?>, List<String>> getMembers() {
         return members;
     }

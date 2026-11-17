@@ -14,10 +14,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * The library's {@link GraphQLSchema} is a bean of its own, and the library's {@link GraphQL} bean steps aside when
- * the application provides one, as does the library's schema when the application provides its own schema.
- */
 class GraphQLSchemaBeanSpec extends AbstractTest {
 
     static final String SPEC_NAME = "GraphQLSchemaBeanSpec"

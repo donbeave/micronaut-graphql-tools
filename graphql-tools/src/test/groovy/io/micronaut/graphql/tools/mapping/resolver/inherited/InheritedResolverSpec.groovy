@@ -23,11 +23,6 @@ import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * {@link GraphQLRootResolver} and {@link GraphQLTypeResolver} are {@link java.lang.annotation.Inherited}: a bean
- * that implements an annotated interface (for example a generated resolver contract) is a resolver without an
- * annotation of its own. Side effect: a bean that extends an annotated class is a resolver too.
- */
 class InheritedResolverSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InheritedResolverSpec"
@@ -122,8 +117,6 @@ type Book {
             return context.proceed()
         }
     }
-
-    // --- side effect: a bean that extends an annotated class is a resolver too ---
 
     static final String SUBCLASS_SPEC_NAME = "InheritedResolverSpec.subclass"
 
@@ -237,8 +230,6 @@ type Book {
     static class SubclassBookResolver extends AnnotatedBookResolver {
     }
 
-
-    // --- one bean implementing several type resolver contracts ---
 
     static final String CONTRACTS_SPEC_NAME = "InheritedResolverSpec.contracts"
 
@@ -354,8 +345,6 @@ type Writer {
         }
     }
 
-
-    // --- the contract types cannot be read (class annotations unavailable to reflection) ---
 
     void "a bean that is a type resolver only through inheritance fails when its contract types cannot be read"() {
         given:

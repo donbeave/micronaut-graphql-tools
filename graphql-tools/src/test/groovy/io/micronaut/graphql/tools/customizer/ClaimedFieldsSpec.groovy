@@ -19,12 +19,6 @@ import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * A {@link RuntimeWiringCustomizer} serves a field with a hand-written data fetcher by claiming it in
- * {@code claimedFields()}: the library does not bind it, so no Java member is needed. A claim for a coordinate that
- * the schema does not define fails the startup, and a customizer that replaces a bound field without claiming it
- * still fails.
- */
 class ClaimedFieldsSpec extends AbstractTest {
 
     static final String SPEC_NAME = "ClaimedFieldsSpec"
