@@ -37,6 +37,21 @@ import java.util.stream.Collectors;
 @Internal
 final class StrictModeChecks {
 
+    /**
+     * The public methods of {@link Object}, as {@link #signature(String, Class[])} names them. A fixed set, so that
+     * the check neither reflects on {@link Object} nor throws.
+     */
+    static final Set<String> OBJECT_METHOD_SIGNATURES = Set.of(
+            "equals(java.lang.Object)",
+            "hashCode()",
+            "toString()",
+            "getClass()",
+            "notify()",
+            "notifyAll()",
+            "wait()",
+            "wait(long)",
+            "wait(long,int)");
+
     private final BindingManifestRecorder manifestRecorder;
     private final List<String> problems = new ArrayList<>();
 
@@ -102,15 +117,28 @@ final class StrictModeChecks {
      * {@code toString()}: it cannot be made non-public and binds no field by design
      */
     private static boolean isObjectMethod(ExecutableMethod<?, ?> method) {
-        if (method.getDeclaringType() == Object.class) {
-            return true;
-        }
-        try {
-            Object.class.getMethod(method.getMethodName(), method.getArgumentTypes());
-            return true;
-        } catch (NoSuchMethodException e) {
-            return false;
-        }
+        return method.getDeclaringType() == Object.class
+                || isObjectSignature(method.getMethodName(), method.getArgumentTypes());
+    }
+
+    /**
+     * @param name           the method name
+     * @param parameterTypes the parameter types, erased
+     * @return {@code true} when {@link Object} has a public method with this name and these parameter types
+     */
+    static boolean isObjectSignature(String name, Class<?>[] parameterTypes) {
+        return OBJECT_METHOD_SIGNATURES.contains(signature(name, parameterTypes));
+    }
+
+    /**
+     * @param name           the method name
+     * @param parameterTypes the parameter types, erased
+     * @return the method name and its parameter type names, such as {@code wait(long,int)}
+     */
+    static String signature(String name, Class<?>[] parameterTypes) {
+        return Arrays.stream(parameterTypes)
+                .map(Class::getName)
+                .collect(Collectors.joining(",", name + "(", ")"));
     }
 
     /**
