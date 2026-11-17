@@ -1,13 +1,14 @@
 # Micronaut GraphQL Tools
 
-[![Build Status](https://github.com/micronaut-projects/micronaut-graphql-tools/workflows/Java%20CI/badge.svg)](https://github.com/micronaut-projects/micronaut-graphql-tools/actions)
-[![Revved up by Gradle Enterprise](https://img.shields.io/badge/Revved%20up%20by-Gradle%20Enterprise-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.micronaut.io/scans)
+[![Build Status](https://github.com/donbeave/micronaut-graphql-tools/actions/workflows/gradle.yml/badge.svg)](https://github.com/donbeave/micronaut-graphql-tools/actions/workflows/gradle.yml)
 
 Schema-first approach for building GraphQL applications with Micronaut.
 
+This is not an official Micronaut module yet: it is developed here and is intended for later contribution to the Micronaut Foundation. Nothing is published to Maven Central (see [Snapshots and Releases](#snapshots-and-releases)).
+
 ## Documentation
 
-See the [Documentation](https://micronaut-projects.github.io/micronaut-graphql-tools/latest/guide/) for more information.
+The guide sources are in `src/main/docs/guide`; build them with `./gradlew publishGuide` (see [CONTRIBUTING.md](CONTRIBUTING.md)). No documentation site is published yet.
 
 ## Quick start
 
@@ -1080,7 +1081,7 @@ The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the 
 ## Snapshots and Releases
 
 Nothing is published. No snapshot or release of this library is available from Maven Central or any other repository,
-and no workflow publishes one. The only CI workflow, `.github/workflows/gradle.yml`, builds and tests the project.
+and no workflow publishes one. CI (`.github/workflows/gradle.yml` and `native.yml`) builds and tests the project.
 
 Releases are cut by the maintainers by hand, as described in the [Releases](CONTRIBUTING.md#releases) section of
 CONTRIBUTING.md. To use the library before a release, build it yourself and publish it to a local or private
