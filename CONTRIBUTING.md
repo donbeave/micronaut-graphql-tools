@@ -21,9 +21,9 @@ Micronaut GraphQL Tools can be imported into IntelliJ IDEA by opening the projec
 The tests do not need Docker. These are the commands CI runs (`.github/workflows/gradle.yml` and `.github/workflows/native.yml`):
 
 - `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
-- `./gradlew build -PgraphqlJavaVersion=25.1` does the same on the other graphql-java leg; the supported values are `21.3` (default) and `25.1`.
+- `./gradlew build -PgraphqlJavaVersion=<leg>` runs the same build on another graphql-java leg. The legs are defined in `build.gradle.kts` and run in `gradle.yml`.
 - `./gradlew :micronaut-graphql-tools:check` checks the library only; this is the one that works on JDK 17.
-- `./gradlew :test-suite:nativeTest` runs the native image tests (Oracle GraalVM 25); add `-PgraphqlJavaVersion=25.1` for the other leg.
+- `./gradlew :test-suite:nativeTest` runs the native image tests (Oracle GraalVM 25); add `-PgraphqlJavaVersion=<leg>` for another leg.
 
 `.github/workflows/gradle.yml` and `native.yml` are the source of truth if this list and the workflows ever disagree.
 
@@ -114,11 +114,7 @@ Micronaut GraphQL Tools uses [Checkstyle](https://checkstyle.sourceforge.io/) to
 
 Before starting to contribute new code we recommended that you install the IntelliJ [CheckStyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea) plugin and configure it to use `config/checkstyle/checkstyle.xml`.
 
-IntelliJ will mark in red the issues Checkstyle finds. For example:
-
-![](https://github.com/micronaut-projects/micronaut-core/raw/master/src/main/docs/resources/img/checkstyle-issue.png)
-
-In this case, to fix the issues, we need to:
+IntelliJ will mark in red the issues Checkstyle finds. Typical fixes are:
 
 - Add one empty line before `package` in line 16
 - Add the Javadoc for the constructor in line 27

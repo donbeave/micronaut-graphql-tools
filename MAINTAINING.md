@@ -12,7 +12,7 @@ This is not an official Micronaut module yet. This file describes how this repos
 
 ## Triage incoming issues
 
-Issues and pull requests are tracked in the [Roadmap to 1.0](https://github.com/users/donbeave/projects/1) project. Labels in use:
+Issues and pull requests are tracked on the maintainers' "Roadmap to 1.0" project board. Labels in use:
 
 - Kind: `type: bug`, `type: improvement`, `type: enhancement`, `type: docs`, `type: dependency-upgrade`, `type: breaking`, `type: task`, `type: decision`, `type: epic`.
 - Priority: `priority: high`, `priority: medium`, `priority: low`.
