@@ -8,7 +8,7 @@ If you are interested in contributing to Micronaut and are looking for issues to
 
 ## JDK Setup
 
-Micronaut GraphQL Tools currently requires JDK 8.
+Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need GraalVM for JDK 21.
 
 ## IDE Setup
 
