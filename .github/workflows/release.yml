@@ -31,6 +31,7 @@ jobs:
     timeout-minutes: 45
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      sha: ${{ steps.sha.outputs.sha }}
     steps:
       - name: Resolve and validate the tag
         id: tag
@@ -68,6 +69,10 @@ jobs:
           path: source
           fetch-depth: 0
           persist-credentials: false
+      - name: Record the verified commit
+        id: sha
+        working-directory: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Require the tagged commit to be on master
         working-directory: source
         run: |
@@ -132,7 +137,8 @@ jobs:
       - name: Check out the tagged sources
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/${{ needs.verify.outputs.tag }}
+          # The commit that verify built and checked, not the tag again: a tag moved after verify cannot change what is published.
+          ref: ${{ needs.verify.outputs.sha }}
           path: source
           persist-credentials: false
       # No Gradle cache here: the job that holds the write token does not restore a cache.
