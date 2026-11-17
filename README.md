@@ -422,6 +422,8 @@ when the numbers of parameters and arguments differ. There is no positional opt-
 **Migration (breaking):** positional matching has ended. A resolver whose parameter names differ from the SDL argument
 names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<argument name>")`.
 
+### Converting input values
+
 graphql-java hands a data fetcher the coerced argument values: scalar values, enum names, a `Map` per input object
 and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
 including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`), with a Jackson
