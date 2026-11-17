@@ -45,15 +45,20 @@ final class GraphQLUtils {
     }
 
     static String getType(TypeDefinition<?> typeDefinition) {
-        return switch (typeDefinition) {
-            case EnumTypeDefinition enumTypeDefinition -> "enum";
-            case UnionTypeDefinition unionTypeDefinition -> "union";
-            case ObjectTypeDefinition objectTypeDefinition -> "type";
-            case InputObjectTypeDefinition inputObjectTypeDefinition -> "input";
-            case InterfaceTypeDefinition interfaceTypeDefinition -> "interface";
-            case ScalarTypeDefinition scalarTypeDefinition -> "scalar";
-            case null, default -> throw unsupportedTypeDefinition(typeDefinition);
-        };
+        if (typeDefinition instanceof EnumTypeDefinition) {
+            return "enum";
+        } else if (typeDefinition instanceof UnionTypeDefinition) {
+            return "union";
+        } else if (typeDefinition instanceof ObjectTypeDefinition) {
+            return "type";
+        } else if (typeDefinition instanceof InputObjectTypeDefinition) {
+            return "input";
+        } else if (typeDefinition instanceof InterfaceTypeDefinition) {
+            return "interface";
+        } else if (typeDefinition instanceof ScalarTypeDefinition) {
+            return "scalar";
+        }
+        throw unsupportedTypeDefinition(typeDefinition);
     }
 
     /**
@@ -61,12 +66,14 @@ final class GraphQLUtils {
      * @return the type as written in the schema, e.g. {@code [String!]!}
      */
     static String printType(Type<?> graphQlType) {
-        return switch (graphQlType) {
-            case NonNullType nonNullType -> printType(nonNullType.getType()) + "!";
-            case ListType listType -> "[" + printType(listType.getType()) + "]";
-            case TypeName typeName -> typeName.getName();
-            default -> graphQlType.toString();
-        };
+        if (graphQlType instanceof NonNullType nonNullType) {
+            return printType(nonNullType.getType()) + "!";
+        } else if (graphQlType instanceof ListType listType) {
+            return "[" + printType(listType.getType()) + "]";
+        } else if (graphQlType instanceof TypeName typeName) {
+            return typeName.getName();
+        }
+        return graphQlType.toString();
     }
 
     static TypeName getTypeName(Type<?> graphQlType) {

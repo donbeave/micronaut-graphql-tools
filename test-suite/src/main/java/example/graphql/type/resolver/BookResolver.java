@@ -12,6 +12,10 @@ import org.dataloader.DataLoader;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 
+/**
+ * A type resolver for {@code Book}. It overrides {@code toString}, {@code equals} and {@code hashCode}, which the
+ * binding must never report as unbound, in a JVM and in a native image alike.
+ */
 @GraphQLTypeResolver(Book.class)
 public class BookResolver {
 
@@ -26,6 +30,21 @@ public class BookResolver {
         DataLoader<String, List<BookSeller>> dataLoader = dfe.getDataLoader(BookSellerDataLoader.class.getName());
 
         return dataLoader.load(book.getId());
+    }
+
+    @Override
+    public String toString() {
+        return "BookResolver";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return this == o || o != null && getClass() == o.getClass();
+    }
+
+    @Override
+    public int hashCode() {
+        return BookResolver.class.hashCode();
     }
 
 }

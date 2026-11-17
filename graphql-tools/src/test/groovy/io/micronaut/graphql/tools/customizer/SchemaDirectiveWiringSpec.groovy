@@ -12,6 +12,7 @@ import graphql.validation.rules.ValidationRules
 import graphql.validation.schemawiring.ValidationSchemaWiring
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Prototype
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
@@ -41,6 +42,10 @@ class SchemaDirectiveWiringSpec extends AbstractTest {
     static final String SPEC_NAME_REPLACED = "SchemaDirectiveWiringSpec.replaced"
     static final String SPEC_NAME_WRAPPED_BEAN = "SchemaDirectiveWiringSpec.wrappedBean"
     static final String SPEC_NAME_UNWRAPPED_BEAN = "SchemaDirectiveWiringSpec.unwrappedBean"
+
+    static final String SPEC_NAME_PROTOTYPE = "SchemaDirectiveWiringSpec.prototype"
+    static final String SPEC_NAME_PROTOTYPE_UNWRAPPED = "SchemaDirectiveWiringSpec.prototypeUnwrapped"
+    static final String SPEC_NAME_CUSTOMIZER_BEAN = "SchemaDirectiveWiringSpec.customizerBean"
 
     static final List<String> UPPER_CALLS = Collections.synchronizedList([])
 
@@ -108,6 +113,46 @@ type Query {
                 "SchemaDirective.named(name, wiring) (called where the directive is applied) or " +
                 "SchemaDirective.everyElement(names, wiring) (called for every schema element), injecting the bean " +
                 "into the SchemaDirective's factory method, or remove the bean."
+    }
+
+    void "a @Prototype SchemaDirectiveWiring bean wrapped by a SchemaDirective starts and applies"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME_PROTOTYPE)
+
+        when:
+        def result = executeQuery('{ hello plain }')
+
+        then:
+        result.errors.isEmpty()
+        result.data == [hello: 'WORLD', plain: 'plain']
+        UPPER_CALLS == ['hello']
+    }
+
+    void "a @Prototype SchemaDirectiveWiring bean that no SchemaDirective wraps still fails the startup"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME_PROTOTYPE_UNWRAPPED)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof UnwrappedDirectiveWiringException
+        e.cause.beans.size() == 1
+        e.cause.beans[0].startsWith(PrototypeUpperWiring.name)
+    }
+
+    void "a SchemaDirectiveWiring bean that a RuntimeWiringCustomizer registers starts and applies"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME_CUSTOMIZER_BEAN)
+
+        when:
+        def result = executeQuery('{ hello plain }')
+
+        then:
+        result.errors.isEmpty()
+        result.data == [hello: 'WORLD', plain: 'plain']
+        UPPER_CALLS == ['hello']
     }
 
     void "graphql-java-extended-validation: its ValidationSchemaWiring for every element, naming its constraint directives"() {
@@ -269,6 +314,48 @@ type Query {
         }
     }
 
+    @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec\\.prototype(|Unwrapped)')
+    @Prototype
+    static class PrototypeUpperWiring extends UpperWiring {
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_PROTOTYPE)
+    @Factory
+    static class PrototypeFactory {
+        @Bean
+        @Singleton
+        SchemaDirective upper(PrototypeUpperWiring wiring) {
+            return SchemaDirective.named('upper', wiring)
+        }
+
+        @Bean
+        @Singleton
+        SchemaDirective suffix() {
+            return SchemaDirective.everyElement(['suffix'], new SuffixWiring('only'))
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_CUSTOMIZER_BEAN)
+    @Singleton
+    static class CustomizerUpperWiring extends UpperWiring {
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_CUSTOMIZER_BEAN)
+    @Singleton
+    static class RegisterUpper implements RuntimeWiringCustomizer {
+        private final CustomizerUpperWiring wiring
+
+        RegisterUpper(CustomizerUpperWiring wiring) {
+            this.wiring = wiring
+        }
+
+        @Override
+        void customize(RuntimeWiring.Builder builder) {
+            builder.directive('upper', wiring)
+            builder.directive('suffix', new SuffixWiring('only'))
+        }
+    }
+
     @Requires(property = 'spec.name', value = SPEC_NAME_UNWRAPPED_BEAN)
     @Factory
     static class UnwrappedFactory {
@@ -279,7 +366,7 @@ type Query {
         }
     }
 
-    @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec(|\\.duplicate|\\.replaced|\\.wrappedBean|\\.unwrappedBean)')
+    @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec(|\\.duplicate|\\.replaced|\\.wrappedBean|\\.unwrappedBean|\\.prototype|\\.prototypeUnwrapped|\\.customizerBean)')
     @GraphQLRootResolver
     static class Query {
         String hello() {

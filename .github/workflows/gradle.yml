@@ -22,6 +22,11 @@ jobs:
         java: ['21']
         # graphql-java compatibility legs, see build.gradle.kts
         graphql-java: ['21.3', '25.1']
+        include:
+          # JDK 25: the full build on the default graphql-java leg
+          - java: '25'
+            graphql-java: '21.3'
+    # The JDK 21 names are required checks: keep them stable
     name: build (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +39,43 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
       - name: Build with Gradle
         run: ./gradlew build --no-daemon --continue -PgraphqlJavaVersion=${{ matrix.graphql-java }}
+        env:
+          # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
+          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          GRADLE_ENTERPRISE_CACHE_USERNAME: ${{ secrets.GRADLE_ENTERPRISE_CACHE_USERNAME }}
+          GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-java${{ matrix.java }}-graphql-java${{ matrix.graphql-java }}
+          path: |
+            **/build/test-results/test/TEST-*.xml
+            **/build/reports/tests/test/
+          if-no-files-found: ignore
+
+  build-java-17:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17']
+        # the default graphql-java leg only
+        graphql-java: ['21.3']
+    # The library modules compile to release 17 (see buildSrc); test-suite needs Java 21 and cannot run here.
+    name: check library (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build with Gradle
+        run: ./gradlew :micronaut-graphql-tools:check --no-daemon --continue -PgraphqlJavaVersion=${{ matrix.graphql-java }}
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}

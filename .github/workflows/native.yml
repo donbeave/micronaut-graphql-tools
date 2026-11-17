@@ -1,0 +1,52 @@
+name: Native Image CI
+on:
+  push:
+    branches:
+      - master
+      - '[1-9]+.[0-9]+.x'
+  pull_request:
+    branches:
+      - master
+      - '[1-9]+.[0-9]+.x'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        graalvm: ['21']
+        # graphql-java compatibility legs, see build.gradle.kts
+        graphql-java: ['21.3', '25.1']
+    name: native (GraalVM ${{ matrix.graalvm }}, graphql-java ${{ matrix.graphql-java }})
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          distribution: 'graalvm'
+          java-version: ${{ matrix.graalvm }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'gradle'
+          native-image-job-reports: 'true'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Run native tests
+        run: ./gradlew :test-suite:nativeTest --no-daemon -PgraphqlJavaVersion=${{ matrix.graphql-java }}
+        env:
+          GRAALVM_QUICK_BUILD: 'true'
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-test-reports-graalvm${{ matrix.graalvm }}-graphql-java${{ matrix.graphql-java }}
+          path: |
+            test-suite/build/test-results/test-native/TEST-*.xml
+            test-suite/build/test-results/test-native/
+          if-no-files-found: ignore
