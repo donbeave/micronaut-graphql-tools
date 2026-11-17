@@ -80,3 +80,7 @@ In this case, to fix the issues, we need to:
 - Add an space after `if` in line 34
 
 The plugin also adds a new tab in the bottom of the IDE to run Checkstyle and show errors and warnings. We recommend that you run the report and fix all issues before submitting a pull request.
+
+## Releases
+
+Nothing is published automatically. There are no release, snapshot or Maven Central workflows; the only CI workflow is `.github/workflows/gradle.yml`, which builds and tests. Releases are cut by the maintainers by hand.

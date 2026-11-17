@@ -1,8 +1,6 @@
 # Micronaut GraphQL Tools
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.micronaut.project-template/micronaut-graphql-tools.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22io.micronaut.project-template%22%20AND%20a:%22micronaut-graphql-tools%22)
 [![Build Status](https://github.com/micronaut-projects/micronaut-graphql-tools/workflows/Java%20CI/badge.svg)](https://github.com/micronaut-projects/micronaut-graphql-tools/actions)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=micronaut-projects_micronaut-template&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=micronaut-projects_micronaut-template)
 [![Revved up by Gradle Enterprise](https://img.shields.io/badge/Revved%20up%20by-Gradle%20Enterprise-06A0CE?logo=Gradle&labelColor=02303A)](https://ge.micronaut.io/scans)
 
 Schema-first approach for building GraphQL applications with Micronaut.
@@ -10,8 +8,6 @@ Schema-first approach for building GraphQL applications with Micronaut.
 ## Documentation
 
 See the [Documentation](https://micronaut-projects.github.io/micronaut-graphql-tools/latest/guide/) for more information.
-
-See the [Snapshot Documentation](https://micronaut-projects.github.io/micronaut-graphql-tools/snapshot/guide/) for the current development docs.
 
 ## Quick start
 
@@ -1025,18 +1021,9 @@ The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the 
 
 ## Snapshots and Releases
 
-Snapshots are not published automatically at the moment. The CI workflow (`gradle.yml`) builds and tests only; the
-snapshot workflow (`publish-snapshot.yml`) is started manually and still runs on Java 11, so it cannot build this
-project until it moves to Java 21. Build a version yourself as described in
-[Artifacts and versions](#artifacts-and-versions).
+Nothing is published. No snapshot or release of this library is available from Maven Central or any other repository,
+and no workflow publishes one. The only CI workflow, `.github/workflows/gradle.yml`, builds and tests the project.
 
-See the documentation in the [Micronaut Docs](https://docs.micronaut.io/latest/guide/index.html#usingsnapshots) for how to configure your build to use snapshots.
-
-Releases are published to Maven Central via [Github Actions](https://github.com/micronaut-projects/micronaut-graphql-tools/actions).
-
-Releases are completely automated. To perform a release use the following steps:
-
-* [Publish the draft release](https://github.com/micronaut-projects/micronaut-graphql-tools/releases). There should be already a draft release created, edit and publish it. The Git Tag should start with `v`. For example `v1.0.0`.
-* [Monitor the Workflow](https://github.com/micronaut-projects/micronaut-graphql-tools/actions?query=workflow%3ARelease) to check it passed successfully.
-* If everything went fine, [publish to Maven Central](https://github.com/micronaut-projects/micronaut-graphql-tools/actions?query=workflow%3A"Maven+Central+Sync").
-* Celebrate!
+Releases are cut by the maintainers by hand, as described in the [Releases](CONTRIBUTING.md#releases) section of
+CONTRIBUTING.md. To use the library before a release, build it yourself and publish it to a local or private
+repository as described in [Artifacts and versions](#artifacts-and-versions).
