@@ -17,6 +17,7 @@ include("graphql-tools")
 include("graphql-tools-bom")
 include("graphql-tools-processor")
 include("benchmarks")
+include("graphql-tools-tck")
 include("test-suite-java")
 include("test-suite-kotlin")
 include("test-suite-groovy")
@@ -28,7 +29,8 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
 }
 
 // The standardized names prefix every module with "micronaut-"; the benchmarks keep the short name that the contributor
-// guide and CI use (:benchmarks:allocationTest), like the test-suite-* modules.
+// guide and CI use (:benchmarks:allocationTest), like the test-suite-* modules. The TCK is a test module, never published.
 gradle.settingsEvaluated {
     rootProject.children.single { it.name == "micronaut-benchmarks" }.name = "benchmarks"
+    rootProject.children.single { it.name == "micronaut-graphql-tools-tck" }.name = "graphql-tools-tck"
 }

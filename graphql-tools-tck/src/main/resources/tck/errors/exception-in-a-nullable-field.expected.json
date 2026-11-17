@@ -1,0 +1,11 @@
+{
+  "data": { "ok": "fine", "failNullable": null },
+  "errors": [
+    {
+      "message": "Exception while fetching data (/failNullable) : boom",
+      "locations": [{ "line": 3, "column": 3 }],
+      "path": ["failNullable"],
+      "extensions": { "classification": "DataFetchingException" }
+    }
+  ]
+}

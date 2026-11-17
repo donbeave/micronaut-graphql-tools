@@ -1,0 +1,5 @@
+{
+  "data": {
+    "lookup": { "kind": "UNION", "possibleTypes": [{ "name": "Song" }, { "name": "Podcast" }, { "name": "Missing" }] }
+  }
+}

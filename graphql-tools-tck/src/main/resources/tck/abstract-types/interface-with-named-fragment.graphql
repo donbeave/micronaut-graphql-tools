@@ -1,0 +1,15 @@
+query Library {
+  library {
+    ...Details
+    ...Lengths
+  }
+}
+
+fragment Details on Media {
+  title
+  ... on Song { by: artist }
+}
+
+fragment Lengths on Media {
+  seconds
+}

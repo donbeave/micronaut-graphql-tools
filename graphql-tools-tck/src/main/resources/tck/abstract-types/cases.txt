@@ -1,0 +1,8 @@
+interface-with-inline-fragments
+interface-with-named-fragment
+union-results
+typename-only
+introspection-possible-types
+introspection-union-members
+introspection-implemented-interfaces
+operation-name

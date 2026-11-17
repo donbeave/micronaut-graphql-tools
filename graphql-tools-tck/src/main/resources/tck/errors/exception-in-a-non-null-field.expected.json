@@ -1,0 +1,11 @@
+{
+  "data": null,
+  "errors": [
+    {
+      "message": "Exception while fetching data (/failNonNull) : boom",
+      "locations": [{ "line": 3, "column": 3 }],
+      "path": ["failNonNull"],
+      "extensions": { "classification": "DataFetchingException" }
+    }
+  ]
+}

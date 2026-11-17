@@ -1,0 +1,3 @@
+{
+  lookup: __type(name: "Lookup") { kind possibleTypes { name } }
+}

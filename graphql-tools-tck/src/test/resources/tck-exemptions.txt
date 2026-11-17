@@ -1,0 +1,2 @@
+# The test fixture of ExemptionsTest: one '<id> <reason>' per line.
+arguments the fixtures of this suite are not written yet

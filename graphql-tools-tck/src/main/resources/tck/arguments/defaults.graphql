@@ -1,0 +1,7 @@
+{
+  none: defaults
+  text: defaults(text: "given")
+  count: defaults(count: 9)
+  color: defaults(color: RED)
+  all: defaults(text: "t", count: 0, color: GREEN)
+}

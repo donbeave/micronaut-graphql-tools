@@ -1,0 +1,11 @@
+{
+  "data": { "ok": "fine", "nested": null },
+  "errors": [
+    {
+      "message": "Exception while fetching data (/nested/broken) : boom",
+      "locations": [{ "line": 5, "column": 5 }],
+      "path": ["nested", "broken"],
+      "extensions": { "classification": "DataFetchingException" }
+    }
+  ]
+}
