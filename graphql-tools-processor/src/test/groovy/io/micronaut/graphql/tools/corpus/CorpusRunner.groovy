@@ -132,9 +132,21 @@ final class CorpusRunner {
      * Writes an expected file. A single-language case, or the first language of a case, writes the base file; another
      * language writes an override only where it differs from the base, and removes a stale one.
      */
-    private static void write(CorpusCase c, Language language, String file, String text) {
+    private void write(CorpusCase c, Language language, String file, String text) {
         Path base = c.expectedPath(null, file)
         if (language == c.languages().first() || !Files.exists(base)) {
+            // a language this runner does not compile (Kotlin) reads the base file: keep what it reads today as its own
+            // override, so that this update never changes a verdict that was not recomputed (corpusKotlin judges it)
+            if (Files.exists(base)) {
+                String old = Files.readString(base)
+                c.languages().findAll { it != language && !compilers.containsKey(it) && !c.hasOwnExpected(it, file) }.each { Language skipped ->
+                    if (old != text) {
+                        Path own = c.expectedPath(skipped, file)
+                        Files.createDirectories(own.parent)
+                        Files.writeString(own, old, StandardCharsets.UTF_8)
+                    }
+                }
+            }
             Files.createDirectories(base.parent)
             Files.writeString(base, text, StandardCharsets.UTF_8)
             return

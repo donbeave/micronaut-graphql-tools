@@ -46,8 +46,10 @@ final class CorpusStartup {
         Map<String, Object> result = new LinkedHashMap<>()
         List<List<String>> findings = []
         result.put('findings', findings)
-        ApplicationContext context = ApplicationContext.builder(properties, environments as String[]).singletons(registry).start()
+        ApplicationContext context = null
         try {
+            // the start is guarded too: with eager-init=true the binding runs while the context starts
+            context = ApplicationContext.builder(properties, environments as String[]).singletons(registry).start()
             context.getBean(GraphQL)
             String manifest = context.getBean(BindingManifest).render()
             result.put('manifest', manifest.readLines().findAll { !it.startsWith('#') }.join('\n') + '\n')
@@ -59,7 +61,7 @@ final class CorpusStartup {
                 findings.addAll(flatten(known))
             }
         } finally {
-            context.close()
+            context?.close()
         }
         return result
     }

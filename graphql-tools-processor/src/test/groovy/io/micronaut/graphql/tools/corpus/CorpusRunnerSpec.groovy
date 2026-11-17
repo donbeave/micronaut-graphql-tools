@@ -344,4 +344,17 @@ class CorpusRunnerSpec extends Specification {
         message { runner(root, bound).run(new Corpus(root).byName('a'), Language.JAVA) } == null
     }
 
+    void "the golden update keeps the verdict of a language it does not compile (Kotlin) as an override"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 0\n', ['a/kotlin/example/A.kt': 'package example\n'])
+
+        when:
+        runner(root, Verdict.failed([MISSING]), Verdict.unavailable(), true).run(new Corpus(root).byName('a'), Language.JAVA)
+
+        then:
+        Files.readString(dir.resolve('a/expected/runtime.txt')) == "MethodNotFoundException Query.missing schema.graphqls:3:3\n"
+        Files.readString(dir.resolve('a/expected/kotlin/runtime.txt')) == 'ok\n'
+        new Corpus(root).problems == []
+    }
+
 }
