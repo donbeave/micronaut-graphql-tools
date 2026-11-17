@@ -154,6 +154,7 @@ class CorpusRunnerSpec extends Specification {
         message { runner(root, Verdict.bound('Query.a: String → root\n')).run(c, Language.JAVA) } == null
         message { runner(root, Verdict.bound('Query.a: String → property\n')).run(c, Language.JAVA) }
                 .contains('the binding manifest differs from expected/manifest.txt')
+        message { runner(root, Verdict.bound()).run(c, Language.JAVA) }.contains('the case does not record a manifest')
     }
 
     void "the time of each case and language is recorded"() {
@@ -332,10 +333,12 @@ class CorpusRunnerSpec extends Specification {
         when:
         runner(root, Verdict.failed([MISSING, UNBOUND]), Verdict.unavailable(), true).run(new Corpus(root).byName('a'), Language.JAVA)
 
-        then: 'a failing startup has no manifest, so the recorded (empty) manifest file is left alone'
+        then: 'a failing startup has no manifest, so the recorded manifest expectation is removed'
+        !Files.exists(dir.resolve('a/expected/manifest.txt'))
         Files.readString(dir.resolve('a/expected/runtime.txt')) == "MethodNotFoundException Query.missing schema.graphqls:3:3\nunbound-resolver-method example.A#stray() -\n"
 
-        when:
+        when: 'the expectation is recorded again (an empty manifest file marks the case)'
+        Files.writeString(dir.resolve('a/expected/manifest.txt'), '')
         runner(root, bound, Verdict.unavailable(), true).run(new Corpus(root).byName('a'), Language.JAVA)
 
         then:

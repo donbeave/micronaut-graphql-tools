@@ -75,8 +75,17 @@ final class CorpusRunner {
             if (update) {
                 CorpusCase fresh = CorpusCase.load(corpus.root, corpusCase.dir)
                 write(fresh, language, 'runtime.txt', runtime.lines().join('\n') + '\n')
-                if (runtime.bound && recorded(fresh, language, 'manifest.txt')) {
-                    write(fresh, language, 'manifest.txt', runtime.manifest)
+                if (recorded(fresh, language, 'manifest.txt')) {
+                    if (runtime.bound && runtime.manifest != null) {
+                        write(fresh, language, 'manifest.txt', runtime.manifest)
+                    } else if (!runtime.bound) {
+                        // a startup that fails has no manifest: drop the expectation (its removal shows in the diff), the
+                        // shared base file only when this language is the one that writes it
+                        Files.deleteIfExists(fresh.expectedPath(language, 'manifest.txt'))
+                        if (language == fresh.languages().first()) {
+                            Files.deleteIfExists(fresh.expectedPath(null, 'manifest.txt'))
+                        }
+                    }
                 }
                 if (compile.available) {
                     write(fresh, language, 'compile.txt', compile.lines().join('\n') + '\n')
@@ -103,6 +112,8 @@ final class CorpusRunner {
         if (expectedManifest != null) {
             if (!runtime.bound) {
                 failures.add('expected/manifest.txt is recorded but the startup does not bind')
+            } else if (runtime.manifest == null) {
+                failures.add('expected/manifest.txt is recorded but the case does not record a manifest (manifest.record is off)')
             } else if (expectedManifest != runtime.manifest) {
                 failures.add("the binding manifest differs from expected/manifest.txt:\n${diff(expectedManifest.readLines(), runtime.manifest.readLines())}".toString())
             }

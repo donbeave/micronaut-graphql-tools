@@ -51,8 +51,11 @@ final class CorpusStartup {
             // the start is guarded too: with eager-init=true the binding runs while the context starts
             context = ApplicationContext.builder(properties, environments as String[]).singletons(registry).start()
             context.getBean(GraphQL)
-            String manifest = context.getBean(BindingManifest).render()
-            result.put('manifest', manifest.readLines().findAll { !it.startsWith('#') }.join('\n') + '\n')
+            // the manifest bean cannot be read when the case turns recording off: a bound startup then has no manifest
+            if (String.valueOf(properties.get('micronaut.graphql.tools.manifest.record')) == 'true') {
+                String manifest = context.getBean(BindingManifest).render()
+                result.put('manifest', manifest.readLines().findAll { !it.startsWith('#') }.join('\n') + '\n')
+            }
         } catch (RuntimeException e) {
             Throwable known = causes(e).find { it.getClass().name.startsWith('io.micronaut.graphql.tools.exceptions.') }
             if (known == null) {
