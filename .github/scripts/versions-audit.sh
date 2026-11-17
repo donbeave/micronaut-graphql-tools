@@ -98,7 +98,7 @@ compare "gradle wrapper" "$(sed -n 's/.*gradle-\(.*\)-bin.zip/\1/p' gradle/wrapp
 
 # mise: tools and JDKs. Supported JDK lines are 17, 21 and 25 (LTS); the canary line is the newest GA JDK.
 mise_pin() { sed -n "s/^$1 = \"\\(.*\\)\"/\\1/p" "$2"; }
-compare "actionlint" "$(mise_pin actionlint mise.toml)" "$(gh api repos/rhysd/actionlint/releases/latest --jq .tag_name | sed 's/^v//')" "newest"
+compare "jactionlint" "$(mise_pin jactionlint mise.toml)" "$(gh api repos/jdx/jactionlint/releases/latest --jq .tag_name | sed 's/^v//')" "newest"
 graalvm=$(mise_pin java mise.toml)
 compare "java (mise.toml)" "$graalvm" "$(mise ls-remote java oracle-graalvm-25 | grep -E '^oracle-graalvm-25\.[0-9.]+$' | sort -V | tail -1)" "Oracle GraalVM 25.x"
 for jdk in 17 21 25 27; do
