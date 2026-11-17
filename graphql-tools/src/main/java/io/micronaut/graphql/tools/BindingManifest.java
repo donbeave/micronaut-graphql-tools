@@ -58,7 +58,7 @@ public final class BindingManifest {
      */
     public static final String FORMAT = "# graphql-binding-manifest 1";
 
-    private final Supplier<Content> renderer;
+    private Supplier<Content> renderer;
     private volatile Content content;
 
     /**
@@ -83,6 +83,8 @@ public final class BindingManifest {
                 if (result == null) {
                     result = renderer.get();
                     content = result;
+                    // the recorded facts (definitions, schema, arguments) are not needed again
+                    renderer = null;
                 }
             }
         }
