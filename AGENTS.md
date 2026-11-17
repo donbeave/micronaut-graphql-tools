@@ -8,8 +8,9 @@ disagree, the workflow wins, and you should fix this file in the same change.
 ## Setup
 
 - Tools: `mise install` installs Oracle GraalVM 25 (the default JDK and `native-image`) and `actionlint`.
-  For another JDK line, `MISE_ENV=jdk17|jdk21|jdk25 mise install` (Temurin).
-- Run Gradle through mise so the JDK in `mise.toml` is used: `mise exec -- ./gradlew <task>`.
+  For another JDK line, run `MISE_ENV=jdk17|jdk21|jdk25 mise install` once (Temurin).
+- Run Gradle through mise: `mise exec -- ./gradlew <task>` uses the default JDK. For another JDK line, set the same
+  `MISE_ENV` on the command, for example `MISE_ENV=jdk21 mise exec -- ./gradlew <task>`. The JDK of each check is in the table.
 - Always use the Gradle wrapper (`./gradlew`). Do not install Gradle.
 
 ## Checks
@@ -57,8 +58,8 @@ Run the checks that cover what you changed, and before you push run the full bui
 - **No Jackson in the public API.** Use Micronaut Serialization (`micronaut-serde`). Build input conversion on
   compile-time metadata (`BeanIntrospection`, Serde), not on an `ObjectMapper`.
 - **Micronaut 4 practice.** Follow the current Micronaut 4 line and its conventions. Do not design for Micronaut 5.
-- **No publishing.** Do not add publish tasks, snapshot or release workflows, or Maven Central steps. Releases are cut
-  by maintainers by hand.
+- **Publishing.** Nothing goes to Maven Central or GitHub Releases, and there are no snapshots; milestone versions are
+  published to this repository's GitHub Packages (Maven) by a tag-triggered workflow only (never publish by hand).
 - **Docs ship with the feature.** A new configuration key (`micronaut.graphql.tools.*`), public exception or public
   annotation is named in the guide or `README.md` in the same change. `DocsCoverageSpec` enforces this.
 - **No references outside the repository.** Do not link to or cite files, notes or repositories outside this one.
@@ -72,24 +73,18 @@ Run the checks that cover what you changed, and before you push run the full bui
   commit message.
 - Body: `Closes #<issue>` for the issue the change finishes.
 - Open the PR ready for review, not as a draft. Do not merge it yourself.
-- Merge: squash only. Merge commits and rebase merges are disabled.
+- Merge: squash only. Merge commits and rebase merges are disabled. Resolve every review conversation first.
 - Required status check: `required checks` only. It is green when every job in its `needs:` list in `gradle.yml`
   succeeded. A new gated job is added to that list, never to the ruleset. The native jobs are not gated yet.
 - No admin bypass: a red, cancelled or pending check blocks the merge.
 
 ## Model routing
 
-Read the `model:` label of the issue you work on, and use that model. Labels in the repository:
+Use the cheapest model that can do the task well. Small or mechanical changes need only a small model. Core-logic
+changes of medium size or larger, and the review that gates them, need a stronger one. Design questions that need a
+decision are escalated to the strongest model, and its answer is followed. Do not wait on a human for a decision.
 
-| Label | Model | Use for |
-| --- | --- | --- |
-| `model: haiku` | Haiku 5.5 (`claude-haiku-5-5`) | Mechanical, fully specified work |
-| `model: sonnet` | Sonnet 5.5 (`claude-sonnet-5-5`) | Default: implementation, tests, reviews, docs |
-| `model: opus` | Opus 5.5 (`claude-opus-5-5`) | Rare: architecture and cross-cutting design only |
-
-- Haiku to Sonnet: if a `model: haiku` task turns out not to be mechanical, comment on the issue, then continue with Sonnet.
-- Sonnet to Opus: only with the maintainer's approval.
-- Never use Fable.
+If an issue carries a `model:` label, it names the model the maintainers chose for that issue; follow it.
 
 ## Claude Code
 
