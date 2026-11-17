@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The binding manifest of the sample application, against a golden file. Some resolvers of the sample are
@@ -28,6 +29,14 @@ class BindingManifestTest {
             assertEquals(new String(golden.readAllBytes(), StandardCharsets.UTF_8),
                     String.join("\n", bindingManifest.getLines()) + "\n");
         }
+    }
+
+    @Test
+    void aResolverOverridingObjectMethodsHasNoUnboundFinding() {
+        // BookResolver overrides toString, equals and hashCode
+        assertTrue(bindingManifest.getLines().stream().noneMatch(it -> it.startsWith("!unbound ")
+                && (it.contains("toString") || it.contains("equals") || it.contains("hashCode"))),
+                String.valueOf(bindingManifest.getLines()));
     }
 
 }
