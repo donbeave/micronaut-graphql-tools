@@ -16,10 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-/**
- * The application supplies the {@code TypeDefinitionRegistry}, consumes only the library's {@link GraphQLSchema} and
- * builds its own {@link GraphQL} ({@link HostGraphQLFactory}); HTTP requests run on that engine.
- */
 @MicronautTest(environments = HostGraphQLFactory.ENVIRONMENT)
 class HostBuildsGraphQLTest extends AbstractTest {
 

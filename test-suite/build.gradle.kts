@@ -61,13 +61,10 @@ apollo {
     }
 }
 
-// The compile-time checks of the library, applied to this application as an application would apply them.
 dependencies {
     annotationProcessor(projects.micronautGraphqlToolsProcessor)
 }
 
-// The schema directory, declared as an input of the compilation: a schema change recompiles. Only its *.graphqls
-// and *.graphql files are read (src/main/graphql holds client operations, not the schema).
 abstract class GraphQLSchemaDir : CommandLineArgumentProvider {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -82,7 +79,6 @@ tasks.named<JavaCompile>("compileJava") {
     })
 }
 
-// The guard: the build fails if the checks did not run (a processor that is not applied runs silently not at all).
 val checkBindingManifest by tasks.registering {
     val manifest = tasks.named<JavaCompile>("compileJava")
             .flatMap { it.destinationDirectory.file("META-INF/micronaut-graphql-tools/binding-manifest.txt") }

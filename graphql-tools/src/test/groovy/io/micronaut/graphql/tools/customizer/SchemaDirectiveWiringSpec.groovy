@@ -27,13 +27,6 @@ import io.micronaut.graphql.tools.exceptions.UnwrappedDirectiveWiringException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * The library applies a {@link SchemaDirectiveWiring} only through a {@link SchemaDirective} bean: a
- * {@link SchemaDirective#named} one is called only where the schema applies its directive, a
- * {@link SchemaDirective#everyElement} one for every schema element, lowest order first. A {@code SchemaDirectiveWiring}
- * bean that no {@code SchemaDirective} wraps fails the startup instead of running on every element. Both kinds work with
- * a hand-written wiring and with graphql-java-extended-validation.
- */
 class SchemaDirectiveWiringSpec extends AbstractTest {
 
     static final String SPEC_NAME = "SchemaDirectiveWiringSpec"
@@ -221,9 +214,6 @@ type Query {
         }
     }
 
-    /**
-     * Implements {@code @suffix}: appends "-{name}" to the field's value, so the order of the wirings shows.
-     */
     static class SuffixWiring implements SchemaDirectiveWiring {
         private final String name
 
@@ -244,7 +234,6 @@ type Query {
     @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec(|\\.duplicate|\\.replaced)')
     @Factory
     static class DirectiveWiringFactory {
-        // declared, and named alphabetically, in the reverse of their order
         @Bean
         @Singleton
         @Order(30)
@@ -393,7 +382,6 @@ type Query {
                     .build())
         }
 
-        // the wiring is a bean too: wrapping it is what applies it, once
         @Bean
         @Singleton
         SchemaDirective validation(ValidationSchemaWiring validationSchemaWiring) {
@@ -402,7 +390,6 @@ type Query {
                     validationSchemaWiring)
         }
 
-        // the extended-validation directives (@Size, @Pattern, ...) are declared by the library, not in the SDL
         @Bean
         @Singleton
         TypeDefinitionRegistryCustomizer validationDirectives() {

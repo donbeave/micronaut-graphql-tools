@@ -28,16 +28,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-/**
- * Renders Java types for the binding manifest exactly as the library renders them at startup from Micronaut's
- * compile-time type information (an {@code Argument}), never by reflection: binary class names
- * ({@code a.Outer$Inner}), type arguments separated by {@code ", "}, {@code []} for arrays. What an {@code Argument}
- * does not keep is rendered as it does: a wildcard is its bound ({@code List<? extends Book>} reads
- * {@code java.util.List<Book>}, an unbounded one {@code java.lang.Object}), a raw type has {@code java.lang.Object} as
- * each type argument, an array of a parameterized type has no type arguments ({@code List<String>[]} reads
- * {@code java.util.List[]}), and a type variable is its bound. The members are seen from the class that has them, so
- * the type variables of a generic superclass are already replaced.
- */
 final class TypeNames {
 
     private static final String FUTURE = "java.util.concurrent.Future";
@@ -46,17 +36,10 @@ final class TypeNames {
 
     private final JavaTypes javaTypes;
 
-    /**
-     * @param javaTypes the type helpers
-     */
     TypeNames(JavaTypes javaTypes) {
         this.javaTypes = javaTypes;
     }
 
-    /**
-     * @param type a Java type
-     * @return the type as the library renders an {@code Argument}
-     */
     String render(TypeMirror type) {
         TypeKind kind = type.getKind();
         if (kind.isPrimitive() || kind == TypeKind.VOID) {
@@ -85,10 +68,6 @@ final class TypeNames {
         return type.toString();
     }
 
-    /**
-     * @param type the component type of an array
-     * @return the type without type arguments, as an {@code Argument} keeps an array's component
-     */
     private String renderErased(TypeMirror type) {
         if (type instanceof ArrayType arrayType) {
             return renderErased(arrayType.getComponentType()) + "[]";
@@ -99,27 +78,12 @@ final class TypeNames {
         return render(type);
     }
 
-    /**
-     * @param owner  the class that has the method, which decides the type variables the method inherits
-     * @param method a method
-     * @return its parameter types, seen from the owner, in parentheses
-     */
     String parameters(TypeElement owner, ExecutableElement method) {
         return javaTypes.memberType(owner, method).getParameterTypes().stream()
                 .map(this::render)
                 .collect(Collectors.joining(", ", "(", ")"));
     }
 
-    /**
-     * The converted type of a manifest line, as the library's {@code ReturnTypes.convertedTypeName} computes it from
-     * the {@code Argument}: the declared type without {@code CompletionStage} or {@code Future}, then {@code Publisher}
-     * (subscription fields only), then {@code DataFetcherResult} (also as the element of a list), then
-     * {@code Optional}, each once and only where it is the class of a declared type.
-     *
-     * @param declaredType the declared type
-     * @param subscription whether the field belongs to the subscription type
-     * @return the converted type, rendered
-     */
     String converted(TypeMirror declaredType, boolean subscription) {
         TypeMirror result = declaredType;
         if (isA(result, BindingChecks.COMPLETION_STAGE) || isA(result, FUTURE)) {
@@ -149,10 +113,6 @@ final class TypeNames {
         return type instanceof DeclaredType && javaTypes.isA(type, className);
     }
 
-    /**
-     * @return the first type argument, a wildcard being its bound, or the type itself if it has none, as the library
-     * unwraps an {@code Argument}
-     */
     private static TypeMirror firstTypeArgument(TypeMirror type) {
         if (type instanceof DeclaredType declaredType && !declaredType.getTypeArguments().isEmpty()) {
             return bound(declaredType.getTypeArguments().get(0));

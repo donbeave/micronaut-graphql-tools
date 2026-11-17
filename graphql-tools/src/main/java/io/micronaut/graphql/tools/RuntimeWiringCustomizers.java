@@ -38,24 +38,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-/**
- * Applies the {@link RuntimeWiringCustomizer} beans to the library's runtime wiring and fails if one of them replaced
- * what the library wired, directly in the builder or through a code registry.
- */
 @Internal
 final class RuntimeWiringCustomizers {
 
     private RuntimeWiringCustomizers() {
     }
 
-    /**
-     * Applies the customizers in the given order.
-     *
-     * @param builder     the builder that holds the library's wiring
-     * @param customizers the customizers, in {@code Ordered} order
-     * @param registry    the registry the schema is generated from, for the types and fields of the schema
-     * @throws RuntimeWiringOverrideException if a customizer replaced what the library wired
-     */
     static void apply(RuntimeWiring.Builder builder,
                       List<RuntimeWiringCustomizer> customizers,
                       TypeDefinitionRegistry registry) {
@@ -77,10 +65,6 @@ final class RuntimeWiringCustomizers {
         }
     }
 
-    /**
-     * @param registry the registry
-     * @return the name of every object type (extensions included) to the names of its fields
-     */
     private static Map<String, Set<String>> objectTypeFields(TypeDefinitionRegistry registry) {
         Map<String, Set<String>> fieldsByType = new TreeMap<>();
         List<ObjectTypeDefinition> objectTypes = new ArrayList<>();
@@ -100,18 +84,6 @@ final class RuntimeWiringCustomizers {
         return fieldsByType;
     }
 
-    /**
-     * What a runtime wiring holds at one moment. The maps of a {@link RuntimeWiring} are those of its builder, so they
-     * are copied.
-     *
-     * @param dataFetchers        type name to field name to data fetcher
-     * @param defaultDataFetchers type name to default data fetcher
-     * @param wiringFactory       the wiring factory
-     * @param scalars             scalar name to scalar
-     * @param typeResolvers       type name to type resolver
-     * @param directiveWirings    directive name to the wiring registered for it
-     * @param codeRegistry        the code registry the schema generator starts from
-     */
     private record Snapshot(
             Map<String, Map<String, DataFetcher>> dataFetchers,
             Map<String, DataFetcher> defaultDataFetchers,
@@ -143,11 +115,6 @@ final class RuntimeWiringCustomizers {
             );
         }
 
-        /**
-         * @param after        the wiring after a customizer ran
-         * @param fieldsByType the fields of every object type
-         * @return what this snapshot wires that {@code after} wires differently
-         */
         List<String> replacedIn(Snapshot after, Map<String, Set<String>> fieldsByType) {
             List<String> replaced = new ArrayList<>();
             dataFetchers.forEach((type, fields) -> fields.forEach((field, dataFetcher) -> {
@@ -182,10 +149,6 @@ final class RuntimeWiringCustomizers {
             return replaced;
         }
 
-        /**
-         * graphql-java's schema generator keeps a data fetcher or type resolver that the code registry of the runtime
-         * wiring already holds, so one there for a field or type the library wired would win over the library.
-         */
         private List<String> replacedThroughCodeRegistry(Snapshot after, Map<String, Set<String>> fieldsByType) {
             List<String> replaced = new ArrayList<>();
             GraphQLCodeRegistry.Builder now = GraphQLCodeRegistry.newCodeRegistry(after.codeRegistry);

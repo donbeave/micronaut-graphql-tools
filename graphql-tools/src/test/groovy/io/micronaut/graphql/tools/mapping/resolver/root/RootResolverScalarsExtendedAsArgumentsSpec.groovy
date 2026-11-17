@@ -80,7 +80,6 @@ type Query {
         result.data.hello == 'World'
 
         where:
-        // SCHEMA1 binds primitives to nullable scalars, which strict mode rejects (a null could not reach them)
         schema  | config
         SCHEMA1 | ['micronaut.graphql.tools.strict': false]
         SCHEMA2 | [:]

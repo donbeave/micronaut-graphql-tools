@@ -43,11 +43,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-/**
- * The checks of {@link GraphQLRuntimeWiringGenerator} that compare input classes with what the input
- * {@code ObjectMapper} can set and with their GraphQL input types. Findings are collected while the input types are
- * bound and reported by {@link #checkCollected}. It logs under the generator's name.
- */
 @Internal
 final class InputClassChecks {
 
@@ -59,44 +54,20 @@ final class InputClassChecks {
     private final Map<String, Map.Entry<Class<?>, List<String>>> unmappedInputProperties = new TreeMap<>();
     private final Map<String, Class<?>> ownDeserializers = new TreeMap<>();
 
-    /**
-     * @param inputValueConverter the converter whose {@code ObjectMapper} converts requests
-     * @param omissionPlans       the omission plans of the input classes, filled while they are bound
-     */
     InputClassChecks(InputValueConverter inputValueConverter,
                      Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans) {
         this.inputValueConverter = inputValueConverter;
         this.omissionPlans = omissionPlans;
     }
 
-    /**
-     * Records a write-only property that holds an input object, to check once all omission plans are known.
-     *
-     * @param mappingContext the input field
-     * @param inputClass     the input class the property holds
-     */
     void addWriteOnlyInputObjectProperty(InputMappingContext mappingContext, Class<?> inputClass) {
         writeOnlyInputObjectProperties.add(Map.entry(mappingContext, inputClass));
     }
 
-    /**
-     * Records an input class that the input {@code ObjectMapper} converts with a deserializer of its own, so its input
-     * fields cannot be checked for settable properties; {@link #checkCollected} logs them.
-     *
-     * @param inputTypeName the GraphQL input type
-     * @param inputClass    the input class
-     */
     void addOwnDeserializer(String inputTypeName, Class<?> inputClass) {
         ownDeserializers.put(inputTypeName, inputClass);
     }
 
-    /**
-     * Fails on the findings collected while the input types were bound. Each unmapped input class property is an
-     * {@code !unbound} line of the binding manifest, also when it does not fail.
-     *
-     * @param failOnUnmappedProperties whether unmapped input class properties fail
-     * @param manifestRecorder         the binding manifest
-     */
     void checkCollected(boolean failOnUnmappedProperties, BindingManifestRecorder manifestRecorder) {
         checkWriteOnlyInputObjectProperties();
 
@@ -115,16 +86,6 @@ final class InputClassChecks {
         }
     }
 
-    /**
-     * Asks the input {@code ObjectMapper} which properties of an input class it can set, by building the deserializer
-     * that converts requests: properties with a setter, a field or a creator parameter, under the names Jackson uses
-     * (after naming strategies and {@code @JsonProperty}), without ignored ones. An input field that is not among them
-     * would fail every request that sends it, or be dropped by a lenient mapper.
-     *
-     * @param inputClass the input class
-     * @return the names, or {@code null} if the mapper uses a deserializer of its own for the class (then the
-     * application controls the conversion and the check is not possible)
-     */
     @Nullable
     Set<String> findSettableProperties(Class<?> inputClass) {
         ObjectMapper objectMapper = inputValueConverter.getObjectMapper();
@@ -156,10 +117,6 @@ final class InputClassChecks {
         return result.getType();
     }
 
-    /**
-     * A write-only property of an input object type cannot be visited after a conversion, so the
-     * {@link ArgumentValue} properties further down could not be set to {@code omitted()}.
-     */
     private void checkWriteOnlyInputObjectProperties() {
         for (Map.Entry<InputMappingContext, Class<?>> entry : writeOnlyInputObjectProperties) {
             if (holdsArgumentValues(entry.getValue(), new HashSet<>())) {
@@ -182,13 +139,6 @@ final class InputClassChecks {
                 .anyMatch(it -> holdsArgumentValues(elementClass(it.asArgument()), visited));
     }
 
-    /**
-     * Records the properties of an input class that a request can set (through a setter or the constructor) but that
-     * the GraphQL input type does not define. Read-only properties, such as computed getters, are not input.
-     *
-     * @param inputObjectTypeDefinition the input type
-     * @param beanIntrospection         the introspection of its input class
-     */
     void collectUnmappedInputProperties(InputObjectTypeDefinition inputObjectTypeDefinition,
                                         BeanIntrospection<Object> beanIntrospection) {
         Set<String> inputFields = inputObjectTypeDefinition.getInputValueDefinitions().stream()

@@ -24,11 +24,6 @@ import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * {@link RuntimeWiringCustomizer} beans add to the runtime wiring the library generated, lowest order first.
- * They may not replace what the library wired: a replaced data fetcher, type resolver, scalar or wiring factory would
- * silently undo the binding, so the startup fails and names every replacement.
- */
 class RuntimeWiringCustomizerSpec extends AbstractTest {
 
     static final String SPEC_NAME = "RuntimeWiringCustomizerSpec"
@@ -179,7 +174,6 @@ scalar Long
         e.cause.replacements == ["wiring factory (${ReplaceWiringFactory.name})".toString()]
     }
 
-    // declared first, runs second: @Order on a factory method
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Factory
     static class RecordCallFactory {

@@ -56,7 +56,6 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         for (int i = 0; i < argumentDefinitions.size(); i++) {
             Argument<?> argument = argumentDefinitions.get(i).getInputValueArgument().orElse(null);
             if (argument != null) {
-                // the binding allows ArgumentValue only with a declared type argument
                 argumentValues[i] = ArgumentValue.class.equals(argument.getType());
                 javaTypes[i] = inputValueConverter.toJavaType(
                         argumentValues[i] ? argument.getFirstTypeVariable().orElseThrow() : argument);
@@ -92,7 +91,6 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         }
 
         if (instance != null) {
-            // execute root query
             return executable.invoke(instance, arguments.toArray());
         } else {
             return executable.invoke(environment.getSource(), arguments.toArray());

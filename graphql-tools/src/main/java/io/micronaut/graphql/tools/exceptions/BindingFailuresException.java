@@ -26,9 +26,6 @@ public final class BindingFailuresException extends RuntimeException {
 
     private final List<RuntimeException> failures;
 
-    /**
-     * @param failures the failures, at least two, in the order to report them
-     */
     public BindingFailuresException(List<? extends RuntimeException> failures) {
         super(buildMessage(failures), failures.get(0));
 
@@ -36,9 +33,6 @@ public final class BindingFailuresException extends RuntimeException {
         failures.stream().skip(1).forEach(this::addSuppressed);
     }
 
-    /**
-     * @return the failures, in the order they are reported
-     */
     public List<RuntimeException> getFailures() {
         return failures;
     }

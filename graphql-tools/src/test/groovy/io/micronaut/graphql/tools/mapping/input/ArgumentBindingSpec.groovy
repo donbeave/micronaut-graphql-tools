@@ -12,10 +12,6 @@ import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentNameException
 import org.intellij.lang.annotations.Language
 
-/**
- * Resolver parameters are bound to SDL arguments by name, not by position. The name-to-position plan is built at
- * startup; a parameter without an argument fails the startup and names the coordinate and the parameter.
- */
 class ArgumentBindingSpec extends AbstractTest {
 
     static final String SPEC_REORDERED = "ArgumentBindingSpecReordered"

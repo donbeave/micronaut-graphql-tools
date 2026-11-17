@@ -16,7 +16,6 @@ abstract class AbstractTest extends Specification {
     protected void startContext(@Nullable String graphQlSchema, @Nullable String specName = null, Map additionalConfig = [:]) {
         def ctxBuilder = ApplicationContext
                 .builder(
-                        // the manifest is opt-in; most specs read it, StrictModeSpec covers it being off
                         ["spec.name": specName ?: getClass().simpleName,
                          "micronaut.graphql.tools.manifest.record": true] << additionalConfig,
                         "test"

@@ -2,18 +2,10 @@ plugins {
     id("io.micronaut.build.internal.parent")
 }
 
-// graphql-java compatibility legs. The library is built and tested against one leg at a time:
-//   ./gradlew build                            (default leg)
-//   ./gradlew build -PgraphqlJavaVersion=25.1
-// Each leg pins graphql-java and the graphql-java libraries whose versions must move with it, for dependency
-// resolution inside this build. The publications take their versions from the resolved classpath, so a non-default
-// leg would put its pins into the published POM and module metadata: publishing is only allowed from the default leg
-// (guard below).
 data class GraphqlJavaLeg(
     val graphqlJava: String,
     val extendedScalars: String,
     val dataLoader: String,
-    // test scope only: the directive wiring tests run graphql-java-extended-validation
     val extendedValidation: String,
 )
 
@@ -78,8 +70,6 @@ subprojects {
         }
     }
 
-    // An API that graphql-java removes on a newer leg must fail compilation, not surface as NoSuchMethodError at
-    // runtime. Plain deprecations stay warnings: some replacements do not exist on the oldest leg.
     tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.addAll(listOf("-Xlint:removal", "-Werror"))
     }

@@ -11,11 +11,6 @@ import java.util.Collection;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-/**
- * Runs every benchmark of this module once, in this JVM (no fork, one iteration, one invocation), so that they
- * compile, start and complete on every {@code check}. The figures mean nothing: see the contributor guide for the
- * measuring runs.
- */
 class JmhSmokeTest {
 
     @Test

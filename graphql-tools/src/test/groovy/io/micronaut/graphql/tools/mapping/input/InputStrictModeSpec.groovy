@@ -26,17 +26,6 @@ import jakarta.inject.Named
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 
-/**
- * Strict mode governs the input checks that are not about a binding that cannot work:
- * <ul>
- *     <li>a settable input class property that the GraphQL input type does not define fails in strict mode, unless
- *     {@code input.unmapped-properties} says otherwise; it is a {@code !unbound} line of the manifest in every mode;</li>
- *     <li>a primitive for a nullable built-in scalar argument or input field fails in strict mode, because a
- *     {@code null} cannot reach it;</li>
- *     <li>an input class that the input mapper converts with a deserializer of its own is not checked for settable
- *     properties, and the startup logs it.</li>
- * </ul>
- */
 class InputStrictModeSpec extends AbstractTest {
 
     static final String SPEC_PRIMITIVE_ARGUMENT = "InputStrictModeSpecPrimitiveArgument"

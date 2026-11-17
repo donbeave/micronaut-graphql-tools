@@ -5,12 +5,6 @@ import spock.lang.Specification
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
-/**
- * The binding manifest as a build artifact: written once, at the end of the compilation, to the class output as
- * {@code META-INF/micronaut-graphql-tools/binding-manifest.txt}, in the format of the library's {@code BindingManifest}
- * (UTF-8, LF, body sorted by {@link String#compareTo(String)}), and not at all when the compilation fails. Its content
- * is compared with the startup manifest by {@link ManifestParitySpec}.
- */
 class BindingManifestSpec extends Specification {
 
     void "a compilation that passes the checks writes the manifest to the class output, UTF-8 with LF, body sorted"() {
@@ -33,7 +27,6 @@ class BindingManifestSpec extends Specification {
         lines[3] ==~ /# schema-sha256: [0-9a-f]{64}/
         body == body.toSorted { a, b -> a <=> b }
         body.contains('Query.book(id: ID!): Book → root · example.BookQuery#book(java.lang.String) · example.Book · example.Book')
-        // "→" and "·" are written as UTF-8
         bytes.length > text.length()
     }
 

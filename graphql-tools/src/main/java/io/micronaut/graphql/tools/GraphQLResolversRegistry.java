@@ -58,27 +58,19 @@ public final class GraphQLResolversRegistry {
 
     private final List<BeanDefinitionAndMethods> rootResolvers = new ArrayList<>();
     private final Map<Class<?>, List<BeanDefinitionAndMethods>> typeResolvers = new HashMap<>();
-    // key: bean definition, value: each type of its class hierarchy that declares @GraphQLTypeResolver, and the value
     private final Map<BeanDefinition<?>, Map<Class<?>, Class<?>>> typeResolverContracts = new HashMap<>();
-    // methods of beans that are type resolvers for several classes and whose source parameter is none of them
     private final Map<BeanDefinition<?>, List<ExecutableMethod<Object, ?>>> unassignedTypeResolverMethods =
             new HashMap<>();
-    // type resolver methods by bean, until the contracts of the beans are read when the binding starts
     private final Map<BeanDefinition<?>, List<ExecutableMethod<Object, ?>>> pendingTypeResolverMethods =
             new LinkedHashMap<>();
-    // beans that are type resolvers only through an inherited annotation, whose contract types reflection cannot read
     private final List<BeanDefinition<?>> unreadableTypeResolverContracts = new ArrayList<>();
-    // reads the types of a class hierarchy that declare @GraphQLTypeResolver
     private Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader =
             GraphQLResolversRegistry::findTypeResolverContracts;
     private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
-    // key: bean definition, value: the signatures of its methods that carry @GraphQLSchemaCoordinate, and the coordinates
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
 
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
         if (method.isAbstract()) {
-            // the declaration of an abstract superclass the bean inherits the annotation from: its implementation in the
-            // bean is registered too, and is the one method that binds
             return;
         }
         rootResolvers.stream()
@@ -94,12 +86,10 @@ public final class GraphQLResolversRegistry {
 
     public void registerTypeResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
         if (method.isAbstract()) {
-            // as for root resolvers: the implementation in the bean is the method that binds
             return;
         }
         getTypeResolverValue(beanDefinition);
 
-        // the contracts of the bean are read when the binding starts, see resolveTypeResolverMethods()
         pendingTypeResolverMethods.computeIfAbsent(beanDefinition, it -> new ArrayList<>()).add(method);
     }
 
@@ -111,12 +101,6 @@ public final class GraphQLResolversRegistry {
         return annotationValue.getType().get();
     }
 
-    /**
-     * Registers the pending type resolver methods for the class each one resolves. The annotation metadata keeps one
-     * {@link GraphQLTypeResolver} value even when a bean inherits several (it implements two resolver contracts), so
-     * the class hierarchy of the bean is read, by reflection on class annotations, for the types that declare it.
-     * With several classes, each method belongs to the class of its first parameter, the source object.
-     */
     private void resolveTypeResolverMethods() {
         for (Map.Entry<BeanDefinition<?>, List<ExecutableMethod<Object, ?>>> entry
                 : pendingTypeResolverMethods.entrySet()) {
@@ -127,11 +111,9 @@ public final class GraphQLResolversRegistry {
             if (contracts.isEmpty()) {
                 // reflection shows no class annotations (for example a native image without configuration for them)
                 if (!beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class)) {
-                    // inherited only: the bean may implement several contracts, and they cannot be told apart
                     unreadableTypeResolverContracts.add(beanDefinition);
                     continue;
                 }
-                // annotated directly: the metadata value is the only one
                 contracts = Map.of(getUserBeanType(beanDefinition), annotatedClass);
             }
             typeResolverContracts.put(beanDefinition, contracts);
@@ -168,11 +150,6 @@ public final class GraphQLResolversRegistry {
                 .addExecutableMethod(method);
     }
 
-    /**
-     * Replaces how the types that declare {@link GraphQLTypeResolver} are read from a bean class hierarchy (tests).
-     *
-     * @param typeResolverContractReader the reader
-     */
     void setTypeResolverContractReader(Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader) {
         this.typeResolverContractReader = typeResolverContractReader;
     }
@@ -192,33 +169,17 @@ public final class GraphQLResolversRegistry {
                 .put(getExecutableMethodFullName(method), coordinate);
     }
 
-    /**
-     * @return the methods that carry {@link GraphQLSchemaCoordinate}, sorted by bean class and method
-     */
     List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
         return schemaCoordinateMethods.stream()
                 .sorted(Comparator.comparing(SchemaCoordinateMethod::describe))
                 .toList();
     }
 
-    /**
-     * A method of a bean on which some methods carry {@link GraphQLSchemaCoordinate} binds only if it carries one too.
-     */
     private boolean isCandidate(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
         Map<String, String> signatures = schemaCoordinateSignatures.get(beanDefinition);
         return signatures == null || signatures.containsKey(getExecutableMethodFullName(method));
     }
 
-    /**
-     * Finds the methods of a bean that bind a field. A method that carries {@link GraphQLSchemaCoordinate} is found by
-     * its coordinate, which must be one of {@code coordinates}; on a bean without coordinates, a method is found by
-     * its name.
-     *
-     * @param item        the bean and its methods
-     * @param methodName  the field name
-     * @param coordinates the coordinates ({@code Type.field}) the field can be named by
-     * @return the methods
-     */
     private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String methodName,
                                                       Set<String> coordinates) {
         Map<String, String> signatures = schemaCoordinateSignatures.get(item.getBeanDefinition());
@@ -231,10 +192,6 @@ public final class GraphQLResolversRegistry {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * @param beanType a bean class
-     * @return each type of the class hierarchy that declares {@link GraphQLTypeResolver}, and its value, by type name
-     */
     private static Map<Class<?>, Class<?>> findTypeResolverContracts(Class<?> beanType) {
         Map<Class<?>, Class<?>> contracts = new TreeMap<>(Comparator.comparing(Class::getName));
         Deque<Class<?>> types = new ArrayDeque<>(List.of(beanType));
@@ -258,11 +215,6 @@ public final class GraphQLResolversRegistry {
         return contracts;
     }
 
-    /**
-     * Fails when the contract types of a bean that is a type resolver only through an inherited annotation cannot be
-     * read, and when a bean is a type resolver for several classes (it inherits {@link GraphQLTypeResolver} from several
-     * contracts) and the source parameter of a method that could bind is none of them.
-     */
     void verifyTypeResolverContracts() {
         resolveTypeResolverMethods();
 
@@ -288,10 +240,6 @@ public final class GraphQLResolversRegistry {
                 });
     }
 
-    /**
-     * @param beanDefinition a bean definition
-     * @return the user's bean class, not the AOP proxy
-     */
     static Class<?> getUserBeanType(BeanDefinition<?> beanDefinition) {
         Class<?> beanType = beanDefinition.getBeanType();
         if (Intercepted.class.isAssignableFrom(beanType) && beanType.getSuperclass() != null) {
@@ -300,10 +248,6 @@ public final class GraphQLResolversRegistry {
         return beanType;
     }
 
-    /**
-     * @return every method of the root and type resolver beans that can bind a field: on a bean that uses
-     * {@link GraphQLSchemaCoordinate}, only the methods that carry one
-     */
     List<BeanDefinitionAndMethod> getResolverMethods() {
         List<BeanDefinitionAndMethods> items = new ArrayList<>(rootResolvers);
         typeResolvers.values().forEach(items::addAll);
@@ -323,17 +267,6 @@ public final class GraphQLResolversRegistry {
         return !rootResolvers.isEmpty();
     }
 
-    /**
-     * Finds the root resolver methods for a field of a root operation type. A method with a
-     * {@link GraphQLSchemaCoordinate} binds the field of exactly that operation type. A method of a bean without
-     * coordinates binds the field of its name on every root operation type. All candidates are returned, from every
-     * bean; more than one is an ambiguity the caller reports.
-     *
-     * @param operationTypeName the root operation type, for example {@code Query}
-     * @param methodName        the field name
-     * @param mappingContext    the mapping context, for the error
-     * @return the candidate methods, never empty
-     */
     List<BeanDefinitionAndMethod> getRootExecutableMethods(String operationTypeName, String methodName,
                                                            MappingContext mappingContext) {
         List<BeanDefinitionAndMethod> all = new ArrayList<>();
@@ -354,13 +287,6 @@ public final class GraphQLResolversRegistry {
         throw MethodNotFoundException.forRoot(methodName, mappingContext, resolvers);
     }
 
-    /**
-     * @param beanType   the class the type resolvers are declared for
-     * @param typeName   the object type or interface whose field is bound; a method with a
-     *                   {@link GraphQLSchemaCoordinate} binds only the field its coordinate names
-     * @param methodName the field name
-     * @return the type resolver methods for the field, possibly none
-     */
     List<BeanDefinitionAndMethod> findTypeExecutableMethods(Class<?> beanType, String typeName, String methodName) {
         List<BeanDefinitionAndMethod> result = new ArrayList<>();
 
@@ -371,12 +297,6 @@ public final class GraphQLResolversRegistry {
         return result;
     }
 
-    /**
-     * @param beanType       the Java type of the source object
-     * @param methodName     the field name
-     * @param mappingContext the mapping context
-     * @return the error for a field that no type resolver of {@code beanType} binds, naming those type resolvers
-     */
     MethodNotFoundException typeMethodNotFound(Class<?> beanType, String methodName, MappingContext mappingContext) {
         List<BeanDefinitionAndMethods> items = typeResolvers.get(beanType);
 
@@ -389,22 +309,10 @@ public final class GraphQLResolversRegistry {
         return MethodNotFoundException.forType(methodName, mappingContext, beanType, resolvers);
     }
 
-    /**
-     * @param beanDefinition the bean definition
-     * @param method         a method of the bean
-     * @return the user's bean class (not the AOP proxy) and the method signature
-     */
     static String describeMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<?, ?> method) {
         return getUserBeanType(beanDefinition).getName() + " " + getExecutableMethodFullName(method);
     }
 
-    /**
-     * A method that carries {@link GraphQLSchemaCoordinate}.
-     *
-     * @param beanDefinition the bean the method belongs to
-     * @param method         the method
-     * @param coordinate     the declared coordinate, as written
-     */
     record SchemaCoordinateMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method,
                                   String coordinate) {
 

@@ -27,10 +27,6 @@ public final class ScalarMappingNotProvidedException extends AbstractMappingExce
 
     private final String scalarName;
 
-    /**
-     * @param mappingContext the coordinate that uses the scalar
-     * @param scalarName     the name of the scalar
-     */
     public ScalarMappingNotProvidedException(MappingContext mappingContext, String scalarName) {
         super(
                 String.format(
@@ -44,9 +40,6 @@ public final class ScalarMappingNotProvidedException extends AbstractMappingExce
         this.scalarName = scalarName;
     }
 
-    /**
-     * @return the name of the scalar
-     */
     public String getScalarName() {
         return scalarName;
     }

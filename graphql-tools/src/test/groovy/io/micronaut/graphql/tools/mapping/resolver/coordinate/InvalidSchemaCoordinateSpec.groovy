@@ -11,10 +11,6 @@ import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * A {@link GraphQLSchemaCoordinate} that does not match the schema, its method or its bean fails the startup before
- * anything is bound; all such coordinates are reported in one error.
- */
 class InvalidSchemaCoordinateSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InvalidSchemaCoordinateSpec"

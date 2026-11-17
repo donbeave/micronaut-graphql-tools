@@ -59,13 +59,10 @@ public final class AbstractTypeResolver implements TypeResolver {
     private final String abstractTypeKind;
     private final String abstractTypeName;
 
-    // exact class -> object type name
     private final Map<Class<?>, String> exactClasses;
 
-    // object type name -> the Java type it is mapped to, sorted by name
     private final Map<String, Class<?>> objectTypes;
 
-    // runtime class -> object type, or the error message; held by the class itself, so never a strong reference to it
     private final ClassValue<Resolution> resolutions = new ClassValue<>() {
         @Override
         protected Resolution computeValue(Class<?> type) {
@@ -73,7 +70,6 @@ public final class AbstractTypeResolver implements TypeResolver {
         }
     };
 
-    // set once the exact classes are resolved, which needs the schema (not built when this resolver is created)
     private volatile boolean exactClassesResolved;
 
     /**
@@ -97,7 +93,6 @@ public final class AbstractTypeResolver implements TypeResolver {
     public GraphQLObjectType getType(TypeResolutionEnvironment env) {
         Class<?> objectClass = env.getObject().getClass();
         if (!exactClassesResolved) {
-            // the schema is available from the first resolution on: resolve the mapped classes once, up front
             exactClasses.keySet().forEach(resolutions::get);
             exactClassesResolved = true;
         }
@@ -131,7 +126,6 @@ public final class AbstractTypeResolver implements TypeResolver {
             return new Resolution(schema.getObjectType(candidates.get(0)), null);
         }
 
-        // the most specific candidate: its Java type is a subtype of every other candidate's Java type
         List<String> mostSpecific = candidates.stream()
                 .filter(it -> candidates.stream()
                         .allMatch(other -> objectTypes.get(other).isAssignableFrom(objectTypes.get(it))))

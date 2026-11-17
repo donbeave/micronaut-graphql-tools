@@ -12,10 +12,6 @@ import org.intellij.lang.annotations.Language
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
-/**
- * GraphQL {@code Float} is a double-precision value (graphql-java coerces it to {@link Double}), so {@code double} and
- * {@link Double} must be accepted wherever {@code float}/{@link Float} are.
- */
 class FloatAsDoubleSpec extends AbstractTest {
 
     static final String SPEC_NAME = "FloatAsDoubleSpec"

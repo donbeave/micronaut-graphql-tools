@@ -21,9 +21,6 @@ import jakarta.inject.Provider;
 
 import java.util.NoSuchElementException;
 
-/**
- * @author Alexey Zhokhov
- */
 @Internal
 final class GraphQLSchemaProvider implements Provider<GraphQLSchema> {
 

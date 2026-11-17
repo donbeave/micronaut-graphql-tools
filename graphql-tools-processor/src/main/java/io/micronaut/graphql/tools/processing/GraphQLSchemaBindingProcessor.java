@@ -55,9 +55,6 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
     private boolean errorRaised;
     private int round;
 
-    /**
-     * Creates the processor; javac does, through {@code META-INF/services/javax.annotation.processing.Processor}.
-     */
     public GraphQLSchemaBindingProcessor() {
     }
 
@@ -81,8 +78,6 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
         round++;
         for (TypeElement type : ElementFilter.typesIn(roundEnv.getRootElements())) {
             if (round > 1 && type.getSimpleName().toString().startsWith("$")) {
-                // generated in this compilation by another processor, under the $ prefix that Micronaut gives its bean
-                // definitions, introspections and AOP proxies: not a class of the application
                 continue;
             }
             collect(type);
@@ -129,7 +124,6 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
             problems.report(processingEnv.getMessager());
             return;
         }
-        // the checks see each type with the fields of its extensions; the manifest hashes the schema as written
         TypeDefinitionRegistry checked = TypeExtensions.merge(registry);
         SchemaChecks schemaChecks = new SchemaChecks(checked, options, problems);
         BindingManifestLines manifest = new BindingManifestLines();
@@ -155,10 +149,6 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
         problems.report(processingEnv.getMessager());
     }
 
-    /**
-     * Writes the binding manifest once, after the last round, and only when the compilation has no error, so that a
-     * manifest in the class output always belongs to code that passed the checks.
-     */
     private void writeManifest(BindingManifestLines manifest, List<String> omissions, List<String> accessors,
                                TypeDefinitionRegistry registry, Problems problems) {
         String content = manifest.render(registry);

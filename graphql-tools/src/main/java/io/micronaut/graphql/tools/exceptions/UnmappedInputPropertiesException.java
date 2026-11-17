@@ -27,10 +27,6 @@ public final class UnmappedInputPropertiesException extends RuntimeException {
 
     private final Map<String, Map.Entry<Class<?>, List<String>>> unmappedProperties;
 
-    /**
-     * @param unmappedProperties per GraphQL input type: the input class and its properties that the type does not
-     *                           define
-     */
     public UnmappedInputPropertiesException(Map<String, Map.Entry<Class<?>, List<String>>> unmappedProperties) {
         super("Input classes have properties that their GraphQL input types do not define "
                 + "(set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):"
@@ -42,9 +38,6 @@ public final class UnmappedInputPropertiesException extends RuntimeException {
         this.unmappedProperties = Map.copyOf(unmappedProperties);
     }
 
-    /**
-     * @return per GraphQL input type: the input class and its properties that the type does not define
-     */
     public Map<String, Map.Entry<Class<?>, List<String>>> getUnmappedProperties() {
         return unmappedProperties;
     }

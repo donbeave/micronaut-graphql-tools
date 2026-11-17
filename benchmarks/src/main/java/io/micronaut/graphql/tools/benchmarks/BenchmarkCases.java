@@ -32,14 +32,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * The benchmarked operations on the request hot path. Each one is built once (the schema, the data fetcher, the
- * environment it is called with) and then run many times: the benchmarks and the allocation gates call the same
- * {@link Op}s, so they measure the same thing.
- */
 public final class BenchmarkCases implements AutoCloseable {
 
-    /** Names of the operations, as the benchmarks and the allocation baselines key them. */
     public static final String PROPERTY_FETCH = "propertyFetch";
     public static final String GRAPHQL_JAVA_PROPERTY_FETCH = "graphqlJavaPropertyFetch";
     public static final String ROOT_METHOD = "rootMethod";
@@ -101,7 +95,6 @@ public final class BenchmarkCases implements AutoCloseable {
             type Rectangle implements Figure { name: String! }
             """;
 
-    /** One benchmarked operation. */
     @FunctionalInterface
     public interface Op {
         Object run() throws Exception;
@@ -140,7 +133,6 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(QUERY_10K, query(10_000));
     }
 
-    /** The operation by name. */
     public Op op(String name) {
         Op op = ops.get(name);
         if (op == null) {
@@ -149,12 +141,10 @@ public final class BenchmarkCases implements AutoCloseable {
         return op;
     }
 
-    /** The names of every operation. */
     public Iterable<String> names() {
         return ops.keySet();
     }
 
-    /** Whether the operation is a whole query, not a path the library owns. */
     public static boolean isWholeQuery(String name) {
         return name.startsWith("query");
     }
@@ -192,7 +182,6 @@ public final class BenchmarkCases implements AutoCloseable {
                 .build();
     }
 
-    /** Resolves the two objects alternately: the resolver is shared, so it is also the multi-threaded case. */
     private Op resolve(Object abstractType, Object first, Object second) {
         TypeResolver resolver = abstractType instanceof GraphQLUnionType union
                 ? schema.getCodeRegistry().getTypeResolver(union)

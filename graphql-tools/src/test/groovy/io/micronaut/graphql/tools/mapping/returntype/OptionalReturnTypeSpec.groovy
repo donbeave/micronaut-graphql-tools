@@ -12,10 +12,6 @@ import org.intellij.lang.annotations.Language
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
-/**
- * A declared return type may wrap the mapped class in {@link Optional} when the GraphQL type is nullable; an empty
- * {@link Optional} becomes {@code null}. On a non-null GraphQL type an {@link Optional} fails at startup.
- */
 class OptionalReturnTypeSpec extends AbstractTest {
 
     static final String SPEC_NAME = "OptionalReturnTypeSpec"

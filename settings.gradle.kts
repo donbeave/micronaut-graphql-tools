@@ -25,8 +25,6 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     importMicronautCatalog("micronaut-graphql")
 }
 
-// The standardized names prefix every module with "micronaut-"; the benchmarks keep the short name that the contributor
-// guide and CI use (:benchmarks:allocationTest), like test-suite.
 gradle.settingsEvaluated {
     rootProject.children.single { it.name == "micronaut-benchmarks" }.name = "benchmarks"
 }

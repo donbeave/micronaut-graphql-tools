@@ -27,15 +27,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * The accessors that the compile-time checks recorded in {@code META-INF/micronaut-graphql-tools/accessors.txt}: for
- * each property of an introspected type the getter that reads it, and for each {@code @GraphQLField} method the class it
- * is written in. Micronaut's bean introspection does not say which method reads a property, and the manifest must not
- * ask reflection, so it takes the answer from the compile-time metadata. Loaded when the manifest is rendered, once.
- *
- * <p>A line is {@code Type#property → Class#getter()} or {@code Type#method/arity → Class#method(parameter types)}.
- * A type the checks did not see has no line, and its members are rendered as {@code Type#property}.</p>
- */
 @Internal
 final class CompileTimeAccessors {
 
@@ -46,9 +37,6 @@ final class CompileTimeAccessors {
     private CompileTimeAccessors() {
     }
 
-    /**
-     * @return the accessors of every module on the classpath, by {@code Type#member}
-     */
     static Map<String, String> get() {
         return Holder.ACCESSORS;
     }

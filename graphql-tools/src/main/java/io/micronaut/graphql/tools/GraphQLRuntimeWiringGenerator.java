@@ -126,9 +126,6 @@ import static io.micronaut.graphql.tools.SystemTypes.getSupportedClasses;
 import static io.micronaut.graphql.tools.SystemTypes.isGraphQlBuiltInType;
 import static io.micronaut.graphql.tools.SystemTypes.isJavaBuiltInClass;
 
-/**
- * @author Alexey Zhokhov
- */
 @Internal
 final class GraphQLRuntimeWiringGenerator {
 
@@ -148,48 +145,32 @@ final class GraphQLRuntimeWiringGenerator {
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
 
     private final Map<String, Class<?>> processedTypes = new HashMap<>();
-    // object type -> the Java interface whose own introspection its properties are read through
     private final Map<String, Class<?>> contractTypes = new HashMap<>();
 
-    // key: schema coordinate (Type.field), value: description of the member bound to it
     private final Map<String, String> fieldBindings = new HashMap<>();
 
-    // key: resolver bean class and method, value: the schema coordinates the method is bound to
     private final Map<String, Set<String>> resolverBindings = new HashMap<>();
 
     // key: object type name, value: its wiring, registered once all its fields are bound (interface fields are bound
     // last, and graphql-java does not merge two wirings of one type the same way in every version)
     private final Map<String, TypeRuntimeWiring.Builder> objectTypeWirings = new LinkedHashMap<>();
 
-    // interface fields that the class of an implementing object type does not bind: bound by an interface resolver
-    // once the Java types of all reached interfaces are known
     private final List<InterfaceField> unboundInterfaceFields = new ArrayList<>();
 
-    // interface fields bound by an interface resolver
     private final List<InterfaceField> interfaceResolverFields = new ArrayList<>();
 
-    // interface fields that the class of an implementing object type binds itself (property, method, type resolver)
     private final List<InterfaceField> ownInterfaceFields = new ArrayList<>();
 
-    // interface fields that a member of the class of an implementing object type can bind, decided once the Java types
-    // of all reached interfaces are known (precedence resolver-first: an interface resolver wins)
     private final List<InterfaceField> deferredModelMemberFields = new ArrayList<>();
 
-    // key: root resolver method, value: the root fields it is bound to
     private final Map<ExecutableMethod<?, ?>, Set<String>> rootMethodBindings = new IdentityHashMap<>();
 
-    // resolver methods that precedence property-first left unbound in favour of a member of the Java type
     private final Set<String> shadowedResolverMethods = new HashSet<>();
 
-    // key: object type mapped to a Java interface without a bean introspection of its own, value: the interface and
-    // the implementation class whose introspection is read instead
     private final Map<String, List<Class<?>>> interfacesReadThroughImplementations = new TreeMap<>();
 
-    // failures of fields that cannot be bound, reported together once every field was tried
     private final List<AbstractMappingException> bindingFailures = new ArrayList<>();
 
-    // key: schema coordinate (Type.field) that a member and a type resolver can both bind, decided by the precedence,
-    // value: the members
     private final Map<String, String> ambiguousBindings = new TreeMap<>();
 
     private final BindingManifestRecorder manifestRecorder;
@@ -240,11 +221,6 @@ final class GraphQLRuntimeWiringGenerator {
         scalarMappings.values().forEach(it -> rootRuntimeWiringBuilder.scalar(it.getScalarType()));
     }
 
-    /**
-     * @return a copy of the application's {@link GraphQLToolsConfiguration#INPUT_OBJECT_MAPPER} bean if there is one,
-     * otherwise a mapper with Jackson's defaults and the {@link BeanIntrospectionModule}; in both cases with the
-     * library's own modules added ({@link ArgumentValueModule} only with {@code input.detect-omission})
-     */
     private static ObjectMapper createInputObjectMapper(ApplicationContext applicationContext,
                                                         Collection<GraphQLScalarMapping> scalarMappings,
                                                         GraphQLToolsConfiguration configuration) {
@@ -280,19 +256,10 @@ final class GraphQLRuntimeWiringGenerator {
         return result;
     }
 
-    /**
-     * @return the lines of the binding manifest recorded by {@link #generate()}
-     */
     BindingManifestRecorder getManifestRecorder() {
         return manifestRecorder;
     }
 
-    /**
-     * Wires every field the library binds, then applies the customizers.
-     *
-     * @param customizers the {@link RuntimeWiringCustomizer} beans, in {@code Ordered} order
-     * @return the runtime wiring
-     */
     RuntimeWiring generate(List<RuntimeWiringCustomizer> customizers) {
         long start = System.nanoTime();
 
@@ -324,7 +291,6 @@ final class GraphQLRuntimeWiringGenerator {
 
             bindInterfaceFields();
 
-            // the checks below would only repeat what partial bindings left out
             throwBindingFailures();
 
             GraphQLToolsConfiguration.UnmappedProperties unmappedProperties =
@@ -365,19 +331,12 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
-    /**
-     * Records the strict-mode findings in the binding manifest, and fails with all of them in strict mode. Does nothing
-     * when strict mode is off and the manifest is not recorded.
-     *
-     * @param unboundTypes the unreachable types left unbound on purpose
-     */
     private void checkStrictMode(Set<String> unboundTypes) {
         Set<String> allowedTypes = new HashSet<>(configuration.getAllowUnreachable());
         if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
             allowedTypes.addAll(unboundTypes);
         }
 
-        // the checks serve strict mode and the manifest findings: with neither wanted they would only be discarded
         if (!configuration.isStrict() && !manifestRecorder.isRecording()) {
             return;
         }
@@ -547,7 +506,6 @@ final class GraphQLRuntimeWiringGenerator {
             result.add(ArgumentDefinition.ofSourceArgument());
         }
 
-        // Bind by name once, at startup; the per-request path walks the result in method parameter order.
         Map<String, InputValueDefinition> inputsByName = new HashMap<>();
         for (InputValueDefinition input : inputs) {
             inputsByName.put(input.getName(), input);
@@ -805,15 +763,6 @@ final class GraphQLRuntimeWiringGenerator {
         });
     }
 
-    /**
-     * Maps a GraphQL interface returned by a field to the declared Java interface, and binds every object type that
-     * implements it, each to the class registered for it in the {@link SchemaMappingDictionary}. The type resolver is
-     * registered by {@link #wireInterfaceTypeResolvers()}.
-     *
-     * @param interfaceTypeDefinition the interface
-     * @param targetClass             the declared Java type
-     * @param mappingContext          the field that returns the interface
-     */
     private void processInterfaceTypeDefinition(InterfaceTypeDefinition interfaceTypeDefinition, Class<?> targetClass,
                                                 TypeMappingContext mappingContext) {
         processIfNotProcessed(interfaceTypeDefinition, targetClass, mappingContext, () -> {
@@ -844,15 +793,6 @@ final class GraphQLRuntimeWiringGenerator {
         });
     }
 
-    /**
-     * The Java type a bound object type is resolved by: the class the {@link SchemaMappingDictionary} maps it to, which
-     * every implementation of a returned interface has, so that the result does not depend on which of two alike
-     * classes (see {@link #bindsAlike}) a field reached the type through first. Without a dictionary entry, the class
-     * the type was bound with.
-     *
-     * @param objectTypeDefinition the object type
-     * @return the Java type, or {@code null} if the object type is not bound
-     */
     @Nullable
     private Class<?> getBoundClass(ObjectTypeDefinition objectTypeDefinition) {
         Class<?> processedClass = processedTypes.get(objectTypeDefinition.getName());
@@ -862,12 +802,6 @@ final class GraphQLRuntimeWiringGenerator {
         return schemaMappingDictionary.getTypes().getOrDefault(objectTypeDefinition.getName(), processedClass);
     }
 
-    /**
-     * An object type is rejected only when no object can be an instance of both the Java type the field declares for
-     * the union or interface and the Java type the object type is mapped to: two classes with no subtype relation, or
-     * a {@code final} class that does not implement the other type. Anything else can hold at runtime, for example an
-     * object whose class implements the declared interface and the mapped one, and is accepted.
-     */
     private static void checkMemberClass(String abstractTypeKind, String abstractTypeName, Class<?> declaredClass,
                                          String objectTypeName, Class<?> memberClass,
                                          TypeMappingContext mappingContext) {
@@ -881,18 +815,11 @@ final class GraphQLRuntimeWiringGenerator {
         if (a.isAssignableFrom(b) || b.isAssignableFrom(a)) {
             return false;
         }
-        // not related: a class or interface that could gain the other type in a subclass is not provably disjoint
         return !a.isInterface() && !b.isInterface()
                 || Modifier.isFinal(a.getModifiers())
                 || Modifier.isFinal(b.getModifiers());
     }
 
-    /**
-     * @param clazz the Java type an object type is mapped to
-     * @return the classes whose objects resolve to that object type by their exact class: the type itself and, for a
-     * Java interface, the classes annotated with {@code @GraphQLType(theInterface)}, as an object is never an instance
-     * of the interface itself
-     */
     private List<Class<?>> getMappedClasses(Class<?> clazz) {
         if (!clazz.isInterface()) {
             return List.of(clazz);
@@ -910,13 +837,6 @@ final class GraphQLRuntimeWiringGenerator {
                 .toList();
     }
 
-    /**
-     * Registers the type resolver of every interface that a field returns or that a bound object type implements. Such
-     * an implemented-only interface is never the type of a field, so graphql-java never calls its type resolver, but
-     * the schema requires one. Each type resolver maps the classes of the bound implementations.
-     *
-     * @return the interfaces that no field returns, but that a bound object type implements
-     */
     private Set<String> wireInterfaceTypeResolvers() {
         Set<String> implementedInterfaces = new TreeSet<>();
 
@@ -940,8 +860,6 @@ final class GraphQLRuntimeWiringGenerator {
                     objectTypes.put(implementation.getName(), clazz);
                     for (Class<?> mappedClass : getMappedClasses(clazz)) {
                         if (exactClasses.putIfAbsent(mappedClass, implementation.getName()) != null) {
-                            // only possible for an implemented-only interface (the dictionary maps each class once):
-                            // its type resolver is never called, and an exact lookup must not pick one of the types
                             sharedClasses.add(mappedClass);
                         }
                     }
@@ -1061,7 +979,6 @@ final class GraphQLRuntimeWiringGenerator {
                 .findTypeExecutableMethods(sourceClass, objectTypeDefinition.getName(), fieldDefinition.getName());
 
         if (beanDefinitionAndMethods.isEmpty() && !declaringInterfaces.isEmpty()) {
-            // an interface resolver may bind it, see bindInterfaceFields()
             unboundInterfaceFields.add(new InterfaceField(objectTypeDefinition, fieldDefinition,
                     sourceClass, Collections.emptyMap(), null));
             return;
@@ -1076,13 +993,6 @@ final class GraphQLRuntimeWiringGenerator {
                 beanDefinitionAndMethods, declaringInterfaces);
     }
 
-    /**
-     * Binds a field that a member of the Java type of its object type (a property or a {@code @GraphQLField} method)
-     * can bind, applying {@link GraphQLToolsConfiguration#getPrecedence()} and
-     * {@link GraphQLToolsConfiguration#getResolverDirectives()} when a type resolver method can bind it too. The type
-     * resolvers of the interfaces that declare the field are known only after the traversal, so such a field is
-     * decided by {@link #bindInterfaceFields()} when a type resolver could win.
-     */
     private void processModelMemberField(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,
                                          TypeRuntimeWiring.Builder typeRuntimeWiringBuilder, ModelMember modelMember,
                                          Class<?> sourceClass, List<InterfaceTypeDefinition> declaringInterfaces) {
@@ -1117,14 +1027,12 @@ final class GraphQLRuntimeWiringGenerator {
         }
 
         if (!declaringInterfaces.isEmpty() && directive != null) {
-            // only an interface resolver can bind it, see bindInterfaceFields()
             unboundInterfaceFields.add(new InterfaceField(objectTypeDefinition, fieldDefinition, sourceClass,
                     modelMember.members(), modelMember));
             return;
         }
 
         if (!declaringInterfaces.isEmpty() && precedence == Precedence.RESOLVER_FIRST) {
-            // an interface resolver binds it if there is one, see bindInterfaceFields()
             deferredModelMemberFields.add(new InterfaceField(objectTypeDefinition, fieldDefinition, sourceClass,
                     modelMember.members(), modelMember));
             return;
@@ -1159,7 +1067,6 @@ final class GraphQLRuntimeWiringGenerator {
             fieldBindings.put(coordinate, "property " + beanIntrospection.getBeanType().getName() + "."
                     + getPropertyMethodName(beanProperty));
 
-            // the bean property don't have arguments, that's why we only validates arguments count, not exact types
             checkArgumentCount(beanProperty, mappingContext);
 
             processFieldReturnType(beanProperty.asArgument(), fieldDefinition.getType(), mappingContext);
@@ -1228,11 +1135,6 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
-    /**
-     * @param fieldDefinition a field of an object type
-     * @return the first directive of {@link GraphQLToolsConfiguration#getResolverDirectives()} that the field carries,
-     * or {@code null}
-     */
     @Nullable
     private String getResolverDirective(FieldDefinition fieldDefinition) {
         for (String directive : configuration.getResolverDirectives()) {
@@ -1243,10 +1145,6 @@ final class GraphQLRuntimeWiringGenerator {
         return null;
     }
 
-    /**
-     * Checks that every directive listed in {@link GraphQLToolsConfiguration#getResolverDirectives()} is declared by
-     * the schema, so that the list cannot go stale.
-     */
     private void validateResolverDirectives() {
         List<String> undeclared = configuration.getResolverDirectives().stream()
                 .filter(it -> typeDefinitionRegistry.getDirectiveDefinition(it).isEmpty())
@@ -1258,17 +1156,12 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
-    /**
-     * Records a field that both a member of its Java type and a type resolver method can bind, and that
-     * {@link GraphQLToolsConfiguration#getPrecedence()} decided.
-     */
     private void recordAmbiguity(TypeMappingContext mappingContext, ModelMember modelMember,
                                  List<BeanDefinitionAndMethod> resolvers) {
         String coordinate = mappingContext.getGraphQlObjectType() + "." + mappingContext.getGraphQlField();
         ambiguousBindings.put(coordinate, describeMembers(modelMember.members()) + " | "
                 + describeMembers(toMap(resolvers)));
         if (configuration.getPrecedence() == Precedence.PROPERTY_FIRST) {
-            // the precedence chose the member: the resolver methods are accounted for by the ambiguous line
             resolvers.forEach(it -> shadowedResolverMethods.add(GraphQLResolversRegistry.describeMethod(
                     it.getBeanDefinition(), it.getExecutableMethod())));
         }
@@ -1295,11 +1188,6 @@ final class GraphQLRuntimeWiringGenerator {
         return result;
     }
 
-    /**
-     * @param objectTypeDefinition an object type
-     * @param fieldName            one of its fields
-     * @return the interfaces the object type implements that declare the field, by name
-     */
     private List<InterfaceTypeDefinition> getDeclaringInterfaces(ObjectTypeDefinition objectTypeDefinition,
                                                                  String fieldName) {
         return objectTypeDefinition.getImplements().stream()
@@ -1310,14 +1198,6 @@ final class GraphQLRuntimeWiringGenerator {
                 .toList();
     }
 
-    /**
-     * Finds the type resolver methods for a field declared by the interfaces of an object type: the methods of the
-     * {@link io.micronaut.graphql.tools.annotation.GraphQLTypeResolver}s of the Java type each interface is mapped to.
-     * Only interfaces that a field returns have a Java type.
-     *
-     * @param field the interface field of an object type
-     * @return the interface resolver methods, possibly none
-     */
     private List<InterfaceResolverMethod> findInterfaceResolverMethods(InterfaceField field) {
         List<InterfaceResolverMethod> result = new ArrayList<>();
         String fieldName = field.fieldDefinition().getName();
@@ -1326,7 +1206,6 @@ final class GraphQLRuntimeWiringGenerator {
                 : getDeclaringInterfaces(field.objectTypeDefinition(), fieldName)) {
             Class<?> interfaceClass = processedTypes.get(interfaceTypeDefinition.getName());
 
-            // the object type's own type resolvers are already its own binding
             if (interfaceClass == null || interfaceClass.equals(field.ownSourceClass())) {
                 continue;
             }
@@ -1341,30 +1220,13 @@ final class GraphQLRuntimeWiringGenerator {
         return result;
     }
 
-    /**
-     * Binds the interface fields that the class of an implementing object type does not bind itself to the type
-     * resolver of the interface, then checks for ambiguities. It runs after the traversal from the root types, so that
-     * the Java type of every reached interface is known, and repeats while binding reaches more types. All checks use
-     * the final mapping, so the result does not depend on the order of the schema.
-     * <ul>
-     *     <li>An interface field that the implementation binds itself (property, method or its own type resolver) and
-     *     that an interface resolver binds too is ambiguous.</li>
-     *     <li>So is an interface field with resolvers of two interfaces.</li>
-     *     <li>An interface field that nothing binds is a {@link io.micronaut.graphql.tools.exceptions.MethodNotFoundException},
-     *     as for any other field.</li>
-     * </ul>
-     */
     private void bindInterfaceFields() {
-        // binding a resolver over a member (resolver-first) may reach more types, whose fields are bound in turn
         boolean rebound = true;
         while (rebound) {
             rebound = bindInterfaceFieldsOnce();
         }
     }
 
-    /**
-     * @return {@code true} if a type resolver replaced a member bound before, so that binding has to run again
-     */
     private boolean bindInterfaceFieldsOnce() {
         while (true) {
             boolean progress = false;
@@ -1394,7 +1256,6 @@ final class GraphQLRuntimeWiringGenerator {
                 break;
             }
 
-            // precedence resolver-first: an interface resolver binds the field if there is one, else the member
             for (InterfaceField field : sortedByCoordinate(deferredModelMemberFields)) {
                 deferredModelMemberFields.remove(field);
                 List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
@@ -1436,7 +1297,6 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             if (field.modelMember() == null) {
-                // the object type's own type resolver and an interface resolver
                 Map<Class<?>, List<String>> members = toInterfaceMethodsMap(methods);
                 field.ownMembers().forEach((clazz, names) ->
                         members.computeIfAbsent(clazz, it -> new ArrayList<>()).addAll(names));
@@ -1454,7 +1314,6 @@ final class GraphQLRuntimeWiringGenerator {
                 case PROPERTY_FIRST -> recordAmbiguity(field.mappingContext(), field.modelMember(),
                         methods.stream().map(InterfaceResolverMethod::method).toList());
                 case RESOLVER_FIRST -> {
-                    // the interface's Java type became known only after the member was bound: bind the resolver
                     ownInterfaceFields.remove(field);
                     collectFailure(() -> bindResolverOverModelMember(field, methods));
                     rebound = true;
@@ -1466,12 +1325,6 @@ final class GraphQLRuntimeWiringGenerator {
         return rebound;
     }
 
-    /**
-     * Runs the binding of one field and records a failure instead of stopping at it, so that every field that cannot
-     * be bound is reported at once.
-     *
-     * @param action the binding of one field
-     */
     private void collectFailure(Runnable action) {
         try {
             action.run();
@@ -1480,10 +1333,6 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
-    /**
-     * Throws the binding failures collected so far: a single one as is, several as a {@link BindingFailuresException},
-     * sorted by schema coordinate.
-     */
     private void throwBindingFailures() {
         if (bindingFailures.isEmpty()) {
             return;
@@ -1546,11 +1395,6 @@ final class GraphQLRuntimeWiringGenerator {
         return fields.stream().sorted(Comparator.comparing(InterfaceField::coordinate)).toList();
     }
 
-    /**
-     * @return the {@link MethodNotFoundException} for a field that neither a property, a method of the type nor a type
-     * resolver binds; for a type read through the introspection of a Java interface it says that getters only an
-     * implementation class declares are not candidates
-     */
     private MethodNotFoundException methodNotFound(String objectTypeName, Class<?> sourceClass, String fieldName,
                                                    TypeMappingContext mappingContext) {
         MethodNotFoundException exception =
@@ -1736,7 +1580,6 @@ final class GraphQLRuntimeWiringGenerator {
                 throw IncorrectClassMappingException.forArgument(mappingContext, returnType, supportedClasses);
             }
             if (returnType.isPrimitive() && !nonNull && configuration.isStrict()) {
-                // null (omitted or explicit) cannot reach a primitive; without strict mode this stays as it was
                 throw IncorrectClassMappingException.forNullablePrimitiveInStrictMode(mappingContext, returnType,
                         typeName.getName(), supportedClasses);
             }
@@ -1752,7 +1595,6 @@ final class GraphQLRuntimeWiringGenerator {
                         scalarMapping.getInputClasses());
             }
             if (returnType.isPrimitive() && !nonNull) {
-                // null (omitted or explicit) cannot be passed to a primitive parameter or set on a primitive property
                 throw IncorrectClassMappingException.forNullablePrimitive(mappingContext, returnType,
                         scalarMapping.getName(), scalarMapping.getInputClasses());
             }
@@ -1761,17 +1603,6 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
-    /**
-     * Removes an {@link ArgumentValue} from the declared type of an argument or an input class property. It needs
-     * {@code input.detect-omission}, a nullable GraphQL type (only those can be omitted or {@code null}) and the field
-     * level (a list element cannot be omitted).
-     *
-     * @param argument       the declared type
-     * @param graphQlType    the GraphQL type of the argument, input field or list element, before removing non-null
-     * @param fieldLevel     {@code true} for the argument or input field itself, {@code false} for a list element
-     * @param mappingContext the mapping context
-     * @return the type the GraphQL type has to be mapped to
-     */
     private Argument<?> unwrapArgumentValue(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
                                             MappingContext mappingContext) {
         if (!ArgumentValue.class.equals(argument.getType())) {
@@ -1824,21 +1655,14 @@ final class GraphQLRuntimeWiringGenerator {
                 );
             }
 
-            // do nothing as it already processed
             return;
         }
 
-        // save processed type before actual processing is because sometimes one type can refer to itself in it fields
         processedTypes.put(typeDefinition.getName(), targetClass);
 
         runnable.run();
     }
 
-    /**
-     * Two Java types bind a GraphQL object type alike when they are equal, or when one is a Java interface and the
-     * other a class annotated with {@code @GraphQLType(thatInterface)}, or both are such classes, and the type's
-     * properties are read through the same bean introspection either way.
-     */
     private boolean bindsAlike(Class<?> first, Class<?> second, MappingContext mappingContext) {
         if (first.equals(second)) {
             return true;
@@ -1858,16 +1682,6 @@ final class GraphQLRuntimeWiringGenerator {
         return TimeUnit.MILLISECONDS.convert(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
     }
 
-    /**
-     * A field of an object type that one of its interfaces declares.
-     *
-     * @param objectTypeDefinition the object type
-     * @param fieldDefinition      the field
-     * @param ownSourceClass       the class the object type's own type resolvers are declared for
-     * @param ownMembers           the members of the object type's class or type resolvers that bind the field
-     * @param modelMember          the member of the object type's class that binds or may bind the field, or
-     *                             {@code null} if its own type resolver binds it or nothing does
-     */
     private record InterfaceField(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,
                                   Class<?> ownSourceClass,
                                   Map<Class<?>, List<String>> ownMembers,
@@ -1883,25 +1697,10 @@ final class GraphQLRuntimeWiringGenerator {
 
     }
 
-    /**
-     * A type resolver method of the Java type an interface is mapped to.
-     *
-     * @param interfaceTypeDefinition the interface
-     * @param interfaceClass          the Java type the interface is mapped to
-     * @param method                  the type resolver method
-     */
     private record InterfaceResolverMethod(InterfaceTypeDefinition interfaceTypeDefinition, Class<?> interfaceClass,
                                            BeanDefinitionAndMethod method) {
     }
 
-    /**
-     * A member of the Java type of an object type that can bind a field: a bean property or a {@code @GraphQLField}
-     * method, never both.
-     *
-     * @param beanIntrospection the introspection the member belongs to
-     * @param beanProperty      the property, or {@code null}
-     * @param beanMethod        the method, or {@code null}
-     */
     private record ModelMember(BeanIntrospection<Object> beanIntrospection,
                                @Nullable BeanProperty<Object, Object> beanProperty,
                                @Nullable BeanMethod<Object, ?> beanMethod) {

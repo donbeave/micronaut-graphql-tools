@@ -11,11 +11,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException
 import org.intellij.lang.annotations.Language
 
-/**
- * Omitted arguments and input fields versus explicit {@code null}: {@code micronaut.graphql.tools.input.detect-omission}
- * (default {@code false}) enables {@link ArgumentValue}. In both modes the schema's default values apply and enum
- * values arrive as the Java enum constants of the same name.
- */
 class ArgumentOmissionSpec extends AbstractTest {
 
     static final String SPEC_DEFAULT = "ArgumentOmissionSpecDefault"
@@ -421,7 +416,6 @@ input LoginInput {
         ArgumentValue<String> user
         private String storedPassword
 
-        // write-only: Jackson sets it, nothing may read it
         void setPassword(String password) {
             this.storedPassword = password
         }
@@ -430,7 +424,6 @@ input LoginInput {
             return storedPassword != null
         }
 
-        // computed: no request sets it, and the library must not call it
         String getSummary() {
             throw new IllegalStateException('a computed getter was called')
         }

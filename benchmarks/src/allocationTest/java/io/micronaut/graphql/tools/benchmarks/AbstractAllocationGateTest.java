@@ -10,22 +10,6 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Fails when an operation allocates more than its checked-in baseline.
- *
- * <ul>
- *   <li>A path the library owns (a fetcher, a type resolver, the conversion of an argument): baseline + 0.5 bytes per
- *       operation, so a path that allocates nothing keeps allocating nothing.</li>
- *   <li>A whole query: baseline x 1.05, on the default graphql-java leg only, because the allocation of graphql-java
- *       itself differs between legs.</li>
- *   <li>graphql-java's own {@code PropertyDataFetcher} is reported for comparison and not gated.</li>
- * </ul>
- *
- * <p>One subclass per operation, and the build forks one JVM per class (C1 only, see build.gradle.kts): the figure
- * does not depend on which operations ran before it, or on what the JIT decides.
- *
- * <p>{@code -Pallocation.update} rewrites the baselines of the running graphql-java leg and JDK instead of gating.
- */
 abstract class AbstractAllocationGateTest {
 
     private static final double LIBRARY_TOLERANCE_BYTES = 0.5;
@@ -52,7 +36,6 @@ abstract class AbstractAllocationGateTest {
         }
     }
 
-    /** The name of the operation, see {@link BenchmarkCases}. */
     abstract String operation();
 
     @Test
@@ -77,7 +60,6 @@ abstract class AbstractAllocationGateTest {
             baselines.put(key, measured);
             return;
         }
-        // A JDK without any baseline (17 is not a full leg, D-32) is not gated; a JDK with baselines must have every key.
         Assumptions.assumeTrue(baselines.hasJdk(JDK), "No allocation baselines are recorded for JDK " + JDK);
         Double baseline = baselines.get(key);
         assertNotNull(baseline, "No allocation baseline for " + key + ". Record it with "

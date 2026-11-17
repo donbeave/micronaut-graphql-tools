@@ -18,11 +18,6 @@ import org.intellij.lang.annotations.Language
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
-/**
- * A declared return type may wrap the mapped class in {@link DataFetcherResult} (at field level, inside a
- * {@link CompletionStage}, and per list element). The mapping checks the wrapped class, and graphql-java unwraps the
- * value at runtime, keeping {@code localContext} and errors.
- */
 class DataFetcherResultReturnTypeSpec extends AbstractTest {
 
     static final String SPEC_NAME = "DataFetcherResultReturnTypeSpec"

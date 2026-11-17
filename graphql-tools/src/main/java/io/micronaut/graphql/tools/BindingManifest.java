@@ -53,24 +53,15 @@ import java.util.function.Supplier;
  */
 public final class BindingManifest {
 
-    /**
-     * The first header line.
-     */
     public static final String FORMAT = "# graphql-binding-manifest 1";
 
     private Supplier<Content> renderer;
     private volatile Content content;
 
-    /**
-     * @param renderer builds the header and the lines; called once, when the manifest is first read
-     */
     BindingManifest(Supplier<Content> renderer) {
         this.renderer = renderer;
     }
 
-    /**
-     * @return whether the manifest has been rendered, which happens when it is first read
-     */
     boolean isRendered() {
         return content != null;
     }
@@ -83,7 +74,6 @@ public final class BindingManifest {
                 if (result == null) {
                     result = renderer.get();
                     content = result;
-                    // the recorded facts (definitions, schema, arguments) are not needed again
                     renderer = null;
                 }
             }
@@ -91,33 +81,21 @@ public final class BindingManifest {
         return result;
     }
 
-    /**
-     * @return the header lines, starting with {@link #FORMAT}
-     */
     @NonNull
     public List<String> getHeader() {
         return content().header();
     }
 
-    /**
-     * @return the body lines, sorted
-     */
     @NonNull
     public List<String> getLines() {
         return content().lines();
     }
 
-    /**
-     * @return the diagnostic lines of the body (those starting with {@code !})
-     */
     @NonNull
     public List<String> getDiagnostics() {
         return content().lines().stream().filter(it -> it.startsWith("!")).toList();
     }
 
-    /**
-     * @return the header and the body, each line ended by {@code LF}
-     */
     @NonNull
     public String render() {
         StringBuilder builder = new StringBuilder();
@@ -141,12 +119,6 @@ public final class BindingManifest {
         Files.writeString(path, render(), StandardCharsets.UTF_8);
     }
 
-    /**
-     * The rendered manifest.
-     *
-     * @param header the header lines
-     * @param lines  the body lines, sorted
-     */
     record Content(List<String> header, List<String> lines) {
         Content {
             header = List.copyOf(header);

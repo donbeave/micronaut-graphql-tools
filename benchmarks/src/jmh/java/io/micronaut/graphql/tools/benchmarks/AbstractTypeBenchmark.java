@@ -11,9 +11,6 @@ import org.openjdk.jmh.annotations.Threads;
 
 import java.util.concurrent.TimeUnit;
 
-/**
- * Union and interface resolution from several threads at once: the type resolvers are shared by every request.
- */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)

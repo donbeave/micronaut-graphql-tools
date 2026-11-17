@@ -27,9 +27,6 @@ public final class RuntimeWiringOverrideException extends RuntimeException {
 
     private final List<String> replacements;
 
-    /**
-     * @param replacements every replacement, as {@code "<what> (<customizer class>)"}, in the order the customizers ran
-     */
     public RuntimeWiringOverrideException(List<String> replacements) {
         super("RuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library "
                 + "wired:\n  "
@@ -40,9 +37,6 @@ public final class RuntimeWiringOverrideException extends RuntimeException {
         this.replacements = List.copyOf(replacements);
     }
 
-    /**
-     * @return every replacement, as {@code "<what> (<customizer class>)"}, in the order the customizers ran
-     */
     public List<String> getReplacements() {
         return replacements;
     }

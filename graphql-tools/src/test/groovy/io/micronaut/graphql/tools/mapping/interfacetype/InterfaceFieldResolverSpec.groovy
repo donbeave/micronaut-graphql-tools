@@ -15,11 +15,6 @@ import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-/**
- * A {@link GraphQLTypeResolver} for the Java interface an SDL interface is mapped to binds the fields of that
- * interface on every implementing object type that does not bind them itself. An implementation that binds such a
- * field itself as well is ambiguous.
- */
 class InterfaceFieldResolverSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InterfaceFieldResolverSpec"
@@ -140,8 +135,6 @@ type MediaSection implements Section {
         }
     }
 
-    // --- an implementation that binds the field itself as well ---
-
     void "an implementation with a property for a field that an interface resolver binds fails the startup"() {
         given:
         startContext(SCHEMA, SPEC_NAME + ".ownProperty")
@@ -209,8 +202,6 @@ type MediaSection implements Section {
             return "Media summary of " + section.title
         }
     }
-
-    // --- an object type that implements two interfaces with a resolver for the same field ---
 
     void "two interface resolvers for the same field of an implementation fail the startup"() {
         given:
@@ -306,8 +297,6 @@ type Tag implements Item & Labelled {
         }
     }
 
-    // --- a resolver of an interface that another interface implements ---
-
     void "a resolver of an implemented interface binds the field on the object types"() {
         given:
         startContext("""
@@ -398,8 +387,6 @@ type TextSection implements Section & Node {
                     .registerType("TextSection", NestedTextSection.class)
         }
     }
-
-    // --- a schema coordinate on an interface resolver names the interface field ---
 
     void "an interface resolver method may carry the coordinate of the interface field"() {
         given:

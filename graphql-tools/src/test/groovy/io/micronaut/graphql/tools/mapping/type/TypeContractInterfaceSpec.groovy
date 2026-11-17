@@ -11,11 +11,6 @@ import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
 
-/**
- * A GraphQL type mapped to a Java interface that has a bean introspection of its own (the "contract", annotated with
- * {@code @GraphQLType} or {@code @Introspected}) reads its properties through that introspection, from an object of
- * any class that implements the interface.
- */
 class TypeContractInterfaceSpec extends AbstractTest {
 
     static final String UNANNOTATED_IMPLEMENTATIONS = "TypeContractInterfaceSpec.unannotatedImplementations"
@@ -252,8 +247,6 @@ type Card implements Face {
         result.data.chapter == [title: 'Openings', wordCount: 1200]
     }
 
-    // two implementations without annotations (shape: one contract, a plain and a "featured" implementation)
-
     @GraphQLType
     static interface ReviewGraph {
         String getText()
@@ -291,8 +284,6 @@ type Card implements Face {
         }
     }
 
-    // two implementations, each annotated with @GraphQLType(contract) (shape: a short and a detailed implementation)
-
     @GraphQLType
     static interface LineItemGraph {
         String getName()
@@ -328,8 +319,6 @@ type Card implements Face {
         }
     }
 
-    // a contract annotated with @Introspected
-
     @Introspected
     static interface TagGraph {
         String getLabel()
@@ -353,8 +342,6 @@ type Card implements Face {
         }
     }
 
-    // the contract has no draftNote, only the implementation has
-
     @GraphQLType
     static interface ArticleGraph {
         String getTitle()
@@ -373,8 +360,6 @@ type Card implements Face {
             return new ArticleModel(title: 'Openings', draftNote: 'check the dates')
         }
     }
-
-    // the contract of an implementation of an SDL interface lacks one of the interface's fields
 
     static interface EntryGraph {
     }
@@ -406,8 +391,6 @@ type Card implements Face {
             return (dictionary) -> dictionary.registerType("Memo", MemoGraph)
         }
     }
-
-    // one object type, an interface field and a field that declares one of the annotated implementations
 
     static interface FaceGraph {
         String getLabel()
@@ -448,8 +431,6 @@ type Card implements Face {
             return (dictionary) -> dictionary.registerType("Card", CardGraph)
         }
     }
-
-    // an interface without an introspection of its own: the one class annotated with @GraphQLType(interface) is read
 
     static interface ChapterGraph {
         String getTitle()

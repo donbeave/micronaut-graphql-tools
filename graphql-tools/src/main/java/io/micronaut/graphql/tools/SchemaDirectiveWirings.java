@@ -35,11 +35,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-/**
- * Registers the {@link SchemaDirective} beans with the runtime wiring, and finds the {@link SchemaDirectiveWiring}
- * beans that nothing wires. It runs before the application's {@link RuntimeWiringCustomizer} beans,
- * so these cannot replace a {@code SchemaDirective} bean's wiring unnoticed.
- */
 @Internal
 final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
 
@@ -50,10 +45,6 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
     private final Set<String> everyElementDirectiveNames = new LinkedHashSet<>();
     private final Set<String> directiveNames = new LinkedHashSet<>();
 
-    /**
-     * @param wirings    the {@link SchemaDirectiveWiring} beans
-     * @param directives the {@link SchemaDirective} beans
-     */
     SchemaDirectiveWirings(Collection<BeanRegistration<SchemaDirectiveWiring>> wirings,
                            Collection<BeanRegistration<SchemaDirective>> directives) {
         List<BeanRegistration<SchemaDirective>> everyElement = new ArrayList<>();
@@ -67,7 +58,6 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
                 namedDirectives.add(directive);
             }
         }
-        // lowest order first; stable for equal orders
         everyElement.sort(Comparator.comparingInt(BeanRegistration::getOrder));
         this.everyElementWirings = everyElement.stream().map(it -> it.getBean().getWiring()).toList();
 
@@ -80,14 +70,8 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
     }
 
     /**
-     * Fails on the {@link SchemaDirectiveWiring} beans that neither a {@link SchemaDirective} bean nor a
-     * {@link RuntimeWiringCustomizer} registered. It runs after the customizers, which may register a bean's wiring with
-     * {@code RuntimeWiring.Builder#directive}. A singleton is matched by instance. A prototype bean is a new instance for
-     * every injection point, so it is matched by its class. Limitation: an unwrapped prototype bean is therefore missed when
-     * another wired instance has the same class.
-     *
-     * @param runtimeWiring the runtime wiring after every customizer
-     * @throws UnwrappedDirectiveWiringException if a bean is wired by nothing
+     * Fails on {@link SchemaDirectiveWiring} beans that nothing registered. A prototype bean is matched by its class, so
+     * an unwrapped one is missed when another wired instance has the same class.
      */
     void checkUnwrapped(RuntimeWiring runtimeWiring) {
         List<SchemaDirectiveWiring> registered = new ArrayList<>(wrappedWirings);
@@ -116,17 +100,10 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
         }
     }
 
-    /**
-     * @return the directives that {@link SchemaDirective#everyElement(Collection, SchemaDirectiveWiring)} beans
-     * implement; the named ones are in the runtime wiring
-     */
     Set<String> getEveryElementDirectiveNames() {
         return everyElementDirectiveNames;
     }
 
-    /**
-     * @return the directives that {@link SchemaDirective} beans of either kind implement
-     */
     Set<String> getDirectiveNames() {
         return directiveNames;
     }

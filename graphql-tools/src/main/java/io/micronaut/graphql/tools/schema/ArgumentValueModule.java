@@ -40,9 +40,6 @@ import java.io.IOException;
 @Internal
 public final class ArgumentValueModule extends SimpleModule {
 
-    /**
-     * Creates the module.
-     */
     public ArgumentValueModule() {
         super("micronaut-graphql-tools-argument-value");
         addDeserializer(ArgumentValue.class, new ArgumentValueDeserializer(null));

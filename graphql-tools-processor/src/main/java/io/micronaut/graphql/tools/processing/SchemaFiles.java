@@ -30,21 +30,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * Reads the schema files of {@link ProcessorOptions#SDL_DIR} with graphql-java's parser: every {@code *.graphqls} and
- * {@code *.graphql} file under the directory, in the order of their paths, merged into one registry. Each schema
- * element keeps the path of its file, relative to the directory, as its source name.
- */
 final class SchemaFiles {
 
     private SchemaFiles() {
     }
 
-    /**
-     * @param sdlDir   the directory
-     * @param problems where a missing directory, an unreadable file or a parse error is reported
-     * @return the registry, or {@code null} after an error
-     */
     static TypeDefinitionRegistry read(String sdlDir, Problems problems) {
         Path dir = Path.of(sdlDir);
         if (!Files.isDirectory(dir)) {

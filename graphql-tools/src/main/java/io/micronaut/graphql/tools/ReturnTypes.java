@@ -30,10 +30,6 @@ import java.util.concurrent.Future;
 
 import static io.micronaut.graphql.tools.GraphQLUtils.printType;
 
-/**
- * The containers graphql-java resolves at runtime around the value of a field, and how a declared return type is
- * unwrapped to the type the GraphQL type is mapped to.
- */
 @Internal
 final class ReturnTypes {
 
@@ -43,22 +39,6 @@ final class ReturnTypes {
     private ReturnTypes() {
     }
 
-    /**
-     * Removes the wrappers graphql-java resolves at runtime from a declared return type, in the order graphql-java
-     * resolves them: {@link CompletionStage} (field level only, graphql-java does not await list elements), then
-     * {@link Publisher} (required on fields of the subscription type and allowed nowhere else; the rest applies to each
-     * event), then {@link DataFetcherResult} (its data, errors and local context are applied), then {@link Optional}
-     * (an empty one becomes {@code null}, so it needs a nullable GraphQL type). Each wrapper may appear at most once.
-     * This is stricter than graphql-java in one place: {@code DataFetcherResult<Publisher<T>>} on a subscription field is
-     * rejected (graphql-java would unwrap it), so a subscription field returns the {@link Publisher} directly.
-     *
-     * @param argument       the declared return type
-     * @param graphQlType    the GraphQL type of the field or the list element, before removing non-null
-     * @param fieldLevel     {@code true} for the field type itself, {@code false} for a list element
-     * @param subscription   {@code true} for a field of the subscription type
-     * @param mappingContext the mapping context
-     * @return the type the GraphQL type has to be mapped to
-     */
     static Argument<?> unwrap(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
                                                 boolean subscription, TypeMappingContext mappingContext) {
         Argument<?> result = argument;
@@ -133,15 +113,6 @@ final class ReturnTypes {
                                 + "for example " + wrapper.getSimpleName() + "<String>."));
     }
 
-    /**
-     * The converted type of the binding manifest: the declared type unwrapped once, in this order:
-     * {@link CompletionStage} or {@link Future}, {@link Publisher} (only on a field of the subscription type),
-     * {@link DataFetcherResult} (also of each list element), {@link Optional}.
-     *
-     * @param declaredType the declared type
-     * @param subscription {@code true} for a field of the subscription type
-     * @return the converted type in {@link java.lang.reflect.Type#getTypeName()} form
-     */
     static String convertedTypeName(Argument<?> declaredType, boolean subscription) {
         Argument<?> result = declaredType;
         if (CompletionStage.class.isAssignableFrom(result.getType()) || Future.class.isAssignableFrom(result.getType())) {

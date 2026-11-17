@@ -27,10 +27,6 @@ public final class UnreachableTypesException extends RuntimeException {
 
     private final List<String> typeNames;
 
-    /**
-     * @param types the unreachable types: name to kind ({@code type}, {@code interface}, {@code union}), in the order
-     *              to report them
-     */
     public UnreachableTypesException(Map<String, String> types) {
         super("The schema defines types that no field reachable from a root operation type returns, so nothing "
                 + "binds them: "
@@ -43,9 +39,6 @@ public final class UnreachableTypesException extends RuntimeException {
         this.typeNames = List.copyOf(types.keySet());
     }
 
-    /**
-     * @return the names of the unreachable types
-     */
     public List<String> getTypeNames() {
         return typeNames;
     }

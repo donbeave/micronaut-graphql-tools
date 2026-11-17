@@ -17,7 +17,6 @@ import java.io.InputStreamReader;
 @Factory
 public class GraphQLFactory {
 
-    // TODO use application.yml
     @Bean
     @Singleton
     public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceResolver) {
