@@ -57,6 +57,7 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
 - `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+- `@GraphQLIgnore` Marks a method, a property or an enum constant that binds no field, so that strict mode does not report it, see [Escape hatches](#escape-hatches).
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
 These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
@@ -303,6 +304,8 @@ String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
   [Configuration](#configuration); an enum, input or scalar type that an argument of a directive definition uses,
   directly or through input fields, is reached), `!ambiguous Type.field · member | member` for a field decided by a lenient
   `precedence`, and the findings of [strict mode](#strict-mode) (`!unbound`, `!unusedDictionary`, `!unwiredDirective`).
+- `~ignored Class#member` lines list the members marked `@GraphQLIgnore` that the binding met (see
+  [Escape hatches](#escape-hatches)): they bind no field and are not findings.
 - Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from the reflected method or getter.
   Where reflection cannot find it (for example a native image without reflection configuration), they are written from
   Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
@@ -361,6 +364,25 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
 All findings except unreachable types, unmapped input class properties, primitives for nullable scalars and unwired
 directives are reported in one `StrictModeException`. `!ambiguous` lines are allowed by
 the `precedence` that produced them. Every schema field must be bound in every mode (`MethodNotFoundException`).
+
+### Escape hatches
+
+A member that binds no field on purpose does not need `strict: false`, which turns off every other check too:
+
+- **`@GraphQLIgnore`** (package `io.micronaut.graphql.tools.annotation`) on a resolver method, a getter or property of a
+  type or input class, or an enum constant. The member is not reported as unbound (`!unbound`), and nothing binds it: an
+  ignored method does not bind the field of its name, and an ignored getter does not take part in `precedence`, so a
+  type resolver method may bind that field without an ambiguity. A schema field that only ignored members could
+  bind fails as any unbound field does. On an input class property it suppresses the finding for a property that the
+  input type does not define. On an enum constant it suppresses the finding for a constant without a schema value; the
+  enum needs a bean introspection (`@Introspected`), from which the annotation is read, never by reflection.
+  Every ignored member the binding meets is a `~ignored Class#member` line of the
+  [binding manifest](#binding-manifest), so a review can see what was set aside. Use it sparingly: it hides the
+  mistake that the check exists to find.
+- **Lifecycle methods are not resolver methods.** A method annotated with `@EventListener`, `@Scheduled` or
+  `@PreDestroy` on a resolver bean is not reported as unbound. It still binds a field if it has that field's name.
+
+These apply to the runtime checks; the compile-time checks (`micronaut-graphql-tools-processor`) do not read them yet.
 
 With `strict: false` the library skips these checks and binds as before strict mode existed: only object, interface and
 union types are checked for reachability, and the findings appear in the manifest only. It does not change

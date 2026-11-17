@@ -71,6 +71,7 @@ final class BindingManifestRecorder {
     // key: what the line describes (a type, a coordinate), so that a later binding of the same coordinate replaces it
     private final Map<String, Supplier<String>> lines = new HashMap<>();
     private final Set<String> diagnostics = new TreeSet<>();
+    private final Set<String> ignored = new TreeSet<>();
     private final Set<String> scalars = new TreeSet<>();
     private final boolean recording;
 
@@ -186,6 +187,18 @@ final class BindingManifestRecorder {
     }
 
     /**
+     * Records a member marked {@code @GraphQLIgnore}, as an {@code ~ignored} line.
+     *
+     * @param member the member, as the other manifest lines name members
+     */
+    void ignored(String member) {
+        if (!recording) {
+            return;
+        }
+        ignored.add("~ignored " + requirePart(member));
+    }
+
+    /**
      * @param typeName a scalar
      * @return {@code true} if a bound field, argument or input field uses it
      */
@@ -214,10 +227,12 @@ final class BindingManifestRecorder {
         Map<String, Supplier<String>> recorded = new HashMap<>(lines);
         Set<String> recordedDiagnostics = new TreeSet<>(diagnostics);
         Set<String> recordedScalars = new TreeSet<>(scalars);
+        Set<String> recordedIgnored = new TreeSet<>(ignored);
         return new BindingManifest(() -> {
             List<String> body = new ArrayList<>(recorded.size() + recordedDiagnostics.size() + recordedScalars.size());
             recorded.values().forEach(it -> body.add(it.get()));
             body.addAll(recordedDiagnostics);
+            body.addAll(recordedIgnored);
             for (String scalar : recordedScalars) {
                 GraphQLType type = schema.getType(scalar);
                 Class<?> coercing = type instanceof GraphQLScalarType scalarType
