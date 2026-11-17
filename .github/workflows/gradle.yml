@@ -29,14 +29,14 @@ jobs:
     # The JDK 21 names are required checks: keep them stable
     name: build (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.4.1
       - name: Build with Gradle
         run: ./gradlew build --no-daemon --continue -PgraphqlJavaVersion=${{ matrix.graphql-java }}
         env:
@@ -47,7 +47,7 @@ jobs:
           PREDICTIVE_TEST_SELECTION: 'false'
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: test-reports-java${{ matrix.java }}-graphql-java${{ matrix.graphql-java }}
           path: |
@@ -66,14 +66,14 @@ jobs:
     # The library modules compile to release 17 (see buildSrc); test-suite needs Java 21 and cannot run here.
     name: check library (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.4.1
       - name: Build with Gradle
         run: ./gradlew :micronaut-graphql-tools:check --no-daemon --continue -PgraphqlJavaVersion=${{ matrix.graphql-java }}
         env:
@@ -84,7 +84,7 @@ jobs:
           PREDICTIVE_TEST_SELECTION: 'false'
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: test-reports-java${{ matrix.java }}-graphql-java${{ matrix.graphql-java }}
           path: |

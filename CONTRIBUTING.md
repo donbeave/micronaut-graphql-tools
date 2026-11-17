@@ -8,7 +8,7 @@ If you are interested in contributing to Micronaut and are looking for issues to
 
 ## JDK Setup
 
-Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need GraalVM for JDK 21. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and `test-suite` need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
+Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and `test-suite` need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
 
 ## IDE Setup
 

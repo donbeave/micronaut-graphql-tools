@@ -1,17 +1,17 @@
 [versions]
-micronaut = "4.10.9"
+micronaut = "4.10.37"
+micronaut-platform = "4.10.24"
 micronaut-docs = "3.0.0"
-micronaut-test = "4.6.2"
+micronaut-test = "4.10.3"
 micronaut-graphql = "4.8.0"
 
-groovy = "4.0.24"
-spock = "2.3-groovy-4.0"
+groovy = "4.0.33"
 
-apollo = "4.4.1"
+apollo = "4.4.4"
 jmh = "1.37"
 junit = "5.13.4"
-jetbrains-annotations = "24.0.1"
-logback = "1.5.26"
+jetbrains-annotations = "26.1.0"
+logback = "1.5.38"
 # test oracle for the scalar SPI: the date/time scalars many graphql-java applications use
 graphql-java-datetime = "6.0.0"
 

@@ -20,14 +20,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        graalvm: ['21']
+        graalvm: ['25']
         # graphql-java compatibility legs, see build.gradle.kts
         graphql-java: ['21.3', '25.1']
     name: native (GraalVM ${{ matrix.graalvm }}, graphql-java ${{ matrix.graphql-java }})
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Set up GraalVM
-        uses: graalvm/setup-graalvm@v1
+        uses: graalvm/setup-graalvm@v1.6.9
         with:
           distribution: 'graalvm'
           java-version: ${{ matrix.graalvm }}
@@ -35,7 +35,7 @@ jobs:
           cache: 'gradle'
           native-image-job-reports: 'true'
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.4.1
       - name: Run native tests
         run: ./gradlew :test-suite:nativeTest --no-daemon -PgraphqlJavaVersion=${{ matrix.graphql-java }}
         env:
@@ -43,7 +43,7 @@ jobs:
           PREDICTIVE_TEST_SELECTION: 'false'
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: native-test-reports-graalvm${{ matrix.graalvm }}-graphql-java${{ matrix.graphql-java }}
           path: |
