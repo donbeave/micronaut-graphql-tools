@@ -147,8 +147,6 @@ jobs:
       - name: Scan for forbidden names
         env:
           FORBIDDEN_NAMES: ${{ secrets.FORBIDDEN_NAMES }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
           IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
         run: |
           set -euo pipefail
@@ -185,7 +183,8 @@ jobs:
             failed=1
           fi
           # PR title and body: the text is not printed; only the fact of a match is reported.
-          printf '%s\n%s\n' "$PR_TITLE" "$PR_BODY" > "$work/pr-text.txt"
+          # Read from the event payload file, not from env: the runner prints every step env value in the log.
+          jq -r '(.pull_request.title // ""), (.pull_request.body // "")' "$GITHUB_EVENT_PATH" > "$work/pr-text.txt"
           set +e
           grep -niIF -f "$work/patterns.txt" "$work/pr-text.txt" > /dev/null
           rc=$?
