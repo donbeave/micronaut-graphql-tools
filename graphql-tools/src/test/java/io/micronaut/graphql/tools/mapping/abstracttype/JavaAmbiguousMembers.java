@@ -43,4 +43,26 @@ public final class JavaAmbiguousMembers {
         }
     }
 
+    /**
+     * The members of the exact-class case. They are separate from Boxed and Bagged, so that {@link BoxedAndBagged} is
+     * not ambiguous in that case's union.
+     */
+    @GraphQLType
+    public interface Marked extends Wrapped {
+    }
+
+    @GraphQLType
+    public interface Stamped extends Wrapped {
+    }
+
+    /** An instance of both exact-case members, mapped by its exact class to {@link Marked}: not ambiguous. */
+    @GraphQLType(Marked.class)
+    @Introspected
+    public static class MarkedAndStamped implements Marked, Stamped {
+        @Override
+        public String getLabel() {
+            return "exact";
+        }
+    }
+
 }

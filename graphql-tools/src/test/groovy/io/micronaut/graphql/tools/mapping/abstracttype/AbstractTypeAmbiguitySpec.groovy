@@ -15,7 +15,10 @@ import spock.lang.Unroll
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Bagged
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Boxed
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.BoxedAndBagged
+import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Marked
+import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.MarkedAndStamped
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.OnlyBoxed
+import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Stamped
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Wrapped
 
 /**
@@ -27,6 +30,28 @@ class AbstractTypeAmbiguitySpec extends AbstractTest {
     static final String UNION = "AbstractTypeAmbiguitySpec.union"
     static final String INTERFACE = "AbstractTypeAmbiguitySpec.interface"
     static final String CHAIN = "AbstractTypeAmbiguitySpec.chain"
+    static final String EXACT = "AbstractTypeAmbiguitySpec.exact"
+
+    @Language("GraphQL")
+    static final String EXACT_SCHEMA = """
+schema {
+  query: Query
+}
+
+type Query {
+  wrapped: Holder
+}
+
+union Holder = Marked | Stamped
+
+type Marked {
+  label: String!
+}
+
+type Stamped {
+  label: String!
+}
+"""
 
     static String schema(String keyword) {
         boolean union = keyword == 'union'
@@ -94,6 +119,18 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
         'interface' | INTERFACE
     }
 
+    void "a class mapped by its exact class to one of two ambiguous members does not fail the startup"() {
+        given:
+        startContext(EXACT_SCHEMA, EXACT)
+
+        when:
+        def result = executeQuery("{ wrapped { __typename } }")
+
+        then:
+        result.errors.isEmpty()
+        result.data.wrapped == [__typename: 'Marked']
+    }
+
     void "a class matching a member and its more specific sub-member does not fail the startup"() {
         given:
         startContext(CHAIN_SCHEMA, CHAIN)
@@ -147,6 +184,26 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
             return (dictionary) -> dictionary
                     .registerType("Boxed", Boxed)
                     .registerType("Bagged", Bagged)
+        }
+    }
+
+    @Requires(property = 'spec.name', value = EXACT)
+    @GraphQLRootResolver
+    static class ExactQuery {
+        Wrapped wrapped() {
+            return new MarkedAndStamped()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = EXACT)
+    @Factory
+    static class ExactDictionary {
+        @Bean
+        @Singleton
+        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+            return (dictionary) -> dictionary
+                    .registerType("Marked", Marked)
+                    .registerType("Stamped", Stamped)
         }
     }
 
