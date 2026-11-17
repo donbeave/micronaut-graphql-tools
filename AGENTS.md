@@ -7,7 +7,8 @@ disagree, the workflow wins, and you should fix this file in the same change.
 
 ## Setup
 
-- Tools: `mise install` installs Oracle GraalVM 25 (the default JDK and `native-image`) and `actionlint`.
+- Tools: `mise install` installs Oracle GraalVM 25 (the default JDK and `native-image`) and `actionlint`. If mise reports
+  that the configuration is not trusted, run `mise trust` first.
   For another JDK line, run `MISE_ENV=jdk17 mise install`, `MISE_ENV=jdk21 mise install` or `MISE_ENV=jdk25 mise install` once (Temurin).
 - Run Gradle through mise: `mise exec -- ./gradlew <task>` uses the default JDK. For another JDK line, set the same
   `MISE_ENV` on the command, for example `MISE_ENV=jdk21 mise exec -- ./gradlew <task>`. The JDK of each check is in the table.
@@ -26,16 +27,17 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check` | Changes to the library module (JDK 17) |
 | Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
 | Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
-| Guide | `set -o pipefail; ./gradlew docs 2>&1 \| tee docs.log` | Docs or `snippet::` changes; then check the log (below) |
+| Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |
 | Benchmarks | `./gradlew :benchmarks:check` | Hot path, allocation or startup changes |
-| Workflow lint | `actionlint` | Any change under `.github/` |
+| Workflow lint | `mise exec -- actionlint` | Any change under `.github/` |
 
 - Leg values are roles (`floor`, `default`, `ceiling`, `latest`). The floor and ceiling versions are in
   `gradle/libs.versions.toml`; the default leg takes the graphql-java that micronaut-graphql manages; `latest` is resolved in `build.gradle.kts`.
   `-PgraphqlJavaVersion` is rejected. `latest` is for the canary only.
 - Groovy has no native test: the Groovy suite runs on the JVM only (`:test-suite-groovy:test`).
 - Add `-PgraphqlJavaLeg=ceiling` to the native command to run it on that leg.
-- `./gradlew docs` exits 0 even when a snippet is missing. CI fails on the log, so run this after `docs`:
+- Run the guide as `set -o pipefail; ./gradlew docs 2>&1 | tee docs.log`. `./gradlew docs` exits 0 even when a snippet is
+  missing. CI fails on the log, so run this after `docs`:
   `grep -E 'NO FILE FOUND|not found in include file|include file not found|unexpected end tag|detected unclosed tag|mismatched end tag|unterminated .* block|Unresolved directive' docs.log`
   It must print nothing (grep exits 1 when there is no match, so read the output, not the status).
 - Benchmarks: `:benchmarks:check` runs a JMH smoke test and `allocationTest`, which fails when an operation allocates more
