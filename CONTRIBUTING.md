@@ -12,20 +12,22 @@ Open issues are listed at [donbeave/micronaut-graphql-tools/issues](https://gith
 
 Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
 
+The tools are pinned in `mise.toml` and installed with [mise](https://mise.jdx.dev): run `mise install` in the project directory. It installs Oracle GraalVM 25 (the build JDK, and `native-image` for the native tests) and `actionlint` (lints the workflows: run `actionlint`). To build on another JDK line, select an overlay with `MISE_ENV`, for example `export MISE_ENV=jdk21` and then `mise install` (or one command at a time: `MISE_ENV=jdk21 mise exec -- ./gradlew build`; `mise install` alone does not activate the tools, so keep `MISE_ENV` set, or use `mise exec`, when you run Gradle) (`jdk17`, `jdk21`, `jdk25` and `jdk27` install Temurin; JDK 27 is for the canary only). Gradle is not installed by mise: use `./gradlew`.
+
 ## IDE Setup
 
 Micronaut GraphQL Tools can be imported into IntelliJ IDEA by opening the project directory (or `settings.gradle.kts`).
 
 ## Running Tests
 
-The tests do not need Docker. These are the commands CI runs (`.github/workflows/gradle.yml` and `.github/workflows/native.yml`):
+The tests do not need Docker. These are the commands CI runs (all in `.github/workflows/gradle.yml`, workflow `Java CI`):
 
 - `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
 - `./gradlew build -PgraphqlJavaLeg=floor|ceiling` runs the same build on another graphql-java leg (`default` is the default; `latest` is for the canary). The versions of each role are in `gradle/libs.versions.toml`; the README explains the roles. `-PgraphqlJavaCompileLeg=default` compiles main code on the default leg while the tests run on the leg of `-PgraphqlJavaLeg` (the binary compatibility job).
 - `./gradlew :micronaut-graphql-tools:check` checks the library only; this is the one that works on JDK 17.
 - `./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --no-parallel` runs the native image tests (the build runs tasks in parallel by default, and each native build needs about 5 GB) (Oracle GraalVM 25); add `-PgraphqlJavaLeg=ceiling` for another leg.
 
-`.github/workflows/gradle.yml` and `native.yml` are the source of truth if this list and the workflows ever disagree.
+`.github/workflows/gradle.yml` is the source of truth if this list and the workflow ever disagree.
 
 The example applications are three separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
 
@@ -129,7 +131,7 @@ where the gate is skipped (the module is not built there). Run the update on 21 
 
 ## Creating a pull request
 
-`master` is protected: every change goes through a pull request, and the pull request is squash-merged once the `required checks` status check is green. `required checks` is the only check the ruleset requires: it is the gate job in `gradle.yml`, and a job that must block merging is added to the `needs:` of that job (no ruleset edit). Native tests (`native.yml`) are not part of the gate yet.
+`master` is protected: every change goes through a pull request, and the pull request is squash-merged once the `required checks` status check is green. `required checks` is the only check the ruleset requires: it is the gate job in `gradle.yml`, and a job that must block merging is added to the `needs:` of that job (no ruleset edit). The native image jobs (`native (GraalVM 25, ...)`) are in the same workflow but not part of the gate yet.
 
 - Create a branch, commit with `git commit -s` (DCO sign-off) and push it to your fork or to a branch of the repository.
 - Use a [conventional commit](https://www.conventionalcommits.org/) style title for the pull request (`feat:`, `fix:`, `docs:`, `build:`, `ci:`, `perf:`, `test:`, `chore:`). It becomes the squashed commit message.
@@ -158,4 +160,4 @@ The plugin also adds a new tab in the bottom of the IDE to run Checkstyle and sh
 
 ## Releases
 
-Nothing is published: there are no release, snapshot or Maven Central workflows. CI has two workflows, `.github/workflows/gradle.yml` (build and tests, plus the `required checks` gate) and `.github/workflows/native.yml` (native image tests). Releases and tags are cut by the maintainers by hand; see [MAINTAINING.md](MAINTAINING.md).
+Nothing is published: there are no release, snapshot or Maven Central workflows. CI is one workflow, `.github/workflows/gradle.yml` (`Java CI`: build and tests, the native image tests, the guide, `actionlint`, plus the `required checks` gate), with the shared tool setup in `.github/actions/setup-build`. Releases and tags are cut by the maintainers by hand; see [MAINTAINING.md](MAINTAINING.md).
