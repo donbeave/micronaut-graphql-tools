@@ -1,8 +1,8 @@
 plugins {
-    id("io.micronaut.application") version "4.6.2"
-    id("com.gradleup.shadow") version "8.3.11"
-    id("io.micronaut.aot") version "4.6.2"
-    id("com.apollographql.apollo").version("4.4.4")
+    id("io.micronaut.application")
+    id("com.gradleup.shadow")
+    id("io.micronaut.aot")
+    id("com.apollographql.apollo")
 }
 
 repositories {

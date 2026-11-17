@@ -8,7 +8,7 @@ If you are interested in contributing to Micronaut and are looking for issues to
 
 ## JDK Setup
 
-Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and `test-suite` need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
+Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
 
 ## IDE Setup
 
@@ -21,6 +21,16 @@ Micronaut GraphQL Tools tests currently require Docker to be installed.
 ## Running Tests
 
 To run the tests, use `./gradlew check`.
+
+The example applications are three separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
+
+| Suite | Language | Run the JVM tests | Run the native tests (Oracle GraalVM 25) |
+| --- | --- | --- | --- |
+| `test-suite-java` | Java (annotation processors) | `./gradlew :test-suite-java:test` | `./gradlew :test-suite-java:nativeTest` |
+| `test-suite-kotlin` | Kotlin 2.1.21 with KSP2 (Java and Kotlin target 21) | `./gradlew :test-suite-kotlin:test` | `./gradlew :test-suite-kotlin:nativeTest` |
+| `test-suite-groovy` | Groovy (Spock) | `./gradlew :test-suite-groovy:test` | none: Groovy runs on the JVM |
+
+Each native test takes about 5 to 7 minutes and 5 GB of memory: run them one after another.
 
 ## Building Documentation
 
