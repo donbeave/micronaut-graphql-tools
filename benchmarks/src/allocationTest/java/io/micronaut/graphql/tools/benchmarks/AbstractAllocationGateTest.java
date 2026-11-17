@@ -30,11 +30,11 @@ abstract class AbstractAllocationGateTest {
 
     private static final double LIBRARY_TOLERANCE_BYTES = 0.5;
     private static final double QUERY_TOLERANCE_FACTOR = 1.05;
-    private static final String DEFAULT_LEG = "21.3";
+    private static final String DEFAULT_LEG = "default";
 
     private static BenchmarkCases cases;
     private static Baselines baselines;
-    private static final String LEG = System.getProperty("allocation.graphqlJavaVersion", DEFAULT_LEG);
+    private static final String LEG = System.getProperty("allocation.graphqlJavaLeg", DEFAULT_LEG);
     private static final String JDK = String.valueOf(Runtime.version().feature());
     private static final boolean UPDATE = Boolean.getBoolean("allocation.update");
 
@@ -73,6 +73,8 @@ abstract class AbstractAllocationGateTest {
         if (name.equals(BenchmarkCases.GRAPHQL_JAVA_PROPERTY_FETCH)) {
             return;
         }
+        // latest.release moves with every release: it is the canary's leg and has no baselines
+        Assumptions.assumeTrue(UPDATE || !"latest".equals(LEG), "No allocation baselines are recorded for the latest leg");
         if (UPDATE) {
             baselines.put(key, measured);
             return;

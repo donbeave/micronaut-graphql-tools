@@ -217,8 +217,11 @@ mode.
 
 ## Startup errors
 
-The schema is bound when the `GraphQL` bean is created. Every field that cannot be bound is reported; the binding does
-not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
+The schema is bound when the application context starts, whether the library or the application creates the
+`GraphQL` bean: a field that cannot be bound fails the startup (of the `ApplicationContext` and of the embedded server),
+and the first request does no binding work. `micronaut.graphql.tools.eager-init: false` binds it when the first bean
+that needs the `GraphQLSchema` is created instead, for tests that expect the failure on a bean lookup. Every field that
+cannot be bound is reported; the binding does not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
 `MultipleMethodsFoundException`, `IncorrectClassMappingException`, ...). Several are thrown together as
 `BindingFailuresException`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
 others are suppressed exceptions. The checks that need a complete binding (unreachable types, schema coordinates) run
@@ -521,6 +524,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
 | `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` turns these checks off, so the startup does not fail on them; the findings that have a manifest representation are listed in the manifest (unwired directives are also logged as a warning). It does not change `precedence`. |
+| `micronaut.graphql.tools.eager-init` | `true` \| `false` | Bind the schema when the application context starts, so that a broken binding fails the startup (also when the application defines its own `GraphQL` bean) and the first request does no binding work. `false` binds it when the first bean that needs the `GraphQLSchema` is created. |
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded, and with `strict: false` the strict-mode checks that only feed the manifest are skipped. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
@@ -901,8 +905,8 @@ data fetcher or type resolver for a field or type the library wired into a code 
 which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
 and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
-(On graphql-java 25.1 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
-resolver or scalar with `StrictModeWiringException`; 21.3 accepts them silently.) To wrap data fetchers, use a
+(On graphql-java 25.2 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
+resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently.) To wrap data fetchers, use a
 `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
@@ -1021,8 +1025,8 @@ public TypeDefinitionRegistryCustomizer validationDirectives() {
 }
 ```
 
-Use extended-validation 21.0 with graphql-java 21.3 and 24.0 with 25.1 (21.0 calls a `GraphQLCodeRegistry` method
-that graphql-java 25 removed); the library's tests run both.
+Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 25.2 (21.0 calls a
+`GraphQLCodeRegistry` method that graphql-java 22.4 and later removed); the library's tests run all three.
 
 ## Configuring the GraphQL bean
 
@@ -1078,23 +1082,36 @@ include a language's source by path.
 
 ## Compatibility
 
-The library is built and tested on Java 21 against two graphql-java lines (CI runs both):
+The library is built and tested against graphql-java by role. The versions of each role live in
+[`gradle/libs.versions.toml`](gradle/libs.versions.toml):
 
-| graphql-java | graphql-java-extended-scalars | java-dataloader | Micronaut / micronaut-graphql | Java |
+| Role | graphql-java | graphql-java-extended-scalars | java-dataloader | Where it runs |
 |---|---|---|---|---|
-| 21.3 (default build) | 21.0 | 3.2.1 | 4.10.x / 4.8.0 | 21 |
-| 25.1 | 24.0 | 6.0.0 | 4.10.x / 4.8.0 | 21 |
+| `floor` | 21.5 | 21.0 | 3.2.1 | full build, JDK 25 |
+| `default` | what `micronaut-graphql` 4.8.0 manages (22.4), not pinned by this build | 22.0 | as graphql-java brings it | full build on JDK 25 and 21, library check on JDK 17, native tests on GraalVM 25; the published POM |
+| `ceiling` | 25.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; binary compatibility (main compiled on `default`, tested on `ceiling`) |
+| `latest` | newest release (`latest.release`) | newest release | newest release | the canary only, never a required check |
+
+The graphql-java axis runs on JDK 25; JDK 21 and JDK 17 run the `default` role only. Micronaut 4.10.x and micronaut-graphql 4.8.0
+are the base of every role.
+
+**Support policy.** The supported graphql-java lines are 21.x up to the ceiling line. They are tested at the newest patch of
+the floor, the default and the ceiling. A new graphql-java major enters through the `latest` canary and becomes the ceiling
+through a promotion issue once it is green. graphql-java-extended-scalars has no 25.x release; 24.0 links against 25.2.
 
 The published POM does not pin graphql-java: it arrives through `micronaut-graphql` (4.8.0 brings 22.4). Pin
-graphql-java in your build to the line you run, and use the matching extended-scalars version from the table
-(extended-scalars has no 25.x release; 24.0 works with graphql-java 25.1).
+graphql-java in your build to the line you run, and use the matching extended-scalars version from the table.
 
-To build or test against a leg locally:
+To build or test against a role locally:
 
 ```shell
-./gradlew build                            # graphql-java 21.3
-./gradlew build -PgraphqlJavaVersion=25.1  # graphql-java 25.1
+./gradlew build                              # default
+./gradlew build -PgraphqlJavaLeg=floor       # graphql-java 21.5
+./gradlew build -PgraphqlJavaLeg=ceiling     # graphql-java 25.2
+./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default   # binary compatibility: main compiled on default
 ```
+
+`-PgraphqlJavaVersion` no longer exists: setting it fails the build with a message that names `-PgraphqlJavaLeg`.
 
 ## Artifacts and versions
 
@@ -1119,7 +1136,7 @@ version, override it on the command line; a version without `-SNAPSHOT` is publi
 ```
 
 The `io.micronaut.publishing.*` settings are JVM system properties (`-D`), not Gradle project properties. Publish from
-the default graphql-java leg only (no `-PgraphqlJavaVersion`): the published POM takes its versions from the build's
+the default graphql-java leg only (no `-PgraphqlJavaLeg` or `-PgraphqlJavaCompileLeg`): the published POM takes its versions from the build's
 resolved dependencies, so the build refuses to run a publish task on another leg.
 
 Both commands publish the library and the annotation processor (jar, sources, javadoc, POM and Gradle module

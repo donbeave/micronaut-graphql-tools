@@ -14,19 +14,23 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  # graphql-java legs by role (floor, default, ceiling, latest): the versions live in gradle/libs.versions.toml, never here.
+  # The graphql-java axis runs on JDK 25 (D-35); JDK 21 runs the default leg only. Job names are role-based, so a version
+  # bump never renames a job. Every gated job is listed in the `needs:` of `required checks` below.
   build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        java: ['21']
-        # graphql-java compatibility legs, see build.gradle.kts
-        graphql-java: ['21.3', '25.1']
         include:
-          # JDK 25: the full build on the default graphql-java leg
           - java: '25'
-            graphql-java: '21.3'
-    # The JDK 21 names are required checks: keep them stable
+            graphql-java: floor
+          - java: '25'
+            graphql-java: default
+          - java: '25'
+            graphql-java: ceiling
+          - java: '21'
+            graphql-java: default
     name: build (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,7 +42,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Build with Gradle
-        run: ./gradlew build --no-daemon --continue -PgraphqlJavaVersion=${{ matrix.graphql-java }}
+        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
@@ -49,20 +53,20 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-reports-java${{ matrix.java }}-graphql-java${{ matrix.graphql-java }}
+          name: test-reports-java${{ matrix.java }}-graphql-java-${{ matrix.graphql-java }}
           path: |
             **/build/test-results/test/TEST-*.xml
             **/build/reports/tests/test/
           if-no-files-found: ignore
 
-  build-java-17:
+  check-library:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         java: ['17']
         # the default graphql-java leg only
-        graphql-java: ['21.3']
+        graphql-java: [default]
     # The library modules compile to release 17 (see buildSrc); the test-suite-* modules need Java 21 and cannot run here.
     name: check library (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     steps:
@@ -75,7 +79,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Build with Gradle
-        run: ./gradlew :micronaut-graphql-tools:check --no-daemon --continue -PgraphqlJavaVersion=${{ matrix.graphql-java }}
+        run: ./gradlew :micronaut-graphql-tools:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
@@ -86,7 +90,44 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-reports-java${{ matrix.java }}-graphql-java${{ matrix.graphql-java }}
+          name: test-reports-java${{ matrix.java }}-graphql-java-${{ matrix.graphql-java }}
+          path: |
+            **/build/test-results/test/TEST-*.xml
+            **/build/reports/tests/test/
+          if-no-files-found: ignore
+
+  # Main code is compiled on the default leg and tested on the ceiling: the published jar is compiled against what
+  # micronaut-graphql manages, so a graphql-java change that breaks its binary linkage (a changed return type, a removed
+  # method) fails here as NoSuchMethodError, which a build that recompiles main on the ceiling would not show.
+  binary-compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['25']
+    name: binary compatibility (Java ${{ matrix.java }}, graphql-java ceiling)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up JDK
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default
+        env:
+          # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
+          GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+          GRADLE_ENTERPRISE_CACHE_USERNAME: ${{ secrets.GRADLE_ENTERPRISE_CACHE_USERNAME }}
+          GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-binary-compatibility
           path: |
             **/build/test-results/test/TEST-*.xml
             **/build/reports/tests/test/
@@ -97,7 +138,7 @@ jobs:
   required:
     name: required checks
     if: always()
-    needs: [build, build-java-17]
+    needs: [build, check-library, binary-compatibility]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

@@ -31,7 +31,8 @@ dependencies {
     jmhAnnotationProcessor(libs.jmh.generator.annprocess)
 }
 
-val graphqlJavaVersion = providers.gradleProperty("graphqlJavaVersion").getOrElse("21.3")
+// the graphql-java leg by role (floor, default, ceiling, latest), selected as in the root build.gradle.kts
+val graphqlJavaLeg = providers.gradleProperty("graphqlJavaLeg").getOrElse("default")
 
 // A realistic large schema for the binding benchmark: 160 object types of 10 fields each (seven properties, a link to
 // the next type, a method bound through a type resolver with an argument, and one more property), reached by a chain
@@ -167,7 +168,7 @@ val allocationTestTask = tasks.register<Test>("allocationTest") {
     maxHeapSize = "512m"
     jvmArgs("-XX:+UseG1GC", "-XX:TieredStopAtLevel=1")
     systemProperty("allocation.baselines", allocationBaselines.asFile.absolutePath)
-    systemProperty("allocation.graphqlJavaVersion", graphqlJavaVersion)
+    systemProperty("allocation.graphqlJavaLeg", graphqlJavaLeg)
     systemProperty("allocation.update", providers.gradleProperty("allocation.update").isPresent)
     inputs.file(allocationBaselines).withPropertyName("allocationBaselines")
     outputs.upToDateWhen { false } // a measurement, never up to date

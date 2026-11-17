@@ -13,56 +13,72 @@ plugins {
     id("com.apollographql.apollo") version "4.4.4" apply false
 }
 
-// graphql-java compatibility legs. The library is built and tested against one leg at a time:
-//   ./gradlew build                            (default leg)
-//   ./gradlew build -PgraphqlJavaVersion=25.1
-// Each leg pins graphql-java and the graphql-java libraries whose versions must move with it, for dependency
-// resolution inside this build. The publications take their versions from the resolved classpath, so a non-default
-// leg would put its pins into the published POM and module metadata: publishing is only allowed from the default leg
-// (guard below).
-data class GraphqlJavaLeg(
-    val graphqlJava: String,
-    val extendedScalars: String,
-    val dataLoader: String,
-    // test scope only: the directive wiring tests run graphql-java-extended-validation
-    val extendedValidation: String,
-)
-
-val graphqlJavaLegs = mapOf(
-    "21.3" to GraphqlJavaLeg(
-        graphqlJava = "21.3",
-        extendedScalars = "21.0",
-        dataLoader = "3.2.1",
-        extendedValidation = "21.0",
-    ),
-    // graphql-java-extended-scalars has no 25.x release; 24.0 links against 25.1.
-    "25.1" to GraphqlJavaLeg(
-        graphqlJava = "25.1",
-        extendedScalars = "24.0",
-        dataLoader = "6.0.0",
-        // extended-validation 21.0 calls a GraphQLCodeRegistry overload that 25.x removed; 24.0 does not.
-        extendedValidation = "24.0",
-    ),
-)
-
-val defaultGraphqlJavaVersion = "21.3"
-val graphqlJavaVersion = providers.gradleProperty("graphqlJavaVersion").getOrElse(defaultGraphqlJavaVersion)
-val graphqlJavaLeg = graphqlJavaLegs[graphqlJavaVersion]
-    ?: throw GradleException(
-        "Unsupported graphqlJavaVersion '$graphqlJavaVersion'. Supported legs: ${graphqlJavaLegs.keys.joinToString()}"
+// graphql-java legs by role (D-35). The library is built and tested against one leg at a time:
+//   ./gradlew build                              the default leg: graphql-java as micronaut-graphql manages it, nothing pinned
+//   ./gradlew build -PgraphqlJavaLeg=floor       the oldest supported line
+//   ./gradlew build -PgraphqlJavaLeg=ceiling     the newest tested line
+//   ./gradlew build -PgraphqlJavaLeg=latest      the newest release of every graphql-java library (the canary only)
+// Binary compatibility: main code compiled on one leg, tested on another:
+//   ./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default
+// The versions live in gradle/libs.versions.toml. A non-default leg pins its versions for dependency resolution inside this
+// build. The publications take their versions from the resolved classpath, so a non-default leg would put its pins into the
+// published POM and module metadata: publishing is only allowed from the default leg (guard below).
+if (providers.gradleProperty("graphqlJavaVersion").isPresent) {
+    throw GradleException(
+        "-PgraphqlJavaVersion is no longer supported. Select a graphql-java leg by role with " +
+                "-PgraphqlJavaLeg=floor|default|ceiling|latest; the versions are in gradle/libs.versions.toml."
     )
-logger.lifecycle("Building against graphql-java ${graphqlJavaLeg.graphqlJava} " +
-        "(extended-scalars ${graphqlJavaLeg.extendedScalars}, java-dataloader ${graphqlJavaLeg.dataLoader}, " +
-        "test: extended-validation ${graphqlJavaLeg.extendedValidation})")
+}
 
-if (graphqlJavaVersion != defaultGraphqlJavaVersion) {
+// graphql-java and the libraries whose versions must move with it, by Maven coordinates ("group:name")
+val legPins: Map<String, Map<String, String>> = mapOf(
+    "floor" to mapOf(
+        "com.graphql-java:graphql-java" to libs.versions.floor.graphql.java.get(),
+        "com.graphql-java:graphql-java-extended-scalars" to libs.versions.floor.extended.scalars.get(),
+        "com.graphql-java:java-dataloader" to libs.versions.floor.java.dataloader.get(),
+        // test scope only: the directive wiring tests run graphql-java-extended-validation
+        "com.graphql-java:graphql-java-extended-validation" to libs.versions.floor.extended.validation.get(),
+    ),
+    // nothing is pinned: graphql-java comes through micronaut-graphql
+    "default" to emptyMap(),
+    "ceiling" to mapOf(
+        "com.graphql-java:graphql-java" to libs.versions.ceiling.graphql.java.get(),
+        "com.graphql-java:graphql-java-extended-scalars" to libs.versions.ceiling.extended.scalars.get(),
+        "com.graphql-java:java-dataloader" to libs.versions.ceiling.java.dataloader.get(),
+        "com.graphql-java:graphql-java-extended-validation" to libs.versions.ceiling.extended.validation.get(),
+    ),
+    // The newest release of each library. `latest.release` is not used: these libraries have published date-named versions
+    // ("230521-nf-execution", "2023-01-24T02-11-56-babda5f") that Gradle sorts above every real version, so the range
+    // starts at the first real release line and ends above any real major.
+    "latest" to listOf(
+        "graphql-java", "graphql-java-extended-scalars", "java-dataloader", "graphql-java-extended-validation",
+    ).associate { "com.graphql-java:$it" to "[1.0,1000)" },
+)
+
+fun selectedLeg(property: String, fallback: String): String {
+    val leg = providers.gradleProperty(property).getOrElse(fallback)
+    if (leg !in legPins) {
+        throw GradleException("Unsupported -P$property=$leg. Supported legs: ${legPins.keys.joinToString()}")
+    }
+    return leg
+}
+
+// the leg the tests run on, and the leg main code is compiled on (the same, unless the binary compatibility job says so)
+val graphqlJavaLeg = selectedLeg("graphqlJavaLeg", "default")
+val graphqlJavaCompileLeg = selectedLeg("graphqlJavaCompileLeg", graphqlJavaLeg)
+logger.lifecycle("Building against graphql-java leg '$graphqlJavaLeg' (compiled on '$graphqlJavaCompileLeg'): " +
+        (legPins.getValue(graphqlJavaLeg).takeIf { it.isNotEmpty() }
+            ?.entries?.joinToString { "${it.key.substringAfter(':')} ${it.value}" }
+            ?: "graphql-java as managed by micronaut-graphql, nothing pinned"))
+
+if (graphqlJavaLeg != "default" || graphqlJavaCompileLeg != "default") {
     gradle.taskGraph.whenReady {
         val publishTasks = allTasks.filter { it.name.startsWith("publish") }
         if (publishTasks.isNotEmpty()) {
             throw GradleException(
-                "Publishing is only allowed from the default graphql-java leg ($defaultGraphqlJavaVersion): this build " +
-                        "uses -PgraphqlJavaVersion=$graphqlJavaVersion, whose pins would end up in the published POM. " +
-                        "Tasks: ${publishTasks.joinToString { it.path }}"
+                "Publishing is only allowed from the default graphql-java leg: this build uses " +
+                        "-PgraphqlJavaLeg=$graphqlJavaLeg -PgraphqlJavaCompileLeg=$graphqlJavaCompileLeg, whose pins would " +
+                        "end up in the published POM. Tasks: ${publishTasks.joinToString { it.path }}"
             )
         }
     }
@@ -74,17 +90,17 @@ subprojects {
     }
 
     configurations.configureEach {
-        resolutionStrategy.eachDependency {
-            val pinned = when {
-                requested.group == "com.graphql-java" && requested.name == "graphql-java" -> graphqlJavaLeg.graphqlJava
-                requested.group == "com.graphql-java" && requested.name == "graphql-java-extended-scalars" -> graphqlJavaLeg.extendedScalars
-                requested.group == "com.graphql-java" && requested.name == "java-dataloader" -> graphqlJavaLeg.dataLoader
-                requested.group == "com.graphql-java" && requested.name == "graphql-java-extended-validation" -> graphqlJavaLeg.extendedValidation
-                else -> null
-            }
-            if (pinned != null) {
-                useVersion(pinned)
-                because("graphql-java leg $graphqlJavaVersion")
+        // main code is compiled on the compile leg; everything that runs, and the tests, use the leg under test
+        val compileSide = name == "compileClasspath" || name.endsWith("AnnotationProcessor") || name == "annotationProcessor"
+        val leg = if (compileSide) graphqlJavaCompileLeg else graphqlJavaLeg
+        val pins = legPins.getValue(leg)
+        if (pins.isNotEmpty()) {
+            resolutionStrategy.eachDependency {
+                val pinned = pins["${requested.group}:${requested.name}"]
+                if (pinned != null) {
+                    useVersion(pinned)
+                    because("graphql-java leg $leg")
+                }
             }
         }
     }
