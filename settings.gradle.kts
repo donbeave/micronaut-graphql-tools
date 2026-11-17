@@ -17,6 +17,7 @@ include("graphql-tools")
 include("graphql-tools-bom")
 include("graphql-tools-processor")
 include("benchmarks")
+include("graphql-tools-tck")
 include("test-suite-java")
 include("test-suite-kotlin")
 include("test-suite-groovy")
@@ -29,4 +30,5 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
 
 gradle.settingsEvaluated {
     rootProject.children.single { it.name == "micronaut-benchmarks" }.name = "benchmarks"
+    rootProject.children.single { it.name == "micronaut-graphql-tools-tck" }.name = "graphql-tools-tck"
 }

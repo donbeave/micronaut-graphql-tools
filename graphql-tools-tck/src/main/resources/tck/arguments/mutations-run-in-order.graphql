@@ -1,0 +1,5 @@
+mutation {
+  first: add(amount: 1)
+  second: add(amount: 10)
+  third: add(amount: 100)
+}

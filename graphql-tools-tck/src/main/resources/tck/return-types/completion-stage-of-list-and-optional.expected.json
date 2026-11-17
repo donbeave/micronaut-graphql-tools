@@ -1,0 +1,6 @@
+{
+  "data": {
+    "futureList": [{ "message": "one" }, { "message": "two" }],
+    "futureAbsent": null
+  }
+}

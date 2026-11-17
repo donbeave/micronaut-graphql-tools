@@ -1,0 +1,15 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+extend type Query {
+  ok: String!
+  failNullable: String
+  failNonNull: String!
+  failFuture: String
+  nested: Parent
+  nestedNonNull: Parent!
+  echo(value: Int!): Int!
+}
+
+type Parent {
+  name: String!
+  broken: String!
+}

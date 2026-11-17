@@ -1,0 +1,12 @@
+scalars-literals
+scalars-variables
+defaults
+default-and-explicit-null
+omitted-and-null
+lists
+inputs-literal
+inputs-variables
+mutations-run-in-order
+introspection-input
+introspection-enum
+introspection-roots

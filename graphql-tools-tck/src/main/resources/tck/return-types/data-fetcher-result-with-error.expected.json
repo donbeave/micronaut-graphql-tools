@@ -1,0 +1,13 @@
+{
+  "data": {
+    "partial": [{ "message": "loaded" }, null]
+  },
+  "errors": [
+    {
+      "message": "the second element could not be loaded",
+      "locations": [{ "line": 2, "column": 3 }],
+      "path": ["partial"],
+      "extensions": { "classification": "DataFetchingException" }
+    }
+  ]
+}

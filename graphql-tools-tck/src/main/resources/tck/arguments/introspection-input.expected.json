@@ -1,0 +1,13 @@
+{
+  "data": {
+    "__type": {
+      "kind": "INPUT_OBJECT",
+      "inputFields": [
+        { "name": "name", "defaultValue": null, "type": { "kind": "NON_NULL", "name": null, "ofType": { "kind": "SCALAR", "name": "String", "ofType": null } } },
+        { "name": "color", "defaultValue": "GREEN", "type": { "kind": "ENUM", "name": "Color", "ofType": null } },
+        { "name": "points", "defaultValue": null, "type": { "kind": "NON_NULL", "name": null, "ofType": { "kind": "LIST", "name": null, "ofType": { "kind": "NON_NULL", "name": null } } } },
+        { "name": "note", "defaultValue": null, "type": { "kind": "SCALAR", "name": "String", "ofType": null } }
+      ]
+    }
+  }
+}

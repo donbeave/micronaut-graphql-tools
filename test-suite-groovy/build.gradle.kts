@@ -16,6 +16,7 @@ dependencies {
     runtimeOnly("ch.qos.logback:logback-classic")
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation("io.micronaut:micronaut-http-client")
+    testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
 }
 
 application {

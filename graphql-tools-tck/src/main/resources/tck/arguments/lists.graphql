@@ -1,0 +1,8 @@
+query ($numbers: [Int!]!, $rows: [[Int!]!]!) {
+  literal: total(numbers: [1, 2, 3])
+  single: total(numbers: 7)
+  variable: total(numbers: $numbers)
+  empty: total(numbers: [])
+  grid(rows: $rows)
+  gridLiteral: grid(rows: [[1, 2], [3], []])
+}

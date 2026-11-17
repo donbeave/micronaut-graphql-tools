@@ -1,0 +1,6 @@
+{
+  __type(name: "Color") {
+    kind
+    enumValues { name }
+  }
+}

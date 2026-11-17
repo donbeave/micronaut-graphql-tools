@@ -1,0 +1,3 @@
+{
+  song: __type(name: "Song") { interfaces { name } }
+}

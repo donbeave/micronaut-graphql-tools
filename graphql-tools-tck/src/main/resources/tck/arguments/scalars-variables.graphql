@@ -1,0 +1,3 @@
+query ($text: String!, $number: Int!, $ratio: Float!, $flag: Boolean!, $id: ID!) {
+  scalars(text: $text, number: $number, ratio: $ratio, flag: $flag, id: $id)
+}

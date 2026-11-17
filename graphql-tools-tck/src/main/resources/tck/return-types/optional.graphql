@@ -1,0 +1,4 @@
+{
+  present { message }
+  absent { message }
+}
