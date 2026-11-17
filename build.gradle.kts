@@ -111,3 +111,11 @@ subprojects {
         options.compilerArgs.addAll(listOf("-Xlint:removal", "-Werror"))
     }
 }
+
+// The guide takes its code examples from the test-suite-* sources with the `snippet::` macro. The macro reads them behind
+// Gradle's back, so without these inputs a changed or removed example would leave publishGuide up to date.
+tasks.named("publishGuide") {
+    inputs.files(fileTree(".") { include("test-suite-*/src/main/**") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("snippetSources")
+}

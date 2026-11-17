@@ -45,9 +45,23 @@ Groovy has no native test. `:test-suite-groovy:nativeTest` was tried on Oracle G
 
 The documentation sources are located at `src/main/docs/guide`.
 
-To build the documentation, run `./gradlew publishGuide` (or `./gradlew pG`), then open `build/docs/index.html`
+To build the guide and the Javadocs, run `./gradlew docs`, then open `build/docs/index.html`. To build only the guide, run `./gradlew publishGuide` (or `./gradlew pG`); the result is in `build/docs/guide/index.html`. Nothing is published. The `docs (Java 25)` CI job runs `./gradlew docs` on every pull request and uploads `build/docs` as the `guide` workflow artifact.
 
-To also build the Javadocs, run `./gradlew docs`.
+### Adding a code example
+
+Every code example in the guide is compiled code in all three languages. A page includes it with the `snippet::` macro:
+
+```
+snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="main", tags="resolver", indent="0"]
+```
+
+The macro looks for the class in `test-suite-java`, `test-suite-kotlin` and `test-suite-groovy` (`project-base` names them), under `src/main` (`source="main"`, use the default `test` for specs), and renders one tab per language. To add an example:
+
+1. Add the class, with the same fully qualified name, to all three suites.
+2. Wrap the lines to show in `// tag::name[]` and `// end::name[]` comment lines, with the same tag name in all three files.
+3. Include it with `snippet::<fully qualified class name>[project-base="test-suite", source="main", tags="name", indent="0"]`.
+
+A missing file or tag does not fail `./gradlew docs`: the macro prints a warning (`NO FILE FOUND`, `tag ... not found in include file`) and renders the tab without it. The CI job fails when the log contains one of these warnings, so check the log when you run `./gradlew docs` locally.
 
 ## Working on the code base
 

@@ -133,12 +133,48 @@ jobs:
             **/build/reports/tests/test/
           if-no-files-found: ignore
 
+  # The guide build (#57). The `snippet::` macro prints a warning and still succeeds when a snippet file or tag is missing in
+  # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; nothing is published (D-09).
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['25']
+    name: docs (Java ${{ matrix.java }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up JDK
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Build the guide
+        run: |
+          set -o pipefail
+          ./gradlew docs --no-daemon 2>&1 | tee docs.log
+      - name: Fail on a missing snippet
+        run: |
+          if grep -E 'NO FILE FOUND|not found in include file|unexpected end tag|Unresolved directive' docs.log; then
+            echo "A snippet file or tag is missing in test-suite-java, test-suite-kotlin or test-suite-groovy" >&2
+            exit 1
+          fi
+      - name: Upload the guide
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: guide
+          path: build/docs
+          retention-days: 7
+          if-no-files-found: error
+
   # The only required status check (D-35). It runs even when a gated job fails or is cancelled,
   # and it is green only when every gated job succeeded. Add a gated job to `needs:`, never to the ruleset.
   required:
     name: required checks
     if: always()
-    needs: [build, check-library, binary-compatibility]
+    needs: [build, check-library, binary-compatibility, docs]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

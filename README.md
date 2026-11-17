@@ -8,7 +8,7 @@ This is not an official Micronaut module yet: it is developed here and is intend
 
 ## Documentation
 
-The guide sources are in `src/main/docs/guide`; build them with `./gradlew publishGuide` (see [CONTRIBUTING.md](CONTRIBUTING.md)). No documentation site is published yet.
+The guide sources are in `src/main/docs/guide`; build them with `./gradlew docs` (see [CONTRIBUTING.md](CONTRIBUTING.md)). No documentation site is published yet.
 
 ## Quick start
 

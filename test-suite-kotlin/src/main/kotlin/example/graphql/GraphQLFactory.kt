@@ -13,12 +13,14 @@ import jakarta.inject.Singleton
 @Factory
 class GraphQLFactory {
 
+    // tag::registry[]
     @Bean
     @Singleton
     fun typeDefinitionRegistry(resourceResolver: ResourceResolver): TypeDefinitionRegistry {
         val inputStream = resourceResolver.getResourceAsStream("classpath:schema.graphqls").get()
         return TypeDefinitionRegistry().merge(SchemaParser().parse(inputStream.bufferedReader()))
     }
+    // end::registry[]
 
     @Bean
     @Singleton
