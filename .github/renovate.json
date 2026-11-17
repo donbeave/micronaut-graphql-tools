@@ -2,7 +2,11 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    "helpers:pinGitHubActionDigests"
+    "helpers:pinGitHubActionDigests",
+    ":gitSignOff"
+  ],
+  "ignorePresets": [
+    "workarounds:javaLTSVersions"
   ],
   "timezone": "Europe/Prague",
   "schedule": [
@@ -84,6 +88,17 @@
         "/^com\\.graphql-java/"
       ],
       "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "java-dataloader pins are the floor's 3.2.x and the ceiling's 6.0.x lines (versions audit, #295); only patch updates apply.",
+      "matchPackageNames": [
+        "com.graphql-java:java-dataloader"
+      ],
+      "matchUpdateTypes": [
+        "minor",
         "major"
       ],
       "enabled": false
