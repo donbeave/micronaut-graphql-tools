@@ -108,8 +108,10 @@ in use before the start. JMH's text summary adds the forks up for a secondary re
 the JSON. Both are measured cold, one fresh JVM per sample, only by `scripts/startup-report.py` (see below): the
 `./gradlew :benchmarks:jmh` task excludes them, because its warm-up would start contexts in the same JVM first.
 
-Each schema size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build), so that the JVM of a
-size has no other size on its classpath. Measured: the 100-field context retained 14.4 MB with all three sizes on the
+The benchmark jar generates the 1,600-field schema only, as before, so the other start-up benchmarks bind the same
+schema as before. Each other size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build), so
+that the JVM of a size has no other size on its classpath. `jmhSmokeTest` generates the 100 and 10,000-field schemas in
+its own source set. Measured: the 100-field context retained 14.4 MB with all three sizes on the
 classpath and 4.7 MB with the 100-field classes alone. The 10,000-field schema is a chain of 1,000 types, and binding
 recurses once per type of the chain: the default thread stack overflows, so the benchmark JVMs run with `-Xss16m`. This
 is a workaround for #297, which removes the recursion; remove the flag when #297 lands (`jvmArgs` in
