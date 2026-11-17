@@ -31,23 +31,20 @@ public class BindingBenchmark {
     @Setup
     public void parse() {
         registry = LargeSchema.registry(fields);
-        check();
-    }
-
-    private void check() {
-        try (ApplicationContext context = start()) {
-            LargeSchema.checkBound(context);
-            if (LargeSchema.manifestAvailable(context) != record) {
-                throw new IllegalStateException("The manifest is " + (record ? "not " : "") + "recorded, but record is "
-                        + record);
-            }
-        }
     }
 
     @Benchmark
     public Object bindLargeSchema() {
         try (ApplicationContext context = start()) {
-            return context.getBean(GraphQL.class).getGraphQLSchema();
+            Object schema = context.getBean(GraphQL.class).getGraphQLSchema();
+            // The checks run inside the invocation, after the binding. A context started in @Setup would make the
+            // measured start the second start in the JVM, with the classes and the static state of the first.
+            LargeSchema.checkBound(context);
+            if (LargeSchema.manifestAvailable(context) != record) {
+                throw new IllegalStateException("The manifest is " + (record ? "not " : "") + "recorded, but record is "
+                        + record);
+            }
+            return schema;
         }
     }
 

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Start-up report (#39): binding time and retained heap per schema size, as medians of cold JVMs.
 
-Run from anywhere; it builds the JMH jar and runs both start-up benchmarks, one fresh JVM per fork:
+Run from anywhere. For each schema size it builds a JMH jar that generates that size only (-PlargeFields), then runs
+both start-up benchmarks on it, one fresh JVM per fork. The last jar built stays in benchmarks/build/libs, so run
+`./gradlew :benchmarks:jmhJar` again before the other benchmarks:
 
   python3 benchmarks/scripts/startup-report.py                       run, print the medians
   python3 benchmarks/scripts/startup-report.py --json run.json       also keep the JMH JSON in run.json
@@ -23,6 +25,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 BENCHMARKS = "BindingBenchmark|RetainedHeapBenchmark"
+STARTUP_CLASSES = ("BindingBenchmark", "RetainedHeapBenchmark")
+SIZES = (100, 1600, 10000)
 MB = 1e6
 
 
@@ -36,6 +40,8 @@ def cases(results):
     table = {}
     for result in results:
         cls = result["benchmark"].split(".")[-2]
+        if cls not in STARTUP_CLASSES:
+            continue
         key = (int(result["params"]["fields"]), result["params"]["record"] == "true")
         entry = table.setdefault(key, {"ms": [], "bytes": []})
         if cls == "BindingBenchmark":
@@ -75,13 +81,24 @@ def print_change(results, previous, out):
 
 
 def run_jmh(json_path, forks):
-    subprocess.run([str(ROOT / "gradlew"), ":benchmarks:jmhJar", "--no-daemon"], cwd=ROOT, check=True)
-    jars = sorted((ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"))
-    if len(jars) != 1:
-        sys.exit(f"expected one benchmark jar, found {len(jars)}")
-    # -Xss16m: the 10,000-field schema recurses once per type of its chain (see CONTRIBUTING.md and #297).
-    subprocess.run(["java", "-jar", str(jars[0]), BENCHMARKS, "-f", str(forks), "-wi", "0", "-i", "1", "-bm", "ss",
-                    "-jvmArgs", "-Xss16m", "-rf", "json", "-rff", str(json_path)], cwd=ROOT, check=True)
+    """One jar per schema size, so that the other sizes are not on the classpath of the JVM that measures a size."""
+    results = []
+    with tempfile.TemporaryDirectory(prefix="startup-report-") as tmp:
+        for size in SIZES:
+            subprocess.run([str(ROOT / "gradlew"), ":benchmarks:jmhJar", f"-PlargeFields={size}", "--no-daemon"],
+                           cwd=ROOT, check=True)
+            jars = sorted((ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"))
+            if len(jars) != 1:
+                sys.exit(f"expected one benchmark jar, found {len(jars)}")
+            jar = Path(tmp) / f"jmh-{size}.jar"
+            part = Path(tmp) / f"jmh-{size}.json"
+            jar.write_bytes(jars[0].read_bytes())
+            # -Xss16m: the 10,000-field schema recurses once per type of its chain (see CONTRIBUTING.md and #297).
+            subprocess.run(["java", "-jar", str(jar), BENCHMARKS, "-p", f"fields={size}", "-f", str(forks),
+                            "-wi", "0", "-i", "1", "-bm", "ss", "-jvmArgs", "-Xss16m", "-rf", "json", "-rff", str(part)],
+                           cwd=ROOT, check=True)
+            results.extend(load(part))
+        Path(json_path).write_text(json.dumps(results, indent=2), encoding="utf-8")
 
 
 def load(path):

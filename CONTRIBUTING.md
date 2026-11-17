@@ -105,14 +105,20 @@ fields each. `BindingBenchmark` measures start-up: it starts a fresh application
 invocation per context. `RetainedHeapBenchmark` takes the same parameters and reports the heap a started context keeps
 as the secondary result `retainedBytes`: the heap in use after a full collection with the context open, minus the heap
 in use before the start. JMH's text summary adds the forks up for a secondary result, so the figure per fork is read from
-the JSON. The 10,000-field schema is a chain of 1,000 types, and binding recurses once per type of the chain: the default
-thread stack overflows, so the benchmark JVMs run with `-Xss16m`. This is a workaround for #297, which removes the
-recursion; remove the flag when #297 lands (`jvmArgs` in `benchmarks/build.gradle.kts`, and `-jvmArgs -Xss16m` for the
-jar). `ContextStartBenchmark`, `FirstRequestBenchmark` and `StartAndFirstRequestBenchmark` separate the binding at
-startup from the first request: the same schema with `micronaut.graphql.tools.eager-init` `true` or `false`, timing the
-context start, the first query after the start, and both together (`./gradlew :benchmarks:jmhJar`, then run the jar with
-`-f 10 -wi 0 -i 1 -bm ss -jvmArgs -Xss16m` for a cold JVM per sample). None has an allocation gate: a whole context start
-is not a path the library owns. A gain is claimed only with a figure from these benchmarks.
+the JSON. Both are measured cold, one fresh JVM per sample, only by `scripts/startup-report.py` (see below): the
+`./gradlew :benchmarks:jmh` task excludes them, because its warm-up would start contexts in the same JVM first.
+
+Each schema size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build), so that the JVM of a
+size has no other size on its classpath. Measured: the 100-field context retained 14.4 MB with all three sizes on the
+classpath and 4.7 MB with the 100-field classes alone. The 10,000-field schema is a chain of 1,000 types, and binding
+recurses once per type of the chain: the default thread stack overflows, so the benchmark JVMs run with `-Xss16m`. This
+is a workaround for #297, which removes the recursion; remove the flag when #297 lands (`jvmArgs` in
+`benchmarks/build.gradle.kts`, and `-jvmArgs -Xss16m` for the jar). `ContextStartBenchmark`, `FirstRequestBenchmark` and
+`StartAndFirstRequestBenchmark` separate the binding at startup from the first request: the same schema with
+`micronaut.graphql.tools.eager-init` `true` or `false`, timing the context start, the first query after the start, and
+both together (`./gradlew :benchmarks:jmhJar`, then run the jar with `-f 10 -wi 0 -i 1 -bm ss -jvmArgs -Xss16m` for a cold
+JVM per sample). None has an allocation gate: a whole context start is not a path the library owns. A gain is claimed
+only with a figure from these benchmarks.
 
 Two checks run on every `./gradlew check`:
 
@@ -133,11 +139,12 @@ it with `-Pjmh.includes=<regex>`, and pick the graphql-java leg with `-PgraphqlJ
 `benchmarks/build/results/jmh/`. Run on an idle machine with a JDK the CI uses (Temurin 21 or 25), and quote the figures with
 the JDK, the graphql-java leg and the error that JMH prints.
 
-The start-up figures have one command. `python3 benchmarks/scripts/startup-report.py` builds the jar and runs
-`BindingBenchmark` and `RetainedHeapBenchmark` with ten cold JVMs per case (`--forks` changes that). It prints, for each
-case, the median binding time with the minimum and maximum, and the median `retainedBytes`, all taken over the per-fork
-values in the JMH JSON. `--json <file>` keeps the JSON, `--previous <file>` prints the change against an earlier JSON, and
-`--from <file>` reports a JSON without running anything. The report prints the JDK, so quote it with the figures.
+The start-up figures have one command. `python3 benchmarks/scripts/startup-report.py` builds one jar per schema size
+and runs `BindingBenchmark` and `RetainedHeapBenchmark` on each, with ten cold JVMs per case (`--forks` changes that). It
+prints, for each case, the median binding time with the minimum and maximum, and the median `retainedBytes`, all taken
+over the per-fork values in the JMH JSON. `--json <file>` keeps the JSON, `--previous <file>` prints the change against
+an earlier JSON, and `--from <file>` reports a JSON without running anything. The report prints the JDK, so quote it with
+the figures. The last jar it builds is a one-size jar: run `./gradlew :benchmarks:jmhJar` again before the other benchmarks.
 
 When an allocation changes on purpose, record the new baselines of the three legs (`floor`, `default`, `ceiling`) and commit the file; the diff is the
 review of the change:
