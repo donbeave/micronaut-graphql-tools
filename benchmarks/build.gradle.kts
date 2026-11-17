@@ -5,7 +5,7 @@ plugins {
 
 // Benchmarks of the request hot path and the allocation gates (D-02). Nothing here is published.
 //   src/main                 the benchmarked schema, resolvers and operations, shared by everything below
-//   build/generated/large-schema   a generated schema of 1,600 fields and the classes it is bound to (generateLargeSchema)
+//   build/generated/large-schema   the generated large schemas of 100, 1,600 and 10,000 fields and the classes they are bound to (generateLargeSchema)
 //   src/jmh                  the JMH benchmarks: ./gradlew :benchmarks:jmh
 //   src/jmhSmokeTest         jmhSmokeTest: the JMH benchmarks as a JUnit test (no fork, single shot), part of `check`
 //   src/allocationTest       allocationTest: bytes per operation against allocation-baselines.properties, part of `check`
@@ -34,94 +34,101 @@ dependencies {
 // the graphql-java leg by role (floor, default, ceiling, latest), selected as in the root build.gradle.kts
 val graphqlJavaLeg = providers.gradleProperty("graphqlJavaLeg").getOrElse("default")
 
-// A realistic large schema for the binding benchmark: 160 object types of 10 fields each (seven properties, a link to
-// the next type, a method bound through a type resolver with an argument, and one more property), reached by a chain
-// from the root, so that strict mode accepts it. The classes are generated so that there is no hand-written bulk.
-val largeTypes = 160
+// Realistic large schemas for the start-up benchmarks: object types of 10 fields each (seven properties, a link to the
+// next type, a method bound through a type resolver with an argument, and one more property), reached by a chain from
+// the root, so that strict mode accepts them. The classes are generated so that there is no hand-written bulk. Each size
+// is a package of its own (large.f<fields>) and is selected at run time by benchmarks.large.fields, so that the sizes
+// never meet in one context.
+val largeTypeCounts = listOf(10, 160, 1000) // 100, 1,600 and 10,000 fields
 val generatedLargeSchema = layout.buildDirectory.dir("generated/large-schema")
 
 val generateLargeSchema = tasks.register("generateLargeSchema") {
     val output = generatedLargeSchema
-    val types = largeTypes
-    inputs.property("types", types)
+    val typeCounts = largeTypeCounts
+    inputs.property("typeCounts", typeCounts)
     outputs.dir(output)
     doLast {
         val root = output.get().asFile
         root.deleteRecursively()
-        val pkg = "io.micronaut.graphql.tools.benchmarks.large"
-        val javaDir = root.resolve("java/" + pkg.replace('.', '/')).also { it.mkdirs() }
         val resourceDir = root.resolve("resources").also { it.mkdirs() }
-        val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n  root: Node0\n}\n")
-        for (i in 0 until types) {
-            val next = (i + 1) % types
-            sdl.append(
-                """
-                |
-                |type Node$i {
-                |  id: ID!
-                |  name: String!
-                |  count: Int!
-                |  price: Float!
-                |  active: Boolean!
-                |  label: String
-                |  note: String
-                |  tags: [String!]!
-                |  next: Node$next
-                |  computed(n: Int!): String
-                |}
-                |""".trimMargin()
-            )
-            javaDir.resolve("Node$i.java").writeText(
-                """
-                |package $pkg;
-                |
-                |import io.micronaut.graphql.tools.annotation.GraphQLType;
-                |import java.util.List;
-                |
-                |@GraphQLType
-                |public class Node$i {
-                |    public String getId() { return "id"; }
-                |    public String getName() { return "name"; }
-                |    public int getCount() { return 1; }
-                |    public double getPrice() { return 1.5; }
-                |    public boolean isActive() { return true; }
-                |    public String getLabel() { return "label"; }
-                |    public String getNote() { return "note"; }
-                |    public List<String> getTags() { return List.of("tag"); }
-                |    public Node$next getNext() { return null; }
-                |}
-                |""".trimMargin()
-            )
-            javaDir.resolve("Node${i}Resolver.java").writeText(
+        for (types in typeCounts) {
+            val fields = types * 10
+            val pkg = "io.micronaut.graphql.tools.benchmarks.large.f$fields"
+            val javaDir = root.resolve("java/" + pkg.replace('.', '/')).also { it.mkdirs() }
+            val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n  root: Node0\n}\n")
+            for (i in 0 until types) {
+                val next = (i + 1) % types
+                sdl.append(
+                    """
+                    |
+                    |type Node$i {
+                    |  id: ID!
+                    |  name: String!
+                    |  count: Int!
+                    |  price: Float!
+                    |  active: Boolean!
+                    |  label: String
+                    |  note: String
+                    |  tags: [String!]!
+                    |  next: Node$next
+                    |  computed(n: Int!): String
+                    |}
+                    |""".trimMargin()
+                )
+                javaDir.resolve("Node$i.java").writeText(
+                    """
+                    |package $pkg;
+                    |
+                    |import io.micronaut.context.annotation.Requires;
+                    |import io.micronaut.graphql.tools.annotation.GraphQLType;
+                    |import java.util.List;
+                    |
+                    |@Requires(property = "benchmarks.large.fields", value = "$fields")
+                    |@GraphQLType
+                    |public class Node$i {
+                    |    public String getId() { return "id"; }
+                    |    public String getName() { return "name"; }
+                    |    public int getCount() { return 1; }
+                    |    public double getPrice() { return 1.5; }
+                    |    public boolean isActive() { return true; }
+                    |    public String getLabel() { return "label"; }
+                    |    public String getNote() { return "note"; }
+                    |    public List<String> getTags() { return List.of("tag"); }
+                    |    public Node$next getNext() { return null; }
+                    |}
+                    |""".trimMargin()
+                )
+                javaDir.resolve("Node${i}Resolver.java").writeText(
+                    """
+                    |package $pkg;
+                    |
+                    |import io.micronaut.context.annotation.Requires;
+                    |import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+                    |
+                    |@Requires(property = "benchmarks.large.fields", value = "$fields")
+                    |@GraphQLTypeResolver(Node$i.class)
+                    |public class Node${i}Resolver {
+                    |    public String computed(Node$i node, int n) { return "computed"; }
+                    |}
+                    |""".trimMargin()
+                )
+            }
+            javaDir.resolve("LargeQuery.java").writeText(
                 """
                 |package $pkg;
                 |
                 |import io.micronaut.context.annotation.Requires;
-                |import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+                |import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
                 |
-                |@Requires(property = "benchmarks.large", value = "true")
-                |@GraphQLTypeResolver(Node$i.class)
-                |public class Node${i}Resolver {
-                |    public String computed(Node$i node, int n) { return "computed"; }
+                |@Requires(property = "benchmarks.large.fields", value = "$fields")
+                |@GraphQLRootResolver
+                |public class LargeQuery {
+                |    public Node0 root() { return new Node0(); }
                 |}
                 |""".trimMargin()
             )
+            resourceDir.resolve("large-schema-$fields.graphqls").writeText(sdl.toString())
         }
-        javaDir.resolve("LargeQuery.java").writeText(
-            """
-            |package $pkg;
-            |
-            |import io.micronaut.context.annotation.Requires;
-            |import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
-            |
-            |@Requires(property = "benchmarks.large", value = "true")
-            |@GraphQLRootResolver
-            |public class LargeQuery {
-            |    public Node0 root() { return new Node0(); }
-            |}
-            |""".trimMargin()
-        )
-        resourceDir.resolve("large-schema.graphqls").writeText(sdl.toString())
     }
 }
 
@@ -185,6 +192,9 @@ val jmhSmokeTestTask = tasks.register<Test>("jmhSmokeTest") {
     testClassesDirs = jmhSmokeTest.output.classesDirs
     classpath = jmhSmokeTest.runtimeClasspath + sourceSets["jmh"].output + sourceSets["jmh"].runtimeClasspath +
             files(tasks.named("jmhCompileGeneratedClasses"))
+    // The 10,000-field schema is a chain of 1,000 types, and binding recurses once per type of the chain: the default
+    // thread stack overflows (measured), so the JVM that runs it gets a larger one.
+    jvmArgs("-Xss16m")
     useJUnitPlatform()
 }
 
@@ -206,5 +216,7 @@ jmh {
     timeOnIteration = "1s"
     profilers = listOf("gc")
     resultFormat = "JSON"
+    // the 10,000-field schema binds recursively along its chain of types (see jmhSmokeTest)
+    jvmArgs = listOf("-Xss16m")
     includes = providers.gradleProperty("jmh.includes").map { listOf(it) }.orElse(listOf()).get()
 }

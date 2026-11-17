@@ -1,6 +1,5 @@
 package io.micronaut.graphql.tools.benchmarks;
 
-import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.graphql.tools.GraphQLSchemaCustomizer;
@@ -9,9 +8,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -26,6 +22,8 @@ public abstract class AbstractEagerInitState {
 
     static final String QUERY = "{ root { id next { name computed(n: 1) } } }";
 
+    static final int FIELDS = 1600;
+
     @Param({"true", "false"})
     public boolean eagerInit;
 
@@ -34,10 +32,8 @@ public abstract class AbstractEagerInitState {
     private TypeDefinitionRegistry registry;
 
     @Setup
-    public void parse() throws IOException {
-        try (InputStream in = AbstractEagerInitState.class.getResourceAsStream("/large-schema.graphqls")) {
-            registry = new SchemaParser().parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
-        }
+    public void parse() {
+        registry = LargeSchema.registry(FIELDS);
     }
 
     ApplicationContext start() {
@@ -51,6 +47,7 @@ public abstract class AbstractEagerInitState {
                         "graphql.graphql-ws.enabled", false,
                         "graphql.graphiql.enabled", false,
                         "benchmarks.large", true,
+                        LargeSchema.FIELDS, FIELDS,
                         "micronaut.graphql.tools.eager-init", eagerInit))
                 .singletons(registry, counting)
                 .start();
