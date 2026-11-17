@@ -87,9 +87,10 @@ subprojects {
     }
 
     // An API that graphql-java removes on a newer leg must fail compilation, not surface as NoSuchMethodError at
-    // runtime. Plain deprecations stay warnings: some replacements do not exist on the oldest leg.
+    // runtime. Plain deprecations stay warnings: some replacements do not exist on the oldest leg. -Werror is set
+    // only on the library's compileJava (graphql-tools/build.gradle.kts), so warnings elsewhere do not fail the build.
     tasks.withType<JavaCompile>().configureEach {
-        options.compilerArgs.addAll(listOf("-Xlint:removal", "-Werror"))
+        options.compilerArgs.add("-Xlint:removal")
     }
 }
 

@@ -23,6 +23,11 @@ micronautBuild {
     }
 }
 
+// Warnings in the library's main code fail the build. Tests, the test-suite modules and the processor do not.
+tasks.named<JavaCompile>("compileJava") {
+    options.compilerArgs.add("-Werror")
+}
+
 // DocsCoverageSpec reads the README, the guide and the snippet sources next to this module behind Gradle's back, so
 // they are declared as inputs: a documentation change must re-run the spec.
 tasks.named<Test>("test") {
