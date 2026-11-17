@@ -25,16 +25,12 @@ jobs:
         include:
           - java: '25'
             graphql-java: floor
-            tasks: check -x spotlessCheck -x checkstyleMain -x checkstyleTest
           - java: '25'
             graphql-java: default
-            tasks: build
           - java: '25'
             graphql-java: ceiling
-            tasks: check -x spotlessCheck -x checkstyleMain -x checkstyleTest
           - java: '21'
             graphql-java: default
-            tasks: check -x spotlessCheck -x checkstyleMain -x checkstyleTest
     name: build (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     timeout-minutes: 30
     steps:
@@ -44,7 +40,7 @@ jobs:
           jdk: ${{ matrix.java }}
           tools: java
       - name: Build with Gradle
-        run: ./gradlew ${{ matrix.tasks }} --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
@@ -116,7 +112,7 @@ jobs:
           jdk: ${{ matrix.java }}
           tools: java
       - name: Build with Gradle
-        run: ./gradlew check -x spotlessCheck -x checkstyleMain -x checkstyleTest --no-daemon --continue -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default
+        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
