@@ -9,6 +9,7 @@ import io.micronaut.graphql.tools.BindingManifest
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException
@@ -32,6 +33,7 @@ class GraphQLIgnoreSpec extends AbstractTest {
     static final String SPEC_UNBOUND = "IgnoreSpecUnbound"
     static final String SPEC_IGNORED_ROOT = "IgnoreSpecIgnoredRoot"
     static final String SPEC_IGNORED_GETTER = "IgnoreSpecIgnoredGetter"
+    static final String SPEC_IGNORED_COORDINATE = "IgnoreSpecIgnoredCoordinate"
 
     @Language("GraphQL")
     static final String SCHEMA = """
@@ -149,6 +151,36 @@ type Item {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof BindingFailuresException || e.cause instanceof MethodNotFoundException
         !(e.cause instanceof AmbiguousBindingException)
+    }
+
+    void "an ignored method that carries a coordinate does not switch its bean to coordinate-only binding"() {
+        given:
+        startContext("""
+schema {
+  query: Query
+}
+
+type Query {
+  hello: String
+}
+""", SPEC_IGNORED_COORDINATE)
+
+        when:
+        def result = executeQuery('{ hello }')
+
+        then:
+        result.errors.isEmpty()
+        result.data == [hello: 'hi']
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_IGNORED_COORDINATE)
+    @GraphQLRootResolver
+    static class IgnoredCoordinateQuery {
+        String hello() { 'hi' }
+
+        @GraphQLIgnore
+        @GraphQLSchemaCoordinate("Query.other")
+        String other() { 'other' }
     }
 
     @Requires(property = 'spec.name', value = SPEC_GROOVY)

@@ -186,6 +186,10 @@ public final class GraphQLResolversRegistry {
      */
     public void registerSchemaCoordinateExecutableMethod(BeanDefinition<?> beanDefinition,
                                                          ExecutableMethod<Object, ?> method) {
+        if (isIgnored(method)) {
+            // an ignored method binds nothing, so it must not switch its bean to coordinate-only binding either
+            return;
+        }
         String coordinate = method.stringValue(GraphQLSchemaCoordinate.class).orElse("");
 
         schemaCoordinateMethods.add(new SchemaCoordinateMethod(beanDefinition, method, coordinate));
@@ -304,7 +308,7 @@ public final class GraphQLResolversRegistry {
                 .sorted(Comparator.comparing(it -> it.getKey().getBeanType().getName()))
                 .forEach(entry -> {
                     List<String> methods = entry.getValue().stream()
-                            .filter(method -> isCandidate(entry.getKey(), method))
+                            .filter(method -> isCandidate(entry.getKey(), method) && !isLifecycleMethod(method))
                             .map(MicronautUtils::getExecutableMethodFullName)
                             .sorted()
                             .toList();
@@ -362,6 +366,10 @@ public final class GraphQLResolversRegistry {
                 }
             }
         }
+        // a method of a bean with several contracts whose source parameter is none of them is kept apart
+        unassignedTypeResolverMethods.forEach((beanDefinition, methods) -> methods.stream()
+                .filter(GraphQLResolversRegistry::isIgnored)
+                .forEach(method -> result.add(new BeanDefinitionAndMethod(beanDefinition, method))));
         return result;
     }
 
