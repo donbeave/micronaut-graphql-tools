@@ -8,7 +8,7 @@ dependencies {
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.java)
-    testRuntimeOnly(libs.logback.classic)
+    testRuntimeOnly("ch.qos.logback:logback-classic")
 }
 
 micronautBuild {

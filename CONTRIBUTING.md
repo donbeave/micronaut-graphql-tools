@@ -45,6 +45,14 @@ Groovy has no native test. `:test-suite-groovy:nativeTest` was tried on Oracle G
 
 Responses keep their null fields (#45): `example.nullfields` sends raw HTTP requests and checks that `null` values keep their keys, under each JSON configuration. The default stack (Jackson databind, with and without `jackson.serialization-inclusion=NON_NULL`) runs in `test`, so `nativeTest` runs it too. Micronaut Serialization (`micronaut-serde-jackson`, with and without `micronaut.serde.serialization.inclusion=NON_NULL`) runs in its own source set and task, `./gradlew :test-suite-java:serdeTest` (part of `check`), because `micronaut-serde-jackson` makes its `JsonMapper` win and the two stacks cannot share a test classpath. The serde case is JVM-only: registering it as a second native test binary builds (about 3.5 minutes), but the native image selects the Jackson databind `JsonMapper` although `micronaut-serde-jackson` is on its classpath (the guard test `usesTheExpectedJsonStack` fails on GraalVM 25.0.5.0.3), so it would not test the stack it names. The same queries and assertions run natively on the default stack.
 
+## Dependencies
+
+Dependencies come from the Micronaut version catalog (`mn.*`) first; `gradle/libs.versions.toml` only holds what Micronaut does not manage; overrides need a recorded reason.
+
+- A dependency that Micronaut's BOMs manage is declared without a version, or through the generated `mn`, `mnGraphql` and `mnTest` catalogs. `logback` and JUnit come from the Micronaut platform BOM (`libs.micronaut.platform`) in the tests and the benchmarks.
+- The `micronaut`, `micronaut-platform` and `micronaut-test` entries of `gradle/libs.versions.toml` are inputs of micronaut-build and the Micronaut Gradle plugin, not dependency pins.
+- An override of a managed version (today only Groovy 4.0.33, because the BOM's 4.0.28 cannot read JDK 27 class files) needs a comment with its reason next to it and an exception in `.github/scripts/versions-audit.sh`.
+
 ## Building Documentation
 
 The documentation sources are located at `src/main/docs/guide`.
