@@ -217,8 +217,11 @@ mode.
 
 ## Startup errors
 
-The schema is bound when the `GraphQL` bean is created. Every field that cannot be bound is reported; the binding does
-not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
+The schema is bound when the application context starts, whether the library or the application creates the
+`GraphQL` bean: a field that cannot be bound fails the startup (of the `ApplicationContext` and of the embedded server),
+and the first request does no binding work. `micronaut.graphql.tools.eager-init: false` binds it when the first bean
+that needs the `GraphQLSchema` is created instead, for tests that expect the failure on a bean lookup. Every field that
+cannot be bound is reported; the binding does not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
 `MultipleMethodsFoundException`, `IncorrectClassMappingException`, ...). Several are thrown together as
 `BindingFailuresException`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
 others are suppressed exceptions. The checks that need a complete binding (unreachable types, schema coordinates) run
@@ -521,6 +524,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
 | `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` turns these checks off, so the startup does not fail on them; the findings that have a manifest representation are listed in the manifest (unwired directives are also logged as a warning). It does not change `precedence`. |
+| `micronaut.graphql.tools.eager-init` | `true` \| `false` | Bind the schema when the application context starts, so that a broken binding fails the startup (also when the application defines its own `GraphQL` bean) and the first request does no binding work. `false` binds it when the first bean that needs the `GraphQLSchema` is created. |
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded, and with `strict: false` the strict-mode checks that only feed the manifest are skipped. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
