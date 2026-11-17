@@ -870,10 +870,13 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
   implements. These run lowest order first (`@Order` or `Ordered` on the `SchemaDirective` bean), so the first one
   wraps a data fetcher innermost.
 
-A `SchemaDirectiveWiring` bean is **not** applied on its own: if no `SchemaDirective` bean wraps that instance, the
-startup fails with `UnwrappedDirectiveWiringException`, which names the bean. A wiring therefore never runs on every
-element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of its
-`SchemaDirective`.
+A `SchemaDirectiveWiring` bean is **not** applied on its own: if neither a `SchemaDirective` bean wraps it nor a
+`RuntimeWiringCustomizer` registers it (`RuntimeWiring.Builder#directive` or `#directiveWiring`), the startup fails with
+`UnwrappedDirectiveWiringException`, which names the bean. The check runs after every customizer. A wiring therefore
+never runs on every element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of
+its `SchemaDirective`. A singleton is matched by instance; a `@Prototype` bean (a new instance per injection point) by
+its class, so it may be wrapped too. Because of that, an unwrapped `@Prototype` bean goes undetected when some wired
+instance (of any bean) has the same class; the check then cannot tell the two instances apart.
 
 **Every directive the schema applies must have a wiring**, or the startup fails with `UnwiredDirectivesException`,
 which lists every such directive and where the schema applies it. With `strict: false` (see [Strict mode](#strict-mode)) the
