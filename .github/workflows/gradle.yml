@@ -135,7 +135,7 @@ jobs:
 
   # D-04 guard: fails when the working tree or the PR title/body contains a forbidden consumer name. The pattern list
   # is the FORBIDDEN_NAMES secret (one fixed string per line) and is never written to the repository or to the log.
-  # Fork PRs and repositories without the secret get no pattern list: the job reports that it did not run and passes.
+  # Fork PRs get no secrets: the job reports that it did not run and passes. Any other run without a pattern list fails.
   consumer-name-guard:
     name: consumer-name guard
     runs-on: ubuntu-latest
@@ -162,10 +162,11 @@ jobs:
           if [ ! -s "$work/patterns.txt" ]; then
             if [ "$IS_FORK" = "true" ]; then
               echo "::notice title=consumer-name guard::Did not run: fork pull requests do not receive repository secrets."
-            else
-              echo "::notice title=consumer-name guard::Did not run: the FORBIDDEN_NAMES secret is not set."
+              exit 0
             fi
-            exit 0
+            # A missing or empty secret must not turn the guard into a no-op on repository branches.
+            echo "::error title=consumer-name guard::The FORBIDDEN_NAMES secret is not set or empty, so the guard cannot run."
+            exit 1
           fi
           failed=0
           # Working tree: print file and line only, never the matched text.
