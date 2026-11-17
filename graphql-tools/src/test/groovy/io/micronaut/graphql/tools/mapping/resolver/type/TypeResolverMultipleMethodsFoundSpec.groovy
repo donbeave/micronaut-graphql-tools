@@ -47,7 +47,7 @@ type User {
   Methods: 
   1) ${UserResolver.name} roles(${User.name} user)
   2) ${UserResolver.name} roles(${User.name} user, ${DataFetchingEnvironment.name} env)
-  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with @GraphQLSchemaCoordinate("<Operation>.<field>"), for this field @GraphQLSchemaCoordinate("User.roles")."""
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("User.roles") on one of them (two methods with the same coordinate still conflict)."""
         e.cause.mappingContext.graphQlObjectType == 'User'
         e.cause.mappingContext.graphQlField == 'roles'
         e.cause.mappingContext.mappedClass == null

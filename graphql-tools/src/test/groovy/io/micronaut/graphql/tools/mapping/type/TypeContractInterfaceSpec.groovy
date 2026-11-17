@@ -197,7 +197,7 @@ type Chapter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `subtitle` not found in ${MemoGraph.name}'s type. Properties are read from the interface ${MemoGraph.name}, which has an introspection of its own, so a getter that only an implementation class declares is not a property. `subtitle` is declared by an implementation class. Fix: declare the getter on ${MemoGraph.name}, or remove the interface's own introspection (the @GraphQLType or @Introspected annotation on it).
+        e.cause.message == """The property or method `subtitle` not found in ${MemoGraph.name}'s type. Properties are read from the interface ${MemoGraph.name}, which has an introspection of its own, so a getter that only an implementation class declares is not a property. Fix: declare the getter on ${MemoGraph.name}, or remove the interface's own introspection (the @GraphQLType or @Introspected annotation on it).
   GraphQL coordinate: Memo.subtitle (line 17, column 3)
   GraphQL object type: Memo
   GraphQL field: subtitle"""

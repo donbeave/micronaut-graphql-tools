@@ -92,14 +92,13 @@ public final class MethodNotFoundException extends AbstractMappingException {
      */
     @Internal
     public MethodNotFoundException forContract(Class<?> contractClass, List<Class<?>> implementations) {
-        String declaredBy = implementations.isEmpty() ? "an implementation class" : implementations.stream()
-                .map(Class::getName)
-                .collect(Collectors.joining(", "));
+        String declaredBy = implementations.isEmpty() ? "" : " `" + methodName + "` is declared by "
+                + implementations.stream().map(Class::getName).collect(Collectors.joining(", ")) + ".";
         return new MethodNotFoundException(
                 reason + " Properties are read from the interface " + contractClass.getName()
                         + ", which has an introspection of its own, so a getter that only an implementation class "
-                        + "declares is not a property. `" + methodName + "` is declared by " + declaredBy
-                        + ". Fix: declare the getter on " + contractClass.getName()
+                        + "declares is not a property." + declaredBy
+                        + " Fix: declare the getter on " + contractClass.getName()
                         + ", or remove the interface's own introspection (the @GraphQLType or @Introspected "
                         + "annotation on it).",
                 getMappingContext(),
