@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.annotation;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -25,11 +26,13 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /**
  * Binds a resolver method parameter to the GraphQL field argument with the given name. Without it, the parameter is
  * bound to the argument that has the same name as the parameter. Use it when the parameter name cannot match the
- * argument name, for instance when the argument name is a Java keyword.
+ * argument name, for instance when the argument name is a Java keyword. The annotation is inherited: declared on a
+ * parameter of an interface or superclass method, it applies to the overriding method.
  *
  * @author Alexey Zhokhov
  */
 @Documented
+@Inherited
 @Retention(RUNTIME)
 @Target({ElementType.PARAMETER})
 public @interface GraphQLArgument {

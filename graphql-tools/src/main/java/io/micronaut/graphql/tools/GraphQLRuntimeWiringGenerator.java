@@ -552,7 +552,7 @@ final class GraphQLRuntimeWiringGenerator {
             InputValueDefinition inputValueDefinition = inputsByName.get(name);
 
             if (inputValueDefinition == null) {
-                throw IncorrectArgumentNameException.parameterWithoutArgument(mappingContext, name,
+                throw IncorrectArgumentNameException.parameterWithoutArgument(mappingContext, argument.getName(), name,
                         inputs.stream().map(InputValueDefinition::getName).toList());
             }
             if (!bound.add(name)) {

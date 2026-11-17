@@ -415,6 +415,8 @@ bind it explicitly:
 String size(@GraphQLArgument("long") Integer length, @GraphQLArgument("short") Integer width) { ... }
 ```
 
+The annotation on a parameter of an interface or superclass method also applies to the overriding method.
+
 The startup fails with the schema coordinate and the parameter when a parameter has no argument of that name
 (`IncorrectArgumentNameException`), when two parameters bind to one argument, and (`IncorrectArgumentCountException`)
 when the numbers of parameters and arguments differ. There is no positional opt-out.

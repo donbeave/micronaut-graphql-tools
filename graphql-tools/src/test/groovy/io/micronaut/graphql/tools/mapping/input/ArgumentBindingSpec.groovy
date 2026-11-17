@@ -27,6 +27,8 @@ class ArgumentBindingSpec extends AbstractTest {
     static final String SPEC_EXTRA = "ArgumentBindingSpecExtra"
     static final String SPEC_MISSING = "ArgumentBindingSpecMissing"
     static final String SPEC_SOURCE = "ArgumentBindingSpecSource"
+    static final String SPEC_BAD_OVERRIDE = "ArgumentBindingSpecBadOverride"
+    static final String SPEC_CONTRACT = "ArgumentBindingSpecContract"
 
     @Language("GraphQL")
     static final String SCHEMA = """
@@ -166,6 +168,29 @@ type User { name(prefix: String!, suffix: String!): String! }
         e.cause.message.contains('GraphQL coordinate: Query.page')
     }
 
+    void "a mistyped @GraphQLArgument value names the Java parameter and the requested argument"() {
+        given:
+        startContext(SCHEMA_PAGE, SPEC_BAD_OVERRIDE)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof IncorrectArgumentNameException
+        e.cause.message.contains("The method parameter 'first' is bound by @GraphQLArgument(\"frist\")")
+        e.cause.message.contains('(arguments: [first, offset])')
+        e.cause.message.contains('GraphQL coordinate: Query.page')
+    }
+
+    void "@GraphQLArgument declared on a resolver contract applies to its implementation"() {
+        given:
+        startContext(SCHEMA, SPEC_CONTRACT)
+
+        expect:
+        executeQuery('{ renamed(long: 7, short: 3) }').data.renamed == 'long=7 short=3'
+    }
+
     private String page() {
         def result = executeQuery('{ page(first: 10, offset: 200) }')
         assert result.errors.isEmpty()
@@ -234,6 +259,27 @@ type User { name(prefix: String!, suffix: String!): String! }
         String name(User user, String suffix, String prefix, DataFetchingEnvironment env) {
             "user:$prefix-$suffix"
         }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_BAD_OVERRIDE)
+    @GraphQLRootResolver
+    static class BadOverrideQuery {
+        String page(@GraphQLArgument('frist') Integer first, Integer offset) { null }
+    }
+
+    interface RenamedContract {
+        String page(Integer first, Integer offset)
+        String renamed(@GraphQLArgument('long') Integer length, @GraphQLArgument('short') Integer width)
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_CONTRACT)
+    @GraphQLRootResolver
+    static class ContractQuery implements RenamedContract {
+        @Override
+        String page(Integer first, Integer offset) { null }
+
+        @Override
+        String renamed(Integer length, Integer width) { "long=$length short=$width" }
     }
 
 }

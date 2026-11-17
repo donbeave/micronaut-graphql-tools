@@ -32,7 +32,20 @@ public final class IncorrectArgumentNameException extends AbstractMappingExcepti
 
     public static IncorrectArgumentNameException parameterWithoutArgument(MappingContext mappingContext,
                                                                          String parameterName,
+                                                                         String argumentName,
                                                                          List<String> argumentNames) {
+        if (!parameterName.equals(argumentName)) {
+            return new IncorrectArgumentNameException(
+                    String.format(
+                            "The method parameter '%s' is bound by @GraphQLArgument(\"%s\") to a GraphQL argument"
+                                    + " that does not exist (arguments: %s). Correct the annotation value.",
+                            parameterName,
+                            argumentName,
+                            argumentNames
+                    ),
+                    mappingContext
+            );
+        }
         return new IncorrectArgumentNameException(
                 String.format(
                         "The method parameter '%s' has no GraphQL argument with that name (arguments: %s). Rename the"
