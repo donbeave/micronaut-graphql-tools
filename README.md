@@ -823,9 +823,23 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   implement only one of their Java types.
   ```
 
-  What can be checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
-  object types) and the member types against the declared Java interface (provably disjoint mappings only). Whether one object is an
-  instance of two unrelated mapped Java interfaces depends on the runtime class and is reported at runtime.
+  What is checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
+  object types), the member types against the declared Java interface (provably disjoint mappings only) and, for every
+  concrete class with a bean introspection, the ambiguity of the members. Such a class that is not mapped by its exact
+  class, and is an instance of the Java types of several members of a returned union or interface of which none is more
+  specific, fails the startup with `AmbiguousAbstractTypeException`, naming the class and the members. A class and its
+  sub-member (`B` mapped to `LongNote extends Note` mapped to `A`) is not ambiguous. The check runs once, from the
+  introspection metadata, which a native image has, and adds nothing per request:
+
+  ```
+  Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type
+  is the most specific one:
+    com.example.BundleModel is an instance of Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph) of union Item
+  Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement only one of their Java types.
+  ```
+
+  A class without an introspection, such as a proxy or a class generated at runtime, can only be checked at runtime,
+  where it is the GraphQL error above.
 - Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
   (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
 - A `@GraphQLTypeResolver` for the Java interface that an SDL interface is mapped to binds the fields of that interface
