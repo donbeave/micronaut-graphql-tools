@@ -48,6 +48,7 @@ public class GraphQLToolsConfiguration {
     private List<String> resolverDirectives = Collections.emptyList();
     private List<String> inertDirectives = Collections.emptyList();
     private boolean strict = true;
+    private boolean eagerInit = true;
     private InputConfiguration input = new InputConfiguration();
     private ManifestConfiguration manifest = new ManifestConfiguration();
 
@@ -180,6 +181,25 @@ public class GraphQLToolsConfiguration {
      */
     public void setStrict(boolean strict) {
         this.strict = strict;
+    }
+
+    /**
+     * @return whether the schema is bound when the application context starts
+     */
+    public boolean isEagerInit() {
+        return eagerInit;
+    }
+
+    /**
+     * Sets whether the schema is bound when the application context starts, so that a broken binding fails the
+     * startup and the first request does no binding work. {@code false} binds it when the first bean that needs the
+     * {@link graphql.schema.GraphQLSchema} is created, which is what tests that expect the binding to fail on a
+     * lookup need. Default: {@code true}.
+     *
+     * @param eagerInit whether to bind at startup
+     */
+    public void setEagerInit(boolean eagerInit) {
+        this.eagerInit = eagerInit;
     }
 
     /**
