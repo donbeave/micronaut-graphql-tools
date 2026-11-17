@@ -5,6 +5,8 @@ on:
       - master
       - '[1-9]+.[0-9]+.x'
   pull_request:
+    # `edited` re-runs the gate when the title or body changes, so the consumer-name guard sees the new text.
+    types: [opened, synchronize, reopened, edited]
     branches:
       - master
       - '[1-9]+.[0-9]+.x'
@@ -169,12 +171,82 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  # D-04 guard: fails when the working tree or the PR title/body contains a forbidden consumer name. The pattern list
+  # is the FORBIDDEN_NAMES secret (one fixed string per line) and is never written to the repository or to the log.
+  # Fork PRs get no secrets: the job reports that it did not run and passes. Any other run without a pattern list fails.
+  consumer-name-guard:
+    name: consumer-name guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Scan for forbidden names
+        env:
+          FORBIDDEN_NAMES: ${{ secrets.FORBIDDEN_NAMES }}
+          IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/consumer-name-guard"
+          mkdir -p "$work"
+          printf '%s\n' "$FORBIDDEN_NAMES" | tr -d '\r' | grep -v '^[[:space:]]*$' > "$work/patterns.txt" || true
+          # Mask every pattern before anything else can print it.
+          while IFS= read -r pattern; do
+            echo "::add-mask::$pattern"
+          done < "$work/patterns.txt"
+          if [ ! -s "$work/patterns.txt" ]; then
+            if [ "$IS_FORK" = "true" ]; then
+              echo "::notice title=consumer-name guard::Did not run: fork pull requests do not receive repository secrets."
+              exit 0
+            fi
+            # A missing or empty secret must not turn the guard into a no-op on repository branches.
+            echo "::error title=consumer-name guard::The FORBIDDEN_NAMES secret is not set or empty, so the guard cannot run."
+            exit 1
+          fi
+          failed=0
+          # Working tree: print file and line only, never the matched text.
+          set +e
+          grep -rniIF -n -f "$work/patterns.txt" --exclude-dir=.git --exclude-dir=build --exclude-dir=.gradle . > "$work/tree-hits.txt"
+          rc=$?
+          set -e
+          if [ "$rc" -gt 1 ]; then
+            echo "::error title=consumer-name guard::Scan of the working tree failed (grep exit $rc)."
+            exit 1
+          fi
+          if [ "$rc" -eq 0 ]; then
+            while IFS=: read -r file line _; do
+              echo "::error file=${file#./},line=$line,title=consumer-name guard::Forbidden name found (text withheld)."
+            done < "$work/tree-hits.txt"
+            failed=1
+          fi
+          # PR title and body: the text is not printed; only the fact of a match is reported.
+          # Read from the event payload file, not from env: the runner prints every step env value in the log.
+          jq -r '(.pull_request.title // ""), (.pull_request.body // "")' "$GITHUB_EVENT_PATH" > "$work/pr-text.txt"
+          set +e
+          grep -niIF -f "$work/patterns.txt" "$work/pr-text.txt" > /dev/null
+          rc=$?
+          set -e
+          if [ "$rc" -gt 1 ]; then
+            echo "::error title=consumer-name guard::Scan of the PR title and body failed (grep exit $rc)."
+            exit 1
+          fi
+          if [ "$rc" -eq 0 ]; then
+            echo "::error title=consumer-name guard::Forbidden name found in the pull request title or body (text withheld)."
+            failed=1
+          fi
+          if [ "$failed" -ne 0 ]; then
+            echo "D-04 violation: forbidden consumer name found (details above, text withheld)." >&2
+            exit 1
+          fi
+          echo "consumer-name guard passed."
+
   # The only required status check (D-35). It runs even when a gated job fails or is cancelled,
   # and it is green only when every gated job succeeded. Add a gated job to `needs:`, never to the ruleset.
   required:
     name: required checks
     if: always()
-    needs: [build, check-library, binary-compatibility, docs]
+    needs: [build, check-library, binary-compatibility, docs, consumer-name-guard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
