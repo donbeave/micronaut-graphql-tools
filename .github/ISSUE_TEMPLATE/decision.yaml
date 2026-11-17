@@ -1,0 +1,50 @@
+name: Decision
+description: A decision the maintainer must make (options, recommendation and evidence)
+labels: ["type: decision", "status: needs-decision"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a choice that needs the maintainer. Fill in the facts, the options and a recommendation. Keep every claim linked to code, an issue, a PR, a CI run or a measurement. The `status: needs-decision` label marks the issue as blocked on the decision; remove it when the decision is made and recorded, then close the issue.
+  - type: input
+    id: question
+    attributes:
+      label: Question
+      description: The decision in one question, for example "Is strict mode the default?"
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why the decision is needed now, what it blocks, and the issue, epic or PR it affects.
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options
+      description: At least two options. For each one, say what it does, its cost, its risk, and what it means for users.
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation
+      description: One option and the reason for it. Say what new fact would change the recommendation.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Measurements (with the JDK, graphql-java version and tool used), and links to code, issues, PRs, CI runs or specifications.
+    validations:
+      required: true
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Consequences
+      description: What follows from the decision, including the follow-up issues and the decision log entry it needs.
+    validations:
+      required: true
