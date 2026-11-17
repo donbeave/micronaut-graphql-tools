@@ -901,8 +901,8 @@ data fetcher or type resolver for a field or type the library wired into a code 
 which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
 and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
-(On graphql-java 25.1 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
-resolver or scalar with `StrictModeWiringException`; 21.3 accepts them silently.) To wrap data fetchers, use a
+(On graphql-java 25.2 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
+resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently.) To wrap data fetchers, use a
 `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
@@ -1021,8 +1021,8 @@ public TypeDefinitionRegistryCustomizer validationDirectives() {
 }
 ```
 
-Use extended-validation 21.0 with graphql-java 21.3 and 24.0 with 25.1 (21.0 calls a `GraphQLCodeRegistry` method
-that graphql-java 25 removed); the library's tests run both.
+Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 25.2 (21.0 calls a
+`GraphQLCodeRegistry` method that graphql-java 22.4 and later removed); the library's tests run all three.
 
 ## Configuring the GraphQL bean
 
