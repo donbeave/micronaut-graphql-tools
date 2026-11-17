@@ -1,11 +1,11 @@
 name: Decision
-description: A decision the maintainer must make (options, recommendation and evidence)
+description: A decision the maintainers make (options, recommendation and evidence)
 labels: ["type: decision", "status: needs-decision"]
 body:
   - type: markdown
     attributes:
       value: |
-        Use this form for a choice that needs the maintainer. Fill in the facts, the options and a recommendation. Keep every claim linked to code, an issue, a PR, a CI run or a measurement. The `status: needs-decision` label marks the issue as blocked on the decision; remove it when the decision is made and recorded, then close the issue.
+        Use this form for a choice that the maintainers decide. Fill in the facts, the options and a recommendation. Keep every claim linked to code, an issue, a PR, a CI run or a measurement. The maintainers decide; AI agents contributing here escalate per AGENTS.md and the maintainers' written decision stands. The `status: needs-decision` label marks the issue as blocked until the decision is recorded; remove it once the decision is recorded, then close the issue.
   - type: input
     id: question
     attributes:
