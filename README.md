@@ -87,8 +87,9 @@ The mapping then checks `T`. Anything else fails at startup with `UnsupportedRet
 
 `@GraphQLRootResolver` and `@GraphQLTypeResolver` are inherited (`@Inherited`). They may sit on an interface, for
 example one emitted by a code generator, and a bean that implements it is a resolver without a GraphQL annotation of
-its own. Any class that implements an annotated contract becomes a singleton resolver bean, even without `@Singleton`
-(the contract annotation is a bean stereotype), so a hand-written fake or delegating adapter that implements it is
+its own. The implementing class still needs a bean annotation such as `@Singleton`: the contract's annotation does not
+make the class a bean, and the compile-time checks report a contract that no bean class implements. Every bean that
+implements the contract is a resolver, so a hand-written fake or delegating adapter that implements it and is a bean is
 registered too. Micronaut AOP advice (`@Around`) on the implementation still applies.
 
 ```java
@@ -98,6 +99,7 @@ public interface BookLabelResolverContract {
     String label(Book book);
 }
 
+@Singleton
 public class BookLabelResolver implements BookLabelResolverContract {
     @Override
     public String label(Book book) { ... }
@@ -531,9 +533,10 @@ tasks.compileJava {
 
 The processor is aggregating: it checks the whole compilation once, in the last round. It claims the library's
 annotations, `@Introspected`, and the Micronaut annotations that make a class a bean (`@Singleton`, `@Prototype`,
-`@RequestScope`, ...), never `*`. On an incremental compilation Gradle hands every claimed type to the processor again,
-not only the changed ones, so a change to one file also regenerates the classes of the other claimed types. This is a
-known limitation, not the intended behaviour: issues #13 and #150 track it, and this paragraph changes with them.
+`@RequestScope`, ...), never `*`. On an incremental compilation Gradle hands every claimed type to the processor again
+(it reprocesses them; it does not recompile the unchanged ones), not only the changed ones, because the processor is
+aggregating. This is a known limitation, not the intended behaviour: issues #13 and #150 track it, and this paragraph
+changes with them.
 Errors about unchanged files then have no Java file and line (javac did not compile them), but name the coordinate and
 the class. With Micronaut's processor, set
 `micronaut.processing.incremental=true` (the Micronaut Gradle plugin does), or every compilation is a full one.
