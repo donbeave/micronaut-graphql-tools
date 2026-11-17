@@ -10,7 +10,7 @@ Open issues are listed at [donbeave/micronaut-graphql-tools/issues](https://gith
 
 ## JDK Setup
 
-Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and `test-suite` need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
+Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
 
 The tools are pinned in `mise.toml` and installed with [mise](https://mise.jdx.dev): run `mise install` in the project directory. It installs Oracle GraalVM 25 (the build JDK, and `native-image` for the native tests) and `actionlint` (lints the workflows: run `actionlint`). To build on another JDK line, select an overlay with `MISE_ENV`, for example `MISE_ENV=jdk21 mise install` (`jdk17`, `jdk21`, `jdk25` and `jdk27` install Temurin; JDK 27 is for the canary only). Gradle is not installed by mise: use `./gradlew`.
 
@@ -25,9 +25,23 @@ The tests do not need Docker. These are the commands CI runs (`.github/workflows
 - `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
 - `./gradlew build -PgraphqlJavaLeg=floor|ceiling` runs the same build on another graphql-java leg (`default` is the default; `latest` is for the canary). The versions of each role are in `gradle/libs.versions.toml`; the README explains the roles. `-PgraphqlJavaCompileLeg=default` compiles main code on the default leg while the tests run on the leg of `-PgraphqlJavaLeg` (the binary compatibility job).
 - `./gradlew :micronaut-graphql-tools:check` checks the library only; this is the one that works on JDK 17.
-- `./gradlew :test-suite:nativeTest` runs the native image tests (Oracle GraalVM 25); add `-PgraphqlJavaLeg=ceiling` for another leg.
+- `./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --no-parallel` runs the native image tests (the build runs tasks in parallel by default, and each native build needs about 5 GB) (Oracle GraalVM 25); add `-PgraphqlJavaLeg=ceiling` for another leg.
 
 `.github/workflows/gradle.yml` and `native.yml` are the source of truth if this list and the workflows ever disagree.
+
+The example applications are three separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
+
+| Suite | Language | Run the JVM tests | Run the native tests (Oracle GraalVM 25) |
+| --- | --- | --- | --- |
+| `test-suite-java` | Java (annotation processors) | `./gradlew :test-suite-java:test` | `./gradlew :test-suite-java:nativeTest` |
+| `test-suite-kotlin` | Kotlin 2.1.21 with KSP2 (Java and Kotlin target 21) | `./gradlew :test-suite-kotlin:test` | `./gradlew :test-suite-kotlin:nativeTest` |
+| `test-suite-groovy` | Groovy (Spock) | `./gradlew :test-suite-groovy:test` | none (see below) |
+
+Each native test takes about 5 to 7 minutes and 5 GB of memory: run them one after another.
+
+The three schemas (`src/main/resources/schema.graphqls`) are copies; `./gradlew :test-suite-java:checkSuiteSchemaParity` (part of `check`) fails when they differ.
+
+Groovy has no native test. `:test-suite-groovy:nativeTest` was tried on Oracle GraalVM 25.0.5.0.3 and Micronaut 4.10: with Spock the native test launcher fails at discovery (`ClassNotFoundException: org.spockframework.runtime.extension.builtin.IncludeExcludeExtension`, Spock loads its extensions reflectively and ships no native metadata). With a JUnit 5 Groovy test instead, the image builds and starts, but the Groovy runtime needs build-time initialisation of `org.codehaus.groovy`, `groovy`, `org.apache.groovy` and `groovyjarjar*`, `indy` off, and reflection metadata for what Groovy's meta-class machinery and AST-generated code call at run time (enum `$INIT`, `ImmutableASTTransformation.checkPropNames`, `org.codehaus.groovy.runtime.dgm$N`); each fix exposed the next, and Groovy 4.0.x ships no GraalVM metadata. So the Groovy suite runs on the JVM only.
 
 ## Building Documentation
 

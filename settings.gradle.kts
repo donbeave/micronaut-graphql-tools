@@ -17,7 +17,9 @@ include("graphql-tools")
 include("graphql-tools-bom")
 include("graphql-tools-processor")
 include("benchmarks")
-include("test-suite")
+include("test-suite-java")
+include("test-suite-kotlin")
+include("test-suite-groovy")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true
@@ -26,7 +28,7 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
 }
 
 // The standardized names prefix every module with "micronaut-"; the benchmarks keep the short name that the contributor
-// guide and CI use (:benchmarks:allocationTest), like test-suite.
+// guide and CI use (:benchmarks:allocationTest), like the test-suite-* modules.
 gradle.settingsEvaluated {
     rootProject.children.single { it.name == "micronaut-benchmarks" }.name = "benchmarks"
 }

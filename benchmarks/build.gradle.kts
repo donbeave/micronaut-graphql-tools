@@ -14,7 +14,7 @@ repositories {
     mavenCentral()
 }
 
-// Compiled with the JDK that runs the build (21 and 25 are the two full CI legs, D-32), like test-suite; no toolchain, so
+// Compiled with the JDK that runs the build (21 and 25 are the two full CI legs, D-32), like the test-suite-* modules; no toolchain, so
 // the allocation baselines are recorded and checked on the same JDK that built them.
 java {
     sourceCompatibility = JavaVersion.toVersion("21")

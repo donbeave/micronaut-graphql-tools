@@ -66,7 +66,7 @@ jobs:
         java: ['17']
         # the default graphql-java leg only
         graphql-java: [default]
-    # The library modules compile to release 17 (see buildSrc); test-suite needs Java 21 and cannot run here.
+    # The library modules compile to release 17 (see buildSrc); the test-suite-* modules need Java 21 and cannot run here.
     name: check library (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     timeout-minutes: 20
     steps:
@@ -147,7 +147,7 @@ jobs:
         with:
           tools: java
       - name: Run native tests
-        run: ./gradlew :test-suite:nativeTest --configuration-cache --no-daemon -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: ./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --configuration-cache --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           GRAALVM_QUICK_BUILD: 'true'
           PREDICTIVE_TEST_SELECTION: 'false'
@@ -157,8 +157,8 @@ jobs:
         with:
           name: native-test-reports-graalvm${{ matrix.graalvm }}-graphql-java${{ matrix.graphql-java }}
           path: |
-            test-suite/build/test-results/test-native/TEST-*.xml
-            test-suite/build/test-results/test-native/
+            test-suite-*/build/test-results/test-native/TEST-*.xml
+            test-suite-*/build/test-results/test-native/
           if-no-files-found: ignore
           retention-days: 7
 

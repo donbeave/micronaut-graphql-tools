@@ -12,7 +12,7 @@ The stack makes the binding between the SDL schema and the Java code safe: drift
 - Public seams: registry, wiring and schema customizers, `GraphQLBuilderCustomizer`, `SchemaDirective` wirings, a conditional `GraphQL` bean (#5, integrated by #242).
 - Binding safety: explicit precedence, root resolvers per operation type, every binding failure reported at once, binding manifest, strict mode (#6).
 - Compile-time verification: new module `micronaut-graphql-tools-processor` checks the SDL against the Java bindings (#7).
-- Build tooling: the newest Micronaut 4 line (core 4.10.37, platform 4.10.24 for `test-suite`, micronaut-test 4.10.3), Gradle 9.9.1 with a verified wrapper checksum, Groovy 4.0.33 forced on every configuration, Shadow 8.3.11, Apollo 4.4.4 and JMH plugin 0.7.4 (#115). Native image tests and the `test-suite` native Dockerfile move from GraalVM 21 to Oracle GraalVM 25; the library still compiles to Java 17 bytecode.
+- Build tooling: the newest Micronaut 4 line (core 4.10.37, platform 4.10.24 for the `test-suite-*` modules, micronaut-test 4.10.3), Gradle 9.9.1 with a verified wrapper checksum, Groovy 4.0.33 forced on every configuration, Shadow 8.3.11, Apollo 4.4.4 and JMH plugin 0.7.4 (#115). Native image tests and the `test-suite-java` and `test-suite-kotlin` native Dockerfiles move from GraalVM 21 to Oracle GraalVM 25; the library still compiles to Java 17 bytecode.
 
 ## Behaviour changes (BC-01 to BC-19)
 

@@ -604,7 +604,7 @@ val checkBindingManifest by tasks.registering {
 tasks.check { dependsOn(checkBindingManifest) }
 ```
 
-The library's example application (`test-suite`) is built this way, and its tests compare the manifest the
+The library's example application (`test-suite-java`) is built this way, and its tests compare the manifest the
 processor wrote with the one its startup builds, without what the processor's record of omissions names.
 
 Options (`-A<name>=<value>`) have the values and defaults of the runtime options of the same name. They are written
@@ -1065,7 +1065,7 @@ public GraphQL graphQL(GraphQLSchema schema, MyInstrumentation instrumentation) 
 }
 ```
 
-[`test-suite/src/test/java/example/host`](test-suite/src/test/java/example/host) is such an application: it supplies the
+[`test-suite-java/src/test/java/example/host`](test-suite-java/src/test/java/example/host) is such an application: it supplies the
 `TypeDefinitionRegistry`, consumes only the library's `GraphQLSchema` and builds its own `GraphQL` with its own
 instrumentation, which then serves the HTTP requests.
 
@@ -1075,7 +1075,10 @@ can exclude that dependency.
 
 ## Examples
 
-Examples can be found in the [test-suite](test-suite) directory.
+Three example applications serve the same schema (the same resolvers, types and data) in each language:
+[test-suite-java](test-suite-java), [test-suite-kotlin](test-suite-kotlin) (KSP) and
+[test-suite-groovy](test-suite-groovy). Their classes have the same fully qualified names, so a documentation snippet can
+include a language's source by path.
 
 ## Compatibility
 
