@@ -21,7 +21,15 @@ runs:
     - name: Select the JDK
       if: inputs.jdk != ''
       shell: bash
-      run: echo "MISE_ENV=jdk${INPUT_JDK}" >> "$GITHUB_ENV"
+      run: |
+        case "$INPUT_JDK" in
+          17) mise_env=jdk17 ;;
+          21) mise_env=jdk21 ;;
+          25) mise_env=jdk25 ;;
+          27) mise_env=jdk27 ;;
+          *) echo "::error::jdk must be 17, 21, 25 or 27, not '$INPUT_JDK'"; exit 1 ;;
+        esac
+        echo "MISE_ENV=$mise_env" >> "$GITHUB_ENV"
       env:
         INPUT_JDK: ${{ inputs.jdk }}
     - name: Install tools with mise

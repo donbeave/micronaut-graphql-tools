@@ -172,10 +172,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-build
         with:
-          tools: actionlint
+          tools: github:jdx/jactionlint
           gradle: 'false'
       - name: Lint the workflows and composite actions
-        run: actionlint -color
+        run: jactionlint --color
 
   # The guide build (#57). The `snippet::` macro prints a warning and still succeeds when a snippet file or tag is missing in
   # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; nothing is published (D-09).
