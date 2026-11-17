@@ -1,0 +1,45 @@
+= Thread Selection for Blocking Resolvers
+
+This page describes where GraphQL operations run on a Micronaut server, and the stop-gap for resolvers that block.
+It is a workaround, not a fix. The permanent fix is the library-owned GraphQL invocation tracked in https://github.com/donbeave/micronaut-graphql-tools/issues/49[#49].
+When #49 ships, this page is replaced.
+
+== Default behaviour
+
+Micronaut sets `micronaut.server.thread-selection` to `MANUAL` by default.
+Verified in the Micronaut 4.10.16 `HttpServerConfiguration` bytecode.
+
+With `MANUAL`, the GraphQL controllers from micronaut-graphql 4.8.0 have no `@ExecuteOn` annotation. Every GraphQL operation then runs on the Netty event loop, over HTTP and WebSocket.
+A resolver that blocks, for example on JDBC, gRPC, or `join()`, stalls an event loop thread and so stalls the server.
+
+The event loop behaviour was observed with a probe in issue #14: the resolver thread was `default-eventLoopGroup-*`.
+This was not re-run for this page.
+
+== Workaround: `BLOCKING`
+
+Set the server thread selection to `BLOCKING` in `application.yml`:
+
+[source,yaml]
+----
+micronaut:
+  server:
+    thread-selection: BLOCKING
+----
+
+Micronaut 4.10.16 defines four values for `ThreadSelection`: `AUTO`, `MANUAL`, `IO` and `BLOCKING`.
+This page documents only `MANUAL` (the default) and `BLOCKING`. The behaviour of `AUTO` and `IO` is not verified here.
+
+With `BLOCKING`, the issue #14 probe showed that the resolver runs on a thread outside the event loop, and that `PropagatedContext` and `ServerRequestContext` are available in the resolver.
+This was not re-run for this page.
+
+WARNING: `thread-selection` is a server-wide setting. It is not a GraphQL setting.
+The routing code reads it for every route that has no `@ExecuteOn` annotation, so it changes the executor for every controller in the application, including non-GraphQL routes.
+A route that declares its own `@ExecuteOn` keeps that executor. This was verified from the Micronaut 4.10.16 bytecode, not by running the application.
+
+== What this setting does not fix
+
+* It does not change the GraphQL invocation itself. The library still relies on the upstream `GraphQLInvocation`.
+* It does not measure cost. The throughput, latency and allocation effect of moving operations to the blocking executor is not measured. No performance gain or loss is claimed.
+* Its effect on the WebSocket endpoints is not verified.
+* It does not scope DataLoaders per execution, and it does not fix the `connection_init` payload handling. These are reported in the decision brief for issue #31 and are not re-verified here.
+* It does not fix the `graphql-transport-ws` failure on Micronaut core 4.10.16 (close code 1011). That is tracked upstream as micronaut-graphql issue 718 and is also reported in the decision brief for issue #31, not re-verified here.
