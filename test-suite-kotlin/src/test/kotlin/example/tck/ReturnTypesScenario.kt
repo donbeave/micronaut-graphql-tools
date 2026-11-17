@@ -1,6 +1,9 @@
 package example.tck
 
-import graphql.GraphqlErrorBuilder
+import graphql.ErrorClassification
+import graphql.ErrorType
+import graphql.GraphQLError
+import graphql.language.SourceLocation
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
@@ -45,7 +48,7 @@ class ReturnTypesQueries {
     fun partial(environment: DataFetchingEnvironment): DataFetcherResult<List<Greeting?>> =
         DataFetcherResult.newResult<List<Greeting?>>()
             .data(listOf(Greeting("loaded"), null))
-            .error(GraphqlErrorBuilder.newError(environment).message("the second element could not be loaded").build())
+            .error(dataFetchingError(environment, "the second element could not be loaded"))
             .build()
 
     fun nulls(): List<Int?> = listOf(1, null, 3)
@@ -53,4 +56,16 @@ class ReturnTypesQueries {
     fun nothing(): String? = null
 
     fun scalars(): Scalars = Scalars()
+}
+
+// GraphqlErrorBuilder.newError(environment) returns a recursive generic type that the Kotlin compiler cannot resolve against
+// graphql-java 26 (StackOverflowError in compileTestKotlin), so the error that the builder would make is written out.
+private fun dataFetchingError(environment: DataFetchingEnvironment, text: String): GraphQLError = object : GraphQLError {
+    override fun getMessage(): String = text
+
+    override fun getLocations(): List<SourceLocation>? = listOfNotNull(environment.field.sourceLocation)
+
+    override fun getPath(): List<Any> = environment.executionStepInfo.path.toList()
+
+    override fun getErrorType(): ErrorClassification = ErrorType.DataFetchingException
 }
