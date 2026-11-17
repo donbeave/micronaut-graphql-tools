@@ -299,10 +299,10 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
 - **Unreachable types of every kind.** Without strict mode, only object, interface and union types that nothing binds
   are checked (`unreachable-types`). Strict mode adds enum, input and scalar types that no bound field, argument or input
   field uses (`!unreachable`); they are reported in the same `UnreachableTypesException`, and `allow-unreachable` may
-  name them. `unreachable-types: ignore` ignores them too. An allowed or ignored object, interface or union type also
-  covers the enum, input and scalar types its fields and arguments use (and the types its input types use), so
-  `allow-unreachable: [Legacy]` is enough for `type Legacy { since: Long era: Era }`. A type that an argument of a directive definition uses,
-  directly or through input fields, is reached.
+  name them. `unreachable-types: ignore` ignores them too. An allowed or ignored unreachable type also covers the enum,
+  input and scalar types its fields and arguments use, and the types that those input types use in turn, so
+  `allow-unreachable: [Legacy]` is enough for `type Legacy { since: Long era: Era }`. A type that an argument of a
+  directive definition uses, directly or through input fields, is reached.
 - **Resolver methods that bind no field** (`!unbound Class#method(...)`): every executable method of a
   `@GraphQLRootResolver` or `@GraphQLTypeResolver` bean, which Micronaut makes of its public methods, must bind a
   field. On a bean that uses `@GraphQLSchemaCoordinate`, only the annotated methods count, so a contract
