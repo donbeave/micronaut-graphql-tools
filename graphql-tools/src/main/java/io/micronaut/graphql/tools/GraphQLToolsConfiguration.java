@@ -49,6 +49,7 @@ public class GraphQLToolsConfiguration {
     private List<String> inertDirectives = Collections.emptyList();
     private boolean strict = true;
     private InputConfiguration input = new InputConfiguration();
+    private ManifestConfiguration manifest = new ManifestConfiguration();
 
     /**
      * @return what happens to object, interface and union types of the schema that no field reachable from a root
@@ -198,14 +199,59 @@ public class GraphQLToolsConfiguration {
     }
 
     /**
+     * @return the options of the binding manifest, under {@value #PREFIX}.manifest
+     */
+    @NonNull
+    public ManifestConfiguration getManifest() {
+        return manifest;
+    }
+
+    /**
+     * @param manifest the options of the binding manifest
+     */
+    public void setManifest(@NonNull ManifestConfiguration manifest) {
+        ArgumentUtils.requireNonNull("manifest", manifest);
+        this.manifest = manifest;
+    }
+
+    /**
      * Options of the binding manifest, under {@value GraphQLToolsConfiguration#PREFIX}{@code .manifest}.
      */
     @ConfigurationProperties("manifest")
     public static class ManifestConfiguration {
 
         private boolean enabled;
+        private boolean record;
         @Nullable
         private String path;
+
+        /**
+         * @return whether the binding manifest is recorded while the schema is bound, which is the case when it is
+         * recorded explicitly or written at startup
+         */
+        public boolean isRecorded() {
+            return record || enabled;
+        }
+
+        /**
+         * @return whether the binding manifest is recorded explicitly, so that the {@link BindingManifest} bean can be
+         * read
+         */
+        public boolean isRecord() {
+            return record;
+        }
+
+        /**
+         * Sets whether the binding manifest is recorded while the schema is bound, so that the
+         * {@link BindingManifest} bean can be read. Default: {@code false}: nothing is recorded, the bean cannot be
+         * created, and the strict-mode checks that only feed the manifest are skipped when
+         * {@link GraphQLToolsConfiguration#isStrict()} is {@code false} too. {@link #isEnabled()} implies it.
+         *
+         * @param record whether to record it
+         */
+        public void setRecord(boolean record) {
+            this.record = record;
+        }
 
         /**
          * @return whether the binding manifest is written at startup
@@ -216,7 +262,7 @@ public class GraphQLToolsConfiguration {
 
         /**
          * Sets whether the binding manifest is written at startup: to {@link #getPath()}, or to the log when no path is
-         * set. Default: {@code false}. The {@link BindingManifest} bean is available either way.
+         * set. Default: {@code false}. This records the manifest, see {@link #setRecord(boolean)}.
          *
          * @param enabled whether to write it
          */

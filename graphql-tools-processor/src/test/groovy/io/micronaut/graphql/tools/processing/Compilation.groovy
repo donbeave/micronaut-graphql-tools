@@ -294,6 +294,7 @@ public final class Startup {
             try {
                 thread.contextClassLoader = loader
                 Map<String, Object> configuration = new LinkedHashMap<>(properties)
+                configuration.putIfAbsent('micronaut.graphql.tools.manifest.record', true)
                 configuration.put('startup.sdl-dir', schemaDir.absolutePath)
                 return (String) loader.loadClass('startup.Startup').getMethod('manifest', Map).invoke(null, configuration)
             } finally {

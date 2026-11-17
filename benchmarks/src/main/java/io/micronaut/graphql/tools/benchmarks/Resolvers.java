@@ -6,6 +6,7 @@ import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.SchemaDirectiveWiringEnvironment;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.SchemaDirective;
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
@@ -26,7 +27,8 @@ import java.util.List;
 
 /**
  * The resolvers and wiring of the benchmarked schema. Every method does the least work that keeps the call from being
- * optimised away, so the benchmarks measure the library's path, not the resolver.
+ * optimised away, so the benchmarks measure the library's path, not the resolver. The beans are off in the context of
+ * the large-schema benchmark ({@code benchmarks.large}), which has resolvers of its own.
  */
 public final class Resolvers {
 
@@ -47,6 +49,7 @@ public final class Resolvers {
     }
 
     /** The root resolver. */
+    @Requires(property = "benchmarks.large", notEquals = "true")
     @GraphQLRootResolver
     public static class Query {
 
@@ -88,6 +91,7 @@ public final class Resolvers {
     }
 
     /** A field of {@code Item} bound to a method that takes the source. */
+    @Requires(property = "benchmarks.large", notEquals = "true")
     @GraphQLTypeResolver(Item.class)
     public static class ItemResolver {
 
@@ -101,6 +105,7 @@ public final class Resolvers {
     }
 
     /** The classes of the object types of the union and the interface. */
+    @Requires(property = "benchmarks.large", notEquals = "true")
     @Factory
     public static class Wiring {
 

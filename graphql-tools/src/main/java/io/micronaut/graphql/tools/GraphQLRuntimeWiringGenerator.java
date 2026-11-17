@@ -192,7 +192,7 @@ final class GraphQLRuntimeWiringGenerator {
     // value: the members
     private final Map<String, String> ambiguousBindings = new TreeMap<>();
 
-    private final BindingManifestRecorder manifestRecorder = new BindingManifestRecorder();
+    private final BindingManifestRecorder manifestRecorder;
 
     private final SchemaChecks schemaChecks;
 
@@ -221,6 +221,7 @@ final class GraphQLRuntimeWiringGenerator {
         this.schemaMappingDictionary = schemaMappingDictionary;
         this.graphQLSchemaProvider = graphQLSchemaProvider;
         this.configuration = configuration;
+        this.manifestRecorder = new BindingManifestRecorder(configuration.getManifest().isRecorded());
         this.schemaChecks = new SchemaChecks(typeDefinitionRegistry, graphQLResolversRegistry,
                 graphQLBeanIntrospectionRegistry, schemaMappingDictionary, configuration, manifestRecorder);
 
@@ -365,7 +366,8 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     /**
-     * Records the strict-mode findings in the binding manifest, and fails with all of them in strict mode.
+     * Records the strict-mode findings in the binding manifest, and fails with all of them in strict mode. Does nothing
+     * when strict mode is off and the manifest is not recorded.
      *
      * @param unboundTypes the unreachable types left unbound on purpose
      */
@@ -373,6 +375,11 @@ final class GraphQLRuntimeWiringGenerator {
         Set<String> allowedTypes = new HashSet<>(configuration.getAllowUnreachable());
         if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
             allowedTypes.addAll(unboundTypes);
+        }
+
+        // the checks serve strict mode and the manifest findings: with neither wanted they would only be discarded
+        if (!configuration.isStrict() && !manifestRecorder.isRecording()) {
+            return;
         }
 
         StrictModeChecks checks = new StrictModeChecks(manifestRecorder);
@@ -689,10 +696,12 @@ final class GraphQLRuntimeWiringGenerator {
         rootMethodBindings.computeIfAbsent(executable, it -> new TreeSet<>())
                 .add(objectTypeDefinition.getName() + "." + fieldDefinition.getName());
 
-        manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_ROOT,
-                () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
-                executable.getReturnType().asArgument(),
-                objectTypeDefinition.getName().equals(subscriptionTypeName));
+        if (manifestRecorder.isRecording()) {
+            manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_ROOT,
+                    () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
+                    executable.getReturnType().asArgument(),
+                    objectTypeDefinition.getName().equals(subscriptionTypeName));
+        }
     }
 
     private void processEnumTypeDefinition(EnumTypeDefinition enumTypeDefinition, Class<?> targetClass, boolean input,
@@ -1155,8 +1164,10 @@ final class GraphQLRuntimeWiringGenerator {
 
             processFieldReturnType(beanProperty.asArgument(), fieldDefinition.getType(), mappingContext);
 
-            manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_PROPERTY,
-                    () -> BindingManifestRecorder.propertyMember(beanProperty), beanProperty.asArgument(), false);
+            if (manifestRecorder.isRecording()) {
+                manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_PROPERTY,
+                        () -> BindingManifestRecorder.propertyMember(beanProperty), beanProperty.asArgument(), false);
+            }
             return;
         }
 
@@ -1174,8 +1185,10 @@ final class GraphQLRuntimeWiringGenerator {
                 mappingContext
         );
 
-        manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_PROPERTY,
-                modelMember::manifestMember, beanMethod.getReturnType().asArgument(), false);
+        if (manifestRecorder.isRecording()) {
+            manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_PROPERTY,
+                    modelMember::manifestMember, beanMethod.getReturnType().asArgument(), false);
+        }
     }
 
     private void bindTypeResolver(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,
@@ -1208,9 +1221,11 @@ final class GraphQLRuntimeWiringGenerator {
                 mappingContext
         );
 
-        manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_RESOLVER,
-                () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
-                executable.getReturnType().asArgument(), false);
+        if (manifestRecorder.isRecording()) {
+            manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_RESOLVER,
+                    () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
+                    executable.getReturnType().asArgument(), false);
+        }
     }
 
     /**
@@ -1257,11 +1272,13 @@ final class GraphQLRuntimeWiringGenerator {
             resolvers.forEach(it -> shadowedResolverMethods.add(GraphQLResolversRegistry.describeMethod(
                     it.getBeanDefinition(), it.getExecutableMethod())));
         }
-        manifestRecorder.diagnostic("ambiguous", coordinate, Stream.concat(
-                        Stream.of(modelMember.manifestMember()),
-                        resolvers.stream().map(it -> BindingManifestRecorder.methodMember(it.getExecutableMethod(),
-                                it.getExecutableMethod().getDeclaringType())).sorted())
-                .collect(Collectors.joining(" | ")));
+        if (manifestRecorder.isRecording()) {
+            manifestRecorder.diagnostic("ambiguous", coordinate, Stream.concat(
+                            Stream.of(modelMember.manifestMember()),
+                            resolvers.stream().map(it -> BindingManifestRecorder.methodMember(it.getExecutableMethod(),
+                                    it.getExecutableMethod().getDeclaringType())).sorted())
+                    .collect(Collectors.joining(" | ")));
+        }
     }
 
     private static String describeMembers(Map<Class<?>, List<String>> members) {
@@ -1513,10 +1530,12 @@ final class GraphQLRuntimeWiringGenerator {
                 mappingContext
         );
 
-        manifestRecorder.field(field.objectTypeDefinition(), field.fieldDefinition(),
-                BindingManifestRecorder.KIND_RESOLVER,
-                () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
-                executable.getReturnType().asArgument(), false);
+        if (manifestRecorder.isRecording()) {
+            manifestRecorder.field(field.objectTypeDefinition(), field.fieldDefinition(),
+                    BindingManifestRecorder.KIND_RESOLVER,
+                    () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
+                    executable.getReturnType().asArgument(), false);
+        }
     }
 
     private static Map<Class<?>, List<String>> toInterfaceMethodsMap(List<InterfaceResolverMethod> methods) {

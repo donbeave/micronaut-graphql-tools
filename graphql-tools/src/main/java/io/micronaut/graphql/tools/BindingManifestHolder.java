@@ -31,13 +31,14 @@ public final class BindingManifestHolder {
 
     /**
      * @return the binding manifest
-     * @throws NoSuchElementException if the schema is not bound yet, or never is because the application
-     *                                provides its own {@code GraphQLSchema}
+     * @throws NoSuchElementException if the schema is not bound yet, never is because the application provides its
+     *                                own {@code GraphQLSchema}, or the manifest is not recorded
      */
     BindingManifest get() {
         if (bindingManifest == null) {
-            throw new NoSuchElementException("The schema is not bound yet, or the application provides its own "
-                    + "GraphQLSchema bean, which the library does not bind");
+            throw new NoSuchElementException("There is no binding manifest: the schema is not bound yet, "
+                    + "the application provides its own GraphQLSchema bean, which the library does not bind, or the "
+                    + "manifest is not recorded (set " + GraphQLToolsConfiguration.PREFIX + ".manifest.record to true)");
         }
         return bindingManifest;
     }
