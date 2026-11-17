@@ -24,8 +24,8 @@ import java.util.Set;
  * {@code Directives.isBuiltInDirective} does not exist before 26, so the names are kept here. They are the names of
  * {@code DirectiveInfo.GRAPHQL_SPECIFICATION_DIRECTIVES} on 25.x and of {@code Directives.BUILT_IN_DIRECTIVES} on 26.x;
  * 21.x and 22.x do not list {@code defer} and {@code experimental_disableErrorPropagation} there. {@link #isSpecified}
- * is the set graphql-java lists on every line (declarations, reachability, undeclared checks); {@link #isBuiltIn} adds
- * those two, so a schema that declares them is not asked to wire them.
+ * is the set graphql-java lists on every line (reachability, undeclared checks); {@link #isBuiltIn} adds
+ * those two (the wiring check and the schema hash: graphql-java 25 and later register them in every registry).
  */
 @Internal
 final class GraphQLSpecifiedDirectives {

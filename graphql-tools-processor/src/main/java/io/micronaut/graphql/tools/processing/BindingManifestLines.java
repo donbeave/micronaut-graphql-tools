@@ -254,7 +254,7 @@ final class BindingManifestLines {
                 .filter(it -> !ScalarInfo.isGraphqlSpecifiedScalar(it.getName()))
                 .forEach(it -> add(named, it.getName(), it));
         registry.getDirectiveDefinitions().values().stream()
-                .filter(it -> !GraphQLSpecifiedDirectives.isSpecified(it.getName()))
+                .filter(it -> !GraphQLSpecifiedDirectives.isBuiltIn(it.getName()))
                 .forEach(it -> add(named, it.getName(), it));
         addExtensions(named, registry.objectTypeExtensions());
         addExtensions(named, registry.interfaceTypeExtensions());
