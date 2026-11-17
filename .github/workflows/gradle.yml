@@ -91,3 +91,25 @@ jobs:
             **/build/test-results/test/TEST-*.xml
             **/build/reports/tests/test/
           if-no-files-found: ignore
+
+  # The only required status check (D-35). It runs even when a gated job fails or is cancelled,
+  # and it is green only when every gated job succeeded. Add a gated job to `needs:`, never to the ruleset.
+  required:
+    name: required checks
+    if: always()
+    needs: [build, build-java-17]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Fail unless every gated job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          not_success=$(echo "$NEEDS" | jq -r 'to_entries[] | select(.value.result != "success") | "\(.key)=\(.value.result)"')
+          if [ -n "$not_success" ]; then
+            echo "Gated jobs not successful: $not_success" >&2
+            exit 1
+          fi
