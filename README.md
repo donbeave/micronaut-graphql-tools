@@ -4,7 +4,7 @@
 
 Schema-first approach for building GraphQL applications with Micronaut.
 
-This is not an official Micronaut module yet: it is developed here and is intended for later contribution to the Micronaut Foundation. Nothing is published to Maven Central (see [Snapshots and Releases](#snapshots-and-releases)).
+This is not an official Micronaut module yet: it is developed here and is intended for later contribution to the Micronaut Foundation. Milestone previews (`1.0.0-M<n>`) are published to the GitHub Packages Maven registry of this repository (see [Snapshots and Releases](#snapshots-and-releases)); nothing is published to Maven Central.
 
 ## Documentation
 
@@ -12,22 +12,43 @@ The guide sources are in `src/main/docs/guide`; build them with `./gradlew docs`
 
 ## Quick start
 
-1. Add the necessary dependencies in build.gradle or pom.xml (no version is on Maven Central yet, see [Artifacts and versions](#artifacts-and-versions)):
+1. Add the repository and the dependency in build.gradle or pom.xml. Milestone previews come from the GitHub Packages registry of this repository, which needs a token even for downloads ([Consuming milestone previews](#consuming-milestone-previews) has the full setup; no version is on Maven Central):
 
 Gradle:
 
 ```groovy
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-SNAPSHOT")
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/donbeave/micronaut-graphql-tools")
+        credentials {
+            username = providers.gradleProperty("gpr.user").orNull ?: System.getenv("GITHUB_ACTOR")
+            password = providers.gradleProperty("gpr.key").orNull ?: System.getenv("GITHUB_TOKEN")
+        }
+        content { includeGroup("io.micronaut.graphql.tools") }
+    }
+}
+
+dependencies {
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M1")
+}
 ```
 
-Maven:
+Maven (the repository goes in the POM, the credentials in `~/.m2/settings.xml`, see [Consuming milestone previews](#consuming-milestone-previews)):
 
 ```xml
+<repositories>
+    <repository>
+        <id>github-graphql-tools</id>
+        <url>https://maven.pkg.github.com/donbeave/micronaut-graphql-tools</url>
+    </repository>
+</repositories>
+
 <dependencies>
     <dependency>
         <groupId>io.micronaut.graphql.tools</groupId>
         <artifactId>micronaut-graphql-tools</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0-M1</version>
     </dependency>
 </dependencies>
 ```
@@ -1166,6 +1187,41 @@ To build or test against a role locally:
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 
+### Consuming milestone previews
+
+Milestone versions (`1.0.0-M1`, `1.0.0-M2`, ...) and, later, `1.0.0` are published to the GitHub Packages Maven registry of
+this repository: `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. They keep the `io.micronaut.graphql.tools`
+group, but they are milestone previews from this repository: they are not affiliated with, and not published by, the
+Micronaut Foundation, and the group is not on Maven Central until the project is contributed. The versions are listed on the
+[packages page](https://github.com/donbeave?tab=packages&repo_name=micronaut-graphql-tools). There are no snapshots and no
+GitHub Releases.
+
+GitHub Packages requires authentication to download from its Maven registry, also for public packages. Create a
+[personal access token (classic)](https://github.com/settings/tokens) with the `read:packages` scope (the Maven registry
+accepts only classic tokens) and hand it to the build:
+
+- Gradle: put `gpr.user=<your GitHub user name>` and `gpr.key=<token>` in `~/.gradle/gradle.properties` (or export
+  `GITHUB_ACTOR` and `GITHUB_TOKEN`), and use the `repositories` block of the quick start. Never commit the token.
+- Maven: add a server to `~/.m2/settings.xml` whose id is the repository id of your POM (`github-graphql-tools` above):
+
+```xml
+<settings>
+    <servers>
+        <server>
+            <id>github-graphql-tools</id>
+            <username>YOUR_GITHUB_USER</username>
+            <password>YOUR_TOKEN</password>
+        </server>
+    </servers>
+</settings>
+```
+
+In GitHub Actions of another repository, store such a token as a secret; that workflow's own `GITHUB_TOKEN` can read the
+package only if the package grants the repository access.
+
+Milestone previews carry no compatibility promise: names and behaviour can change between milestones (see the migration
+notes). A published version is not replaced; a fix ships in the next milestone.
+
 The version comes from `projectVersion` in `gradle.properties` (`1.0.0-SNAPSHOT` on `master`). To build a fixed
 version, override it on the command line; a version without `-SNAPSHOT` is published as a release version:
 
@@ -1173,7 +1229,7 @@ version, override it on the command line; a version without `-SNAPSHOT` is publi
 # into the local Maven repository (~/.m2/repository, or -Dmaven.repo.local=<dir>)
 ./gradlew publishToMavenLocal -PprojectVersion=1.0.0-internal.1
 
-# into a Maven repository of your own (Nexus, Artifactory, GitHub Packages, ...)
+# into a Maven repository of your own (Nexus, Artifactory, ...)
 ./gradlew publishAllPublicationsToExternalRepository -PprojectVersion=1.0.0-internal.1 \
     -Dio.micronaut.publishing.uri=https://repo.example.com/maven-releases \
     -Dio.micronaut.publishing.username=<user> \
@@ -1200,9 +1256,12 @@ The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the 
 
 ## Snapshots and Releases
 
-Nothing is published. No snapshot or release of this library is available from Maven Central or any other repository,
-and no workflow publishes one. CI (`.github/workflows/gradle.yml`) builds and tests the project.
+Milestone versions (`1.0.0-M<n>`) and, later, `1.0.0` are published to the GitHub Packages Maven registry of this repository
+by the `Release` workflow (`.github/workflows/release.yml`), after the full build is green on the tagged commit. See
+[Consuming milestone previews](#consuming-milestone-previews) to use them. Nothing is published to Maven Central, no
+GitHub Release is created and there are no snapshots; that stays so until the project is contributed to the Micronaut
+Foundation. CI (`.github/workflows/gradle.yml`) builds and tests the project.
 
-Releases are cut by the maintainers by hand, as described in the [Releases](CONTRIBUTING.md#releases) section of
-CONTRIBUTING.md. To use the library before a release, build it yourself and publish it to a local or private
-repository as described in [Artifacts and versions](#artifacts-and-versions).
+Releases are cut by the maintainers by pushing a version tag, as described in the [Releases](CONTRIBUTING.md#releases)
+section of CONTRIBUTING.md. To use unreleased code, build it yourself and publish it to a local or private repository as
+described in [Artifacts and versions](#artifacts-and-versions).

@@ -196,4 +196,6 @@ The plugin also adds a new tab in the bottom of the IDE to run Checkstyle and sh
 
 ## Releases
 
-Nothing is published: there are no release, snapshot or Maven Central workflows. CI is one workflow, `.github/workflows/gradle.yml` (`Java CI`: build and tests, the native image tests, the guide, the workflow lint (the `actionlint` job, which runs `jactionlint`), plus the `required checks` gate), with the shared tool setup in `.github/actions/setup-build`. Releases and tags are cut by the maintainers by hand; see [MAINTAINING.md](MAINTAINING.md).
+Only milestone versions (`1.0.0-M<n>`, later `1.0.0`) are published, to the GitHub Packages Maven registry of this repository (D-40). There is no Maven Central, GitHub Release or snapshot publishing. A maintainer cuts a release by pushing a version tag on `master`; the `Release` workflow (`.github/workflows/release.yml`) then builds the tagged commit, checks that the build version equals the tag and publishes the library, the annotation processor and the BOM. Contributors never publish. See [MAINTAINING.md](MAINTAINING.md#releases) for the steps and [README.md](README.md#consuming-milestone-previews) for how to consume a release.
+
+CI is one workflow, `.github/workflows/gradle.yml` (`Java CI`: build and tests, the native image tests, the guide, the workflow lint (the `actionlint` job, which runs `jactionlint`), plus the `required checks` gate), with the shared tool setup in `.github/actions/setup-build`.
