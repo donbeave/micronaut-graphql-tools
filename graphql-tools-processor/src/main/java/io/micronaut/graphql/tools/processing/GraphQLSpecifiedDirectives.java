@@ -23,8 +23,9 @@ import java.util.Set;
  * The directives graphql-java treats as built in, by name. graphql-java 26 removed {@code DirectiveInfo}, and
  * {@code Directives.isBuiltInDirective} does not exist before 26, so the names are kept here. They are the names of
  * {@code DirectiveInfo.GRAPHQL_SPECIFICATION_DIRECTIVES} on 25.x and of {@code Directives.BUILT_IN_DIRECTIVES} on 26.x;
- * 21.x and 22.x do not list {@code defer} and {@code experimental_disableErrorPropagation} there, and a schema that
- * declares them is still not asked to wire them.
+ * 21.x and 22.x do not list {@code defer} and {@code experimental_disableErrorPropagation} there. {@link #isSpecified}
+ * is the set graphql-java lists on every line (declarations, reachability, undeclared checks); {@link #isBuiltIn} adds
+ * those two, so a schema that declares them is not asked to wire them.
  */
 @Internal
 final class GraphQLSpecifiedDirectives {
@@ -39,14 +40,24 @@ final class GraphQLSpecifiedDirectives {
             "experimental_disableErrorPropagation"
     );
 
+    static final Set<String> SPECIFIED = Set.of("include", "skip", "deprecated", "specifiedBy", "oneOf");
+
     private GraphQLSpecifiedDirectives() {
     }
 
     /**
      * @param name the name of a directive, without the {@code @}
-     * @return true if graphql-java treats a directive with this name as built in
+     * @return true if every supported graphql-java line lists a directive with this name as specified
      */
     static boolean isSpecified(String name) {
+        return name != null && SPECIFIED.contains(name);
+    }
+
+    /**
+     * @param name the name of a directive, without the {@code @}
+     * @return true if graphql-java implements a directive with this name itself on some supported line
+     */
+    static boolean isBuiltIn(String name) {
         return name != null && NAMES.contains(name);
     }
 }

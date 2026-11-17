@@ -19,7 +19,15 @@ class GraphQLSpecifiedDirectivesSpec extends Specification {
     def "every directive that graphql-java reports as built in or specified on this leg is specified"() {
         expect:
         !graphqlJavaNames().isEmpty()
-        graphqlJavaNames().every { GraphQLSpecifiedDirectives.isSpecified(it) }
+        graphqlJavaNames().every { GraphQLSpecifiedDirectives.isBuiltIn(it) }
+    }
+
+    def "the specified names are listed by graphql-java on this leg, and defer is only built in"() {
+        expect:
+        GraphQLSpecifiedDirectives.SPECIFIED.every { graphqlJavaNames().contains(it) }
+        GraphQLSpecifiedDirectives.isBuiltIn("defer") && !GraphQLSpecifiedDirectives.isSpecified("defer")
+        GraphQLSpecifiedDirectives.isBuiltIn("experimental_disableErrorPropagation") &&
+                !GraphQLSpecifiedDirectives.isSpecified("experimental_disableErrorPropagation")
     }
 
     def "the set equals graphql-java's on 25 and later, and adds only the two graphql-java 25 introduced before"() {
@@ -32,9 +40,19 @@ class GraphQLSpecifiedDirectivesSpec extends Specification {
                 (GraphQLSpecifiedDirectives.NAMES - graphqlJavaNames()) == ["defer", "experimental_disableErrorPropagation"] as Set
     }
 
+    def "an input type used only by a declared defer directive is still found as a directive argument type"() {
+        given:
+        def registry = new graphql.schema.idl.SchemaParser().parse(
+                "directive @defer(options: DeferOptions) on FIELD_DEFINITION\ninput DeferOptions { a: String }\ntype Query { a: String }")
+
+        expect:
+        GraphQLUtils.findDirectiveArgumentTypes(registry).contains("DeferOptions")
+    }
+
     def "other names, a different case, an empty name and null are not specified"() {
         expect:
         !GraphQLSpecifiedDirectives.isSpecified(name)
+        !GraphQLSpecifiedDirectives.isBuiltIn(name)
 
         where:
         name << ["Include", "", "custom", "auth", "stream", null]

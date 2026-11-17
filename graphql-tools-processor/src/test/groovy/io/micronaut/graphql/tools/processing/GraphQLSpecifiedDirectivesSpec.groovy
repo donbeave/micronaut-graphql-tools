@@ -13,6 +13,12 @@ class GraphQLSpecifiedDirectivesSpec extends Specification {
         GraphQLSpecifiedDirectives.NAMES == io.micronaut.graphql.tools.GraphQLSpecifiedDirectives.NAMES
     }
 
+    def "defer is built in but not specified"() {
+        expect:
+        GraphQLSpecifiedDirectives.isBuiltIn("defer") && !GraphQLSpecifiedDirectives.isSpecified("defer")
+        GraphQLSpecifiedDirectives.SPECIFIED == io.micronaut.graphql.tools.GraphQLSpecifiedDirectives.SPECIFIED
+    }
+
     def "other names, a different case, an empty name and null are not specified"() {
         expect:
         !GraphQLSpecifiedDirectives.isSpecified(name)

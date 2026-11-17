@@ -132,7 +132,7 @@ final class DirectiveWiringCheck {
 
     // graphql-java implements these itself; @include and @skip cannot be applied in a schema, but are built in as well
     private static boolean isBuiltIn(String name) {
-        return GraphQLSpecifiedDirectives.isSpecified(name);
+        return GraphQLSpecifiedDirectives.isBuiltIn(name);
     }
 
     /**
