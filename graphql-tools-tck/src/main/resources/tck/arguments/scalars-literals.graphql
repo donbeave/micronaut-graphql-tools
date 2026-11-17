@@ -1,0 +1,3 @@
+{
+  scalars(text: "hello", number: 2147483647, ratio: 2, flag: true, id: 42)
+}

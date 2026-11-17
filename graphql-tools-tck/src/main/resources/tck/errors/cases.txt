@@ -1,0 +1,10 @@
+exception-in-a-nullable-field
+exception-in-a-non-null-field
+non-null-error-reaches-the-nearest-nullable-parent
+non-null-error-reaches-the-root
+failed-completion-stage
+sibling-fields-still-run
+variable-of-the-wrong-type
+missing-required-variable
+unknown-field
+syntax-error

@@ -1,0 +1,7 @@
+# The scenarios of the execution-behaviour TCK, in the order they run. Every scenario is a directory next to this file.
+# A suite without fixtures for a scenario lists it, with a reason, in its tck-exemptions.txt (the list only shrinks).
+arguments
+return-types
+abstract-types
+errors
+data-loader

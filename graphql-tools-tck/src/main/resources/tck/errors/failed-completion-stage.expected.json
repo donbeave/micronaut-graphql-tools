@@ -1,0 +1,11 @@
+{
+  "data": { "failFuture": null },
+  "errors": [
+    {
+      "message": "Exception while fetching data (/failFuture) : async boom",
+      "locations": [{ "line": 2, "column": 3 }],
+      "path": ["failFuture"],
+      "extensions": { "classification": "DataFetchingException" }
+    }
+  ]
+}

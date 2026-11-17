@@ -1,0 +1,7 @@
+{
+  "data": {
+    "song": { "__typename": "Song", "title": "Aria", "artist": "Ada" },
+    "podcast": { "__typename": "Podcast", "title": "Weekly", "host": "Grace" },
+    "nothing": { "__typename": "Missing", "reason": "no media titled Silence" }
+  }
+}

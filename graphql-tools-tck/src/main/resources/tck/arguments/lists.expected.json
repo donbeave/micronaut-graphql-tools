@@ -1,0 +1,10 @@
+{
+  "data": {
+    "literal": 6,
+    "single": 7,
+    "variable": 60,
+    "empty": 0,
+    "grid": 10,
+    "gridLiteral": 6
+  }
+}

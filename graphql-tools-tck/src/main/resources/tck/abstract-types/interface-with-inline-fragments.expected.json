@@ -1,0 +1,9 @@
+{
+  "data": {
+    "library": [
+      { "__typename": "Song", "title": "Aria", "seconds": 245, "artist": "Ada" },
+      { "__typename": "Podcast", "title": "Weekly", "seconds": 1800, "host": "Grace" },
+      { "__typename": "Song", "title": "Nocturne", "seconds": 180, "artist": "Lin" }
+    ]
+  }
+}

@@ -45,6 +45,32 @@ Groovy has no native test. `:test-suite-groovy:nativeTest` was tried on Oracle G
 
 Responses keep their null fields (#45): `example.nullfields` sends raw HTTP requests and checks that `null` values keep their keys, under each JSON configuration. The default stack (Jackson databind, with and without `jackson.serialization-inclusion=NON_NULL`) runs in `test`, so `nativeTest` runs it too. Micronaut Serialization (`micronaut-serde-jackson`, with and without `micronaut.serde.serialization.inclusion=NON_NULL`) runs in its own source set and task, `./gradlew :test-suite-java:serdeTest` (part of `check`), because `micronaut-serde-jackson` makes its `JsonMapper` win and the two stacks cannot share a test classpath. The serde case is JVM-only: registering it as a second native test binary builds (about 3.5 minutes), but the native image selects the Jackson databind `JsonMapper` although `micronaut-serde-jackson` is on its classpath (the guard test `usesTheExpectedJsonStack` fails on GraalVM 25.0.5.0.3), so it would not test the stack it names. The same queries and assertions run natively on the default stack.
 
+### The execution-behaviour TCK
+
+`graphql-tools-tck` holds the execution behaviour the library promises (argument binding, null handling, return types, errors and `data: null`, abstract types, DataLoaders, introspection, variables, aliases, fragments) as scenarios that are written once and run in all three suites: `example.tck.GraphQLToolsTckTest` in `test-suite-java` and `test-suite-kotlin` (JUnit 5, also under `nativeTest`) and `example.tck.GraphQLToolsTckSpec` in `test-suite-groovy` (Spock, JVM only). `./gradlew :graphql-tools-tck:test` checks the scenario files themselves (listed, complete, well-formed JSON) without a suite; the three suites run the scenarios: `./gradlew :test-suite-java:test --tests 'example.tck.*'` (and the same for Kotlin and Groovy). The whole TCK takes about 7 to 9 seconds in each suite on a laptop, starting one application per scenario.
+
+A scenario is a directory under `graphql-tools-tck/src/main/resources/tck/`:
+
+| File | Content |
+| --- | --- |
+| `schema.graphqls` | `extend type Query` (and `extend type Mutation`) with the fields of the scenario, plus its own types. Every suite serves its example schema and merges this file into it, so the type names must not clash with the example's (`Book`, `User`, `Error`, ...). |
+| `config.properties` | Optional: Micronaut properties for the application of this scenario (for example `micronaut.graphql.tools.input.detect-omission=true`). |
+| `cases.txt` | The cases, one name per line, run in this order against one application: state (a counter, a DataLoader's statistics) carries over from case to case. |
+| `<case>.graphql` | The operation document, sent as a raw HTTP POST to `/graphql`. |
+| `<case>.variables.json` | Optional: the variables. |
+| `<case>.operation` | Optional: the `operationName`. |
+| `<case>.expected.json` | The complete response body: `data`, `errors` with `message`, `locations`, `path` and `extensions`. Objects are compared by key, arrays by position, numbers by value. The string `"@any"` matches any string: use it for the message of an error whose wording is graphql-java's and changes between its versions, never for the data. |
+
+To add a scenario:
+
+1. Create the directory with the files above and list its id in `tck/scenarios.txt`. `./gradlew :graphql-tools-tck:test` fails on a missing, unlisted or malformed file.
+2. In each suite add the fixtures (resolvers, types, loaders) in `src/test/{java,kotlin,groovy}/example/tck/<Scenario>Scenario.*`. Every fixture bean carries `@Requires(property = "tck.scenario", value = "<id>")`, so that only the scenario that runs has resolvers; classes of unions and interfaces are mapped by a `TckTypeMappings` bean with the same condition. Names stay unique across scenarios, because the fixtures of all scenarios are on one classpath.
+3. Run the three suites. A scenario without fixtures in a suite fails there when the application starts. A suite that cannot have the fixtures lists the id and a reason in `src/test/resources/tck-exemptions.txt` (`<id> <reason>`); the list only shrinks: the meta-test `exemptionsAreCurrent` fails on an id that is no scenario, and on one whose scenario passes. No suite has an exemption today.
+
+The fixtures serve a plain `DataLoaderRegistry` in every scenario except the ones that set `tck.registry=per-request` (`data-loader`). The example's registry is request scoped, and a request-scoped bean has no request on the thread that completes a `CompletionStage`: the call fails with `No request present` (the per-execution context and lazy DataLoader registry of #44 and #20 are the fix, and this scenario setting goes away with them).
+
+Out of scope here: HTTP transport details and WebSocket scenarios (#50), subscriptions (a `Publisher` return type is allowed on subscription fields only), and per-request context propagation.
+
 ## Building Documentation
 
 The documentation sources are located at `src/main/docs/guide`.
@@ -192,4 +218,6 @@ The plugin also adds a new tab in the bottom of the IDE to run Checkstyle and sh
 
 ## Releases
 
-Nothing is published: there are no release, snapshot or Maven Central workflows. CI is one workflow, `.github/workflows/gradle.yml` (`Java CI`: build and tests, the native image tests, the guide, the workflow lint (the `actionlint` job, which runs `jactionlint`), plus the `required checks` gate), with the shared tool setup in `.github/actions/setup-build`. Releases and tags are cut by the maintainers by hand; see [MAINTAINING.md](MAINTAINING.md).
+Only milestone versions (`1.0.0-M<n>`, later `1.0.0`) are published, to the GitHub Packages Maven registry of this repository (D-40). There is no Maven Central, GitHub Release or snapshot publishing. A maintainer cuts a release by pushing a version tag on `master`; the `Release` workflow (`.github/workflows/release.yml`) then builds the tagged commit, checks that the build version equals the tag and publishes the library, the annotation processor and the BOM. Contributors never publish. See [MAINTAINING.md](MAINTAINING.md#releases) for the steps and [README.md](README.md#consuming-milestone-previews) for how to consume a release.
+
+CI is one workflow, `.github/workflows/gradle.yml` (`Java CI`: build and tests, the native image tests, the guide, the workflow lint (the `actionlint` job, which runs `jactionlint`), plus the `required checks` gate), with the shared tool setup in `.github/actions/setup-build`.

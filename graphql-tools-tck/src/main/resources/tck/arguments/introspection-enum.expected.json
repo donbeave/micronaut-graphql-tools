@@ -1,0 +1,8 @@
+{
+  "data": {
+    "__type": {
+      "kind": "ENUM",
+      "enumValues": [{ "name": "RED" }, { "name": "GREEN" }, { "name": "BLUE" }]
+    }
+  }
+}
