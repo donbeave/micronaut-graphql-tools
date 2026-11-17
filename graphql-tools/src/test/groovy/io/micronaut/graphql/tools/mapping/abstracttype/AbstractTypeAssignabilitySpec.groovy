@@ -28,6 +28,7 @@ class AbstractTypeAssignabilitySpec extends AbstractTest {
     static final String UNION_STRAY_MEMBER = "AbstractTypeAssignabilitySpec.unionStrayMember"
     static final String INTERFACE_STRAY_MEMBER = "AbstractTypeAssignabilitySpec.interfaceStrayMember"
     static final String FIELD_ORDER = "AbstractTypeAssignabilitySpec.fieldOrder"
+    static final String UNRELATED_CONTRACT = "AbstractTypeAssignabilitySpec.unrelatedContract"
 
     static String shelfSchema(boolean volumeFirst) {
         String volume = "  volume: Volume\n"
@@ -185,6 +186,27 @@ type LongNote {
 """
 
     @Language("GraphQL")
+    static final String PAY_SCHEMA = """
+schema {
+  query: Query
+}
+
+type Query {
+  pay(kind: String!): Pay
+}
+
+union Pay = Receipt | Refund
+
+type Receipt {
+  code: String!
+}
+
+type Refund {
+  reason: String!
+}
+"""
+
+    @Language("GraphQL")
     static final String STRAY_UNION_SCHEMA = """
 schema {
   query: Query
@@ -291,7 +313,7 @@ type Stray implements Coded {
         result.errors[0].path == ['bundle']
         result.errors[0].message == "Can't resolve '/bundle'. Abstract type 'Item' must resolve to an Object type at " +
                 "runtime for field 'Query.item'. The object of class ${BundleModel.name} is an instance of more than " +
-                "one object type of union Item: Digital (${DigitalGraph.name}), Printed (${PrintedGraph.name}). " +
+                "one object type of union Item, and none is more specific than the others: Digital (${DigitalGraph.name}), Printed (${PrintedGraph.name}). " +
                 "Map its class to one of them, or let it implement only one of their Java types."
         result.data.single == [__typename: 'Printed']
         result.data.bundle == null
@@ -308,12 +330,12 @@ type Stray implements Coded {
         result.errors.size() == 1
         result.errors[0].path == ['bundle']
         result.errors[0].message.endsWith(". The object of class ${BundleModel.name} is an instance of more than " +
-                "one object type of interface Media: Digital (${DigitalGraph.name}), Printed (${PrintedGraph.name}). " +
+                "one object type of interface Media, and none is more specific than the others: Digital (${DigitalGraph.name}), Printed (${PrintedGraph.name}). " +
                 "Map its class to one of them, or let it implement only one of their Java types.")
         result.data.bundle == null
     }
 
-    void "the exact class wins over a superclass, and a subclass of two mapped classes is an error"() {
+    void "the exact class wins, and a subclass of two mapped classes resolves to the most specific one"() {
         given:
         startContext(TEXT_SCHEMA, SUBCLASS_CHAIN)
 
@@ -321,12 +343,22 @@ type Stray implements Coded {
         def result = executeQuery("{ texts { __typename } }")
 
         then:
-        result.errors.size() == 1
-        result.errors[0].path == ['texts', 2]
-        result.errors[0].message.endsWith(". The object of class ${AnnotatedLongNoteModel.name} is an instance of " +
-                "more than one object type of union Text: LongNote (${LongNoteModel.name}), Note (${NoteModel.name}). " +
-                "Map its class to one of them, or let it implement only one of their Java types.")
-        result.data.texts == [[__typename: 'Note'], [__typename: 'LongNote'], null]
+        result.errors.isEmpty()
+        result.data.texts == [[__typename: 'Note'], [__typename: 'LongNote'], [__typename: 'LongNote']]
+    }
+
+    void "a mapped Java type that is not a subtype of the declared one is accepted, and the object of both resolves"() {
+        given:
+        startContext(PAY_SCHEMA, UNRELATED_CONTRACT)
+
+        when:
+        def result = executeQuery("{ paid: pay(kind: \"paid\") { __typename ... on Receipt { code } } " +
+                "refund: pay(kind: \"refund\") { __typename ... on Refund { reason } } }")
+
+        then:
+        result.errors.isEmpty()
+        result.data.paid == [__typename: 'Receipt', code: 'P-1']
+        result.data.refund == [__typename: 'Refund', reason: 'duplicate']
     }
 
     @Unroll
@@ -345,7 +377,7 @@ type Stray implements Coded {
         volumeFirst << [true, false]
     }
 
-    void "a union member mapped to a Java type that is not the declared Java type is a startup error"() {
+    void "a union member mapped to a final class that does not implement the declared Java type is a startup error"() {
         given:
         startContext(STRAY_UNION_SCHEMA, UNION_STRAY_MEMBER)
 
@@ -355,7 +387,7 @@ type Stray implements Coded {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectMemberMappingException
-        e.cause.message == """The union Payload is returned as ${PayloadGraph.name}, but its object type Stray is mapped to ${StrayModel.name}, which is not a ${PayloadGraph.name}, so no object the field returns can resolve to Stray.
+        e.cause.message == """The union Payload is returned as ${PayloadGraph.name}, but its object type Stray is mapped to ${StrayModel.name}, and no object can be an instance of both ${PayloadGraph.name} and ${StrayModel.name}, so no object the field returns can resolve to Stray. Map Stray to a Java type that ${PayloadGraph.name} can implement or extend.
   GraphQL coordinate: Query.payload (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: payload
@@ -363,7 +395,7 @@ type Stray implements Coded {
   Mapped method: payload(java.lang.String kind)"""
     }
 
-    void "an interface implementation mapped to a Java type that is not the declared Java type is a startup error"() {
+    void "an interface implementation mapped to a final class that does not implement the declared Java type is a startup error"() {
         given:
         startContext(STRAY_INTERFACE_SCHEMA, INTERFACE_STRAY_MEMBER)
 
@@ -374,8 +406,8 @@ type Stray implements Coded {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectMemberMappingException
         e.cause.message.startsWith("The interface Coded is returned as ${PayloadGraph.name}, but its object type Stray " +
-                "is mapped to ${StrayModel.name}, which is not a ${PayloadGraph.name}, so no object the field " +
-                "returns can resolve to Stray.")
+                "is mapped to ${StrayModel.name}, and no object can be an instance of both ${PayloadGraph.name} and " +
+                "${StrayModel.name}, so no object the field returns can resolve to Stray.")
     }
 
     // Payload: classes, a subclass and a runtime subclass
@@ -608,10 +640,49 @@ type Stray implements Coded {
         }
     }
 
+    // Pay: a member mapped to a Java interface that is not a subtype of the declared one
+
+    static interface PayGraph {
+    }
+
+    @GraphQLType
+    static interface ReceiptGraph {
+        String getCode()
+    }
+
+    @GraphQLType
+    static class RefundModel implements PayGraph {
+        String reason
+    }
+
+    static class PaidReceiptModel implements PayGraph, ReceiptGraph {
+        String code
+    }
+
+    @Requires(property = 'spec.name', value = UNRELATED_CONTRACT)
+    @GraphQLRootResolver
+    static class PayQuery {
+        PayGraph pay(String kind) {
+            return kind == 'paid' ? new PaidReceiptModel(code: 'P-1') : new RefundModel(reason: 'duplicate')
+        }
+    }
+
+    @Requires(property = 'spec.name', value = UNRELATED_CONTRACT)
+    @Factory
+    static class PayDictionary {
+        @Bean
+        @Singleton
+        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+            return (dictionary) -> dictionary
+                    .registerType("Receipt", ReceiptGraph)
+                    .registerType("Refund", RefundModel)
+        }
+    }
+
     // Stray: a member mapped to a class outside the declared Java type
 
     @GraphQLType
-    static class StrayModel {
+    static final class StrayModel {
         String code
     }
 
