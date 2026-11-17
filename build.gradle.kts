@@ -1,5 +1,16 @@
 plugins {
     id("io.micronaut.build.internal.parent")
+
+    // The plugins of the test-suite-* modules, declared once with their versions and not applied here. Declared in each
+    // module, the Kotlin module's plugin classpath differs from the others and the GraalVM native build tools load twice
+    // ("GraalVMReachabilityMetadataService cannot be cast"); declared here, every module shares one class loader.
+    id("io.micronaut.application") version "4.6.2" apply false
+    id("com.gradleup.shadow") version "8.3.11" apply false
+    // The core BOM's kotlin2 / ksp2 versions (D-34); the newest Kotlin runs in the canary.
+    id("org.jetbrains.kotlin.jvm") version "2.1.21" apply false
+    id("com.google.devtools.ksp") version "2.1.21-2.0.2" apply false
+    id("io.micronaut.aot") version "4.6.2" apply false
+    id("com.apollographql.apollo") version "4.4.4" apply false
 }
 
 // graphql-java legs by role (D-35). The library is built and tested against one leg at a time:
