@@ -31,6 +31,7 @@ public final class ArgumentDefinition {
     private static final String SOURCE_ARGUMENT = "* SRC *";
     private static final String DATA_FETCHING_ENVIRONMENT_ARGUMENT = "* DFE *";
 
+    // p274 measurement marker
     private final String name;
     private final Argument<?> inputValueArgument;
 
