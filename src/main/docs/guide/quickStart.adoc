@@ -1,10 +1,24 @@
 This page binds a small schema to a resolver. Every code example is shown in Java, Kotlin and Groovy; pick a tab.
 
-1. Add the dependency. No version is on Maven Central yet, so publish the library to your local Maven repository first: run `./gradlew publishToMavenLocal` in a clone of https://github.com/donbeave/micronaut-graphql-tools[the repository] (nothing leaves your machine), and add `mavenLocal()` to the `repositories` of your build. The version of the current development line is `1.0.0-SNAPSHOT`:
+1. Add the repository and the dependency. Milestone previews are published to the https://github.com/donbeave/micronaut-graphql-tools/packages[GitHub Packages] Maven registry of the repository, and GitHub Packages needs a token with the `read:packages` scope even to download a public package (see <<compatibility,Compatibility>>). No version is on Maven Central:
 +
 [source,groovy]
 ----
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-SNAPSHOT")
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/donbeave/micronaut-graphql-tools")
+        credentials {
+            username = providers.gradleProperty("gpr.user").orNull ?: System.getenv("GITHUB_ACTOR")
+            password = providers.gradleProperty("gpr.key").orNull ?: System.getenv("GITHUB_TOKEN")
+        }
+        content { includeGroup("io.micronaut.graphql.tools") }
+    }
+}
+
+dependencies {
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M1")
+}
 ----
 
 2. Define the GraphQL schema in a `schema.graphqls` file, for example in the `src/main/resources` folder:

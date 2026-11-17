@@ -42,4 +42,13 @@ Renovate is configured in `.github/renovate.json`. Review its pull requests like
 
 ## Releases
 
-Nothing is published: there are no release, snapshot or Maven Central workflows, and no version is on any repository. Releases and tags are cut by the maintainers by hand. To build a version locally, see "Artifacts and versions" in [README.md](README.md).
+Only GitHub Packages milestone releases are published (D-40): milestone versions `1.0.0-M<n>` and, later, `1.0.0` go to the Maven registry of this repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. Maven Central, GitHub Releases and snapshots stay out of scope until the Foundation contribution. The groupId stays `io.micronaut.graphql.tools`; every consumer-facing page says that the artifacts are unaffiliated milestone previews until contributed.
+
+To cut a release:
+
+1. Check that `master` is green (`required checks`) at the commit to release, and that the release notes are ready.
+2. Create and push an annotated tag on that commit: `git tag -a 1.0.0-M2 -m "1.0.0-M2" <sha>` and `git push origin 1.0.0-M2`. The tag must match `^[0-9]+\.[0-9]+\.[0-9]+(-M[0-9]+)?$`.
+3. The `Release` workflow (`.github/workflows/release.yml`) starts on the tag push. `verify` builds the tagged commit exactly like the default leg of `gradle.yml` and checks that the build version equals the tag; only then does `publish` upload the library, the annotation processor and the BOM. It publishes from the tag's own sources, so no version bump commit is needed: the tag name is the version (`-PprojectVersion`).
+4. To publish a tag that already exists and predates the workflow, run `gh workflow run release.yml --ref master -f tag=<tag>`. The workflow definition and the publishing setup (`.github/gradle/publish-github-packages.init.gradle`) come from `master`, and the sources come from the tag.
+
+A published version is not replaced. If a release is wrong, fix it on `master` and release the next milestone; deleting a version needs repository admin rights (GitHub refuses it for a public version with more than 5,000 downloads). The workflow uses the repository's `GITHUB_TOKEN` with `packages: write` and runs only in `donbeave/micronaut-graphql-tools`. See "Consuming milestone previews" in [README.md](README.md) for how users read the packages. To build a version locally, see "Artifacts and versions" there.
