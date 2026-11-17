@@ -7,6 +7,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import java.util.List;
 
+// tag::resolver[]
 @GraphQLRootResolver
 public class AllBooksQuery {
 
@@ -22,3 +23,4 @@ public class AllBooksQuery {
     }
 
 }
+// end::resolver[]

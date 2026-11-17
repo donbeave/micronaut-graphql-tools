@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 public class GraphQLFactory {
 
     // TODO use application.yml
+    // tag::registry[]
     @Bean
     @Singleton
     public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceResolver) {
@@ -26,6 +27,7 @@ public class GraphQLFactory {
         return new TypeDefinitionRegistry()
                 .merge(new SchemaParser().parse(new BufferedReader(new InputStreamReader(inputStream))));
     }
+    // end::registry[]
 
     @Bean
     @Singleton

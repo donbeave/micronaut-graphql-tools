@@ -6,6 +6,7 @@ import example.data.BookRepository
 import groovy.transform.CompileStatic
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
+// tag::resolver[]
 @CompileStatic
 @GraphQLRootResolver
 class AllBooksQuery {
@@ -21,3 +22,4 @@ class AllBooksQuery {
         bookRepository.findAll()
     }
 }
+// end::resolver[]

@@ -43,13 +43,29 @@ The three schemas (`src/main/resources/schema.graphqls`) are copies; `./gradlew 
 
 Groovy has no native test. `:test-suite-groovy:nativeTest` was tried on Oracle GraalVM 25.0.5.0.3 and Micronaut 4.10: with Spock the native test launcher fails at discovery (`ClassNotFoundException: org.spockframework.runtime.extension.builtin.IncludeExcludeExtension`, Spock loads its extensions reflectively and ships no native metadata). With a JUnit 5 Groovy test instead, the image builds and starts, but the Groovy runtime needs build-time initialisation of `org.codehaus.groovy`, `groovy`, `org.apache.groovy` and `groovyjarjar*`, `indy` off, and reflection metadata for what Groovy's meta-class machinery and AST-generated code call at run time (enum `$INIT`, `ImmutableASTTransformation.checkPropNames`, `org.codehaus.groovy.runtime.dgm$N`); each fix exposed the next, and Groovy 4.0.x ships no GraalVM metadata. So the Groovy suite runs on the JVM only.
 
+Responses keep their null fields (#45): `example.nullfields` sends raw HTTP requests and checks that `null` values keep their keys, under each JSON configuration. The default stack (Jackson databind, with and without `jackson.serialization-inclusion=NON_NULL`) runs in `test`, so `nativeTest` runs it too. Micronaut Serialization (`micronaut-serde-jackson`, with and without `micronaut.serde.serialization.inclusion=NON_NULL`) runs in its own source set and task, `./gradlew :test-suite-java:serdeTest` (part of `check`), because `micronaut-serde-jackson` makes its `JsonMapper` win and the two stacks cannot share a test classpath. The serde case is JVM-only: registering it as a second native test binary builds (about 3.5 minutes), but the native image selects the Jackson databind `JsonMapper` although `micronaut-serde-jackson` is on its classpath (the guard test `usesTheExpectedJsonStack` fails on GraalVM 25.0.5.0.3), so it would not test the stack it names. The same queries and assertions run natively on the default stack.
+
 ## Building Documentation
 
 The documentation sources are located at `src/main/docs/guide`.
 
-To build the documentation, run `./gradlew publishGuide` (or `./gradlew pG`), then open `build/docs/index.html`
+To build the guide and the Javadocs, run `./gradlew docs`, then open `build/docs/index.html`. To build only the guide, run `./gradlew publishGuide` (or `./gradlew pG`); the result is in `build/docs/guide/index.html`. Nothing is published. The `docs (Java 25)` CI job runs `./gradlew docs` on every pull request and uploads `build/docs` as the `guide` workflow artifact.
 
-To also build the Javadocs, run `./gradlew docs`.
+### Adding a code example
+
+Every code example in the guide is compiled code in all three languages. A page includes it with the `snippet::` macro:
+
+```
+snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="main", tags="resolver", indent="0"]
+```
+
+The macro looks for the class in `test-suite-java`, `test-suite-kotlin` and `test-suite-groovy` (`project-base` names them), under `src/main` (`source="main"`, use the default `test` for specs), and renders one tab per language. To add an example:
+
+1. Add the class, with the same fully qualified name, to all three suites.
+2. Wrap the lines to show in `// tag::name[]` and `// end::name[]` comment lines, with the same tag name in all three files.
+3. Include it with `snippet::<fully qualified class name>[project-base="test-suite", source="main", tags="name", indent="0"]`.
+
+A missing file or tag does not fail `./gradlew docs`: the macro prints a warning (`NO FILE FOUND`, `tag ... not found in include file`) and renders the tab without it; an unclosed tag logs `detected unclosed tag` or `mismatched end tag`, an unclosed block logs `unterminated ... block`. The CI job fails when the log contains one of these warnings, so check the log when you run `./gradlew docs` locally.
 
 ## Working on the code base
 
