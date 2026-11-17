@@ -29,6 +29,8 @@ jobs:
     if: github.repository == 'donbeave/micronaut-graphql-tools'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      MISE_ENV: jdk25
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
       sha: ${{ steps.sha.outputs.sha }}
@@ -84,10 +86,13 @@ jobs:
           fi
         env:
           STEPS_TAG: ${{ steps.tag.outputs.tag }}
-      - uses: ./.github/actions/setup-build
+      # mise only, with no cache: the composite setup-build action restores caches, and nothing restored may end up in a published artifact.
+      - name: Install the JDK with mise
+        uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
-          jdk: '25'
-          tools: java
+          install: true
+          install_args: java
+          cache: false
       - name: Build with Gradle
         working-directory: source
         run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=default -PprojectVersion="$TAG"
@@ -126,6 +131,8 @@ jobs:
     if: github.repository == 'donbeave/micronaut-graphql-tools'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      MISE_ENV: jdk25
     permissions:
       contents: read
       packages: write
@@ -141,12 +148,13 @@ jobs:
           ref: ${{ needs.verify.outputs.sha }}
           path: source
           persist-credentials: false
-      # No Gradle cache here: the job that holds the write token does not restore a cache.
-      - uses: ./.github/actions/setup-build
+      # mise only, with no cache: the composite setup-build action restores caches, and nothing restored may end up in a published artifact.
+      - name: Install the JDK with mise
+        uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
-          jdk: '25'
-          tools: java
-          gradle: 'false'
+          install: true
+          install_args: java
+          cache: false
       - name: Publish
         working-directory: source
         run: |
