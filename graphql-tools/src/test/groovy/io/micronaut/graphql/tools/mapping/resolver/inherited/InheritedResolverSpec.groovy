@@ -372,6 +372,22 @@ type Writer {
                 "reflection configuration of a native image), or annotate the bean class directly."
     }
 
+    void "a bean with a single inherited contract fails loudly, naming the bean, when the contract types cannot be read"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME)
+        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { Class<?> type -> [:] }
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof TypeResolverContractsNotFoundException
+        e.cause.beanType == BookResolver
+        e.cause.message.contains(BookResolver.name)
+        e.cause.message.contains('@GraphQLTypeResolver only through an inherited annotation')
+    }
+
     void "a bean annotated directly binds as before when the contract types cannot be read"() {
         given:
         CountedInterceptor.CALLS.set(0)
