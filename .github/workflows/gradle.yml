@@ -159,7 +159,7 @@ jobs:
           ./gradlew docs --no-daemon 2>&1 | tee docs.log
       - name: Fail on a missing snippet
         run: |
-          if grep -E 'NO FILE FOUND|not found in include file|include file not found|unexpected end tag|unterminated .* block|Unresolved directive' docs.log; then
+          if grep -E 'NO FILE FOUND|not found in include file|include file not found|unexpected end tag|detected unclosed tag|mismatched end tag|unterminated .* block|Unresolved directive' docs.log; then
             echo "The guide has a missing snippet file or tag (test-suite-java, test-suite-kotlin, test-suite-groovy) or a broken block" >&2
             exit 1
           fi

@@ -61,7 +61,7 @@ The macro looks for the class in `test-suite-java`, `test-suite-kotlin` and `tes
 2. Wrap the lines to show in `// tag::name[]` and `// end::name[]` comment lines, with the same tag name in all three files.
 3. Include it with `snippet::<fully qualified class name>[project-base="test-suite", source="main", tags="name", indent="0"]`.
 
-A missing file or tag does not fail `./gradlew docs`: the macro prints a warning (`NO FILE FOUND`, `tag ... not found in include file`) and renders the tab without it; an unclosed block logs `unterminated ... block`. The CI job fails when the log contains one of these warnings, so check the log when you run `./gradlew docs` locally.
+A missing file or tag does not fail `./gradlew docs`: the macro prints a warning (`NO FILE FOUND`, `tag ... not found in include file`) and renders the tab without it; an unclosed tag logs `detected unclosed tag` or `mismatched end tag`, an unclosed block logs `unterminated ... block`. The CI job fails when the log contains one of these warnings, so check the log when you run `./gradlew docs` locally.
 
 ## Working on the code base
 
