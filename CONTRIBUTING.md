@@ -65,6 +65,16 @@ The macro looks for the class in `test-suite-java`, `test-suite-kotlin` and `tes
 
 A missing file or tag does not fail `./gradlew docs`: the macro prints a warning (`NO FILE FOUND`, `tag ... not found in include file`) and renders the tab without it; an unclosed tag logs `detected unclosed tag` or `mismatched end tag`, an unclosed block logs `unterminated ... block`. The CI job fails when the log contains one of these warnings, so check the log when you run `./gradlew docs` locally.
 
+### Documentation coverage checks
+
+`DocsCoverageSpec` (in the `graphql-tools` module, so `./gradlew :micronaut-graphql-tools:test` and `check` run it) fails when the documentation has a gap:
+
+- Every configuration key under `micronaut.graphql.tools` (read from the generated configuration metadata) is named in the guide or in `README.md`, as the full dotted key, for example `micronaut.graphql.tools.eager-init`.
+- Every public exception in `io.micronaut.graphql.tools.exceptions` and every public annotation in `io.micronaut.graphql.tools.annotation` is named in the guide or in `README.md`. The failure message names the item and the page to edit.
+- Every `snippet::` in the guide (except those with an explicit `project=`) has its `.java`, `.kt` and `.groovy` file in the three suites, with every tag named by the macro.
+
+A deliberate gap goes into `graphql-tools/src/test/resources/docs-coverage-allowlist.txt` with a reason and a tracker issue number. The list may only shrink: the spec fails on an entry whose item is documented now or no longer exists. A new key, exception or annotation needs documentation in the same pull request.
+
 ## Working on the code base
 
 To get a local development version of Micronaut GraphQL Tools working, first run the `publishToMavenLocal` task. This publishes to your local Maven repository only; nothing is published anywhere else.
