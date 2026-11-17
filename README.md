@@ -269,8 +269,9 @@ String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
 - Type lines: `object`, `interface`, `union`, `enum`, `input` with their Java type, `scalar` with its `Coercing` class
   (only scalars that a bound field, argument or input field uses). Root operation types have no Java type (`-`).
 - Field lines: `Type.field(argument: Type): Type → kind · member · declared type · converted type`. The kind is `root`,
-  `resolver` (a type resolver method, also of an interface) or `property` (a getter or a `@GraphQLField` method of the
-  Java type). Methods are written `Class#method(parameter types)` with every Java parameter: a root or type resolver
+  `resolver` (a type resolver method, also of an interface), `property` (a getter or a `@GraphQLField` method of the
+  Java type) or `claimed` (a field a [`RuntimeWiringCustomizer` claims](#fields-a-customizer-serves); the member is the
+  class name of the customizer, the declared and converted types are `-`). Methods are written `Class#method(parameter types)` with every Java parameter: a root or type resolver
   method on its bean class, also when the bean inherits it (AOP proxies are unwrapped), a `@GraphQLField` method on the
   class it is written in; getters on the class that declares them. Parameter and declared types are those of the
   declaration, so a type variable of a generic superclass stays a type variable (`T`). The converted type is the
@@ -914,6 +915,44 @@ public RuntimeWiringCustomizer hideInternalFields() {
     return builder -> builder.fieldVisibility(BlockedFields.newBlock().addPattern("Query.internal.*").build());
 }
 ```
+
+### Fields a customizer serves
+
+A field that only a hand-written `DataFetcher` serves has no Java member, so the library would fail the startup with
+`MethodNotFoundException`. The customizer declares such a field by **claiming** it in `claimedFields()` and registers the
+data fetcher in `customize`:
+
+```java
+@Singleton
+class ServerVersionCustomizer implements RuntimeWiringCustomizer {
+
+    @Override
+    public Set<FieldCoordinates> claimedFields() {
+        return Set.of(FieldCoordinates.coordinates("Query", "serverVersion"));
+    }
+
+    @Override
+    public void customize(RuntimeWiring.Builder builder) {
+        builder.type("Query", type -> type.dataFetcher("serverVersion", new StaticDataFetcher("1.0")));
+    }
+
+}
+```
+
+- The library does not bind or check a claimed field, even when the Java type has a member of that name, and a data
+  fetcher the customizer registers for it is not a replacement. Fields it does not claim stay protected: replacing one
+  still fails with `RuntimeWiringOverrideException`.
+- A claim must name a field of an **object** type of the schema (the fields of `extend type` included). A claim for a type
+  or field the schema does not define, or for an interface, fails the startup with `InvalidClaimedFieldsException`, which
+  names every such coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
+- `RuntimeWiringOverrideException`, and the `MethodNotFoundException` of a field added by `extend type`, name
+  `claimedFields()` as the way out.
+- `claimedFields()` is read once, at startup, before any field is bound. Claimed fields have a line in the
+  [binding manifest](#binding-manifest) of kind `claimed`, naming the customizer.
+- Types that only a claimed field returns are not reached by the binding: list them in `allow-unreachable`, or bind
+  them through another field.
+- Customizers are runtime beans, so the compile-time checks cannot see a claim; they report a field that nothing in the
+  sources binds.
 
 ## Schema directives
 

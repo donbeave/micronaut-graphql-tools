@@ -74,7 +74,8 @@ public final class GraphQLFactory {
                 TypeExtensions.merge(registry),
                 schemaMappingDictionary,
                 graphQLSchemaProvider,
-                configuration
+                configuration,
+                TypeExtensions.objectExtensionFields(registry)
         );
 
         // the directive beans first: an application's customizer then cannot replace them unnoticed

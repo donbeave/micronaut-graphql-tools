@@ -15,8 +15,11 @@
  */
 package io.micronaut.graphql.tools;
 
+import graphql.schema.FieldCoordinates;
 import graphql.schema.idl.RuntimeWiring;
 import io.micronaut.core.annotation.NonNull;
+
+import java.util.Set;
 
 /**
  * Adds to the {@link RuntimeWiring} the library generated from its bindings: scalars, directive wirings, field
@@ -44,6 +47,10 @@ import io.micronaut.core.annotation.NonNull;
  * or scalar itself ({@code StrictModeWiringException}); graphql-java 21.3 accepts them silently. The library's check
  * covers both lines, the wiring factory included, and lists every replacement at once where the builder lets the
  * customizers finish.</p>
+ *
+ * <p>A customizer serves a field with a hand-written {@code DataFetcher} by <em>claiming</em> it in
+ * {@link #claimedFields()} and registering the data fetcher in {@link #customize}. The library neither binds nor
+ * checks a claimed field, so no Java member is needed for it.</p>
  */
 @FunctionalInterface
 public interface RuntimeWiringCustomizer {
@@ -54,5 +61,25 @@ public interface RuntimeWiringCustomizer {
      * @param builder the builder that holds the library's wiring
      */
     void customize(@NonNull RuntimeWiring.Builder builder);
+
+    /**
+     * The fields of object types that this customizer serves with a data fetcher of its own. The library does not bind
+     * them: a field with no Java member starts, and a data fetcher the customizer registers for it is not a
+     * replacement. This method is called once, at startup, before any field is bound; the customizer still has to
+     * register the data fetcher in {@link #customize}.
+     *
+     * <p>The startup fails with
+     * {@link io.micronaut.graphql.tools.exceptions.InvalidClaimedFieldsException}, which names the coordinate, if a
+     * claim names a type the schema does not define, a type that is not an object type, or a field the type does not
+     * define. A claim on an interface field is not possible: claim the field of each implementing object type.</p>
+     *
+     * <p>Customizers run after the binding, so the compile-time checks cannot know the claims.</p>
+     *
+     * @return the coordinates this customizer serves, none by default
+     */
+    @NonNull
+    default Set<FieldCoordinates> claimedFields() {
+        return Set.of();
+    }
 
 }
