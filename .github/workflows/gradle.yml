@@ -146,7 +146,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Scan for forbidden names
         env:
-          FORBIDDEN_NAMES: ${{ secrets.FORBIDDEN_NAMES }}
+          FORBIDDEN_NAMES: ${{ secrets.P9_GUARD_PROOF }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
           IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
