@@ -1,0 +1,3 @@
+query Skipped { find(title: "Aria") { __typename } }
+
+query Chosen { find(title: "Weekly") { __typename } }

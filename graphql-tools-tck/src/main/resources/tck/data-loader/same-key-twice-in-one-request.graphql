@@ -1,0 +1,4 @@
+{
+  first: authors { name volumes { title } }
+  second: authors { name volumes { title } }
+}

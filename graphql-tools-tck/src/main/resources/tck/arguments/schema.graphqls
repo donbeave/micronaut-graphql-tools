@@ -1,0 +1,36 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+enum Color {
+  RED
+  GREEN
+  BLUE
+}
+
+input Point {
+  x: Int!
+  y: Int!
+}
+
+input Shape {
+  name: String!
+  color: Color = GREEN
+  points: [Point!]!
+  note: String
+}
+
+extend type Query {
+  scalars(text: String!, number: Int!, ratio: Float!, flag: Boolean!, id: ID!): String!
+
+  defaults(text: String = "fallback", count: Int = 3, color: Color = BLUE): String!
+
+  presence(text: String): String!
+
+  total(numbers: [Int!]!): Int!
+
+  grid(rows: [[Int!]!]!): Int!
+
+  shape(shape: Shape!): String!
+}
+
+extend type Mutation {
+  add(amount: Int!): Int!
+}

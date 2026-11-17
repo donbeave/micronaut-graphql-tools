@@ -1,0 +1,5 @@
+query Lookups($song: String!, $podcast: String!, $nothing: String!) {
+  song: find(title: $song) { __typename ... on Song { title artist } }
+  podcast: find(title: $podcast) { __typename ... on Podcast { title host } ... on Song { title } }
+  nothing: find(title: $nothing) { __typename ... on Missing { reason } }
+}

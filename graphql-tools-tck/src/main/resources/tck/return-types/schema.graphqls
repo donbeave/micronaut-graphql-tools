@@ -1,0 +1,30 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+extend type Query {
+  plain: Greeting!
+
+  present: Greeting
+  absent: Greeting
+
+  future(name: String!): Greeting!
+  futureList: [Greeting!]!
+  futureAbsent: Greeting
+
+  result: Greeting
+  partial: [Greeting]
+
+  nulls: [Int]!
+  nothing: String
+  scalars: Scalars!
+}
+
+type Greeting {
+  message: String!
+}
+
+type Scalars {
+  count: Int!
+  ratio: Float!
+  flag: Boolean!
+  id: ID!
+  big: Float
+}

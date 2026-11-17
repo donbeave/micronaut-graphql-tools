@@ -1,0 +1,20 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+extend type Query {
+  authors: [Author!]!
+
+  loaderStats: LoaderStats!
+}
+
+type Author {
+  name: String!
+  volumes: [Volume!]!
+}
+
+type Volume {
+  title: String!
+}
+
+type LoaderStats {
+  batches: Int!
+  keys: Int!
+}

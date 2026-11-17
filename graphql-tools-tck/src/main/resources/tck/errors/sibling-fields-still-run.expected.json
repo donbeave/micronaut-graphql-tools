@@ -1,0 +1,11 @@
+{
+  "data": { "before": "fine", "failed": null, "after": "fine", "echoed": 5 },
+  "errors": [
+    {
+      "message": "Exception while fetching data (/failed) : boom",
+      "locations": [{ "line": 3, "column": 3 }],
+      "path": ["failed"],
+      "extensions": { "classification": "DataFetchingException" }
+    }
+  ]
+}

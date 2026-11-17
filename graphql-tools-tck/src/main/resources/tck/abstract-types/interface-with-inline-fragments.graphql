@@ -1,0 +1,9 @@
+{
+  library {
+    __typename
+    title
+    seconds
+    ... on Song { artist }
+    ... on Podcast { host }
+  }
+}

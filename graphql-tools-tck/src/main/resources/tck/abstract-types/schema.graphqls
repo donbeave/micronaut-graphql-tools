@@ -1,0 +1,29 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+interface Media {
+  title: String!
+  seconds: Int!
+}
+
+type Song implements Media {
+  title: String!
+  seconds: Int!
+  artist: String!
+}
+
+type Podcast implements Media {
+  title: String!
+  seconds: Int!
+  host: String!
+}
+
+type Missing {
+  reason: String!
+}
+
+union Lookup = Song | Podcast | Missing
+
+extend type Query {
+  library: [Media!]!
+
+  find(title: String!): Lookup!
+}

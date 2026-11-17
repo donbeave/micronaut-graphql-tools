@@ -18,6 +18,7 @@ dependencies {
     kspTest("io.micronaut:micronaut-inject-kotlin")
     runtimeOnly("ch.qos.logback:logback-classic")
     testImplementation("io.micronaut:micronaut-http-client")
+    testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
