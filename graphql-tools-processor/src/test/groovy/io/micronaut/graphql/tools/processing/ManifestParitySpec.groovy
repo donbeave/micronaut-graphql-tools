@@ -16,9 +16,10 @@ import spock.lang.Specification
  *     has additional lines only of the kinds that depend on runtime beans the processor cannot see:
  *     {@code scalar} lines (they name the {@code Coercing} of the scalar's runtime wiring), {@code resolves} lines and
  *     every line of a type bound only through the {@code SchemaMappingDictionary} (object types of unions and
- *     interfaces, and what only they reach), {@code !unusedDictionary} lines, and fields that a type resolver of an
- *     interface binds. The processor records each of them in {@code binding-manifest-omitted.txt}, and the test filters
- *     the startup manifest by that record ({@link #omitted}), never by a list of its own; the cases below pin each
+ *     interfaces, and what only they reach), {@code !unusedDictionary} and {@code !unwiredDirective} lines
+ *     (directive wirings are runtime beans), and fields that a type resolver of an interface binds. The processor
+ *     records each of them in {@code binding-manifest-omitted.txt}, and the test filters the startup manifest by that
+ *     record ({@link #omitted}), never by a list of its own; the cases below pin each
  *     kind.</li>
  * </ul>
  */
@@ -633,7 +634,7 @@ public class DateCoercing implements Coercing<LocalDate, String> {
                 'SearchResult → union · example.SearchResult · - · -',
         ]
         result.omitted.readLines() == ['# graphql-binding-manifest-omitted 1', 'kind resolves', 'kind scalar',
-                                         'kind unusedDictionary', 'type Book', 'type Magazine', 'type Publisher']
+                                         'kind unusedDictionary', 'kind unwiredDirective', 'type Book', 'type Magazine', 'type Publisher']
         body(startup).findAll { omitted(it, result.omitted) } == [
                 'Book → object · example.Book · - · -',
                 'Book.id: ID! → property · example.Book#getId() · java.lang.String · java.lang.String',
@@ -745,6 +746,57 @@ public class BookResolver extends BaseResolver<Book> {
         ]
     }
 
+    // ---------------------------------------------------------------- case 6: directives without a wiring
+
+    static final String DIRECTIVE_SCHEMA = '''schema {
+  query: Query
+}
+
+directive @audit on FIELD_DEFINITION
+
+type Query {
+  greeting: String @audit
+}
+'''
+
+    static final Map<String, String> DIRECTIVE_SOURCES = [
+            'example.GreetingQuery': '''
+package example;
+
+@io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+public class GreetingQuery {
+    public String greeting() {
+        return "hello";
+    }
+}
+''',
+    ]
+
+    void "an applied directive without a wiring: the startup fails in strict mode, and its !unwiredDirective line is left to the startup"() {
+        when: 'directive wirings are runtime beans: javac cannot tell whether @audit has one'
+        def result = compile(DIRECTIVE_SCHEMA, DIRECTIVE_SOURCES)
+
+        then:
+        result.success
+        result.omitted.readLines().contains('kind unwiredDirective')
+        result.startupManifest().startsWith('FAILED: The schema applies directives that have no wiring: @audit (Query.greeting).')
+
+        when:
+        def options = [strict: 'false']
+        def lenient = compile(DIRECTIVE_SCHEMA, DIRECTIVE_SOURCES, options)
+        def startup = lenient.startupManifest(runtimeProperties(options))
+
+        then:
+        lenient.success
+        !startup.startsWith('FAILED')
+        sameHeader(lenient.manifest, startup)
+        body(lenient.manifest) == body(startup).findAll { !omitted(it, lenient.omitted) }
+        body(startup).findAll { omitted(it, lenient.omitted) } == [
+                '!unwiredDirective audit',
+                'String → scalar · graphql.scalar.GraphqlStringCoercing · - · -',
+        ]
+    }
+
     // ---------------------------------------------------------------- helpers
 
     /**
@@ -763,7 +815,7 @@ public class BookResolver extends BaseResolver<Book> {
             String value = entry.substring(entry.indexOf(' ') + 1)
             switch (kind) {
                 case 'kind':
-                    return value == 'unusedDictionary' ? line.startsWith('!unusedDictionary ') : line.contains(" → ${value} · ")
+                    return line.startsWith('!' + value + ' ') || line.contains(" → ${value} · ")
                 case 'type':
                     return line.startsWith(value + ' → ') || line.startsWith(value + '.') || line.startsWith(value + '/')
                             || line.startsWith('!ambiguous ' + value + '.')

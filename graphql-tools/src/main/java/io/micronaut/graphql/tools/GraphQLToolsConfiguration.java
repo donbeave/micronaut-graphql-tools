@@ -46,6 +46,7 @@ public class GraphQLToolsConfiguration {
     private List<String> allowUnreachable = Collections.emptyList();
     private Precedence precedence = Precedence.STRICT;
     private List<String> resolverDirectives = Collections.emptyList();
+    private List<String> inertDirectives = Collections.emptyList();
     private boolean strict = true;
     private InputConfiguration input = new InputConfiguration();
 
@@ -134,6 +135,28 @@ public class GraphQLToolsConfiguration {
     }
 
     /**
+     * @return the directives the schema may apply without a wiring, because they have no effect at runtime
+     */
+    @NonNull
+    public List<String> getInertDirectives() {
+        return inertDirectives;
+    }
+
+    /**
+     * Sets the directives the schema may apply without a wiring, because they have no effect at runtime (names
+     * without {@code @}). Any other directive the schema applies needs a wiring, except graphql-java's built-in
+     * ones; in strict mode ({@link #isStrict()}) an applied directive without either fails the startup, without it
+     * that is a warning. Every name must be a directive the schema declares and that has no wiring; any other name
+     * fails the startup in either mode, so the list cannot go stale. Default: empty.
+     *
+     * @param inertDirectives the directive names
+     */
+    public void setInertDirectives(@NonNull List<String> inertDirectives) {
+        ArgumentUtils.requireNonNull("inertDirectives", inertDirectives);
+        this.inertDirectives = List.copyOf(inertDirectives);
+    }
+
+    /**
      * @return whether binding fails on everything the binding manifest reports as a finding
      */
     public boolean isStrict() {
@@ -147,8 +170,10 @@ public class GraphQLToolsConfiguration {
      * fields of several operation types, Java enum constants without a schema value,
      * dictionary entries for types that are not bound, Java interfaces read through an implementation's bean
      * introspection instead of their own, input class properties that the input type does not define (unless
-     * {@link InputConfiguration#getUnmappedProperties()} is set), and primitive arguments or input class properties for
-     * nullable built-in scalars. Default: {@code true}.
+     * {@link InputConfiguration#getUnmappedProperties()} is set), primitive arguments or input class properties for
+     * nullable built-in scalars, and directives the schema applies without a wiring (unless
+     * {@link #getInertDirectives()} lists them; without strict mode they are logged as a warning). Invalid entries of
+     * {@link #getAllowUnreachable()} and {@link #getInertDirectives()} fail in either mode. Default: {@code true}.
      *
      * @param strict whether to fail
      */

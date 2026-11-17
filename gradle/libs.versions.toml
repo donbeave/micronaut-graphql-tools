@@ -15,11 +15,15 @@ graphql-java-datetime = "6.0.0"
 
 managed-graphql-java-extended-scalars = "21.0"
 
+# test scope only; build.gradle.kts moves it with the graphql-java leg
+graphql-java-extended-validation = "21.0"
+
 [libraries]
 # Core
 micronaut-core = { module = "io.micronaut:micronaut-core-bom", version.ref = "micronaut" }
 
 managed-graphql-java-extended-scalars = { module = "com.graphql-java:graphql-java-extended-scalars", version.ref = "managed-graphql-java-extended-scalars" }
+graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-extended-validation", version.ref = "graphql-java-extended-validation" }
 
 # BOMs
 micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", version.ref = "micronaut-graphql" }

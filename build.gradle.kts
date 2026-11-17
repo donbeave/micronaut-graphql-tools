@@ -13,6 +13,8 @@ data class GraphqlJavaLeg(
     val graphqlJava: String,
     val extendedScalars: String,
     val dataLoader: String,
+    // test scope only: the directive wiring tests run graphql-java-extended-validation
+    val extendedValidation: String,
 )
 
 val graphqlJavaLegs = mapOf(
@@ -20,12 +22,15 @@ val graphqlJavaLegs = mapOf(
         graphqlJava = "21.3",
         extendedScalars = "21.0",
         dataLoader = "3.2.1",
+        extendedValidation = "21.0",
     ),
     // graphql-java-extended-scalars has no 25.x release; 24.0 links against 25.1.
     "25.1" to GraphqlJavaLeg(
         graphqlJava = "25.1",
         extendedScalars = "24.0",
         dataLoader = "6.0.0",
+        // extended-validation 21.0 calls a GraphQLCodeRegistry overload that 25.x removed; 24.0 does not.
+        extendedValidation = "24.0",
     ),
 )
 
@@ -36,7 +41,8 @@ val graphqlJavaLeg = graphqlJavaLegs[graphqlJavaVersion]
         "Unsupported graphqlJavaVersion '$graphqlJavaVersion'. Supported legs: ${graphqlJavaLegs.keys.joinToString()}"
     )
 logger.lifecycle("Building against graphql-java ${graphqlJavaLeg.graphqlJava} " +
-        "(extended-scalars ${graphqlJavaLeg.extendedScalars}, java-dataloader ${graphqlJavaLeg.dataLoader})")
+        "(extended-scalars ${graphqlJavaLeg.extendedScalars}, java-dataloader ${graphqlJavaLeg.dataLoader}, " +
+        "test: extended-validation ${graphqlJavaLeg.extendedValidation})")
 
 if (graphqlJavaVersion != defaultGraphqlJavaVersion) {
     gradle.taskGraph.whenReady {
@@ -62,6 +68,7 @@ subprojects {
                 requested.group == "com.graphql-java" && requested.name == "graphql-java" -> graphqlJavaLeg.graphqlJava
                 requested.group == "com.graphql-java" && requested.name == "graphql-java-extended-scalars" -> graphqlJavaLeg.extendedScalars
                 requested.group == "com.graphql-java" && requested.name == "java-dataloader" -> graphqlJavaLeg.dataLoader
+                requested.group == "com.graphql-java" && requested.name == "graphql-java-extended-validation" -> graphqlJavaLeg.extendedValidation
                 else -> null
             }
             if (pinned != null) {

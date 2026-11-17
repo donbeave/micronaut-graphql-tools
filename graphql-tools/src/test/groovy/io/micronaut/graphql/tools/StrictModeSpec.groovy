@@ -479,7 +479,7 @@ enum Tier {
 type Query {
   label: String @restricted(level: HIGH)
 }
-""", SPEC_NAME + ".directives")
+""", SPEC_NAME + ".directives", ['micronaut.graphql.tools.inert-directives': ['restricted']])
 
         when:
         def result = executeQuery('{ label }')

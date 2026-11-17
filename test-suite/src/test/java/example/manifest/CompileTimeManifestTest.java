@@ -48,16 +48,16 @@ class CompileTimeManifestTest {
     }
 
     /**
-     * The rule of the record: {@code kind K} every line of kind K, {@code type T} every line about T, {@code field T.f}
-     * the line of the field, {@code unbound M} the line {@code !unbound M}.
+     * The rule of the record: {@code kind K} every line of kind K (a binding line or a {@code !K} line),
+     * {@code type T} every line about T, {@code field T.f} the line of the field, {@code unbound M} the line
+     * {@code !unbound M}.
      */
     private static boolean isOmitted(String line, List<String> omitted) {
         for (String entry : omitted) {
             String kind = entry.substring(0, entry.indexOf(' '));
             String value = entry.substring(entry.indexOf(' ') + 1);
             boolean match = switch (kind) {
-                case "kind" -> value.equals("unusedDictionary") ? line.startsWith("!unusedDictionary ")
-                        : line.contains(" → " + value + " · ");
+                case "kind" -> line.startsWith("!" + value + " ") || line.contains(" → " + value + " · ");
                 case "type" -> line.startsWith(value + " → ") || line.startsWith(value + ".")
                         || line.startsWith(value + "/") || line.startsWith("!ambiguous " + value + ".");
                 case "field" -> line.startsWith(value + "(") || line.startsWith(value + ":")

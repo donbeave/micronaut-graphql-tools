@@ -14,6 +14,7 @@ dependencies {
     testImplementation(libs.jetbrains.annotations)
     testImplementation(libs.logback.classic)
     testImplementation(libs.graphql.java.datetime)
+    testImplementation(libs.graphql.java.extended.validation)
 }
 
 micronautBuild {

@@ -282,7 +282,13 @@ final class GraphQLRuntimeWiringGenerator {
         return manifestRecorder;
     }
 
-    RuntimeWiring generate() {
+    /**
+     * Wires every field the library binds, then applies the customizers.
+     *
+     * @param customizers the {@link RuntimeWiringCustomizer} beans, in {@code Ordered} order
+     * @return the runtime wiring
+     */
+    RuntimeWiring generate(List<RuntimeWiringCustomizer> customizers) {
         long start = System.nanoTime();
 
         try {
@@ -342,6 +348,8 @@ final class GraphQLRuntimeWiringGenerator {
             checkStrictMode(unboundTypes);
 
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(unboundTypes));
+
+            RuntimeWiringCustomizers.apply(rootRuntimeWiringBuilder, customizers, typeDefinitionRegistry);
 
             return rootRuntimeWiringBuilder.build();
         } finally {

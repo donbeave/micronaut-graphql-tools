@@ -271,7 +271,8 @@ type Legacy {
         given:
         startContext(SCHEMA, SPEC_NAME, [
                 'micronaut.graphql.tools.precedence'       : 'property-first',
-                'micronaut.graphql.tools.allow-unreachable': ['Legacy']
+                'micronaut.graphql.tools.allow-unreachable': ['Legacy'],
+                'micronaut.graphql.tools.inert-directives' : ['computed']
         ])
 
         when:
@@ -460,7 +461,8 @@ enum Unused {
 type Query {
   label: String! @restricted(level: HIGH)
 }
-""", SPEC_NAME + ".directives", ['micronaut.graphql.tools.allow-unreachable': ['Unused']])
+""", SPEC_NAME + ".directives", ['micronaut.graphql.tools.allow-unreachable': ['Unused'],
+                'micronaut.graphql.tools.inert-directives': ['restricted']])
 
         when:
         BindingManifest manifest = applicationContext.getBean(BindingManifest)

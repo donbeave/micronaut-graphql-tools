@@ -54,7 +54,9 @@ import java.util.stream.Collectors;
  *     <li>{@code resolves} lines and everything bound through the {@code SchemaMappingDictionary}, a runtime bean: the
  *     object types of unions and interfaces that fields return, what only they reach, and interfaces only they
  *     implement;</li>
- *     <li>fields that a type resolver of an interface binds, and {@code !unusedDictionary} lines.</li>
+ *     <li>fields that a type resolver of an interface binds, and {@code !unusedDictionary} lines;</li>
+ *     <li>{@code !unwiredDirective} lines: directive wirings are runtime beans (and an unwired directive fails the
+ *     startup in strict mode, so these lines appear only with {@code strict: false}).</li>
  * </ul>
  */
 final class BindingManifestLines {

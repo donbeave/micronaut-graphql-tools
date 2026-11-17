@@ -1227,7 +1227,9 @@ final class BindingChecks {
             }
             pending.addAll(reachedTypes(name));
         }
-        List<String> result = new ArrayList<>(List.of("kind resolves", "kind scalar", "kind unusedDictionary"));
+        List<String> result = new ArrayList<>(List.of("kind resolves", "kind scalar", "kind unusedDictionary",
+                // directive wirings are runtime beans
+                "kind unwiredDirective"));
         types.forEach(it -> result.add("type " + it));
         omittedFields.forEach(it -> result.add("field " + it));
         undecidedMembers.forEach(it -> result.add("unbound " + it));

@@ -275,7 +275,7 @@ String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
 - Lines starting with `!` are findings: `!unreachable Type` for a declared type nothing binds (allowed or ignored, see
   [Configuration](#configuration); an enum, input or scalar type that an argument of a directive definition uses,
   directly or through input fields, is reached), `!ambiguous Type.field · member | member` for a field decided by a lenient
-  `precedence`.
+  `precedence`, and the findings of [strict mode](#strict-mode) (`!unbound`, `!unusedDictionary`, `!unwiredDirective`).
 - Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from the reflected method or getter.
   Where reflection cannot find it (for example a native image without reflection configuration), they are written from
   Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
@@ -324,16 +324,22 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
   class or make the GraphQL type non-null. The startup fails with `IncorrectClassMappingException`. For a custom
   scalar this fails in every mode. A primitive for a non-null type and a primitive return type are fine. This finding
   has no `!` line in the manifest.
+- **Applied directives without a wiring** (`!unwiredDirective name`, one line per directive): a directive the schema
+  applies that no `SchemaDirective` bean, `RuntimeWiringCustomizer` or `resolver-directives` entry implements and that
+  `inert-directives` does not list (see [Schema directives](#schema-directives)). They are reported in one
+  `UnwiredDirectivesException`, which lists where each is applied.
 
-All findings except unreachable types, unmapped input class properties and primitives for nullable scalars are
-reported in one `StrictModeException`. `!ambiguous` lines are allowed by
+All findings except unreachable types, unmapped input class properties, primitives for nullable scalars and unwired
+directives are reported in one `StrictModeException`. `!ambiguous` lines are allowed by
 the `precedence` that produced them. Every schema field must be bound in every mode (`MethodNotFoundException`).
 
 With `strict: false` the library binds as before strict mode existed: only object, interface and union types are
 checked for reachability, and the findings appear in the manifest only. `allow-unreachable` may still name unreachable
 enum, input and scalar types, so switching strict mode off never makes a valid configuration fail; without strict mode
 those entries have no effect. Unmapped input class properties are accepted (unless `input.unmapped-properties: fail`)
-and primitives for nullable built-in scalars bind as before.
+and primitives for nullable built-in scalars bind as before. Applied directives without a wiring are logged as one
+warning that lists them as the error would, and the schema keeps them without effect. Invalid `inert-directives`
+entries still fail the startup, as invalid `allow-unreachable` entries do.
 
 ## Custom scalars
 
@@ -471,11 +477,12 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
-| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set) and primitives for nullable built-in scalars. `false` binds as before and only lists them in the manifest. |
+| `micronaut.graphql.tools.strict` | `true` \| `false` | Fail the startup on the findings listed in [Strict mode](#strict-mode), among them input class properties without an input field (unless `input.unmapped-properties` is set), primitives for nullable built-in scalars and applied directives without a wiring. `false` binds as before and only lists them in the manifest (unwired directives are also logged as a warning). |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
 | `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
 | `micronaut.graphql.tools.input.unmapped-properties` | not set \| `fail` \| `ignore` | Input class properties that the GraphQL input type does not define. Not set: they fail in [strict mode](#strict-mode) and are accepted without it. `fail` stops the startup with one error that lists them for every input class, also with `strict: false`; `ignore` accepts them, also in strict mode. See [Input classes and input types](#input-classes-and-input-types). |
+| `micronaut.graphql.tools.inert-directives` | list of directive names, without `@` (empty) | Directives the schema may apply without a wiring, because they have no effect at runtime; they are logged at INFO. Every other applied directive needs a wiring (see [Schema directives](#schema-directives)); without one it fails the startup in [strict mode](#strict-mode) and is a warning without it. Every entry must be a directive the schema declares, that is not built in, that has no wiring and that is not a `resolver-directives` entry, otherwise the startup fails in either mode, so the list cannot go stale. |
 
 ```yaml
 micronaut:
@@ -644,6 +651,9 @@ the running application knows:
   interface only they implement;
 - fields that a type resolver of an SDL interface binds, `!unusedDictionary` lines, and the `!unbound` lines of type
   resolver methods whose class only those parts may reach;
+- `!unwiredDirective` lines: directive wirings are runtime beans, so whether an applied directive has one is decided
+  at startup (with `inert-directives`, which has no processor option); in strict mode such a directive fails the
+  startup, so these lines appear only with `strict: false`;
 - the lines of a type the processor leaves to the startup for another reason (reported as a note, see above).
 
 The processor writes what it left out next to the manifest, as
@@ -654,15 +664,17 @@ The processor writes what it left out next to the manifest, as
 kind resolves
 kind scalar
 kind unusedDictionary
+kind unwiredDirective
 type Magazine
 field Book.name
 unbound example.MagazineResolver#issue(example.Magazine)
 ```
 
-`kind K` stands for every line of kind `K`; `type T` for every line about `T` (`T → ...`, `T.x ...`, `T/...`,
-`!ambiguous T.x ...`); `field T.f` for the line of the field and its `!ambiguous` line; `unbound M` for the line
-`!unbound M`. A comparison of both manifests removes from the startup manifest exactly what this record names, and
-nothing else, so the omissions come from the processor, never from a list in the build.
+`kind K` stands for every line of kind `K` (a binding line `... → K · ...` or a finding `!K ...`); `type T` for every
+line about `T` (`T → ...`, `T.x ...`, `T/...`, `!ambiguous T.x ...`); `field T.f` for the line of the field and
+its `!ambiguous` line; `unbound M` for the line `!unbound M`. A comparison of both manifests removes from the
+startup manifest exactly what this record names, and nothing else, so the omissions come from the processor, never
+from a list in the build.
 
 The header is identical when the processor and the library come from the same release (the `# binder:` line names
 the version of the jar). The library's tests compile fixtures with the processor, start them, and compare both
@@ -807,6 +819,145 @@ Declare the getter on the interface, or resolve the field with a `@GraphQLTypeRe
 **Behaviour change:** before, such an interface was read through its one annotated implementation class, so getters
 of that class bound even when the interface did not declare them. There is no option to keep that: the binding
 silently depended on which class happened to implement the interface.
+
+## Customizing the schema
+
+Three kinds of beans change what the library builds. Each kind may have any number of beans; they run lowest order
+first, by `@Order` on the bean class or factory method, or by `Ordered#getOrder()` if the bean implements `Ordered`.
+
+| Bean type | Receives | Runs |
+|---|---|---|
+| `TypeDefinitionRegistryCustomizer` | a copy of the application's `TypeDefinitionRegistry` bean (the bean itself stays unchanged) | before the binding: types and fields added here need a binding like any other |
+| `RuntimeWiringCustomizer` | the `RuntimeWiring.Builder` that holds the library's wiring | after the binding, before the schema is generated |
+| `GraphQLSchemaCustomizer` | the generated `GraphQLSchema`; returns the schema to use | last |
+
+A `RuntimeWiringCustomizer` may only **add** (scalars, directive wirings, field visibility, ...). If it replaces a data
+fetcher, default data fetcher, type resolver or scalar that the library registered, or the wiring factory, or puts a
+data fetcher or type resolver for a field or type the library wired into a code registry (`builder.codeRegistry(...)`,
+which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
+and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
+providers, are allowed.
+(On graphql-java 25.1 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
+resolver or scalar with `StrictModeWiringException`; 21.3 accepts them silently.) To wrap data fetchers, use a
+`SchemaDirectiveWiring`; to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
+`RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
+`GraphQLSchemaCustomizer` changes.
+
+```java
+@Bean
+@Singleton
+@Order(10)
+public RuntimeWiringCustomizer hideInternalFields() {
+    return builder -> builder.fieldVisibility(BlockedFields.newBlock().addPattern("Query.internal.*").build());
+}
+```
+
+## Schema directives
+
+The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirectiveWiring`) only through a
+`SchemaDirective` bean:
+
+- `SchemaDirective.named(name, wiring)` binds the wiring to **one** directive name; graphql-java calls it only for the
+  elements that apply that directive (`RuntimeWiring.Builder#directive`). Two such beans for one name fail the
+  startup with `DuplicateDirectiveWiringException`, and a `RuntimeWiringCustomizer` that replaces such a wiring fails
+  it with `RuntimeWiringOverrideException`.
+- `SchemaDirective.everyElement(names, wiring)` registers a wiring that graphql-java calls for **every** schema element
+  and that decides itself what to do (`RuntimeWiring.Builder#directiveWiring`); the names say which directives it
+  implements. These run lowest order first (`@Order` or `Ordered` on the `SchemaDirective` bean), so the first one
+  wraps a data fetcher innermost.
+
+A `SchemaDirectiveWiring` bean is **not** applied on its own: if no `SchemaDirective` bean wraps that instance, the
+startup fails with `UnwrappedDirectiveWiringException`, which names the bean. A wiring therefore never runs on every
+element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of its
+`SchemaDirective`.
+
+**Every directive the schema applies must have a wiring**, or the startup fails with `UnwiredDirectivesException`,
+which lists every such directive and where the schema applies it. With `strict: false` (see [Strict mode](#strict-mode)) the
+same list is a warning instead; either way each such directive is an `!unwiredDirective` line of the binding
+manifest. A directive counts as wired if a `SchemaDirective` bean names it, if a `RuntimeWiringCustomizer` registers a
+wiring for it with `RuntimeWiring.Builder#directive`, or if `resolver-directives` lists it (the binding implements it). A
+directive that is meant to have no effect at runtime (documentation, or enforced elsewhere) is listed in
+`micronaut.graphql.tools.inert-directives`. `SchemaDirectiveWiring` has no hook for the schema definition or for
+directive arguments, so a directive applied there can only be listed as inert, or be handled by a
+`GraphQLSchemaCustomizer`. Exempt: graphql-java's built-in directives (`@deprecated`, `@specifiedBy`, `@oneOf`,
+`@include`, `@skip`), directives the schema declares but never applies, and directives it applies without declaring
+them (graphql-java reports those). `SchemaDirective` names that the schema does not declare are logged at INFO and not
+used, so a shared module may wire more directives than one schema applies.
+
+```java
+@Bean
+@Singleton
+public SchemaDirective upper(UpperCaseWiring upperCaseWiring) { // UpperCaseWiring may be a bean
+    return SchemaDirective.named("upper", upperCaseWiring);
+}
+```
+
+graphql-java-extended-validation plugs in as a wiring for every element that names its constraint directives, and a
+`TypeDefinitionRegistryCustomizer` can add their declarations unless the SDL declares them:
+
+```java
+@Bean
+@Singleton
+public SchemaDirective validation() {
+    DirectiveConstraints constraints = DirectiveConstraints.newDirectiveConstraints().build();
+    return SchemaDirective.everyElement(constraints.getConstraints().keySet(),
+            new ValidationSchemaWiring(ValidationRules.newValidationRules().build()));
+}
+
+@Bean
+@Singleton
+public TypeDefinitionRegistryCustomizer validationDirectives() {
+    return registry -> registry.merge(DirectiveConstraints.newDirectiveConstraints().build().getDirectivesDeclaration());
+}
+```
+
+Use extended-validation 21.0 with graphql-java 21.3 and 24.0 with 25.1 (21.0 calls a `GraphQLCodeRegistry` method
+that graphql-java 25 removed); the library's tests run both.
+
+## Configuring the GraphQL bean
+
+`GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean (created with the
+library's schema) before it is built, lowest order first (`@Order` or `Ordered`): instrumentation, a
+`PreparsedDocumentProvider`, execution strategies, the default `DataFetcherExceptionHandler`, and so on. A builder
+setter keeps one value, so a later customizer replaces what an earlier one set there; chain instrumentations with
+`ChainedInstrumentation`. The library itself never calls `doNotAddDefaultInstrumentations()`, which graphql-java 25
+removed.
+
+```java
+@Bean
+@Singleton
+public GraphQLBuilderCustomizer tracing(MyTracingInstrumentation instrumentation) {
+    return builder -> builder.instrumentation(instrumentation);
+}
+```
+
+## Building the GraphQL bean yourself
+
+The library creates two beans: the bound `GraphQLSchema`, and the `GraphQL` engine that runs it. Each one is created
+only when the application has no bean of that type:
+
+- An application that configures the engine itself (instrumentation, execution strategies, its own transport)
+  provides a `GraphQL` bean built from the library's `GraphQLSchema` bean. The library then creates no `GraphQL`
+  bean, so there is exactly one, and `GraphQLBuilderCustomizer` beans are not called.
+- An application that provides its own `GraphQLSchema` bean gets no binding from the library (no
+  `TypeDefinitionRegistry` is needed); the library's `GraphQL` bean, unless the application has one too, runs that
+  schema.
+
+```java
+@Bean
+@Singleton
+public GraphQL graphQL(GraphQLSchema schema, MyInstrumentation instrumentation) {
+    return GraphQL.newGraphQL(schema).instrumentation(instrumentation).build();
+}
+```
+
+[`test-suite/src/test/java/example/host`](test-suite/src/test/java/example/host) is such an application: it supplies the
+`TypeDefinitionRegistry`, consumes only the library's `GraphQLSchema` and builds its own `GraphQL` with its own
+instrumentation, which then serves the HTTP requests.
+
+The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and its HTTP controller serves
+whichever `GraphQL` bean exists. The library's own code does not use it, so an application with its own transport
+can exclude that dependency.
 
 ## Examples
 

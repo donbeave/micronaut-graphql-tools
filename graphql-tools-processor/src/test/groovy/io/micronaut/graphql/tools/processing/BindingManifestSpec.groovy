@@ -79,7 +79,7 @@ class BindingManifestSpec extends Specification {
 
         then:
         result.success
-        result.omitted == '# graphql-binding-manifest-omitted 1\nkind resolves\nkind scalar\nkind unusedDictionary\n'
+        result.omitted == '# graphql-binding-manifest-omitted 1\nkind resolves\nkind scalar\nkind unusedDictionary\nkind unwiredDirective\n'
     }
 
     void "the schema hash of the header ignores the order of the schema files and of the definitions"() {
