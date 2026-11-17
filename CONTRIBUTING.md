@@ -72,7 +72,7 @@ Two checks run on every `./gradlew check`:
 To measure, run `./gradlew :benchmarks:jmh` (two forks, the `gc` profiler; the allocation figure is
 `gc.alloc.rate.norm` in bytes per operation) or `./gradlew :benchmarks:jmh -Pjmh.profile=quick` for a short run. Narrow
 it with `-Pjmh.includes=<regex>`, and pick the graphql-java leg with `-PgraphqlJavaVersion=25.1`. The results are in
-`benchmarks/build/results/jmh/`. Run on an idle machine with the JDK the CI uses (Temurin 21), and quote the figures with
+`benchmarks/build/results/jmh/`. Run on an idle machine with a JDK the CI uses (Temurin 21 or 25), and quote the figures with
 the JDK, the graphql-java leg and the error that JMH prints.
 
 When an allocation changes on purpose, record the new baselines of both legs and commit the file; the diff is the
@@ -83,7 +83,9 @@ review of the change:
 ./gradlew :benchmarks:allocationTest -Pallocation.update -PgraphqlJavaVersion=25.1
 ```
 
-Baselines are keyed by operation, graphql-java leg and JDK feature version; record them with the JDK the CI uses.
+Baselines are keyed by operation, graphql-java leg and JDK feature version, and are recorded for JDK 21 and JDK 25 (the two
+full CI legs); record the ones for the JDK you run with, and for both when a change is intended. There are none for JDK 17,
+where the gate is skipped (the module is not built there). Run the update on 21 and on 25 for both legs.
 
 ## Creating a pull request
 

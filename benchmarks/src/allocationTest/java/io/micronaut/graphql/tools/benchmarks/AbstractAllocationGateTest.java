@@ -1,6 +1,7 @@
 package io.micronaut.graphql.tools.benchmarks;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -76,6 +77,8 @@ abstract class AbstractAllocationGateTest {
             baselines.put(key, measured);
             return;
         }
+        // A JDK without any baseline (17 is not a full leg, D-32) is not gated; a JDK with baselines must have every key.
+        Assumptions.assumeTrue(baselines.hasJdk(JDK), "No allocation baselines are recorded for JDK " + JDK);
         Double baseline = baselines.get(key);
         assertNotNull(baseline, "No allocation baseline for " + key + ". Record it with "
                 + "./gradlew :benchmarks:allocationTest -Pallocation.update");

@@ -38,6 +38,11 @@ final class Baselines {
         return value == null ? null : Double.valueOf(value);
     }
 
+    /** Whether any baseline is recorded for this JDK feature version. */
+    boolean hasJdk(String jdk) {
+        return values.keySet().stream().anyMatch(key -> key.endsWith("@" + jdk));
+    }
+
     void put(String key, double bytesPerOperation) {
         values.put(key, String.format(java.util.Locale.ROOT, "%.2f", bytesPerOperation));
     }
