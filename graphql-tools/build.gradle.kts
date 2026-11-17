@@ -22,3 +22,16 @@ micronautBuild {
         enabled.set(false)
     }
 }
+
+// DocsCoverageSpec reads the README, the guide and the snippet sources next to this module behind Gradle's back, so
+// they are declared as inputs: a documentation change must re-run the spec.
+tasks.named<Test>("test") {
+    val repositoryRoot = rootProject.layout.projectDirectory
+    systemProperty("docs.root", repositoryRoot.asFile.absolutePath)
+    inputs.files(repositoryRoot.file("README.md"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("docsReadme")
+    inputs.files(repositoryRoot.asFileTree.matching { include("src/main/docs/guide/**", "test-suite-*/src/main/**", "test-suite-*/src/test/**") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("docsSources")
+}
