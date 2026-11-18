@@ -1217,6 +1217,7 @@ To build or test against a role locally:
 | Artifact | Coordinates |
 |---|---|
 | Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
+| Binding rules (internal, pulled in by the library) | `io.micronaut.graphql.tools:micronaut-graphql-tools-binding` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 
