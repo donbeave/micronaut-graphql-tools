@@ -74,6 +74,7 @@ import io.micronaut.inject.ExecutableMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -163,6 +164,16 @@ final class GraphQLRuntimeWiringGenerator {
     private final UnreachableTypeChecks unreachableTypeChecks;
 
     private final RuntimeTypeModel typeModel = new RuntimeTypeModel();
+
+    // The walk from a field to the types it returns is a depth-first walk over the schema, so its depth is the length of
+    // the longest chain of types: it runs from this stack of steps instead of recursing once per type.
+    private final ArrayDeque<Step> steps = new ArrayDeque<>();
+
+    private boolean draining;
+
+    private Step running;
+
+    private Step lastNested;
 
     private final InputTypeBinder inputTypeBinder;
 
@@ -434,11 +445,11 @@ final class GraphQLRuntimeWiringGenerator {
             if (typeDefinition instanceof EnumTypeDefinition enumTypeDefinition) {
                 processEnumTypeDefinition(enumTypeDefinition, returnClass, false, mappingContext);
             } else if (typeDefinition instanceof UnionTypeDefinition unionTypeDefinition) {
-                processUnionTypeDefinition(unionTypeDefinition, returnClass, mappingContext);
+                nested(() -> processUnionTypeDefinition(unionTypeDefinition, returnClass, mappingContext));
             } else if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
-                processObjectTypeDefinition(objectTypeDefinition, returnClass, mappingContext);
+                nested(() -> processObjectTypeDefinition(objectTypeDefinition, returnClass, mappingContext));
             } else if (typeDefinition instanceof InterfaceTypeDefinition interfaceTypeDefinition) {
-                processInterfaceTypeDefinition(interfaceTypeDefinition, returnClass, mappingContext);
+                nested(() -> processInterfaceTypeDefinition(interfaceTypeDefinition, returnClass, mappingContext));
             } else if (typeDefinition instanceof ScalarTypeDefinition scalarTypeDefinition) {
                 GraphQLScalarMapping scalarMapping = scalarMappings.require(scalarTypeDefinition, mappingContext);
 
@@ -600,7 +611,9 @@ final class GraphQLRuntimeWiringGenerator {
             manifestRecorder.type(unionTypeDefinition.getName(), "union", targetClass);
 
             abstractTypeWiring.wireUnion(unionTypeDefinition, targetClass, mappingContext,
-                    this::processObjectTypeDefinition);
+                    (objectTypeDefinition, memberClass, memberContext) ->
+                            nested(() -> processObjectTypeDefinition(objectTypeDefinition, memberClass, memberContext)),
+                    this::inOrder);
         });
     }
 
@@ -619,19 +632,23 @@ final class GraphQLRuntimeWiringGenerator {
 
             manifestRecorder.type(interfaceTypeDefinition.getName(), "interface", targetClass);
 
+            List<Runnable> members = new ArrayList<>();
             for (ObjectTypeDefinition implementation
                     : abstractTypeWiring.getImplementations(interfaceTypeDefinition)) {
-                Class<?> clazz = Optional
-                        .ofNullable(schemaMappingDictionary.getTypes().get(implementation.getName()))
-                        .orElseThrow(() -> new InterfaceTypeMappingNotProvidedException(
-                                mappingContext, implementation.getName(), interfaceTypeDefinition.getName()
-                        ));
+                members.add(() -> {
+                    Class<?> clazz = Optional
+                            .ofNullable(schemaMappingDictionary.getTypes().get(implementation.getName()))
+                            .orElseThrow(() -> new InterfaceTypeMappingNotProvidedException(
+                                    mappingContext, implementation.getName(), interfaceTypeDefinition.getName()
+                            ));
 
-                AbstractTypeWiring.checkMemberClass("interface", interfaceTypeDefinition.getName(), targetClass,
-                        implementation.getName(), clazz, mappingContext);
+                    AbstractTypeWiring.checkMemberClass("interface", interfaceTypeDefinition.getName(), targetClass,
+                            implementation.getName(), clazz, mappingContext);
 
-                processObjectTypeDefinition(implementation, clazz, mappingContext);
+                    nested(() -> processObjectTypeDefinition(implementation, clazz, mappingContext));
+                });
             }
+            inOrder(members);
         });
     }
 
@@ -676,10 +693,12 @@ final class GraphQLRuntimeWiringGenerator {
                     .defaultDataFetcher(new MicronautIntrospectionDataFetcher(beanIntrospection));
             objectTypeWirings.put(objectTypeDefinition.getName(), typeRuntimeWiringBuilder);
 
-            for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
-                collectFailure(TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName()),
-                        () -> processFieldDefinition(
-                                fieldDefinition, objectTypeDefinition, typeRuntimeWiringBuilder, beanIntrospection));
+            List<FieldDefinition> fieldDefinitions = objectTypeDefinition.getFieldDefinitions();
+            for (int i = fieldDefinitions.size() - 1; i >= 0; i--) {
+                FieldDefinition fieldDefinition = fieldDefinitions.get(i);
+                steps.push(new Step(() -> processFieldDefinition(
+                        fieldDefinition, objectTypeDefinition, typeRuntimeWiringBuilder, beanIntrospection),
+                        TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName())));
             }
         });
     }
@@ -936,27 +955,80 @@ final class GraphQLRuntimeWiringGenerator {
         ambiguities = ambiguityLog.snapshot().plus(bindings.ambiguities());
     }
 
-    private void collectFailure(MappingContext mappingContext, Runnable action) {
+    private boolean collectFailure(MappingContext mappingContext, Runnable action) {
         try {
             action.run();
+            return true;
         } catch (AbstractMappingException e) {
             bindingFailures.add(e);
         } catch (RuntimeException e) {
             bindingFailures.add(new UnexpectedBindingException(mappingContext, e));
         }
+        return false;
     }
 
-    private void throwBindingFailures() {
-        if (bindingFailures.isEmpty()) {
+    /**
+     * Runs the work as the recursive call it stands for: inside a running walk it becomes the next step, which runs
+     * before the steps that were already waiting, so the order is the one of a recursive walk. A failure of the step
+     * is reported on the field that reached it, as the recursive call's failure would have been.
+     */
+    private void nested(Runnable work) {
+        if (!draining) {
+            drain(new Step(work, null));
             return;
         }
-        if (bindingFailures.size() == 1) {
-            throw bindingFailures.get(0);
+        Step step = new Step(work, running.context);
+        steps.push(step);
+        lastNested = step;
+    }
+
+    private void drain(Step first) {
+        draining = true;
+        steps.push(first);
+        try {
+            while (!steps.isEmpty()) {
+                Step step = steps.pop();
+                if (step.cancelled) {
+                    continue;
+                }
+                Step previous = running;
+                running = step;
+                try {
+                    step.run();
+                } finally {
+                    running = previous;
+                }
+            }
+        } finally {
+            steps.clear();
+            draining = false;
         }
-        List<AbstractMappingException> sorted = bindingFailures.stream()
-                .sorted(Comparator.comparing(it -> it.getMappingContext().getCoordinate()))
-                .toList();
-        throw new BindingFailuresException(sorted);
+    }
+
+    /**
+     * Runs the actions one after the other, each with the steps it starts, and stops at the first one that fails, as
+     * a loop that calls them does.
+     */
+    private void inOrder(List<Runnable> actions) {
+        inOrder(actions, 0);
+    }
+
+    private void inOrder(List<Runnable> actions, int index) {
+        if (index == actions.size()) {
+            return;
+        }
+        Step rest = new Step(() -> inOrder(actions, index + 1), running.context);
+        steps.push(rest);
+        lastNested = null;
+        try {
+            actions.get(index).run();
+        } catch (RuntimeException e) {
+            rest.cancelled = true;
+            throw e;
+        }
+        if (lastNested != null) {
+            lastNested.after = rest;
+        }
     }
 
     private MethodNotFoundException methodNotFound(String objectTypeName, Class<?> sourceClass, String fieldName,
@@ -1016,6 +1088,19 @@ final class GraphQLRuntimeWiringGenerator {
 
     private static long elapsedMillis(long startNanos) {
         return TimeUnit.MILLISECONDS.convert(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+    }
+
+    private void throwBindingFailures() {
+        if (bindingFailures.isEmpty()) {
+            return;
+        }
+        if (bindingFailures.size() == 1) {
+            throw bindingFailures.get(0);
+        }
+        List<AbstractMappingException> sorted = bindingFailures.stream()
+                .sorted(Comparator.comparing(it -> it.getMappingContext().getCoordinate()))
+                .toList();
+        throw new BindingFailuresException(sorted);
     }
 
     private final class InputCallbacks implements InputTypeBinder.Callbacks {
@@ -1088,4 +1173,24 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
+    private final class Step {
+
+        private final Runnable action;
+        private final MappingContext context;
+        private boolean cancelled;
+        private Step after;
+
+        private Step(Runnable action, MappingContext context) {
+            this.action = action;
+            this.context = context;
+        }
+
+        private void run() {
+            if (context == null) {
+                action.run();
+            } else if (!collectFailure(context, action) && after != null) {
+                after.cancelled = true;
+            }
+        }
+    }
 }

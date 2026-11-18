@@ -1,0 +1,16 @@
+{
+  "data": { "basket": null },
+  "errors": [
+    {
+      "message": "Invalid value for argument Query.basket(basket) at lines[1].ticket: the value is not accepted by the scalar Ticket.",
+      "locations": [{ "line": 2, "column": 3 }],
+      "path": ["basket"],
+      "extensions": {
+        "code": "INPUT_CONVERSION_FAILED",
+        "coordinate": "Query.basket(basket)",
+        "inputPath": ["lines", 1, "ticket"],
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

@@ -55,6 +55,48 @@ class Stock {
 }
 // end::constructor-input[]
 
+// tag::nested-constructor-input[]
+@CompileStatic
+@GraphQLInput
+class Dimensions {
+    final int width
+    final ArgumentValue<String> unit
+
+    Dimensions(int width, ArgumentValue<String> unit) {
+        this.width = width
+        this.unit = unit
+    }
+}
+
+@CompileStatic
+@GraphQLInput
+class Part {
+    final String name
+    final ArgumentValue<String> note
+
+    Part(String name, ArgumentValue<String> note) {
+        this.name = name
+        this.note = note
+    }
+}
+
+@CompileStatic
+@GraphQLInput
+class Crate {
+    final String label
+    final Dimensions dimensions
+    final List<Part> parts
+    final ArgumentValue<String> memo
+
+    Crate(String label, Dimensions dimensions, List<Part> parts, ArgumentValue<String> memo) {
+        this.label = label
+        this.dimensions = dimensions
+        this.parts = parts
+        this.memo = memo
+    }
+}
+// end::nested-constructor-input[]
+
 @CompileStatic
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'arguments')
@@ -85,6 +127,11 @@ class ArgumentsQueries {
 
     String stock(Stock stock) {
         return "sku=$stock.sku quantity=$stock.quantity weight=$stock.weight tags=$stock.tags colors=$stock.colors comment=${presence(stock.comment)}".toString()
+    }
+
+    String crate(Crate crate) {
+        String parts = crate.parts.collect { "${it.name}:${presence(it.note)}" }.join(', ')
+        return "label=$crate.label dimensions=$crate.dimensions.width unit=${presence(crate.dimensions.unit)} parts=[$parts] memo=${presence(crate.memo)}".toString()
     }
 
     String shape(Shape shape) {

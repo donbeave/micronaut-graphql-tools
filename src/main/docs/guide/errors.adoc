@@ -1,1 +1,17 @@
 NOTE: This page is pending. It will be written with the user guide (epic #97).
+
+== Input conversion errors
+
+A value that graphql-java accepted but the converter of its declared Java type cannot convert is an error of the field, not a startup failure and not an exception that reaches the client. The cases are a custom scalar value that the scalar mapping's classes and the `ConversionService` do not accept (for example a list where the parameter is a `Map`), a list that is not a list, and an input class whose constructor or setter throws. The field is `null` and the rest of the operation runs; a non-null field passes the `null` to its nearest nullable parent as usual.
+
+The error is built from the field's data fetching environment, so it has the usual `locations` and `path`. Its `extensions` are stable:
+
+[cols="1,3", options="header"]
+|===
+|Key |Value
+|`code` |`INPUT_CONVERSION_FAILED`
+|`coordinate` |The argument as `Type.field(argument)`, for example `Query.basket(basket)`.
+|`inputPath` |The input field names and list indexes from the argument down to the value that failed, for example `["lines", 1, "ticket"]`; empty when the argument itself failed.
+|===
+
+The message is `Invalid value for argument Query.basket(basket) at lines[1].ticket: the value is not accepted by the scalar Ticket.` The problem is worded in GraphQL terms (`expected a list`, `expected an input object`, `the value is not accepted by the scalar X`, `the value could not be converted`). It has no Java class name and no stack detail, and a message that a setter or constructor threw is not copied into it. The cause and the Java detail are logged at debug level by `io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher`. Match on `extensions.code`, not on the message text. The exception behind it, `InputConversionException`, is internal and never reaches the client.

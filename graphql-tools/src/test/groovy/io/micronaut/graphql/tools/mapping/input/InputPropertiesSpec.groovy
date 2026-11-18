@@ -119,7 +119,7 @@ type Query {
 
     void "an input field without a property fails for an input type wrapped in ArgumentValue"() {
         when:
-        startContext(SCHEMA_BASKET, SPEC_ARGUMENT_VALUE, [(GraphQLToolsConfiguration.PREFIX + '.input.detect-omission'): true])
+        startContext(SCHEMA_BASKET, SPEC_ARGUMENT_VALUE)
         getGraphQLBean()
 
         then:

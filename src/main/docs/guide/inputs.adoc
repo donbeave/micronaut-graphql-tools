@@ -31,6 +31,10 @@ The rules:
 * Every input field needs a property of the same name. The startup fails with `MethodNotFoundException` for a missing one, and with `InputFieldNotSettableException` for a read-only property that no constructor parameter of the same name takes.
 * In strict mode, a settable property that the input type does not define fails the startup (`UnmappedInputPropertiesException`).
 
+== Conversion errors
+
+A value that cannot be converted (see <<errors,Errors>>) is a GraphQL error with `extensions.code` `INPUT_CONVERSION_FAILED` that names the argument as `Type.field(argument)` and the path inside the value. The resolver is not called, the field is `null` and the other fields run.
+
 == Customization
 
 Customization goes through Micronaut `TypeConverter` beans and the scalar mapping, not through a mapper:
@@ -40,9 +44,15 @@ Customization goes through Micronaut `TypeConverter` beans and the scalar mappin
 
 == ArgumentValue
 
-An `ArgumentValue<T>` argument or input field tells an omitted value from an explicit `null`. It needs a nullable GraphQL type and `micronaut.graphql.tools.input.detect-omission=true`. The converter sets it from the keys of the coerced `Map`, while it builds the instance: no getter is called, and no second pass walks the converted object. Besides `isOmitted()`, `isNull()`, `isPresent()` and `get()`, two methods read the value without a branch:
+An `ArgumentValue<T>` argument or input field tells an omitted value from an explicit `null`. It needs a nullable GraphQL type; declaring it is all it takes, there is no option. A type without an `ArgumentValue` gets no omission handling at all. The converter sets it from the keys of the coerced `Map`, while it builds the instance: no getter is called, and no second pass walks the converted object. Besides `isOmitted()`, `isNull()`, `isPresent()` and `get()`, two methods read the value without a branch:
 
 * `asOptional()` returns an `Optional` that is empty for an omitted value and for an explicit `null`.
 * `ifPresent(Consumer)` runs the consumer only for a provided, non-null value.
+
+A constructor parameter of that type works too, so a record or a Kotlin data class can hold an `ArgumentValue` without a setter. The constructor receives `ArgumentValue.omitted()` when the client leaves the field out and the schema declares no default, and `ArgumentValue.ofNullable(value)` otherwise, including the schema default. Nested input classes and lists of them behave the same way:
+
+snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="nested-constructor-input", indent="0"]
+
+In Kotlin, a data class `val` of that type gets its value from the request; its default argument is not used. In Groovy, write the constructor yourself: `@TupleConstructor` and `@Immutable` add theirs after the introspection is built, so the class would be instantiated without arguments.
 
 snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="optional-helpers", indent="0"]

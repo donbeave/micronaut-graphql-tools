@@ -40,7 +40,6 @@ public class GraphQLToolsConfiguration {
     private AllowConfiguration allow = new AllowConfiguration();
     private boolean eagerInit = true;
     private SchemaConfiguration schema = new SchemaConfiguration();
-    private InputConfiguration input = new InputConfiguration();
     private ManifestConfiguration manifest = new ManifestConfiguration();
 
     /**
@@ -177,22 +176,6 @@ public class GraphQLToolsConfiguration {
     }
 
     /**
-     * @return the options for arguments and input objects, under {@value #PREFIX}.input
-     */
-    @NonNull
-    public InputConfiguration getInput() {
-        return input;
-    }
-
-    /**
-     * @param input the options for arguments and input objects
-     */
-    public void setInput(@NonNull InputConfiguration input) {
-        ArgumentUtils.requireNonNull("input", input);
-        this.input = input;
-    }
-
-    /**
      * @return the options of the binding manifest, under {@value #PREFIX}.manifest
      */
     @NonNull
@@ -313,36 +296,6 @@ public class GraphQLToolsConfiguration {
          */
         public void setPath(@Nullable String path) {
             this.path = path;
-        }
-
-    }
-
-    /**
-     * Options for arguments and input objects, under {@value GraphQLToolsConfiguration#PREFIX}.input.
-     */
-    @ConfigurationProperties("input")
-    public static class InputConfiguration {
-
-        private boolean detectOmission;
-
-        /**
-         * @return whether resolver parameters and input class properties declared as {@link ArgumentValue} tell an
-         * omitted value from an explicit {@code null}
-         */
-        public boolean isDetectOmission() {
-            return detectOmission;
-        }
-
-        /**
-         * Enables {@link ArgumentValue} for resolver parameters and input class properties, so that they tell an
-         * omitted value from an explicit {@code null}. Without it a declared {@link ArgumentValue} fails the startup,
-         * and an omitted value and an explicit {@code null} both reach the resolver as {@code null}. Default:
-         * {@code false}.
-         *
-         * @param detectOmission whether to enable {@link ArgumentValue}
-         */
-        public void setDetectOmission(boolean detectOmission) {
-            this.detectOmission = detectOmission;
         }
 
     }

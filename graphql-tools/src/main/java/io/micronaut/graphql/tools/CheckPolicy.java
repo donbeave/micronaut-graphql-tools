@@ -47,13 +47,19 @@ final class CheckPolicy {
     private static final Map<String, String> REMOVED = new LinkedHashMap<>();
 
     static {
-        REMOVED.put("unreachable-types", "checks.unreachable-type and checks.unreachable-value-type (fail, warn or "
-                + "ignore; ignore is the old unreachable-types: ignore)");
-        REMOVED.put("allow-unreachable", "allow.unreachable");
-        REMOVED.put("input.unmapped-properties", "checks.unmapped-input-property");
-        REMOVED.put("inert-directives", "allow.inert-directives");
-        REMOVED.put("schema-customizer-directives", "allow.schema-customizer-directives");
-        REMOVED.put("unwired-directives", "checks.unwired-directive");
+        REMOVED.put("unreachable-types", use("checks.unreachable-type and " + PREFIX + "checks.unreachable-value-type "
+                + "(fail, warn or ignore; ignore is the old unreachable-types: ignore)"));
+        REMOVED.put("allow-unreachable", use("allow.unreachable"));
+        REMOVED.put("input.unmapped-properties", use("checks.unmapped-input-property"));
+        REMOVED.put("inert-directives", use("allow.inert-directives"));
+        REMOVED.put("schema-customizer-directives", use("allow.schema-customizer-directives"));
+        REMOVED.put("unwired-directives", use("checks.unwired-directive"));
+        REMOVED.put("input.detect-omission", "declare ArgumentValue on the resolver parameter or the input property; "
+                + "that is the only opt-in");
+    }
+
+    private static String use(String key) {
+        return "use " + PREFIX + key;
     }
 
     private final Map<BindingCode, Severity> severities = new EnumMap<>(BindingCode.class);
@@ -82,12 +88,12 @@ final class CheckPolicy {
         List<String> removed = new ArrayList<>();
         REMOVED.forEach((key, replacement) -> {
             if (resolver.containsProperty(PREFIX + key)) {
-                removed.add(PREFIX + key + " was removed; use " + PREFIX + replacement + ".");
+                removed.add(PREFIX + key + " was removed; " + replacement + ".");
             }
         });
         if (!removed.isEmpty()) {
             throw new InvalidConfigurationException(BindingCode.REMOVED_CONFIGURATION_KEY,
-                    "The configuration uses keys that were removed in 1.0.0-M3 (BC-27):", removed);
+                    "The configuration uses keys that were removed in 1.0.0-M3 (BC-27, BC-28):", removed);
         }
 
         Map<BindingCode, Severity> explicit = new EnumMap<>(BindingCode.class);

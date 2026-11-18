@@ -183,6 +183,16 @@ class CheckSeveritySpec extends AbstractTest {
         'unwired-directives'             | 'ignore'     || 'checks.unwired-directive'
     }
 
+    void "the removed input.detect-omission fails the startup and names ArgumentValue"() {
+        when:
+        def failure = startFailure([(PREFIX + 'input.detect-omission'): true])
+
+        then:
+        failure instanceof InvalidConfigurationException
+        failure.code() == BindingCode.REMOVED_CONFIGURATION_KEY
+        failure.message.contains("${PREFIX}input.detect-omission was removed; declare ArgumentValue")
+    }
+
     void "all removed keys are named in one error"() {
         when:
         def failure = startFailure([(PREFIX + 'unreachable-types'): 'fail', (PREFIX + 'allow-unreachable'): ['A']])
