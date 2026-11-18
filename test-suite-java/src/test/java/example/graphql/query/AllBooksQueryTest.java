@@ -1,7 +1,7 @@
 package example.graphql.query;
 
 import com.apollographql.apollo.api.ApolloResponse;
-import com.apollographql.apollo.rx3.Rx3Apollo;
+import com.apollographql.java.rx3.Rx3Apollo;
 import example.AbstractTest;
 import example.client.AllBooksQuery;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
