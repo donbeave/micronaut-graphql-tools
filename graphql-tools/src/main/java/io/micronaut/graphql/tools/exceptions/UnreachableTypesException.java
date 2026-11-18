@@ -35,13 +35,25 @@ public final class UnreachableTypesException extends SchemaBindingException {
                 .map(it -> it.getKey() + " (" + it.getValue() + ")")
                 .collect(Collectors.joining(", "))
                 + ".\n  Bind them through a field, remove them from the schema, list them in "
-                + "micronaut.graphql.tools.allow-unreachable, or set micronaut.graphql.tools.unreachable-types to ignore.");
+                + "micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks."
+                + checksOf(types) + " to warn or ignore.");
 
         this.typeNames = List.copyOf(types.keySet());
     }
 
+    private static String checksOf(Map<String, String> types) {
+        boolean values = types.values().stream().anyMatch(UnreachableTypesException::isValueType);
+        boolean others = types.values().stream().anyMatch(it -> !isValueType(it));
+        return values && others ? BindingCode.UNREACHABLE_TYPE.code() + " and " + BindingCode.UNREACHABLE_VALUE_TYPE.code()
+                : codeOf(types).code();
+    }
+
+    private static boolean isValueType(String kind) {
+        return kind.equals("enum") || kind.equals("input") || kind.equals("scalar");
+    }
+
     private static BindingCode codeOf(Map<String, String> types) {
-        return types.values().stream().allMatch(it -> it.equals("enum") || it.equals("input") || it.equals("scalar"))
+        return types.values().stream().allMatch(UnreachableTypesException::isValueType)
                 ? BindingCode.UNREACHABLE_VALUE_TYPE : BindingCode.UNREACHABLE_TYPE;
     }
 

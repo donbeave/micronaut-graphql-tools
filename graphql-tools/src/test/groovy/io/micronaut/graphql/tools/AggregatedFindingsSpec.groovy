@@ -57,15 +57,16 @@ type Draft {
         failures.failures*.class == [UnreachableTypesException, InvalidSchemaCoordinateException, StrictModeException]
         failures.message.startsWith("[binding-failures] The schema cannot be bound: 3 errors.\n  1) [unreachable-type] ")
         failures.message.contains("\n  2) [unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:")
-        failures.message.contains("\n  3) [strict-findings] Strict mode found problems in the binding of the schema:")
+        failures.message.contains("\n  3) [strict-findings] The strict checks found problems in the binding of the schema:")
         failures.message.contains("Draft (type)")
         failures.message.contains("the method is not bound to Book.summary")
         failures.message.contains("${Query.name}#helper(java.lang.String) binds no schema field")
     }
 
-    void "with strict false the strict findings are left out and the others are still reported together"() {
+    void "with strict false the strict findings are warnings, an explicit check still fails, and the failures are reported together"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.strict': false])
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.strict': false,
+                                         'micronaut.graphql.tools.checks.unreachable-type': 'fail'])
 
         when:
         getGraphQLBean()

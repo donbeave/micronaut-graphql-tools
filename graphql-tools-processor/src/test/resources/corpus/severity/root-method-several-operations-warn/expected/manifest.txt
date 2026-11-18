@@ -1,0 +1,6 @@
+!root-method-several-operations example.Operations#ping()
+Mutation -> object ; - ; - ; -
+Mutation.ping: String -> root ; example.Operations#ping() ; java.lang.String ; java.lang.String
+Query -> object ; - ; - ; -
+Query.ping: String -> root ; example.Operations#ping() ; java.lang.String ; java.lang.String
+String -> scalar ; String ; - ; -

@@ -122,9 +122,9 @@ class DirectiveStartupTest {
     private fun manifestLines(context: ApplicationContext): List<String> = context.getBean(BindingManifest::class.java).lines
 
     private companion object {
-        const val UNWIRED_DIRECTIVES = "micronaut.graphql.tools.unwired-directives"
+        const val UNWIRED_DIRECTIVES = "micronaut.graphql.tools.checks.unwired-directive"
         const val STRICT = "micronaut.graphql.tools.strict"
-        const val INERT_DIRECTIVES = "micronaut.graphql.tools.inert-directives"
-        const val SCHEMA_CUSTOMIZER_DIRECTIVES = "micronaut.graphql.tools.schema-customizer-directives"
+        const val INERT_DIRECTIVES = "micronaut.graphql.tools.allow.inert-directives"
+        const val SCHEMA_CUSTOMIZER_DIRECTIVES = "micronaut.graphql.tools.allow.schema-customizer-directives"
     }
 }

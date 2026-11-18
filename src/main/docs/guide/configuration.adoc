@@ -2,15 +2,20 @@ NOTE: This page is pending: the prose will be written with the user guide (epic 
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration.adoc[]
 
-include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$InputConfiguration.adoc[]
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$AllowConfiguration.adoc[]
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$SchemaConfiguration.adoc[]
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$ManifestConfiguration.adoc[]
 
+== Check severity
+
+Each check has a severity, `micronaut.graphql.tools.checks.<code>`: `fail` (the default), `warn` or `ignore`. `strict` is the shorthand for the checks that have no entry: `true` is every check at `fail`, `false` is every check at `warn`. An explicit entry wins. A check at `ignore` does no work. An unknown code or severity fails the startup. The `allow` settings accept findings: `allow.unreachable`, `allow.inert-directives`, `allow.schema-customizer-directives` and `allow.findings` (lines of the binding manifest). Every entry is validated, and one that no longer applies fails the startup.
+
 == Check codes
 
-Each strict check has a code, from the code registry (`BindingCode` in `graphql-tools-binding`). Today the checks are switched together by `micronaut.graphql.tools.strict`. The per-check severity of issue #86 uses the same codes as the keys `checks.<code>` and in `allow.findings`. The same code starts the startup error (`[unbound-enum-constant] ...`) and follows `!` in a line of the binding manifest. The checks that the compile-time check also reports are marked; relaxing one at startup does not relax the compile error.
+Each strict check has a code, from the code registry (`BindingCode` in `graphql-tools-binding`). The code is the key of `micronaut.graphql.tools.checks` (`checks.<code>`), the word in an `allow.findings` line, the token at the start of the startup error (`[unbound-enum-constant] ...`) and the word after `!` in a line of the binding manifest. The five checks that the compile-time check also reports are marked: relaxing one at startup does not relax the compile error. The other five run at startup only.
+
 
 * `unbound-resolver-method` (compile time)
 * `root-method-several-operations` (compile time)

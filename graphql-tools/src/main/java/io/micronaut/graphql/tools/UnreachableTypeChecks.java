@@ -40,20 +40,19 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import static io.micronaut.graphql.tools.GraphQLUtils.getType;
 
 /**
  * The reachability phase: the types that no field reachable from a root operation type returns, and the value types that
- * nothing binds, judged against {@code allow-unreachable} and {@code unreachable-types}.
+ * nothing binds, judged against {@code allow.unreachable} and the severity of the two checks.
  */
 @Internal
 final class UnreachableTypeChecks {
@@ -62,12 +61,14 @@ final class UnreachableTypeChecks {
 
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final GraphQLToolsConfiguration configuration;
+    private final CheckPolicy policy;
     private final BindingManifestRecorder manifestRecorder;
 
     UnreachableTypeChecks(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLToolsConfiguration configuration,
-                          BindingManifestRecorder manifestRecorder) {
+                          CheckPolicy policy, BindingManifestRecorder manifestRecorder) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.configuration = configuration;
+        this.policy = policy;
         this.manifestRecorder = manifestRecorder;
     }
 
@@ -91,17 +92,12 @@ final class UnreachableTypeChecks {
             }
         }
 
-        Map<String, TypeDefinition<?>> unreachableValueTypes = findUnreachableValueTypes(processedTypes);
-        boolean strict = configuration.isStrict();
-        Map<String, TypeDefinition<?>> checked = new TreeMap<>(unreachableTypes);
-        if (strict) {
-            checked.putAll(unreachableValueTypes);
-        }
+        boolean typesOn = policy.enabled(BindingCode.UNREACHABLE_TYPE);
+        boolean valueTypesOn = policy.enabled(BindingCode.UNREACHABLE_VALUE_TYPE);
+        Set<String> allowed = new TreeSet<>(configuration.getAllow().getUnreachable());
+        Map<String, TypeDefinition<?>> unreachableValueTypes = valueTypesOn || !allowed.isEmpty()
+                ? findUnreachableValueTypes(processedTypes) : Map.of();
 
-        Set<String> allowed = new TreeSet<>(configuration.getAllowUnreachable());
-        boolean ignoring = configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE;
-        Set<String> covered = findCoveredValueTypes(ignoring ? unreachableTypes.keySet() : allowed);
-        checked.keySet().removeAll(covered);
         List<String> undefined = allowed.stream()
                 .filter(it -> !isDefined(it))
                 .toList();
@@ -114,36 +110,29 @@ final class UnreachableTypeChecks {
                     "object, interface, union, enum, input or scalar");
         }
 
-        Set<String> unbound;
-        if (ignoring) {
-            unbound = unreachableTypes.keySet();
-            if (!checked.isEmpty()) {
-                LOG.warn("{} is ignore: the schema defines types that no field reachable from a root operation "
-                                + "type returns; they use graphql-java's default data fetchers: {}",
-                        GraphQLToolsConfiguration.PREFIX + ".unreachable-types", String.join(", ", checked.keySet()));
-            }
-        } else {
-            Map<String, String> failing = new LinkedHashMap<>();
-            checked.forEach((name, typeDefinition) -> {
-                if (!allowed.contains(name)) {
-                    failing.put(name, getType(typeDefinition));
-                }
-            });
-            if (failing.isEmpty()) {
-                unbound = allowed.stream().filter(unreachableTypes::containsKey)
-                        .collect(Collectors.toCollection(TreeSet::new));
-            } else {
-                finding = new UnreachableTypesException(failing);
-                unbound = unreachableTypes.keySet();
-            }
-            if (!allowed.isEmpty()) {
-                LOG.info("Unreachable types allowed by {} use graphql-java's default data fetchers: {}",
-                        GraphQLToolsConfiguration.PREFIX + ".allow-unreachable", String.join(", ", allowed));
-            }
+        // the types that the accepted types use are accepted with them
+        Set<String> accepted = new TreeSet<>(allowed);
+        if (!policy.failing(BindingCode.UNREACHABLE_TYPE)) {
+            accepted.addAll(unreachableTypes.keySet());
         }
+        Set<String> covered = valueTypesOn ? findCoveredValueTypes(accepted) : Set.of();
 
-        unbound.forEach(it -> manifestRecorder.diagnostic(BindingCode.UNREACHABLE_TYPE, it));
-        unreachableValueTypes.keySet().forEach(it -> manifestRecorder.diagnostic(BindingCode.UNREACHABLE_VALUE_TYPE, it));
+        Map<String, String> failing = new TreeMap<>();
+        Map<BindingCode, List<String>> warnings = new EnumMap<>(BindingCode.class);
+        if (typesOn) {
+            judge(BindingCode.UNREACHABLE_TYPE, unreachableTypes, allowed, Set.of(), failing, warnings);
+        }
+        if (valueTypesOn) {
+            judge(BindingCode.UNREACHABLE_VALUE_TYPE, unreachableValueTypes, allowed, covered, failing, warnings);
+        }
+        warnings.forEach(policy::warn);
+        if (!failing.isEmpty()) {
+            finding = new UnreachableTypesException(failing);
+        } else if (!allowed.isEmpty()) {
+            LOG.info("Unreachable types allowed by {} use graphql-java's default data fetchers: {}",
+                    GraphQLToolsConfiguration.PREFIX + ".allow.unreachable", String.join(", ", allowed));
+        }
+        Set<String> unbound = unreachableTypes.keySet();
 
         for (String name : unbound) {
             TypeDefinition<?> typeDefinition = unreachableTypes.get(name);
@@ -156,6 +145,25 @@ final class UnreachableTypeChecks {
         }
 
         return new Reachability(unbound, finding);
+    }
+
+    // records each finding of the check and sorts it into failing or warnings, unless it is allowed or covered
+    private void judge(BindingCode code, Map<String, TypeDefinition<?>> types, Set<String> allowed,
+                       Set<String> covered, Map<String, String> failing, Map<BindingCode, List<String>> warnings) {
+        types.forEach((name, typeDefinition) -> {
+            if (policy.allowed(BindingManifestRecorder.diagnosticLine(code, name))) {
+                return;
+            }
+            manifestRecorder.diagnostic(code, name);
+            if (allowed.contains(name) || covered.contains(name)) {
+                return;
+            }
+            if (policy.failing(code)) {
+                failing.put(name, getType(typeDefinition));
+            } else {
+                warnings.computeIfAbsent(code, it -> new ArrayList<>()).add(name + " (" + getType(typeDefinition) + ")");
+            }
+        });
     }
 
     private Set<String> findCoveredValueTypes(Set<String> roots) {

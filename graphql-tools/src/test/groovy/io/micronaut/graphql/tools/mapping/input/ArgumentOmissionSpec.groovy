@@ -285,7 +285,7 @@ input CreateW {
 
     void "a class backing two input types keeps the omitted properties of both"() {
         given:
-        startContext(schema, spec, DETECT + [(GraphQLToolsConfiguration.PREFIX + '.input.unmapped-properties'): 'ignore'])
+        startContext(schema, spec, DETECT + [(GraphQLToolsConfiguration.PREFIX + '.checks.unmapped-input-property'): 'ignore'])
 
         expect:
         result('create', '{ create(input: {name: "a"}) }') == 'name=value(a) email=omitted'

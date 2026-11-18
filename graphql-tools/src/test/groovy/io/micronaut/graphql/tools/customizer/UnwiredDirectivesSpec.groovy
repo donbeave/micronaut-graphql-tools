@@ -108,10 +108,10 @@ input Pick @oneOf {
 scalar Long @specifiedBy(url: "https://example.com/long")
 """
 
-    static final Map ALLOW = ['micronaut.graphql.tools.allow-unreachable': ['Filter', 'Pick', 'Role']]
+    static final Map ALLOW = ['micronaut.graphql.tools.allow.unreachable': ['Filter', 'Pick', 'Role']]
 
     static final String UNWIRED_MESSAGE = """The schema applies directives that have no wiring: @auth (Filter.name, Query.me, Query.users, Role.ADMIN, User and 1 more), @cached (Query.items(limit:)).
-  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.inert-directives if it has no effect at runtime."""
+  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.allow.inert-directives if it has no effect at runtime, or set micronaut.graphql.tools.checks.unwired-directive to warn or ignore."""
 
     ListAppender<ILoggingEvent> appender
 
@@ -119,10 +119,12 @@ scalar Long @specifiedBy(url: "https://example.com/long")
         appender = new ListAppender<>()
         appender.start()
         checkLogger().addAppender(appender)
+        policyLogger().addAppender(appender)
     }
 
     void cleanup() {
         checkLogger().detachAppender(appender)
+        policyLogger().detachAppender(appender)
     }
 
     void "applied directives without a wiring fail the startup, all of them, with where they are applied"() {
@@ -189,7 +191,7 @@ extend input In {
 
 scalar Sc @onScalar
 """
-        startContext(schema, SPEC_NAME_KINDS, ['micronaut.graphql.tools.unreachable-types': 'ignore'])
+        startContext(schema, SPEC_NAME_KINDS, ['micronaut.graphql.tools.checks.unreachable-type': 'warn', 'micronaut.graphql.tools.checks.unreachable-value-type': 'warn'])
 
         when:
         getGraphQLBean()
@@ -207,7 +209,7 @@ scalar Sc @onScalar
 
     void "inert-directives lets the listed directives through and logs them"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.inert-directives': ['cached', 'auth']])
+        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.allow.inert-directives': ['cached', 'auth']])
 
         when:
         def result = executeQuery('{ me { email } shout amount }')
@@ -218,13 +220,13 @@ scalar Sc @onScalar
         applicationContext.getBean(BindingManifest).lines.every { !it.startsWith('!unwired-directive ') }
         appender.list.any {
             it.level == Level.INFO && it.formattedMessage == 'Directives without a wiring, declared inert by ' +
-                    'micronaut.graphql.tools.inert-directives: @auth, @cached'
+                    'micronaut.graphql.tools.allow.inert-directives: @auth, @cached'
         }
     }
 
     void "an inert-directives entry that is not declared or that has a wiring fails the startup, with the rest"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.inert-directives': ['auth', 'missing', 'upper', 'deprecated']])
+        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.allow.inert-directives': ['auth', 'missing', 'upper', 'deprecated']])
 
         when:
         getGraphQLBean()
@@ -235,8 +237,8 @@ scalar Sc @onScalar
         e.cause.unwiredDirectives == ['cached']
         e.cause.invalidInertDirectives == ['deprecated', 'missing', 'upper']
         e.cause.message == """[unwired-directive] The schema applies directives that have no wiring: @cached (Query.items(limit:)).
-  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.inert-directives if it has no effect at runtime.
-[invalid-inert-directives] micronaut.graphql.tools.inert-directives lists directives that are built in, not declared in the schema, or that have a wiring: @deprecated (built into graphql-java), @missing (not declared in the schema), @upper (has a wiring).
+  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.allow.inert-directives if it has no effect at runtime, or set micronaut.graphql.tools.checks.unwired-directive to warn or ignore.
+[invalid-inert-directives] micronaut.graphql.tools.allow.inert-directives lists directives that are built in, not declared in the schema, or that have a wiring: @deprecated (built into graphql-java), @missing (not declared in the schema), @upper (has a wiring).
   Remove them from the list."""
     }
 
@@ -251,7 +253,7 @@ scalar Sc @onScalar
         result.errors.isEmpty()
         result.data == [me: [email: 'me@example.com'], shout: 'SHOUT']
         appender.list.findAll { it.level == Level.WARN }*.formattedMessage == [
-                'micronaut.graphql.tools.strict is false, so the startup goes on: ' + UNWIRED_MESSAGE]
+                '[unwired-directive] micronaut.graphql.tools.strict is false, so the startup goes on:\n  ' + UNWIRED_MESSAGE]
 
         and: 'one line per unwired directive; built-in and wired ones have none'
         applicationContext.getBean(BindingManifest).lines.findAll { it.startsWith('!unwired-directive ') } == [
@@ -262,7 +264,7 @@ scalar Sc @onScalar
         given:
         startContext(SCHEMA, SPEC_NAME, ALLOW + [
                 'micronaut.graphql.tools.strict'          : false,
-                'micronaut.graphql.tools.inert-directives': ['cached', 'missing', 'upper']])
+                'micronaut.graphql.tools.allow.inert-directives': ['cached', 'missing', 'upper']])
 
         when:
         getGraphQLBean()
@@ -273,7 +275,7 @@ scalar Sc @onScalar
         e.cause.unwiredDirectives == []
         e.cause.invalidInertDirectives == ['missing', 'upper']
         appender.list.findAll { it.level == Level.WARN }*.formattedMessage == [
-                'micronaut.graphql.tools.strict is false, so the startup goes on: The schema applies directives that ' +
+                '[unwired-directive] micronaut.graphql.tools.strict is false, so the startup goes on:\n  The schema applies directives that ' +
                         'have no wiring: @auth (Filter.name, Query.me, Query.users, Role.ADMIN, User and 1 more).\n' +
                         UNWIRED_MESSAGE.substring(UNWIRED_MESSAGE.indexOf('  Wire each'))]
     }
@@ -282,7 +284,7 @@ scalar Sc @onScalar
         given: '@unused is declared and never applied, which resolver-directives accepts'
         startContext(SCHEMA, SPEC_NAME, ALLOW + [
                 'micronaut.graphql.tools.resolver-directives': ['unused'],
-                'micronaut.graphql.tools.inert-directives'   : ['auth', 'cached', 'unused']])
+                'micronaut.graphql.tools.allow.inert-directives'   : ['auth', 'cached', 'unused']])
 
         when:
         getGraphQLBean()
@@ -313,7 +315,7 @@ scalar Sc @onScalar
 
     void "a directive wiring that a RuntimeWiringCustomizer registers counts"() {
         given:
-        startContext(SCHEMA, SPEC_NAME_CUSTOMIZER, ALLOW + ['micronaut.graphql.tools.inert-directives': ['cached']])
+        startContext(SCHEMA, SPEC_NAME_CUSTOMIZER, ALLOW + ['micronaut.graphql.tools.allow.inert-directives': ['cached']])
 
         when:
         def result = executeQuery('{ me { email } shout }')
@@ -325,7 +327,7 @@ scalar Sc @onScalar
 
     void "a type named schema is wired like any other type, and does not stand for the schema definition"() {
         given: 'a named wiring for @typeDir, which is applied to the type schema, and none for @audit on the schema definition'
-        startContext(TYPE_NAMED_SCHEMA_SCHEMA, SPEC_NAME_TYPE_SCHEMA, ['micronaut.graphql.tools.unreachable-types': 'ignore'])
+        startContext(TYPE_NAMED_SCHEMA_SCHEMA, SPEC_NAME_TYPE_SCHEMA, ['micronaut.graphql.tools.checks.unreachable-type': 'warn', 'micronaut.graphql.tools.checks.unreachable-value-type': 'warn'])
 
         when:
         getGraphQLBean()
@@ -341,8 +343,9 @@ scalar Sc @onScalar
     void "a type named schema passes when the schema definition's directive is listed in schema-customizer-directives"() {
         given:
         startContext(TYPE_NAMED_SCHEMA_SCHEMA, SPEC_NAME_TYPE_SCHEMA, [
-                'micronaut.graphql.tools.unreachable-types'            : 'ignore',
-                'micronaut.graphql.tools.schema-customizer-directives': ['audit']])
+                'micronaut.graphql.tools.checks.unreachable-type'      : 'warn',
+                'micronaut.graphql.tools.checks.unreachable-value-type': 'warn',
+                'micronaut.graphql.tools.allow.schema-customizer-directives': ['audit']])
 
         when:
         def result = executeQuery('{ r }')
@@ -354,7 +357,7 @@ scalar Sc @onScalar
 
     void "a schema-customizer-directives entry that no schema definition or directive argument applies is stale"() {
         given: '@unused is declared and applied nowhere'
-        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.schema-customizer-directives': ['unused']])
+        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.allow.schema-customizer-directives': ['unused']])
 
         when:
         getGraphQLBean()
@@ -368,7 +371,7 @@ scalar Sc @onScalar
 
     void "a wiring does not count for the schema definition or a directive argument"() {
         given: 'named wirings for @audit (on schema), @doc (on a directive argument) and @meta'
-        startContext(PLACES_SCHEMA, SPEC_NAME_PLACES, ['micronaut.graphql.tools.inert-directives': ['fed*']])
+        startContext(PLACES_SCHEMA, SPEC_NAME_PLACES, ['micronaut.graphql.tools.allow.inert-directives': ['fed*']])
 
         when:
         getGraphQLBean()
@@ -378,15 +381,15 @@ scalar Sc @onScalar
         e.cause instanceof UnwiredDirectivesException
         e.cause.unwiredDirectives == ['audit', 'doc']
         e.cause.message == """[unwired-directive] The schema applies directives that have no wiring: @audit (schema definition), @doc (@meta(x:)).
-  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.inert-directives if it has no effect at runtime.
-  graphql-java calls no wiring for the schema definition or for directive arguments (@name(arg:)), so a directive applied there must be listed in inert-directives, or in micronaut.graphql.tools.schema-customizer-directives if a GraphQLSchemaCustomizer handles it."""
+  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.allow.inert-directives if it has no effect at runtime, or set micronaut.graphql.tools.checks.unwired-directive to warn or ignore.
+  graphql-java calls no wiring for the schema definition or for directive arguments (@name(arg:)), so a directive applied there must be listed in allow.inert-directives, or in micronaut.graphql.tools.allow.schema-customizer-directives if a GraphQLSchemaCustomizer handles it."""
     }
 
     void "schema-customizer-directives and inert-directives accept the schema-level and argument-level ones"() {
         given:
         startContext(PLACES_SCHEMA, SPEC_NAME_PLACES, [
-                'micronaut.graphql.tools.schema-customizer-directives': ['audit'],
-                'micronaut.graphql.tools.inert-directives'            : ['fed*']])
+                'micronaut.graphql.tools.allow.schema-customizer-directives': ['audit'],
+                'micronaut.graphql.tools.allow.inert-directives'            : ['fed*']])
 
         when:
         def e = null
@@ -404,8 +407,8 @@ scalar Sc @onScalar
     void "an inert-directives pattern that matches no directive without a wiring, and invalid schema-customizer-directives entries, fail the startup"() {
         given:
         startContext(PLACES_SCHEMA, SPEC_NAME_PLACES, [
-                'micronaut.graphql.tools.schema-customizer-directives': ['audit', 'doc', 'deprecated', 'missing'],
-                'micronaut.graphql.tools.inert-directives'            : ['fed*', 'gone*', '*Key']])
+                'micronaut.graphql.tools.allow.schema-customizer-directives': ['audit', 'doc', 'deprecated', 'missing'],
+                'micronaut.graphql.tools.allow.inert-directives'            : ['fed*', 'gone*', '*Key']])
 
         when:
         getGraphQLBean()
@@ -420,9 +423,9 @@ scalar Sc @onScalar
         e.cause.message.contains('@deprecated (built into graphql-java), @missing (not declared in the schema)')
     }
 
-    void "unwired-directives: ignore skips the check, warn logs it, fail fails also with strict false"() {
+    void "checks.unwired-directive: ignore skips the check, warn logs it, fail fails also with strict false"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.unwired-directives': mode] + extra)
+        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.checks.unwired-directive': mode] + extra)
 
         when:
         Throwable failure = null
@@ -445,7 +448,7 @@ scalar Sc @onScalar
 
     void "the wiring beans are injected into the schema factory method, so the DI graph shows them"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.inert-directives': ['auth', 'cached']])
+        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.allow.inert-directives': ['auth', 'cached']])
 
         when:
         def arguments = applicationContext.getBeanDefinition(GraphQLSchema).constructor.arguments.toList()
@@ -457,6 +460,10 @@ scalar Sc @onScalar
         schemaDirectives.typeParameters[0].type == BeanRegistration
         schemaDirectives.typeParameters[0].typeParameters[0].type == SchemaDirective
         directiveWirings.typeParameters[0].typeParameters[0].type == SchemaDirectiveWiring
+    }
+
+    private static Logger policyLogger() {
+        return (Logger) LoggerFactory.getLogger('io.micronaut.graphql.tools.GraphQLRuntimeWiringGenerator')
     }
 
     private static Logger checkLogger() {
