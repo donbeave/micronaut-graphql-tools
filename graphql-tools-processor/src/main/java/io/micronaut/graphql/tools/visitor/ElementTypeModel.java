@@ -110,13 +110,18 @@ final class ElementTypeModel implements TypeModel {
     }
 
     private TypeRef ref(ClassElement type, AnnotationMetadata declaration) {
+        return ref(type, declaration, Set.of());
+    }
+
+    private TypeRef ref(ClassElement type, AnnotationMetadata declaration, Set<String> variables) {
         boolean array = type.isArray();
         ClassElement raw = array ? type.fromArray() : type;
-        reachable.put(raw.getName(), raw);
+        reachable.put(raw.getName(), erased(raw));
+        Set<String> open = raw instanceof GenericPlaceholderElement placeholder
+                ? with(variables, placeholder.getVariableName()) : variables;
         List<TypeRef> arguments = new ArrayList<>();
         for (ClassElement argument : raw.getBoundGenericTypes()) {
-            ClassElement resolved = bound(argument);
-            arguments.add(ref(resolved, AnnotationMetadata.EMPTY_METADATA));
+            arguments.add(argument(argument, open));
         }
         Nullability nullability = declaration.hasStereotype("javax.annotation.Nullable")
                 || declaration.hasStereotype("jakarta.annotation.Nullable")
@@ -128,17 +133,50 @@ final class ElementTypeModel implements TypeModel {
         return new TypeRef(raw.getName(), arguments, nullability, raw.isPrimitive(), array);
     }
 
-    // a wildcard or a type variable is read as its first bound, as the runtime reads the type argument
-    private static ClassElement bound(ClassElement argument) {
+    // a wildcard or a type variable is read as its first bound, as the runtime reads the type argument; a variable that is
+    // bound by itself (T extends Comparable<T>) is followed once and read as its bound without arguments the second time
+    private TypeRef argument(ClassElement argument, Set<String> variables) {
         if (argument instanceof WildcardElement wildcard) {
             List<? extends ClassElement> bounds = wildcard.getUpperBounds();
-            return bounds.isEmpty() ? argument : bound(bounds.get(0));
+            return bounds.isEmpty() ? ref(argument, AnnotationMetadata.EMPTY_METADATA, variables)
+                    : argument(bounds.get(0), variables);
         }
         if (argument instanceof GenericPlaceholderElement placeholder) {
             List<? extends ClassElement> bounds = placeholder.getBounds();
-            return bounds.isEmpty() ? argument : bound(bounds.get(0));
+            if (bounds.isEmpty()) {
+                return ref(argument, AnnotationMetadata.EMPTY_METADATA, variables);
+            }
+            if (variables.contains(placeholder.getVariableName())) {
+                ClassElement bound = bounds.get(0);
+                reachable.put(bound.getName(), erased(bound));
+                return new TypeRef(bound.getName(), List.of(), Nullability.UNKNOWN, bound.isPrimitive(), false);
+            }
+            return argument(bounds.get(0), with(variables, placeholder.getVariableName()));
         }
-        return argument;
+        return ref(argument, AnnotationMetadata.EMPTY_METADATA, variables);
+    }
+
+    // what the rules ask of a reached type is its erasure: Micronaut resolves the type arguments of a type variable that is
+    // bound by itself (T extends Comparable<T>) without end when it is asked whether such a type is assignable
+    private static ClassElement erased(ClassElement element) {
+        ClassElement current = element;
+        for (int i = 0; i < 16; i++) {
+            if (current instanceof GenericPlaceholderElement placeholder && !placeholder.getBounds().isEmpty()) {
+                current = placeholder.getBounds().get(0);
+            } else if (current instanceof WildcardElement wildcard && !wildcard.getUpperBounds().isEmpty()) {
+                current = wildcard.getUpperBounds().get(0);
+            } else {
+                break;
+            }
+        }
+        // a primitive and a type without arguments are their own erasure
+        return current.isPrimitive() || current.getBoundGenericTypes().isEmpty() ? current : current.getRawClassElement();
+    }
+
+    private static Set<String> with(Set<String> variables, String name) {
+        Set<String> result = new LinkedHashSet<>(variables);
+        result.add(name);
+        return result;
     }
 
     private static AnnotationView view(@Nullable AnnotationMetadata metadata) {
@@ -293,7 +331,7 @@ final class ElementTypeModel implements TypeModel {
         @Override
         public List<TypeRef> typeArgumentsOf(String supertypeBinaryName) {
             return element.getTypeArguments(supertypeBinaryName).values().stream()
-                    .map(it -> ref(bound(it), AnnotationMetadata.EMPTY_METADATA))
+                    .map(it -> argument(it, Set.of()))
                     .toList();
         }
 

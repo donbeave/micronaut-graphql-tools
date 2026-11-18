@@ -251,6 +251,26 @@ public interface IntroducedQuery {
         result.findings == ['[unbound-resolver-method] example.IntroducedQuery#stray()']
     }
 
+    def "a type variable that is bound by itself is read as its bound, not followed for ever: #member"() {
+        when:
+        def result = compilation('''
+@GraphQLRootResolver
+public class QueryResolver<T extends Comparable<T>> {
+''' + member + '''
+}''').compile()
+
+        then:
+        result.findings == []
+
+        where:
+        member << [
+                'public <E extends Enum<E>> List<E> version() { return null; }',
+                'public List<T> books(String genre) { return null; }',
+                'public T book(String id) { return null; }',
+                'public Map<String, List<? extends Comparable<?>>> version() { return null; }',
+        ]
+    }
+
     def "an unreachable type is not a compile-time finding: reachability is whole-program, a check of the startup (#83)"() {
         when:
         def result = compilation('''
