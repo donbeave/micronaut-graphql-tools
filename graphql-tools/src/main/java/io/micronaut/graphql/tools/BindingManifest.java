@@ -36,7 +36,8 @@ import java.util.function.Supplier;
  *     <li>{@code Type.field(arg: T): T → root|resolver|property · <member> · <declared type> · <converted type>}, where
  *     the member is {@code Class#method(parameter types)} and the converted type is the declared type without
  *     {@code CompletionStage}, {@code Publisher} (subscription fields), {@code DataFetcherResult} (also per list
- *     element) and {@code Optional}, unwrapped once in that order</li>
+ *     element) and {@code Optional}, unwrapped once in that order; the primitive optionals
+ *     ({@code OptionalInt}, {@code OptionalLong}, {@code OptionalDouble}) are unwrapped as well</li>
  *     <li>{@code Abstract/Member → resolves · <Java type> · - · -}</li>
  *     <li>{@code Enum.VALUE → enumValue · <Java enum>#VALUE · - · -}</li>
  *     <li>{@code Input.field: T → inputField · <Java type>#property · <declared type> · <converted type>}</li>

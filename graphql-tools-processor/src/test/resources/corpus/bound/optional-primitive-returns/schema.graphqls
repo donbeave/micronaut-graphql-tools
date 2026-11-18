@@ -1,0 +1,12 @@
+scalar Long
+
+schema {
+  query: Query
+}
+
+type Query {
+  count: Int
+  big: Long
+  ratio: Float
+  counts: [Int]
+}

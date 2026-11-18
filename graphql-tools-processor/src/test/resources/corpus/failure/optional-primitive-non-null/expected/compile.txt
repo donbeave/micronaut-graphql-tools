@@ -1,0 +1,1 @@
+UnsupportedReturnTypeException Query.count schema.graphqls:6:3

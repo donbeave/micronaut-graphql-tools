@@ -8,6 +8,8 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 
+import java.util.OptionalDouble
+import java.util.OptionalInt
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
@@ -97,5 +99,21 @@ class ReturnTypesQueries {
 
     Scalars scalars() {
         return new Scalars()
+    }
+
+    OptionalInt primitiveCount() {
+        return OptionalInt.of(7)
+    }
+
+    OptionalInt primitiveAbsentCount() {
+        return OptionalInt.empty()
+    }
+
+    OptionalDouble primitiveRatio() {
+        return OptionalDouble.of(0.5d)
+    }
+
+    List<OptionalInt> primitiveCounts() {
+        return [OptionalInt.of(1), OptionalInt.empty(), OptionalInt.of(3)]
     }
 }

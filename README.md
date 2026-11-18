@@ -93,13 +93,15 @@ containers graphql-java resolves at runtime, outermost first and each at most on
   type and allowed nowhere else; the wrappers below then apply to each event;
 - `DataFetcherResult<T>`, for the field or each list element; its errors and local context are applied;
 - `Optional<T>`, for the field or each list element, and only where the GraphQL type is nullable (an empty
-  `Optional` becomes `null`).
+  `Optional` becomes `null`);
+- `OptionalInt`, `OptionalLong` or `OptionalDouble`, under the same rules, mapped to `Int`, `Long` or `Float`.
 
 The mapping then checks `T`. Anything else fails at startup with `UnsupportedReturnTypeException`. In particular:
 
 - `List<CompletionStage<T>>` is rejected: graphql-java does not wait for futures inside a list, and the client would
   receive the future's `toString()`. Return `CompletionStage<List<T>>` instead.
-- `Optional<T>` on a non-null type (`String!`, `[String!]`) is rejected.
+- `Optional<T>`, `OptionalInt`, `OptionalLong` and `OptionalDouble` on a non-null type (`String!`, `[String!]`) are
+  rejected.
 - A field of the subscription type must return a `Publisher` (optionally inside a `CompletionStage`); otherwise the
   startup fails (graphql-java would fail only on the first subscription request). A `Publisher` on any other field,
   or inside a list, is rejected.
