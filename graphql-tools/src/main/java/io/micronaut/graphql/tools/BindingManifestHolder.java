@@ -15,7 +15,10 @@
  */
 package io.micronaut.graphql.tools;
 
+import graphql.schema.GraphQLSchema;
+import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.inject.BeanDefinition;
 import jakarta.inject.Singleton;
 
 import java.util.NoSuchElementException;
@@ -27,13 +30,23 @@ import java.util.NoSuchElementException;
 @Singleton
 public final class BindingManifestHolder {
 
+    private final BeanContext beanContext;
     private BindingManifest bindingManifest;
+
+    BindingManifestHolder(BeanContext beanContext) {
+        this.beanContext = beanContext;
+    }
 
     BindingManifest get() {
         if (bindingManifest == null) {
+            BeanDefinition<?> competitor = LibraryBeanSelection.competitor(beanContext, GraphQLSchema.class);
+            if (competitor != null) {
+                throw new NoSuchElementException("There is no binding manifest: the library did not bind a schema, because the "
+                        + "application provides " + LibraryBeanSelection.describe(competitor) + ", which the library does not "
+                        + "bind. Remove that bean, or give it a qualifier such as @Named, to let the library bind its schema");
+            }
             throw new NoSuchElementException("There is no binding manifest: the schema is not bound yet, "
-                    + "the application provides its own GraphQLSchema bean, which the library does not bind, or the "
-                    + "manifest is not recorded (set " + GraphQLToolsConfiguration.PREFIX + ".manifest.record to true)");
+                    + "or the manifest is not recorded (set " + GraphQLToolsConfiguration.PREFIX + ".manifest.record to true)");
         }
         return bindingManifest;
     }

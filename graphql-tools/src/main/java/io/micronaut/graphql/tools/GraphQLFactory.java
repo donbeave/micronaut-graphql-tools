@@ -24,6 +24,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
@@ -34,10 +35,12 @@ import java.util.Objects;
 
 /**
  * Creates the {@link GraphQLSchema} bound from the application's {@link TypeDefinitionRegistry} and the
- * {@link GraphQL} bean that runs it. Each of them steps aside when the application provides a bean of that type: an
- * application that builds its own {@code GraphQL} (instrumentation, execution strategies, transport) consumes the
- * library's {@code GraphQLSchema} bean, and an application that provides its own {@code GraphQLSchema} gets no
- * binding from the library at all.
+ * {@link GraphQL} bean that runs it. Each of them steps aside when the application provides an unqualified or
+ * {@code @Primary} bean of that type: an application that builds its own {@code GraphQL} (instrumentation, execution
+ * strategies, transport) consumes the library's {@code GraphQLSchema} bean, and an application that provides its own
+ * {@code GraphQLSchema} gets no binding from the library at all. A bean with a qualifier (for example
+ * {@code @Named("admin")}) does not make them step aside; the library's beans are {@code @Primary}, so an unqualified
+ * injection point still gets them.
  *
  * @author Alexey Zhokhov
  */
@@ -47,7 +50,8 @@ public final class GraphQLFactory {
 
     @Bean
     @Singleton
-    @Requires(missingBeans = GraphQLSchema.class)
+    @Primary
+    @Requires(condition = LibraryBeanSelection.NoCompetingSchema.class)
     public GraphQLSchema graphQLSchema(ApplicationContext applicationContext,
                                        GraphQLResolversRegistry graphQLResolversRegistry,
                                        TypeDefinitionRegistry typeDefinitionRegistry,
@@ -106,7 +110,8 @@ public final class GraphQLFactory {
 
     @Bean
     @Singleton
-    @Requires(missingBeans = GraphQL.class)
+    @Primary
+    @Requires(condition = LibraryBeanSelection.NoCompetingGraphQL.class)
     public GraphQL graphQL(GraphQLSchema graphQLSchema, List<GraphQLBuilderCustomizer> graphQLBuilderCustomizers) {
         GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema);
         graphQLBuilderCustomizers.forEach(customizer -> customizer.customize(builder));
