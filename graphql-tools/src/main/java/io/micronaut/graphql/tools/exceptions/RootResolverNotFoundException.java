@@ -15,15 +15,16 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 /**
  * @author Alexey Zhokhov
  */
-public final class RootResolverNotFoundException extends RuntimeException {
+public final class RootResolverNotFoundException extends SchemaBindingException {
 
     public RootResolverNotFoundException() {
-        super(
+        super(BindingCode.ROOT_RESOLVER_NOT_FOUND,
                 String.format(
                         "No any root resolvers found. Create one or ensure the class is annotated with %s.",
                         GraphQLRootResolver.class.getName()

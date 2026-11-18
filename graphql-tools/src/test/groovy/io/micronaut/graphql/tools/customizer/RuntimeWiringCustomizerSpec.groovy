@@ -129,7 +129,7 @@ scalar Long
                     "scalar Long (${ReplaceScalarAndTypeResolver.name})".toString(),
                     "type resolver of Payload (${ReplaceScalarAndTypeResolver.name})".toString(),
             ]
-            assert e.cause.message == """RuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library wired:
+            assert e.cause.message == """[runtime-wiring-override] RuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library wired:
   data fetcher of Query.hello (${ReplaceFetchers.name})
   default data fetcher of Item (${ReplaceFetchers.name})
   wiring factory (${ReplaceFetchers.name})

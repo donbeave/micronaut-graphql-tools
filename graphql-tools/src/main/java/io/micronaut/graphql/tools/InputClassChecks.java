@@ -26,6 +26,7 @@ import graphql.language.InputValueDefinition;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.model.JClass;
 import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules;
 import io.micronaut.graphql.tools.binding.internal.rules.InputVerdict;
@@ -83,7 +84,7 @@ final class InputClassChecks {
         ignoredInputProperties.forEach(manifestRecorder::ignored);
 
         unmappedInputProperties.values().forEach(entry -> entry.getValue().forEach(property ->
-                manifestRecorder.diagnostic("unbound", entry.getKey().getTypeName() + "#" + property)));
+                manifestRecorder.diagnostic(BindingCode.UNMAPPED_INPUT_PROPERTY, entry.getKey().getTypeName() + "#" + property)));
 
         if (failOnUnmappedProperties && !unmappedInputProperties.isEmpty()) {
             throw new UnmappedInputPropertiesException(unmappedInputProperties);

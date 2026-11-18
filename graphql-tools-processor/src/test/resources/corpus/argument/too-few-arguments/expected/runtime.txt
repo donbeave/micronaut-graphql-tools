@@ -1,1 +1,1 @@
-IncorrectArgumentCountException Query.username schema.graphqls:6:3
+argument-mismatch Query.username schema.graphqls:6:3

@@ -1,1 +1,1 @@
-MethodNotFoundException Book.isbn schema.graphqls:11:3
+field-not-bound Book.isbn schema.graphqls:11:3

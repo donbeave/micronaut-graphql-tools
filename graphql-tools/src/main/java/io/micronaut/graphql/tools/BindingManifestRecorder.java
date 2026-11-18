@@ -30,6 +30,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
 import io.micronaut.graphql.tools.binding.internal.plan.BindingPlan;
 
@@ -143,11 +144,11 @@ final class BindingManifestRecorder {
                 () -> ReturnTypes.convertedTypeName(property.asArgument(), false, false)));
     }
 
-    void diagnostic(String kind, String... parts) {
+    void diagnostic(BindingCode code, String... parts) {
         if (!recording) {
             return;
         }
-        diagnostics.add(ManifestRenderer.diagnostic(kind, parts));
+        diagnostics.add(ManifestRenderer.diagnostic(code.code(), parts));
     }
 
     void ignored(String member) {

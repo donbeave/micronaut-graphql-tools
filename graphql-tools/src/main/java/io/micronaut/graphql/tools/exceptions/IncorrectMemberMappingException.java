@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
@@ -43,7 +44,7 @@ public final class IncorrectMemberMappingException extends AbstractMappingExcept
     public IncorrectMemberMappingException(MappingContext mappingContext, String abstractTypeKind,
                                            String abstractTypeName, Class<?> declaredClass, String objectTypeName,
                                            Class<?> memberClass) {
-        super(
+        super(BindingCode.INCORRECT_MEMBER_MAPPING,
                 String.format(
                         "The %s %s is returned as %s, but its object type %s is mapped to %s, and no object can be an "
                                 + "instance of both %s and %s, so no object the field returns can resolve to %s. Map "

@@ -32,7 +32,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The field is mapped to a built-in class, when required an instance of Iterable interface.
+        e.cause.message == """[incorrect-class-mapping] The field is mapped to a built-in class, when required an instance of Iterable interface.
   GraphQL coordinate: Query.testString (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: testString

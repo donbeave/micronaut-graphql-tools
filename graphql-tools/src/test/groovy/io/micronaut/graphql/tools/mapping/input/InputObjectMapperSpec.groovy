@@ -133,7 +133,7 @@ input RegistrationInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InputFieldNotSettableException
-        e.cause.message.startsWith('The input field RegistrationInput.displayName cannot be set')
+        e.cause.message.startsWith('[input-field-not-settable] The input field RegistrationInput.displayName cannot be set')
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '.*')

@@ -51,7 +51,7 @@ enum Genre {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidSchemaCoordinateException
-        e.cause.message == "Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
+        e.cause.message == "[unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
         e.cause.problems == [problem]
 
         where:
@@ -76,7 +76,7 @@ enum Genre {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidSchemaCoordinateException
-        e.cause.message == """Invalid @GraphQLSchemaCoordinate declarations:
+        e.cause.message == """[unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:
   1) @GraphQLSchemaCoordinate("Book.summary") on ${SeveralResolver.name} summaryText(${Book.name} book): the field name summary differs from the method name summaryText.
   2) @GraphQLSchemaCoordinate("Book.synopsis") on ${SeveralResolver.name} synopsis(${Book.name} book): the type Book has no field synopsis."""
     }
