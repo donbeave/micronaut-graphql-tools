@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ExecutorService
-import java.util.function.Supplier
 
 @CompileStatic
 @Singleton
@@ -31,12 +30,12 @@ class BookSellerDataLoader implements MappedBatchLoader<String, List<BookSeller>
 
     @Override
     CompletionStage<Map<String, List<BookSeller>>> load(Set<String> keys) {
-        return CompletableFuture.supplyAsync({
+        return CompletableFuture.<Map<String, List<BookSeller>>> supplyAsync(() -> {
             Map<String, List<BookSeller>> grouped = bookSellerRepository.findAllByBookIds(keys).groupBy { it.bookId }
             LOG.info('Loaded book sellers')
             Map<String, List<BookSeller>> result = [:]
             keys.each { String id -> result.put(id, grouped.getOrDefault(id, Collections.<BookSeller> emptyList())) }
             result
-        } as Supplier<Map<String, List<BookSeller>>>, executor)
+        }, executor)
     }
 }

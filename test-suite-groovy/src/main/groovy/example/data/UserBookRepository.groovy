@@ -17,7 +17,7 @@ class UserBookRepository {
     }
 
     void addBook(User user, Book book) {
-        List<Book> books = STATE.computeIfAbsent(user.id) { Long k -> new ArrayList<Book>() }
+        List<Book> books = STATE.computeIfAbsent(user.id, (Long k) -> new ArrayList<Book>())
         if (books.contains(book)) {
             throw new DuplicateException()
         }
