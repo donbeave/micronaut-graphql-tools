@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * What every Gradle sample proves (D-39, CT-WIRING): the option reaches the compiler, a schema edit reruns the compile
+ * What every Gradle sample proves: the option reaches the compiler, a schema edit reruns the compile
  * task, a drifted class fails with its code and coordinate, a missing option fails, and {@code checks=false} compiles
  * with one note. The specs assert what a build prints and which tasks ran, never an internal of the visitor.
  */
@@ -58,7 +58,7 @@ abstract class GradleSampleContract {
         return new String[0];
     }
 
-    /** Whether the cache entry of the checked task is valid at another project path (D-39 3.3: javac only). */
+    /** Whether the cache entry of the checked task is valid at another project path (javac only: the others take the absolute path as an input). */
     boolean relocatable() {
         return false;
     }

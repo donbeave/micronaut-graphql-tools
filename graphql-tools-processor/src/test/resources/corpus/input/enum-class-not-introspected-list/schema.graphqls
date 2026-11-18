@@ -1,0 +1,12 @@
+schema {
+  query: Query
+}
+
+type Query {
+  paint(colors: [Color!]!): Int
+}
+
+enum Color {
+  RED
+  GREEN
+}

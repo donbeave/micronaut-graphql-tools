@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * What every Maven sample proves (D-39, CT-WIRING): the option reaches the compiler, a drifted class fails {@code mvn
+ * What every Maven sample proves: the option reaches the compiler, a drifted class fails {@code mvn
  * verify} with its code and coordinate, a missing option fails, and {@code checks=false} compiles with one note. Maven does
  * not track the schema directory: the compiler plugin of a Java project treats the classes as up to date after a schema
  * edit, so the documented rule is {@code mvn clean verify}; what each build does without {@code clean} is recorded.

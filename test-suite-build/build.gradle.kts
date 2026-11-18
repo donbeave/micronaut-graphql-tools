@@ -82,6 +82,9 @@ abstract class StageSampleRepository : DefaultTask() {
                 Files.copy(jar, copy)
                 return
             }
+            if (jsr269.none { zip.getEntry(it) != null }) {
+                throw GradleException("$jar registers neither the visitor nor the JSR-269 processor: the registration format changed, so update stageSampleRepository (or delete it, if #291 landed)")
+            }
             ZipOutputStream(Files.newOutputStream(copy)).use { out ->
                 zip.entries().asSequence().filter { it.name !in jsr269 }.forEach { entry ->
                     out.putNextEntry(ZipEntry(entry.name))
@@ -150,7 +153,7 @@ tasks.test {
 }
 
 apply(from = rootProject.file("config/spotless.license.gradle"))
-// The sample sources carry the header too (D-44); the standard targets cover src/ only.
+// The sample sources carry the header too; the standard targets cover src/ only.
 extensions.configure<com.diffplug.gradle.spotless.SpotlessExtension>("spotless") {
     format("samples") {
         target("samples/**/src/*/java/**/*.java", "samples/**/src/*/groovy/**/*.groovy", "samples/**/src/*/kotlin/**/*.kt")

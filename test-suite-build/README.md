@@ -6,8 +6,8 @@ Gradle project `:test-suite-build`, folder `test-suite-build/`. Not published.
 
 The proof that the build wiring of the compile-time checks works. Each sample is a small project that applies
 `micronaut-graphql-tools-processor` the way a consumer's build does, and a spec builds it with Gradle TestKit or Maven
-against the library published to `build/repo`. The tagged regions of the sample build files (`tag::schema-dirs[]`, ...)
-are the snippets that the compile-time guide page (#12) includes, so a documented snippet is one that a spec has built.
+against the library published to `build/repo`. The tagged regions of the sample build files (`// tag::schema-dirs[]`, ...) are the
+snippets that the compile-time guide page (#12) includes, so a documented snippet is one that a spec has built.
 
 ## Responsibility
 
@@ -27,7 +27,7 @@ are the snippets that the compile-time guide page (#12) includes, so a documente
   `annotationProcessorArgs` to the `kapt` execution of `kotlin-maven-plugin`; Groovy puts the processor on the `provided`
   scope and sets the option as a system property of the Maven JVM with `properties-maven-plugin`. The library comes from
   `build/repo` as a snapshot repository, and the library BOM manages the processor version.
-- `src/test/java/.../buildtools`: `GradleSampleContract` is what every Gradle sample must show: the option arrives (the
+- `src/test/java/.../build`: `GradleSampleContract` is what every Gradle sample must show: the option arrives (the
   visitor's summary note names the schema directory), a schema edit reruns the compile task, a drifted class fails with
   `[code] coordinate` and the schema location, a missing option fails with `processor-schema-not-configured`,
   `checks=false` compiles with one note, and the build cache outcome of a clean rebuild and of a relocated project is
@@ -62,8 +62,7 @@ Nothing here is a library API.
 
 ## Build and test
 
-JDK 25 (the CI job's JDK) or 21 and `mvn` on the path (`mise install` installs both); the specs need the network (the plugin
-portal and Maven Central) and take several minutes.
+JDK 25 (the CI job's JDK) or 21 and `mvn` on the path (`mise install` installs both); the specs need the network (the plugin portal and Maven Central) and take a few minutes.
 
 ```
 ./gradlew :test-suite-build:buildToolsTest

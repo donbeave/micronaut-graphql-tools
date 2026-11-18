@@ -49,6 +49,11 @@ class MultiModuleGradleSampleTest extends GradleSampleContract {
         return "feature/build.gradle.kts";
     }
 
+    @Override
+    boolean relocatable() {
+        return true;
+    }
+
     @Test
     void aSchemaEditRecompilesTheResolverModuleAndNotTheApplication() {
         GradleSample sample = GradleSample.copyOf(sample(), "schema-edit-modules");
