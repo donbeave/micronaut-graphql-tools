@@ -29,6 +29,7 @@ final class CorpusCase {
 
     static final String PROPERTIES = 'case.properties'
     static final String EXPECTED = 'expected'
+    static final String JAR = 'jar'
     static final List<String> EXPECTED_FILES = ['runtime.txt', 'compile.txt', 'manifest.txt']
     static final Set<String> PROPERTY_KEYS = ['description', 'tags', 'environments'] as Set<String>
     static final String CONFIG_PREFIX = 'config.'
@@ -75,6 +76,12 @@ final class CorpusCase {
 
     List<Path> schemaFiles() {
         return list(dir).findAll { Files.isRegularFile(it) && it.fileName.toString().endsWith('.graphqls') }
+    }
+
+    /** @return the schema files that the case puts in a dependency jar, under {@code graphql/}, read through {@code classpath*:} */
+    List<Path> jarSchemaFiles() {
+        Path jar = dir.resolve(JAR)
+        return Files.isDirectory(jar) ? list(jar).findAll { Files.isRegularFile(it) && it.fileName.toString().endsWith('.graphqls') } : []
     }
 
     /** @return the languages of the case, in the order of {@link Language} */
@@ -144,10 +151,13 @@ final class CorpusCase {
         list(dir).each { Path entry ->
             String file = entry.fileName.toString()
             boolean known = file == PROPERTIES || file == EXPECTED || languageDirs.contains(file) && Files.isDirectory(entry) ||
-                    Files.isRegularFile(entry) && file.endsWith('.graphqls')
+                    file == JAR && Files.isDirectory(entry) || Files.isRegularFile(entry) && (file.endsWith('.graphqls') || file.endsWith('.graphql'))
             if (!known) {
-                problems.add("orphan entry '${file}' (a case holds ${PROPERTIES}, *.graphqls, ${languageDirs.join('/')} and ${EXPECTED})".toString())
+                problems.add("orphan entry '${file}' (a case holds ${PROPERTIES}, *.graphqls, *.graphql operation files, ${JAR}/, ${languageDirs.join('/')} and ${EXPECTED})".toString())
             }
+        }
+        if (Files.isDirectory(dir.resolve(JAR)) && jarSchemaFiles().empty) {
+            problems.add("${JAR}/ has no *.graphqls schema file".toString())
         }
         if (schemaFiles().empty) {
             problems.add('no *.graphqls schema file')

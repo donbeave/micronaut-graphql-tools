@@ -2,9 +2,6 @@ package io.micronaut.graphql.tools.corpus
 
 import graphql.GraphQL
 import graphql.language.SourceLocation
-import graphql.parser.MultiSourceReader
-import graphql.schema.idl.SchemaParser
-import graphql.schema.idl.TypeDefinitionRegistry
 import groovy.transform.CompileStatic
 import io.micronaut.context.ApplicationContext
 import io.micronaut.graphql.tools.BindingManifest
@@ -37,13 +34,9 @@ final class CorpusStartup {
     private CorpusStartup() {
     }
 
-    static Map<String, Object> start(Map<String, String> config, List<String> environments, List<String> schemaNames,
-                                     List<String> schemaTexts) {
-        TypeDefinitionRegistry registry = new TypeDefinitionRegistry()
-        schemaNames.eachWithIndex { String name, int index ->
-            registry.merge(new SchemaParser().parse(MultiSourceReader.newMultiSourceReader().string(schemaTexts[index], name).build()))
-        }
+    static Map<String, Object> start(Map<String, String> config, List<String> environments, List<String> schemaLocations) {
         Map<String, Object> properties = new LinkedHashMap<>(config)
+        properties.put('micronaut.graphql.tools.schema.locations', schemaLocations)
         properties.putIfAbsent('micronaut.graphql.tools.manifest.record', true)
         properties.putIfAbsent('micronaut.graphql.tools.eager-init', false)
         Map<String, Object> result = new LinkedHashMap<>()
@@ -52,7 +45,7 @@ final class CorpusStartup {
         ApplicationContext context = null
         try {
             // the start is guarded too: with eager-init=true the binding runs while the context starts
-            context = ApplicationContext.builder(properties, environments as String[]).singletons(registry).start()
+            context = ApplicationContext.builder(properties, environments as String[]).start()
             context.getBean(GraphQL)
             // the manifest bean cannot be read when the case turns recording off: a bound startup then has no manifest
             // (recorded = manifest.record or manifest.enabled, as ManifestConfiguration.isRecorded)

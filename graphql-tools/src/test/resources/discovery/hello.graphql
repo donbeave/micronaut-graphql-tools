@@ -1,0 +1,4 @@
+# client operation, not schema
+query Hello {
+  hello
+}

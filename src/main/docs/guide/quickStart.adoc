@@ -21,7 +21,7 @@ dependencies {
 }
 ----
 
-2. Define the GraphQL schema in a `schema.graphqls` file, for example in the `src/main/resources` folder:
+2. Define the GraphQL schema in `.graphqls` files in the `src/main/resources/graphql` folder. The library finds them at startup (see the Schema page), and a `schema { }` block is optional:
 +
 [source,graphql]
 ----
@@ -35,7 +35,7 @@ type Book {
 }
 ----
 
-3. Define a `TypeDefinitionRegistry` bean that loads the schema. Put the bean method in a class annotated with `@Factory` (`io.micronaut.context.annotation.Factory`):
+3. Optional: to load the schema yourself, define a `TypeDefinitionRegistry` bean. It is used instead of the discovered files, so the example loads its own file, `schema.graphqls` at the root of the classpath (a file in the default folder is `classpath:graphql/schema.graphqls`). Put the bean method in a class annotated with `@Factory` (`io.micronaut.context.annotation.Factory`):
 +
 snippet::example.graphql.GraphQLFactory[project-base="test-suite", source="main", tags="registry", indent="0"]
 

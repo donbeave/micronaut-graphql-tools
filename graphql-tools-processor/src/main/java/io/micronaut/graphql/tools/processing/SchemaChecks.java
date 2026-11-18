@@ -67,8 +67,8 @@ final class SchemaChecks {
         checkResolverDirectives();
         Optional<SchemaDefinition> schemaDefinition = registry.schemaDefinition();
         if (schemaDefinition.isEmpty()) {
-            problems.error("the schema has no schema definition (schema { query: ... }); the library needs one to "
-                    + "find the root operation types.");
+            problems.error("the schema has no schema definition (schema { query: ... }) and no Query type; "
+                    + "the library needs one to find the root operation types.");
             return false;
         }
         checkUnreachableTypes(schemaDefinition.get());
