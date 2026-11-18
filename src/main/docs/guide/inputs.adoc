@@ -31,6 +31,10 @@ The rules:
 * Every input field needs a property of the same name. The startup fails with `MethodNotFoundException` for a missing one, and with `InputFieldNotSettableException` for a read-only property that no constructor parameter of the same name takes.
 * In strict mode, a settable property that the input type does not define fails the startup (`UnmappedInputPropertiesException`).
 
+== Conversion errors
+
+A value that cannot be converted (see <<errors,Errors>>) is a GraphQL error with `extensions.code` `INPUT_CONVERSION_FAILED` that names the argument as `Type.field(argument)` and the path inside the value. The resolver is not called, the field is `null` and the other fields run.
+
 == Customization
 
 Customization goes through Micronaut `TypeConverter` beans and the scalar mapping, not through a mapper:

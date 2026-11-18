@@ -72,18 +72,19 @@ public final class ValueConverters {
     }
 
     /**
+     * @param scalarName        the name of the custom scalar
      * @param declared          a class of a custom scalar's input classes
      * @param conversionService converts a value that is not an instance of the class (the application's
      *                          {@code TypeConverter} beans are registered in it)
      * @return the converter: a value of the declared class passes as is
      */
-    public static ValueConverter scalar(Class<?> declared, ConversionService conversionService) {
+    public static ValueConverter scalar(String scalarName, Class<?> declared, ConversionService conversionService) {
         Class<?> boxed = WRAPPERS.getOrDefault(declared, declared);
         if (boxed == Object.class) {
             return IDENTITY;
         }
         Argument<?> target = Argument.of(boxed);
-        return value -> value == null || boxed.isInstance(value) ? value : convertOrFail(conversionService, value, target);
+        return value -> value == null || boxed.isInstance(value) ? value : convertOrFail(scalarName, conversionService, value, target);
     }
 
     /**
@@ -108,17 +109,24 @@ public final class ValueConverters {
                 return null;
             }
             if (!(value instanceof Collection<?> source)) {
-                throw new IllegalArgumentException("Expected a list, got " + value.getClass().getName());
+                throw new InputConversionException("expected a list", "Expected a list, got "
+                        + value.getClass().getName(), null);
             }
             Collection<Object> result = factory.apply(source.size());
-            if (source instanceof List<?> list) {
-                for (int i = 0, size = list.size(); i < size; i++) {
-                    result.add(converter == null ? list.get(i) : converter.convert(list.get(i)));
+            int index = 0;
+            try {
+                if (source instanceof List<?> list) {
+                    for (int size = list.size(); index < size; index++) {
+                        result.add(converter == null ? list.get(index) : converter.convert(list.get(index)));
+                    }
+                } else {
+                    for (Object item : source) {
+                        result.add(converter == null ? item : converter.convert(item));
+                        index++;
+                    }
                 }
-            } else {
-                for (Object item : source) {
-                    result.add(converter == null ? item : converter.convert(item));
-                }
+            } catch (InputConversionException e) {
+                throw e.within(index);
             }
             return result;
         };
@@ -143,18 +151,21 @@ public final class ValueConverters {
     }
 
     /**
+     * @param scalarName        the name of the scalar, for the error
      * @param conversionService the service to ask
      * @param value             the value to convert
      * @param target            the declared type
      * @return the converted value
-     * @throws IllegalArgumentException if no converter handles the pair
+     * @throws InputConversionException if no converter handles the pair
      */
     @Nullable
-    public static Object convertOrFail(ConversionService conversionService, Object value, Argument<?> target) {
+    public static Object convertOrFail(String scalarName, ConversionService conversionService, Object value,
+                                       Argument<?> target) {
         Optional<?> converted = conversionService.convert(value, target);
         if (converted.isEmpty()) {
-            throw new IllegalArgumentException("Cannot convert " + value.getClass().getName() + " `" + value
-                    + "` to " + target.getTypeString(false) + ": register a TypeConverter bean for the pair");
+            throw new InputConversionException("the value is not accepted by the scalar " + scalarName,
+                    "Cannot convert " + value.getClass().getName() + " `" + value + "` to "
+                            + target.getTypeString(false) + ": register a TypeConverter bean for the pair", null);
         }
         return converted.get();
     }

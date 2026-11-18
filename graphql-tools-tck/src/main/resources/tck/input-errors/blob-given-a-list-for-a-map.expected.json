@@ -1,0 +1,16 @@
+{
+  "data": { "fine": "fine", "blob": null },
+  "errors": [
+    {
+      "message": "Invalid value for argument Query.blob(data): the value is not accepted by the scalar Blob.",
+      "locations": [{ "line": 3, "column": 3 }],
+      "path": ["blob"],
+      "extensions": {
+        "code": "INPUT_CONVERSION_FAILED",
+        "coordinate": "Query.blob(data)",
+        "inputPath": [],
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

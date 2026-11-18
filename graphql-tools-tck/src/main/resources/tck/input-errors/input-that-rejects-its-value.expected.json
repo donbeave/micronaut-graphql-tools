@@ -1,0 +1,16 @@
+{
+  "data": { "guarded": null },
+  "errors": [
+    {
+      "message": "Invalid value for argument Query.guarded(guarded): the value could not be converted.",
+      "locations": [{ "line": 2, "column": 3 }],
+      "path": ["guarded"],
+      "extensions": {
+        "code": "INPUT_CONVERSION_FAILED",
+        "coordinate": "Query.guarded(guarded)",
+        "inputPath": [],
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

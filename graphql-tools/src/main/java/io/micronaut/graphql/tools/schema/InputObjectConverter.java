@@ -73,8 +73,8 @@ public final class InputObjectConverter implements ValueConverter {
             return value;
         }
         if (!(value instanceof Map<?, ?> map)) {
-            throw new IllegalArgumentException("Expected an input object for " + type.getName() + ", got "
-                    + value.getClass().getName());
+            throw new InputConversionException("expected an input object", "Expected an input object for "
+                    + type.getName() + ", got " + value.getClass().getName(), null);
         }
         Object bean;
         if (constructorDefaults.length == 0) {
@@ -178,7 +178,12 @@ public final class InputObjectConverter implements ValueConverter {
             if (raw == null && !map.containsKey(name)) {
                 return argumentValue ? ArgumentValue.omitted() : ABSENT;
             }
-            Object converted = raw == null || converter == null ? raw : converter.convert(raw);
+            Object converted;
+            try {
+                converted = raw == null || converter == null ? raw : converter.convert(raw);
+            } catch (InputConversionException e) {
+                throw e.within(name);
+            }
             if (argumentValue) {
                 return ArgumentValue.ofNullable(converted);
             }
