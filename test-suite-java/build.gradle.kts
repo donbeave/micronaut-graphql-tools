@@ -158,3 +158,19 @@ graalvmNative {
 // The native-image plugin builds every test binary's image classpath from `testRuntimeClasspath`, which has no
 // micronaut-serde: without this the image has no Serde bean definitions and selects JacksonDatabindMapper (#285).
 configurations.named("nativeImageSerdeTestClasspath") { extendsFrom(configurations.getByName(serdeTest.runtimeClasspathConfigurationName)) }
+
+// The schema index of the discovery test (SchemaDiscoveryTest): a native image cannot list a classpath directory, so the
+// wildcard location reads this file. The same task is in the Schema page of the guide.
+val graphqlSchemaIndex = tasks.register("graphqlSchemaIndex") {
+    val schemaFiles = fileTree("src/test/resources") { include("discovery/**/*.graphqls") }
+    val output = layout.buildDirectory.dir("generated/graphql-index")
+    inputs.files(schemaFiles).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(output)
+    doLast {
+        val index = output.get().file("META-INF/micronaut-graphql-tools/schema-index.txt").asFile
+        index.parentFile.mkdirs()
+        index.writeText(schemaFiles.files.map { it.relativeTo(file("src/test/resources")).invariantSeparatorsPath }
+            .sorted().joinToString("\n", prefix = "# GraphQL schema files\n", postfix = "\n"))
+    }
+}
+sourceSets.test { resources.srcDir(graphqlSchemaIndex) }

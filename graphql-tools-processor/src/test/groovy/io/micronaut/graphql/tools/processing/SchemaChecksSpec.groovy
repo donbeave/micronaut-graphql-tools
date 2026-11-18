@@ -131,14 +131,43 @@ public class Clock {
         result.graphqlErrors[0].startsWith('[graphql] the schema file schema.graphqls is not valid: ')
     }
 
-    void "a schema without a schema definition fails the compilation"() {
+    void "a schema without a schema definition and without a Query type fails the compilation"() {
+        when:
+        def result = compilation('type Mutation {\n  hello: String\n}\n').compile()
+
+        then:
+        !result.success
+        result.graphqlErrors == ['[graphql] the schema has no schema definition (schema { query: ... }) and no Query '
+                                         + 'type; the library needs one to find the root operation types.']
+    }
+
+    void "a schema without a schema definition uses the implicit root types"() {
         when:
         def result = compilation('type Query {\n  hello: String\n}\n').compile()
 
         then:
+        result.success
+        result.graphqlErrors.isEmpty()
+    }
+
+    void "a client operation file next to the schema is not read"() {
+        when:
+        def result = compilation(SCHEMA).schema('operations/hello.graphql', 'query Hello {\n  hello\n}\n').compile()
+
+        then:
+        result.success
+        result.graphqlErrors.isEmpty()
+    }
+
+    void "a schema directory whose files are all empty or operation-only fails and names the skipped files"() {
+        when:
+        def result = compilation('query Hello {\n  hello\n}\n').compile()
+
+        then:
         !result.success
-        result.graphqlErrors == ['[graphql] the schema has no schema definition (schema { query: ... }); the library '
-                                         + 'needs one to find the root operation types.']
+        result.graphqlErrors.size() == 1
+        result.graphqlErrors[0].contains('has no schema')
+        result.graphqlErrors[0].contains('schema.graphqls')
     }
 
     void "an unreachable object type fails the compilation with its coordinate, file and line"() {
@@ -358,7 +387,7 @@ type Query {
         def result = new Compilation()
                 .schema('schema.graphqls', 'schema {\n  query: Query\n}\n')
                 .schema('query/query.graphqls', 'type Query {\n  hello: String\n  report: Report\n}\n')
-                .schema('query/report.graphql', 'type Report {\n  title: String\n}\ntype Orphan {\n  x: Int\n}\n')
+                .schema('query/report.graphqls', 'type Report {\n  title: String\n}\ntype Orphan {\n  x: Int\n}\n')
                 .source('example.HelloQuery', REPORT_QUERY)
                 .source('example.Report', 'package example; @io.micronaut.graphql.tools.annotation.GraphQLType public class Report { public String getTitle() { return null; } }')
                 .compile()
@@ -367,7 +396,7 @@ type Query {
         !result.success
         result.graphqlErrors == ['[graphql] Orphan: the object type is unreachable: no field reachable from a root '
                                          + 'operation type returns it. Use it, remove it from the schema, or list it in '
-                                         + 'micronaut.graphql.tools.allowUnreachable. (query/report.graphql:4)']
+                                         + 'micronaut.graphql.tools.allowUnreachable. (query/report.graphqls:4)']
     }
 
     void "the processor claims the library and bean annotations, never *"() {

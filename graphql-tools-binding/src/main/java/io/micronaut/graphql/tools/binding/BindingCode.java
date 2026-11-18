@@ -193,6 +193,9 @@ public enum BindingCode {
     /** Failure: the schema cannot be loaded or merged. */
     SCHEMA_INVALID("schema-invalid", false, true,
             "The schema files cannot be parsed or merged."),
+    /** Failure: no schema file is found at the configured locations. */
+    SCHEMA_NOT_FOUND("schema-not-found", false, false,
+            "No schema file is found at the configured locations, or a location is invalid."),
     /** Failure: binding a field threw an exception the library does not know. */
     UNEXPECTED_BINDING_ERROR("unexpected-binding-error", false, false,
             "Binding a field failed with an unexpected exception; the cause is attached."),

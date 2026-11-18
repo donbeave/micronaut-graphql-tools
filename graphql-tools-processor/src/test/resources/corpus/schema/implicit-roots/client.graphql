@@ -1,0 +1,5 @@
+query Book {
+  book(id: "1") {
+    title
+  }
+}

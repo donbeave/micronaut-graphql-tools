@@ -66,9 +66,15 @@ enum Genre {
         model.subscriptionType().get() == 'Events'
     }
 
-    void "a registry without a schema definition has no model"() {
+    void "a registry without a schema definition and without a root type has no model"() {
         expect:
-        SchemaModel.load(new SchemaParser().parse('type Query { a: Int }')).isEmpty()
+        SchemaModel.load(new SchemaParser().parse('type Book { a: Int }')).isEmpty()
+    }
+
+    void "a registry without a schema definition takes the implicit root types"() {
+        expect:
+        SchemaModel.load(new SchemaParser().parse('type Query { a: Int } type Subscription { b: Int }')).get().rootTypes() ==
+                [query: 'Query', subscription: 'Subscription']
     }
 
     void "the model locates a coordinate in the source"() {

@@ -27,6 +27,7 @@ import graphql.language.TypeName;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanProperty;
@@ -77,7 +78,7 @@ final class InputTypeBinder {
     private final GraphQLToolsConfiguration configuration;
     private final CheckPolicy policy;
     private final BindingManifestRecorder manifestRecorder;
-    private final InputClassChecks inputClassChecks;
+    private final InputClassChecks.Builder inputClassChecks = new InputClassChecks.Builder();
     private final RuntimeTypeModel typeModel;
     private final ApplicationContext applicationContext;
     private final Callbacks callbacks;
@@ -90,17 +91,23 @@ final class InputTypeBinder {
     InputTypeBinder(TypeDefinitionRegistry typeDefinitionRegistry, ScalarMappings scalarMappings,
                     GraphQLToolsConfiguration configuration, CheckPolicy policy,
                     BindingManifestRecorder manifestRecorder,
-                    InputClassChecks inputClassChecks, RuntimeTypeModel typeModel,
+                    RuntimeTypeModel typeModel,
                     ApplicationContext applicationContext, Callbacks callbacks) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.scalarMappings = scalarMappings;
         this.configuration = configuration;
         this.policy = policy;
         this.manifestRecorder = manifestRecorder;
-        this.inputClassChecks = inputClassChecks;
         this.typeModel = typeModel;
         this.applicationContext = applicationContext;
         this.callbacks = callbacks;
+    }
+
+    /**
+     * @return what the binding found out about the input classes, an immutable snapshot of the input types bound so far
+     */
+    InputClassChecks inputClassChecks() {
+        return inputClassChecks.build();
     }
 
     private ValueConverter processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,
@@ -151,9 +158,10 @@ final class InputTypeBinder {
             );
         }
 
-        InputObjectConverter converter = new InputObjectConverter(beanIntrospection);
+        InputObjectConverter.Builder converter = InputObjectConverter.builder(beanIntrospection);
         ValueConverter custom = typeConverter(targetClass);
-        inputConverters.put(inputObjectTypeDefinition.getName(), custom != null ? custom : converter);
+        Forward forward = new Forward();
+        inputConverters.put(inputObjectTypeDefinition.getName(), forward);
         Set<String> mapped = new HashSet<>();
         Set<String> constructorArguments = Arrays.stream(beanIntrospection.getConstructorArguments())
                 .map(Argument::getName)
@@ -211,9 +219,11 @@ final class InputTypeBinder {
                 }
             }
         }
-        converter.seal();
+        ValueConverter built = custom != null ? custom : converter.build();
+        forward.target = built;
+        inputConverters.put(inputObjectTypeDefinition.getName(), built);
 
-        inputClassChecks.collectUnmappedInputProperties(inputObjectTypeDefinition,
+        inputClassChecks.collect(inputObjectTypeDefinition,
                 typeModel.of(beanIntrospection), beanIntrospection.getBeanType());
 
         manifestRecorder.type(inputObjectTypeDefinition.getName(), "input", targetClass);
@@ -389,6 +399,21 @@ final class InputTypeBinder {
 
         void processEnum(EnumTypeDefinition enumTypeDefinition, Class<?> targetClass, boolean input,
                          MappingContext mappingContext);
+    }
+
+    /**
+     * Stands for the converter of an input type while its fields are bound, so that a field that refers back to the type
+     * has one to hold. Set once, before the first request; the converter itself is immutable.
+     */
+    private static final class Forward implements ValueConverter {
+
+        private ValueConverter target;
+
+        @Override
+        @Nullable
+        public Object convert(@Nullable Object value) {
+            return target.convert(value);
+        }
     }
 
 }

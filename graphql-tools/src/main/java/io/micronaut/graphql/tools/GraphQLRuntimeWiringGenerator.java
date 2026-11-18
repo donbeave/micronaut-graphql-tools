@@ -115,7 +115,6 @@ final class GraphQLRuntimeWiringGenerator {
     private final GraphQLResolversRegistry graphQLResolversRegistry;
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final SchemaMappingDictionary schemaMappingDictionary;
-    private final InputClassChecks inputClassChecks;
     private final GraphQLToolsConfiguration configuration;
     private final CheckPolicy checkPolicy;
     private final ScalarMappings scalarMappings;
@@ -205,7 +204,6 @@ final class GraphQLRuntimeWiringGenerator {
         this.scalarMappings = new ScalarMappings(applicationContext.getBeansOfType(GraphQLScalarMapping.class),
                 manifestRecorder, applicationContext);
 
-        this.inputClassChecks = new InputClassChecks(checkPolicy);
         this.rootRuntimeWiringBuilder = RuntimeWiring.newRuntimeWiring()
                 .scalar(ExtendedScalars.GraphQLLong)
                 .scalar(ExtendedScalars.GraphQLShort)
@@ -213,7 +211,7 @@ final class GraphQLRuntimeWiringGenerator {
                 .scalar(ExtendedScalars.GraphQLBigInteger);
         scalarMappings.all().forEach(it -> rootRuntimeWiringBuilder.scalar(it.getScalarType()));
         this.inputTypeBinder = new InputTypeBinder(typeDefinitionRegistry, scalarMappings, configuration,
-                checkPolicy, manifestRecorder, inputClassChecks, typeModel, applicationContext, new InputCallbacks());
+                checkPolicy, manifestRecorder, typeModel, applicationContext, new InputCallbacks());
         this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,
@@ -261,7 +259,7 @@ final class GraphQLRuntimeWiringGenerator {
 
             throwBindingFailures();
 
-            inputClassChecks.checkCollected(manifestRecorder);
+            inputTypeBinder.inputClassChecks().checkCollected(checkPolicy, manifestRecorder);
 
             if (!ambiguities.bindings().isEmpty()) {
                 LOG.warn("{} is {}: fields that both a member of the Java type and a type resolver method can bind: {}",
@@ -273,7 +271,7 @@ final class GraphQLRuntimeWiringGenerator {
 
             objectTypeWirings.values().forEach(it -> rootRuntimeWiringBuilder.type(it.build()));
 
-            Set<String> implementedInterfaces = abstractTypeWiring.wireInterfaces(processedTypes);
+            Set<String> implementedInterfaces = abstractTypeWiring.wireInterfaces(snapshot(processedTypes));
 
             abstractTypeWiring.checkAmbiguity();
 
@@ -321,6 +319,7 @@ final class GraphQLRuntimeWiringGenerator {
             allowedTypes.addAll(unboundTypes);
         }
 
+        Map<String, Class<?>> processed = snapshot(processedTypes);
         if (checks.enabled(BindingCode.UNBOUND_RESOLVER_METHOD)) {
             Set<String> accountedMethods = new HashSet<>(resolverBindings.keySet());
             accountedMethods.addAll(ambiguities.shadowedResolverMethods());
@@ -333,10 +332,10 @@ final class GraphQLRuntimeWiringGenerator {
             checks.rootMethodsOfSeveralOperationTypes(rootMethodBindings);
         }
         if (checks.enabled(BindingCode.UNBOUND_ENUM_CONSTANT) || recording) {
-            checks.unboundEnumConstants(snapshot(processedTypes), typeDefinitionRegistry, typeModel);
+            checks.unboundEnumConstants(processed, typeDefinitionRegistry, typeModel);
         }
         if (checks.enabled(BindingCode.UNUSED_DICTIONARY_ENTRY)) {
-            checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processedTypes.keySet(), allowedTypes);
+            checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processed.keySet(), allowedTypes);
         }
         if (checks.enabled(BindingCode.INTERFACE_READ_THROUGH_IMPLEMENTATION)) {
             checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);

@@ -25,24 +25,30 @@ import io.micronaut.graphql.tools.binding.internal.rules.InputVerdict;
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+/**
+ * What the input-type binding phase found out about the input classes: the result the phase returns and the generator
+ * reads. Immutable.
+ *
+ * @param unmappedInputProperties the properties no input field maps to, by input type name
+ * @param ignoredInputProperties  the properties marked as ignored
+ */
 @Internal
-final class InputClassChecks {
+record InputClassChecks(Map<String, Map.Entry<Class<?>, List<String>>> unmappedInputProperties,
+                        Set<String> ignoredInputProperties) {
 
-    private final CheckPolicy policy;
-    private final Map<String, Map.Entry<Class<?>, List<String>>> unmappedInputProperties = new TreeMap<>();
-    private final Set<String> ignoredInputProperties = new TreeSet<>();
-
-    InputClassChecks(CheckPolicy policy) {
-        this.policy = policy;
+    InputClassChecks {
+        unmappedInputProperties = Collections.unmodifiableSortedMap(new TreeMap<>(unmappedInputProperties));
+        ignoredInputProperties = Collections.unmodifiableSortedSet(new TreeSet<>(ignoredInputProperties));
     }
 
-    void checkCollected(BindingManifestRecorder manifestRecorder) {
+    void checkCollected(CheckPolicy policy, BindingManifestRecorder manifestRecorder) {
         ignoredInputProperties.forEach(manifestRecorder::ignored);
 
         if (!policy.enabled(BindingCode.UNMAPPED_INPUT_PROPERTY)) {
@@ -74,15 +80,27 @@ final class InputClassChecks {
                 .toList());
     }
 
-    void collectUnmappedInputProperties(InputObjectTypeDefinition inputObjectTypeDefinition, JClass inputClass,
-                                        Class<?> beanType) {
-        InputVerdict verdict = InputTypeRules.check(inputObjectTypeDefinition.getInputValueDefinitions().stream()
-                .map(InputValueDefinition::getName)
-                .toList(), inputClass);
-        ignoredInputProperties.addAll(verdict.ignoredProperties());
-        if (!verdict.unmappedProperties().isEmpty()) {
-            unmappedInputProperties.put(inputObjectTypeDefinition.getName(),
-                    Map.entry(beanType, verdict.unmappedProperties()));
+    /**
+     * Collects the findings while the input types are bound. Owned by the binder; only {@link #build()} leaves it.
+     */
+    static final class Builder {
+
+        private final Map<String, Map.Entry<Class<?>, List<String>>> unmapped = new TreeMap<>();
+        private final Set<String> ignored = new TreeSet<>();
+
+        void collect(InputObjectTypeDefinition inputObjectTypeDefinition, JClass inputClass, Class<?> beanType) {
+            InputVerdict verdict = InputTypeRules.check(inputObjectTypeDefinition.getInputValueDefinitions().stream()
+                    .map(InputValueDefinition::getName)
+                    .toList(), inputClass);
+            ignored.addAll(verdict.ignoredProperties());
+            if (!verdict.unmappedProperties().isEmpty()) {
+                unmapped.put(inputObjectTypeDefinition.getName(),
+                        Map.entry(beanType, List.copyOf(verdict.unmappedProperties())));
+            }
+        }
+
+        InputClassChecks build() {
+            return new InputClassChecks(unmapped, ignored);
         }
     }
 

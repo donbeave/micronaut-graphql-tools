@@ -6,6 +6,8 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQL
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$InputConfiguration.adoc[]
 
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$SchemaConfiguration.adoc[]
+
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$ManifestConfiguration.adoc[]
 
 == Check severity

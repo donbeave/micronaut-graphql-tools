@@ -22,6 +22,7 @@ import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.InterfaceTypeDefinition;
 import graphql.language.Node;
+import graphql.language.SchemaDefinition;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.OperationTypeDefinition;
 import graphql.language.SourceLocation;
@@ -54,16 +55,19 @@ public record SchemaModel(TypeDefinitionRegistry registry, Map<String, String> r
      * Reads the root operation types of a schema.
      *
      * @param registry the schema
-     * @return the model, or empty when the schema has no {@code schema} definition
+     * @return the model, or empty when the schema has neither a {@code schema} definition nor an implicit root type
      */
     public static Optional<SchemaModel> load(TypeDefinitionRegistry registry) {
-        return registry.schemaDefinition().map(definition -> {
-            Map<String, String> roots = new TreeMap<>();
-            for (OperationTypeDefinition operation : definition.getOperationTypeDefinitions()) {
-                roots.putIfAbsent(operation.getName(), operation.getTypeName().getName());
-            }
-            return new SchemaModel(registry, roots);
-        });
+        Optional<SchemaDefinition> definition = registry.schemaDefinition();
+        if (definition.isEmpty()) {
+            Map<String, String> implicit = SchemaSources.implicitRoots(registry);
+            return implicit.isEmpty() ? Optional.empty() : Optional.of(new SchemaModel(registry, implicit));
+        }
+        Map<String, String> roots = new TreeMap<>();
+        for (OperationTypeDefinition operation : definition.get().getOperationTypeDefinitions()) {
+            roots.putIfAbsent(operation.getName(), operation.getTypeName().getName());
+        }
+        return Optional.of(new SchemaModel(registry, roots));
     }
 
     /**
