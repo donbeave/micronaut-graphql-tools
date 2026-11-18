@@ -569,21 +569,16 @@ public record Book(String title, Genre genre) implements SearchResult {
                                             + 'is java.lang.String. (schema.graphqls:6)']
     }
 
-    void "input.detectOmission reads booleans as Micronaut does: '#value'"() {
+    void "the removed option input.detectOmission is an unknown option"() {
         when:
-        def result = compilation(['example.BookQuery': BOOK_QUERY.replace('book(String id)',
-                'book(String id, io.micronaut.graphql.tools.ArgumentValue<String> title)')],
-                SCHEMA.replace('book(id: ID!): Book', 'book(id: ID!, title: String): Book'))
-                .option(ProcessorOptions.DETECT_OMISSION, value).compile()
+        def result = compilation(['example.BookQuery': BOOK_QUERY]).option('micronaut.graphql.tools.input.detectOmission', 'true').compile()
 
         then:
-        result.success
-
-        where:
-        value << ['true', 'yes', 'on']
+        !result.success
+        result.graphqlErrors[0].startsWith('[graphql] unknown option -Amicronaut.graphql.tools.input.detectOmission.')
     }
 
-    void "ArgumentValue needs input.detectOmission, as at startup, a nullable type and the field level; a property needs a getter and a setter"() {
+    void "ArgumentValue needs a nullable type and the field level; a property needs a getter and a setter"() {
         given:
         def schema = SCHEMA.replace('book(id: ID!): Book', 'book(id: ID!, title: String): Book')
         def query = { String parameter ->
@@ -598,20 +593,12 @@ public record Book(String title, Genre genre) implements SearchResult {
 ''', '')
 
         when:
-        def withoutOption = compilation(['example.BookQuery': query(argumentValue)], schema).compile()
-        def withOption = compilation(['example.BookQuery': query(argumentValue)], schema)
-                .option(ProcessorOptions.DETECT_OMISSION, 'true').compile()
-        def nonNull = compilation(['example.BookQuery': query(argumentValue)], schema.replace('title: String): Book', 'title: String!): Book'))
-                .option(ProcessorOptions.DETECT_OMISSION, 'true').compile()
-        def readOnly = compilation(['example.BookFilter': readOnlyFilter]).option(ProcessorOptions.DETECT_OMISSION, 'true')
-                .compile()
+        def plain = compilation(['example.BookQuery': query(argumentValue)], schema).compile()
+        def nonNull = compilation(['example.BookQuery': query(argumentValue)], schema.replace('title: String): Book', 'title: String!): Book')).compile()
+        def readOnly = compilation(['example.BookFilter': readOnlyFilter]).compile()
 
         then:
-        !withoutOption.success
-        withoutOption.graphqlErrors == ['BookQuery.java:8: [graphql] Query.book(title:): io.micronaut.graphql.tools.ArgumentValue '
-                                                + 'needs micronaut.graphql.tools.input.detectOmission=true (as at startup '
-                                                + 'micronaut.graphql.tools.input.detect-omission=true). (schema.graphqls:6)']
-        withOption.success
+        plain.success
         !nonNull.success
         nonNull.graphqlErrors[0].contains('io.micronaut.graphql.tools.ArgumentValue is only allowed for a nullable GraphQL '
                 + 'type, the type is String!.')
