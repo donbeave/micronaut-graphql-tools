@@ -1018,40 +1018,6 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
-    private final class Step {
-
-        private final Runnable action;
-        private final MappingContext context;
-        private boolean cancelled;
-        private Step after;
-
-        private Step(Runnable action, MappingContext context) {
-            this.action = action;
-            this.context = context;
-        }
-
-        private void run() {
-            if (context == null) {
-                action.run();
-            } else if (!collectFailure(context, action) && after != null) {
-                after.cancelled = true;
-            }
-        }
-    }
-
-    private void throwBindingFailures() {
-        if (bindingFailures.isEmpty()) {
-            return;
-        }
-        if (bindingFailures.size() == 1) {
-            throw bindingFailures.get(0);
-        }
-        List<AbstractMappingException> sorted = bindingFailures.stream()
-                .sorted(Comparator.comparing(it -> it.getMappingContext().getCoordinate()))
-                .toList();
-        throw new BindingFailuresException(sorted);
-    }
-
     private MethodNotFoundException methodNotFound(String objectTypeName, Class<?> sourceClass, String fieldName,
                                                    TypeMappingContext mappingContext) {
         MethodNotFoundException exception =
@@ -1109,6 +1075,19 @@ final class GraphQLRuntimeWiringGenerator {
 
     private static long elapsedMillis(long startNanos) {
         return TimeUnit.MILLISECONDS.convert(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+    }
+
+    private void throwBindingFailures() {
+        if (bindingFailures.isEmpty()) {
+            return;
+        }
+        if (bindingFailures.size() == 1) {
+            throw bindingFailures.get(0);
+        }
+        List<AbstractMappingException> sorted = bindingFailures.stream()
+                .sorted(Comparator.comparing(it -> it.getMappingContext().getCoordinate()))
+                .toList();
+        throw new BindingFailuresException(sorted);
     }
 
     private final class InputCallbacks implements InputTypeBinder.Callbacks {
@@ -1181,4 +1160,24 @@ final class GraphQLRuntimeWiringGenerator {
         }
     }
 
+    private final class Step {
+
+        private final Runnable action;
+        private final MappingContext context;
+        private boolean cancelled;
+        private Step after;
+
+        private Step(Runnable action, MappingContext context) {
+            this.action = action;
+            this.context = context;
+        }
+
+        private void run() {
+            if (context == null) {
+                action.run();
+            } else if (!collectFailure(context, action) && after != null) {
+                after.cancelled = true;
+            }
+        }
+    }
 }

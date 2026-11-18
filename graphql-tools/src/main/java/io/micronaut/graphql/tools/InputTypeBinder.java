@@ -454,7 +454,10 @@ final class InputTypeBinder {
     }
 
     /**
-     * An input type that is being bound: its name, and the type that reached it, which fails when this one fails.
+     * An input type that is being bound.
+     *
+     * @param name   the name of the type
+     * @param parent the type that reached it, which fails when this one fails
      */
     private record TypeFrame(String name, TypeFrame parent) {
     }
