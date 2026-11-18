@@ -1,0 +1,16 @@
+schema {
+  query: Query
+}
+
+type Query {
+  create(input: ZInput!): String
+  rename(input: AInput!): String
+}
+
+input ZInput {
+  name: String!
+}
+
+input AInput {
+  name: String!
+}

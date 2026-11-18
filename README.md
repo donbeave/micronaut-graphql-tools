@@ -634,6 +634,8 @@ Input classes are checked against their GraphQL input types at startup, in both 
   set it. Each one is also an `!unmapped-input-property InputClass#property` line of the binding manifest.
   `micronaut.graphql.tools.input.unmapped-properties` overrides strict mode: `ignore` accepts such properties,
   `fail` rejects them also with `strict: false`. Read-only properties, such as computed getters, are not checked.
+  A class that several input types map to is checked once: a property is unmapped only when none of those input types has a
+  field for it, so one class may serve a create and a rename input. `@GraphQLIgnore` excludes a server-populated property.
 
 Both checks apply wherever the input type is used: an argument, a list, another input type, an `ArgumentValue`.
 

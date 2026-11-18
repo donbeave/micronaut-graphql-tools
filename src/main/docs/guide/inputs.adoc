@@ -29,7 +29,10 @@ The rules:
 * A field that the client leaves out is not set, so the class keeps the value it gives itself. An explicit `null` is set as `null`; for a primitive property the default stays.
 * A constructor parameter that no input field provides gets `null`, or the default of a primitive.
 * Every input field needs a property of the same name. The startup fails with `MethodNotFoundException` for a missing one, and with `InputFieldNotSettableException` for a read-only property that no constructor parameter of the same name takes.
-* In strict mode, a settable property that the input type does not define fails the startup (`UnmappedInputPropertiesException`).
+* A property is settable when it has a setter or a constructor parameter, as the introspection lists them. The same definition decides `InputFieldNotSettableException`, the unmapped properties at startup and the compile-time check.
+* In strict mode, a settable property that no input type defines fails the startup (`UnmappedInputPropertiesException`), naming the class and the property. A class that several input types map to, such as one DTO for a create and a rename input, is checked once: a property is unmapped only when none of those types has a field for it, so each type may cover a different subset.
+* To exclude a property that the server populates, annotate it with `@GraphQLIgnore`. The property is then not reported, and the binding manifest lists it as `~ignored`. A field that names the property still binds it. Jackson annotations such as `@JsonIgnore` are not read.
+* The compile-time check cannot see the resolvers of other classes. It reports a property only when no input type of the schema that it did not reach could cover it, so it never reports a property that the startup accepts.
 
 == Conversion errors
 
