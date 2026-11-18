@@ -27,37 +27,13 @@ import java.util.function.Supplier;
 
 /**
  * What the schema is bound to: one line per schema coordinate, saying which Java member serves it, in the text format
- * {@code graphql-binding-manifest 1}. Available as a bean once the {@code GraphQL} bean is built, and written at
- * startup with {@code micronaut.graphql.tools.manifest.enabled}.
+ * {@code graphql-binding-manifest 2}. The format is specified, with its grammar, sorting and escape rules, in the guide
+ * page "Binding Manifest". Available as a bean once the {@code GraphQL} bean is built when
+ * {@code micronaut.graphql.tools.manifest.record} is set, and written at startup with
+ * {@code micronaut.graphql.tools.manifest.enabled}.
  *
- * <p>The header names the format, the binder, the graphql-java version and a SHA-256 of the schema definitions. The
- * body is sorted by {@link String#compareTo(String)}:</p>
- * <ul>
- *     <li>{@code Type → object|interface|union|enum|input|scalar · <Java type> · - · -}</li>
- *     <li>{@code Type.field(arg: T): T → root|resolver|property · <member> · <declared type> · <converted type>}, where
- *     the member is {@code Class#method(parameter types)} and the converted type is the declared type without
- *     {@code CompletionStage}, {@code Publisher} (subscription fields), {@code DataFetcherResult} (also per list
- *     element) and {@code Optional}, unwrapped once in that order; the primitive optionals
- *     ({@code OptionalInt}, {@code OptionalLong}, {@code OptionalDouble}) are unwrapped as well</li>
- *     <li>{@code Abstract/Member → resolves · <Java type> · - · -}</li>
- *     <li>{@code Enum.VALUE → enumValue · <Java enum>#VALUE · - · -}</li>
- *     <li>{@code Input.field: T → inputField · <Java type>#property · <declared type> · <converted type>}</li>
- *     <li>diagnostics, starting with {@code !} and the registry code of the finding
- *     ({@link io.micronaut.graphql.tools.binding.BindingCode#code()}): {@code !unreachable-type <Type>} (an enum,
- *     input or scalar type is {@code !unreachable-value-type}), {@code !precedence-ambiguity <coordinate> ·
- *     <member> | <member>} and the strict-mode findings ({@code !unbound-resolver-method},
- *     {@code !unbound-enum-constant}, {@code !unmapped-input-property}, {@code !unused-dictionary-entry},
- *     {@code !unwired-directive})</li>
- *     <li>{@code ~ignored <member>}: a member marked {@code @GraphQLIgnore} that the binding met, which binds no
- *     field and is not reported</li>
- * </ul>
  * <p>The manifest is rendered when it is first read, not while the schema is bound, and without reflection: it is the
- * same text on the JVM and in a native image. Java types are rendered as {@link java.lang.reflect.Type#getTypeName()}
- * renders them from Micronaut's compile-time type information, which keeps no wildcards, raw types or generic array
- * components ({@code List<? extends Book>} reads {@code java.util.List<Book>}). The member of a property is the getter
- * that the compile-time checks (the processor) recorded in {@code META-INF/micronaut-graphql-tools/accessors.txt};
- * without the processor it reads {@code Type#property}. Text is UTF-8 with
- * {@code LF} line ends; nothing is escaped (a part that would contain a separator fails the build of the manifest).</p>
+ * same text on the JVM and in a native image.</p>
  */
 public final class BindingManifest {
 

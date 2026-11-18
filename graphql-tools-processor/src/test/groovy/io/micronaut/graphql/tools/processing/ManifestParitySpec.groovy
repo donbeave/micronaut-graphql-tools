@@ -300,31 +300,31 @@ public class BookSubscription {
         sameHeader(result.manifest, startup)
         body(result.manifest) == body(startup).findAll { !omitted(it, result.omitted) }
         body(startup).findAll { omitted(it, result.omitted) } == [
-                'Boolean → scalar · graphql.scalar.GraphqlBooleanCoercing · - · -',
-                'Float → scalar · graphql.scalar.GraphqlFloatCoercing · - · -',
-                'ID → scalar · graphql.scalar.GraphqlIDCoercing · - · -',
-                'Int → scalar · graphql.scalar.GraphqlIntCoercing · - · -',
-                'Rated/Review → resolves · example.Review · - · -',
-                'String → scalar · graphql.scalar.GraphqlStringCoercing · - · -',
+                'Boolean -> scalar ; Boolean ; - ; -',
+                'Float -> scalar ; Float ; - ; -',
+                'ID -> scalar ; ID ; - ; -',
+                'Int -> scalar ; Int ; - ; -',
+                'Rated/Review -> resolves ; example.Review ; - ; -',
+                'String -> scalar ; String ; - ; -',
         ]
 
         and: 'the lines a reader would check by hand'
         body(result.manifest).containsAll([
-                'Book.id: ID! → property · example.Entity#getId() · java.lang.String · java.lang.String',
-                'Book.available: Boolean! → property · example.Book#isAvailable() · boolean · boolean',
-                'Book.excerpt(length: Int!): String → property · example.Book#excerpt(int) · java.lang.String · java.lang.String',
-                'Author → object · example.Author · - · -',
-                'Author.books: [Book!]! → resolver · example.AuthorResolver#books(example.Author) · java.util.List<example.Book> · java.util.List<example.Book>',
-                'Shelf → object · example.Library$Shelf · - · -',
-                'Shelf.size: Int! → property · example.Library$Shelf#size() · int · int',
-                'Query.shelf: Shelf! → root · example.BookQuery#shelf() · java.util.concurrent.CompletionStage<graphql.execution.DataFetcherResult<example.Library$Shelf>> · example.Library$Shelf',
-                'Query.reviews: [Review] → root · example.BookQuery#reviews() · java.util.List<example.Review> · java.util.List<example.Review>',
-                'Query.count: Int → root · example.BookQuery#count() · java.util.OptionalInt · java.lang.Integer',
-                'Subscription.bookAdded: Book! → root · example.BookSubscription#bookAdded() · org.reactivestreams.Publisher<example.Book> · example.Book',
-                'BookInput.tags: [String!] → inputField · example.BookInput#tags · java.util.List<java.lang.String> · java.util.List<java.lang.String>',
-                'Genre.POETRY → enumValue · example.Genre#POETRY · - · -',
-                'Rated → interface · - · - · -',
-                'Review.comment: String → property · example.Review#getComment() · java.lang.String · java.lang.String',
+                'Book.id: ID! -> property ; example.Entity#getId() ; java.lang.String ; java.lang.String',
+                'Book.available: Boolean! -> property ; example.Book#isAvailable() ; boolean ; boolean',
+                'Book.excerpt(length: Int!): String -> property ; example.Book#excerpt(int) ; java.lang.String ; java.lang.String',
+                'Author -> object ; example.Author ; - ; -',
+                'Author.books: [Book!]! -> resolver ; example.AuthorResolver#books(example.Author) ; java.util.List<example.Book> ; java.util.List<example.Book>',
+                'Shelf -> object ; example.Library$Shelf ; - ; -',
+                'Shelf.size: Int! -> property ; example.Library$Shelf#size() ; int ; int',
+                'Query.shelf: Shelf! -> root ; example.BookQuery#shelf() ; java.util.concurrent.CompletionStage<graphql.execution.DataFetcherResult<example.Library$Shelf>> ; example.Library$Shelf',
+                'Query.reviews: [Review] -> root ; example.BookQuery#reviews() ; java.util.List<example.Review> ; java.util.List<example.Review>',
+                'Query.count: Int -> root ; example.BookQuery#count() ; java.util.OptionalInt ; java.lang.Integer',
+                'Subscription.bookAdded: Book! -> root ; example.BookSubscription#bookAdded() ; org.reactivestreams.Publisher<example.Book> ; example.Book',
+                'BookInput.tags: [String!] -> inputField ; example.BookInput#tags ; java.util.List<java.lang.String> ; java.util.List<java.lang.String>',
+                'Genre.POETRY -> enumValue ; example.Genre#POETRY ; - ; -',
+                'Rated -> interface ; - ; - ; -',
+                'Review.comment: String -> property ; example.Review#getComment() ; java.lang.String ; java.lang.String',
         ])
     }
 
@@ -448,14 +448,14 @@ public class BookQuery {
         sameHeader(result.manifest, startup)
         body(result.manifest) == body(startup).findAll { !omitted(it, result.omitted) }
         body(result.manifest).findAll { it.startsWith('!') } == [
-                '!ambiguous Book.title · example.Book#getTitle() | example.BookResolver#title(example.Book)',
+                '!ambiguous Book.title ; example.Book#getTitle() | example.BookResolver#title(example.Book)',
                 '!unbound example.BookQuery#helper()',
                 '!unbound example.Filter#limit',
                 '!unbound example.Genre#POETRY',
                 '!unreachable Orphan',
                 '!unreachable Unused',
         ]
-        body(startup).findAll { omitted(it, result.omitted) } == ['String → scalar · graphql.scalar.GraphqlStringCoercing · - · -']
+        body(startup).findAll { omitted(it, result.omitted) } == ['String -> scalar ; String ; - ; -']
     }
 
     static final String RUNTIME_SCHEMA = '''schema {
@@ -612,31 +612,31 @@ public class DateCoercing implements Coercing<LocalDate, String> {
         sameHeader(result.manifest, startup)
         body(result.manifest) == body(startup).findAll { !omitted(it, result.omitted) }
         body(result.manifest) == [
-                'Node → interface · example.Node · - · -',
-                'Query → object · - · - · -',
-                'Query.node: Node → root · example.SearchQuery#node() · example.Node · example.Node',
-                'Query.search: [SearchResult!]! → root · example.SearchQuery#search() · java.util.List<example.SearchResult> · java.util.List<example.SearchResult>',
-                'Query.today: Date → root · example.SearchQuery#today() · java.time.LocalDate · java.time.LocalDate',
-                'SearchResult → union · example.SearchResult · - · -',
+                'Node -> interface ; example.Node ; - ; -',
+                'Query -> object ; - ; - ; -',
+                'Query.node: Node -> root ; example.SearchQuery#node() ; example.Node ; example.Node',
+                'Query.search: [SearchResult!]! -> root ; example.SearchQuery#search() ; java.util.List<example.SearchResult> ; java.util.List<example.SearchResult>',
+                'Query.today: Date -> root ; example.SearchQuery#today() ; java.time.LocalDate ; java.time.LocalDate',
+                'SearchResult -> union ; example.SearchResult ; - ; -',
         ]
         result.omitted.readLines() == ['# graphql-binding-manifest-omitted 1', 'kind resolves', 'kind scalar',
                                          'kind unusedDictionary', 'kind unwiredDirective', 'type Book', 'type Magazine', 'type Publisher']
         body(startup).findAll { omitted(it, result.omitted) } == [
-                'Book → object · example.Book · - · -',
-                'Book.id: ID! → property · example.Book#getId() · java.lang.String · java.lang.String',
-                'Book.publisher: Publisher → property · example.Book#getPublisher() · example.Publisher · example.Publisher',
-                'Book.title: String! → property · example.Book#getTitle() · java.lang.String · java.lang.String',
-                'Date → scalar · example.DateCoercing · - · -',
-                'ID → scalar · graphql.scalar.GraphqlIDCoercing · - · -',
-                'Int → scalar · graphql.scalar.GraphqlIntCoercing · - · -',
-                'Magazine → object · example.Magazine · - · -',
-                'Magazine.issue: Int! → property · example.Magazine#getIssue() · int · int',
-                'Node/Book → resolves · example.Book · - · -',
-                'Publisher → object · example.Publisher · - · -',
-                'Publisher.name: String! → property · example.Publisher#getName() · java.lang.String · java.lang.String',
-                'SearchResult/Book → resolves · example.Book · - · -',
-                'SearchResult/Magazine → resolves · example.Magazine · - · -',
-                'String → scalar · graphql.scalar.GraphqlStringCoercing · - · -',
+                'Book -> object ; example.Book ; - ; -',
+                'Book.id: ID! -> property ; example.Book#getId() ; java.lang.String ; java.lang.String',
+                'Book.publisher: Publisher -> property ; example.Book#getPublisher() ; example.Publisher ; example.Publisher',
+                'Book.title: String! -> property ; example.Book#getTitle() ; java.lang.String ; java.lang.String',
+                'Date -> scalar ; Date ; - ; -',
+                'ID -> scalar ; ID ; - ; -',
+                'Int -> scalar ; Int ; - ; -',
+                'Magazine -> object ; example.Magazine ; - ; -',
+                'Magazine.issue: Int! -> property ; example.Magazine#getIssue() ; int ; int',
+                'Node/Book -> resolves ; example.Book ; - ; -',
+                'Publisher -> object ; example.Publisher ; - ; -',
+                'Publisher.name: String! -> property ; example.Publisher#getName() ; java.lang.String ; java.lang.String',
+                'SearchResult/Book -> resolves ; example.Book ; - ; -',
+                'SearchResult/Magazine -> resolves ; example.Magazine ; - ; -',
+                'String -> scalar ; String ; - ; -',
         ]
     }
 
@@ -723,10 +723,10 @@ public class BookResolver extends BaseResolver<Book> {
         sameHeader(result.manifest, startup)
         body(result.manifest) == body(startup).findAll { !omitted(it, result.omitted) }
         body(result.manifest).findAll { it.startsWith('Book.') || it.startsWith('Query.') } == [
-                'Book.author: String → resolver · example.BookResolver#author(example.Book) · java.lang.String · java.lang.String',
-                'Book.title: String! → property · example.Titled#getTitle() · java.lang.String · java.lang.String',
-                'Query.book(id: ID!): Book → root · example.BookQuery#book(java.lang.String) · example.Book · example.Book',
-                'Query.books(ids: [ID!]!): [Book!]! → root · example.BookQuery#books(java.util.List<java.lang.String>) · java.util.List<example.Book> · java.util.List<example.Book>',
+                'Book.author: String -> resolver ; example.BookResolver#author(example.Book) ; java.lang.String ; java.lang.String',
+                'Book.title: String! -> property ; example.Titled#getTitle() ; java.lang.String ; java.lang.String',
+                'Query.book(id: ID!): Book -> root ; example.BookQuery#book(java.lang.String) ; example.Book ; example.Book',
+                'Query.books(ids: [ID!]!): [Book!]! -> root ; example.BookQuery#books(java.util.List<java.lang.String>) ; java.util.List<example.Book> ; java.util.List<example.Book>',
         ]
     }
 
@@ -775,7 +775,7 @@ public class GreetingQuery {
         body(lenient.manifest) == body(startup).findAll { !omitted(it, lenient.omitted) }
         body(startup).findAll { omitted(it, lenient.omitted) } == [
                 '!unwiredDirective audit',
-                'String → scalar · graphql.scalar.GraphqlStringCoercing · - · -',
+                'String -> scalar ; String ; - ; -',
         ]
     }
 
@@ -785,9 +785,9 @@ public class GreetingQuery {
             String value = entry.substring(entry.indexOf(' ') + 1)
             switch (kind) {
                 case 'kind':
-                    return line.startsWith('!' + value + ' ') || line.contains(" → ${value} · ")
+                    return line.startsWith('!' + value + ' ') || line.contains(" -> ${value} ; ")
                 case 'type':
-                    return line.startsWith(value + ' → ') || line.startsWith(value + '.') || line.startsWith(value + '/')
+                    return line.startsWith(value + ' -> ') || line.startsWith(value + '.') || line.startsWith(value + '/')
                             || line.startsWith('!ambiguous ' + value + '.')
                 case 'field':
                     return line.startsWith(value + '(') || line.startsWith(value + ':') || line.startsWith('!ambiguous ' + value + ' ')

@@ -25,18 +25,22 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Renders a {@link BindingPlan} as the text format {@code graphql-binding-manifest 1}: a header and one line per entry,
- * {@code subject → kind · member · declared type · converted type}, sorted with {@link String#compareTo(String)}.
- * Nothing is escaped: a part that holds a separator or a line break fails the rendering.
+ * Renders a {@link BindingPlan} as the text format {@code graphql-binding-manifest 2}: a header and one line per entry,
+ * {@code subject -> kind ; member ; declared type ; converted type}, sorted with {@link String#compareTo(String)}.
+ * The text is ASCII: a character outside {@code 0x20..0x7e} and the backslash are written as a backslash, a u and four
+ * hex digits. A part that holds a separator fails the rendering. The format is specified in the guide page "Binding Manifest".
  */
 @Internal
 public final class ManifestRenderer {
 
     /** The first line of a manifest. */
-    public static final String FORMAT = "# graphql-binding-manifest 1";
+    public static final String FORMAT = "# graphql-binding-manifest 2";
 
-    private static final String ARROW = " → ";
-    private static final String DOT = " · ";
+    /** The version of the format, the number in {@link #FORMAT}. */
+    public static final int VERSION = 2;
+
+    private static final String ARROW = " -> ";
+    private static final String DOT = " ; ";
 
     private ManifestRenderer() {
     }
@@ -60,6 +64,19 @@ public final class ManifestRenderer {
         header.add(FORMAT);
         header.addAll(headerLines);
         return new Rendered(header, body);
+    }
+
+    /**
+     * @param binder      the library version, or {@code unknown}
+     * @param graphqlJava the graphql-java version, or {@code unknown}
+     * @param schemaHash  the {@link SchemaHash#sha256} of the schema
+     * @return the three header lines after {@link #FORMAT}
+     */
+    public static List<String> header(String binder, String graphqlJava, String schemaHash) {
+        return List.of(
+                "# binder: micronaut-graphql-tools " + binder,
+                "# graphql-java: " + graphqlJava,
+                "# schema-sha256: " + schemaHash);
     }
 
     /**
@@ -95,11 +112,35 @@ public final class ManifestRenderer {
     }
 
     private static String requirePart(String part) {
-        if (part.contains(ARROW) || part.contains(DOT) || part.contains("\n") || part.contains("\r")) {
+        if (part.contains(ARROW) || part.contains(DOT)) {
             throw new IllegalStateException("Cannot write the binding manifest: \"" + part
-                    + "\" contains a separator (\"" + ARROW.strip() + "\" or \"" + DOT.strip() + "\") or a line break.");
+                    + "\" contains a separator (\"" + ARROW.strip() + "\" or \"" + DOT.strip() + "\").");
         }
-        return part;
+        return ascii(part);
+    }
+
+    private static String ascii(String part) {
+        int i = 0;
+        while (i < part.length() && isPlain(part.charAt(i))) {
+            i++;
+        }
+        if (i == part.length()) {
+            return part;
+        }
+        StringBuilder builder = new StringBuilder(part.length() + 8).append(part, 0, i);
+        for (; i < part.length(); i++) {
+            char c = part.charAt(i);
+            if (isPlain(c)) {
+                builder.append(c);
+            } else {
+                builder.append("\\u").append(String.format("%04x", (int) c));
+            }
+        }
+        return builder.toString();
+    }
+
+    private static boolean isPlain(char c) {
+        return c >= 0x20 && c <= 0x7e && c != '\\';
     }
 
     /**

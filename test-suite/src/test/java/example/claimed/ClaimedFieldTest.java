@@ -33,7 +33,7 @@ class ClaimedFieldTest {
 
     @Test
     void aClaimedFieldIsListedInTheManifest() {
-        assertTrue(manifest.getLines().stream().anyMatch(it -> it.startsWith("Query.serverVersion: String → claimed · ")));
+        assertTrue(manifest.getLines().stream().anyMatch(it -> it.startsWith("Query.serverVersion: String -> claimed ; ")));
     }
 
 }
