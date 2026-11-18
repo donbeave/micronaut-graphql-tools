@@ -49,6 +49,10 @@ processor of this module** (DD-13). Every case is compiled **twice**, as a build
   errors and the warnings of the compiler as findings. This compilation must fail exactly when `expected/compile.txt` lists an
   error, and report nothing else.
 
+Java and Groovy are compiled without `-parameters` (Java) and without `parameters` (Groovy), so a case shows that a method declared in the
+sources binds by the name of its source (the cases under `argument/`, #15). The one thing that needs a flag, a method inherited from a class
+file without parameter names, is `ParameterNamesSpec` (a class file cannot be a case).
+
 1. The checks-off compilation succeeds.
 2. The startup verdict equals `expected/runtime.txt`.
 3. The binding manifest of a bound startup equals `expected/manifest.txt`, where there is one.

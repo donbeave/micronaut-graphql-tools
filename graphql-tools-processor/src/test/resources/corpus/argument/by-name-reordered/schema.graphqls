@@ -1,0 +1,8 @@
+schema {
+  query: Query
+}
+
+type Query {
+  page(first: Int!, offset: Int!): String!
+  search(term: String!, limit: Int!): String!
+}

@@ -1,0 +1,7 @@
+schema {
+  query: Query
+}
+
+type Query {
+  size(long: Int!, short: Int!): String!
+}

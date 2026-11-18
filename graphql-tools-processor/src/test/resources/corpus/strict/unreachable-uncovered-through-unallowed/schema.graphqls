@@ -1,0 +1,35 @@
+schema {
+  query: Query
+}
+
+scalar Long
+
+type Query {
+  label: String
+}
+
+type Legacy {
+  since: Long
+  era: Era
+  search(filter: Filter): String
+}
+
+enum Era {
+  OLD
+}
+
+enum Grade {
+  A
+}
+
+input Filter {
+  grade: Grade
+}
+
+type Stray {
+  size: Size
+}
+
+enum Size {
+  SMALL
+}

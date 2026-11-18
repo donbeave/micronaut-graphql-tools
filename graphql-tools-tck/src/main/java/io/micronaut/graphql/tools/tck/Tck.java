@@ -50,6 +50,8 @@ public final class Tck {
 
     static final String EXEMPTIONS = "tck-exemptions.txt";
 
+    private static final String LOOPBACK = "127.0.0.1";
+
     private Tck() {
     }
 
@@ -107,6 +109,24 @@ public final class Tck {
     }
 
     /**
+     * The properties a scenario's application starts with: the scenario's {@code config.properties}, the property that
+     * activates its fixtures, and a random port on the loopback address. The server binds the address the client connects
+     * to: on a wildcard address another process with a listener on the same port of the loopback address (a Gradle daemon
+     * has several) takes the connections, and the request fails with {@code header parser received no bytes} or
+     * {@code Connection reset}.
+     *
+     * @param id the scenario id
+     * @return the properties of the application
+     */
+    public static Map<String, Object> applicationProperties(String id) {
+        Map<String, Object> properties = new LinkedHashMap<>(Scenarios.load(id).config());
+        properties.put(SCENARIO_PROPERTY, id);
+        properties.put("micronaut.server.host", LOOPBACK);
+        properties.put("micronaut.server.port", -1);
+        return properties;
+    }
+
+    /**
      * Runs one scenario.
      *
      * @param id the scenario id
@@ -114,9 +134,7 @@ public final class Tck {
      */
     public static void run(String id) {
         Scenario scenario = Scenarios.load(id);
-        Map<String, Object> properties = new LinkedHashMap<>(scenario.config());
-        properties.put(SCENARIO_PROPERTY, id);
-        properties.put("micronaut.server.port", -1);
+        Map<String, Object> properties = applicationProperties(id);
 
         try (ApplicationContext context = ApplicationContext.builder().properties(properties).start()) {
             EmbeddedServer server = context.getBean(EmbeddedServer.class).start();

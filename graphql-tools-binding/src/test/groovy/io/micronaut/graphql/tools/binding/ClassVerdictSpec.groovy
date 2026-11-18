@@ -96,7 +96,7 @@ type Book {
                 .methods()[0].fields()[0]
 
         then:
-        field.arguments().failure() == new ArgumentVerdict.ParameterWithoutArgument(0, 'limit', ['id'])
+        field.arguments().failure() == new ArgumentVerdict.ParameterWithoutArgument(0, 'limit', ['id'], false)
         field.returns().failure() == null
     }
 
