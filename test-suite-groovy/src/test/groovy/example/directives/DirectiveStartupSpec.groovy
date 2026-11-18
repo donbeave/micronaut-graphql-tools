@@ -26,10 +26,10 @@ import spock.lang.Specification
 
 class DirectiveStartupSpec extends Specification {
 
-    static final String UNWIRED_DIRECTIVES = 'micronaut.graphql.tools.unwired-directives'
+    static final String UNWIRED_DIRECTIVES = 'micronaut.graphql.tools.checks.unwired-directive'
     static final String STRICT = 'micronaut.graphql.tools.strict'
-    static final String INERT_DIRECTIVES = 'micronaut.graphql.tools.inert-directives'
-    static final String SCHEMA_CUSTOMIZER_DIRECTIVES = 'micronaut.graphql.tools.schema-customizer-directives'
+    static final String INERT_DIRECTIVES = 'micronaut.graphql.tools.allow.inert-directives'
+    static final String SCHEMA_CUSTOMIZER_DIRECTIVES = 'micronaut.graphql.tools.allow.schema-customizer-directives'
 
     def 'a directive wired by a named and an every-element SchemaDirective fails the startup'() {
         when:

@@ -4,7 +4,7 @@ NOTE: The current version is *2*. Version 1 was the format of 1.0.0-M1 and 1.0.0
 
 == Where the text comes from
 
-Recording is opt-in: set `micronaut.graphql.tools.manifest.record` to `true`, or `micronaut.graphql.tools.manifest.enabled` (which implies it). Without either, nothing is recorded while the schema is bound, the `BindingManifest` bean cannot be created (it fails with a message that names `manifest.record`), and with `strict` set to `false` the strict-mode checks that only feed the manifest are skipped. Strict mode itself does not need the manifest and fails on the same findings either way.
+Recording is opt-in: set `micronaut.graphql.tools.manifest.record` to `true`, or `micronaut.graphql.tools.manifest.enabled` (which implies it). Without either, nothing is recorded while the schema is bound, the `BindingManifest` bean cannot be created (it fails with a message that names `manifest.record`). The checks do not need the manifest: they fail, warn or are skipped by their severity either way, and the manifest only lists what they find.
 
 When it is recorded, the manifest is recorded as cheap facts (the binding plan) and rendered the first time it is read: by the `BindingManifest` bean, or by the startup writer when `micronaut.graphql.tools.manifest.enabled` is `true`. A start that does not read the manifest renders nothing, and a start that does not record costs nothing.
 
@@ -101,7 +101,7 @@ A line that starts with `!` is a finding. The word after `!` is the code of the 
 |Line |Meaning
 
 |`!unreachable-type Type`
-|a declared type that nothing binds and that is not allowed (`allow-unreachable`)
+|a declared type that nothing binds and that is not allowed (`allow.unreachable`)
 
 |`!unreachable-value-type Type`
 |the same for an enum, input or scalar type
@@ -109,8 +109,8 @@ A line that starts with `!` is a finding. The word after `!` is the code of the 
 |`!precedence-ambiguity Type.field ; member \| member`
 |a field decided by a lenient `precedence`: the coordinate, then the members that compete
 
-|`!unbound-resolver-method member`, `!unbound-enum-constant member`, `!unmapped-input-property member`, `!unused-dictionary-entry Type = Class`, `!unwired-directive name`
-|the findings of strict mode
+|`!unbound-resolver-method member`, `!root-method-several-operations member`, `!unbound-enum-constant member`, `!unmapped-input-property member`, `!nullable-primitive Type.field(argument:)`, `!unused-dictionary-entry Type = Class`, `!interface-read-through-implementation Type`, `!unwired-directive name`
+|the findings of the strict checks. A check at `ignore` writes none; a line that `allow.findings` lists is not written
 |===
 
 === Ignored members

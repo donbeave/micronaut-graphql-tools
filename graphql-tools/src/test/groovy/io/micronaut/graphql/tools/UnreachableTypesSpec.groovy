@@ -17,7 +17,7 @@ class UnreachableTypesSpec extends AbstractTest {
 
     static final String SPEC_NAME = "UnreachableTypesSpec"
 
-    static final Map NOT_STRICT = ['micronaut.graphql.tools.strict': false]
+    static final Map NOT_STRICT = ['micronaut.graphql.tools.checks.unreachable-value-type': 'ignore']
 
     @Language("GraphQL")
     static final String SCHEMA = """
@@ -81,7 +81,7 @@ input Filter {
         e.cause instanceof UnreachableTypesException
         e.cause.typeNames == ['Lonely', 'Orphan', 'Shape', 'Stray']
         e.cause.message == """[unreachable-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Lonely (type), Orphan (type), Shape (interface), Stray (union).
-  Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow-unreachable, or set micronaut.graphql.tools.unreachable-types to ignore."""
+  Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks.unreachable-type to warn or ignore."""
     }
 
     void "unreachable object types are all reported, not only the first one"() {
@@ -155,9 +155,9 @@ type Item implements Node {
         result.data.__type == [kind: 'INTERFACE', possibleTypes: [[name: 'Item']]]
     }
 
-    void "unreachable-types=fail can be set explicitly"() {
+    void "checks.unreachable-type=fail can be set explicitly"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.unreachable-types': 'fail'] + NOT_STRICT)
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.checks.unreachable-type': 'fail'] + NOT_STRICT)
 
         when:
         getGraphQLBean()
@@ -170,7 +170,7 @@ type Item implements Node {
 
     void "allow-unreachable exempts exactly the listed types"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.allow-unreachable': ['Orphan', 'Stray']] + NOT_STRICT)
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.allow.unreachable': ['Orphan', 'Stray']] + NOT_STRICT)
 
         when:
         getGraphQLBean()
@@ -184,7 +184,7 @@ type Item implements Node {
     void "allow-unreachable listing every unreachable type lets the schema build, and the exemption is logged"() {
         given:
         startContext(SCHEMA, SPEC_NAME,
-                ['micronaut.graphql.tools.allow-unreachable': ['Stray', 'Orphan', 'Lonely', 'Shape']] + NOT_STRICT)
+                ['micronaut.graphql.tools.allow.unreachable': ['Stray', 'Orphan', 'Lonely', 'Shape']] + NOT_STRICT)
 
         when:
         def result = executeQuery("""
@@ -200,14 +200,14 @@ type Item implements Node {
         result.data.orphan == [name: 'Orphan']
         appender.list.any {
             it.level == Level.INFO && it.formattedMessage == "Unreachable types allowed by " +
-                    "micronaut.graphql.tools.allow-unreachable use graphql-java's default data fetchers: " +
+                    "micronaut.graphql.tools.allow.unreachable use graphql-java's default data fetchers: " +
                     "Lonely, Orphan, Shape, Stray"
         }
     }
 
-    void "unreachable-types=ignore lets the schema build and logs every ignored type"() {
+    void "checks.unreachable-type=warn lets the schema build and logs every unreachable type"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.unreachable-types': 'ignore'] + NOT_STRICT)
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.checks.unreachable-type': 'warn'] + NOT_STRICT)
 
         when:
         def result = executeQuery("""
@@ -222,17 +222,17 @@ type Item implements Node {
         result.data.item == [name: 'item']
         result.data.__schema.types*.name.containsAll(['Lonely', 'Orphan', 'Shape', 'Stray'])
         appender.list.any {
-            it.level == Level.WARN && it.formattedMessage == "micronaut.graphql.tools.unreachable-types is ignore: " +
-                    "the schema defines types that no field reachable from a root operation type returns; they use " +
-                    "graphql-java's default data fetchers: Lonely, Orphan, Shape, Stray"
+            it.level == Level.WARN && it.formattedMessage == "[unreachable-type] " +
+                    "micronaut.graphql.tools.checks.unreachable-type is warn, so the startup goes on:\n  " +
+                    "Lonely (type)\n  Orphan (type)\n  Shape (interface)\n  Stray (union)"
         }
     }
 
     void "an allow-unreachable entry that is not an unreachable type fails the startup (#mode)"() {
         given:
         startContext(SCHEMA, SPEC_NAME, [
-                'micronaut.graphql.tools.unreachable-types': mode,
-                'micronaut.graphql.tools.allow-unreachable': ['Orphan', 'Missing', 'Item', 'Color', 'Filter', 'String']
+                'micronaut.graphql.tools.checks.unreachable-type': mode,
+                'micronaut.graphql.tools.allow.unreachable': ['Orphan', 'Missing', 'Item', 'Color', 'Filter', 'String']
         ] + NOT_STRICT)
 
         when:
@@ -243,7 +243,7 @@ type Item implements Node {
         e.cause instanceof InvalidAllowUnreachableException
         e.cause.undefinedTypeNames == ['Missing']
         e.cause.notUnreachableTypeNames == ['Item', 'String']
-        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Missing (not defined in the schema), Item (not an unreachable object, interface, union, enum, input or scalar type), String (not an unreachable object, interface, union, enum, input or scalar type).
+        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Missing (not defined in the schema), Item (not an unreachable object, interface, union, enum, input or scalar type), String (not an unreachable object, interface, union, enum, input or scalar type).
   Remove them from the list."""
 
         where:

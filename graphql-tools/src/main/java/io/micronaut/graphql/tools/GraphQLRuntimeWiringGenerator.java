@@ -49,6 +49,7 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.rules.EnumTypeRules;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
@@ -116,6 +117,7 @@ final class GraphQLRuntimeWiringGenerator {
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final SchemaMappingDictionary schemaMappingDictionary;
     private final GraphQLToolsConfiguration configuration;
+    private final CheckPolicy checkPolicy;
     private final ScalarMappings scalarMappings;
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
 
@@ -203,13 +205,14 @@ final class GraphQLRuntimeWiringGenerator {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.schemaMappingDictionary = schemaMappingDictionary;
         this.configuration = configuration;
+        this.checkPolicy = CheckPolicy.of(configuration, applicationContext);
         this.extensionFields = extensionFields;
         this.manifestRecorder = new BindingManifestRecorder(configuration.getManifest().isRecorded());
         this.coordinateValidator = new SchemaCoordinateValidator(typeDefinitionRegistry, graphQLResolversRegistry,
-                graphQLBeanIntrospectionRegistry, configuration);
+                graphQLBeanIntrospectionRegistry, checkPolicy);
         this.dictionaryValidator = new DictionaryValidator(typeDefinitionRegistry, schemaMappingDictionary);
         this.interfaceIndex = new DeclaringInterfaces(typeDefinitionRegistry);
-        this.unreachableTypeChecks = new UnreachableTypeChecks(typeDefinitionRegistry, configuration, manifestRecorder);
+        this.unreachableTypeChecks = new UnreachableTypeChecks(typeDefinitionRegistry, configuration, checkPolicy, manifestRecorder);
 
         this.scalarMappings = new ScalarMappings(applicationContext.getBeansOfType(GraphQLScalarMapping.class),
                 manifestRecorder, applicationContext);
@@ -221,7 +224,7 @@ final class GraphQLRuntimeWiringGenerator {
                 .scalar(ExtendedScalars.GraphQLBigInteger);
         scalarMappings.all().forEach(it -> rootRuntimeWiringBuilder.scalar(it.getScalarType()));
         this.inputTypeBinder = new InputTypeBinder(typeDefinitionRegistry, scalarMappings, configuration,
-                manifestRecorder, typeModel, applicationContext, new InputCallbacks());
+                checkPolicy, manifestRecorder, typeModel, applicationContext, new InputCallbacks());
         this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,
@@ -230,6 +233,10 @@ final class GraphQLRuntimeWiringGenerator {
 
     BindingManifestRecorder getManifestRecorder() {
         return manifestRecorder;
+    }
+
+    CheckPolicy getCheckPolicy() {
+        return checkPolicy;
     }
 
     RuntimeWiring generate(List<RuntimeWiringCustomizer> customizers) {
@@ -265,11 +272,8 @@ final class GraphQLRuntimeWiringGenerator {
 
             throwBindingFailures();
 
-            GraphQLToolsConfiguration.UnmappedProperties unmappedProperties =
-                    configuration.getInput().getUnmappedProperties();
-            inputTypeBinder.inputClassChecks().checkCollected(unmappedProperties == null
-                    ? configuration.isStrict()
-                    : unmappedProperties == GraphQLToolsConfiguration.UnmappedProperties.FAIL, manifestRecorder);
+            inputTypeBinder.logNullablePrimitiveWarnings();
+            inputTypeBinder.inputClassChecks().checkCollected(checkPolicy, manifestRecorder);
 
             if (!ambiguities.bindings().isEmpty()) {
                 LOG.warn("{} is {}: fields that both a member of the Java type and a type resolver method can bind: {}",
@@ -322,27 +326,37 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     private Optional<RuntimeException> checkStrictMode(Set<String> unboundTypes) {
-        Set<String> allowedTypes = new HashSet<>(configuration.getAllowUnreachable());
-        if (configuration.getUnreachableTypes() == GraphQLToolsConfiguration.UnreachableTypes.IGNORE) {
+        StrictModeChecks checks = new StrictModeChecks(manifestRecorder, checkPolicy);
+        boolean recording = manifestRecorder.isRecording();
+        Set<String> allowedTypes = new HashSet<>(configuration.getAllow().getUnreachable());
+        if (!checkPolicy.failing(BindingCode.UNREACHABLE_TYPE)) {
             allowedTypes.addAll(unboundTypes);
         }
 
-        if (!configuration.isStrict() && !manifestRecorder.isRecording()) {
-            return Optional.empty();
-        }
-
-        StrictModeChecks checks = new StrictModeChecks(manifestRecorder);
-        Set<String> accountedMethods = new HashSet<>(resolverBindings.keySet());
-        accountedMethods.addAll(ambiguities.shadowedResolverMethods());
-        checks.unboundResolverMethods(graphQLResolversRegistry.getResolverMethods(), accountedMethods);
-        checks.ignoredResolverMethods(graphQLResolversRegistry.getIgnoredMethods());
-        checks.rootMethodsOfSeveralOperationTypes(rootMethodBindings);
         Map<String, Class<?>> processed = snapshot(processedTypes);
-        checks.unboundEnumConstants(processed, typeDefinitionRegistry, typeModel);
-        checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processed.keySet(), allowedTypes);
-        checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
+        if (checks.enabled(BindingCode.UNBOUND_RESOLVER_METHOD)) {
+            Set<String> accountedMethods = new HashSet<>(resolverBindings.keySet());
+            accountedMethods.addAll(ambiguities.shadowedResolverMethods());
+            checks.unboundResolverMethods(graphQLResolversRegistry.getResolverMethods(), accountedMethods);
+        }
+        if (recording) {
+            checks.ignoredResolverMethods(graphQLResolversRegistry.getIgnoredMethods());
+        }
+        if (checks.enabled(BindingCode.ROOT_METHOD_SEVERAL_OPERATIONS)) {
+            checks.rootMethodsOfSeveralOperationTypes(rootMethodBindings);
+        }
+        if (checks.enabled(BindingCode.UNBOUND_ENUM_CONSTANT) || recording) {
+            checks.unboundEnumConstants(processed, typeDefinitionRegistry, typeModel);
+        }
+        if (checks.enabled(BindingCode.UNUSED_DICTIONARY_ENTRY)) {
+            checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processed.keySet(), allowedTypes);
+        }
+        if (checks.enabled(BindingCode.INTERFACE_READ_THROUGH_IMPLEMENTATION)) {
+            checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
+        }
+        checks.logWarnings();
 
-        return configuration.isStrict() && !checks.getProblems().isEmpty()
+        return !checks.getProblems().isEmpty()
                 ? Optional.of(new StrictModeException(checks.getCodes(), checks.getProblems()))
                 : Optional.empty();
     }

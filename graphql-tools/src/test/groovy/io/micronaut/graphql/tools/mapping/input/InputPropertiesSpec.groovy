@@ -26,7 +26,7 @@ class InputPropertiesSpec extends AbstractTest {
     static final String SPEC_READ_ONLY = "InputPropertiesSpecReadOnly"
     static final String SPEC_IGNORED = "InputPropertiesSpecIgnored"
 
-    static final String UNMAPPED = GraphQLToolsConfiguration.PREFIX + '.input.unmapped-properties'
+    static final String UNMAPPED = GraphQLToolsConfiguration.PREFIX + '.checks.unmapped-input-property'
 
     @Language("GraphQL")
     static final String ITEM_INPUT = """
@@ -151,7 +151,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnmappedInputPropertiesException
-        e.cause.message == """[unmapped-input-property] Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):
+        e.cause.message == """[unmapped-input-property] Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.checks.unmapped-input-property to warn or ignore to accept them):
   GraphQL input object type: BasketInput, mapped class: ${ExtraBasket.name}, properties: giftWrap
   GraphQL input object type: ItemInput, mapped class: ${ExtraItem.name}, properties: discount, legacyCode"""
     }

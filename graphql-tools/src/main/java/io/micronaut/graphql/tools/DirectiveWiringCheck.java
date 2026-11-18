@@ -29,7 +29,6 @@ import graphql.language.TypeDefinition;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration.UnwiredDirectives;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException;
 import org.slf4j.Logger;
@@ -60,7 +59,9 @@ final class DirectiveWiringCheck {
                       Collection<String> everyElementDirectiveNames,
                       Collection<String> schemaDirectiveNames,
                       GraphQLToolsConfiguration configuration,
+                      CheckPolicy policy,
                       BindingManifestRecorder manifestRecorder) {
+        GraphQLToolsConfiguration.AllowConfiguration allow = configuration.getAllow();
         Set<String> wired = new TreeSet<>(runtimeWiring.getRegisteredDirectiveWiring().keySet());
         wired.addAll(everyElementDirectiveNames);
         Set<String> resolverDirectives = new TreeSet<>(configuration.getResolverDirectives());
@@ -68,7 +69,7 @@ final class DirectiveWiringCheck {
         Set<String> inert = new TreeSet<>();
         List<Pattern> inertPatterns = new ArrayList<>();
         List<String> inertPatternSources = new ArrayList<>();
-        for (String entry : configuration.getInertDirectives()) {
+        for (String entry : allow.getInertDirectives()) {
             if (entry.indexOf('*') >= 0) {
                 inertPatternSources.add(entry);
                 inertPatterns.add(pattern(entry));
@@ -76,7 +77,7 @@ final class DirectiveWiringCheck {
                 inert.add(entry);
             }
         }
-        Set<String> schemaCustomizer = new TreeSet<>(configuration.getSchemaCustomizerDirectives());
+        Set<String> schemaCustomizer = new TreeSet<>(allow.getSchemaCustomizerDirectives());
 
         Map<String, String> invalidInert = new TreeMap<>();
         for (String name : inert) {
@@ -98,11 +99,7 @@ final class DirectiveWiringCheck {
                 invalidInert.put(inertPatternSources.get(i), "matches no declared directive that lacks a wiring");
             }
         }
-        UnwiredDirectives mode = configuration.getUnwiredDirectives();
-        if (mode == null) {
-            mode = configuration.isStrict() ? UnwiredDirectives.FAIL : UnwiredDirectives.WARN;
-        }
-        Map<String, Set<String>> applied = mode == UnwiredDirectives.IGNORE && schemaCustomizer.isEmpty()
+        Map<String, Set<String>> applied = !policy.enabled(BindingCode.UNWIRED_DIRECTIVE) && schemaCustomizer.isEmpty()
                 ? Map.of() : appliedDirectives(registry);
         Map<String, String> invalidSchemaCustomizer = new TreeMap<>();
         for (String name : schemaCustomizer) {
@@ -117,7 +114,7 @@ final class DirectiveWiringCheck {
         }
 
         Map<String, List<String>> unwired = new TreeMap<>();
-        if (mode != UnwiredDirectives.IGNORE) {
+        if (policy.enabled(BindingCode.UNWIRED_DIRECTIVE)) {
             applied.forEach((name, coordinates) -> {
                 boolean declared = registry.getDirectiveDefinition(name).isPresent();
                 if (!declared || isBuiltIn(name) || inert.contains(name)
@@ -129,28 +126,26 @@ final class DirectiveWiringCheck {
                 List<String> missing = coordinates.stream()
                         .filter(it -> isGraphQLJavaWiringless(it) ? !customizer : !isWired)
                         .toList();
-                if (!missing.isEmpty()) {
+                if (!missing.isEmpty() && !policy.allowed(
+                        BindingManifestRecorder.diagnosticLine(BindingCode.UNWIRED_DIRECTIVE, name))) {
                     unwired.put(name, missing);
                 }
             });
         }
 
         unwired.keySet().forEach(name -> manifestRecorder.diagnostic(BindingCode.UNWIRED_DIRECTIVE, name));
-        boolean fail = mode == UnwiredDirectives.FAIL;
-        if (mode == UnwiredDirectives.WARN && !unwired.isEmpty()) {
-            String reason = configuration.getUnwiredDirectives() == null
-                    ? GraphQLToolsConfiguration.PREFIX + ".strict is false"
-                    : GraphQLToolsConfiguration.PREFIX + ".unwired-directives is warn";
-            LOG.warn("{}, so the startup goes on: {}", reason, UnwiredDirectivesException.describeUnwired(unwired));
+        boolean fail = policy.failing(BindingCode.UNWIRED_DIRECTIVE);
+        if (!fail && !unwired.isEmpty()) {
+            policy.warn(BindingCode.UNWIRED_DIRECTIVE, List.of(UnwiredDirectivesException.describeUnwired(unwired)));
         }
         if ((fail && !unwired.isEmpty()) || !invalidInert.isEmpty() || !invalidSchemaCustomizer.isEmpty()) {
             throw new UnwiredDirectivesException(fail ? unwired : Map.of(), invalidInert, invalidSchemaCustomizer);
         }
 
-        if (!configuration.getInertDirectives().isEmpty()) {
+        if (!allow.getInertDirectives().isEmpty()) {
             LOG.info("Directives without a wiring, declared inert by {}: @{}",
-                    GraphQLToolsConfiguration.PREFIX + ".inert-directives",
-                    String.join(", @", new TreeSet<>(configuration.getInertDirectives())));
+                    GraphQLToolsConfiguration.PREFIX + ".allow.inert-directives",
+                    String.join(", @", new TreeSet<>(allow.getInertDirectives())));
         }
         Set<String> notDeclared = new TreeSet<>();
         for (String name : schemaDirectiveNames) {

@@ -37,10 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DirectiveStartupTest {
 
-    private static final String UNWIRED_DIRECTIVES = "micronaut.graphql.tools.unwired-directives";
+    private static final String UNWIRED_DIRECTIVES = "micronaut.graphql.tools.checks.unwired-directive";
     private static final String STRICT = "micronaut.graphql.tools.strict";
-    private static final String INERT_DIRECTIVES = "micronaut.graphql.tools.inert-directives";
-    private static final String SCHEMA_CUSTOMIZER_DIRECTIVES = "micronaut.graphql.tools.schema-customizer-directives";
+    private static final String INERT_DIRECTIVES = "micronaut.graphql.tools.allow.inert-directives";
+    private static final String SCHEMA_CUSTOMIZER_DIRECTIVES = "micronaut.graphql.tools.allow.schema-customizer-directives";
 
     @Test
     void aDirectiveWiredByANamedAndAnEveryElementSchemaDirectiveFailsTheStartup() {

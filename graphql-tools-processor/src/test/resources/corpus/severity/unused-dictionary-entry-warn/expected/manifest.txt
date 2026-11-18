@@ -1,0 +1,6 @@
+!unused-dictionary-entry Ghost = example.Item
+Item -> object ; example.Item ; - ; -
+Item.name: String! -> property ; example.Item#name ; java.lang.String ; java.lang.String
+Query -> object ; - ; - ; -
+Query.item: Item -> root ; example.Query#item() ; example.Item ; example.Item
+String -> scalar ; String ; - ; -

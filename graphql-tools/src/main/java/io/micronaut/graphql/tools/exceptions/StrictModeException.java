@@ -19,9 +19,8 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 
 /**
- * Thrown in strict mode ({@code micronaut.graphql.tools.strict}, on by default) when the binding finds something
- * that works but is probably a mistake: a resolver method that binds no field, a root resolver method that binds
- * fields of several operation types, a Java enum constant without a schema value, a dictionary entry for a type that is
+ * Thrown when a check at {@code fail} (the default of every check) finds something that works but is probably a mistake: a resolver method that binds no field, a root resolver method that
+ * binds fields of several operation types, a Java enum constant without a schema value, a dictionary entry for a type that is
  * not bound, a Java interface read through an implementation. All findings are reported in one error.
  */
 public final class StrictModeException extends SchemaBindingException {
@@ -52,11 +51,11 @@ public final class StrictModeException extends SchemaBindingException {
     }
 
     private static String buildMessage(List<BindingCode> codes, List<String> problems) {
-        StringBuilder builder = new StringBuilder("Strict mode found problems in the binding of the schema:");
+        StringBuilder builder = new StringBuilder("The strict checks found problems in the binding of the schema:");
         for (int i = 0; i < problems.size(); i++) {
             builder.append("\n  ").append(i + 1).append(") ").append(codes.get(i).tag(problems.get(i)));
         }
-        return builder.append("\n  Fix them, or set micronaut.graphql.tools.strict to false.").toString();
+        return builder.append("\n  Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore.").toString();
     }
 
 }
