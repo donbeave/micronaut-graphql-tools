@@ -1,0 +1,6 @@
+!interface-read-through-implementation Note
+Note → object · example.PlainNoteImpl · - · -
+Note.text: String → property · example.PlainNoteImpl#text · java.lang.String · java.lang.String
+Query → object · - · - · -
+Query.note: Note → root · example.Query#note() · example.PlainNote · example.PlainNote
+String → scalar · graphql.scalar.GraphqlStringCoercing · - · -

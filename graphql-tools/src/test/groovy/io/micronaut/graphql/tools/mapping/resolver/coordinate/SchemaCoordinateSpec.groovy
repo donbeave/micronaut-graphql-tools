@@ -286,7 +286,7 @@ type Draft {
   note: String
 }
 """, SPEC_NAME + ".unreachable", [
-                'micronaut.graphql.tools.allow-unreachable': ['Draft'],
+                'micronaut.graphql.tools.allow.unreachable': ['Draft'],
                 'micronaut.graphql.tools.strict'           : false
         ])
 

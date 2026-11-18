@@ -1,0 +1,5 @@
+Mutation → object · - · - · -
+Mutation.ping: String → root · example.Operations#ping() · java.lang.String · java.lang.String
+Query → object · - · - · -
+Query.ping: String → root · example.Operations#ping() · java.lang.String · java.lang.String
+String → scalar · graphql.scalar.GraphqlStringCoercing · - · -

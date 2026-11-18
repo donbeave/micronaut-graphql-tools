@@ -808,7 +808,9 @@ public class GreetingQuery {
 
     static Map<String, Object> runtimeProperties(Map<String, String> options) {
         Map<String, Object> result = [:]
-        options.each { name, value -> result.put('micronaut.graphql.tools.' + name, value) }
+        // the JSR-269 options keep their names until #291; the runtime keys moved with #86
+        Map<String, String> renamed = [allowUnreachable: 'allow.unreachable']
+        options.each { name, value -> result.put('micronaut.graphql.tools.' + (renamed[name] ?: name), value) }
         return result
     }
 

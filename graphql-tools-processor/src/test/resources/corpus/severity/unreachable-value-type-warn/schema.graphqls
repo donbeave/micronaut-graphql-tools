@@ -1,0 +1,16 @@
+schema {
+  query: Query
+}
+
+type Query {
+  hello: String
+}
+
+enum Size {
+  SMALL
+  LARGE
+}
+
+input Filter {
+  name: String
+}

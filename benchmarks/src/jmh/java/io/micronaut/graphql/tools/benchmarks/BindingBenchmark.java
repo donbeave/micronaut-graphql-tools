@@ -3,6 +3,7 @@ package io.micronaut.graphql.tools.benchmarks;
 import graphql.GraphQL;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -12,6 +13,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -48,14 +50,24 @@ public class BindingBenchmark {
         }
     }
 
+    // -Dbenchmarks.checks=ignore (a JMH -jvmArgs value) starts every context with all ten checks at ignore, to measure
+    // what the checks cost: the default is every check at fail
     private ApplicationContext start() {
+        Map<String, Object> properties = new HashMap<>(Map.of(
+                "graphql.graphql-ws.enabled", false,
+                "graphql.graphiql.enabled", false,
+                "benchmarks.large", true,
+                LargeSchema.FIELDS, fields,
+                "micronaut.graphql.tools.manifest.record", record));
+        if ("ignore".equals(System.getProperty("benchmarks.checks"))) {
+            for (BindingCode code : BindingCode.values()) {
+                if (code.check()) {
+                    properties.put("micronaut.graphql.tools.checks." + code.code(), "ignore");
+                }
+            }
+        }
         return ApplicationContext.builder()
-                .properties(Map.of(
-                        "graphql.graphql-ws.enabled", false,
-                        "graphql.graphiql.enabled", false,
-                        "benchmarks.large", true,
-                        LargeSchema.FIELDS, fields,
-                        "micronaut.graphql.tools.manifest.record", record))
+                .properties(properties)
                 .singletons(registry)
                 .start();
     }

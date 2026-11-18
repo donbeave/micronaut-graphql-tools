@@ -147,9 +147,18 @@ final class BindingManifestRecorder {
         if (!recording) {
             return;
         }
-        diagnostics.add("!" + code.code() + " " + Arrays.stream(parts)
+        diagnostics.add(diagnosticLine(code, parts));
+    }
+
+    /**
+     * @param code  the check
+     * @param parts the subject of the finding
+     * @return the {@code !} line that the manifest has for the finding, which is also what {@code allow.findings} lists
+     */
+    static String diagnosticLine(BindingCode code, String... parts) {
+        return "!" + code.code() + " " + Arrays.stream(parts)
                 .map(BindingManifestRecorder::requirePart)
-                .collect(Collectors.joining(DOT)));
+                .collect(Collectors.joining(DOT));
     }
 
     void ignored(String member) {

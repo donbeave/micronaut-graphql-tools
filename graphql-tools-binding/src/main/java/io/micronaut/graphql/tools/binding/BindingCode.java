@@ -159,15 +159,24 @@ public enum BindingCode {
     /** Failure: a customizer claims fields the schema does not define. */
     INVALID_CLAIMED_FIELDS("invalid-claimed-fields", false, false,
             "A RuntimeWiringCustomizer claims fields that the schema does not define."),
-    /** Failure: allow-unreachable names a type that is not unreachable. */
+    /** Failure: allow.unreachable names a type that is not unreachable. */
     INVALID_ALLOW_UNREACHABLE("invalid-allow-unreachable", false, false,
-            "allow-unreachable names a type that is not an unreachable type."),
-    /** Failure: inert-directives lists a directive that cannot be inert. */
+            "allow.unreachable names a type that is not an unreachable type."),
+    /** Failure: allow.inert-directives lists a directive that cannot be inert. */
     INVALID_INERT_DIRECTIVES("invalid-inert-directives", false, false,
-            "inert-directives lists a directive that is built in, undeclared or wired."),
-    /** Failure: schema-customizer-directives lists a built-in or undeclared directive. */
+            "allow.inert-directives lists a directive that is built in, undeclared or wired."),
+    /** Failure: allow.schema-customizer-directives lists a built-in or undeclared directive. */
     INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES("invalid-schema-customizer-directives", false, false,
-            "schema-customizer-directives lists a built-in or undeclared directive."),
+            "allow.schema-customizer-directives lists a built-in or undeclared directive."),
+    /** Failure: an allow.findings entry is malformed, or matches no finding. */
+    INVALID_ALLOW_FINDINGS("invalid-allow-findings", false, false,
+            "allow.findings has an entry that is not a manifest line of a check, or that matches no finding."),
+    /** Failure: a checks entry names an unknown check or has an unknown severity. */
+    INVALID_CHECK_SETTING("invalid-check-setting", false, false,
+            "checks names a code that is not a check, or a severity that is not fail, warn or ignore."),
+    /** Failure: a configuration key was removed. */
+    REMOVED_CONFIGURATION_KEY("removed-configuration-key", false, false,
+            "A configuration key was removed; the message names its replacement."),
     /** Failure: a directive is wired twice. */
     DUPLICATE_DIRECTIVE_WIRING("duplicate-directive-wiring", false, false,
             "More than one SchemaDirective binds a wiring to the same directive."),

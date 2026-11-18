@@ -58,7 +58,7 @@ enum Color {
   2) [unbound-resolver-method] The resolver method ${Query.name}#helper(java.lang.String) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
   3) [unbound-enum-constant] The enum constant ${Color.name}#BLUE has no value in the schema enum Color. Add the value to the schema or remove the constant.
   4) [unused-dictionary-entry] The SchemaMappingDictionary maps Ghost to ${Item.name}, but the schema binds no type Ghost. Remove the entry or correct its name.
-  Fix them, or set micronaut.graphql.tools.strict to false."""
+  Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore."""
         e.cause.problems.size() == 4
         e.cause.code() == BindingCode.STRICT_FINDINGS
         e.cause.codes == [BindingCode.UNBOUND_RESOLVER_METHOD, BindingCode.UNBOUND_RESOLVER_METHOD,
@@ -230,7 +230,7 @@ type Query {
 type Draft {
   note: String
 }
-""", SPEC_NAME + ".unreachable", ['micronaut.graphql.tools.allow-unreachable': ['Draft']])
+""", SPEC_NAME + ".unreachable", ['micronaut.graphql.tools.allow.unreachable': ['Draft']])
 
         when:
         getGraphQLBean()
@@ -348,7 +348,7 @@ input Filter {
     void "in strict mode allow-unreachable may name enum, input and scalar types"() {
         given:
         startContext(VALUE_TYPES_SCHEMA, SPEC_NAME + ".valueTypes",
-                ['micronaut.graphql.tools.allow-unreachable': ['Orphan', 'Size', 'Filter', 'Long']])
+                ['micronaut.graphql.tools.allow.unreachable': ['Orphan', 'Size', 'Filter', 'Long']])
 
         when:
         def result = executeQuery('{ label }')
@@ -361,7 +361,7 @@ input Filter {
 
     void "in strict mode an allow-unreachable entry naming a reached enum fails the startup"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.allow-unreachable': ['Color']])
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.allow.unreachable': ['Color']])
 
         when:
         getGraphQLBean()
@@ -369,13 +369,13 @@ input Filter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidAllowUnreachableException
-        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Color (not an unreachable object, interface, union, enum, input or scalar type).
+        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Color (not an unreachable object, interface, union, enum, input or scalar type).
   Remove them from the list."""
     }
 
     void "with unreachable-types ignore, unreachable enum, input and scalar types are ignored too"() {
         given:
-        startContext(VALUE_TYPES_SCHEMA, SPEC_NAME + ".valueTypes", ['micronaut.graphql.tools.unreachable-types': 'ignore'])
+        startContext(VALUE_TYPES_SCHEMA, SPEC_NAME + ".valueTypes", ['micronaut.graphql.tools.checks.unreachable-type': 'warn', 'micronaut.graphql.tools.checks.unreachable-value-type': 'warn'])
 
         when:
         def result = executeQuery('{ label }')
@@ -387,7 +387,7 @@ input Filter {
     void "with strict false only unreachable object, interface and union types fail, as before"() {
         given:
         startContext(VALUE_TYPES_SCHEMA, SPEC_NAME + ".valueTypes",
-                ['micronaut.graphql.tools.allow-unreachable': ['Orphan']] + NOT_STRICT)
+                ['micronaut.graphql.tools.allow.unreachable': ['Orphan']] + NOT_STRICT)
 
         when:
         def result = executeQuery('{ label }')
@@ -518,7 +518,7 @@ enum Tier {
 type Query {
   label: String @restricted(level: HIGH)
 }
-""", SPEC_NAME + ".directives", ['micronaut.graphql.tools.inert-directives': ['restricted']])
+""", SPEC_NAME + ".directives", ['micronaut.graphql.tools.allow.inert-directives': ['restricted']])
 
         when:
         def result = executeQuery('{ label }')
@@ -676,7 +676,7 @@ input Nested {
     void "allowing only an unreachable object type covers the enums, scalars and inputs its fields and arguments use"() {
         given:
         startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive",
-                ['micronaut.graphql.tools.allow-unreachable': ['Legacy', 'Stray']])
+                ['micronaut.graphql.tools.allow.unreachable': ['Legacy', 'Stray']])
 
         when:
         def result = executeQuery('{ label }')
@@ -687,7 +687,7 @@ input Nested {
 
     void "with unreachable-types ignore the value types of ignored types need no entry"() {
         given:
-        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive", ['micronaut.graphql.tools.unreachable-types': 'ignore'])
+        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive", ['micronaut.graphql.tools.checks.unreachable-type': 'warn', 'micronaut.graphql.tools.checks.unreachable-value-type': 'warn'])
 
         when:
         def result = executeQuery('{ label }')
@@ -698,7 +698,7 @@ input Nested {
 
     void "a type that only a non-allowed unreachable type uses still fails"() {
         given:
-        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive", ['micronaut.graphql.tools.allow-unreachable': ['Legacy']])
+        startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive", ['micronaut.graphql.tools.allow.unreachable': ['Legacy']])
 
         when:
         getGraphQLBean()
@@ -712,7 +712,7 @@ input Nested {
     void "a stale allow-unreachable entry still fails, also next to an allowed type that covers others"() {
         given:
         startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive",
-                ['micronaut.graphql.tools.allow-unreachable': ['Legacy', 'Stray', 'Query', 'Missing']])
+                ['micronaut.graphql.tools.allow.unreachable': ['Legacy', 'Stray', 'Query', 'Missing']])
 
         when:
         getGraphQLBean()
@@ -727,7 +727,7 @@ input Nested {
     void "a value type that an allowed type covers may still be listed itself, and the manifest still reports it"() {
         given:
         startContext(TRANSITIVE_SCHEMA, SPEC_NAME + ".transitive",
-                ['micronaut.graphql.tools.allow-unreachable': ['Legacy', 'Stray', 'Era']])
+                ['micronaut.graphql.tools.allow.unreachable': ['Legacy', 'Stray', 'Era']])
 
         when:
         def result = executeQuery('{ label }')
@@ -748,7 +748,7 @@ input Nested {
     void "with strict false allow-unreachable may still name unreachable enum, input and scalar types, without effect"() {
         given:
         startContext(VALUE_TYPES_SCHEMA, SPEC_NAME + ".valueTypes",
-                ['micronaut.graphql.tools.allow-unreachable': ['Orphan', 'Size', 'Filter', 'Long']] + NOT_STRICT)
+                ['micronaut.graphql.tools.allow.unreachable': ['Orphan', 'Size', 'Filter', 'Long']] + NOT_STRICT)
 
         when:
         def result = executeQuery('{ label }')

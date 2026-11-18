@@ -23,6 +23,7 @@ import io.micronaut.core.util.ArgumentUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Options of Micronaut GraphQL Tools, under {@value #PREFIX}.
@@ -38,60 +39,14 @@ public class GraphQLToolsConfiguration {
     @Internal
     public static final String INPUT_OBJECT_MAPPER = "graphql-tools";
 
-    private UnreachableTypes unreachableTypes = UnreachableTypes.FAIL;
-    private List<String> allowUnreachable = Collections.emptyList();
     private Precedence precedence = Precedence.STRICT;
     private List<String> resolverDirectives = Collections.emptyList();
-    private List<String> inertDirectives = Collections.emptyList();
-    private List<String> schemaCustomizerDirectives = Collections.emptyList();
-    private UnwiredDirectives unwiredDirectives;
     private boolean strict = true;
+    private Map<String, String> checks = Collections.emptyMap();
+    private AllowConfiguration allow = new AllowConfiguration();
     private boolean eagerInit = true;
     private InputConfiguration input = new InputConfiguration();
     private ManifestConfiguration manifest = new ManifestConfiguration();
-
-    /**
-     * @return what happens to object, interface and union types of the schema that no field reachable from a root
-     * operation type returns, and in strict mode to enum, input and scalar types that nothing uses
-     */
-    @NonNull
-    public UnreachableTypes getUnreachableTypes() {
-        return unreachableTypes;
-    }
-
-    /**
-     * Sets what happens to object, interface and union types of the schema that no field reachable from a root
-     * operation type returns, and in strict mode ({@link #isStrict()}) to enum, input and scalar types that no bound
-     * field, argument, input field or directive definition uses. Default: {@link UnreachableTypes#FAIL}.
-     *
-     * @param unreachableTypes the handling of unreachable types
-     */
-    public void setUnreachableTypes(@NonNull UnreachableTypes unreachableTypes) {
-        ArgumentUtils.requireNonNull("unreachableTypes", unreachableTypes);
-        this.unreachableTypes = unreachableTypes;
-    }
-
-    /**
-     * @return the names of unreachable types that are allowed even when {@link #getUnreachableTypes()} is
-     * {@link UnreachableTypes#FAIL}
-     */
-    @NonNull
-    public List<String> getAllowUnreachable() {
-        return allowUnreachable;
-    }
-
-    /**
-     * Sets the names of unreachable types that are allowed even when {@link #getUnreachableTypes()} is
-     * {@link UnreachableTypes#FAIL}. Every name must be an unreachable type of the schema: an object, interface or
-     * union type, or an enum, input or scalar type (these take effect in strict mode only, see {@link #isStrict()});
-     * any other name fails the startup, so the list cannot go stale. Default: empty.
-     *
-     * @param allowUnreachable the type names
-     */
-    public void setAllowUnreachable(@NonNull List<String> allowUnreachable) {
-        ArgumentUtils.requireNonNull("allowUnreachable", allowUnreachable);
-        this.allowUnreachable = List.copyOf(allowUnreachable);
-    }
 
     /**
      * @return how a field is bound when both a member of its Java type (a property or a {@code @GraphQLField} method)
@@ -135,93 +90,60 @@ public class GraphQLToolsConfiguration {
     }
 
     /**
-     * @return the directives the schema may apply without a wiring, because they have no effect at runtime
-     */
-    @NonNull
-    public List<String> getInertDirectives() {
-        return inertDirectives;
-    }
-
-    /**
-     * Sets the directives the schema may apply without a wiring, because they have no effect at runtime (names
-     * without {@code @}; an entry with {@code *} is a pattern, such as {@code link*}, and must match a declared
-     * directive that lacks a wiring). Any other directive the schema applies needs a wiring, except graphql-java's built-in
-     * ones; in strict mode ({@link #isStrict()}) an applied directive without either fails the startup, without it
-     * that is a warning. Every name must be a directive the schema declares and that has no wiring; any other name
-     * fails the startup in either mode, so the list cannot go stale. Default: empty.
-     *
-     * @param inertDirectives the directive names
-     */
-    public void setInertDirectives(@NonNull List<String> inertDirectives) {
-        ArgumentUtils.requireNonNull("inertDirectives", inertDirectives);
-        this.inertDirectives = List.copyOf(inertDirectives);
-    }
-
-    /**
-     * @return the directives that a {@link GraphQLSchemaCustomizer} handles where graphql-java calls no wiring
-     */
-    @NonNull
-    public List<String> getSchemaCustomizerDirectives() {
-        return schemaCustomizerDirectives;
-    }
-
-    /**
-     * Sets the directives (names without {@code @}) that a {@link GraphQLSchemaCustomizer} handles on the schema
-     * definition and on the arguments of directive definitions. graphql-java calls no
-     * {@link graphql.schema.idl.SchemaDirectiveWiring} there, so a wiring does not count for those places: a directive
-     * applied there needs an entry in this list or in {@link #getInertDirectives()}. Every name must be a directive
-     * the schema declares and that is not built in. Default: empty.
-     *
-     * @param schemaCustomizerDirectives the directive names
-     */
-    public void setSchemaCustomizerDirectives(@NonNull List<String> schemaCustomizerDirectives) {
-        ArgumentUtils.requireNonNull("schemaCustomizerDirectives", schemaCustomizerDirectives);
-        this.schemaCustomizerDirectives = List.copyOf(schemaCustomizerDirectives);
-    }
-
-    /**
-     * @return what happens to applied directives without a wiring, or {@code null} to follow strict mode
-     */
-    @Nullable
-    public UnwiredDirectives getUnwiredDirectives() {
-        return unwiredDirectives;
-    }
-
-    /**
-     * Sets what happens to directives the schema applies without a wiring. {@code null} (the default) follows
-     * {@link #isStrict()}: fail with it, warn without it. {@link UnwiredDirectives#IGNORE} skips the check, so tooling
-     * directives need no listing. Invalid {@link #getInertDirectives()} and {@link #getSchemaCustomizerDirectives()}
-     * entries fail in every mode.
-     *
-     * @param unwiredDirectives the handling of unwired directives, or {@code null} to follow strict mode
-     */
-    public void setUnwiredDirectives(@Nullable UnwiredDirectives unwiredDirectives) {
-        this.unwiredDirectives = unwiredDirectives;
-    }
-
-    /**
-     * @return whether binding fails on everything the binding manifest reports as a finding
+     * @return the shorthand for every check that has no {@code checks} entry
      */
     public boolean isStrict() {
         return strict;
     }
 
     /**
-     * Sets whether binding fails on everything the binding manifest reports as a finding, unless an option allows it:
-     * unreachable types of every kind (also enums, input types and scalars; {@link #getAllowUnreachable()} may then
-     * name them too), public resolver methods that bind no field, root resolver methods without a coordinate that bind
-     * fields of several operation types, Java enum constants without a schema value,
-     * dictionary entries for types that are not bound, Java interfaces read through an implementation's bean
-     * introspection instead of their own, input class properties that the input type does not define (unless
-     * {@link InputConfiguration#getUnmappedProperties()} is set), primitive arguments or input class properties for
-     * nullable built-in scalars, and directives the schema applies without a wiring (unless
-     * {@link #getInertDirectives()} lists them; without strict mode they are logged as a warning). Invalid entries of
-     * {@link #getAllowUnreachable()} and {@link #getInertDirectives()} fail in either mode. Default: {@code true}.
+     * Sets the shorthand for the severity of every check that has no entry in {@link #getChecks()}: {@code true}
+     * (the default) is every check at its default severity, {@code fail}; {@code false} is every check {@code warn}.
+     * An explicit {@code checks.<code>} entry wins. Default: {@code true}.
      *
-     * @param strict whether to fail
+     * @param strict whether the checks fail by default
      */
     public void setStrict(boolean strict) {
         this.strict = strict;
+    }
+
+    /**
+     * @return the severity of each check by its code, as written: {@code fail}, {@code warn} or {@code ignore}
+     */
+    @NonNull
+    public Map<String, String> getChecks() {
+        return checks;
+    }
+
+    /**
+     * Sets the severity of single checks, by their codes: {@code unbound-resolver-method},
+     * {@code root-method-several-operations}, {@code unbound-enum-constant}, {@code unmapped-input-property},
+     * {@code nullable-primitive}, {@code unreachable-type}, {@code unreachable-value-type},
+     * {@code unused-dictionary-entry}, {@code interface-read-through-implementation} and {@code unwired-directive}.
+     * {@code fail} fails the startup, {@code warn} logs the finding and goes on, {@code ignore} skips the check. An
+     * unknown code or severity fails the startup. The entries win over {@link #isStrict()}. Default: empty.
+     *
+     * @param checks the severity of each check by its code
+     */
+    public void setChecks(@NonNull Map<String, String> checks) {
+        ArgumentUtils.requireNonNull("checks", checks);
+        this.checks = Map.copyOf(checks);
+    }
+
+    /**
+     * @return the findings, types and directives the checks accept, under {@value #PREFIX}.allow
+     */
+    @NonNull
+    public AllowConfiguration getAllow() {
+        return allow;
+    }
+
+    /**
+     * @param allow the findings, types and directives the checks accept
+     */
+    public void setAllow(@NonNull AllowConfiguration allow) {
+        ArgumentUtils.requireNonNull("allow", allow);
+        this.allow = allow;
     }
 
     /**
@@ -358,8 +280,6 @@ public class GraphQLToolsConfiguration {
     public static class InputConfiguration {
 
         private boolean detectOmission;
-        @Nullable
-        private UnmappedProperties unmappedProperties;
 
         /**
          * @return whether resolver parameters and input class properties declared as {@link ArgumentValue} tell an
@@ -381,27 +301,104 @@ public class GraphQLToolsConfiguration {
             this.detectOmission = detectOmission;
         }
 
+    }
+
+    /**
+     * What the checks accept, under {@value GraphQLToolsConfiguration#PREFIX}.allow. Every entry is validated at
+     * startup; an entry that no longer applies fails it, so the lists cannot go stale.
+     */
+    @ConfigurationProperties("allow")
+    public static class AllowConfiguration {
+
+        private List<String> unreachable = Collections.emptyList();
+        private List<String> inertDirectives = Collections.emptyList();
+        private List<String> schemaCustomizerDirectives = Collections.emptyList();
+        private List<String> findings = Collections.emptyList();
+
         /**
-         * @return what happens to properties of input classes that the GraphQL input type does not define, or
-         * {@code null} if strict mode decides ({@link GraphQLToolsConfiguration#isStrict()})
+         * @return the names of unreachable types that the checks accept
          */
-        @Nullable
-        public UnmappedProperties getUnmappedProperties() {
-            return unmappedProperties;
+        @NonNull
+        public List<String> getUnreachable() {
+            return unreachable;
         }
 
         /**
-         * Sets what happens to properties of input classes (settable through a setter or the constructor) that the
-         * GraphQL input type does not define, so no request can ever set them. Either way each of them is an
-         * {@code !unmapped-input-property} line of the binding manifest. Default: not set, which means {@link UnmappedProperties#FAIL}
-         * in strict mode ({@link GraphQLToolsConfiguration#isStrict()}) and {@link UnmappedProperties#IGNORE} without
-         * it.
+         * Sets the names of unreachable types that the checks accept: an object, interface or union type, or an enum,
+         * input or scalar type. An unreachable type keeps graphql-java's default data fetchers, and the types its
+         * fields use are accepted with it. Every name must be an unreachable type of the schema; any other name fails
+         * the startup. Default: empty.
          *
-         * @param unmappedProperties the handling of unmapped input class properties, or {@code null} to follow strict
-         *                           mode
+         * @param unreachable the type names
          */
-        public void setUnmappedProperties(@Nullable UnmappedProperties unmappedProperties) {
-            this.unmappedProperties = unmappedProperties;
+        public void setUnreachable(@NonNull List<String> unreachable) {
+            ArgumentUtils.requireNonNull("unreachable", unreachable);
+            this.unreachable = List.copyOf(unreachable);
+        }
+
+        /**
+         * @return the directives the schema may apply without a wiring, because they have no effect at runtime
+         */
+        @NonNull
+        public List<String> getInertDirectives() {
+            return inertDirectives;
+        }
+
+        /**
+         * Sets the directives the schema may apply without a wiring, because they have no effect at runtime (names
+         * without {@code @}; an entry with {@code *} is a pattern, such as {@code link*}, and must match a declared
+         * directive that lacks a wiring). Every name must be a directive the schema declares and that has no wiring;
+         * any other name fails the startup, so the list cannot go stale. Default: empty.
+         *
+         * @param inertDirectives the directive names
+         */
+        public void setInertDirectives(@NonNull List<String> inertDirectives) {
+            ArgumentUtils.requireNonNull("inertDirectives", inertDirectives);
+            this.inertDirectives = List.copyOf(inertDirectives);
+        }
+
+        /**
+         * @return the directives that a {@link GraphQLSchemaCustomizer} handles where graphql-java calls no wiring
+         */
+        @NonNull
+        public List<String> getSchemaCustomizerDirectives() {
+            return schemaCustomizerDirectives;
+        }
+
+        /**
+         * Sets the directives (names without {@code @}) that a {@link GraphQLSchemaCustomizer} handles on the schema
+         * definition and on the arguments of directive definitions. graphql-java calls no
+         * {@link graphql.schema.idl.SchemaDirectiveWiring} there, so a wiring does not count for those places: a
+         * directive applied there needs an entry in this list or in {@link #getInertDirectives()}. Every name must be
+         * a directive the schema declares and that is not built in. Default: empty.
+         *
+         * @param schemaCustomizerDirectives the directive names
+         */
+        public void setSchemaCustomizerDirectives(@NonNull List<String> schemaCustomizerDirectives) {
+            ArgumentUtils.requireNonNull("schemaCustomizerDirectives", schemaCustomizerDirectives);
+            this.schemaCustomizerDirectives = List.copyOf(schemaCustomizerDirectives);
+        }
+
+        /**
+         * @return the manifest lines of findings that the checks accept
+         */
+        @NonNull
+        public List<String> getFindings() {
+            return findings;
+        }
+
+        /**
+         * Sets the findings that the checks accept, as lines of the binding manifest, exactly as they are written
+         * there: {@code !unbound-resolver-method example.Query#helper(java.lang.String)}. A listed finding neither
+         * fails the startup nor is logged, and it does not appear in the manifest. Every entry must be a {@code !}
+         * line of a check that is not {@code ignore} and must match a finding of this startup; any other entry fails
+         * the startup. Default: empty.
+         *
+         * @param findings the manifest lines
+         */
+        public void setFindings(@NonNull List<String> findings) {
+            ArgumentUtils.requireNonNull("findings", findings);
+            this.findings = List.copyOf(findings);
         }
 
     }
@@ -429,65 +426,6 @@ public class GraphQLToolsConfiguration {
          * Bind the type resolver method; the member of the Java type is not read.
          */
         RESOLVER_FIRST
-
-    }
-
-    /**
-     * The handling of input class properties that the GraphQL input type does not define.
-     */
-    public enum UnmappedProperties {
-
-        /**
-         * Fail the startup with one error that lists them for every input class.
-         */
-        FAIL,
-
-        /**
-         * Accept them (they keep the value the class gives them).
-         */
-        IGNORE
-
-    }
-
-    /**
-     * The handling of object, interface and union types of the schema that no field reachable from a root
-     * operation type returns, so that no Java class is bound to them, and in strict mode of enum, input and scalar
-     * types that nothing uses.
-     */
-    public enum UnreachableTypes {
-
-        /**
-         * Fail the startup with one error that lists every unreachable type (except those in
-         * {@link #getAllowUnreachable()}).
-         */
-        FAIL,
-
-        /**
-         * Keep the types in the schema with graphql-java's default data fetchers, and log them as a warning.
-         */
-        IGNORE
-
-    }
-
-    /**
-     * The handling of directives the schema applies without a wiring.
-     */
-    public enum UnwiredDirectives {
-
-        /**
-         * Fail the startup with one error that lists every such directive and where it is applied.
-         */
-        FAIL,
-
-        /**
-         * Log one warning that lists them; the schema keeps them without effect.
-         */
-        WARN,
-
-        /**
-         * Do not check.
-         */
-        IGNORE
 
     }
 

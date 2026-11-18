@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 /**
  * Thrown when input classes have settable properties that their GraphQL input types do not define, so no request can
- * ever set them. {@code micronaut.graphql.tools.input.unmapped-properties=ignore} accepts them instead.
+ * ever set them. {@code micronaut.graphql.tools.checks.unmapped-input-property} set to {@code warn} or {@code ignore} accepts them instead.
  */
 public final class UnmappedInputPropertiesException extends SchemaBindingException {
 
@@ -30,7 +30,7 @@ public final class UnmappedInputPropertiesException extends SchemaBindingExcepti
 
     public UnmappedInputPropertiesException(Map<String, Map.Entry<Class<?>, List<String>>> unmappedProperties) {
         super(BindingCode.UNMAPPED_INPUT_PROPERTY, "Input classes have properties that their GraphQL input types do not define "
-                + "(set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):"
+                + "(set micronaut.graphql.tools.checks.unmapped-input-property to warn or ignore to accept them):"
                 + unmappedProperties.entrySet().stream()
                 .map(it -> "\n  GraphQL input object type: " + it.getKey()
                         + ", mapped class: " + it.getValue().getKey().getName()

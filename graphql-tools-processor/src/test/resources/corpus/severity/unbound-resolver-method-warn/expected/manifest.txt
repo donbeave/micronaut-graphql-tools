@@ -1,0 +1,4 @@
+!unbound-resolver-method example.Query#stray(java.lang.String)
+Query → object · - · - · -
+Query.hello: String → root · example.Query#hello() · java.lang.String · java.lang.String
+String → scalar · graphql.scalar.GraphqlStringCoercing · - · -

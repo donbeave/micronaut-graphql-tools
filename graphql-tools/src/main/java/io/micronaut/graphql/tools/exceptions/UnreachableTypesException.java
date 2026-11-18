@@ -35,7 +35,8 @@ public final class UnreachableTypesException extends SchemaBindingException {
                 .map(it -> it.getKey() + " (" + it.getValue() + ")")
                 .collect(Collectors.joining(", "))
                 + ".\n  Bind them through a field, remove them from the schema, list them in "
-                + "micronaut.graphql.tools.allow-unreachable, or set micronaut.graphql.tools.unreachable-types to ignore.");
+                + "micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks."
+                + codeOf(types) + " to warn or ignore.");
 
         this.typeNames = List.copyOf(types.keySet());
     }

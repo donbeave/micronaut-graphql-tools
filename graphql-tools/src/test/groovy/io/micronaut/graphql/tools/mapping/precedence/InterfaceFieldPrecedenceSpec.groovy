@@ -95,7 +95,7 @@ type MediaSection implements Section {
     void "precedence property-first binds the getter of the implementation"() {
         given:
         startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.precedence': 'property-first',
-                                        'micronaut.graphql.tools.inert-directives': ['computed']])
+                                        'micronaut.graphql.tools.allow.inert-directives': ['computed']])
 
         when:
         def result = executeQuery('{ sections { title summary } }')
@@ -111,7 +111,7 @@ type MediaSection implements Section {
     void "precedence resolver-first binds the interface resolver (#order)"() {
         given:
         startContext(schema, SPEC_NAME, ['micronaut.graphql.tools.precedence': 'resolver-first',
-                                        'micronaut.graphql.tools.inert-directives': ['computed']])
+                                        'micronaut.graphql.tools.allow.inert-directives': ['computed']])
 
         when:
         def result = executeQuery('{ sections { title summary } }')

@@ -2,7 +2,7 @@ This page is the error reference. Every startup failure, every strict check and 
 
 == The exception
 
-Every startup failure is a `SchemaBindingException` (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnreachableTypesException`, `StrictModeException`, `BindingFailuresException`, and the others in the `exceptions` package). `code()` returns its code. An aggregate has a code of its own and carries its findings: `BindingFailuresException` (`binding-failures`) lists the failures of several fields, and each of them has its own code; `StrictModeException` (`strict-findings`) lists the strict findings, `getCodes()` returns the check code of each one, and each line of the message starts with it. Issue #109 collapses the subclasses into internal classes behind one public exception; the codes stay.
+Every startup failure is a `SchemaBindingException` (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnreachableTypesException`, `StrictModeException`, `BindingFailuresException`, `InvalidConfigurationException`, and the others in the `exceptions` package). `code()` returns its code. An aggregate has a code of its own and carries its findings: `BindingFailuresException` (`binding-failures`) lists the failures of several fields, and each of them has its own code; `StrictModeException` (`strict-findings`) lists the strict findings, `getCodes()` returns the check code of each one, and each line of the message starts with it. Issue #109 collapses the subclasses into internal classes behind one public exception; the codes stay.
 
 == Checks
 
@@ -59,9 +59,12 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 |`invalid-scalar-mapping` |failure |no |GraphQLScalarMapping beans contradict each other or the library.
 |`runtime-wiring-override` |failure |no |A RuntimeWiringCustomizer replaced what the library wired.
 |`invalid-claimed-fields` |failure |no |A RuntimeWiringCustomizer claims fields that the schema does not define.
-|`invalid-allow-unreachable` |failure |no |allow-unreachable names a type that is not an unreachable type.
-|`invalid-inert-directives` |failure |no |inert-directives lists a directive that is built in, undeclared or wired.
-|`invalid-schema-customizer-directives` |failure |no |schema-customizer-directives lists a built-in or undeclared directive.
+|`invalid-allow-unreachable` |failure |no |allow.unreachable names a type that is not an unreachable type.
+|`invalid-inert-directives` |failure |no |allow.inert-directives lists a directive that is built in, undeclared or wired.
+|`invalid-schema-customizer-directives` |failure |no |allow.schema-customizer-directives lists a built-in or undeclared directive.
+|`invalid-allow-findings` |failure |no |allow.findings has an entry that is not a manifest line of a check, or that matches no finding.
+|`invalid-check-setting` |failure |no |checks names a code that is not a check, or a severity that is not fail, warn or ignore.
+|`removed-configuration-key` |failure |no |A configuration key was removed; the message names its replacement.
 |`duplicate-directive-wiring` |failure |no |More than one SchemaDirective binds a wiring to the same directive.
 |`unwrapped-directive-wiring` |failure |no |A SchemaDirectiveWiring bean is not wrapped by a SchemaDirective.
 |`schema-definition-not-provided` |failure |no |No schema definition is configured.
@@ -79,4 +82,6 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 
 The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup does not emit it yet: a schema that graphql-java rejects still fails with graphql-java's own `SchemaProblem`.
 
-`nullable-primitive` and `coordinate-on-non-resolver` are registered for the compile-time check and are not emitted yet: no startup check reports them, and the compile-time check that does arrives with the visitor.
+`coordinate-on-non-resolver` is registered for the compile-time check and is not emitted at startup. `nullable-primitive` is emitted at startup for a primitive at a nullable built-in scalar; for a custom scalar the failure keeps the code `incorrect-class-mapping`.
+
+`checks.<code>` and the `[code]` of a configuration failure use the same codes: `invalid-check-setting` (an unknown check or severity), `removed-configuration-key` (a key that was removed in 1.0.0-M3, BC-23, with its replacement) and `invalid-allow-findings` (an `allow.findings` entry that is not a manifest line of a check, or that matches no finding). They are raised as `InvalidConfigurationException`.

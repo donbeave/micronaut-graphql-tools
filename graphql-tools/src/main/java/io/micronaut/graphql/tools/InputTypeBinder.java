@@ -31,6 +31,7 @@ import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
 import io.micronaut.graphql.tools.exceptions.InputFieldNotSettableException;
@@ -63,6 +64,7 @@ final class InputTypeBinder {
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final ScalarMappings scalarMappings;
     private final GraphQLToolsConfiguration configuration;
+    private final CheckPolicy policy;
     private final BindingManifestRecorder manifestRecorder;
     private final InputClassChecks inputClassChecks;
     private final Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans;
@@ -70,12 +72,14 @@ final class InputTypeBinder {
     private final Callbacks callbacks;
 
     InputTypeBinder(TypeDefinitionRegistry typeDefinitionRegistry, ScalarMappings scalarMappings,
-                    GraphQLToolsConfiguration configuration, BindingManifestRecorder manifestRecorder,
+                    GraphQLToolsConfiguration configuration, CheckPolicy policy,
+                    BindingManifestRecorder manifestRecorder,
                     InputClassChecks inputClassChecks, Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans,
                     RuntimeTypeModel typeModel, Callbacks callbacks) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.scalarMappings = scalarMappings;
         this.configuration = configuration;
+        this.policy = policy;
         this.manifestRecorder = manifestRecorder;
         this.inputClassChecks = inputClassChecks;
         this.omissionPlans = omissionPlans;
@@ -252,9 +256,8 @@ final class InputTypeBinder {
             if (!supportedClasses.contains(returnType)) {
                 throw IncorrectClassMappingException.forArgument(mappingContext, returnType, supportedClasses);
             }
-            if (returnType.isPrimitive() && !nonNull && configuration.isStrict()) {
-                throw IncorrectClassMappingException.forNullablePrimitiveInStrictMode(mappingContext, returnType,
-                        typeName.getName(), supportedClasses);
+            if (returnType.isPrimitive() && !nonNull && policy.enabled(BindingCode.NULLABLE_PRIMITIVE)) {
+                checkNullablePrimitive(mappingContext, returnType, typeName.getName(), supportedClasses);
             }
         } else if (typeDefinition instanceof ScalarTypeDefinition scalarTypeDefinition) {
             GraphQLScalarMapping scalarMapping = scalarMappings.require(scalarTypeDefinition, mappingContext);
@@ -274,6 +277,23 @@ final class InputTypeBinder {
         } else {
             throw unsupportedTypeDefinition(typeDefinition);
         }
+    }
+
+    private void checkNullablePrimitive(MappingContext mappingContext, Class<?> primitive, String scalarName,
+                                        Set<Class<?>> supportedClasses) {
+        String coordinate = mappingContext.getCoordinate();
+        if (policy.allowed(BindingManifestRecorder.diagnosticLine(BindingCode.NULLABLE_PRIMITIVE, coordinate))) {
+            return;
+        }
+        manifestRecorder.diagnostic(BindingCode.NULLABLE_PRIMITIVE, coordinate);
+        IncorrectClassMappingException finding = IncorrectClassMappingException.forNullablePrimitiveInStrictMode(
+                mappingContext, primitive, scalarName, supportedClasses);
+        if (policy.failing(BindingCode.NULLABLE_PRIMITIVE)) {
+            throw finding;
+        }
+        policy.warn(BindingCode.NULLABLE_PRIMITIVE,
+                List.of(mappingContext.getMessage(IncorrectClassMappingException.nullablePrimitiveText(primitive,
+                        scalarName, supportedClasses))));
     }
 
     private Argument<?> unwrapArgumentValue(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,

@@ -94,7 +94,8 @@ public final class GraphQLFactory {
 
         DirectiveWiringCheck.check(registry, runtimeWiring, schemaDirectiveWirings.getEveryElementDirectiveNames(),
                 schemaDirectiveWirings.getDirectiveNames(), configuration,
-                graphQLRuntimeWiringGenerator.getManifestRecorder());
+                graphQLRuntimeWiringGenerator.getCheckPolicy(), graphQLRuntimeWiringGenerator.getManifestRecorder());
+        graphQLRuntimeWiringGenerator.getCheckPolicy().verifyAllowedFindings();
 
         SchemaGenerator schemaGenerator = new SchemaGenerator();
         GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(registry, runtimeWiring);

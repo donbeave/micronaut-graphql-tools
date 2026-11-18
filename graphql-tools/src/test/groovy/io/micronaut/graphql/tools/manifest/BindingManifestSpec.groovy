@@ -111,7 +111,7 @@ type Legacy {
 
     static final Map CONFIG = [
             'micronaut.graphql.tools.resolver-directives': ['computed'],
-            'micronaut.graphql.tools.allow-unreachable'  : ['Legacy']
+            'micronaut.graphql.tools.allow.unreachable'  : ['Legacy']
     ]
 
     void "the manifest names the member, the declared and the converted type of every coordinate"() {
@@ -272,8 +272,8 @@ type Legacy {
         given:
         startContext(SCHEMA, SPEC_NAME, [
                 'micronaut.graphql.tools.precedence'       : 'property-first',
-                'micronaut.graphql.tools.allow-unreachable': ['Legacy'],
-                'micronaut.graphql.tools.inert-directives' : ['computed']
+                'micronaut.graphql.tools.allow.unreachable': ['Legacy'],
+                'micronaut.graphql.tools.allow.inert-directives' : ['computed']
         ])
 
         when:
@@ -456,8 +456,8 @@ enum Unused {
 type Query {
   label: String! @restricted(level: HIGH)
 }
-""", SPEC_NAME + ".directives", ['micronaut.graphql.tools.allow-unreachable': ['Unused'],
-                'micronaut.graphql.tools.inert-directives': ['restricted']])
+""", SPEC_NAME + ".directives", ['micronaut.graphql.tools.allow.unreachable': ['Unused'],
+                'micronaut.graphql.tools.allow.inert-directives': ['restricted']])
 
         when:
         BindingManifest manifest = applicationContext.getBean(BindingManifest)

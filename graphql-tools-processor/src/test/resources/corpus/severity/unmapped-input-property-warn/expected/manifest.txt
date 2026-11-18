@@ -1,0 +1,6 @@
+!unmapped-input-property example.Filter#extra
+Filter → input · example.Filter · - · -
+Filter.text: String! → inputField · example.Filter#text · java.lang.String · java.lang.String
+Query → object · - · - · -
+Query.describe(filter: Filter!): String → root · example.Query#describe(example.Filter) · java.lang.String · java.lang.String
+String → scalar · graphql.scalar.GraphqlStringCoercing · - · -

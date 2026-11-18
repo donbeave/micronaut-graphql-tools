@@ -34,7 +34,7 @@ class InputStrictModeSpec extends AbstractTest {
     static final String SPEC_DESERIALIZER = "InputStrictModeSpecDeserializer"
 
     static final String STRICT = GraphQLToolsConfiguration.PREFIX + '.strict'
-    static final String UNMAPPED = GraphQLToolsConfiguration.PREFIX + '.input.unmapped-properties'
+    static final String UNMAPPED = GraphQLToolsConfiguration.PREFIX + '.checks.unmapped-input-property'
 
     @Language("GraphQL")
     static final String SCHEMA_PRIMITIVE_ARGUMENT = """
@@ -132,9 +132,9 @@ input PointInput {
         e.cause.unmappedProperties.keySet() == ['BasketInput', 'ItemInput'] as Set
     }
 
-    void "strict mode with unmapped-properties=ignore accepts them and still lists them in the manifest"() {
+    void "checks.unmapped-input-property=warn accepts them, logs them and lists them in the manifest"() {
         given:
-        startContext(InputPropertiesSpec.SCHEMA, InputPropertiesSpec.SPEC_EXTRA, [(UNMAPPED): 'ignore'])
+        startContext(InputPropertiesSpec.SCHEMA, InputPropertiesSpec.SPEC_EXTRA, [(UNMAPPED): 'warn'])
 
         when:
         def result = executeQuery('{ basket(basket: {owner: "jane", items: [{sku: "a", quantity: 2}]}) }')
@@ -143,6 +143,23 @@ input PointInput {
         result.errors.isEmpty()
         applicationContext.getBean(BindingManifest).diagnostics.contains(
                 "!unmapped-input-property ${InputPropertiesSpec.ExtraItem.name}#discount".toString())
+        appender.list.any {
+            it.level == Level.WARN && it.formattedMessage.startsWith("[unmapped-input-property] " +
+                    "micronaut.graphql.tools.checks.unmapped-input-property is warn, so the startup goes on:")
+        }
+    }
+
+    void "checks.unmapped-input-property=ignore accepts them and the manifest has no line for them"() {
+        given:
+        startContext(InputPropertiesSpec.SCHEMA, InputPropertiesSpec.SPEC_EXTRA, [(UNMAPPED): 'ignore'])
+
+        when:
+        def result = executeQuery('{ basket(basket: {owner: "jane", items: [{sku: "a", quantity: 2}]}) }')
+
+        then:
+        result.errors.isEmpty()
+        applicationContext.getBean(BindingManifest).diagnostics.isEmpty()
+        appender.list.findAll { it.level == Level.WARN }.isEmpty()
     }
 
     void "strict mode: a primitive parameter for a nullable built-in scalar argument fails"() {
@@ -155,7 +172,7 @@ input PointInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """[incorrect-class-mapping] The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. Strict mode rejects this for built-in scalars too; with micronaut.graphql.tools.strict=false a null reaches the primitive as its default value or fails the request.
+        e.cause.message == """[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. The check nullable-primitive rejects this for built-in scalars too; with micronaut.graphql.tools.checks.nullable-primitive set to warn or ignore a null reaches the primitive as its default value or fails the request.
   GraphQL coordinate: Query.repeat(times:) (line 7, column 25)
   GraphQL object type: Query
   GraphQL field: repeat
@@ -177,7 +194,24 @@ input PointInput {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
         e.cause.mappingContext.graphQlInputObjectType == 'LineInput'
-        e.cause.message.startsWith("[incorrect-class-mapping] The argument is mapped to the primitive int, but the GraphQL type Int is nullable")
+        e.cause.message.startsWith("[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable")
+    }
+
+    void "checks.nullable-primitive=warn accepts a primitive for a nullable built-in scalar and logs it"() {
+        given:
+        startContext(SCHEMA_PRIMITIVE_PROPERTY, SPEC_PRIMITIVE_PROPERTY,
+                [(GraphQLToolsConfiguration.PREFIX + '.checks.nullable-primitive'): 'warn'])
+
+        when:
+        def result = executeQuery('{ order(line: {sku: "a", quantity: 3}) }')
+
+        then:
+        result.errors.isEmpty()
+        applicationContext.getBean(BindingManifest).diagnostics == ['!nullable-primitive LineInput.quantity']
+        appender.list.any {
+            it.level == Level.WARN && it.formattedMessage.startsWith("[nullable-primitive] " +
+                    "micronaut.graphql.tools.checks.nullable-primitive is warn, so the startup goes on:")
+        }
     }
 
     void "strict false: a primitive for a nullable built-in scalar is accepted, as before"() {

@@ -23,10 +23,9 @@ import java.util.stream.Collectors;
 
 /**
  * Thrown when the schema applies directives that have no wiring and are not listed in
- * {@code micronaut.graphql.tools.inert-directives} (such a directive would be in the schema and have no effect) and
- * strict mode is on ({@code micronaut.graphql.tools.strict}, the default, unless {@code unwired-directives} says otherwise; without it they are a warning), or, in
- * every mode, when that list names directives that the schema does not declare or that have a wiring (a stale or
- * contradictory entry), or when {@code micronaut.graphql.tools.schema-customizer-directives} lists a built-in or
+ * {@code micronaut.graphql.tools.allow.inert-directives} (such a directive would be in the schema and have no effect)
+ * and the check {@code unwired-directive} is {@code fail} (the default), or, in every mode, when that list names directives that the schema does not declare or that have a wiring (a stale or
+ * contradictory entry), or when {@code micronaut.graphql.tools.allow.schema-customizer-directives} lists a built-in or
  * undeclared directive. A directive applied on the schema definition or on a directive argument counts as wired only
  * through one of those two lists, because graphql-java calls no wiring there.
  */
@@ -81,7 +80,7 @@ public final class UnwiredDirectivesException extends SchemaBindingException {
         }
         if (!invalidInertDirectives.isEmpty()) {
             paragraphs.add(tagAfterFirst(paragraphs, BindingCode.INVALID_INERT_DIRECTIVES,
-                    "micronaut.graphql.tools.inert-directives lists directives that are built in, not declared "
+                    "micronaut.graphql.tools.allow.inert-directives lists directives that are built in, not declared "
                     + "in the schema, or that have a wiring: "
                     + invalidInertDirectives.entrySet().stream()
                     .map(it -> "@" + it.getKey() + " (" + it.getValue() + ")")
@@ -90,7 +89,7 @@ public final class UnwiredDirectivesException extends SchemaBindingException {
         }
         if (!invalidSchemaCustomizerDirectives.isEmpty()) {
             paragraphs.add(tagAfterFirst(paragraphs, BindingCode.INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES,
-                    "micronaut.graphql.tools.schema-customizer-directives lists directives that are built in "
+                    "micronaut.graphql.tools.allow.schema-customizer-directives lists directives that are built in "
                     + "or not declared in the schema: "
                     + invalidSchemaCustomizerDirectives.entrySet().stream()
                     .map(it -> "@" + it.getKey() + " (" + it.getValue() + ")")
@@ -107,7 +106,7 @@ public final class UnwiredDirectivesException extends SchemaBindingException {
 
     /**
      * Describes applied directives without a wiring as this exception does, for the warning that replaces it when
-     * strict mode is off.
+     * the check is not fail.
      *
      * @param unwiredDirectives directive name to the schema coordinates that apply it, in the order to report them
      * @return the directives with up to five coordinates each, and what to do about them
@@ -119,11 +118,12 @@ public final class UnwiredDirectivesException extends SchemaBindingException {
                 .collect(Collectors.joining(", "))
                 + ".\n  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or "
                 + "SchemaDirective.everyElement for a wiring that sees every element), or list it in "
-                + "micronaut.graphql.tools.inert-directives if it has no effect at runtime."
+                + "micronaut.graphql.tools.allow.inert-directives if it has no effect at runtime, or set "
+                + "micronaut.graphql.tools.checks.unwired-directive to warn or ignore."
                 + (hasWiringlessCoordinate(unwiredDirectives)
                 ? "\n  graphql-java calls no wiring for the schema definition (schema) or for directive arguments "
-                + "(@name(arg:)), so a directive applied there must be listed in inert-directives, or in "
-                + "micronaut.graphql.tools.schema-customizer-directives if a GraphQLSchemaCustomizer handles it."
+                + "(@name(arg:)), so a directive applied there must be listed in allow.inert-directives, or in "
+                + "micronaut.graphql.tools.allow.schema-customizer-directives if a GraphQLSchemaCustomizer handles it."
                 : "");
     }
 

@@ -63,9 +63,10 @@ type Draft {
         failures.message.contains("${Query.name}#helper(java.lang.String) binds no schema field")
     }
 
-    void "with strict false the strict findings are left out and the others are still reported together"() {
+    void "with strict false the strict findings are warnings, an explicit check still fails, and the failures are reported together"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.strict': false])
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.strict': false,
+                                         'micronaut.graphql.tools.checks.unreachable-type': 'fail'])
 
         when:
         getGraphQLBean()
