@@ -171,11 +171,15 @@ val allocationTestTask = tasks.register<Test>("allocationTest") {
     minHeapSize = "512m"
     maxHeapSize = "512m"
     jvmArgs("-XX:+UseG1GC", "-XX:TieredStopAtLevel=1")
-    systemProperty("allocation.baselines", allocationBaselines.asFile.absolutePath)
+    val update = providers.gradleProperty("allocation.update").isPresent
+    // Relative to the working directory (the project directory): an absolute path would be a task input and differ per machine.
+    systemProperty("allocation.baselines", allocationBaselines.asFile.name)
     systemProperty("allocation.graphqlJavaLeg", graphqlJavaLeg)
-    systemProperty("allocation.update", providers.gradleProperty("allocation.update").isPresent)
-    inputs.file(allocationBaselines).withPropertyName("allocationBaselines")
-    outputs.upToDateWhen { false }
+    systemProperty("allocation.update", update)
+    inputs.file(allocationBaselines).withPropertyName("allocationBaselines").withPathSensitivity(PathSensitivity.NONE)
+    // An update run rewrites its own input, so it must run every time and never be restored from the cache.
+    outputs.upToDateWhen { !update }
+    outputs.doNotCacheIf("the baselines are being updated") { update }
     testLogging {
         events("passed", "failed")
         showStandardStreams = true
