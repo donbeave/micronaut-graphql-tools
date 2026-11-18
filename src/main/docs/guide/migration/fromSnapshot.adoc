@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22`, `BC-23` and `BC-24` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-25` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -35,6 +35,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-22 one code system (#237) | Every startup message starts with `[code]`. The `!` lines of the binding manifest are named by the code (`!unbound` is `!unbound-resolver-method`, `!unbound-enum-constant` or `!unmapped-input-property`; `!unusedDictionary` is `!unused-dictionary-entry`; `!ambiguous` is `!precedence-ambiguity`; `!unreachable` is `!unreachable-type` or `!unreachable-value-type`; `!unwiredDirective` is `!unwired-directive`). The labels of `BindingFailuresException` are `[unknown-schema-coordinate]` and `[strict-findings]` (were `[invalid-schema-coordinate]` and `[strict]`). | Match on `SchemaBindingException#code()`, not on message text. Read the new kinds from the manifest. New in 1.0.0-M3, no opt-out.
 | BC-23 input conversion from `BeanIntrospection` (#37) | Arguments and input objects are converted by converters that startup builds from the bean introspection, not by Jackson. Jackson annotations, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean stop being the input contract. A list is converted into `List`, `Collection`, `Iterable`, `Set`, `SortedSet`, `Deque` or `Queue` only. `InputFieldNotSettableException` has a new message. | Name the properties and constructor parameters of an input class like the input fields. Use a `TypeConverter` bean for a conversion of your own, and the scalar mapping for custom scalars.
 | BC-24 schema files are `*.graphqls` (#17) | The compile-time processor no longer reads `*.graphql` files of its schema directory, so a schema kept in one is missing at compile time. | Rename the schema files to `.graphqls`. Client operation files may stay `.graphql`; they are never read.
+| BC-25 binding manifest format 2 (#90) | The manifest is written in format version 2: ASCII separators (` -> ` and ` ; ` replace the arrow and the middle dot), a `scalar` line names the scalar (not the `Coercing` class), characters outside ASCII are escaped, and the schema hash does not depend on the order of the files and the extensions. The first line is `# graphql-binding-manifest 2`. | Regenerate checked-in manifests. A reader checks the version on the first line. New in 1.0.0-M3, no opt-out.
 | #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. | Add `micronaut-jackson-databind` to your own build if you use it.
 | #86 check severity and removed keys | _Pending._ Four keys are removed and their replacements named. `strict: false` also warns on unreachable object, interface and union types. | Use the replacement keys listed under #86 in the pending changes below.
 | #105 precedence default | _Pending._ The default value `strict` of `precedence` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
@@ -545,6 +546,17 @@ public class ItemInput {
     // getter and setter, or a constructor parameter named legacyCode
 }
 ----
+
+=== BC-25: the binding manifest has a specified format, version 2 (#90)
+
+The manifest format is specified on the "Binding Manifest" page and its version is the number on the first line. Version 2 differs from version 1 in four ways:
+
+* The separators are ASCII: ` -> ` replaces the arrow and ` ; ` replaces the middle dot, in entries and in findings. The text is ASCII only: a character outside `0x20` to `0x7e` and the backslash in a part are written `\uXXXX`. A part that holds a line break is escaped instead of failing the rendering.
+* A `scalar` line names the scalar in the member part (`Long -> scalar ; Long ; - ; -`). It named the `Coercing` class (`graphql.scalars.java.JavaPrimitives$1`), which could be an anonymous class and changed with the graphql-java version. A `claimed` line names the customizer by a class a reader can find, never an anonymous or generated class.
+* The schema hash is computed over the definitions sorted by name, with the extensions of a name sorted by their printed text. The same schema files loaded in any order give one hash. The hash of every schema differs from the hash of version 1.
+* The first line is `# graphql-binding-manifest 2`.
+
+Fix: regenerate every checked-in manifest, and change a reader that splits lines on the arrow or the middle dot to split on ` -> ` and ` ; `. A reader should check the version on the first line and refuse a version it does not know. The compile-time manifest of the JSR-269 processor and the manifest of the startup are both written in version 2.
 
 == Pending changes
 

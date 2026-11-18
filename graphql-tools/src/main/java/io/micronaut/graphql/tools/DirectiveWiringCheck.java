@@ -47,9 +47,10 @@ import java.util.regex.Pattern;
 @Internal
 final class DirectiveWiringCheck {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DirectiveWiringCheck.class);
     // not a GraphQL name, so no type can have this coordinate
     static final String SCHEMA_DEFINITION = "schema definition";
+
+    private static final Logger LOG = LoggerFactory.getLogger(DirectiveWiringCheck.class);
 
     private DirectiveWiringCheck() {
     }

@@ -48,4 +48,4 @@ val schemaIndex = tasks.register("graphqlSchemaIndex") {
 sourceSets.main { resources.srcDir(schemaIndex) }
 ----
 
-On the JVM a jar without directory entries cannot be listed. When nothing else is found the index of that jar is used.
+On the JVM a jar without directory entries cannot be listed. For `classpath*:` the index of such a jar is read next to the roots that were listed, and the files of both are merged; for `classpath:` the index is used only when no classpath entry has the directory.

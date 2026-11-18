@@ -147,12 +147,12 @@ class CorpusRunnerSpec extends Specification {
 
     void "the binding manifest of a bound startup is compared where one is recorded"() {
         given:
-        Path root = corpus(['runtime.txt': 'ok\n', 'manifest.txt': 'Query.a: String → root\n'])
+        Path root = corpus(['runtime.txt': 'ok\n', 'manifest.txt': 'Query.a: String -> root\n'])
         CorpusCase c = new Corpus(root).byName('a')
 
         expect:
-        message { runner(root, Verdict.bound('Query.a: String → root\n')).run(c, Language.JAVA) } == null
-        message { runner(root, Verdict.bound('Query.a: String → property\n')).run(c, Language.JAVA) }
+        message { runner(root, Verdict.bound('Query.a: String -> root\n')).run(c, Language.JAVA) } == null
+        message { runner(root, Verdict.bound('Query.a: String -> property\n')).run(c, Language.JAVA) }
                 .contains('the binding manifest differs from expected/manifest.txt')
         message { runner(root, Verdict.bound()).run(c, Language.JAVA) }.contains('the case does not record a manifest')
     }
@@ -328,7 +328,7 @@ class CorpusRunnerSpec extends Specification {
     void "the golden update rewrites the expected files from what the binders say, and the result passes"() {
         given:
         Path root = corpus(['runtime.txt': 'ok\n', 'manifest.txt': ''])
-        Verdict bound = Verdict.bound('Query.a: String → root\n')
+        Verdict bound = Verdict.bound('Query.a: String -> root\n')
 
         when:
         runner(root, Verdict.failed([MISSING, UNBOUND]), Verdict.unavailable(), true).run(new Corpus(root).byName('a'), Language.JAVA)
@@ -343,7 +343,7 @@ class CorpusRunnerSpec extends Specification {
 
         then:
         Files.readString(dir.resolve('a/expected/runtime.txt')) == 'ok\n'
-        Files.readString(dir.resolve('a/expected/manifest.txt')) == 'Query.a: String → root\n'
+        Files.readString(dir.resolve('a/expected/manifest.txt')) == 'Query.a: String -> root\n'
         message { runner(root, bound).run(new Corpus(root).byName('a'), Language.JAVA) } == null
     }
 

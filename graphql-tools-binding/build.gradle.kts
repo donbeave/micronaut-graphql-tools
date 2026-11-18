@@ -23,6 +23,11 @@ afterEvaluate {
 
 tasks.named<Test>("test") {
     // BindingArchitectureSpec reads the sources of this module behind Gradle's back.
+    // ManifestFormatSpec reads the examples of the format specification, the manifest guide page.
+    systemProperty("manifest.spec", rootProject.layout.projectDirectory.file("src/main/docs/guide/manifest.adoc").asFile.absolutePath)
+    inputs.file(rootProject.layout.projectDirectory.file("src/main/docs/guide/manifest.adoc"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("manifestSpec")
     systemProperty("binding.sources", layout.projectDirectory.dir("src/main/java").asFile.absolutePath)
     inputs.files(layout.projectDirectory.dir("src/main/java").asFileTree)
         .withPathSensitivity(PathSensitivity.RELATIVE)

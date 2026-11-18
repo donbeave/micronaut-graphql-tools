@@ -154,7 +154,7 @@ public final class GraphQLSchemaBindingProcessor extends AbstractProcessor {
         String content = manifest.render(registry);
         if (!manifest.invalidParts().isEmpty()) {
             problems.error("cannot write the binding manifest: " + String.join(", ", manifest.invalidParts())
-                    + " contain a separator (\"→\" or \"·\") or a line break.");
+                    + " contain a separator (\"->\" or \";\").");
             return;
         }
         StringBuilder omitted = new StringBuilder(BindingManifestLines.OMITTED_FORMAT).append('\n');
