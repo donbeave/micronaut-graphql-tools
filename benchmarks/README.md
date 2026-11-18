@@ -16,8 +16,9 @@ runs, or when they claim a performance gain.
 - `src/allocationTest/java`: the allocation gate. It fails when an operation allocates more bytes than its baseline in
   `allocation-baselines.properties`.
 - `src/jmhSmokeTest/java`: runs every JMH benchmark once, so that the benchmarks compile and start. Its numbers mean nothing.
-- `src/main`: generated sources. The `generateLargeSchema` task generates the large schema that the start-up benchmarks bind.
-- `scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
+- `src/main`: the benchmark classes shared by the source sets (`Resolvers`, `BenchmarkCases`, `Fixtures`). The
+  `generateLargeSchema` task writes the large schema that the start-up benchmarks bind to `build/generated/large-schema`.
+- `benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
 
 ## Who uses it
 
@@ -46,7 +47,7 @@ Run from the repository root. JDK 21 or 25.
 ```
 
 - `:benchmarks:jmh` runs two forks with the `gc` profiler. The allocation figure is `gc.alloc.rate.norm`. The start-up
-  benchmarks are left out of it: run them with `scripts/startup-report.py`.
+  benchmarks are left out of it: run them with `benchmarks/scripts/startup-report.py`.
 - `:benchmarks:allocationTest -Pallocation.update` rewrites the baselines. Review the diff: a higher number is an
   allocation the change added. Use `-PgraphqlJavaLeg=floor` or `ceiling` for the other legs, which have their own
   baselines.

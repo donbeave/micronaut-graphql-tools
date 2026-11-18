@@ -13,8 +13,8 @@ run every scenario against their own resolvers.
 
 - The scenarios: one directory each under `src/main/resources/tck/`, listed in `tck/scenarios.txt`.
 - The runner in `io.micronaut.graphql.tools.tck` (`Tck`, `Scenarios`, `Scenario`, `JsonDiff`). It reads the scenario
-  files from the classpath and compares responses. It does not start an application itself: each suite starts its own
-  application for each scenario.
+  files from the classpath and compares responses. `Tck.run` starts an application context and its embedded server for each
+  scenario; the suites supply the application classes and the fixtures.
 - The checks of the scenario files in `src/test` (`ScenarioFilesTest`, `ExemptionsTest`, `JsonDiffTest`): every listed
   scenario is complete and well-formed.
 

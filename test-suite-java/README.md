@@ -51,6 +51,6 @@ Run from the repository root. JDK 21 or 25 (JDK 25 with Oracle GraalVM for the n
   `check`.
 - `nativeTest` and `nativeSerdeTest` build native images and run the tests in them. They need Oracle GraalVM 25, about 5 GB of
   memory and 5 to 7 minutes each. Run them one after another (`--no-parallel`).
-- Add `-PgraphqlJavaLeg=floor|ceiling|latest` to run on another graphql-java leg.
+- Add `-PgraphqlJavaLeg=floor|ceiling` to run on another graphql-java leg.
 
 The full list of the commands CI runs is in `CONTRIBUTING.md` ("Running Tests").

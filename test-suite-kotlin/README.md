@@ -47,6 +47,6 @@ Run from the repository root. JDK 21 or 25 (native tests need Oracle GraalVM 25;
 - `test` runs the JUnit tests on the JVM.
 - `nativeTest` builds a native image and runs the tests in it. It takes about 5 to 7 minutes and 5 GB of memory. Run it after the
   other native tests, not in parallel with them.
-- Add `-PgraphqlJavaLeg=floor|ceiling|latest` to run on another graphql-java leg.
+- Add `-PgraphqlJavaLeg=floor|ceiling` to run on another graphql-java leg.
 
 The full list of the commands CI runs is in `CONTRIBUTING.md` ("Running Tests").

@@ -50,6 +50,6 @@ Run from the repository root. JDK 21 or 25.
 - `test` runs the Spock specs on the JVM.
 - `nativeSmokeTest` builds the native executable with `:test-suite-groovy:nativeCompile` and smoke-tests it. It needs
   Oracle GraalVM 25, about 5 minutes and 5 GB of memory. It is the native check for this suite in CI.
-- Add `-PgraphqlJavaLeg=floor|ceiling|latest` to run on another graphql-java leg.
+- Add `-PgraphqlJavaLeg=floor|ceiling` to run on another graphql-java leg.
 
 The full list of the commands CI runs is in `CONTRIBUTING.md` ("Running Tests").

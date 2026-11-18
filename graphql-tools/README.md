@@ -38,8 +38,8 @@ public surface is reduced in #109.
 - `io.micronaut.graphql.tools.annotation`: the public annotations (`@GraphQLType`, `@GraphQLRootResolver`,
   `@GraphQLTypeResolver`, `@GraphQLInput`, `@GraphQLField`, `@GraphQLArgument`, `@GraphQLIgnore`,
   `@GraphQLSchemaCoordinate`).
-- `io.micronaut.graphql.tools` (top level): mixed. Customizer interfaces such as `RuntimeWiringCustomizer`,
-  `SchemaDirective`, `SchemaMappingDictionaryCustomizer`, `GraphQLToolsConfiguration` and `BindingManifest` are not
+- `io.micronaut.graphql.tools` (top level): mixed. The customizer interfaces `RuntimeWiringCustomizer` and `SchemaMappingDictionaryCustomizer`, the
+  classes `SchemaDirective` and `BindingManifest`, and the configuration class `GraphQLToolsConfiguration` are not
   annotated `@Internal`. Most other types in the package are annotated `@Internal`. Check the annotation on the class
   before you use it.
 - `io.micronaut.graphql.tools.exceptions`: the startup failures. Not annotated `@Internal` today.
@@ -56,10 +56,17 @@ its tests only. `benchmarks` and the three `test-suite-*` modules use it as the 
 
 ## Build and test
 
-Run from the repository root (JDK 21 or 25; see `mise.toml`):
+Run from the repository root (see `mise.toml`):
 
 ```
 ./gradlew :micronaut-graphql-tools:check
+```
+
+The library compiles to Java 17 bytecode and supports JDK 17. On JDK 17 run the library and its binding module only; the
+processor and the test suites need JDK 21 or newer:
+
+```
+./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check
 ```
 
 `check` runs the unit tests, `DocsCoverageSpec` (a configuration key, public exception or public annotation that the guide
@@ -72,4 +79,4 @@ To run only the documentation specs:
 ./gradlew :micronaut-graphql-tools:test --tests '*DocsCoverageSpec*' --tests '*ModuleReadmesSpec*'
 ```
 
-Add `-PgraphqlJavaLeg=floor|ceiling|latest` for another graphql-java leg. The guide is built with `./gradlew docs`.
+Add `-PgraphqlJavaLeg=floor|ceiling` for another graphql-java leg. The guide is built with `./gradlew docs`.
