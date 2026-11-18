@@ -20,6 +20,8 @@ dependencies {
     implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M1")
 }
 ----
++
+The library does not bring a JSON codec (BC-26). Add the one your application uses, for example `micronaut-jackson-databind` or `micronaut-serde-jackson`, to the same `dependencies` block.
 
 2. Define the GraphQL schema in `.graphqls` files in the `src/main/resources/graphql` folder. The library finds them at startup (see the Schema page), and a `schema { }` block is optional:
 +
