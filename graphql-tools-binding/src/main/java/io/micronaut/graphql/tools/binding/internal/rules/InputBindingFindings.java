@@ -44,7 +44,6 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaTypes;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -319,17 +318,21 @@ public final class InputBindingFindings {
     }
 
     // An input type of the schema that this walk did not reach may be bound to a class of this walk by another resolver, so
-    // its fields cover a property here: a finding is only what no input type of the schema can cover.
+    // its fields cover a property here: a finding is only what no input type of the schema can cover. When such a type could
+    // sort before the types of this walk, the startup names the finding after it, and this walk reports nothing.
     private List<Finding> unmappedProperties() {
         Set<String> reached = coverage.inputTypes();
-        Set<String> otherFields = new HashSet<>();
+        Map<String, List<String>> others = new HashMap<>();
         for (InputObjectTypeDefinition other : schema.registry().getTypes(InputObjectTypeDefinition.class)) {
             if (!reached.contains(other.getName())) {
-                other.getInputValueDefinitions().forEach(it -> otherFields.add(it.getName()));
+                others.put(other.getName(), other.getInputValueDefinitions().stream().map(InputValueDefinition::getName).toList());
             }
         }
         List<Finding> result = new ArrayList<>();
-        for (InputClassCoverage.ClassCoverage entry : coverage.verdicts(otherFields)) {
+        for (InputClassCoverage.ClassCoverage entry : coverage.verdicts(others)) {
+            if (!entry.named()) {
+                continue;
+            }
             for (String property : entry.verdict().unmappedProperties()) {
                 String coordinate = entry.inputType() + "." + property;
                 result.add(new Finding(BindingCode.UNMAPPED_INPUT_PROPERTY.code(), coordinate,

@@ -76,7 +76,7 @@ record InputClassChecks(Map<String, Map.Entry<Class<?>, List<String>>> unmappedI
         InputClassChecks build() {
             Map<String, Map.Entry<Class<?>, List<String>>> unmapped = new TreeMap<>();
             Set<String> ignored = new TreeSet<>();
-            for (InputClassCoverage.ClassCoverage entry : coverage.verdicts(List.of())) {
+            for (InputClassCoverage.ClassCoverage entry : coverage.verdicts(Map.of())) {
                 ignored.addAll(entry.verdict().ignoredProperties());
                 if (!entry.verdict().unmappedProperties().isEmpty()) {
                     unmapped.put(entry.inputType(),

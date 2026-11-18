@@ -30,7 +30,7 @@ class InputClassCoverageSpec extends Specification {
         coverage.add('RenameBook', ['id', 'title'], book)
 
         expect:
-        coverage.verdicts([]).every { it.verdict().unmappedProperties().isEmpty() }
+        coverage.verdicts([:]).every { it.verdict().unmappedProperties().isEmpty() }
     }
 
     void "a property that no input type of the class covers is reported once, at the smallest type name"() {
@@ -40,7 +40,7 @@ class InputClassCoverageSpec extends Specification {
         coverage.add('CreateBook', ['title'], book)
 
         when:
-        def verdicts = coverage.verdicts([])
+        def verdicts = coverage.verdicts([:])
 
         then:
         verdicts.size() == 1
@@ -55,7 +55,7 @@ class InputClassCoverageSpec extends Specification {
         coverage.add('CreateBook', ['title'], book)
 
         expect:
-        coverage.verdicts(['id'])[0].verdict().unmappedProperties().isEmpty()
+        coverage.verdicts([OtherBook: ['id']])[0].verdict().unmappedProperties().isEmpty()
     }
 
     void "classes are judged apart"() {
@@ -65,6 +65,22 @@ class InputClassCoverageSpec extends Specification {
         coverage.add('CreateAuthor', ['name'], FakeModel.inputClass('a.Author', [FakeModel.property('name'), FakeModel.property('id')]))
 
         expect:
-        coverage.verdicts([])*.verdict()*.unmappedProperties() == [['id'], ['id']]
+        coverage.verdicts([:])*.verdict()*.unmappedProperties() == [['id'], ['id']]
+    }
+
+    void "the finding is named only when no unseen input type that the class could take sorts first"() {
+        given:
+        def coverage = new InputClassCoverage()
+        coverage.add('RenameBook', ['title'], book)
+
+        expect:
+        coverage.verdicts(others)[0].named() == named
+
+        where:
+        others                                | named
+        [:]                                   | true
+        [CreateBook: ['title']]               | false
+        [ZBook: ['title']]                    | true
+        [CreateBook: ['title', 'isbn']]       | true
     }
 }

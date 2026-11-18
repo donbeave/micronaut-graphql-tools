@@ -48,18 +48,29 @@ public final class InputClassCoverage {
     }
 
     /**
-     * @param otherFields the fields of input types that may be bound to any class, which cover a property as well
+     * @param others the input types that were not added, with their fields: another resolver may bind them to any class, so
+     *               their fields cover a property as well
      * @return the verdict of each class, in the order the classes were first added
      */
-    public List<ClassCoverage> verdicts(Collection<String> otherFields) {
+    public List<ClassCoverage> verdicts(Map<String, ? extends Collection<String>> others) {
         List<ClassCoverage> result = new ArrayList<>();
         for (Entry entry : byClass.values()) {
             Set<String> covered = new HashSet<>(entry.fields);
-            covered.addAll(otherFields);
+            others.values().forEach(covered::addAll);
             result.add(new ClassCoverage(entry.types.first(), List.copyOf(entry.types), entry.inputClass,
-                    InputTypeRules.check(covered, entry.inputClass)));
+                    InputTypeRules.check(covered, entry.inputClass), !smallerCandidate(entry, others)));
         }
         return result;
+    }
+
+    // The startup names a finding after the smallest input type bound to the class. An input type that was not added and sorts
+    // before it, with every field settable on the class, may be bound to it by another resolver: the smallest name is unknown.
+    private static boolean smallerCandidate(Entry entry, Map<String, ? extends Collection<String>> others) {
+        Set<String> settable = new HashSet<>();
+        entry.inputClass.writableProperties().forEach(it -> settable.add(it.name()));
+        String smallest = entry.types.first();
+        return others.entrySet().stream()
+                .anyMatch(it -> it.getKey().compareTo(smallest) < 0 && settable.containsAll(it.getValue()));
     }
 
     /**
@@ -76,8 +87,10 @@ public final class InputClassCoverage {
      * @param inputTypes every input type bound to the class, sorted
      * @param inputClass the class
      * @param verdict    what no input type of the class covers
+     * @param named      whether {@code inputType} is the name the startup gives the findings of the class
      */
-    public record ClassCoverage(String inputType, List<String> inputTypes, JClass inputClass, InputVerdict verdict) {
+    public record ClassCoverage(String inputType, List<String> inputTypes, JClass inputClass, InputVerdict verdict,
+                                boolean named) {
     }
 
     private static final class Entry {
