@@ -10,6 +10,8 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.
+    runtimeOnly(mn.micronaut.jackson.databind)
     // The Groovy runtime of the application classes. Nothing else puts it on the runtime classpath: the tests got it from
     // Spock, so the application itself (run, shadowJar) was missing it.
     implementation("org.apache.groovy:groovy")

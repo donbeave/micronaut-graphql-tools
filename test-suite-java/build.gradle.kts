@@ -11,6 +11,8 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.
+    runtimeOnly(mn.micronaut.jackson.databind)
     implementation(libs.apollo.java.client)
     implementation(libs.apollo.java.rx3)
     implementation(libs.apollo.api) // the Java client 1.0.0 resolves apollo-api 5.0.1; keep the API at the plugin's version
