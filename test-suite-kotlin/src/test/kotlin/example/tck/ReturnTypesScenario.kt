@@ -10,6 +10,8 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import java.util.Optional
+import java.util.OptionalDouble
+import java.util.OptionalInt
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
@@ -56,6 +58,14 @@ class ReturnTypesQueries {
     fun nothing(): String? = null
 
     fun scalars(): Scalars = Scalars()
+
+    fun primitiveCount(): OptionalInt = OptionalInt.of(7)
+
+    fun primitiveAbsentCount(): OptionalInt = OptionalInt.empty()
+
+    fun primitiveRatio(): OptionalDouble = OptionalDouble.of(0.5)
+
+    fun primitiveCounts(): List<OptionalInt> = listOf(OptionalInt.of(1), OptionalInt.empty(), OptionalInt.of(3))
 }
 
 // GraphqlErrorBuilder.newError(environment) returns a recursive generic type that the Kotlin compiler cannot resolve against

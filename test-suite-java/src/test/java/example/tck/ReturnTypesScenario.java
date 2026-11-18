@@ -10,6 +10,8 @@ import io.micronaut.graphql.tools.annotation.GraphQLType;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -106,6 +108,22 @@ public final class ReturnTypesScenario {
 
         public Scalars scalars() {
             return new Scalars();
+        }
+
+        public OptionalInt primitiveCount() {
+            return OptionalInt.of(7);
+        }
+
+        public OptionalInt primitiveAbsentCount() {
+            return OptionalInt.empty();
+        }
+
+        public OptionalDouble primitiveRatio() {
+            return OptionalDouble.of(0.5);
+        }
+
+        public List<OptionalInt> primitiveCounts() {
+            return List.of(OptionalInt.of(1), OptionalInt.empty(), OptionalInt.of(3));
         }
     }
 
