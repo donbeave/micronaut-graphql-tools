@@ -58,10 +58,6 @@ final class CheckPolicy {
                 + "that is the only opt-in");
     }
 
-    private static String use(String key) {
-        return "use " + PREFIX + key;
-    }
-
     private final Map<BindingCode, Severity> severities = new EnumMap<>(BindingCode.class);
     private final Map<BindingCode, String> origins = new EnumMap<>(BindingCode.class);
     private final Set<String> allowedFindings;
@@ -148,6 +144,10 @@ final class CheckPolicy {
                     "The allow.findings setting lists findings of checks that are ignored; remove the entries:", unused);
         }
         return policy;
+    }
+
+    private static String use(String key) {
+        return "use " + PREFIX + key;
     }
 
     private static String checkNames() {
