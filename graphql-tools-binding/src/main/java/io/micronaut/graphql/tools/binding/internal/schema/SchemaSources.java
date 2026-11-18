@@ -38,9 +38,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -113,6 +115,7 @@ public final class SchemaSources {
      */
     public static List<Source> readDirectories(List<Path> directories) {
         List<Source> sources = new ArrayList<>();
+        Set<Path> seen = new HashSet<>();
         for (Path directory : directories) {
             if (!Files.isDirectory(directory)) {
                 throw new SchemaSourceException("not a directory: " + directory.toAbsolutePath());
@@ -128,6 +131,9 @@ public final class SchemaSources {
                         + e.getMessage(), e);
             }
             for (Path file : files) {
+                if (!seen.add(file.toAbsolutePath().normalize())) {
+                    continue;
+                }
                 String relative = directory.relativize(file).toString().replace('\\', '/');
                 try {
                     sources.add(new Source(directories.size() > 1 ? directory + "/" + relative : relative,

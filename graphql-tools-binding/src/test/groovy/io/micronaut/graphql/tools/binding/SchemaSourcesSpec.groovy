@@ -140,6 +140,19 @@ class SchemaSourcesSpec extends Specification {
         SchemaSources.readDirectories([dir])*.name() == ['b.graphqls', 'sub/a.graphqls']
     }
 
+    void "a file under two overlapping directories is read once"() {
+        given:
+        Files.createDirectories(dir.resolve('common'))
+        Files.writeString(dir.resolve('common/a.graphqls'), 'type A { a: Int }')
+
+        when:
+        def sources = SchemaSources.readDirectories([dir, dir.resolve('common')])
+
+        then:
+        sources.size() == 1
+        SchemaSources.load(sources).read().size() == 1
+    }
+
     void "a directory that does not exist fails"() {
         when:
         SchemaSources.readDirectories([dir.resolve('missing')])
