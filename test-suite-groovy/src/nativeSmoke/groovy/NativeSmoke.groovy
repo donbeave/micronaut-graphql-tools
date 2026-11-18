@@ -53,7 +53,7 @@ try {
             [id: 'ab']).addBook
     assert payload.error.__typename == 'SecurityError'
     assert payload.error.securityCode == 'NOT_AUTHENTICATED'
-    assert payload.error.message != null
+    assert payload.error.message == 'Not logged in.'
 
     List<Map> books = execute('{ allBooks { id title year label sellers { name price } } }').allBooks
     assert books.size() == 5
@@ -79,7 +79,7 @@ try {
     assert wrong.data == null
     assert wrong.error.__typename == 'SecurityError'
     assert wrong.error.securityCode == 'INCORRECT_CREDENTIALS'
-    assert wrong.error.message != null
+    assert wrong.error.message == 'Password is incorrect.'
 
     String signUpQuery = 'mutation($input: SignUpInput!) { signUp(input: $input) { data { username firstName lastName books { id } } error { __typename ... on ValidationError { validationCode: code message } } } }'
     Map input = [username: 'john', password: 'test', firstName: 'John', lastName: 'Johnathan']
