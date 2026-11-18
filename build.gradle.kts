@@ -6,7 +6,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "2.1.21" apply false
     id("com.google.devtools.ksp") version "2.1.21-2.0.2" apply false
     id("io.micronaut.aot") version "4.6.2" apply false
-    id("com.apollographql.apollo") version "4.4.4" apply false
+    id("com.apollographql.apollo") version "5.2.0" apply false
 }
 
 if (providers.gradleProperty("graphqlJavaVersion").isPresent) {

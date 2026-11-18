@@ -11,8 +11,9 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
-    implementation(libs.apollo.runtime)
-    implementation(libs.apollo.rx3.support)
+    implementation(libs.apollo.java.client)
+    implementation(libs.apollo.java.rx3)
+    implementation(libs.apollo.api) // the Java client 1.0.0 resolves apollo-api 5.0.1; keep the API at the plugin's version
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
     runtimeOnly("ch.qos.logback:logback-classic")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
