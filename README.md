@@ -1055,7 +1055,8 @@ A `RuntimeWiringCustomizer` may only **add** (scalars, directive wirings, field 
 fetcher, default data fetcher, type resolver or scalar that the library registered, or the wiring factory, or puts a
 data fetcher or type resolver for a field or type the library wired into a code registry (`builder.codeRegistry(...)`,
 which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
-and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
+and the customizer that made it. The check runs only when the application has a `RuntimeWiringCustomizer` bean; the
+library's own directive wirings are not checked, and without a customizer the startup does no check work. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
 (On graphql-java 25.2 the builder itself already rejects the first replaced default data fetcher, type
 resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently. A second data fetcher for a
