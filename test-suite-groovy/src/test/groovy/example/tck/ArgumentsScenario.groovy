@@ -33,6 +33,28 @@ class Shape {
     String note
 }
 
+// tag::constructor-input[]
+@CompileStatic
+@GraphQLInput
+class Stock {
+    final String sku
+    final int quantity
+    final Float weight
+    final List<String> tags
+    final Set<Color> colors
+    final ArgumentValue<String> comment
+
+    Stock(String sku, int quantity, Float weight, List<String> tags, Set<Color> colors, ArgumentValue<String> comment) {
+        this.sku = sku
+        this.quantity = quantity
+        this.weight = weight
+        this.tags = tags
+        this.colors = colors
+        this.comment = comment
+    }
+}
+// end::constructor-input[]
+
 @CompileStatic
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'arguments')
@@ -59,6 +81,10 @@ class ArgumentsQueries {
 
     int grid(List<List<Integer>> rows) {
         return rows.collectMany { it }.sum(0) as int
+    }
+
+    String stock(Stock stock) {
+        return "sku=$stock.sku quantity=$stock.quantity weight=$stock.weight tags=$stock.tags colors=$stock.colors comment=${presence(stock.comment)}".toString()
     }
 
     String shape(Shape shape) {

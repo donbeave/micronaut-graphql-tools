@@ -87,7 +87,7 @@ final class CheckPolicy {
         });
         if (!removed.isEmpty()) {
             throw new InvalidConfigurationException(BindingCode.REMOVED_CONFIGURATION_KEY,
-                    "The configuration uses keys that were removed in 1.0.0-M3 (BC-23):", removed);
+                    "The configuration uses keys that were removed in 1.0.0-M3 (BC-24):", removed);
         }
 
         Map<BindingCode, Severity> explicit = new EnumMap<>(BindingCode.class);

@@ -16,7 +16,6 @@
 package io.micronaut.graphql.tools;
 
 import io.micronaut.context.annotation.ConfigurationProperties;
-import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArgumentUtils;
@@ -32,12 +31,6 @@ import java.util.Map;
 public class GraphQLToolsConfiguration {
 
     public static final String PREFIX = "micronaut.graphql.tools";
-
-    /**
-     * The bean name under which the input conversion mapper is looked up. Internal: not part of the API.
-     */
-    @Internal
-    public static final String INPUT_OBJECT_MAPPER = "graphql-tools";
 
     private Precedence precedence = Precedence.STRICT;
     private List<String> resolverDirectives = Collections.emptyList();

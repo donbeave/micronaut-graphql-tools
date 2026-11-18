@@ -84,4 +84,4 @@ The codes that run at compile time and have no startup form (`processor-option-u
 
 `coordinate-on-non-resolver` is registered for the compile-time check and is not emitted at startup. `nullable-primitive` is emitted at startup for a primitive at a nullable built-in scalar; for a custom scalar the failure keeps the code `incorrect-class-mapping`.
 
-`checks.<code>` and the `[code]` of a configuration failure use the same codes: `invalid-check-setting` (an unknown check or severity), `removed-configuration-key` (a key that was removed in 1.0.0-M3, BC-23, with its replacement) and `invalid-allow-findings` (an `allow.findings` entry that is not a manifest line of a check, or that matches no finding). They are raised as `InvalidConfigurationException`.
+`checks.<code>` and the `[code]` of a configuration failure use the same codes: `invalid-check-setting` (an unknown check or severity), `removed-configuration-key` (a key that was removed in 1.0.0-M3, BC-24, with its replacement) and `invalid-allow-findings` (an `allow.findings` entry that is not a manifest line of a check, or that matches no finding). They are raised as `InvalidConfigurationException`.

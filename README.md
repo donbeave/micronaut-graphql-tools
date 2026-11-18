@@ -532,8 +532,9 @@ public class ScalarsFactory {
 
 - **Output classes** are the classes the scalar's `serialize` accepts. A field of the scalar type may be backed by one
   of them or a subclass.
-- **Input classes** are the classes the scalar's `parseValue`/`parseLiteral` produce. An argument or an input object
-  field of the scalar type must be declared as exactly one of them.
+- **Input classes** are the classes an argument or an input object field of the scalar type may be declared as, exactly
+  one of them. They are normally the classes that `parseValue`/`parseLiteral` produce; a parsed value that is not an
+  instance of the declared class is converted by the Micronaut `ConversionService`.
 - A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type
   (`Count!`), because `null` cannot be passed to it.
 
@@ -549,8 +550,9 @@ The startup fails:
 - with `InvalidScalarMappingException` when two mappings have the same scalar name, or a mapping names a built-in
   scalar.
 
-Values of custom scalars inside input objects reach the input class as the instances the scalar parsed, also for
-classes Jackson cannot serialize itself (such as `java.time` types without the JSR-310 module).
+Values of custom scalars inside input objects reach the input class as the instances the scalar parsed. When the
+declared class is another one of the mapping's input classes, the value goes through the Micronaut `ConversionService`,
+which has the application's `TypeConverter` beans (see [Converting input values](#converting-input-values)).
 
 ## Arguments and input objects
 
@@ -587,10 +589,36 @@ names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<a
 
 graphql-java hands a data fetcher the coerced argument values: scalar values, enum constants, a `Map` per input object
 and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
-including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`). The current conversion runs on
-an internal Jackson mapper that reads the input classes through their bean introspection (`BeanIntrospection`), unless a
-class has a deserializer of its own. It is not part of the API and is not configurable through a documented one. #37
-replaces it with introspection-based conversion, so the Jackson-based behaviour is not a promise and may change before 1.0.
+including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`). Every converter is built
+once at startup, from the declared type and the GraphQL type, and a request only runs it. There is no reflection and no
+Jackson on the request path:
+
+- a `String`, `Boolean`, `Integer` (also for an `int` parameter), `Long`, `Short`, `BigDecimal`, `BigInteger` or `Double`
+  value is the declared type already and is passed on as it is; a `Float` argument for a `float` parameter or property
+  is narrowed from graphql-java's `Double`;
+- an enum is the Java constant already, from the values provider of the enum (see [Enums](#enums));
+- a list becomes a new, mutable `ArrayList` for `List`, `Collection` and `Iterable`, a `LinkedHashSet` for `Set` (it
+  keeps the order of the list), a `TreeSet` for `SortedSet`, or a `LinkedList` for `Deque` and `Queue`; any other declared collection
+  fails the startup with `UnsupportedInputTypeException`;
+- an input object becomes an instance of its input class, built from the class's bean introspection
+  (`BeanIntrospection`, generated at compile time because `@GraphQLInput` is `@Introspected`): the introspected
+  constructor takes the fields that match its parameters (a record, a Kotlin data class or an immutable class), then
+  each remaining field is set through its property (`BeanProperty`). A field the client leaves out is not set, so the
+  class keeps its own default; an explicit `null` is set to `null`, and left out for a primitive property, which keeps its
+  default. A constructor parameter that no field provides gets `null`, or the default of a primitive;
+- a custom scalar value that is an instance of the declared input class is passed on; any other value goes through the
+  Micronaut `ConversionService`.
+
+Customization goes through Micronaut `TypeConverter` beans and the [scalar mapping](#custom-scalars), not through a
+mapper. A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInput` itself (the class still needs its
+introspection, because the startup checks below read it, and the bean owns the whole instance, including its
+`ArgumentValue` properties: the library does not touch the result); a `TypeConverter` for another pair converts the values of a
+custom scalar that its scalar parsed to another class.
+
+**Migration (breaking, BC-23):** Jackson no longer shapes the input. `@JsonIgnore`, `@JsonProperty`, `@JsonCreator`,
+`@JsonDeserialize`, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean of any name have no effect
+on an input class. Name the input class's properties and constructor parameters like the input fields, and use a
+`TypeConverter` bean where an input class needs a conversion of its own.
 
 An input field that the input class cannot take fails the startup (see [Input classes and input types](#input-classes-and-input-types)).
 
@@ -599,10 +627,9 @@ An input field that the input class cannot take fails the startup (see [Input cl
 Input classes are checked against their GraphQL input types at startup, in both directions:
 
 - Every field of an input type needs a settable property of the same name: a setter, a field or a constructor
-  parameter. A missing property fails the startup with `MethodNotFoundException`; a read-only one, or one that the
-  conversion cannot set, fails with `InputFieldNotSettableException`, which names the field as `InputType.field`. Such
-  a field would otherwise fail every request that sends it, or be dropped silently. The check is skipped for a class
-  converted by a custom deserializer, and the startup logs such classes at INFO.
+  parameter. A missing property fails the startup with `MethodNotFoundException`; a read-only property that no
+  constructor parameter of the same name takes fails with `InputFieldNotSettableException`, which names the field as
+  `InputType.field`. Such a field would otherwise fail every request that sends it, or be dropped silently.
 - A property the class can set (through a setter or the constructor) that the input type does not define fails the
   startup (the check `unmapped-input-property`, see [strict mode](#strict-mode)), all of them in one
   `UnmappedInputPropertiesException`, because no request can set it. Each one is also an
@@ -649,11 +676,11 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
   or the schema's default).
 - A variable the request does not provide counts as omitted.
 - `ArgumentValue` is allowed only for a nullable GraphQL type, not inside a list, and an input class property of that
-  type needs a getter and a setter (the library sets it to `ArgumentValue.omitted()` when the client leaves it out).
-  Otherwise, and without the option, the startup fails with `UnsupportedInputTypeException`.
-- After a conversion the library reads only the `ArgumentValue` properties and the properties that hold input objects
-  (worked out at startup); it never calls other getters. A write-only property that holds an input class with
-  `ArgumentValue` properties fails the startup, because they could not be set to `omitted()`.
+  type needs a setter or a constructor parameter (the library sets it to `ArgumentValue.omitted()` when the client
+  leaves it out, and also when the input type does not define it, for example when another input type backed by the
+  same class does). Otherwise, and without the option, the startup fails with `UnsupportedInputTypeException`.
+- The conversion decides what is omitted from the keys of the `Map` that graphql-java coerced, while it builds the
+  instance. It calls no getter and never walks the converted object again: a write-only property is enough.
 
 ## Configuration
 

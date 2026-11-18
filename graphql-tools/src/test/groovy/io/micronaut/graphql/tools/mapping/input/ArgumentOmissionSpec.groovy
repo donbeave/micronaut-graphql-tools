@@ -247,35 +247,32 @@ input LoginInput {
         result.data.login == 'user=omitted password stored=true'
     }
 
-    void "detect-omission: a write-only ArgumentValue property fails the startup"() {
+    void "detect-omission: a write-only ArgumentValue property is set, and omitted when the client leaves it out"() {
         given:
         startContext(SCHEMA, SPEC_WRITE_ONLY_WRAPPER, DETECT)
 
         when:
-        getGraphQLBean()
+        def omitted = executeQuery('{ update(profile: {color: RED}) }')
+        def explicitNull = executeQuery('{ update(profile: {nickname: null}) }')
+        def given = executeQuery('{ update(profile: {nickname: "n"}) }')
 
         then:
-        def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedInputTypeException
-        e.cause.reason == "${ArgumentValue.name} needs a readable property: it is read to set it to omitted() when " +
-                "the client leaves it out."
-        e.cause.mappingContext.graphQlInputValue == 'nickname'
+        omitted.data.update == 'nickname=omitted'
+        explicitNull.data.update == 'nickname=null'
+        given.data.update == 'nickname=value(n)'
     }
 
-    void "detect-omission: a write-only property whose input class has ArgumentValue properties fails the startup"() {
+    void "detect-omission: a write-only property whose input class has ArgumentValue properties is set"() {
         given:
         startContext(SCHEMA, SPEC_WRITE_ONLY_NESTED, DETECT)
 
         when:
-        getGraphQLBean()
+        def omitted = executeQuery('{ update(profile: {address: {zip: "1"}}) }')
+        def given = executeQuery('{ update(profile: {address: {city: "c", zip: "1"}}) }')
 
         then:
-        def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedInputTypeException
-        e.cause.reason == "the property is write-only, but its input class ${DetectAddressInput.name} has " +
-                "${ArgumentValue.name} properties, which are read to set them to omitted() when the client leaves " +
-                "them out."
-        e.cause.mappingContext.graphQlInputValue == 'address'
+        omitted.data.update == 'city=omitted zip=1'
+        given.data.update == 'city=value(c) zip=1'
     }
 
     @Language("GraphQL")
@@ -519,7 +516,7 @@ input CreateW {
     @GraphQLRootResolver
     static class WriteOnlyWrapperQuery {
         String update(String name, Color color, Integer limit, WriteOnlyWrapperProfileInput profile) {
-            return null
+            return "nickname=${profile.nicknameState()}"
         }
     }
 
@@ -529,7 +526,14 @@ input CreateW {
         List<String> tags
         AddressInput address
 
+        private ArgumentValue<String> storedNickname
+
         void setNickname(ArgumentValue<String> nickname) {
+            this.storedNickname = nickname
+        }
+
+        String nicknameState() {
+            return show(storedNickname)
         }
     }
 
@@ -537,7 +541,7 @@ input CreateW {
     @GraphQLRootResolver
     static class WriteOnlyNestedQuery {
         String update(String name, Color color, Integer limit, WriteOnlyNestedProfileInput profile) {
-            return null
+            return profile.addressState()
         }
     }
 
@@ -547,7 +551,14 @@ input CreateW {
         Color color
         List<String> tags
 
+        private DetectAddressInput storedAddress
+
         void setAddress(DetectAddressInput address) {
+            this.storedAddress = address
+        }
+
+        String addressState() {
+            return "city=${show(storedAddress.city)} zip=${storedAddress.zip}"
         }
     }
 

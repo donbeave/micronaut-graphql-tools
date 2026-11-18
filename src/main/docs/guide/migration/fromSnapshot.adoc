@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, and `BC-21` to `BC-23` are the ones of 1.0.0-M3 so far. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22`, `BC-23` and `BC-24` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -30,12 +30,12 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-17 `extend type` fields | Startup fails for an extension field that nothing binds. Before, graphql-java served it without a check. | Give the field a resolver or property, or claim it with `claimedFields()`.
 | BC-18 unreachable types | Startup fails and lists every unreachable type. An `allow.unreachable` entry that is no longer unreachable fails startup. | Bind the type, remove it, or list it in `allow.unreachable`. Remove stale entries. Or set `checks.unreachable-type` to `warn` or `ignore`.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time check is _pending_ with #150. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
-| BC-20 `@Named("graphql-tools")` mapper seam (#173) | The `graphql-tools` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Input conversion is not configurable through a public bean. | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion; it is not supported. Its replacement is planned with #37.
-| BC-21 enums need a bean introspection (#33) | Startup fails with `ClassNotIntrospectedException` for a bound Java enum without a bean introspection. Enum arguments now arrive as the Java constants from the schema's enum values, not as names converted by Jackson. | Annotate the enum with `@Introspected`. An input `ObjectMapper` that serializes enums by `toString()` now also sees the constants.
+| BC-20 `@Named("graphql-tools")` mapper seam (#173) | The `graphql-tools` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Input conversion is not configurable through a public bean. | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion; it is not supported. Its replacement is BC-23 (#37): `TypeConverter` beans and the scalar mapping.
+| BC-21 enums need a bean introspection (#33) | Startup fails with `ClassNotIntrospectedException` for a bound Java enum without a bean introspection. Enum arguments now arrive as the Java constants from the schema's enum values, not as names converted by Jackson. | Annotate the enum with `@Introspected`.
 | BC-22 one code system (#237) | Every startup message starts with `[code]`. The `!` lines of the binding manifest are named by the code (`!unbound` is `!unbound-resolver-method`, `!unbound-enum-constant` or `!unmapped-input-property`; `!unusedDictionary` is `!unused-dictionary-entry`; `!ambiguous` is `!precedence-ambiguity`; `!unreachable` is `!unreachable-type` or `!unreachable-value-type`; `!unwiredDirective` is `!unwired-directive`). The labels of `BindingFailuresException` are `[unknown-schema-coordinate]` and `[strict-findings]` (were `[invalid-schema-coordinate]` and `[strict]`). | Match on `SchemaBindingException#code()`, not on message text. Read the new kinds from the manifest. New in 1.0.0-M3, no opt-out.
-| #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. Jackson annotations stop being the input contract. | Plan for Micronaut Serialization and introspection annotations.
-| #37 input conversion | _Pending._ Arguments and input objects are converted from `BeanIntrospection` instead of Jackson. | Plan for introspection-based conversion and the scalar SPI.
-| BC-23 per-check severity (#86) | `checks.<code>` sets `fail`, `warn` or `ignore` for each of the ten checks, and `strict: false` is `warn` for every check, including unreachable object, interface and union types. Six keys are removed and fail the startup with `[removed-configuration-key]`: `unreachable-types`, `allow-unreachable`, `input.unmapped-properties`, `inert-directives`, `schema-customizer-directives` and `unwired-directives`. | Use the replacement keys: see BC-23 below. No opt-out for the removal.
+| BC-23 input conversion from `BeanIntrospection` (#37) | Arguments and input objects are converted by converters that startup builds from the bean introspection, not by Jackson. Jackson annotations, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean stop being the input contract. A list is converted into `List`, `Collection`, `Iterable`, `Set`, `SortedSet`, `Deque` or `Queue` only. `InputFieldNotSettableException` has a new message. | Name the properties and constructor parameters of an input class like the input fields. Use a `TypeConverter` bean for a conversion of your own, and the scalar mapping for custom scalars.
+| BC-24 per-check severity (#86) | `checks.<code>` sets `fail`, `warn` or `ignore` for each of the ten checks, and `strict: false` is `warn` for every check, including unreachable object, interface and union types. Six keys are removed and fail the startup with `[removed-configuration-key]`: `unreachable-types`, `allow-unreachable`, `input.unmapped-properties`, `inert-directives`, `schema-customizer-directives` and `unwired-directives`. | Use the replacement keys: see BC-23 below. No opt-out for the removal.
+| #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. | Add `micronaut-jackson-databind` to your own build if you use it.
 | #105 precedence default | _Pending._ The default value `strict` of `precedence` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
 | #109 public exceptions | _Pending._ The startup exception subclasses become internal behind `SchemaBindingException`, which already carries the code (BC-22). | Match on the error code, not on the exception subclass.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
@@ -402,7 +402,7 @@ public class FakePingQuery extends PingQuery {
 
 Fix: fix each finding. A member that binds no field on purpose can carry `@GraphQLIgnore`. Or set `strict: false`.
 
-Opt-out: `micronaut.graphql.tools.strict: false` makes every check `warn`, including unreachable object, interface and union types (BC-23). A single check is relaxed with `checks.<code>`, a single finding with `allow.findings`.
+Opt-out: `micronaut.graphql.tools.strict: false` makes every check `warn`, including unreachable object, interface and union types (BC-24). A single check is relaxed with `checks.<code>`, a single finding with `allow.findings`.
 
 === BC-17: `extend type` fields are bound and checked
 
@@ -469,9 +469,9 @@ public Book book(@GraphQLArgument("id") String isbn) { ... }
 
 === BC-20: the `graphql-tools` mapper seam is internal (#173)
 
-The `@Named("graphql-tools")` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. The README no longer describes Jackson-defined input behaviour (`@JsonIgnore`, naming strategies, a named mapper). Applications should not depend on the bean. Input conversion is not configurable through a public bean until #37 replaces it.
+The `@Named("graphql-tools")` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. The README no longer describes Jackson-defined input behaviour (`@JsonIgnore`, naming strategies, a named mapper). Applications should not depend on the bean. BC-23 (#37) removes the mapper: the input conversion no longer reads an `ObjectMapper`.
 
-Fix: remove the `graphql-tools` bean and any reference to `INPUT_OBJECT_MAPPER`. Input conversion has no public configuration until #37.
+Fix: remove the `graphql-tools` bean and any reference to `INPUT_OBJECT_MAPPER`. Customize the input conversion with `TypeConverter` beans (BC-23).
 
 == Entries for 1.0.0-M3
 
@@ -517,7 +517,35 @@ try {
 }
 ----
 
-=== BC-23: per-check severity and removed keys (#86)
+=== BC-23: arguments and input objects are converted from `BeanIntrospection` (#37)
+
+Before, every list, input object and enum argument went through Jackson's `convertValue` on each request. Now the library builds one converter per argument and per input type at startup, from the declared type and from the bean introspection that Micronaut generated at compile time, and a request runs no Jackson and no reflection. Instances are built through the introspected constructor, then the remaining input fields are set through their `BeanProperty`; a field the client leaves out is not set, and an `ArgumentValue` is set to `omitted()` from the keys of the coerced map, in the same pass.
+
+What stops being the input contract:
+
+* Jackson annotations on an input class (`@JsonIgnore`, `@JsonProperty`, `@JsonCreator`, `@JsonDeserialize`) and the naming strategy of an `ObjectMapper`. An input field is bound to the property or constructor parameter of the same name.
+* `FAIL_ON_UNKNOWN_PROPERTIES` and every other `ObjectMapper` setting. An `ObjectMapper` bean, whatever its name, is not read. The `INPUT_OBJECT_MAPPER` constant is removed.
+* A list argument or input field is converted into `List`, `Collection`, `Iterable` (an `ArrayList`), `Set` (a `LinkedHashSet`), `SortedSet` (a `TreeSet`), `Deque` or `Queue` (a `LinkedList`). Any other declared collection fails the startup with `UnsupportedInputTypeException`.
+* `InputFieldNotSettableException` now says that the property has no setter and no constructor parameter. A property with an `ArgumentValue` type may be write-only, and an `ArgumentValue` property that an input type does not define is set to `omitted()`.
+
+Fix: name the properties and the constructor parameters of an input class like the input fields. Put a `TypeConverter<Map, SomeInput>` bean in the application for an input class that needs a conversion of its own (the bean builds the whole instance, `ArgumentValue` properties included), and a `GraphQLScalarMapping` for a custom scalar. A scalar value that is not an instance of the declared class goes through the Micronaut `ConversionService`, which holds the application's `TypeConverter` beans.
+
+[source,java]
+----
+// Before: Jackson read the annotation, and the field "legacy_code" bound to "legacyCode"
+@GraphQLInput
+public class ItemInput {
+    @JsonProperty("legacy_code")
+    private String legacyCode;
+}
+
+// After: the property carries the name of the input field
+@GraphQLInput
+public class ItemInput {
+    private String legacyCode;
+    // getter and setter, or a constructor parameter named legacyCode
+}
+=== BC-24: per-check severity and removed keys (#86)
 
 Each of the ten checks has a severity, set with `micronaut.graphql.tools.checks.<code>`: `fail` (the default of every check), `warn` (log the finding and go on) or `ignore` (skip the check; it does no work). `strict` is the shorthand for the checks without an entry: `true` leaves them at `fail`, `false` makes them `warn`. `unreachable-type` is split into two codes: `unreachable-type` for object, interface and union types, and `unreachable-value-type` for enum, input and scalar types. `strict: false` now also warns on unreachable object, interface and union types, which failed before. `precedence` does not depend on `strict`.
 
@@ -564,9 +592,9 @@ micronaut:
 
 The following changes are planned and are not on `master` yet. Their behaviour is not described as current. Each entry names the issue that makes the change.
 
-=== #36 and #37: Jackson leaves the input contract
+=== #36: Jackson leaves the `api` scope
 
-Today the input objects and arguments are converted with Jackson, and the library's `api` scope brings `micronaut-jackson-databind` to every application. #37 converts arguments and input objects from `BeanIntrospection`. #36 removes the Jackson dependency. After them, Jackson annotations and `FAIL_ON_UNKNOWN_PROPERTIES` no longer shape the input. Customisation goes through Micronaut `TypeConverter` beans and the scalar SPI.
+The library's `api` scope brings `micronaut-jackson-databind` to every application. The library itself no longer uses Jackson (#37, BC-23), and #36 removes the dependency from the `api` scope. An application that uses Jackson adds `micronaut-jackson-databind` (or `micronaut-serde-jackson`) to its own build.
 
 === #105: the precedence default
 
@@ -604,7 +632,7 @@ micronaut:
         enabled: true
 ----
 
-`strict: false` makes every check `warn`, including unreachable object, interface and union types, so none of them fails the startup (BC-23).
+`strict: false` makes every check `warn`, including unreachable object, interface and union types, so none of them fails the startup (BC-24).
 
 `resolver-first` is the migration setting, but it is not the snapshot's behaviour. On object types the property used to win silently, so `resolver-first` can return a different value for a field that a property and a type resolver method both bind. Read the ambiguities in the manifest first, or use `precedence: property-first` to keep the old values while you fix them.
 

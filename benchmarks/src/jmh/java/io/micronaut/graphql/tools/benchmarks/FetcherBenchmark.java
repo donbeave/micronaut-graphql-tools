@@ -25,6 +25,9 @@ public class FetcherBenchmark extends CaseState {
     private BenchmarkCases.Op enumArgument;
     private BenchmarkCases.Op inputObjectArgument;
     private BenchmarkCases.Op listOfInputsArgument;
+    private BenchmarkCases.Op listOfScalarsArgument;
+    private BenchmarkCases.Op recordInputArgument;
+    private BenchmarkCases.Op nestedInputArgument;
 
     @Setup
     public void prepare() {
@@ -38,6 +41,9 @@ public class FetcherBenchmark extends CaseState {
         enumArgument = op(BenchmarkCases.ENUM_ARGUMENT);
         inputObjectArgument = op(BenchmarkCases.INPUT_OBJECT_ARGUMENT);
         listOfInputsArgument = op(BenchmarkCases.LIST_OF_INPUTS_ARGUMENT);
+        listOfScalarsArgument = op(BenchmarkCases.LIST_OF_SCALARS_ARGUMENT);
+        recordInputArgument = op(BenchmarkCases.RECORD_INPUT_ARGUMENT);
+        nestedInputArgument = op(BenchmarkCases.NESTED_INPUT_ARGUMENT);
     }
 
     @Benchmark
@@ -88,5 +94,20 @@ public class FetcherBenchmark extends CaseState {
     @Benchmark
     public Object listOfInputsArgument() throws Exception {
         return listOfInputsArgument.run();
+    }
+
+    @Benchmark
+    public Object listOfScalarsArgument() throws Exception {
+        return listOfScalarsArgument.run();
+    }
+
+    @Benchmark
+    public Object recordInputArgument() throws Exception {
+        return recordInputArgument.run();
+    }
+
+    @Benchmark
+    public Object nestedInputArgument() throws Exception {
+        return nestedInputArgument.run();
     }
 }

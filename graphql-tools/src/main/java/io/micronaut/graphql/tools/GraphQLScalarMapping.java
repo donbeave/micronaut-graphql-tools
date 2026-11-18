@@ -41,8 +41,10 @@ import java.util.Set;
  * <ul>
  *     <li><b>Output classes</b> are the classes the scalar's {@code serialize} accepts. A field of the scalar type must
  *     be backed by one of them or a subclass.</li>
- *     <li><b>Input classes</b> are the classes the scalar's {@code parseValue}/{@code parseLiteral} produce. An argument
- *     or an input object field of the scalar type must be declared as exactly one of them.</li>
+ *     <li><b>Input classes</b> are the classes an argument or an input object field of the scalar type may be
+ *     declared as, exactly one of them. They are normally the classes that {@code parseValue}/{@code parseLiteral}
+ *     produce. A parsed value that is not an instance of the declared class is converted by the Micronaut
+ *     {@code ConversionService}, which holds the application's {@code TypeConverter} beans.</li>
  * </ul>
  *
  * A primitive Java type matches its wrapper class. A scalar of the schema that a field, argument or input field uses
