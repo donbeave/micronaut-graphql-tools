@@ -1,7 +1,9 @@
 package example.graphql.directive
 
 import graphql.schema.DataFetcher
+import graphql.schema.DataFetchingEnvironment
 import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLSchema
 import graphql.schema.idl.SchemaDirectiveWiring
 import graphql.schema.idl.SchemaDirectiveWiringEnvironment
 import groovy.transform.CompileStatic
@@ -10,6 +12,8 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.graphql.tools.GraphQLSchemaCustomizer
 import io.micronaut.graphql.tools.SchemaDirective
 import jakarta.inject.Singleton
+
+import java.util.function.Consumer
 
 @CompileStatic
 @Factory
@@ -35,8 +39,8 @@ class DirectiveWirings {
 
     static class AuditCustomizer implements GraphQLSchemaCustomizer {
         @Override
-        graphql.schema.GraphQLSchema customize(graphql.schema.GraphQLSchema schema) {
-            schema.getSchemaAppliedDirective('audit') == null ? schema : schema.transform { it.description('audited') }
+        GraphQLSchema customize(GraphQLSchema schema) {
+            schema.getSchemaAppliedDirective('audit') == null ? schema : schema.transform(new Describe())
         }
     }
 
@@ -44,7 +48,7 @@ class DirectiveWirings {
         @Override
         GraphQLFieldDefinition onField(SchemaDirectiveWiringEnvironment<GraphQLFieldDefinition> environment) {
             DataFetcher<?> original = environment.fieldDataFetcher
-            environment.setFieldDataFetcher({ fetching -> original.get(fetching).toString().toUpperCase() } as DataFetcher)
+            environment.setFieldDataFetcher(new UpperFetcher(original))
         }
     }
 
@@ -56,7 +60,43 @@ class DirectiveWirings {
             }
             String label = environment.getAppliedDirective('tagged').getArgument('label').getValue()
             DataFetcher<?> original = environment.fieldDataFetcher
-            environment.setFieldDataFetcher({ fetching -> "[${label}] ${original.get(fetching)}".toString() } as DataFetcher)
+            environment.setFieldDataFetcher(new TaggedFetcher(label, original))
+        }
+    }
+
+    static class Describe implements Consumer<GraphQLSchema.Builder> {
+        @Override
+        void accept(GraphQLSchema.Builder builder) {
+            builder.description('audited')
+        }
+    }
+
+    // Static classes instead of closures coerced to SAM types: that coercion needs Groovy's dynamic runtime, which a native image lacks.
+    static class UpperFetcher implements DataFetcher<String> {
+        private final DataFetcher<?> original
+
+        UpperFetcher(DataFetcher<?> original) {
+            this.original = original
+        }
+
+        @Override
+        String get(DataFetchingEnvironment fetching) throws Exception {
+            String.valueOf(original.get(fetching)).toUpperCase()
+        }
+    }
+
+    static class TaggedFetcher implements DataFetcher<String> {
+        private final String label
+        private final DataFetcher<?> original
+
+        TaggedFetcher(String label, DataFetcher<?> original) {
+            this.label = label
+            this.original = original
+        }
+
+        @Override
+        String get(DataFetchingEnvironment fetching) throws Exception {
+            '[' + label + '] ' + original.get(fetching)
         }
     }
 }
