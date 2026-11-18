@@ -617,8 +617,8 @@ String page(Integer offset, Integer first) { ... }   // page(first: 10, offset: 
 
 Names come from Micronaut's compile-time metadata (`Argument.getName()`), not from reflection. A method declared in a
 class that Micronaut processes has the name of the source, so the compiler does not need `-parameters`. A method
-inherited from a class file has the name that the class file carries (`-parameters`, or `-g`, which Gradle and Maven pass
-by default); a class file built with neither has `arg0`, and the failure says to compile it with `-parameters` or to use
+inherited from a class file has the name that the class file carries (`-parameters`, or, for a method with a body, `-g`, which Gradle and Maven pass
+by default; an abstract or interface method needs `-parameters`); a class file built with neither has `arg0`, and the failure says to compile it with `-parameters` or to use
 `@GraphQLArgument`. If a parameter name cannot match the argument name (for example `long` or `short`),
 bind it explicitly:
 

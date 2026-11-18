@@ -16,7 +16,7 @@ The startup and the compile-time check (the visitor of `graphql-tools-processor`
 |===
 | Parameter of | Name
 | A method declared in a class of the module that Micronaut processes (Java, Kotlin or Groovy) | The name in the source. The compiler needs no `-parameters`: Micronaut records the name when it processes the class.
-| A method inherited from a class file, such as a superclass or an interface of a dependency | The name that the class file carries. javac writes it with `-parameters` or, as local variable debug information, with `-g`, which the Gradle and Maven compile tasks pass by default. A class file built with neither has none: the name is `arg0`.
+| A method inherited from a class file, such as a superclass or an interface of a dependency | The name that the class file carries. javac writes it with `-parameters` or, for a method that has a body, as local variable debug information with `-g`, which the Gradle and Maven compile tasks pass by default. An abstract or interface method has no body to hold that information, so its names need `-parameters`. A class file built without the needed flag has no names: the name is `arg0`.
 |===
 
 A parameter without a name fails like any other parameter with no argument of that name, and the message says what to do: compile the class that declares the method with `-parameters`, or bind the parameter with `@GraphQLArgument`. Startup and compile time see the same name for the same class file.

@@ -34,6 +34,13 @@ public final class IncorrectArgumentNameException extends AbstractMappingExcepti
     public static IncorrectArgumentNameException parameterWithoutArgument(MappingContext mappingContext,
                                                                          String parameterName,
                                                                          String argumentName,
+                                                                         List<String> argumentNames) {
+        return parameterWithoutArgument(mappingContext, parameterName, argumentName, argumentNames, false);
+    }
+
+    public static IncorrectArgumentNameException parameterWithoutArgument(MappingContext mappingContext,
+                                                                         String parameterName,
+                                                                         String argumentName,
                                                                          List<String> argumentNames,
                                                                          boolean syntheticName) {
         if (!parameterName.equals(argumentName)) {

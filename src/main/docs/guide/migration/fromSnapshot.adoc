@@ -455,7 +455,7 @@ Fix: rename the parameter to the argument name, or add `@GraphQLArgument("<argum
 
 Status: breaking by design; no opt-out. The runtime half is on `master` (PR #257). The compile-time visitor of `graphql-tools-processor` applies the same rule (#15), with the same code and coordinate. The JSR-269 processor that a build registers until #291 still compares parameters by position, so a build does not yet catch a misnamed parameter.
 
-A parameter of a method inherited from a class file that carries no parameter names (built without `-parameters` and without `-g`) has the name `arg0`. The failure then says to compile the class that declares the method with `-parameters`, or to add `@GraphQLArgument`. The guide page "Inputs" lists where the names come from.
+A parameter of a method inherited from a class file that carries no parameter names (built without `-parameters`, or without `-g` for a method with a body) has the name `arg0`. The failure then says to compile the class that declares the method with `-parameters`, or to add `@GraphQLArgument`. The guide page "Inputs" lists where the names come from.
 
 [source,java]
 ----
