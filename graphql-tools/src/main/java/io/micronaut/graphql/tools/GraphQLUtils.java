@@ -18,7 +18,6 @@ package io.micronaut.graphql.tools;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InterfaceTypeDefinition;
-import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.ScalarTypeDefinition;
@@ -28,6 +27,7 @@ import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.internal.schema.SchemaTypes;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -58,14 +58,7 @@ final class GraphQLUtils {
     }
 
     static String printType(Type<?> graphQlType) {
-        if (graphQlType instanceof NonNullType nonNullType) {
-            return printType(nonNullType.getType()) + "!";
-        } else if (graphQlType instanceof ListType listType) {
-            return "[" + printType(listType.getType()) + "]";
-        } else if (graphQlType instanceof TypeName typeName) {
-            return typeName.getName();
-        }
-        return graphQlType.toString();
+        return SchemaTypes.print(graphQlType);
     }
 
     static TypeName getTypeName(Type<?> graphQlType) {

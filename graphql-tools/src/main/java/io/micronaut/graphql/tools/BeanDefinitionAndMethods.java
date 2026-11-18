@@ -17,10 +17,12 @@ package io.micronaut.graphql.tools;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.graphql.tools.binding.internal.model.JMethod;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
@@ -29,7 +31,8 @@ import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
 final class BeanDefinitionAndMethods {
 
     private final BeanDefinition<?> beanDefinition;
-    private final Set<ExecutableMethod<Object, ?>> executableMethods = new HashSet<>();
+    // each method with the view that the rules read, built once at registration
+    private final Map<ExecutableMethod<Object, ?>, JMethod> executableMethods = new HashMap<>();
 
     BeanDefinitionAndMethods(@NonNull BeanDefinition<?> beanDefinition) {
         requireNonNull("beanDefinition", beanDefinition);
@@ -37,10 +40,10 @@ final class BeanDefinitionAndMethods {
         this.beanDefinition = beanDefinition;
     }
 
-    void addExecutableMethod(@NonNull ExecutableMethod<Object, ?> executableMethod) {
+    void addExecutableMethod(@NonNull ExecutableMethod<Object, ?> executableMethod, JMethod view) {
         requireNonNull("executableMethod", executableMethod);
 
-        executableMethods.add(executableMethod);
+        executableMethods.putIfAbsent(executableMethod, view);
     }
 
     BeanDefinition<?> getBeanDefinition() {
@@ -48,6 +51,10 @@ final class BeanDefinitionAndMethods {
     }
 
     Set<ExecutableMethod<Object, ?>> getExecutableMethods() {
+        return executableMethods.keySet();
+    }
+
+    Map<ExecutableMethod<Object, ?>, JMethod> getMethodViews() {
         return executableMethods;
     }
 

@@ -106,6 +106,14 @@ final class RuntimeTypeModel implements TypeModel {
     }
 
     /**
+     * @param method an executable method of a resolver bean
+     * @return the method as the rules see it
+     */
+    JMethod method(ExecutableMethod<?, ?> method) {
+        return new RuntimeMethod(method);
+    }
+
+    /**
      * @param arguments the arguments of an executable
      * @return its parameters, in declaration order
      */
@@ -205,6 +213,8 @@ final class RuntimeTypeModel implements TypeModel {
 
         @Nullable
         private Map<String, AnnotationView> constantAnnotations;
+        @Nullable
+        private Set<String> supertypeNames;
 
         RuntimeClass(Class<?> type, @Nullable BeanDefinition<?> beanDefinition,
                      @Nullable BeanIntrospection<?> introspection) {
@@ -327,7 +337,10 @@ final class RuntimeTypeModel implements TypeModel {
 
         @Override
         public boolean isAssignableTo(String binaryName) {
-            return supertypes(true).stream().anyMatch(it -> it.getName().equals(binaryName));
+            if (supertypeNames == null) {
+                supertypeNames = supertypes(true).stream().map(Class::getName).collect(Collectors.toSet());
+            }
+            return supertypeNames.contains(binaryName);
         }
 
         @Override

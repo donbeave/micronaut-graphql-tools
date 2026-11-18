@@ -20,9 +20,9 @@ import io.micronaut.context.annotation.Infrastructure;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
-import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+import io.micronaut.graphql.tools.binding.internal.model.JMethod;
+import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.exceptions.AmbiguousTypeResolverException;
 import io.micronaut.graphql.tools.exceptions.IncorrectAnnotationException;
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
@@ -68,7 +68,9 @@ public final class GraphQLResolversRegistry {
     private Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader =
             GraphQLResolversRegistry::findTypeResolverContracts;
     private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
+    // by the signature of the method as the type model prints it
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
+    private final RuntimeTypeModel typeModel = new RuntimeTypeModel();
 
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
         if (method.isAbstract() || beanDefinition.isAbstract()) {
@@ -82,7 +84,7 @@ public final class GraphQLResolversRegistry {
                     rootResolvers.add(item);
                     return item;
                 })
-                .addExecutableMethod(method);
+                .addExecutableMethod(method, typeModel.method(method));
     }
 
     public void registerTypeResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
@@ -148,7 +150,7 @@ public final class GraphQLResolversRegistry {
                     typeResolvers.get(modelClass).add(item);
                     return item;
                 })
-                .addExecutableMethod(method);
+                .addExecutableMethod(method, typeModel.method(method));
     }
 
     void setTypeResolverContractReader(Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader) {
@@ -156,21 +158,22 @@ public final class GraphQLResolversRegistry {
     }
 
     /**
-     * Records a method that carries {@link GraphQLSchemaCoordinate}, whatever the bean is.
+     * Records a method that carries {@code @GraphQLSchemaCoordinate}, whatever the bean is.
      *
      * @param beanDefinition the bean definition
      * @param method         the method
      */
     public void registerSchemaCoordinateExecutableMethod(BeanDefinition<?> beanDefinition,
                                                          ExecutableMethod<Object, ?> method) {
-        if (isIgnored(method)) {
+        JMethod view = typeModel.method(method);
+        if (ResolverClassRules.isIgnored(view)) {
             return;
         }
-        String coordinate = method.stringValue(GraphQLSchemaCoordinate.class).orElse("");
+        String coordinate = ResolverClassRules.declaredCoordinate(view);
 
         schemaCoordinateMethods.add(new SchemaCoordinateMethod(beanDefinition, method, coordinate));
         schemaCoordinateSignatures.computeIfAbsent(beanDefinition, it -> new HashMap<>())
-                .put(getExecutableMethodFullName(method), coordinate);
+                .put(view.signature(), coordinate);
     }
 
     List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
@@ -181,36 +184,27 @@ public final class GraphQLResolversRegistry {
     }
 
     private boolean isCandidate(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        if (isIgnored(method)) {
-            return false;
-        }
-        Map<String, String> signatures = schemaCoordinateSignatures.get(beanDefinition);
-        return signatures == null || signatures.containsKey(getExecutableMethodFullName(method));
+        return ResolverClassRules.isCandidate(typeModel.method(method), schemaCoordinateSignatures.get(beanDefinition));
     }
 
-    private static boolean isIgnored(ExecutableMethod<?, ?> method) {
-        return method.hasAnnotation(GraphQLIgnore.class);
+    private boolean isIgnored(ExecutableMethod<?, ?> method) {
+        return ResolverClassRules.isIgnored(typeModel.method(method));
     }
 
-    private static boolean isLifecycleMethod(ExecutableMethod<?, ?> method) {
-        return method.hasAnnotation("io.micronaut.runtime.event.annotation.EventListener")
-                || method.hasAnnotation("io.micronaut.scheduling.annotation.Scheduled")
-                // Scheduled is repeatable: Micronaut keeps its metadata under the container
-                || method.hasAnnotation("io.micronaut.scheduling.annotation.Schedules")
-                || method.hasAnnotation("jakarta.annotation.PreDestroy");
+    private boolean isLifecycleMethod(ExecutableMethod<?, ?> method) {
+        return ResolverClassRules.isLifecycle(typeModel.method(method));
     }
 
     private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String methodName,
                                                       Set<String> coordinates) {
         Map<String, String> signatures = schemaCoordinateSignatures.get(item.getBeanDefinition());
-        return item.getExecutableMethods().stream()
-                .filter(executableMethod -> executableMethod.getMethodName().equals(methodName))
-                .filter(executableMethod -> !isIgnored(executableMethod))
-                .filter(executableMethod -> signatures == null
-                        || signatures.containsKey(getExecutableMethodFullName(executableMethod))
-                        && coordinates.contains(signatures.get(getExecutableMethodFullName(executableMethod))))
-                .map(executableMethod -> new BeanDefinitionAndMethod(item.getBeanDefinition(), executableMethod))
-                .collect(Collectors.toList());
+        List<BeanDefinitionAndMethod> result = new ArrayList<>();
+        item.getMethodViews().forEach((executableMethod, view) -> {
+            if (ResolverClassRules.bindsField(view, methodName, coordinates, signatures)) {
+                result.add(new BeanDefinitionAndMethod(item.getBeanDefinition(), executableMethod));
+            }
+        });
+        return result;
     }
 
     private static Map<Class<?>, Class<?>> findTypeResolverContracts(Class<?> beanType) {
@@ -297,7 +291,7 @@ public final class GraphQLResolversRegistry {
             }
         }
         unassignedTypeResolverMethods.forEach((beanDefinition, methods) -> methods.stream()
-                .filter(GraphQLResolversRegistry::isIgnored)
+                .filter(this::isIgnored)
                 .forEach(method -> result.add(new BeanDefinitionAndMethod(beanDefinition, method))));
         return result;
     }
