@@ -2,6 +2,10 @@ plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
 
+// The quality plugin checks the headers of src/main only; this checks the test sources.
+extra["licenseSourceSets"] = "test"
+apply(from = rootProject.file("config/spotless.license.gradle"))
+
 // The binding rules: the schema rules, the per-class rules, the planner phases, the findings and their rendering. They depend
 // on graphql-java and micronaut-core only and never on io.micronaut.inject (BindingArchitectureSpec), so that the runtime
 // adapter and the compile-time adapter of the type model can share one body of every rule.
