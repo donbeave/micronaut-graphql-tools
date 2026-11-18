@@ -67,8 +67,8 @@ class CompileTimeManifestTest {
             String value = entry.substring(entry.indexOf(' ') + 1);
             boolean match = switch (kind) {
                 case "kind" -> startupKinds(value).stream().anyMatch(it -> line.startsWith("!" + it + " "))
-                        || line.contains(" → " + value + " · ");
-                case "type" -> line.startsWith(value + " → ") || line.startsWith(value + ".")
+                        || line.contains(" -> " + value + " ; ");
+                case "type" -> line.startsWith(value + " -> ") || line.startsWith(value + ".")
                         || line.startsWith(value + "/") || line.startsWith("!precedence-ambiguity " + value + ".");
                 case "field" -> line.startsWith(value + "(") || line.startsWith(value + ":")
                         || line.startsWith("!precedence-ambiguity " + value + " ");

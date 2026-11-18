@@ -106,7 +106,7 @@ public final class GraphQLFactory {
                             + " returned null instead of a schema");
         }
 
-        bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder().build(registry, graphQLSchema));
+        bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder().build(registry));
 
         return graphQLSchema;
     }

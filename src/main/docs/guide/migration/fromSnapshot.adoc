@@ -34,7 +34,8 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-21 enums need a bean introspection (#33) | Startup fails with `ClassNotIntrospectedException` for a bound Java enum without a bean introspection. Enum arguments now arrive as the Java constants from the schema's enum values, not as names converted by Jackson. | Annotate the enum with `@Introspected`.
 | BC-22 one code system (#237) | Every startup message starts with `[code]`. The `!` lines of the binding manifest are named by the code (`!unbound` is `!unbound-resolver-method`, `!unbound-enum-constant` or `!unmapped-input-property`; `!unusedDictionary` is `!unused-dictionary-entry`; `!ambiguous` is `!precedence-ambiguity`; `!unreachable` is `!unreachable-type` or `!unreachable-value-type`; `!unwiredDirective` is `!unwired-directive`). The labels of `BindingFailuresException` are `[unknown-schema-coordinate]` and `[strict-findings]` (were `[invalid-schema-coordinate]` and `[strict]`). | Match on `SchemaBindingException#code()`, not on message text. Read the new kinds from the manifest. New in 1.0.0-M3, no opt-out.
 | BC-23 input conversion from `BeanIntrospection` (#37) | Arguments and input objects are converted by converters that startup builds from the bean introspection, not by Jackson. Jackson annotations, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean stop being the input contract. A list is converted into `List`, `Collection`, `Iterable`, `Set`, `SortedSet`, `Deque` or `Queue` only. `InputFieldNotSettableException` has a new message. | Name the properties and constructor parameters of an input class like the input fields. Use a `TypeConverter` bean for a conversion of your own, and the scalar mapping for custom scalars.
-| BC-24 per-check severity (#86) | `checks.<code>` sets `fail`, `warn` or `ignore` for each of the ten checks, and `strict: false` is `warn` for every check, including unreachable object, interface and union types. Six keys are removed and fail the startup with `[removed-configuration-key]`: `unreachable-types`, `allow-unreachable`, `input.unmapped-properties`, `inert-directives`, `schema-customizer-directives` and `unwired-directives`. | Use the replacement keys: see BC-23 below. No opt-out for the removal.
+| BC-24 per-check severity (#86) | `checks.<code>` sets `fail`, `warn` or `ignore` for each of the ten checks, and `strict: false` is `warn` for every check, including unreachable object, interface and union types. Six keys are removed and fail the startup with `[removed-configuration-key]`: `unreachable-types`, `allow-unreachable`, `input.unmapped-properties`, `inert-directives`, `schema-customizer-directives` and `unwired-directives`. | Use the replacement keys: see BC-24 below. No opt-out for the removal.
+| BC-25 binding manifest format 2 (#90) | The manifest is written in format version 2: ASCII separators (` -> ` and ` ; ` replace the arrow and the middle dot), a `scalar` line names the scalar (not the `Coercing` class), characters outside ASCII are escaped, and the schema hash does not depend on the order of the files and the extensions. The first line is `# graphql-binding-manifest 2`. | Regenerate checked-in manifests. A reader checks the version on the first line. New in 1.0.0-M3, no opt-out.
 | #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. | Add `micronaut-jackson-databind` to your own build if you use it.
 | #105 precedence default | _Pending._ The default value `strict` of `precedence` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
 | #109 public exceptions | _Pending._ The startup exception subclasses become internal behind `SchemaBindingException`, which already carries the code (BC-22). | Match on the error code, not on the exception subclass.
@@ -587,6 +588,17 @@ micronaut:
         findings:
           - "!unbound-resolver-method example.Query#helper(java.lang.String)"
 ----
+
+=== BC-25: the binding manifest has a specified format, version 2 (#90)
+
+The manifest format is specified on the "Binding Manifest" page and its version is the number on the first line. Version 2 differs from version 1 in four ways:
+
+* The separators are ASCII: ` -> ` replaces the arrow and ` ; ` replaces the middle dot, in entries and in findings. The text is ASCII only: a character outside `0x20` to `0x7e` and the backslash in a part are written `\uXXXX`. A part that holds a line break is escaped instead of failing the rendering.
+* A `scalar` line names the scalar in the member part (`Long -> scalar ; Long ; - ; -`). It named the `Coercing` class (`graphql.scalars.java.JavaPrimitives$1`), which could be an anonymous class and changed with the graphql-java version. A `claimed` line names the customizer by a class a reader can find, never an anonymous or generated class.
+* The schema hash is computed over the definitions sorted by name, with the extensions of a name sorted by their printed text. The same schema files loaded in any order give one hash. The hash of every schema differs from the hash of version 1.
+* The first line is `# graphql-binding-manifest 2`.
+
+Fix: regenerate every checked-in manifest, and change a reader that splits lines on the arrow or the middle dot to split on ` -> ` and ` ; `. A reader should check the version on the first line and refuse a version it does not know. The compile-time manifest of the JSR-269 processor and the manifest of the startup are both written in version 2.
 
 == Pending changes
 

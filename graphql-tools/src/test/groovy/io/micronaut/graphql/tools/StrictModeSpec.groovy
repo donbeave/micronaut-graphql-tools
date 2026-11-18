@@ -285,7 +285,7 @@ type Item {
         then:
         result.data == [item: [name: 'pen']]
         applicationContext.getBean(BindingManifest).diagnostics == [
-                "!precedence-ambiguity Item.name · ${Item.name}#name | ${ShadowingResolver.name}#name(${Item.name})".toString()
+                "!precedence-ambiguity Item.name ; ${Item.name}#name | ${ShadowingResolver.name}#name(${Item.name})".toString()
         ]
     }
 

@@ -15,14 +15,8 @@
  */
 package io.micronaut.graphql.tools;
 
-import graphql.language.AstPrinter;
-import graphql.language.Definition;
 import graphql.language.FieldDefinition;
 import graphql.language.ObjectTypeDefinition;
-import graphql.schema.GraphQLScalarType;
-import graphql.schema.GraphQLSchema;
-import graphql.schema.GraphQLType;
-import graphql.schema.idl.ScalarInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.aop.Intercepted;
 import io.micronaut.core.annotation.Internal;
@@ -32,18 +26,14 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
+import io.micronaut.graphql.tools.binding.internal.manifest.SchemaHash;
 import io.micronaut.graphql.tools.binding.internal.plan.BindingPlan;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -79,7 +69,7 @@ final class BindingManifestRecorder {
             return;
         }
         entries.put(typeName, BindingPlan.Entry.of(typeName, kind,
-                () -> javaType == null ? NONE : javaType.getTypeName()));
+                () -> javaType == null ? NONE : nameOf(javaType)));
     }
 
     void scalar(String typeName) {
@@ -121,7 +111,7 @@ final class BindingManifestRecorder {
             return;
         }
         entries.put(abstractTypeName + "/" + objectTypeName,
-                BindingPlan.Entry.of(abstractTypeName + "/" + objectTypeName, "resolves", javaType::getTypeName));
+                BindingPlan.Entry.of(abstractTypeName + "/" + objectTypeName, "resolves", () -> nameOf(javaType)));
     }
 
     void enumValue(String enumTypeName, String value, Class<?> enumClass) {
@@ -176,27 +166,20 @@ final class BindingManifestRecorder {
     }
 
     @Nullable
-    BindingManifest build(TypeDefinitionRegistry registry, GraphQLSchema schema) {
+    BindingManifest build(TypeDefinitionRegistry registry) {
         if (!recording) {
             return null;
         }
         List<BindingPlan.Entry> bound = new ArrayList<>(entries.values());
         for (String scalar : scalars) {
-            bound.add(BindingPlan.Entry.of(scalar, "scalar", () -> {
-                GraphQLType type = schema.getType(scalar);
-                Class<?> coercing = type instanceof GraphQLScalarType scalarType
-                        ? scalarType.getCoercing().getClass() : null;
-                return coercing == null ? NONE : coercing.getTypeName();
-            }));
+            bound.add(BindingPlan.Entry.of(scalar, "scalar", () -> scalar));
         }
         BindingPlan plan = new BindingPlan(bound, List.copyOf(diagnostics), List.copyOf(ignored));
         return new BindingManifest(() -> {
-            List<String> header = List.of(
-                    "# binder: micronaut-graphql-tools " + version(BindingManifestRecorder.class.getPackage()
-                            .getImplementationVersion()),
-                    "# graphql-java: " + GraphQLJavaVersion.get(),
-                    "# schema-sha256: " + schemaSha256(registry)
-            );
+            List<String> header = ManifestRenderer.header(
+                    version(BindingManifestRecorder.class.getPackage().getImplementationVersion()),
+                    GraphQLJavaVersion.get(),
+                    SchemaHash.sha256(registry, GraphQLSpecifiedDirectives::isProvided));
             ManifestRenderer.Rendered rendered = ManifestRenderer.render(plan, header);
             return new BindingManifest.Content(rendered.header(), rendered.lines());
         });
@@ -219,6 +202,19 @@ final class BindingManifestRecorder {
         return member != null ? member : beanType + "#" + beanProperty.getName();
     }
 
+    static String nameOf(Class<?> type) {
+        Class<?> named = userClass(type);
+        while (named.isAnonymousClass() || named.isHidden() || named.isSynthetic()) {
+            Class<?> next = named.isAnonymousClass() && named.getEnclosingClass() != null ? named.getEnclosingClass()
+                    : named.getInterfaces().length > 0 ? named.getInterfaces()[0] : named.getSuperclass();
+            if (next == null || next == named) {
+                break;
+            }
+            named = userClass(next);
+        }
+        return named.getTypeName();
+    }
+
     private static Class<?> userClass(Class<?> type) {
         if (Intercepted.class.isAssignableFrom(type) && type.getSuperclass() != null) {
             return type.getSuperclass();
@@ -228,45 +224,6 @@ final class BindingManifestRecorder {
 
     private static String version(@Nullable String version) {
         return version == null || version.isBlank() ? "unknown" : version;
-    }
-
-    private static String schemaSha256(TypeDefinitionRegistry registry) {
-        List<Definition<?>> definitions = new ArrayList<>();
-        registry.schemaDefinition().ifPresent(definitions::add);
-        definitions.addAll(registry.getSchemaExtensionDefinitions());
-
-        Map<String, List<Definition<?>>> named = new TreeMap<>();
-        registry.types().values().forEach(it -> add(named, it.getName(), it));
-        registry.scalars().values().stream()
-                .filter(it -> !ScalarInfo.isGraphqlSpecifiedScalar(it.getName()))
-                .forEach(it -> add(named, it.getName(), it));
-        registry.getDirectiveDefinitions().values().stream()
-                .filter(it -> !GraphQLSpecifiedDirectives.isProvided(it.getName()))
-                .forEach(it -> add(named, it.getName(), it));
-        addExtensions(named, registry.objectTypeExtensions());
-        addExtensions(named, registry.interfaceTypeExtensions());
-        addExtensions(named, registry.unionTypeExtensions());
-        addExtensions(named, registry.enumTypeExtensions());
-        addExtensions(named, registry.scalarTypeExtensions());
-        addExtensions(named, registry.inputObjectTypeExtensions());
-        named.values().forEach(definitions::addAll);
-
-        String printed = definitions.stream().map(AstPrinter::printAst).collect(Collectors.joining("\n"));
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                    .digest(printed.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 is not available", e);
-        }
-    }
-
-    private static void addExtensions(Map<String, List<Definition<?>>> named,
-                                      Map<String, ? extends List<? extends Definition<?>>> extensions) {
-        extensions.forEach((name, list) -> list.forEach(it -> add(named, name, it)));
-    }
-
-    private static void add(Map<String, List<Definition<?>>> named, String name, Definition<?> node) {
-        named.computeIfAbsent(name, it -> new ArrayList<>()).add(node);
     }
 
 }

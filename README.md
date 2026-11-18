@@ -314,62 +314,26 @@ kind (`argument-mismatch`, `unsupported-return-type`, `scalar-mapping-not-provid
 ## Binding manifest
 
 The `BindingManifest` bean says what the schema is bound to: one line per schema coordinate, naming the Java member
-that serves it, in a stable text format (`graphql-binding-manifest 1`) that can be checked into a repository and
-diffed. Recording is opt-in: set `micronaut.graphql.tools.manifest.record: true` to record it while the schema is
+that serves it, in a stable, versioned text format (`graphql-binding-manifest 2`) that can be checked into a repository
+and diffed. Recording is opt-in: set `micronaut.graphql.tools.manifest.record: true` to record it while the schema is
 bound (without it nothing is recorded and getting the bean fails with a message saying so). Getting the bean binds the
 schema first. With `micronaut.graphql.tools.manifest.enabled: true` it is written
 at startup to `micronaut.graphql.tools.manifest.path` (directories are created), or logged at INFO when no path is
-set.
+set. The format is specified in the guide page "Binding Manifest" (`src/main/docs/guide/manifest.adoc`): the grammar,
+the line kinds, the sorting, the escape of non-ASCII characters and the schema hash, which does not depend on the order
+of the schema files or of the extensions.
 
 ```
-# graphql-binding-manifest 1
+# graphql-binding-manifest 2
 # binder: micronaut-graphql-tools 1.0.0
 # graphql-java: 21.3
 # schema-sha256: 207c5aaec4894a775f03ae20eaa6b97ba4293ed6608936aa65c812af3a469469
 !unreachable-type Legacy
-Book → object · example.data.Book · - · -
-Book.sellers: [BookSeller!]! → resolver · example.graphql.type.resolver.BookResolver#sellers(example.data.Book, graphql.schema.DataFetchingEnvironment) · java.util.concurrent.CompletionStage<java.util.List<example.data.BookSeller>> · java.util.List<example.data.BookSeller>
-Book.title: String! → property · example.data.Book#getTitle() · java.lang.String · java.lang.String
-Error → union · example.graphql.type.Error · - · -
-Error/SecurityError → resolves · example.graphql.type.SecurityError · - · -
-Query.allBooks: [Book!]! → root · example.graphql.query.AllBooksQuery#allBooks() · java.util.List<example.data.Book> · java.util.List<example.data.Book>
-SecurityErrorCode.NOT_AUTHENTICATED → enumValue · example.graphql.type.SecurityErrorCode#NOT_AUTHENTICATED · - · -
-SignUpInput.username: String! → inputField · example.graphql.input.SignUpInput#username · java.lang.String · java.lang.String
-String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
+Book -> object ; example.data.Book ; - ; -
+Book.title: String! -> property ; example.data.Book#getTitle() ; java.lang.String ; java.lang.String
+Query.allBooks: [Book!]! -> root ; example.graphql.query.AllBooksQuery#allBooks() ; java.util.List<example.data.Book> ; java.util.List<example.data.Book>
+String -> scalar ; String ; - ; -
 ```
-
-- The header names the format, the library version (`unknown` outside a jar), the graphql-java version and the SHA-256
-  of the schema definitions (sorted by name, printed by graphql-java's `AstPrinter`).
-- Type lines: `object`, `interface`, `union`, `enum`, `input` with their Java type, `scalar` with its `Coercing` class
-  (only scalars that a bound field, argument or input field uses). Root operation types have no Java type (`-`).
-- Field lines: `Type.field(argument: Type): Type → kind · member · declared type · converted type`. The kind is `root`,
-  `resolver` (a type resolver method, also of an interface), `property` (a getter or a `@GraphQLField` method of the
-  Java type) or `claimed` (a field a [`RuntimeWiringCustomizer` claims](#fields-a-customizer-serves); the member is the
-  class name of the customizer, the declared and converted types are `-`). Methods are written `Class#method(parameter types)` with every Java parameter: a root or type resolver
-  method on its bean class, also when the bean inherits it (AOP proxies are unwrapped), a `@GraphQLField` method on the
-  class it is written in; getters on the class that declares them. Parameter and declared types are those of the
-  declaration, so a type variable of a generic superclass stays a type variable (`T`). The converted type is the
-  declared type without `CompletionStage`, `Publisher` (subscription fields only), `DataFetcherResult` (also per list
-  element) and `Optional`, unwrapped once in that order. Interface fields have no lines of their own: each object type
-  that implements them has its line.
-- `resolves` lines map each member of a union and each implementation of an interface to its Java type;
-  `enumValue` and `inputField` lines list enum values and input fields.
-- Lines starting with `!` are findings. The word after `!` is the code of the finding, the same code that starts the
-  startup error as `[code]` and that names the check (see [Codes](#error-codes)): `!unreachable-type Type` (or
-  `!unreachable-value-type Type` for an enum, input or scalar type) for a declared type nothing binds (allowed or ignored, see
-  [Configuration](#configuration); an enum, input or scalar type that an argument of a directive definition uses,
-  directly or through input fields, is reached), `!precedence-ambiguity Type.field · member | member` for a field decided by a lenient
-  `precedence`, and the findings of [strict mode](#strict-mode) (`!unbound-resolver-method`, `!unbound-enum-constant`,
-  `!unmapped-input-property`, `!unused-dictionary-entry`, `!unwired-directive`).
-- `~ignored Class#member` lines list the members marked `@GraphQLIgnore` that the binding met (see
-  [Escape hatches](#escape-hatches)): they bind no field and are not findings.
-- Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from the reflected method or getter.
-  Where reflection cannot find it (for example a native image without reflection configuration), they are written from
-  Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
-  `java.util.List<Book>`), no raw types (`List` is written `java.util.List<java.lang.Object>`) and no type arguments of
-  array components (`List<String>[]` is written `java.util.List[]`); the first such member is logged at INFO. The body is
-  sorted by `String#compareTo`, UTF-8, `LF`; nothing is escaped, and a part that would contain ` → ` or ` · ` fails
-  instead.
 
 ## Strict mode
 

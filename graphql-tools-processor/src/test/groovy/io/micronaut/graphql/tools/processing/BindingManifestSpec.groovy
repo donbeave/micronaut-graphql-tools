@@ -21,13 +21,14 @@ class BindingManifestSpec extends Specification {
         file.isFile()
         !text.contains('\r')
         text.endsWith('\n')
-        lines[0] == '# graphql-binding-manifest 1'
+        lines[0] == '# graphql-binding-manifest 2'
         lines[1].startsWith('# binder: micronaut-graphql-tools ')
         lines[2] ==~ /# graphql-java: \d+\.\d+(\.\d+)?|# graphql-java: unknown/
         lines[3] ==~ /# schema-sha256: [0-9a-f]{64}/
         body == body.toSorted { a, b -> a <=> b }
-        body.contains('Query.book(id: ID!): Book → root · example.BookQuery#book(java.lang.String) · example.Book · example.Book')
-        bytes.length > text.length()
+        body.contains('Query.book(id: ID!): Book -> root ; example.BookQuery#book(java.lang.String) ; example.Book ; example.Book')
+        bytes.length == text.length()
+        text.every { (it as char) <= (0x7e as char) }
     }
 
     void "a compilation that fails the checks writes no manifest"() {
