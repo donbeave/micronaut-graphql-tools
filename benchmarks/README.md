@@ -46,8 +46,10 @@ Run from the repository root. JDK 21 or 25.
 ./gradlew :benchmarks:allocationTest
 ```
 
-- `:benchmarks:jmh` runs two forks with the `gc` profiler. The allocation figure is `gc.alloc.rate.norm`. The start-up
-  benchmarks are left out of it: run them with `benchmarks/scripts/startup-report.py`.
+- `:benchmarks:jmh` runs two forks with the `gc` profiler. The allocation figure is `gc.alloc.rate.norm`. It excludes `BindingBenchmark` and
+  `RetainedHeapBenchmark`. Its warm-up makes `ContextStartBenchmark`, `FirstRequestBenchmark` and
+  `StartAndFirstRequestBenchmark` invalid as cold measurements: run the cold start-up benchmarks with
+  `benchmarks/scripts/startup-report.py` or the `jmhJar` jar as the "Benchmarks" section of `CONTRIBUTING.md` describes.
 - `:benchmarks:allocationTest -Pallocation.update` rewrites the baselines. Review the diff: a higher number is an
   allocation the change added. Use `-PgraphqlJavaLeg=floor` or `ceiling` for the other legs, which have their own
   baselines.

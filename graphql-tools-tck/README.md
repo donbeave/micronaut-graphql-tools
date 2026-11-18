@@ -54,7 +54,7 @@ Run the scenarios in a suite. The scenarios are in the `example.tck` package of 
 ./gradlew :test-suite-groovy:test --tests 'example.tck.*'
 ```
 
-`./gradlew :test-suite-java:nativeTest` runs the Java TCK as a native image too. The whole TCK takes about 7 to 9 seconds
+`./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest --no-parallel` runs the Java and Kotlin TCK as native images too. The whole TCK takes about 7 to 9 seconds
 in each suite.
 
 To add a scenario, follow "The execution-behaviour TCK" in `CONTRIBUTING.md`: create the directory, list it in

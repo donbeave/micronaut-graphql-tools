@@ -38,9 +38,10 @@ public surface is reduced in #109.
 - `io.micronaut.graphql.tools.annotation`: the public annotations (`@GraphQLType`, `@GraphQLRootResolver`,
   `@GraphQLTypeResolver`, `@GraphQLInput`, `@GraphQLField`, `@GraphQLArgument`, `@GraphQLIgnore`,
   `@GraphQLSchemaCoordinate`).
-- `io.micronaut.graphql.tools` (top level): mixed. The customizer interfaces `RuntimeWiringCustomizer` and `SchemaMappingDictionaryCustomizer`, the
-  classes `SchemaDirective` and `BindingManifest`, and the configuration class `GraphQLToolsConfiguration` are not
-  annotated `@Internal`. Most other types in the package are annotated `@Internal`. Check the annotation on the class
+- `io.micronaut.graphql.tools` (top level): mixed. The extension points and the types around them, for example `RuntimeWiringCustomizer`,
+  `SchemaMappingDictionaryCustomizer`, `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer`,
+  `TypeDefinitionRegistryCustomizer`, `SchemaDirective`, `GraphQLScalarMapping`, `ArgumentValue`, `BindingManifest`
+  and `GraphQLToolsConfiguration`, are not annotated `@Internal`. This list is not complete. Most other types in the package are annotated `@Internal`. Check the annotation on the class
   before you use it.
 - `io.micronaut.graphql.tools.exceptions`: the startup failures. Not annotated `@Internal` today.
 - `io.micronaut.graphql.tools.processor` and `io.micronaut.graphql.tools.schema`: internal. Every class is annotated
