@@ -72,3 +72,5 @@ val graphqlSchemaIndex = tasks.register("graphqlSchemaIndex") {
     }
 }
 sourceSets.test { resources.srcDir(graphqlSchemaIndex) }
+
+apply(from = rootProject.file("config/spotless.license.gradle"))
