@@ -64,10 +64,6 @@ The annotation processor reads the same settings as build options, with camelCas
 - **Decisions.** Issue #79 is closed. Its decisions are recorded in D-33: BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 are approved with no opt-out. The other statuses in the table are not part of that decision.
 - **Snapshot publishing (BC-03).** Nothing is published. The README "Snapshots and Releases" section and CONTRIBUTING state that no snapshot or release is available and no workflow publishes one (only `.github/workflows/gradle.yml` builds and tests). To use this stack, build it yourself and publish it to a local or private repository.
 
-## Pre-1.0 removal (1.0.0-M2, #173)
-
-- The `graphql-tools` `ObjectMapper` bean name and the `GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Applications must not define that bean to configure input conversion. The README sections that described Jackson-defined input behaviour (`@JsonIgnore`, naming strategies, a named mapper) are removed. Input conversion is replaced by #37.
-
 ## Stack PRs on master
 
 Merged with merge commits, in this order: #2 (`d8d353a`), #3 (`40d12c7`), #6 (`cebdd17`), #7 (`a5cbee3`, brings #4), #242 (`b308c37`, brings #5).
