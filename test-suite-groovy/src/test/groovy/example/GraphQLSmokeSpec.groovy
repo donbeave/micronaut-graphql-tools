@@ -42,6 +42,11 @@ class GraphQLSmokeSpec extends Specification {
         payload.error.securityCode == 'NOT_AUTHENTICATED'
     }
 
+    def 'an introduction advice resolver binds its abstract method'() {
+        expect:
+        execute('{ introduced }').introduced == 'introduced introduced'
+    }
+
     def 'allBooks resolves type resolvers and the data loader'() {
         when:
         List<Map> books = execute('{ allBooks { id title year label sellers { name price } } }').allBooks

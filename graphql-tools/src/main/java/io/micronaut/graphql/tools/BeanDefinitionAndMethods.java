@@ -20,6 +20,7 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -40,6 +41,16 @@ final class BeanDefinitionAndMethods {
     void addExecutableMethod(@NonNull ExecutableMethod<Object, ?> executableMethod) {
         requireNonNull("executableMethod", executableMethod);
 
+        for (ExecutableMethod<Object, ?> existing : executableMethods) {
+            if (existing.getMethodName().equals(executableMethod.getMethodName())
+                    && Arrays.equals(existing.getArgumentTypes(), executableMethod.getArgumentTypes())
+                    && (!existing.isAbstract() || executableMethod.isAbstract())) {
+                return;
+            }
+        }
+        executableMethods.removeIf(it -> it.isAbstract()
+                && it.getMethodName().equals(executableMethod.getMethodName())
+                && Arrays.equals(it.getArgumentTypes(), executableMethod.getArgumentTypes()));
         executableMethods.add(executableMethod);
     }
 
