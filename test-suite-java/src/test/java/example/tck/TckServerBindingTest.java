@@ -47,7 +47,7 @@ class TckServerBindingTest {
             try (ServerSocket other = new ServerSocket()) {
                 other.setReuseAddress(true);
                 assertThrows(BindException.class,
-                        () -> other.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), server.getPort())));
+                        () -> other.bind(new InetSocketAddress(InetAddress.getByAddress(new byte[] {127, 0, 0, 1}), server.getPort())));
             }
         }
     }
