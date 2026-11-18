@@ -85,7 +85,7 @@ final class BindingChecks {
     private static final Pattern SCHEMA_COORDINATE = Pattern.compile("[_A-Za-z][_0-9A-Za-z]*\\.[_A-Za-z][_0-9A-Za-z]*");
     private static final List<String> RETURN_TYPE_WRAPPERS = List.of(COMPLETION_STAGE, PUBLISHER, DATA_FETCHER_RESULT,
             OPTIONAL);
-    private static final Map<String, String> PRIMITIVE_OPTIONALS = Map.of(
+    static final Map<String, String> PRIMITIVE_OPTIONALS = Map.of(
             "java.util.OptionalInt", "java.lang.Integer", "java.util.OptionalLong", "java.lang.Long",
             "java.util.OptionalDouble", "java.lang.Double");
 
@@ -550,7 +550,7 @@ final class BindingChecks {
             checkInputType(property.type(), field.getType(), true, fieldCoordinate, field, property.accessor());
             manifest.inputField(type.getName(), field.getName(), field.getType(), javaTypes.name(javaClass),
                     property.name(), typeNames.render(property.type()),
-                    typeNames.converted(property.type(), false));
+                    typeNames.converted(property.type(), false, false));
             if (options.detectOmission() && javaTypes.is(property.type(), ARGUMENT_VALUE)) {
                 boolean writeOnly = !property.accessor().getParameters().isEmpty();
                 if (!property.settable() || writeOnly) {
@@ -1161,7 +1161,7 @@ final class BindingChecks {
     private void recordField(ObjectTypeDefinition type, FieldDefinition field, String kind, String member,
                              TypeMirror declaredType, boolean subscription) {
         manifest.field(type, field, kind, member, typeNames.render(declaredType),
-                typeNames.converted(declaredType, subscription));
+                typeNames.converted(declaredType, subscription, true));
     }
 
     private TypeMirror resolverReturnType(Method method) {

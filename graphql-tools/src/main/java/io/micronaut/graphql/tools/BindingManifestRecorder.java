@@ -93,7 +93,7 @@ final class BindingManifestRecorder {
         }
         lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
                 () -> line(coordinate(objectTypeDefinition, fieldDefinition), kind, member.get(),
-                        JavaTypeNames.of(declaredType), ReturnTypes.convertedTypeName(declaredType, subscription)));
+                        JavaTypeNames.of(declaredType), ReturnTypes.convertedTypeName(declaredType, subscription, true)));
     }
 
     void claimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String customizer) {
@@ -139,7 +139,7 @@ final class BindingManifestRecorder {
         }
         lines.put(inputTypeName + "." + fieldName, () -> line(inputTypeName + "." + fieldName + ": "
                         + printType(graphQlType), "inputField", inputClass.getTypeName() + "#" + property.getName(),
-                JavaTypeNames.of(property.asArgument()), ReturnTypes.convertedTypeName(property.asArgument(), false)));
+                JavaTypeNames.of(property.asArgument()), ReturnTypes.convertedTypeName(property.asArgument(), false, false)));
     }
 
     void diagnostic(String kind, String... parts) {

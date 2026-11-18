@@ -138,7 +138,7 @@ final class ReturnTypes {
                                 + "for example " + wrapper.getSimpleName() + "<String>."));
     }
 
-    static String convertedTypeName(Argument<?> declaredType, boolean subscription) {
+    static String convertedTypeName(Argument<?> declaredType, boolean subscription, boolean returnType) {
         Argument<?> result = declaredType;
         if (CompletionStage.class.isAssignableFrom(result.getType()) || Future.class.isAssignableFrom(result.getType())) {
             result = result.getFirstTypeVariable().orElse(result);
@@ -152,7 +152,7 @@ final class ReturnTypes {
         if (Optional.class.equals(result.getType())) {
             result = result.getFirstTypeVariable().orElse(result);
         }
-        if (PRIMITIVE_OPTIONALS.containsKey(result.getType())) {
+        if (returnType && PRIMITIVE_OPTIONALS.containsKey(result.getType())) {
             result = Argument.of(PRIMITIVE_OPTIONALS.get(result.getType()));
         }
         Argument<?>[] typeParameters = result.getTypeParameters();
