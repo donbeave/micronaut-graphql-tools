@@ -31,6 +31,7 @@ import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
+import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
 import io.micronaut.graphql.tools.exceptions.InputFieldNotSettableException;
@@ -252,7 +253,7 @@ final class InputTypeBinder {
             if (!supportedClasses.contains(returnType)) {
                 throw IncorrectClassMappingException.forArgument(mappingContext, returnType, supportedClasses);
             }
-            if (returnType.isPrimitive() && !nonNull && configuration.isStrict()) {
+            if (configuration.isStrict() && ResolverClassRules.nullablePrimitive(typeModel.ref(argument), nonNull)) {
                 throw IncorrectClassMappingException.forNullablePrimitiveInStrictMode(mappingContext, returnType,
                         typeName.getName(), supportedClasses);
             }
@@ -267,7 +268,7 @@ final class InputTypeBinder {
                 throw IncorrectClassMappingException.forArgument(mappingContext, returnType,
                         scalarMapping.getInputClasses());
             }
-            if (returnType.isPrimitive() && !nonNull) {
+            if (ResolverClassRules.nullablePrimitive(typeModel.ref(argument), nonNull)) {
                 throw IncorrectClassMappingException.forNullablePrimitive(mappingContext, returnType,
                         scalarMapping.getName(), scalarMapping.getInputClasses());
             }

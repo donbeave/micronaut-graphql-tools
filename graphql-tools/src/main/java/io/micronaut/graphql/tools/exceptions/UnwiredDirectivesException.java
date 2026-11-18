@@ -27,8 +27,9 @@ import java.util.stream.Collectors;
  * strict mode is on ({@code micronaut.graphql.tools.strict}, the default, unless {@code unwired-directives} says otherwise; without it they are a warning), or, in
  * every mode, when that list names directives that the schema does not declare or that have a wiring (a stale or
  * contradictory entry), or when {@code micronaut.graphql.tools.schema-customizer-directives} lists a built-in or
- * undeclared directive. A directive applied on the schema definition or on a directive argument counts as wired only
- * through one of those two lists, because graphql-java calls no wiring there.
+ * undeclared directive, or one it never applies to the schema definition or a directive argument. A directive applied
+ * on the schema definition or on a directive argument counts as wired only through one of those two lists, because
+ * graphql-java calls no wiring there.
  */
 public final class UnwiredDirectivesException extends SchemaBindingException {
 
@@ -90,8 +91,9 @@ public final class UnwiredDirectivesException extends SchemaBindingException {
         }
         if (!invalidSchemaCustomizerDirectives.isEmpty()) {
             paragraphs.add(tagAfterFirst(paragraphs, BindingCode.INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES,
-                    "micronaut.graphql.tools.schema-customizer-directives lists directives that are built in "
-                    + "or not declared in the schema: "
+                    "micronaut.graphql.tools.schema-customizer-directives lists directives that are built in, "
+                    + "not declared in the schema, or never applied to the schema definition or to a directive "
+                    + "argument: "
                     + invalidSchemaCustomizerDirectives.entrySet().stream()
                     .map(it -> "@" + it.getKey() + " (" + it.getValue() + ")")
                     .collect(Collectors.joining(", "))
@@ -121,7 +123,7 @@ public final class UnwiredDirectivesException extends SchemaBindingException {
                 + "SchemaDirective.everyElement for a wiring that sees every element), or list it in "
                 + "micronaut.graphql.tools.inert-directives if it has no effect at runtime."
                 + (hasWiringlessCoordinate(unwiredDirectives)
-                ? "\n  graphql-java calls no wiring for the schema definition (schema) or for directive arguments "
+                ? "\n  graphql-java calls no wiring for the schema definition or for directive arguments "
                 + "(@name(arg:)), so a directive applied there must be listed in inert-directives, or in "
                 + "micronaut.graphql.tools.schema-customizer-directives if a GraphQLSchemaCustomizer handles it."
                 : "");
@@ -129,7 +131,7 @@ public final class UnwiredDirectivesException extends SchemaBindingException {
 
     private static boolean hasWiringlessCoordinate(Map<String, List<String>> unwiredDirectives) {
         return unwiredDirectives.values().stream().flatMap(List::stream)
-                .anyMatch(it -> it.equals("schema") || it.startsWith("@"));
+                .anyMatch(it -> it.equals("schema definition") || it.startsWith("@"));
     }
 
     private static String coordinates(List<String> coordinates) {

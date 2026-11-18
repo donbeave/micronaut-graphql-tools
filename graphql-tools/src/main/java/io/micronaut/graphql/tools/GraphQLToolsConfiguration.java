@@ -172,7 +172,7 @@ public class GraphQLToolsConfiguration {
      * definition and on the arguments of directive definitions. graphql-java calls no
      * {@link graphql.schema.idl.SchemaDirectiveWiring} there, so a wiring does not count for those places: a directive
      * applied there needs an entry in this list or in {@link #getInertDirectives()}. Every name must be a directive
-     * the schema declares and that is not built in. Default: empty.
+     * the schema declares, that is not built in and that is applied on one of those places. Default: empty.
      *
      * @param schemaCustomizerDirectives the directive names
      */
