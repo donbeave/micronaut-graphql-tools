@@ -40,17 +40,17 @@ data class Stock(
 
 // tag::nested-constructor-input[]
 @GraphQLInput
-data class Dimensions(val width: Int, val unit: ArgumentValue<String> = ArgumentValue.omitted())
+data class Dimensions(val width: Int, val unit: ArgumentValue<String> = ArgumentValue.ofNullable("DEFAULT"))
 
 @GraphQLInput
-data class Part(val name: String, val note: ArgumentValue<String> = ArgumentValue.omitted())
+data class Part(val name: String, val note: ArgumentValue<String> = ArgumentValue.ofNullable("DEFAULT"))
 
 @GraphQLInput
 data class Crate(
     val label: String,
     val dimensions: Dimensions,
     val parts: List<Part>,
-    val memo: ArgumentValue<String> = ArgumentValue.omitted(),
+    val memo: ArgumentValue<String> = ArgumentValue.ofNullable("DEFAULT"),
 )
 // end::nested-constructor-input[]
 

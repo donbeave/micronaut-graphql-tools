@@ -671,8 +671,8 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
   leaves it out, and also when the input type does not define it, for example when another input type backed by the
   same class does). Otherwise, and without the option, the startup fails with `UnsupportedInputTypeException`.
 - A record component, a Kotlin data class `val` (a default argument is not used for it) or a constructor parameter of
-  the type is filled at construction: `ArgumentValue.omitted()` when the client leaves the field out, otherwise
-  `ArgumentValue.ofNullable(value)`. It works the same in nested input classes and in lists of them. A Groovy class
+  the type is filled at construction: `ArgumentValue.omitted()` when the client leaves the field out and the schema
+  declares no default, otherwise `ArgumentValue.ofNullable(value)` (the schema default counts as the value). It works the same in nested input classes and in lists of them. A Groovy class
   declares its constructor itself: `@TupleConstructor` and `@Immutable` add theirs after the introspection is built.
 - The conversion decides what is omitted from the keys of the `Map` that graphql-java coerced, while it builds the
   instance. It calls no getter and never walks the converted object again: a write-only property is enough.
