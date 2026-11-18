@@ -670,7 +670,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
 | `micronaut.graphql.tools.allow.unreachable` | list of type names (empty) | Unreachable types that the checks accept; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar), otherwise the startup fails, so the list cannot go stale. An allowed type also allows the enum, input and scalar types that its fields and arguments use, and that those input types use in turn (transitive); list only the type itself. A type that only a type that is not allowed uses stays unreachable. |
 | `micronaut.graphql.tools.allow.inert-directives` | list of directive names, without `@` (empty) | Directives the schema may apply without a wiring, because they have no effect at runtime; they are logged at INFO. An entry with `*` is a pattern (`fed*`) that must match at least one declared directive without a wiring. Every other applied directive needs a wiring (see [Schema directives](#schema-directives)). Every exact entry must be a directive the schema declares, that is not built in, that has no wiring and that is not a `resolver-directives` entry, otherwise the startup fails in every mode, so the list cannot go stale. |
-| `micronaut.graphql.tools.allow.schema-customizer-directives` | list of directive names, without `@` (empty) | Directives that a `GraphQLSchemaCustomizer` handles on the `schema` definition or on directive arguments, where graphql-java calls no wiring (see [Schema directives](#schema-directives)). Every entry must be a directive the schema declares that is not built in, otherwise the startup fails in every mode. |
+| `micronaut.graphql.tools.allow.schema-customizer-directives` | list of directive names, without `@` (empty) | Directives that a `GraphQLSchemaCustomizer` handles on the `schema` definition or on directive arguments, where graphql-java calls no wiring (see [Schema directives](#schema-directives)). Every entry must be a directive the schema declares that is not built in and that it applies on the schema definition or on a directive argument, otherwise the startup fails in every mode. |
 | `micronaut.graphql.tools.allow.findings` | list of manifest lines (empty) | Findings to accept, as `!` lines of the [binding manifest](#binding-manifest), for example `"!unbound-resolver-method example.Query#helper(java.lang.String)"`. Such a finding does not fail the startup, is not logged and is not in the manifest. An entry that is not the line of a check, whose check is `ignore`, or that matches no finding fails the startup. See [Allow lists](#allow-lists). |
 
 ```yaml
@@ -1045,7 +1045,8 @@ A `RuntimeWiringCustomizer` may only **add** (scalars, directive wirings, field 
 fetcher, default data fetcher, type resolver or scalar that the library registered, or the wiring factory, or puts a
 data fetcher or type resolver for a field or type the library wired into a code registry (`builder.codeRegistry(...)`,
 which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
-and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
+and the customizer that made it. The check runs only when the application has a `RuntimeWiringCustomizer` bean; the
+library's own directive wirings are not checked, and without a customizer the startup does no check work. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
 (On graphql-java 25.2 the builder itself already rejects the first replaced default data fetcher, type
 resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently. A second data fetcher for a
@@ -1151,10 +1152,11 @@ directive that is meant to have no effect at runtime (documentation, or enforced
 directive that has no wiring, so it cannot go stale). `micronaut.graphql.tools.checks.unwired-directive` (`fail`, `warn` or `ignore`) sets what the check does; unset it
 follows `strict`, and `ignore` skips the check, for schemas that apply many tooling directives.
 `SchemaDirectiveWiring` has no hook for the schema definition or for directive arguments, so a wiring does not count
-there: a directive applied on `schema { }` (coordinate `schema`) or on an argument of a directive definition
+there: a directive applied on `schema { }` (coordinate `schema definition`) or on an argument of a directive definition
 (`@name(arg:)`) fails the check unless `allow.inert-directives` lists it, or
 `micronaut.graphql.tools.allow.schema-customizer-directives` lists it because a `GraphQLSchemaCustomizer` handles it. That list
-takes exact names of declared directives that are not built in. A directive that has a wiring may be applied at both
+takes exact names of declared directives that are not built in, and each must be applied on the schema definition or on a
+directive argument: an entry that the schema never applies there fails the startup, so a stale entry is not silent. A directive that has a wiring may be applied at both
 kinds of places only through `allow.schema-customizer-directives`, because `allow.inert-directives` rejects a directive that has a
 wiring. Exempt: graphql-java's built-in directives (`@deprecated`, `@specifiedBy`, `@oneOf`,
 `@include`, `@skip`), directives the schema declares but never applies, and directives it applies without declaring

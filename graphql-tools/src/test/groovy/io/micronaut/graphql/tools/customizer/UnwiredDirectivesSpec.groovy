@@ -30,6 +30,7 @@ class UnwiredDirectivesSpec extends AbstractTest {
     static final String SPEC_NAME_CUSTOMIZER = "UnwiredDirectivesSpec.customizer"
     static final String SPEC_NAME_KINDS = "UnwiredDirectivesSpec.kinds"
     static final String SPEC_NAME_PLACES = "UnwiredDirectivesSpec.places"
+    static final String SPEC_NAME_TYPE_SCHEMA = "UnwiredDirectivesSpec.typeNamedSchema"
 
     @Language("GraphQL")
     static final String PLACES_SCHEMA = """
@@ -45,6 +46,24 @@ directive @fedLink on FIELD_DEFINITION
 
 type Query {
   r: String @meta(x: 1) @fedKey @fedLink
+}
+"""
+
+    @Language("GraphQL")
+    static final String TYPE_NAMED_SCHEMA_SCHEMA = """
+schema @audit {
+  query: Query
+}
+
+directive @audit on SCHEMA
+directive @typeDir on OBJECT
+
+type Query {
+  r: String
+}
+
+type schema @typeDir {
+  a: String
 }
 """
 
@@ -185,7 +204,7 @@ scalar Sc @onScalar
         e.cause.message.startsWith('[unwired-directive] The schema applies directives that have no wiring: ' +
                 '@onDirArg (@meta(x:)), @onExt (Query), @onExtField (Query.e), @onIface (Node), ' +
                 '@onIfaceArg (Node.f(a:)), @onIfaceField (Node.id), @onInputExt (In.b), @onScalar (Sc), ' +
-                '@onSchema (schema), @onSchemaExt (schema), @onUnion (U), @rep (Query.r).\n')
+                '@onSchema (schema definition), @onSchemaExt (schema definition), @onUnion (U), @rep (Query.r).\n')
     }
 
     void "inert-directives lets the listed directives through and logs them"() {
@@ -306,6 +325,49 @@ scalar Sc @onScalar
         result.data == [me: [email: 'me@example.com'], shout: 'SHOUT']
     }
 
+    void "a type named schema is wired like any other type, and does not stand for the schema definition"() {
+        given: 'a named wiring for @typeDir, which is applied to the type schema, and none for @audit on the schema definition'
+        startContext(TYPE_NAMED_SCHEMA_SCHEMA, SPEC_NAME_TYPE_SCHEMA, ['micronaut.graphql.tools.unreachable-types': 'ignore'])
+
+        when:
+        getGraphQLBean()
+
+        then: 'only the schema definition is unwired'
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof UnwiredDirectivesException
+        e.cause.unwiredDirectives == ['audit']
+        e.cause.message.contains('@audit (schema definition)')
+        !e.cause.message.contains('typeDir')
+    }
+
+    void "a type named schema passes when the schema definition's directive is listed in schema-customizer-directives"() {
+        given:
+        startContext(TYPE_NAMED_SCHEMA_SCHEMA, SPEC_NAME_TYPE_SCHEMA, [
+                'micronaut.graphql.tools.unreachable-types'            : 'ignore',
+                'micronaut.graphql.tools.allow.schema-customizer-directives': ['audit']])
+
+        when:
+        def result = executeQuery('{ r }')
+
+        then:
+        result.errors.isEmpty()
+        result.data == [r: 'r']
+    }
+
+    void "a schema-customizer-directives entry that no schema definition or directive argument applies is stale"() {
+        given: '@unused is declared and applied nowhere'
+        startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.allow.schema-customizer-directives': ['unused']])
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof UnwiredDirectivesException
+        e.cause.invalidSchemaCustomizerDirectives == ['unused']
+        e.cause.message.contains('@unused (never applied to the schema definition or to a directive argument)')
+    }
+
     void "a wiring does not count for the schema definition or a directive argument"() {
         given: 'named wirings for @audit (on schema), @doc (on a directive argument) and @meta'
         startContext(PLACES_SCHEMA, SPEC_NAME_PLACES, ['micronaut.graphql.tools.allow.inert-directives': ['fed*']])
@@ -317,9 +379,9 @@ scalar Sc @onScalar
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnwiredDirectivesException
         e.cause.unwiredDirectives == ['audit', 'doc']
-        e.cause.message == """[unwired-directive] The schema applies directives that have no wiring: @audit (schema), @doc (@meta(x:)).
+        e.cause.message == """[unwired-directive] The schema applies directives that have no wiring: @audit (schema definition), @doc (@meta(x:)).
   Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.allow.inert-directives if it has no effect at runtime, or set micronaut.graphql.tools.checks.unwired-directive to warn or ignore.
-  graphql-java calls no wiring for the schema definition (schema) or for directive arguments (@name(arg:)), so a directive applied there must be listed in allow.inert-directives, or in micronaut.graphql.tools.allow.schema-customizer-directives if a GraphQLSchemaCustomizer handles it."""
+  graphql-java calls no wiring for the schema definition or for directive arguments (@name(arg:)), so a directive applied there must be listed in allow.inert-directives, or in micronaut.graphql.tools.allow.schema-customizer-directives if a GraphQLSchemaCustomizer handles it."""
     }
 
     void "schema-customizer-directives and inert-directives accept the schema-level and argument-level ones"() {
@@ -464,6 +526,24 @@ scalar Sc @onScalar
         @Singleton
         SchemaDirective meta() {
             return SchemaDirective.named('meta', new NoOpWiring())
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_TYPE_SCHEMA)
+    @Factory
+    static class TypeSchemaFactory {
+        @Bean
+        @Singleton
+        SchemaDirective typeDir() {
+            return SchemaDirective.named('typeDir', new NoOpWiring())
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_TYPE_SCHEMA)
+    @GraphQLRootResolver
+    static class TypeSchemaQuery {
+        String r() {
+            return 'r'
         }
     }
 

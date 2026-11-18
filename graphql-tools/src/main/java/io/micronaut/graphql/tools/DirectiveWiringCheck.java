@@ -47,6 +47,8 @@ import java.util.regex.Pattern;
 final class DirectiveWiringCheck {
 
     private static final Logger LOG = LoggerFactory.getLogger(DirectiveWiringCheck.class);
+    // not a GraphQL name, so no type can have this coordinate
+    static final String SCHEMA_DEFINITION = "schema definition";
 
     private DirectiveWiringCheck() {
     }
@@ -96,18 +98,23 @@ final class DirectiveWiringCheck {
                 invalidInert.put(inertPatternSources.get(i), "matches no declared directive that lacks a wiring");
             }
         }
+        Map<String, Set<String>> applied = !policy.enabled(BindingCode.UNWIRED_DIRECTIVE) && schemaCustomizer.isEmpty()
+                ? Map.of() : appliedDirectives(registry);
         Map<String, String> invalidSchemaCustomizer = new TreeMap<>();
         for (String name : schemaCustomizer) {
             if (isBuiltIn(name)) {
                 invalidSchemaCustomizer.put(name, "built into graphql-java");
             } else if (registry.getDirectiveDefinition(name).isEmpty()) {
                 invalidSchemaCustomizer.put(name, "not declared in the schema");
+            } else if (applied.getOrDefault(name, Set.of()).stream()
+                    .noneMatch(DirectiveWiringCheck::isGraphQLJavaWiringless)) {
+                invalidSchemaCustomizer.put(name, "never applied to the schema definition or to a directive argument");
             }
         }
 
         Map<String, List<String>> unwired = new TreeMap<>();
         if (policy.enabled(BindingCode.UNWIRED_DIRECTIVE)) {
-            appliedDirectives(registry).forEach((name, coordinates) -> {
+            applied.forEach((name, coordinates) -> {
                 boolean declared = registry.getDirectiveDefinition(name).isPresent();
                 if (!declared || isBuiltIn(name) || inert.contains(name)
                         || inertPatterns.stream().anyMatch(it -> it.matcher(name).matches())) {
@@ -153,7 +160,7 @@ final class DirectiveWiringCheck {
 
     // graphql-java calls no SchemaDirectiveWiring for the schema definition or for the arguments of a directive definition
     static boolean isGraphQLJavaWiringless(String coordinate) {
-        return coordinate.equals("schema") || coordinate.startsWith("@");
+        return coordinate.equals(SCHEMA_DEFINITION) || coordinate.startsWith("@");
     }
 
     private static Pattern pattern(String glob) {
@@ -175,8 +182,8 @@ final class DirectiveWiringCheck {
     static Map<String, Set<String>> appliedDirectives(TypeDefinitionRegistry registry) {
         Map<String, Set<String>> applied = new TreeMap<>();
 
-        registry.schemaDefinition().ifPresent(it -> collect(applied, it, "schema"));
-        registry.getSchemaExtensionDefinitions().forEach(it -> collect(applied, it, "schema"));
+        registry.schemaDefinition().ifPresent(it -> collect(applied, it, SCHEMA_DEFINITION));
+        registry.getSchemaExtensionDefinitions().forEach(it -> collect(applied, it, SCHEMA_DEFINITION));
 
         List<TypeDefinition<?>> types = new ArrayList<>();
         for (TypeDefinition<?> type : registry.types().values()) {

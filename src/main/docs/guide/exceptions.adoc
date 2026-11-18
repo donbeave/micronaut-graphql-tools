@@ -61,7 +61,7 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 |`invalid-claimed-fields` |failure |no |A RuntimeWiringCustomizer claims fields that the schema does not define.
 |`invalid-allow-unreachable` |failure |no |allow.unreachable names a type that is not an unreachable type.
 |`invalid-inert-directives` |failure |no |allow.inert-directives lists a directive that is built in, undeclared or wired.
-|`invalid-schema-customizer-directives` |failure |no |allow.schema-customizer-directives lists a built-in or undeclared directive.
+|`invalid-schema-customizer-directives` |failure |no |allow.schema-customizer-directives lists a built-in or undeclared directive, or one it never applies to the schema definition or a directive argument.
 |`invalid-allow-findings` |failure |no |allow.findings has an entry that is not a manifest line of a check, or that matches no finding.
 |`invalid-check-setting` |failure |no |checks names a code that is not a check, or a severity that is not fail, warn or ignore.
 |`removed-configuration-key` |failure |no |A configuration key was removed; the message names its replacement.

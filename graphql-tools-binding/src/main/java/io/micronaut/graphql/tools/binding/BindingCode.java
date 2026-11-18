@@ -165,9 +165,13 @@ public enum BindingCode {
     /** Failure: allow.inert-directives lists a directive that cannot be inert. */
     INVALID_INERT_DIRECTIVES("invalid-inert-directives", false, false,
             "allow.inert-directives lists a directive that is built in, undeclared or wired."),
-    /** Failure: allow.schema-customizer-directives lists a built-in or undeclared directive. */
+    /**
+     * Failure: allow.schema-customizer-directives lists a built-in or undeclared directive, or one never applied to the
+     * schema definition or a directive argument.
+     */
     INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES("invalid-schema-customizer-directives", false, false,
-            "allow.schema-customizer-directives lists a built-in or undeclared directive."),
+            "allow.schema-customizer-directives lists a built-in or undeclared directive, or one it never applies to "
+                    + "the schema definition or a directive argument."),
     /** Failure: an allow.findings entry is malformed, or matches no finding. */
     INVALID_ALLOW_FINDINGS("invalid-allow-findings", false, false,
             "allow.findings has an entry that is not a manifest line of a check, or that matches no finding."),
