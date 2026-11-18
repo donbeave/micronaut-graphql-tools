@@ -1,0 +1,56 @@
+name: Startup benchmark
+# Binding time and retained heap of generated schemas (#39). Report only: never on pull_request, never in the
+# `required checks` gate, and wall-clock time is not gated (D-02, D-35). Each run archives its JMH JSON as an artifact and
+# prints the change against the last successful run. Shared runners are noisy: read the retained heap first.
+on:
+  schedule:
+    - cron: '37 3 * * *'
+  workflow_dispatch:
+    inputs:
+      forks:
+        description: Cold JVMs per case
+        default: '10'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+jobs:
+  startup:
+    name: startup (Java 25, graphql-java default)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Fetch the previous run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          run_id=$(gh run list --workflow startup-benchmark.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --name startup-benchmark --dir previous || echo "No archived JSON in run $run_id"
+          fi
+      - name: Run the benchmark
+        env:
+          FORKS: ${{ inputs.forks || '10' }}
+        run: |
+          set -o pipefail
+          args=(--forks "$FORKS" --json startup-benchmark.json)
+          if [ -f previous/startup-benchmark.json ]; then args+=(--previous previous/startup-benchmark.json); fi
+          python3 benchmarks/scripts/startup-report.py "${args[@]}" | tee report.txt
+          { echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive the JSON
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: startup-benchmark
+          path: |
+            startup-benchmark.json
+            report.txt
+          retention-days: 90
+          if-no-files-found: error
