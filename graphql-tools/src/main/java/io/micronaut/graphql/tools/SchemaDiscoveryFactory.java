@@ -19,6 +19,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Reads the schema files of {@code micronaut.graphql.tools.schema.locations} into the {@link TypeDefinitionRegistry} that the
  * schema is bound from. The bean is {@code @Secondary}: any {@code TypeDefinitionRegistry} bean of the application is used
- * instead, and then no file is read.
+ * instead, and then no file is read: the bean is not even a candidate when another bean enumerates the registries.
  */
 @Internal
 @Factory
@@ -41,6 +42,7 @@ public final class SchemaDiscoveryFactory {
     @Bean
     @Singleton
     @Secondary
+    @Requires(missingBeans = TypeDefinitionRegistry.class)
     public TypeDefinitionRegistry discoveredTypeDefinitionRegistry(BeanContext beanContext,
                                                                    GraphQLToolsConfiguration configuration) {
         SchemaSources.Loaded loaded = SchemaDiscovery.discover(configuration.getSchema().getLocations(),

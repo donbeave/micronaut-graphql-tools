@@ -20,6 +20,7 @@ import java.util.jar.JarOutputStream
 class SchemaDiscoverySpec extends Specification {
 
     static final String SPEC_NAME = 'SchemaDiscoverySpec'
+    static final String REGISTRY_SPEC_NAME = 'SchemaDiscoverySpec.registry'
 
     @TempDir
     Path dir
@@ -170,6 +171,45 @@ class SchemaDiscoverySpec extends Specification {
         context.getBean(graphql.GraphQL).execute('{ hello }').getData() == [hello: 'hello']
     }
 
+    void "an application registry bean is the only registry candidate, so the discovery is never created"() {
+        when:
+        context = ApplicationContext.builder(['spec.name': REGISTRY_SPEC_NAME, 'micronaut.graphql.tools.eager-init': false,
+                                              'micronaut.graphql.tools.schema.locations': ['classpath:nothing/**/*.graphqls']]).start()
+
+        then:
+        context.getBeansOfType(graphql.schema.idl.TypeDefinitionRegistry).size() == 1
+    }
+
+    void "overlapping file locations read a file once"() {
+        given:
+        Files.createDirectories(dir.resolve('common'))
+        Files.writeString(dir.resolve('query.graphqls'), 'type Query { a: Int }')
+        Files.writeString(dir.resolve('common/lib.graphqls'), 'type Lib { name: String }')
+
+        when:
+        def loaded = SchemaDiscovery.discover(["file:${dir}/**/*.graphqls".toString(), "file:${dir}/common/*.graphqls".toString()],
+                getClass().classLoader)
+
+        then:
+        loaded.read() == ['common/lib.graphqls', 'query.graphqls']
+    }
+
+    void "a visible classpath root without schema files shadows a later root and its index"() {
+        given:
+        Path first = dir.resolve('first')
+        Files.createDirectories(first.resolve('discovery'))
+        Files.writeString(first.resolve('discovery/client.graphql'), 'query { a }')
+        Path jar = jar('lib.jar', ['discovery/lib.graphqls'                 : 'type Lib { name: String }',
+                                    (SchemaIndex.RESOURCE): SchemaIndex.render(['discovery/lib.graphqls'])])
+        ClassLoader loader = new URLClassLoader([first.toUri().toURL(), jar.toUri().toURL()] as URL[], ClassLoader.platformClassLoader)
+
+        when:
+        SchemaDiscovery.discover(['classpath:discovery/**/*.graphqls'], loader, false)
+
+        then:
+        thrown(SchemaDiscoveryException)
+    }
+
     void "without a registry bean and without files the startup fails with the locations"() {
         when:
         context = ApplicationContext.builder(['spec.name': SPEC_NAME, 'micronaut.graphql.tools.eager-init': false,
@@ -218,6 +258,15 @@ class SchemaDiscoverySpec extends Specification {
             }
         }
         jar
+    }
+
+    @Requires(property = 'spec.name', value = REGISTRY_SPEC_NAME)
+    @io.micronaut.context.annotation.Factory
+    static class RegistryFactory {
+        @jakarta.inject.Singleton
+        graphql.schema.idl.TypeDefinitionRegistry registry() {
+            new graphql.schema.idl.SchemaParser().parse('type Query { hello: String }')
+        }
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

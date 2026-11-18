@@ -111,7 +111,7 @@ public final class SchemaDiscovery {
             throws IOException {
         List<Source> found = new ArrayList<>();
         switch (location.scheme()) {
-            case FILE -> findFiles(location, found);
+            case FILE -> findFiles(location, found, seen);
             case CLASSPATH, CLASSPATH_ALL -> {
                 if (!location.isPattern()) {
                     findLiteral(location, loader, found, seen);
@@ -126,13 +126,15 @@ public final class SchemaDiscovery {
         return found;
     }
 
-    private static void findFiles(SchemaLocation location, List<Source> found) throws IOException {
+    private static void findFiles(SchemaLocation location, List<Source> found, Set<String> seen) throws IOException {
         if (!location.isPattern()) {
             Path file = Path.of(location.pattern());
             if (!Files.isRegularFile(file)) {
                 throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "The schema file " + location + " does not exist.");
             }
-            found.add(new Source(file.getFileName().toString(), Files.readString(file, StandardCharsets.UTF_8)));
+            if (seen.add(key(file))) {
+                found.add(new Source(file.getFileName().toString(), Files.readString(file, StandardCharsets.UTF_8)));
+            }
             return;
         }
         Path root = Path.of(location.root());
@@ -147,8 +149,14 @@ public final class SchemaDiscovery {
                     .collect(Collectors.toList());
         }
         for (Path file : files) {
-            found.add(new Source(root.relativize(file).toString().replace('\\', '/'), Files.readString(file, StandardCharsets.UTF_8)));
+            if (seen.add(key(file))) {
+                found.add(new Source(root.relativize(file).toString().replace('\\', '/'), Files.readString(file, StandardCharsets.UTF_8)));
+            }
         }
+    }
+
+    private static String key(Path file) throws IOException {
+        return file.toAbsolutePath().normalize().toUri().toURL().toExternalForm();
     }
 
     private static void findLiteral(SchemaLocation location, ClassLoader loader, List<Source> found, Set<String> seen)
@@ -208,7 +216,7 @@ public final class SchemaDiscovery {
             inRoot.sort(Comparator.comparing(Source::name));
             found.addAll(inRoot);
         }
-        if ((found.isEmpty() || location.scheme() == Scheme.CLASSPATH_ALL) && loader.getResource(SchemaIndex.RESOURCE) != null) {
+        if ((roots.isEmpty() || location.scheme() == Scheme.CLASSPATH_ALL) && loader.getResource(SchemaIndex.RESOURCE) != null) {
             // an entry that cannot be listed (a jar without directory entries) is found through its index; seen drops the files that were listed
             findInIndex(location, loader, found, seen);
         }
@@ -229,7 +237,7 @@ public final class SchemaDiscovery {
         }
         for (Path file : files) {
             String name = prefix + directory.relativize(file).toString().replace('\\', '/');
-            if (location.matches(name) && seen.add(file.toUri().toURL().toExternalForm())) {
+            if (location.matches(name) && seen.add(key(file))) {
                 found.add(new Source(name, Files.readString(file, StandardCharsets.UTF_8)));
             }
         }
