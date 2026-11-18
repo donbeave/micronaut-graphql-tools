@@ -19,7 +19,7 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 
 /**
  * The base of the startup failures of the binding. {@link #code()} is the registry code of the failure, the same token
- * that the message starts with as {@code [code]}, that a binding manifest {@code !} line and {@code checks.<code>} use.
+ * that the message starts with as {@code [code]}, that a binding manifest {@code !} line and the {@code checks} setting use.
  * An aggregate ({@link BindingFailuresException}, {@link StrictModeException}) has a code of its own, and each of its
  * findings carries its code in its line.
  */

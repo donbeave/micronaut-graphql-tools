@@ -24,8 +24,8 @@ import java.util.Map;
 
 /**
  * The one registry of the codes of the library: the strict checks and the startup and compile-time failures. A code is
- * the token in {@code [code]} at the start of a diagnostic (at compile time and at startup), the name in
- * {@code checks.<code>} and {@code allow.findings}, the kind of a {@code !} line of the binding manifest, and the value
+ * the token in {@code [code]} at the start of a diagnostic (at compile time and at startup), the name of a
+ * check in the {@code checks} and {@code allow.findings} settings, the kind of a {@code !} line of the binding manifest, and the value
  * of {@code SchemaBindingException#code()}.
  *
  * <p>A code is a lower-case kebab-case word. {@link #compileTime()} says whether the compile-time check reports it; the
@@ -240,7 +240,7 @@ public enum BindingCode {
     }
 
     /**
-     * @return {@code true} for a strict check (a {@code checks.<code>} key), {@code false} for a failure
+     * @return {@code true} for a strict check (a key of the {@code checks} setting), {@code false} for a failure
      */
     public boolean check() {
         return check;
