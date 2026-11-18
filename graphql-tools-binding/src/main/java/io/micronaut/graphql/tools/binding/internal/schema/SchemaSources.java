@@ -27,6 +27,8 @@ import graphql.language.TypeName;
 import graphql.parser.InvalidSyntaxException;
 import graphql.parser.MultiSourceReader;
 import graphql.parser.Parser;
+import graphql.parser.ParserEnvironment;
+import graphql.parser.ParserOptions;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.errors.SchemaProblem;
@@ -195,7 +197,10 @@ public final class SchemaSources {
 
     private static Document parse(Source source) {
         try {
-            return new Parser().parseDocument(MultiSourceReader.newMultiSourceReader().string(source.text(), source.name()).build());
+            return new Parser().parseDocument(ParserEnvironment.newParserEnvironment()
+                    .document(MultiSourceReader.newMultiSourceReader().string(source.text(), source.name()).build())
+                    .parserOptions(ParserOptions.getDefaultSdlParserOptions())
+                    .build());
         } catch (InvalidSyntaxException e) {
             throw new SchemaSourceException("the schema file " + source.name() + " is not valid: " + e.getMessage(), e);
         }

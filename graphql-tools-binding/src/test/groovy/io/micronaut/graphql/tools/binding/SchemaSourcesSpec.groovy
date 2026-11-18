@@ -110,6 +110,14 @@ class SchemaSourcesSpec extends Specification {
         none.schemaDefinition().isEmpty()
     }
 
+    void "a large schema file is parsed with the SDL limits, not the lower limits of a query"() {
+        given:
+        def text = 'type Query {\n' + (1..6000).collect { "  field$it(a: Int, b: Int): Int" }.join('\n') + '\n}\n'
+
+        expect:
+        SchemaSources.load([new SchemaSources.Source('large.graphqls', text)]).registry().getType('Query').isPresent()
+    }
+
     void "a Mutation or Subscription type without a Query type is not a root"() {
         given:
         def registry = new SchemaParser().parse('type Mutation { b: Int } type Subscription { c: Int }')

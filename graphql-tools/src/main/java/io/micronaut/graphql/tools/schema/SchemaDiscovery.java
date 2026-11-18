@@ -35,6 +35,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +93,7 @@ public final class SchemaDiscovery {
                 for (Source source : find(location, loader, useIndex, seen)) {
                     sources.add(source);
                 }
-            } catch (IOException | UncheckedIOException e) {
+            } catch (IOException | UncheckedIOException | InvalidPathException e) {
                 throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "Cannot read the schema location " + location + ": " + e.getMessage(), e);
             }
         }
