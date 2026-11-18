@@ -62,7 +62,7 @@ The annotation processor reads the same settings as build options, with camelCas
   - kapt is documented in the README but is not exercised by the library's tests.
 - **Review findings.** Blocking review findings are fixed on top of this stack in separate changes tracked in issue #172. The stack PRs themselves are not changed.
 - **Decisions.** Issue #79 is closed. Its decisions are recorded in D-33: BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 are approved with no opt-out. The other statuses in the table are not part of that decision.
-- **Snapshot publishing (BC-03).** No snapshot is published. Milestone versions are published to GitHub Packages by `.github/workflows/release.yml` on a version tag (D-40); the README "Snapshots and Releases" section and CONTRIBUTING describe this. To use this stack, build it yourself and publish it to a local or private repository.
+- **Snapshot publishing (BC-03).** No snapshot is published. Milestone versions are published to GitHub Packages by `.github/workflows/release.yml` on a version tag (D-40); the README "Snapshots and Releases" section and CONTRIBUTING describe this. Milestone 1.0.0-M1 is published to GitHub Packages (see the README); to use an unreleased snapshot of this stack, build it yourself and publish it to a local or private repository.
 
 ## Stack PRs on master
 
