@@ -27,7 +27,8 @@ class BindingManifestSpec extends Specification {
         lines[3] ==~ /# schema-sha256: [0-9a-f]{64}/
         body == body.toSorted { a, b -> a <=> b }
         body.contains('Query.book(id: ID!): Book -> root ; example.BookQuery#book(java.lang.String) ; example.Book ; example.Book')
-        bytes.length > text.length()
+        bytes.length == text.length()
+        text.every { (it as char) <= (0x7e as char) }
     }
 
     void "a compilation that fails the checks writes no manifest"() {

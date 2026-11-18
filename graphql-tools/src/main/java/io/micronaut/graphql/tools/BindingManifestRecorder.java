@@ -15,11 +15,8 @@
  */
 package io.micronaut.graphql.tools;
 
-import graphql.language.AstPrinter;
-import graphql.language.Definition;
 import graphql.language.FieldDefinition;
 import graphql.language.ObjectTypeDefinition;
-import graphql.schema.idl.ScalarInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.aop.Intercepted;
 import io.micronaut.core.annotation.Internal;
@@ -32,16 +29,11 @@ import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
 import io.micronaut.graphql.tools.binding.internal.manifest.SchemaHash;
 import io.micronaut.graphql.tools.binding.internal.plan.BindingPlan;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
