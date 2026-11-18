@@ -29,7 +29,16 @@ public final class InvalidSchemaCoordinateException extends SchemaBindingExcepti
     private final List<String> problems;
 
     public InvalidSchemaCoordinateException(List<String> problems) {
-        super(BindingCode.UNKNOWN_SCHEMA_COORDINATE, buildMessage(problems));
+        this(BindingCode.UNKNOWN_SCHEMA_COORDINATE, problems);
+    }
+
+    /**
+     * @param code     {@code unknown-schema-coordinate}, or {@code coordinate-on-non-resolver} for a coordinate declared
+     *                 on a bean that is neither a root nor a type resolver
+     * @param problems the problems, one per declaration
+     */
+    public InvalidSchemaCoordinateException(BindingCode code, List<String> problems) {
+        super(code, buildMessage(problems));
 
         this.problems = List.copyOf(problems);
     }

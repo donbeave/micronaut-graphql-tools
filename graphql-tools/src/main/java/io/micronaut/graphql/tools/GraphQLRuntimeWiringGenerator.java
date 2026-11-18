@@ -551,7 +551,8 @@ final class GraphQLRuntimeWiringGenerator {
                     .toList();
 
             EnumBeanIntrospection<?> introspection = EnumIntrospections.find(targetClass).orElseThrow(
-                    () -> new ClassNotIntrospectedException(mappingContext, targetClass, Introspected.class));
+                    () -> new ClassNotIntrospectedException(new TypeDefinitionMappingContext(enumTypeDefinition, targetClass, mappingContext),
+                            targetClass, Introspected.class));
             Map<String, Object> constants = EnumIntrospections.constantsByName(introspection);
 
             List<String> missingValues = EnumTypeRules.check(expectedValues, typeModel.of(targetClass))

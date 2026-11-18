@@ -42,17 +42,12 @@ input ConversionInput {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ClassNotIntrospectedException
         e.cause.message == """[class-not-introspected] The class ${ConversionInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
-  GraphQL coordinate: PriceInput.conversion (line 11, column 3)
-  GraphQL input object type: PriceInput
-  GraphQL input value: conversion
-  Mapped class: ${PriceInput.name}
-  Mapped property: conversion"""
-        e.cause.mappingContext.graphQlInputObjectType == 'PriceInput'
-        e.cause.mappingContext.graphQlInputValue == 'conversion'
-        e.cause.mappingContext.inputObjectTypeDefinition.name == 'PriceInput'
-        e.cause.mappingContext.inputValueDefinition.name == 'conversion'
-        e.cause.mappingContext.mappedClass == PriceInput
-        e.cause.mappingContext.mappedProperty == 'conversion'
+  GraphQL coordinate: ConversionInput (line 14, column 1)
+  GraphQL type: ConversionInput
+  Mapped class: ${ConversionInput.name}
+  Reached from: PriceInput.conversion (line 11, column 3)"""
+        e.cause.mappingContext.coordinate == 'ConversionInput'
+        e.cause.mappingContext.mappedClass == ConversionInput
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

@@ -35,13 +35,16 @@ final class Parity {
      * @param runtime    the startup verdict
      * @param compile    the compile-time verdict; {@code null} if none is recorded (read as: reports nothing)
      * @param divergences the known gaps
+     * @param relaxed    whether the case sets the severity of a check at startup, which the compile-time check ignores
      * @return the violations, empty if the two verdicts are in parity
      */
-    static List<String> check(String name, Language language, Verdict runtime, Verdict compile, Divergences divergences) {
+    static List<String> check(String name, Language language, Verdict runtime, Verdict compile, Divergences divergences,
+                              boolean relaxed = false) {
         List<String> violations = []
         Set<String> runtimeKeys = runtime.keys()
         Set<String> compileKeys = compile == null ? [] as Set<String> : compile.keys()
-        (compileKeys - runtimeKeys).sort().each {
+        // a case that relaxes a severity at startup is outside the rule: the compile error cannot be relaxed (D-30, point 6)
+        (relaxed ? [] : (compileKeys - runtimeKeys).sort()).each {
             violations.add("soundness: the compile side reports '${it}' but the startup does not (a false compile error)".toString())
         }
         runtime.findings.findAll { it.code in PER_CLASS_CODES && !compileKeys.contains(it.key()) }.each { Finding f ->
@@ -50,6 +53,11 @@ final class Parity {
             }
         }
         return violations
+    }
+
+    /** @return whether the case configures the severity of a check ({@code strict} or {@code checks.<code>}) */
+    static boolean relaxed(CorpusCase corpusCase) {
+        return corpusCase.config.keySet().any { it.startsWith('micronaut.graphql.tools.strict') || it.startsWith('micronaut.graphql.tools.checks.') }
     }
 
     /** @return the violations of the recorded expectations of every case and language */
@@ -68,7 +76,7 @@ final class Parity {
                 if (runtime == null) {
                     return
                 }
-                check(c.name, language, runtime, compile, corpus.divergences)
+                check(c.name, language, runtime, compile, corpus.divergences, relaxed(c))
                         .each { result.add("${c.name} [${language.dir}]: ${it}".toString()) }
             }
         }

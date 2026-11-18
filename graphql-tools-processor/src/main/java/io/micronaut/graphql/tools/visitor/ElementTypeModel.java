@@ -30,9 +30,12 @@ import io.micronaut.graphql.tools.binding.internal.model.TypeModel;
 import io.micronaut.graphql.tools.binding.internal.model.TypeRef;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ElementQuery;
+import io.micronaut.inject.ast.EnumElement;
 import io.micronaut.inject.ast.GenericPlaceholderElement;
 import io.micronaut.inject.ast.MethodElement;
 import io.micronaut.inject.ast.ParameterElement;
+import io.micronaut.inject.ast.PropertyElement;
+import io.micronaut.inject.ast.PropertyElementQuery;
 import io.micronaut.inject.ast.WildcardElement;
 
 import java.util.ArrayList;
@@ -58,6 +61,7 @@ final class ElementTypeModel implements TypeModel {
     private static final Pattern SYNTHETIC_NAME = Pattern.compile("arg\\d+");
 
     private static final String INTRODUCTION = "io.micronaut.aop.Introduction";
+    private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
 
     // what makes a class a bean by its own declaration, as the startup's bean set sees it
     private static final Set<String> BEAN_DEFINING = Set.of("jakarta.inject.Singleton", "jakarta.inject.Scope",
@@ -270,6 +274,8 @@ final class ElementTypeModel implements TypeModel {
         private final ClassElement element;
         @Nullable
         private List<JMethod> bindable;
+        @Nullable
+        private List<PropertyElement> beanProperties;
 
         ElementClass(ClassElement element) {
             this.element = element;
@@ -336,24 +342,49 @@ final class ElementTypeModel implements TypeModel {
             return !OBJECT_SIGNATURES.contains(signature);
         }
 
+        // the properties as the introspection visitor of Micronaut reads them, which is what the startup finds in the
+        // introspection: the same query, the properties that are not excluded, and the parameters of the primary constructor
+        private List<PropertyElement> beanProperties() {
+            if (beanProperties == null) {
+                beanProperties = element.getBeanProperties(PropertyElementQuery.of(element)
+                                .ignoreSettersWithDifferingType(true)).stream()
+                        .filter(it -> !it.isExcluded())
+                        .toList();
+            }
+            return beanProperties;
+        }
+
         @Override
         public List<JProperty> readableProperties() {
-            throw new UnsupportedOperationException("The properties of a class are read by the input and enum checks");
+            return beanProperties().stream().filter(it -> !it.isWriteOnly()).<JProperty>map(ElementProperty::new).toList();
         }
 
         @Override
         public List<JProperty> writableProperties() {
-            throw new UnsupportedOperationException("The properties of a class are read by the input and enum checks");
+            Set<String> constructorArguments = element.getPrimaryConstructor()
+                    .map(it -> Arrays.stream(it.getParameters()).map(ParameterElement::getName).collect(Collectors.toSet()))
+                    .orElse(Set.of());
+            return beanProperties().stream()
+                    .filter(it -> !it.isReadOnly() || constructorArguments.contains(it.getName()))
+                    .<JProperty>map(ElementProperty::new)
+                    .toList();
         }
 
+        // a class has an introspection when it is annotated with @Introspected or an annotation that carries it; the
+        // classes that another class lists in @Introspected(classes) are not visible from this one
         @Override
         public boolean introspected() {
-            throw new UnsupportedOperationException("The introspection of a class is read by the input and enum checks");
+            return element.hasStereotype(INTROSPECTED);
         }
 
         @Override
         public List<JEnumConstant> enumConstants() {
-            throw new UnsupportedOperationException("The constants of an enum are read by the input and enum checks");
+            if (!(element instanceof EnumElement enumElement)) {
+                return List.of();
+            }
+            return enumElement.elements().stream()
+                    .map(it -> new JEnumConstant(it.getName(), view(it.getAnnotationMetadata())))
+                    .toList();
         }
 
         @Override
@@ -466,6 +497,35 @@ final class ElementTypeModel implements TypeModel {
         @Override
         public AnnotationView annotations() {
             return view(parameter.getAnnotationMetadata());
+        }
+    }
+
+    private final class ElementProperty implements JProperty {
+
+        private final PropertyElement property;
+
+        ElementProperty(PropertyElement property) {
+            this.property = property;
+        }
+
+        @Override
+        public String name() {
+            return property.getName();
+        }
+
+        @Override
+        public TypeRef type() {
+            return ref(property.getGenericType(), property.getAnnotationMetadata());
+        }
+
+        @Override
+        public AnnotationView annotations() {
+            return view(property.getAnnotationMetadata());
+        }
+
+        @Override
+        public String accessorText() {
+            return "get" + Character.toUpperCase(property.getName().charAt(0)) + property.getName().substring(1) + "()";
         }
     }
 }
