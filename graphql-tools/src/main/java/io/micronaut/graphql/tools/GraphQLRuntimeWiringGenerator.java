@@ -34,6 +34,7 @@ import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.GraphQLScalarType;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.TypeRuntimeWiring;
@@ -1732,9 +1733,12 @@ final class GraphQLRuntimeWiringGenerator {
 
     private GraphQLScalarMapping requireScalarMapping(ScalarTypeDefinition scalarTypeDefinition,
                                                       MappingContext mappingContext) {
-        GraphQLScalarMapping scalarMapping = scalarMappings.get(scalarTypeDefinition.getName());
+        String scalarName = scalarTypeDefinition.getName();
+        GraphQLScalarMapping scalarMapping = scalarMappings.get(scalarName);
         if (scalarMapping == null) {
-            throw new ScalarMappingNotProvidedException(mappingContext, scalarTypeDefinition.getName());
+            boolean bareScalarTypeExists = applicationContext.getBeansOfType(GraphQLScalarType.class).stream()
+                    .anyMatch(it -> it.getName().equals(scalarName));
+            throw new ScalarMappingNotProvidedException(mappingContext, scalarName, bareScalarTypeExists);
         }
         manifestRecorder.scalar(scalarTypeDefinition.getName());
         return scalarMapping;

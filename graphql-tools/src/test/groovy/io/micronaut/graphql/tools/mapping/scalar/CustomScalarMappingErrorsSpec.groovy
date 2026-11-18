@@ -23,6 +23,7 @@ import java.time.temporal.Temporal
 class CustomScalarMappingErrorsSpec extends AbstractTest {
 
     static final String SPEC_UNMAPPED = "CustomScalarMappingErrorsSpecUnmapped"
+    static final String SPEC_BARE = "CustomScalarMappingErrorsSpecBare"
     static final String SPEC_MAPPED = "CustomScalarMappingErrorsSpecMapped"
     static final String SPEC_DUPLICATE = "CustomScalarMappingErrorsSpecDuplicate"
     static final String SPEC_BUILT_IN = "CustomScalarMappingErrorsSpecBuiltIn"
@@ -60,6 +61,36 @@ type Query {
   Mapped class: ${UnmappedQuery.name}
   Mapped method: today()"""
         e.cause.scalarName == 'LocalDate'
+    }
+
+    void "a bare GraphQLScalarType bean named like the scalar is named in the error with the wrapping fix"() {
+        given:
+        @Language("GraphQL")
+        String schema = """
+scalar LocalDate
+
+schema {
+  query: Query
+}
+
+type Query {
+  today: LocalDate
+}
+"""
+        startContext(schema, SPEC_BARE)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof ScalarMappingNotProvidedException
+        e.cause.message == """The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes. Found a GraphQLScalarType bean 'LocalDate'; wrap it with GraphQLScalarMapping.of(type, JavaClass.class).
+  GraphQL coordinate: Query.today (line 9, column 3)
+  GraphQL object type: Query
+  GraphQL field: today
+  Mapped class: ${UnmappedQuery.name}
+  Mapped method: today()"""
     }
 
     void "an argument of an unmapped scalar fails the startup with its coordinate"() {
@@ -404,7 +435,7 @@ type Query {
         !mapping.isOutputClass(Number)
     }
 
-    @Requires(property = 'spec.name', value = SPEC_UNMAPPED)
+    @Requires(property = 'spec.name', pattern = SPEC_UNMAPPED + '|' + SPEC_BARE)
     @GraphQLRootResolver
     static class UnmappedQuery {
         LocalDate today() {
@@ -423,6 +454,16 @@ type Query {
     @GraphQLInput
     static class BookingInput {
         LocalDate day
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_BARE)
+    @Factory
+    static class BareScalarTypes {
+        @Bean
+        @Singleton
+        GraphQLScalarType localDate() {
+            return LocalDateScalar.create(null, false, null)
+        }
     }
 
     @Requires(property = 'spec.name', value = SPEC_MAPPED)
