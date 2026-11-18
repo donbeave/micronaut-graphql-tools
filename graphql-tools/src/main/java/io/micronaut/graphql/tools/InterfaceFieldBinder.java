@@ -29,6 +29,7 @@ import io.micronaut.graphql.tools.exceptions.ResolverRequiredException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,8 @@ final class InterfaceFieldBinder {
     private final NavigableSet<Long> dirty = new TreeSet<>();
     // the waiting fields that an interface not yet bound to a Java class could still bind, by interface name
     private final Map<String, List<WaitingField>> waitingOnInterface = new HashMap<>();
+    // the sequence numbers of the waiting fields already listed under their unbound interfaces: once is enough
+    private final Set<Long> listed = new HashSet<>();
     private long nextSequence;
     private final List<InterfaceField> interfaceResolverFields = new ArrayList<>();
     private final List<InterfaceField> ownInterfaceFields = new ArrayList<>();
@@ -141,6 +144,9 @@ final class InterfaceFieldBinder {
 
     // a field is asked again only when an interface that declares it has been bound to a Java class since
     private void blockOnUnboundInterfaces(WaitingField waitingField) {
+        if (!listed.add(waitingField.sequence())) {
+            return;
+        }
         InterfaceField field = waitingField.field();
         for (InterfaceTypeDefinition declaring
                 : declaringInterfaces.of(field.objectTypeDefinition(), field.fieldDefinition().getName())) {
@@ -223,6 +229,7 @@ final class InterfaceFieldBinder {
         waiting.clear();
         dirty.clear();
         waitingOnInterface.clear();
+        listed.clear();
         for (InterfaceField field : stillUnbound) {
             if (field.modelMember() != null) {
                 failures.add(new ResolverRequiredException(field.mappingContext(),
