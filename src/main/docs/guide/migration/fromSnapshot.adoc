@@ -547,6 +547,8 @@ public class ItemInput {
     private String legacyCode;
     // getter and setter, or a constructor parameter named legacyCode
 }
+----
+
 === BC-25: the binding manifest has a specified format, version 2 (#90)
 
 The manifest format is specified on the "Binding Manifest" page and its version is the number on the first line. Version 2 differs from version 1 in four ways:
