@@ -95,8 +95,6 @@ public final class GraphQLFactory {
                 schemaDirectiveWirings.getDirectiveNames(), configuration,
                 graphQLRuntimeWiringGenerator.getManifestRecorder());
 
-        applicationContext.destroyBean(graphQLResolversRegistry);
-
         SchemaGenerator schemaGenerator = new SchemaGenerator();
         GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(registry, runtimeWiring);
 
