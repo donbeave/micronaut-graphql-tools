@@ -94,6 +94,20 @@ public final class ArgumentsScenario {
     }
     // end::constructor-input[]
 
+    // tag::nested-constructor-input[]
+    @GraphQLInput
+    public record Dimensions(int width, ArgumentValue<String> unit) {
+    }
+
+    @GraphQLInput
+    public record Part(String name, ArgumentValue<String> note) {
+    }
+
+    @GraphQLInput
+    public record Crate(String label, Dimensions dimensions, List<Part> parts, ArgumentValue<String> memo) {
+    }
+    // end::nested-constructor-input[]
+
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "arguments")
     public static class Queries {
@@ -124,6 +138,13 @@ public final class ArgumentsScenario {
         public String stock(Stock stock) {
             return "sku=" + stock.sku() + " quantity=" + stock.quantity() + " weight=" + stock.weight() + " tags="
                     + stock.tags() + " colors=" + stock.colors() + " comment=" + presence(stock.comment());
+        }
+
+        public String crate(Crate crate) {
+            String parts = crate.parts().stream().map(part -> part.name() + ":" + presence(part.note()))
+                    .collect(Collectors.joining(", ", "[", "]"));
+            return "label=" + crate.label() + " dimensions=" + crate.dimensions().width() + " unit="
+                    + presence(crate.dimensions().unit()) + " parts=" + parts + " memo=" + presence(crate.memo());
         }
 
         public String shape(Shape shape) {

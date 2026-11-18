@@ -38,6 +38,20 @@ data class Stock(
 )
 // end::constructor-input[]
 
+@GraphQLInput
+data class Dimensions(val width: Int, val unit: ArgumentValue<String> = ArgumentValue.omitted())
+
+@GraphQLInput
+data class Part(val name: String, val note: ArgumentValue<String> = ArgumentValue.omitted())
+
+@GraphQLInput
+data class Crate(
+    val label: String,
+    val dimensions: Dimensions,
+    val parts: List<Part>,
+    val memo: ArgumentValue<String> = ArgumentValue.omitted(),
+)
+
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "arguments")
 class ArgumentsQueries {
@@ -60,6 +74,10 @@ class ArgumentsQueries {
     fun stock(stock: Stock): String =
         "sku=${stock.sku} quantity=${stock.quantity} weight=${stock.weight} tags=${stock.tags} colors=${stock.colors} " +
             "comment=${presence(stock.comment)}"
+
+    fun crate(crate: Crate): String =
+        "label=${crate.label} dimensions=${crate.dimensions.width} unit=${presence(crate.dimensions.unit)} " +
+            "parts=${crate.parts.joinToString(", ", "[", "]") { "${it.name}:${presence(it.note)}" }} memo=${presence(crate.memo)}"
 
     fun shape(shape: Shape): String =
         "name=${shape.name} color=${shape.color} points=${shape.points.joinToString(";") { "${it.x},${it.y}" }} note=${shape.note}"
