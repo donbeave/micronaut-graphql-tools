@@ -22,6 +22,7 @@ include("graphql-tools-tck")
 include("test-suite-java")
 include("test-suite-kotlin")
 include("test-suite-groovy")
+include("test-suite-build")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true

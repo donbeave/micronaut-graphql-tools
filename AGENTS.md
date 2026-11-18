@@ -27,6 +27,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check` | Changes to the library or binding module (JDK 17) |
 | Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
 | Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
+| Build wiring of the compile-time checks | `./gradlew :test-suite-build:buildToolsTest` | Changes to the processor's options, registration or documented build snippets (JDK 25, needs the network; CI job `build tools`) |
 | Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |
 | Benchmarks | `./gradlew :benchmarks:check` | Hot path, allocation or startup changes |
 | Workflow lint | `mise exec -- jactionlint` | Any change under `.github/` |
@@ -84,7 +85,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 - Open the PR ready for review, not as a draft. Do not merge it yourself.
 - Merge: squash only. Merge commits and rebase merges are disabled. Resolve every review conversation first.
 - Required status check: `required checks` only. It is green when every job in its `needs:` list in `gradle.yml`
-  succeeded. A new gated job is added to that list, never to the ruleset. The `native Groovy smoke` jobs are gated; the other native jobs are not gated yet.
+  succeeded. A new gated job is added to that list, never to the ruleset. The `native Groovy smoke` jobs and `build tools` are gated; the other native jobs are not gated yet.
 - No admin bypass: a red, cancelled or pending check blocks the merge.
 
 ## Model routing

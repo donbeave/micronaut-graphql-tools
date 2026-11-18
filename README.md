@@ -27,6 +27,7 @@ and test it.
 | [`test-suite-java`](test-suite-java/README.md) | `:test-suite-java` | The example application in Java, with its tests. |
 | [`test-suite-kotlin`](test-suite-kotlin/README.md) | `:test-suite-kotlin` | The example application in Kotlin, with its tests. |
 | [`test-suite-groovy`](test-suite-groovy/README.md) | `:test-suite-groovy` | The example application in Groovy, with its tests and a native smoke test. |
+| [`test-suite-build`](test-suite-build/README.md) | `:test-suite-build` | Sample projects that apply the compile-time checks the way a consumer's build does, built by Gradle TestKit. |
 
 The root project (`graphql-tools-parent`, `build.gradle.kts`) aggregates the modules and the shared build settings. The
 guide is in `src/main/docs/guide`, and the build convention plugin is in `buildSrc`.
