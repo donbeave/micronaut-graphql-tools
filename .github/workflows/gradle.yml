@@ -161,6 +161,8 @@ jobs:
           path: |
             test-suite-*/build/test-results/test-native/TEST-*.xml
             test-suite-*/build/test-results/test-native/
+            test-suite-*/build/test-results/serdeTest-native/TEST-*.xml
+            test-suite-*/build/test-results/serdeTest-native/
           if-no-files-found: ignore
           retention-days: 7
 
