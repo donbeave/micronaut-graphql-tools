@@ -1,6 +1,7 @@
 package example.tck
 
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.ArgumentValue
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -8,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 // The fixtures of the TCK scenario `arguments`.
 
+@Introspected
 enum class Color { RED, GREEN, BLUE }
 
 @GraphQLInput

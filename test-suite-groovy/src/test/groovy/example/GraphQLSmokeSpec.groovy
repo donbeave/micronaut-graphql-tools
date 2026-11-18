@@ -1,5 +1,9 @@
 package example
 
+import example.graphql.type.SecurityErrorCode
+import example.graphql.type.ValidationErrorCode
+import graphql.schema.GraphQLEnumType
+import graphql.schema.GraphQLSchema
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
@@ -16,6 +20,9 @@ class GraphQLSmokeSpec extends Specification {
     @Inject
     @Client('/')
     HttpClient client
+
+    @Inject
+    GraphQLSchema schema
 
     private Map<String, Object> execute(String query, Map<String, Object> variables = [:]) {
         Map<String, Object> response = client.toBlocking().retrieve(
@@ -107,5 +114,11 @@ class GraphQLSmokeSpec extends Specification {
         current.username == 'bob'
         current.books*.id == ['ax']
         current.books.first().label != null
+    }
+
+    def 'schema enum values are the Groovy constants'() {
+        expect:
+        ((GraphQLEnumType) schema.getType('SecurityErrorCode')).getValue('NOT_AUTHENTICATED').value.is(SecurityErrorCode.NOT_AUTHENTICATED)
+        ((GraphQLEnumType) schema.getType('ValidationErrorCode')).getValue('DUPLICATE').value.is(ValidationErrorCode.DUPLICATE)
     }
 }

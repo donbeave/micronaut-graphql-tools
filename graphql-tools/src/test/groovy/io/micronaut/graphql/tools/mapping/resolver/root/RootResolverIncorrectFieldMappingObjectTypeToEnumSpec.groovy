@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -56,6 +57,7 @@ type User {
     }
 
     @GraphQLType
+    @Introspected
     static enum User {
         TEST
     }
