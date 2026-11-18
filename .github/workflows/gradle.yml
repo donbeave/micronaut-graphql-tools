@@ -133,6 +133,35 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The build wiring of the compile-time checks: sample projects that apply the processor with the documented
+  # snippets, built by Gradle TestKit against the library published to build/repo. The job needs the network (plugin portal,
+  # Maven Central); the graphql-java legs do not change what it proves, so it runs on the default leg only.
+  build-tools:
+    runs-on: ubuntu-latest
+    name: build tools (Java 25, graphql-java default)
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Build the samples
+        run: ./gradlew :test-suite-build:buildToolsTest --no-daemon -PgraphqlJavaLeg=default
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-build-tools
+          path: |
+            test-suite-build/build/test-results/buildToolsTest/TEST-*.xml
+            test-suite-build/build/reports/tests/buildToolsTest/
+            test-suite-build/build/reports/build-tools/
+          if-no-files-found: ignore
+          retention-days: 7
+
   # Native image tests on Oracle GraalVM from mise.toml (it provides native-image). Not in the gate's `needs:` until #152.
   native:
     runs-on: ubuntu-latest
@@ -311,7 +340,7 @@ jobs:
   required:
     name: required checks
     if: always()
-    needs: [actionlint, build, check-library, binary-compatibility, native-groovy-smoke, docs, consumer-name-guard]
+    needs: [actionlint, build, check-library, binary-compatibility, build-tools, native-groovy-smoke, docs, consumer-name-guard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

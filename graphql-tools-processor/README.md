@@ -77,7 +77,8 @@ service registration. The `processing` package is annotated `@Internal` in its `
 - Tests depend on `graphql-tools` (`testImplementation`): the binding corpus runs each case through the runtime binder and
   the compile-time binder and compares their verdicts.
 - Used by `test-suite-java`, which puts the processor on its `annotationProcessor` path. `test-suite-kotlin` and
-  `test-suite-groovy` do not use it.
+  `test-suite-groovy` do not use it. `test-suite-build` applies the visitor in sample projects (the options, the schema
+  directory as a task input, the build cache) and builds them with Gradle TestKit.
 - `graphql-tools-bom` manages its version.
 
 ## Build and test

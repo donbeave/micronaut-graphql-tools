@@ -27,6 +27,7 @@ and test it.
 | [`test-suite-java`](test-suite-java/README.md) | `:test-suite-java` | The example application in Java, with its tests. |
 | [`test-suite-kotlin`](test-suite-kotlin/README.md) | `:test-suite-kotlin` | The example application in Kotlin, with its tests. |
 | [`test-suite-groovy`](test-suite-groovy/README.md) | `:test-suite-groovy` | The example application in Groovy, with its tests and a native smoke test. |
+| [`test-suite-build`](test-suite-build/README.md) | `:test-suite-build` | Sample projects that apply the compile-time checks the way a consumer's build does, built by Gradle TestKit. |
 
 The root project (`graphql-tools-parent`, `build.gradle.kts`) aggregates the modules and the shared build settings. The
 guide is in `src/main/docs/guide`, and the build convention plugin is in `buildSrc`.
@@ -539,6 +540,8 @@ A member that binds no field on purpose does not need to relax a check for the w
 - **Lifecycle methods are not resolver methods.** A method annotated with `@EventListener`, `@Scheduled` or
   `@PreDestroy` on a resolver bean is not reported as unbound. It still binds a field if it has that field's name.
 - **`allow.findings`** accepts one finding by its manifest line, see [Allow lists](#allow-lists).
+
+The compile-time visitor in `micronaut-graphql-tools-processor` reads the same annotations and applies the same rules, so a build and the startup agree. The visitor is not yet the default processor (#291): the JSR-269 processor that the build still runs does not read `@GraphQLIgnore` and does not exclude lifecycle methods.
 
 `strict: false` does not change `precedence`: with the default `strict` precedence, a field that both a getter and a
 type resolver can bind still fails the startup (`AmbiguousBindingException`).

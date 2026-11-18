@@ -679,6 +679,6 @@ micronaut:
 
 `resolver-first` is the migration setting, but it is not the snapshot's behaviour. On object types the property used to win silently, so `resolver-first` can return a different value for a field that a property and a type resolver method both bind. Read the ambiguities in the manifest first, or use `precedence: property-first` to keep the old values while you fix them.
 
-Then read the `!` lines of the binding manifest, and fix, annotate with `@GraphQLIgnore`, or allow each one. `@GraphQLIgnore` is read at runtime; the compile-time processor does not read it yet, so a member that carries it can still fail the build.
+Then read the `!` lines of the binding manifest, and fix, annotate with `@GraphQLIgnore`, or allow each one. `@GraphQLIgnore` is read at runtime; the JSR-269 processor does not read it yet, so a member that carries it can still fail the build. The visitor (#291 makes it the default) applies the same rules.
 
 When the runtime findings are fixed, add `graphql-tools-processor` to the build. It needs its own build option, `-Amicronaut.graphql.tools.sdlDir=<directory of the SDL files>` (see the Compile-Time Verification page). It does not read the runtime settings above, and it needs JDK 21 or newer to build.
