@@ -11,6 +11,7 @@ import io.micronaut.graphql.tools.SchemaDirective;
 import jakarta.inject.Singleton;
 
 import java.util.List;
+import java.util.Locale;
 
 @Factory
 public class DirectiveWirings {
@@ -39,7 +40,7 @@ public class DirectiveWirings {
         @Override
         public GraphQLFieldDefinition onField(SchemaDirectiveWiringEnvironment<GraphQLFieldDefinition> environment) {
             DataFetcher<?> original = environment.getFieldDataFetcher();
-            return environment.setFieldDataFetcher(fetching -> String.valueOf(original.get(fetching)).toUpperCase());
+            return environment.setFieldDataFetcher(fetching -> String.valueOf(original.get(fetching)).toUpperCase(Locale.ROOT));
         }
     }
 

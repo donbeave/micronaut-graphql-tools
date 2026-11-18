@@ -81,7 +81,7 @@ class DirectiveWirings {
 
         @Override
         String get(DataFetchingEnvironment fetching) throws Exception {
-            String.valueOf(original.get(fetching)).toUpperCase()
+            String.valueOf(original.get(fetching)).toUpperCase(Locale.ROOT)
         }
     }
 

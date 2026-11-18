@@ -104,7 +104,9 @@ class DirectiveStartupTest {
     }
 
     private static Throwable rootFailure(Map<String, Object> properties, String environment) {
-        BeanInstantiationException e = assertThrows(BeanInstantiationException.class, () -> start(properties, environment));
+        BeanInstantiationException e = assertThrows(BeanInstantiationException.class, () -> {
+            start(properties, environment).close();
+        });
         Throwable cause = e;
         while (!(cause instanceof DuplicateDirectiveWiringException || cause instanceof UnwiredDirectivesException) && cause.getCause() != null) {
             cause = cause.getCause();

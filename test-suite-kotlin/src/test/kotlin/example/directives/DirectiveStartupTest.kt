@@ -94,7 +94,7 @@ class DirectiveStartupTest {
     }
 
     private fun failure(properties: Map<String, Any>, environment: String): Throwable {
-        var cause: Throwable = assertThrows(BeanInstantiationException::class.java) { start(properties, environment) }
+        var cause: Throwable = assertThrows(BeanInstantiationException::class.java) { start(properties, environment).close() }
         while (cause !is DuplicateDirectiveWiringException && cause !is UnwiredDirectivesException && cause.cause != null) {
             cause = cause.cause!!
         }
