@@ -25,10 +25,10 @@ import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InputValueDefinition;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.core.beans.BeanIntrospection;
-import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
-import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
+import io.micronaut.graphql.tools.binding.internal.model.JClass;
+import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules;
+import io.micronaut.graphql.tools.binding.internal.rules.InputVerdict;
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException;
 import io.micronaut.graphql.tools.schema.InputValueConverter;
@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -144,30 +143,15 @@ final class InputClassChecks {
                 .anyMatch(it -> holdsArgumentValues(elementClass(it.asArgument()), visited));
     }
 
-    void collectUnmappedInputProperties(InputObjectTypeDefinition inputObjectTypeDefinition,
-                                        BeanIntrospection<Object> beanIntrospection) {
-        Set<String> inputFields = inputObjectTypeDefinition.getInputValueDefinitions().stream()
+    void collectUnmappedInputProperties(InputObjectTypeDefinition inputObjectTypeDefinition, JClass inputClass,
+                                        Class<?> beanType) {
+        InputVerdict verdict = InputTypeRules.check(inputObjectTypeDefinition.getInputValueDefinitions().stream()
                 .map(InputValueDefinition::getName)
-                .collect(Collectors.toSet());
-        Set<String> constructorArguments = Arrays.stream(beanIntrospection.getConstructorArguments())
-                .map(Argument::getName)
-                .collect(Collectors.toSet());
-        List<String> unmapped = beanIntrospection.getBeanProperties().stream()
-                .filter(it -> !it.isReadOnly() || constructorArguments.contains(it.getName()))
-                .filter(it -> {
-                    if (!it.hasAnnotation(GraphQLIgnore.class) || inputFields.contains(it.getName())) {
-                        return true;
-                    }
-                    ignoredInputProperties.add(beanIntrospection.getBeanType().getTypeName() + "#" + it.getName());
-                    return false;
-                })
-                .map(BeanProperty::getName)
-                .filter(it -> !inputFields.contains(it))
-                .sorted()
-                .toList();
-        if (!unmapped.isEmpty()) {
+                .toList(), inputClass);
+        ignoredInputProperties.addAll(verdict.ignoredProperties());
+        if (!verdict.unmappedProperties().isEmpty()) {
             unmappedInputProperties.put(inputObjectTypeDefinition.getName(),
-                    Map.entry(beanIntrospection.getBeanType(), unmapped));
+                    Map.entry(beanType, verdict.unmappedProperties()));
         }
     }
 

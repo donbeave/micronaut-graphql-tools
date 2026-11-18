@@ -28,6 +28,7 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import jakarta.inject.Singleton;
 
 import java.util.ArrayList;

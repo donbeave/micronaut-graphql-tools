@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    api(projects.micronautGraphqlToolsBinding)
     api(mn.micronaut.jackson.databind)
     api(mnGraphql.micronaut.graphql)
     api(mnGraphql.graphql.java.extended.scalars)

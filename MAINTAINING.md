@@ -10,6 +10,25 @@ This is not an official Micronaut module yet. This file describes how this repos
 - There is no admin bypass. A red, cancelled, pending or missing check blocks the merge. Review conversations must be resolved.
 - The native image jobs (`native (GraalVM 25, graphql-java default|ceiling)`) are in `.github/workflows/gradle.yml` and run on every pull request, but they are not part of the gate yet (#152).
 
+## Module layout and the binding rules
+
+The modules, and what each may depend on:
+
+- `graphql-tools-binding` (`io.micronaut.graphql.tools.binding`) holds the rule bodies: the schema rules (type extensions, the scalar table, wrapper and coordinate rules), the per-class rules (`ResolverClassRules` for the parameters of a resolver method, `InputTypeRules`, `EnumTypeRules`), the finding model and its one renderer (`FindingRenderer`), and the type-model SPI that the rules read (`TypeModel`, `JClass`, `JMethod`, `JProperty`, `TypeRef`; `BeanModel` for the whole-program planner). It depends on graphql-java and micronaut-core only. It never imports `io.micronaut.inject` and uses no reflection: `BindingArchitectureSpec` fails on either. Every type is `@Internal`; the code registry (#237) will be its one public type. It compiles with `--release 17`, and `:micronaut-graphql-tools-binding:check` runs in the JDK 17 job.
+- `graphql-tools` (the runtime) depends on it with `api`. It holds the runtime adapter of the type model (`RuntimeTypeModel` over `BeanDefinition`, `ExecutableMethod`, `Argument` and `BeanIntrospection`; `RuntimeBeanModel`), the bean discovery, the configuration and the wiring. A rule body lives in `binding` or in no module twice; the runtime reads the type through the adapter and calls the rule.
+- `graphql-tools-processor` holds the JSR-269 processor (`io.micronaut.graphql.tools.processing`), which is frozen and goes away with #144. Its main classpaths have no dependency on `graphql-tools` (`checkNoRuntimeDependency`, part of `check`). The element-based adapter of the type model and the visitor are #150.
+
+The startup binding (`GraphQLRuntimeWiringGenerator`) is split by phase. Each phase class owns the mutable state it needs and hands the next phase an immutable result:
+
+| Class | Phase |
+|---|---|
+| `SchemaCoordinateValidator` | explicit `@GraphQLSchemaCoordinate` declarations, before and after the binding |
+| `DictionaryValidator` | the `SchemaMappingDictionary` against itself |
+| `ArgumentPlanner`, `InputTypeBinder`, `ScalarMappings` | how parameters bind arguments (the rule is `ResolverClassRules.arguments`), and how input types, enums and scalars bind Java types |
+| `InterfaceFieldBinder` | fields that an object type shares with its interfaces; returns `InterfaceBindings` |
+| `AbstractTypeWiring` | union and interface type resolution and its ambiguity check |
+| `UnreachableTypeChecks`, `StrictModeChecks` | reachability and the strict-mode findings |
+
 ## Triage incoming issues
 
 Issues and pull requests are tracked on the maintainers' "Roadmap to 1.0" project board. Labels in use:
