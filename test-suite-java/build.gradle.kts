@@ -84,11 +84,14 @@ tasks.named<JavaCompile>("compileJava") {
 val checkBindingManifest by tasks.registering {
     val manifest = tasks.named<JavaCompile>("compileJava")
             .flatMap { it.destinationDirectory.file("META-INF/micronaut-graphql-tools/binding-manifest.txt") }
+    val marker = layout.buildDirectory.file("checks/binding-manifest.ok")
     inputs.files(tasks.named("compileJava"))
+    outputs.file(marker)
     doLast {
         if (!manifest.get().asFile.isFile) {
             throw GradleException("The GraphQL compile-time checks did not run: ${manifest.get().asFile} is missing.")
         }
+        marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
     }
 }
 tasks.named("check") { dependsOn(checkBindingManifest) }
@@ -108,13 +111,16 @@ val checkSuiteSchemaParity by tasks.registering {
     val copies = listOf("test-suite-kotlin", "test-suite-groovy").map {
         rootProject.layout.projectDirectory.file("$it/src/main/resources/schema.graphqls")
     }
+    val marker = layout.buildDirectory.file("checks/schema-parity.ok")
     inputs.files(reference, *copies.toTypedArray())
+    outputs.file(marker)
     doLast {
         copies.forEach { copy ->
             if (copy.asFile.readText() != reference.asFile.readText()) {
                 throw GradleException("${copy.asFile} differs from ${reference.asFile}: the three test suites serve one schema.")
             }
         }
+        marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
     }
 }
 tasks.named("check") { dependsOn(checkSuiteSchemaParity) }
