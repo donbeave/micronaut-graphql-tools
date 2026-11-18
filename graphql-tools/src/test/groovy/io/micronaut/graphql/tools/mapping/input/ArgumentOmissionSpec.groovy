@@ -355,6 +355,25 @@ input CreateW {
         thrown(NoSuchElementException)
     }
 
+    void "ArgumentValue asOptional and ifPresent: only a provided non-null value is present"() {
+        given:
+        def seen = []
+
+        expect:
+        ArgumentValue.omitted().asOptional() == Optional.empty()
+        ArgumentValue.ofNullable(null).asOptional() == Optional.empty()
+        !ArgumentValue.ofNullable(null).isOmitted()
+        ArgumentValue.ofNullable('a').asOptional() == Optional.of('a')
+
+        when:
+        ArgumentValue.omitted().ifPresent { seen << it }
+        ArgumentValue.ofNullable(null).ifPresent { seen << it }
+        ArgumentValue.ofNullable('a').ifPresent { seen << it }
+
+        then:
+        seen == ['a']
+    }
+
     private String run(String query) {
         def result = executeQuery(query)
         assert result.errors.isEmpty()
