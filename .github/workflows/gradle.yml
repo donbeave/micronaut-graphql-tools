@@ -134,7 +134,7 @@ jobs:
           retention-days: 7
 
   # The build wiring of the compile-time checks (D-39): sample projects that apply the processor with the documented
-  # snippets, built by Gradle TestKit against the library published to build/repo. The job needs the network (plugin portal,
+  # snippets, built by Gradle TestKit (and Maven) against the library published to build/repo. The job needs the network (plugin portal,
   # Maven Central); the graphql-java legs do not change what it proves, so it runs on the default leg only.
   build-tools:
     runs-on: ubuntu-latest
@@ -145,7 +145,7 @@ jobs:
       - uses: ./.github/actions/setup-build
         with:
           jdk: '25'
-          tools: java
+          tools: java maven
       - name: Build the samples
         run: ./gradlew :test-suite-build:buildToolsTest --no-daemon -PgraphqlJavaLeg=default
         env:

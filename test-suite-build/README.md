@@ -5,9 +5,9 @@ Gradle project `:test-suite-build`, folder `test-suite-build/`. Not published.
 ## Purpose
 
 The proof that the build wiring of the compile-time checks works. Each sample is a small project that applies
-`micronaut-graphql-tools-processor` the way a consumer's build does, and a spec builds it with Gradle TestKit against the
-library published to `build/repo`. The tagged regions of the sample build files (`// tag::schema-dirs[]`, ...) are the
-snippets that the compile-time guide page (#12) includes, so a documented snippet is one that a spec has built.
+`micronaut-graphql-tools-processor` the way a consumer's build does, and a spec builds it with Gradle TestKit or Maven
+against the library published to `build/repo`. The tagged regions of the sample build files (`tag::schema-dirs[]`, ...)
+are the snippets that the compile-time guide page (#12) includes, so a documented snippet is one that a spec has built.
 
 ## Responsibility
 
@@ -22,11 +22,21 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   | `groovy-gradle` | `compileOnly` | `-D` in the `jvmArgs` of the forked `compileGroovy` | explicit `inputs.files` on `compileGroovy` |
   | `multi-module-gradle` | `annotationProcessor` of the module with the resolvers | as `java-gradle`, reading the schema of another module | as `java-gradle` |
 
-- `src/test/java/.../build`: `GradleSampleContract` is what every Gradle sample must show: the option arrives (the
+- `samples/<name>-maven` (`java-maven`, `kotlin-kapt-maven`, `groovy-maven`): Maven projects with a Micronaut 4 parent.
+  Java passes the option as a `-A` compiler argument and puts the processor on `annotationProcessorPaths`; Kotlin passes
+  `annotationProcessorArgs` to the `kapt` execution of `kotlin-maven-plugin`; Groovy puts the processor on the `provided`
+  scope and sets the option as a system property of the Maven JVM with `properties-maven-plugin`. The library comes from
+  `build/repo` as a snapshot repository, and the library BOM manages the processor version.
+- `src/test/java/.../buildtools`: `GradleSampleContract` is what every Gradle sample must show: the option arrives (the
   visitor's summary note names the schema directory), a schema edit reruns the compile task, a drifted class fails with
   `[code] coordinate` and the schema location, a missing option fails with `processor-schema-not-configured`,
   `checks=false` compiles with one note, and the build cache outcome of a clean rebuild and of a relocated project is
   recorded (it is asserted for javac: `FROM_CACHE`). One subclass per sample names the compile task.
+  `MavenSampleContract` is the Maven counterpart: the option arrives, a drifted class fails `mvn clean verify` with
+  `[code] coordinate`, a missing option fails, and `-Dgraphql.checks=false` passes with the note. Maven does not track the
+  schema directory: the compiler plugin of a Java project calls the classes up to date after a schema edit, so the
+  documented rule is `mvn clean verify` after a schema edit. The spec shows it, and records what each sample does without
+  `clean`; the startup still runs every check.
 - `stageSampleRepository`: copies `build/repo` for the samples and registers the visitor in the processor jar's copy. Until the
   registration switch (#291) the published jar still registers the JSR-269 processor, so the copy drops that registration
   and adds the visitor's, which is what #291 makes true of the jar itself. The task copies the jar unchanged once the jar
@@ -52,7 +62,8 @@ Nothing here is a library API.
 
 ## Build and test
 
-JDK 25 (the CI job's JDK) or 21; the specs need the network (the plugin portal and Maven Central) and take a few minutes.
+JDK 25 (the CI job's JDK) or 21 and `mvn` on the path (`mise install` installs both); the specs need the network (the plugin
+portal and Maven Central) and take several minutes.
 
 ```
 ./gradlew :test-suite-build:buildToolsTest

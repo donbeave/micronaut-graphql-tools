@@ -9,7 +9,7 @@ plugins {
 }
 
 // The build wiring of the compile-time checks (#290): sample projects that apply the processor the way a consumer does, built by
-// Gradle TestKit against the library published to the repository of this build. Nothing here is published.
+// Gradle TestKit and Maven against the library published to the repository of this build. Nothing here is published.
 //   samples/     the projects; their build files carry the tagged snippets that the guide includes
 //   src/test     the specs that build the samples and assert the outcomes
 // The specs run in their own task, buildToolsTest, which `check` does not run: the CI job `build tools` runs it once.
@@ -114,7 +114,7 @@ fun pluginPin(id: String): String =
 
 val samples = layout.projectDirectory.dir("samples")
 val buildToolsTest by tasks.registering(Test::class) {
-    description = "Builds the sample projects with Gradle TestKit and asserts the outcomes."
+    description = "Builds the sample projects with Gradle TestKit and Maven and asserts the outcomes."
     group = "verification"
     testClassesDirs = sourceSets.test.get().output.classesDirs
     classpath = sourceSets.test.get().runtimeClasspath

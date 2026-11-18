@@ -30,7 +30,7 @@ The tests do not need Docker. These are the commands CI runs (all in `.github/wo
 - `./gradlew build -PgraphqlJavaLeg=floor|ceiling` runs the same build on another graphql-java leg (`default` is the default; `latest` is for the canary). The versions of each role are in `gradle/libs.versions.toml`; the README explains the roles. `-PgraphqlJavaCompileLeg=default` compiles main code on the default leg while the tests run on the leg of `-PgraphqlJavaLeg` (the binary compatibility job).
 - `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check` checks the library and its binding module only; this is the one that works on JDK 17.
 - `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` runs the native image tests (the build runs tasks in parallel by default, and each native build needs about 5 GB) (Oracle GraalVM 25); add `-PgraphqlJavaLeg=ceiling` for another leg.
-- `./gradlew :test-suite-build:buildToolsTest` builds the sample projects of `test-suite-build` with Gradle TestKit against the library published to `build/repo` (CI job `build tools`, JDK 25, needs the network). `build` and `check` do not run it.
+- `./gradlew :test-suite-build:buildToolsTest` builds the sample projects of `test-suite-build` with Gradle TestKit against the library published to `build/repo` (CI job `build tools`, JDK 25 and `mvn`, needs the network). `build` and `check` do not run it.
 
 `.github/workflows/gradle.yml` is the source of truth if this list and the workflow ever disagree.
 
