@@ -1,0 +1,4 @@
+# One line per language that differs from the others in an expected file (expected/<lang>/<file>):
+# <case> <java|groovy|kotlin> <runtime.txt|compile.txt|manifest.txt> <reason>
+# The ceiling may only go down; an entry whose override is gone is stale and fails.
+max-entries: 0

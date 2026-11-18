@@ -99,8 +99,13 @@ leg), `ParitySpec` (the soundness and completeness rules and the exception list)
   (`VisitorCompileTimeBinder`), whose errors and warnings must equal `expected/compile.txt`. It asserts them against the startup:
   soundness (a compile error is a startup finding; the five documented exceptions of DD-4 are in
   `corpus-soundness-exceptions.txt`, each with a reason and a case under `exception/`) and completeness (the divergence list,
-  empty). Kotlin has no compile-time backend in the runner yet (#143). `-Pcorpus.only='<regex>'` runs the cases that match.
+  empty). A language that differs from the others in an expected file needs a line with a reason in
+  `corpus-language-differences.txt` (empty, and it may only shrink). `-Pcorpus.only='<regex>'` runs the cases that match.
 - `./gradlew :micronaut-graphql-tools-processor:corpusUpdate` rewrites the expected files of the corpus from what the
-  binders say. Review the diff.
-- `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` compiles the Kotlin cases in one TestKit build. It needs the
-  network and is not part of `check`.
+  binders say (Java and Groovy). Review the diff.
+- `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` runs the Kotlin cases against the real visitor under KSP2: one
+  Gradle TestKit build with two subprojects per case (the unchecked one is started, the checked one runs `kspKotlin` with the schema
+  of the case, and its `e: [ksp] [code] coordinate` lines are compared with `expected/compile.txt`). It needs the network and is not
+  part of `check` or `build`; the CI job `build tools` runs it on every pull request, and the canary workflow runs it under kapt
+  (`-Pcorpus.kotlin.processor=kapt`, the `lang:all` cases) every night. Its budget is 3 minutes on JDK 25.
+  `-Pcorpus.update` with it rewrites the Kotlin expectations.

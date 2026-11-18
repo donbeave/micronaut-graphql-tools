@@ -52,7 +52,7 @@ processor of this module** (DD-13). Every case is compiled **twice**, as a build
 1. The checks-off compilation succeeds.
 2. The startup verdict equals `expected/runtime.txt`.
 3. The binding manifest of a bound startup equals `expected/manifest.txt`, where there is one.
-4. Where the compile-time backend exists (Java and Groovy): the findings of the checks-on compilation equal `expected/compile.txt`.
+4. Where the compile-time backend exists (Java, Groovy and Kotlin under KSP2): the findings of the checks-on compilation equal `expected/compile.txt`.
 5. Soundness (DD-4): every compile **error** is a startup finding with the same code and coordinate. A false compile error is a
    bug. Only the documented exceptions below excuse one.
 6. Completeness: a startup finding of a per-class code (the five parity codes and the per-class failures, see `Parity`)
@@ -65,14 +65,14 @@ prove its fact from one class reports it so (`class-not-introspected`: another c
 `@Introspected(classes)` or `(packages)`, and so can a dependency, which a visitor that looks at one class cannot see). A warning is
 outside the soundness rule, and for the completeness rule it counts as the compile side having reported the finding.
 
-Soundness and completeness are also asserted on the recorded `compile.txt` and `runtime.txt` of every case, so they hold for Kotlin,
-which has no compile-time backend in the runner until #143 (its `compile.txt` holds the verdicts the compile-time design predicts).
+Soundness and completeness are also asserted on the recorded `compile.txt` and `runtime.txt` of every case, so they hold for a
+language whose backend does not run in the same task (Kotlin runs in `corpusKotlin`).
 The codes that a case relaxes at startup (the strict checks for
 `config.micronaut.graphql.tools.strict=false`, the code of a `config.micronaut.graphql.tools.checks.<code>` that is `warn` or `ignore`)
 are outside the soundness rule: the compile error cannot be relaxed at startup (D-30). Every other finding of the case is compared.
 
 Structure is checked too (`BindingCorpusSpec`, "the corpus is well formed"): an orphan or stale file, an override equal to
-its base, an unsorted or malformed verdict, a missing `runtime.txt`, an unknown property, a directory without a case.
+its base, an override that no line of `corpus-language-differences.txt` explains, an unsorted or malformed verdict, a missing `runtime.txt`, an unknown property, a directory without a case.
 
 ## The divergence list
 
@@ -127,6 +127,27 @@ Each run writes the time per case and language to `build/corpus/timings.txt`. A 
 
 ## Kotlin
 
-Kotlin cases run as one batched Gradle TestKit build with the production toolchain (Kotlin 2.1.21, KSP2), not in
-process: see `KotlinCorpusSpec` and the task `corpusKotlin`. Cases with a `kotlin/` directory take part; the verdict is
-`expected/kotlin/runtime.txt` if there is one, else `expected/runtime.txt`.
+Kotlin cases run as one batched Gradle TestKit build with the production toolchain (Kotlin and KSP2 of the root build), not in
+process: `KotlinCorpusSpec`, the task `corpusKotlin`. Cases with a `kotlin/` directory take part, and they are the `lang:all` cases.
+Each case is two subprojects, as it is two compilations for Java and Groovy:
+
+- the unchecked one has the visitor on the `ksp` path with `checks=false`; its classes are started and judged against `runtime.txt`;
+- the checked one runs `kspKotlin` only, with the schema files of the case as `micronaut.graphql.tools.processor.schema.dirs`; its
+  `e: [ksp] [code] coordinate` errors and `w: [ksp]` warnings, with the schema location of the message, are compared with
+  `compile.txt`, and then with `runtime.txt` by the same soundness and completeness rules.
+
+The verdict files are shared by the three languages. A file under `expected/<lang>/` says that one language differs; it fails the
+corpus unless `corpus-language-differences.txt` lists it (`<case> <lang> <file> <reason>`). That list is empty and may only shrink.
+A completeness gap of one language goes in `corpus-divergences.txt` with the language in the second column.
+
+Adding a Kotlin case is adding a `kotlin/` directory (and the tag `lang:all`, with a `java/` and a `groovy/` directory next to it);
+`./gradlew :micronaut-graphql-tools-processor:corpusKotlin` runs it (network needed), and `-Pcorpus.update` with it records what
+the Kotlin run says. `-Pcorpus.kotlin.processor=kapt` runs the same cases under kapt; the canary workflow does it every night. In CI, the
+job `build tools` runs `corpusKotlin` on every pull request, and it is a gated check.
+
+Kotlin compilation is the cost of the corpus. The batch builds `2 x N` subprojects with `--parallel`; the measurements of 23 cases are
+in the pull request that added the checked variant (the Gradle build took 40 s unchecked only and 45 s with the checked variant on a
+10-core machine, 50 to 80 s under kapt). The budget is 3 minutes (`corpus.kotlin.budget-seconds`); over it, a `kotlin:pr` tag would
+select the subset for pull requests and the nightly run would keep all of them. Under kapt, Gradle runs the annotation processing
+in a process of its own (`kapt.workers.isolation=process`), because javac copies a `micronaut.*` option into the system properties of
+its JVM and a later compilation in the same JVM would read the first value.
