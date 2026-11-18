@@ -9,7 +9,7 @@ import java.util.stream.Collectors
 import java.util.stream.Stream
 
 /**
- * A directory of cases and the known-divergence list. Every directory below the root that holds
+ * A directory of cases, the known-divergence list and the list of soundness exceptions. Every directory below the root that holds
  * {@code case.properties} is a case (its name is the relative path); a directory with no case below it, and any file
  * that is not {@code corpus-divergences.txt}, is an orphan and a problem.
  */
@@ -21,6 +21,7 @@ final class Corpus {
     final Path root
     final List<CorpusCase> cases
     final Divergences divergences
+    final SoundnessExceptions exceptions
     final List<String> problems = []
 
     Corpus(Path root) {
@@ -29,9 +30,12 @@ final class Corpus {
         discover(root, found)
         this.cases = Collections.unmodifiableList(found)
         this.divergences = Divergences.load(root.resolve(DIVERGENCES))
+        this.exceptions = SoundnessExceptions.load(root.resolve(SoundnessExceptions.FILE))
         found.each { c -> c.problems.each { problems.add("${c.name}: ${it}".toString()) } }
         problems.addAll(divergences.problems)
         problems.addAll(divergences.verify(this))
+        problems.addAll(exceptions.problems)
+        problems.addAll(exceptions.verify(this))
         problems.addAll(Parity.checkExpected(this))
     }
 
@@ -53,7 +57,7 @@ final class Corpus {
         list(directory).each { Path entry ->
             if (Files.isDirectory(entry)) {
                 any = discover(entry, found) || any
-            } else if (directory == root ? entry.fileName.toString() != DIVERGENCES && entry.fileName.toString() != 'README.md' : true) {
+            } else if (directory == root ? !(entry.fileName.toString() in [DIVERGENCES, SoundnessExceptions.FILE, 'README.md']) : true) {
                 problems.add("orphan file ${root.relativize(entry)}".toString())
             }
         }

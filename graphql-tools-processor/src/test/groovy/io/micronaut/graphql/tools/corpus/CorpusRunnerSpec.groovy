@@ -22,12 +22,14 @@ class CorpusRunnerSpec extends Specification {
     // ------------------------------------------------------------------------------------------------ fixtures
 
     /** One case `a` in Java, with the given expected files. */
-    private Path corpus(Map<String, String> expected = [:], String divergences = 'max-entries: 0\n', Map<String, String> more = [:]) {
+    private Path corpus(Map<String, String> expected = [:], String divergences = 'max-entries: 0\n', Map<String, String> more = [:],
+                        String exceptions = 'max-entries: 0\n') {
         Map<String, String> files = [
                 'a/case.properties'          : 'description=a\ntags=area:test\n',
                 'a/schema.graphqls'          : 'type Query { a: String }\n',
                 'a/java/example/A.java'      : 'package example; class A { }\n',
                 'corpus-divergences.txt'     : divergences,
+                'corpus-soundness-exceptions.txt': exceptions,
         ]
         expected.each { name, text -> files.put('a/expected/' + name, text) }
         files.putAll(more)
@@ -242,6 +244,69 @@ class CorpusRunnerSpec extends Specification {
         'ok\n'  | 'max-entries: 1\na java unbound-resolver-method example.A#stray()\n'        | false
         'ok\n'  | 'max-entries: 1\na all unbound-resolver-method example.A#stray()\n'         | false
         'ok\n'  | 'max-entries: 1\nb java unbound-resolver-method example.A#stray()\n'        | true
+    }
+
+    // ------------------------------------------------------------------------------------------------ the soundness exceptions
+
+    void "a documented exception excuses one compile error of one case and language, and nothing else"() {
+        given:
+        Path root = corpus(['runtime.txt': 'field-not-bound Query.missing schema.graphqls:3:3\n', 'compile.txt': 'argument-mismatch Query.a -\nunbound-resolver-method example.A#stray() -\n'],
+                'max-entries: 0\n', [:], exceptions)
+
+        expect:
+        new Corpus(root).problems.any { it.contains("soundness: the compile side reports 'unbound-resolver-method example.A#stray()'") } == other
+        new Corpus(root).problems.any { it.contains("soundness: the compile side reports 'argument-mismatch Query.a'") } == excused
+
+        where:
+        exceptions                                                                                       | excused | other
+        'max-entries: 0\n'                                                                               | true    | true
+        'max-entries: 1\na java argument-mismatch Query.a customizer-claimed-field\n'                    | false   | true
+        'max-entries: 1\na all argument-mismatch Query.a customizer-claimed-field\n'                     | false   | true
+        'max-entries: 1\nb java argument-mismatch Query.a customizer-claimed-field\n'                    | true    | true
+        'max-entries: 1\na groovy argument-mismatch Query.a customizer-claimed-field\n'                  | true    | true
+    }
+
+    void "an exception is stale when the compile side does not report the error or the startup does, and it names a known reason"() {
+        given:
+        Path root = corpus(['runtime.txt': runtime, 'compile.txt': compile], 'max-entries: 0\n', [:], 'max-entries: 1\n' + entry + '\n')
+
+        expect:
+        new Corpus(root).problems.any { it.contains(fragment) }
+
+        where:
+        runtime                    | compile                      | entry                                                          | fragment
+        'ok\n'                     | 'ok\n'                       | 'a java argument-mismatch Query.a customizer-claimed-field'    | 'is stale: java/compile.txt has no such error'
+        'argument-mismatch Query.a -\n' | 'argument-mismatch Query.a -\n' | 'a java argument-mismatch Query.a customizer-claimed-field' | 'is stale: java/runtime.txt reports it'
+        'ok\n'                     | 'argument-mismatch Query.a -\n' | 'a java argument-mismatch Query.a because'                  | "unknown reason 'because'"
+        'ok\n'                     | 'argument-mismatch Query.a -\n' | 'gone java argument-mismatch Query.a customizer-claimed-field' | 'names no case'
+        'ok\n'                     | 'argument-mismatch Query.a -\n' | 'a java argument-mismatch Query.a'                             | 'expected'
+    }
+
+    void "the exception list may only shrink: the ceiling must equal the number of entries"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n', 'compile.txt': 'argument-mismatch Query.a -\n'], 'max-entries: 0\n', [:], exceptions)
+
+        expect:
+        new Corpus(root).problems.any { it.contains(fragment) } == (fragment != null)
+
+        where:
+        exceptions                                                                           | fragment
+        'max-entries: 1\na java argument-mismatch Query.a customizer-claimed-field\n'        | null
+        'max-entries: 0\na java argument-mismatch Query.a customizer-claimed-field\n'        | 'exceed the ceiling max-entries: 0'
+        'max-entries: 2\na java argument-mismatch Query.a customizer-claimed-field\n'        | 'lower the ceiling to 1'
+        'a java argument-mismatch Query.a customizer-claimed-field\n'                         | "the header 'max-entries: N' is missing"
+    }
+
+    void "a compile warning is outside the soundness rule and counts as the compile side seeing the finding"() {
+        given:
+        Path root = corpus(['runtime.txt': runtime, 'compile.txt': 'warning class-not-introspected Filter schema.graphqls:3:3\n'])
+
+        expect:
+        new Corpus(root).problems.any { it.contains('soundness') } == false
+        new Corpus(root).problems.any { it.contains('completeness') } == false
+
+        where:
+        runtime << ['ok\n', 'class-not-introspected Filter schema.graphqls:3:3\n']
     }
 
     void "a whole-program code is not a completeness gap"() {

@@ -337,4 +337,42 @@ public class Plain {
         result.success
         result.notes == []
     }
+
+    def "a chain of #length input types is walked on the default stack, as the startup binds it with a work stack (#361)"() {
+        given: 'one Java class backs every type of the chain, and only the last type has the field of a primitive property, so the walk must reach it to fail'
+        def types = (0..<length).collect { int i ->
+            "input In${i} { text: String size: Int" + (i < length - 1 ? " next: In${i + 1}" : " count: Int") + " }"
+        }.join('\n')
+
+        when:
+        def result = new VisitorCompilation()
+                .schema('schema.graphqls', "type Query { search(filter: In0): String }\n" + types)
+                .source('example.Link', HEADER + '''
+@io.micronaut.core.annotation.Introspected
+public class Link {
+    private String text;
+    private Integer size;
+    private Link next;
+    private int count;
+    public int getCount() { return count; }
+    public void setCount(int count) { this.count = count; }
+    public String getText() { return text; }
+    public void setText(String text) { this.text = text; }
+    public Integer getSize() { return size; }
+    public void setSize(Integer size) { this.size = size; }
+    public Link getNext() { return next; }
+    public void setNext(Link next) { this.next = next; }
+}''')
+                .source('example.QueryResolver', HEADER + '''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String search(Link filter) { return ""; }
+}''').compile()
+
+        then:
+        result.findings == ["[nullable-primitive] In${length - 1}.count".toString()]
+
+        where:
+        length << [1000, 5000]
+    }
 }

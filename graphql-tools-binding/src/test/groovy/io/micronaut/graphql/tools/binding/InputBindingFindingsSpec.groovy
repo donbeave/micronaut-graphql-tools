@@ -295,4 +295,64 @@ enum Color { RED GREEN }
         ResolverClassFindings.check(schema, modelOf(), bean).collect { it.code() + ' ' + it.coordinate() } ==
                 ['coordinate-on-non-resolver Query.count']
     }
+
+    static final String NESTED = '''\
+type Query {
+  open(top: Top, other: Other): String
+  cycle(outer: Outer): String
+  diamond(a: A, b: B): String
+}
+input Top { first: First  second: Second }
+input First { leaf: Leaf }
+input Leaf { size: Int }
+input Second { text: String }
+input Other { text: String }
+input Outer { inner: Inner }
+input Inner { back: Outer  text: String }
+input A { shared: Shared }
+input B { shared: Shared }
+input Shared { text: String }
+'''
+
+    private List<String> checkNested(List methods, JClass... classes) {
+        ResolverClassFindings.check(SchemaModel.load(new SchemaParser().parse(NESTED)).get(), modelOf(classes), resolver(methods))
+                .collect { it.code() + ' ' + it.coordinate() }
+    }
+
+    void "the walk goes depth first in the order of the fields and stops at the first failure: the types after it are not opened"() {
+        given:
+        def open = method('open', [:], [FakeModel.parameter('top', 'a.Top'), FakeModel.parameter('other', 'a.Other')], STRING,
+                'a.R#open(a.Top,a.Other)')
+        def top = input('a.Top', [property('first', ref('a.First')), property('second', ref('a.Second'))])
+        def first = input('a.First', [property('leaf', ref('a.Leaf'))])
+        def leaf = input('a.Leaf', [property('size', primitive('int'))])
+
+        expect: 'Leaf is reached through First before Second, and its failure ends the walk of the argument'
+        checkNested([open], top, first, leaf, input('a.Second', [property('text')], [], false), input('a.Other', [property('text')])) ==
+                ['nullable-primitive Leaf.size']
+        and: 'without it the next type is opened, and its failure is the one that is reported'
+        checkNested([open], top, first, input('a.Leaf', [property('size', ref('java.lang.Integer'))]),
+                input('a.Second', [property('text')], [], false), input('a.Other', [property('text')])) ==
+                ['class-not-introspected Second']
+    }
+
+    void "an input type that refers back to an ancestor is bound once, and a strict finding below it is reported once"() {
+        given:
+        def cycle = method('cycle', [:], [FakeModel.parameter('outer', 'a.Outer')], STRING, 'a.R#cycle(a.Outer)')
+        def outer = input('a.Outer', [property('inner', ref('a.Inner'))])
+        def inner = input('a.Inner', [property('back', ref('a.Outer')), property('text'), property('extra')])
+
+        expect:
+        checkNested([cycle], outer, inner) == ['unmapped-input-property Inner.extra']
+    }
+
+    void "a type that two inputs share is bound once: its failure is reported once, at the type"() {
+        given:
+        def diamond = method('diamond', [:], [FakeModel.parameter('a', 'a.A'), FakeModel.parameter('b', 'a.B')], STRING,
+                'a.R#diamond(a.A,a.B)')
+
+        expect:
+        checkNested([diamond], input('a.A', [property('shared', ref('a.Shared'))]), input('a.B', [property('shared', ref('a.Shared'))]),
+                input('a.Shared', [property('text')], [], false)) == ['class-not-introspected Shared']
+    }
 }

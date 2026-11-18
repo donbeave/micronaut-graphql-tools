@@ -33,3 +33,5 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
+
+apply(from = rootProject.file("config/spotless.license.gradle"))

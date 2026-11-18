@@ -40,22 +40,34 @@ a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.g
 
 Per case and language, Java and Groovy are compiled in process (javax.tools; the Groovy compiler with Micronaut's AST
 transformation) as part of `test` on the default graphql-java leg, on JDK 21 and 25 (the floor and ceiling legs skip `BindingCorpusSpec`; the processor module never runs on JDK 17), with Micronaut's processing only: **the runner never runs the JSR-269
-processor of this module** (DD-13). The result is started through the real application context (`RuntimeBinder`).
+processor of this module** (DD-13). Every case is compiled **twice**, as a build would:
 
-1. The startup verdict equals `expected/runtime.txt`.
-2. The binding manifest of a bound startup equals `expected/manifest.txt`, where there is one.
-3. Where the compile-time backend exists: its findings equal `expected/compile.txt`.
-4. Soundness (DD-4): every compile finding is a startup finding with the same code and coordinate. It fails outright; no
-   list excuses it. A false compile error is a bug.
-5. Completeness: a startup finding of a per-class code (the five parity codes and the per-class failures, see `Parity`)
+- **checks off** (`micronaut.graphql.tools.processor.checks=false`, the escape hatch): the sources must compile, whatever the
+  case says, because a failing case is a case whose startup or compile-time checks fail, not one whose Java is broken. The
+  result is started through the real application context (`RuntimeBinder`).
+- **checks on** (the schema files of the case are the schema directory of the visitor): `VisitorCompileTimeBinder` reads the
+  errors and the warnings of the compiler as findings. This compilation must fail exactly when `expected/compile.txt` lists an
+  error, and report nothing else.
+
+1. The checks-off compilation succeeds.
+2. The startup verdict equals `expected/runtime.txt`.
+3. The binding manifest of a bound startup equals `expected/manifest.txt`, where there is one.
+4. Where the compile-time backend exists (Java and Groovy): the findings of the checks-on compilation equal `expected/compile.txt`.
+5. Soundness (DD-4): every compile **error** is a startup finding with the same code and coordinate. A false compile error is a
+   bug. Only the documented exceptions below excuse one.
+6. Completeness: a startup finding of a per-class code (the five parity codes and the per-class failures, see `Parity`)
    that the compile side does not report is a gap, and must be listed in `corpus-divergences.txt`. A whole-program finding
    (field not bound, reachability, ambiguity, the dictionary, customizers) is not a gap: the compile side cannot see it, and
    the case records `compile.txt` as `ok`.
 
-Soundness and completeness are also asserted on the recorded `compile.txt` and `runtime.txt` of every case. For Java the
-`CompileTimeBinder` is real (`VisitorCompileTimeBinder`): it compiles the case again with javac and the visitor with the checks on, and
-its findings must equal `compile.txt`. The other languages answer `NoCompileTimeBinder`'s "unavailable" until #143, and their `compile.txt`
-holds the verdicts the compile-time design predicts. The codes that a case relaxes at startup (the strict checks for
+A compile line that starts with `warning ` is a warning of the compiler, not an error: the build passes. A check that cannot
+prove its fact from one class reports it so (`class-not-introspected`: another class can make a class introspected with
+`@Introspected(classes)` or `(packages)`, and so can a dependency, which a visitor that looks at one class cannot see). A warning is
+outside the soundness rule, and for the completeness rule it counts as the compile side having reported the finding.
+
+Soundness and completeness are also asserted on the recorded `compile.txt` and `runtime.txt` of every case, so they hold for Kotlin,
+which has no compile-time backend in the runner until #143 (its `compile.txt` holds the verdicts the compile-time design predicts).
+The codes that a case relaxes at startup (the strict checks for
 `config.micronaut.graphql.tools.strict=false`, the code of a `config.micronaut.graphql.tools.checks.<code>` that is `warn` or `ignore`)
 are outside the soundness rule: the compile error cannot be relaxed at startup (D-30). Every other finding of the case is compared.
 
@@ -69,18 +81,44 @@ known completeness gap. The ceiling must equal the number of entries, so a remov
 as a raised ceiling in the review. An entry that no longer diverges (the finding is gone from `runtime.txt`, or `compile.txt`
 reports it) is stale and fails. The list may only shrink.
 
+## The soundness exceptions
+
+`corpus-soundness-exceptions.txt` holds `max-entries: N` and one line `<case> <java|groovy|kotlin|all> <code> <coordinate> <reason>`
+per compile error that the startup does not report with the same code and coordinate on purpose. They are the cases where the
+premise of DD-4 (the class is an enabled bean, the startup binds what the compile time judged) does not hold, and each has a
+case under `exception/` that shows it:
+
+| reason | what the startup does instead |
+|---|---|
+| `two-classes-one-root-field` | reports the ambiguity of the field and judges no argument of either class |
+| `customizer-claimed-field` | binds no method to a field that a `RuntimeWiringCustomizer` claims (`unbound-resolver-method` with strict on, nothing with strict off) |
+| `runtime-exception-first` | binding the field throws before the argument rule (a singleton resolver that cannot be created): `unexpected-binding-error` |
+| `other-class-binding-failure` | stops at a binding failure of another class before the strict checks of this one |
+| `conflicting-class-mapping` | reports `mapping-conflict` when two classes bind one input type or enum to different Java classes, before the strict checks |
+
+The ceiling must equal the number of entries, so a new exception shows as a raised ceiling in the review. An entry is stale and
+fails when the compile side no longer reports the error or the startup reports it now, an unknown reason fails, and an exception
+excuses one finding of one case and language, never another finding of the case (`ParitySpec`). Every reason has an entry, on the case `exception/<reason>`. A
+false compile error that fits none of the reasons is a bug in the visitor.
+
+The `@Introspected(classes)` or `(packages)` that another class declares is not on this list: it would be a compile error where
+the startup passes, so the check is a warning instead (`input/introspected-elsewhere` shows the startup passing and the
+compile time silent; `input/class-not-introspected` shows both sides for a class that nothing introspects).
+
 ## Adding a case
 
 1. Create the directory with `case.properties`, the schema and the sources (copy a neighbour). `expected/` may start with
    an empty `runtime.txt`.
 2. `./gradlew :micronaut-graphql-tools-processor:corpusUpdate` records `expected/runtime.txt` (and `manifest.txt` if the file
-   exists, even empty). Write `expected/compile.txt` by hand from the design: only for per-class checks and failures, and
-   `ok` where the finding is whole-program.
+   exists, even empty) and, for Java and Groovy, `expected/compile.txt` from the checks-on compilation. A Kotlin case writes
+   `expected/compile.txt` by hand from the design (only per-class checks and failures, `ok` where the finding is whole-program).
 3. Read the diff: it is the review. Check each verdict against what the case is meant to show.
-4. `./gradlew :micronaut-graphql-tools-processor:test --tests '*BindingCorpusSpec'` must pass.
+4. `./gradlew :micronaut-graphql-tools-processor:test --tests '*BindingCorpusSpec'` must pass. `-Pcorpus.only='<regex>'` runs
+   only the cases whose name matches it (for example `-Pcorpus.only='input/.*'`), for writing a case; CI runs them all.
 
 Updating after a behaviour change is the same task (`-Pcorpus.update` on `test` does the same). The diff of the expected
-files is what the pull request is reviewed on. The task never raises the divergence ceiling.
+files is what the pull request is reviewed on. The task never raises the divergence ceiling or the exception ceiling: a compile error
+that the startup does not report fails the corpus until it is fixed or carries a documented reason.
 
 ## Time
 

@@ -244,3 +244,5 @@ tasks.named<Jar>("jmhJar") {
         attributes["Main-Class"] = "io.micronaut.graphql.tools.benchmarks.BenchmarkJarMain"
     }
 }
+
+apply(from = rootProject.file("config/spotless.license.gradle"))

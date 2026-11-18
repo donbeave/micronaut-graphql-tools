@@ -8,17 +8,21 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Runs the cases of a {@link Corpus}: compiles one language of a case in process, starts it through the
- * {@link RuntimeBinder}, and asserts, per case and language:
+ * Runs the cases of a {@link Corpus}: compiles one language of a case in process, twice (the checks off, which is what is
+ * started, and the checks on, which is what a build does), starts the first through the {@link RuntimeBinder}, and asserts, per
+ * case and language:
  *
  * <ol>
+ *   <li>the compilation with {@code checks=false} succeeds, whatever the case: the escape hatch compiles a failing case clean;</li>
  *   <li>the startup verdict equals {@code expected/runtime.txt} (code, coordinate and schema location);</li>
  *   <li>the binding manifest of a bound startup equals {@code expected/manifest.txt}, where there is one;</li>
- *   <li>where the {@link CompileTimeBinder} is available: its findings equal {@code expected/compile.txt};</li>
- *   <li>soundness: every compile finding is a startup finding with the same code and coordinate (no list excuses it);</li>
+ *   <li>where the {@link CompileTimeBinder} is available (Java and Groovy): the compilation with the checks on reports exactly the
+ *   findings of {@code expected/compile.txt}, as errors that fail it and warnings that do not;</li>
+ *   <li>soundness: every compile error is a startup finding with the same code and coordinate; only the documented exceptions of
+ *   DD-4 ({@code corpus-soundness-exceptions.txt}) excuse one;</li>
  *   <li>completeness: a startup finding of a per-class code that the compile side misses is listed in
  *   {@code corpus-divergences.txt}. Both rules are {@link Parity}; they are also asserted on the recorded expectations,
- *   so they hold while the compile-time backend does not exist yet.</li>
+ *   so they hold for a language that has no compile-time backend yet (Kotlin).</li>
  * </ol>
  *
  * <p>Orphan and stale files, an unsorted or malformed expectation and the divergence ceiling are reported by
@@ -52,7 +56,10 @@ final class CorpusRunner {
 
     /** @return each case with each language this runner compiles: the units to run */
     List<List<Object>> units() {
-        return corpus.units().findAll { compilers.containsKey((Language) it[1]) }
+        String only = CorpusFixtures.only()
+        return corpus.units().findAll {
+            compilers.containsKey((Language) it[1]) && (only == null || ((CorpusCase) it[0]).name ==~ only)
+        }
     }
 
     /**
@@ -67,7 +74,8 @@ final class CorpusRunner {
             CaseCompiler compiler = compilers.get(language)
             CompiledCase compiled = compiler.compile(corpusCase, work.resolve('unchecked'))
             if (!compiled.success) {
-                throw new AssertionError("${label(corpusCase, language)}: the sources do not compile:\n  ${compiled.errors.join('\n  ')}".toString())
+                // the first of the two compilations: the escape hatch (checks=false) must compile every case, failing or not
+                throw new AssertionError("${label(corpusCase, language)}: the sources do not compile with the checks off (checks=false):\n  ${compiled.errors.join('\n  ')}".toString())
             }
             BindRequest request = new BindRequest(corpusCase, language, compiler, compiled, work)
             Verdict runtime = runtimeBinder.bind(request)
@@ -128,7 +136,7 @@ final class CorpusRunner {
             } else if (expectedCompile.lines() != compile.lines()) {
                 failures.add("${compileTimeBinder.name} verdict differs from expected/compile.txt:\n${diff(expectedCompile.lines(), compile.lines())}".toString())
             }
-            failures.addAll(Parity.check(corpusCase.name, language, runtime, compile, corpus.divergences, Parity.relaxedCodes(corpusCase.config)))
+            failures.addAll(Parity.check(corpusCase.name, language, runtime, compile, corpus.divergences, Parity.relaxedCodes(corpusCase.config), corpus.exceptions))
         }
         return failures
     }

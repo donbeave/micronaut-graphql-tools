@@ -53,6 +53,11 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
 
     private static final String TAG = "[graphql-tools] ";
 
+    // The finding that a check of one class cannot prove: another class can make a class introspected with
+    // @Introspected(classes) or (packages), and so can a dependency, and an isolating visitor sees neither. An error here
+    // would be a compile error where the startup passes (DD-4), so it is a warning, and the startup decides.
+    private static final String UNPROVEN = BindingCode.CLASS_NOT_INTROSPECTED.code();
+
     @Nullable
     private Compilation compilation;
 
@@ -130,7 +135,8 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             context.info(TAG + "checked " + current.checked + " resolver " + (current.checked == 1 ? "class" : "classes")
                     + " against " + current.schema.files() + " schema " + (current.schema.files() == 1 ? "file" : "files")
                     + " in " + current.schema.directories() + "; " + current.findings + " "
-                    + (current.findings == 1 ? "finding" : "findings") + ".");
+                    + (current.findings == 1 ? "finding" : "findings")
+                    + (current.warnings == 0 ? "" : ", " + current.warnings + (current.warnings == 1 ? " warning" : " warnings")) + ".");
         }
     }
 
@@ -153,10 +159,16 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         current.checked++;
         ElementTypeModel model = current.model;
         List<Finding> findings = ResolverClassFindings.check(schema.get(), model, model.of(element));
-        current.findings += findings.size();
         for (Finding finding : findings) {
             MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());
-            report(context, finding, method != null && element.equals(method.getDeclaringType()) ? method : element);
+            Element at = method != null && element.equals(method.getDeclaringType()) ? method : element;
+            if (UNPROVEN.equals(finding.code())) {
+                current.warnings++;
+                context.warn(FindingRenderer.render(unproven(finding)), at);
+            } else {
+                current.findings++;
+                report(context, finding, at);
+            }
         }
     }
 
@@ -176,6 +188,17 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         return name.equals("ProcessingException") || name.contains("Postpone");
     }
 
+    private static Finding unproven(Finding finding) {
+        String sentence = finding.sentence().strip();
+        if (sentence.endsWith(".")) {
+            sentence = sentence.substring(0, sentence.length() - 1);
+        }
+        return new Finding(finding.code(), finding.coordinate(), sentence + " here; a class can also be made introspected by "
+                + "@Introspected(classes) or @Introspected(packages) on another class, which a compile-time check of one class "
+                + "cannot see, so this is a warning and the startup decides", finding.member(), finding.declaredIn(),
+                finding.schemaLocation(), finding.fix());
+    }
+
     private static void report(VisitorContext context, Finding finding, @Nullable Element element) {
         context.fail(FindingRenderer.render(finding), element);
     }
@@ -190,6 +213,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         boolean noted;
         int checked;
         int findings;
+        int warnings;
 
         Compilation(ProcessorOptions options) {
             this.options = options;

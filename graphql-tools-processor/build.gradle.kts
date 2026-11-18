@@ -41,6 +41,8 @@ tasks.withType<Test>().configureEach {
     if (project.hasProperty("corpus.update")) {
         systemProperty("corpus.update", "true")
     }
+    // `-Pcorpus.only=<regex>` runs only the cases whose name matches (for writing a case; not for CI)
+    providers.gradleProperty("corpus.only").orNull?.let { systemProperty("corpus.only", it) }
 }
 tasks.register<Test>("corpusUpdate") {
     description = "Rewrites the expected files of the binding corpus from what the binders say; review the diff."
