@@ -60,6 +60,16 @@ public class QueryResolver {
         result.findings == ['[processor-option-invalid] -']
     }
 
+    def "a directory that this system cannot use as a path is an option error, not a crash of the compiler"() {
+        when:
+        def options = ProcessorOptions.read([(ProcessorOptions.SCHEMA_DIRS): "ok${File.pathSeparator}bad\u0000path".toString()])
+
+        then:
+        options.errors()*.code() == ['processor-option-invalid']
+        options.errors()[0].sentence().contains(ProcessorOptions.SCHEMA_DIRS)
+        options.schemaDirs()*.toString() == ['ok']
+    }
+
     def "without a schema directory the build fails on the first class it would check, unless checks=false"() {
         when:
         def result = new VisitorCompilation().withoutSchemaOption().source('example.QueryResolver', RESOLVER).compile()

@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.visitor;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationView;
 import io.micronaut.graphql.tools.binding.internal.model.JClass;
 import io.micronaut.graphql.tools.binding.internal.model.JEnumConstant;
@@ -57,6 +58,13 @@ final class ElementTypeModel implements TypeModel {
     private static final Pattern SYNTHETIC_NAME = Pattern.compile("arg\\d+");
 
     private static final String INTRODUCTION = "io.micronaut.aop.Introduction";
+
+    // what makes a class a bean by its own declaration, as the startup's bean set sees it
+    private static final Set<String> BEAN_DEFINING = Set.of("jakarta.inject.Singleton", "jakarta.inject.Scope",
+            "io.micronaut.context.annotation.Bean", "io.micronaut.context.annotation.Prototype",
+            "io.micronaut.context.annotation.Context", "io.micronaut.context.annotation.Infrastructure",
+            "io.micronaut.runtime.context.scope.Refreshable", "io.micronaut.runtime.context.scope.ThreadLocal",
+            "io.micronaut.runtime.http.scope.RequestScope");
 
     // the Object methods that are never resolver methods, by signature as the startup lists them
     private static final Set<String> OBJECT_SIGNATURES = Set.of("equals(java.lang.Object)", "hashCode()", "toString()",
@@ -99,14 +107,30 @@ final class ElementTypeModel implements TypeModel {
 
     /**
      * @param element a resolver class, or an introduction interface that is a resolver bean
-     * @return whether the class is one the visitor checks: it is concrete, or an introduction advice interface, whose methods
-     * are all abstract and whose generated bean is concrete
+     * @return whether the class is one the visitor checks: a concrete class that is a bean, or an introduction advice
+     * interface, whose methods are all abstract and whose generated bean is concrete. A concrete class is a bean when a
+     * bean-defining annotation is declared on it, or a superclass carries a resolver annotation ({@code @Inherited}); the
+     * annotation of an interface does not make an implementation a bean, so a class that only implements an annotated
+     * interface is not one the startup ever sees.
      */
     static boolean isBeanClass(ClassElement element) {
         if (element.isInterface()) {
             return element.hasStereotype(INTRODUCTION);
         }
-        return !element.isAbstract() && !element.isEnum() && !element.isRecord();
+        if (element.isAbstract() || element.isEnum() || element.isRecord()) {
+            return false;
+        }
+        if (BEAN_DEFINING.stream().anyMatch(element::hasDeclaredStereotype)) {
+            return true;
+        }
+        for (ClassElement parent = element.getSuperType().orElse(null); parent != null;
+             parent = parent.getSuperType().orElse(null)) {
+            if (parent.hasDeclaredAnnotation(AnnotationNames.ROOT_RESOLVER)
+                    || parent.hasDeclaredAnnotation(AnnotationNames.TYPE_RESOLVER)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private TypeRef ref(ClassElement type, AnnotationMetadata declaration) {
@@ -115,7 +139,7 @@ final class ElementTypeModel implements TypeModel {
 
     private TypeRef ref(ClassElement type, AnnotationMetadata declaration, Set<String> variables) {
         boolean array = type.isArray();
-        ClassElement raw = array ? type.fromArray() : type;
+        ClassElement raw = resolved(array ? type.fromArray() : type);
         reachable.put(raw.getName(), erased(raw));
         Set<String> open = raw instanceof GenericPlaceholderElement placeholder
                 ? with(variables, placeholder.getVariableName()) : variables;
@@ -142,6 +166,9 @@ final class ElementTypeModel implements TypeModel {
                     : argument(bounds.get(0), variables);
         }
         if (argument instanceof GenericPlaceholderElement placeholder) {
+            if (placeholder.getResolved().isPresent()) {
+                return argument(placeholder.getResolved().get(), variables);
+            }
             List<? extends ClassElement> bounds = placeholder.getBounds();
             if (bounds.isEmpty()) {
                 return ref(argument, AnnotationMetadata.EMPTY_METADATA, variables);
@@ -154,6 +181,11 @@ final class ElementTypeModel implements TypeModel {
             return argument(bounds.get(0), with(variables, placeholder.getVariableName()));
         }
         return ref(argument, AnnotationMetadata.EMPTY_METADATA, variables);
+    }
+
+    // a type variable that a subclass binds (Base<T> extended as Base<CompletionStage<String>>) is the type it is bound to
+    private static ClassElement resolved(ClassElement type) {
+        return type instanceof GenericPlaceholderElement placeholder ? placeholder.getResolved().orElse(type) : type;
     }
 
     // what the rules ask of a reached type is its erasure: Micronaut resolves the type arguments of a type variable that is

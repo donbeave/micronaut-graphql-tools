@@ -232,6 +232,36 @@ public class ContractQuery implements Contract {
         concrete.findings.sort() == ['[unbound-resolver-method] example.BaseQuery#stray()', '[unbound-resolver-method] example.ContractQuery#stray2()']
     }
 
+    def "a class that only implements an annotated interface is no bean, so the startup never sees it and it is not checked"() {
+        when:
+        def result = compilation('''
+@GraphQLRootResolver
+public interface Contract {
+    String stray2();
+}''', '''
+public class Helper implements Contract {
+    public String stray2() { return ""; }
+}''').compile()
+
+        then:
+        result.success
+        result.notes == []
+    }
+
+    def "a type variable that a subclass binds is read as the type it is bound to, as the startup reads it"() {
+        when:
+        def result = compilation('''
+public abstract class Base<T> {
+    public CompletionStage<T> version() { return null; }
+}''', '''
+@GraphQLRootResolver
+public class QueryResolver extends Base<CompletionStage<String>> {
+}''').compile()
+
+        then:
+        result.findings == ['[unsupported-return-type] Query.version']
+    }
+
     def "an @Introduction interface that is a resolver is a bean, and its abstract methods are checked"() {
         when:
         def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)

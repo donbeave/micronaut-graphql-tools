@@ -19,6 +19,7 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 
 import java.io.File;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -78,7 +79,12 @@ record ProcessorOptions(List<Path> schemaDirs, boolean checks, List<Finding> err
         if (dirsValue != null) {
             for (String entry : dirsValue.split(File.pathSeparator)) {
                 if (!entry.isBlank()) {
-                    directories.add(Path.of(entry.trim()));
+                    try {
+                        directories.add(Path.of(entry.trim()));
+                    } catch (InvalidPathException e) {
+                        errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, SCHEMA_DIRS + " holds a path that this "
+                                + "system cannot use: '" + entry.trim() + "' (" + e.getReason() + ")"));
+                    }
                 }
             }
         }
