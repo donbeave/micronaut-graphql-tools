@@ -14,6 +14,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "graphql-tools-parent"
 
 include("graphql-tools")
+include("graphql-tools-binding")
 include("graphql-tools-bom")
 include("graphql-tools-processor")
 include("benchmarks")

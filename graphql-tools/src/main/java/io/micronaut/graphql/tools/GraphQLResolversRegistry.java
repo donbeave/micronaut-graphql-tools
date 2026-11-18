@@ -302,6 +302,25 @@ public final class GraphQLResolversRegistry {
         return result;
     }
 
+    List<BeanDefinition<?>> rootResolverBeans() {
+        return rootResolvers.stream().<BeanDefinition<?>>map(BeanDefinitionAndMethods::getBeanDefinition).toList();
+    }
+
+    List<BeanDefinition<?>> typeResolverBeans() {
+        return typeResolvers.values().stream()
+                .flatMap(List::stream)
+                .<BeanDefinition<?>>map(BeanDefinitionAndMethods::getBeanDefinition)
+                .distinct()
+                .toList();
+    }
+
+    List<String> contractTypesOf(BeanDefinition<?> beanDefinition) {
+        return typeResolverContracts.getOrDefault(beanDefinition, Map.of()).values().stream()
+                .map(Class::getName)
+                .sorted()
+                .toList();
+    }
+
     boolean hasRootResolvers() {
         return !rootResolvers.isEmpty();
     }
