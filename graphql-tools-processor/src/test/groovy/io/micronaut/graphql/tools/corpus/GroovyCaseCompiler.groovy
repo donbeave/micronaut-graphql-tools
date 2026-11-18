@@ -31,6 +31,8 @@ final class GroovyCaseCompiler implements CaseCompiler {
         try {
             System.properties.stringPropertyNames().findAll { it.startsWith('micronaut.graphql.tools.processor.') }
                     .each { System.clearProperty(it) }
+            // the visitor of this module, which the test resources register, only builds the case here
+            System.setProperty('micronaut.graphql.tools.processor.checks', 'false')
             CompilerConfiguration configuration = new CompilerConfiguration()
             configuration.targetDirectory = classes.toFile()
             configuration.parameters = true

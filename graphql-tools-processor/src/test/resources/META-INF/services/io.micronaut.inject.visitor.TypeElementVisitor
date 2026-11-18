@@ -1,0 +1,2 @@
+io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor
+io.micronaut.graphql.tools.visitor.ContractsGateVisitor

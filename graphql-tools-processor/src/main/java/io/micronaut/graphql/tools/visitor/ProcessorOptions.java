@@ -1,0 +1,90 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.micronaut.graphql.tools.visitor;
+
+import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.binding.internal.finding.Finding;
+
+import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+/**
+ * The options of the visitor, read from the options of the compilation: {@code -A} under javac and kapt, {@code arg}
+ * under KSP, system properties under the Groovy compiler. There are two, both under {@code micronaut.graphql.tools.processor.},
+ * a segment that no runtime key uses, so that the visitor rejects an unknown key there without failing on a runtime key that
+ * happens to be a system property.
+ *
+ * @param schemaDirs the directories to read the schema from, empty when the option is absent
+ * @param checks     whether the checks run
+ * @param errors     the options that are wrong; the checks do not run when there are any
+ */
+record ProcessorOptions(List<Path> schemaDirs, boolean checks, List<Finding> errors) {
+
+    static final String PREFIX = "micronaut.graphql.tools.processor.";
+
+    static final String SCHEMA_DIRS = PREFIX + "schema.dirs";
+
+    static final String CHECKS = PREFIX + "checks";
+
+    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, CHECKS);
+
+    ProcessorOptions {
+        schemaDirs = List.copyOf(schemaDirs);
+        errors = List.copyOf(errors);
+    }
+
+    static ProcessorOptions read(Map<String, String> options) {
+        List<Finding> errors = new ArrayList<>();
+        options.keySet().stream().sorted().forEach(key -> {
+            if (key.startsWith(PREFIX) && !NAMES.contains(key)) {
+                errors.add(error(BindingCode.PROCESSOR_OPTION_UNKNOWN, "the option " + key + " is not known; the options are "
+                        + new TreeSet<>(NAMES)));
+            }
+        });
+
+        boolean checks = true;
+        String checksValue = options.get(CHECKS);
+        if (checksValue != null) {
+            switch (checksValue.trim().toLowerCase(Locale.ROOT)) {
+                case "true", "yes", "on" -> checks = true;
+                case "false", "no", "off" -> checks = false;
+                default -> errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, CHECKS + " must be true or false (or "
+                        + "yes/no, on/off), not '" + checksValue + "'"));
+            }
+        }
+
+        List<Path> directories = new ArrayList<>();
+        String dirsValue = options.get(SCHEMA_DIRS);
+        if (dirsValue != null) {
+            for (String entry : dirsValue.split(File.pathSeparator)) {
+                if (!entry.isBlank()) {
+                    directories.add(Path.of(entry.trim()));
+                }
+            }
+        }
+        return new ProcessorOptions(directories, checks, errors);
+    }
+
+    private static Finding error(BindingCode code, String sentence) {
+        return new Finding(code.code(), null, sentence, null, null, null, null);
+    }
+}

@@ -172,6 +172,9 @@ public final class Startup {
                 })
             }
             try {
+                // the visitor of this module, which the test resources register, is not under test here. It reads the option
+                // from the system properties too; the JSR-269 processor would reject it as a -A argument
+                System.setProperty('micronaut.graphql.tools.processor.checks', 'false')
                 success = task.call()
             } finally {
                 System.properties = systemProperties
