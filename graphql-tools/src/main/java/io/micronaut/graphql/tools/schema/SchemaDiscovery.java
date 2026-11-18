@@ -28,6 +28,7 @@ import io.micronaut.graphql.tools.exceptions.SchemaDiscoveryException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -91,7 +92,7 @@ public final class SchemaDiscovery {
                 for (Source source : find(location, loader, useIndex, seen)) {
                     sources.add(source);
                 }
-            } catch (IOException e) {
+            } catch (IOException | UncheckedIOException e) {
                 throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "Cannot read the schema location " + location + ": " + e.getMessage(), e);
             }
         }
