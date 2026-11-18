@@ -1,0 +1,85 @@
+package io.micronaut.graphql.tools.docs
+
+import spock.lang.Shared
+import spock.lang.Specification
+
+import java.nio.charset.StandardCharsets
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+import java.util.regex.Pattern
+
+/**
+ * Comments, docs and build files do not cite the maintainers' planning notes: no decision id, no design rule id and no
+ * path into the planning folder. A reader of the repository cannot resolve those ids, so the reason is written out in
+ * place, or an issue or pull request number is given. The spec reads every text file of the project tree.
+ */
+class NoPlanningReferencesSpec extends Specification {
+
+    /** The forbidden forms. Each one is split in two, so that this file does not contain the text it looks for. */
+    static final List<Pattern> FORBIDDEN = [
+            Pattern.compile('\\bD-' + '[0-9]{2}\\b'),
+            Pattern.compile('\\bDD-' + '[0-9]+'),
+            Pattern.compile('opus' + '-design'),
+            Pattern.compile('\\.plan' + 'ning/'),
+    ]
+
+    /** Not repository content: build output, VCS and Gradle state, and the local notes folders that git excludes. */
+    static final Set<String> SKIPPED_DIRECTORIES = ['build', '.git', '.gradle', '.planning', '.claude'] as Set
+
+    @Shared Path root = Paths.get(System.getProperty('docs.root'))
+
+    def "no file of the project tree cites a decision id, a design rule id or a planning file"() {
+        given:
+        def findings = scan(root)
+
+        expect:
+        assert findings.empty: "Planning references (write the reason out, or cite an issue or pull request instead):\n  " +
+                findings.join('\n  ')
+    }
+
+    def "the scan reports each forbidden form with its file and line"() {
+        given:
+        def dir = Files.createTempDirectory('planning-references')
+        def file = dir.resolve('Notes.java')
+        Files.writeString(file, "class Notes {\n// the rule of ${'D-' + '99'} and ${'DD' + '-3'}\n// see ${'.plan' + 'ning/'}x\n}\n")
+
+        when:
+        def findings = scan(dir)
+
+        then:
+        findings.collect { it.substring(0, it.indexOf(': ')) } == ['Notes.java:2', 'Notes.java:3']
+
+        cleanup:
+        Files.delete(file)
+        Files.delete(dir)
+    }
+
+    static List<String> scan(Path base) {
+        def findings = []
+        Files.walkFileTree(base, new SimpleFileVisitor<Path>() {
+            @Override
+            FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                dir != base && SKIPPED_DIRECTORIES.contains(dir.fileName.toString()) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                def bytes = Files.readAllBytes(file)
+                if ((0..<bytes.length).any { bytes[it] == (byte) 0 }) {
+                    return FileVisitResult.CONTINUE
+                }
+                new String(bytes, StandardCharsets.UTF_8).split('\n', -1).eachWithIndex { line, index ->
+                    if (FORBIDDEN.any { it.matcher(line).find() }) {
+                        findings << "${base.relativize(file)}:${index + 1}: ${line.trim()}".toString()
+                    }
+                }
+                FileVisitResult.CONTINUE
+            }
+        })
+        findings
+    }
+}
