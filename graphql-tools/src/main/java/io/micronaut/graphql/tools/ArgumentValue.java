@@ -20,6 +20,8 @@ import io.micronaut.core.annotation.Nullable;
 
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  * The value of a nullable GraphQL argument or input object field that tells an omitted value from an explicit
@@ -96,6 +98,25 @@ public final class ArgumentValue<T> {
     @Nullable
     public T orElse(@Nullable T other) {
         return value != null ? value : other;
+    }
+
+    /**
+     * @return the provided value, or an empty optional if the value is omitted or an explicit {@code null}
+     */
+    @NonNull
+    public Optional<T> asOptional() {
+        return Optional.ofNullable(value);
+    }
+
+    /**
+     * Runs the action only for a provided, non-null value; an omitted value and an explicit {@code null} are skipped.
+     *
+     * @param action the action to run with the provided value
+     */
+    public void ifPresent(@NonNull Consumer<? super T> action) {
+        if (value != null) {
+            action.accept(value);
+        }
     }
 
     @Override

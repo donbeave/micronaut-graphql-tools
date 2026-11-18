@@ -128,4 +128,14 @@ public final class ArgumentsScenario {
         }
     }
 
+    // tag::optional-helpers[]
+    public static String describePresence(ArgumentValue<String> text) {
+        return text.asOptional().map(value -> "present:" + value).orElse("absent");
+    }
+
+    public static void rememberIfPresent(ArgumentValue<String> text, List<String> seen) {
+        text.ifPresent(seen::add);
+    }
+    // end::optional-helpers[]
+
 }
