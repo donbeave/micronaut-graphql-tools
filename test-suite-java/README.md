@@ -12,7 +12,7 @@ of the JSON tests. The guide's code snippets come from the three suites (`snippe
 
 - `src/main/java/example`: the application: the schema (`src/main/resources/schema.graphqls`), resolvers, data classes and
   the `GraphQLFactory` bean. The `.graphql` operations used by the tests are in `src/main/graphql`.
-- `src/test/java/example`: JUnit tests by feature (`discovery`, `enums`, `graphql/query`, `manifest`, `nullfields`,
+- `src/test/java/example`: JUnit tests by feature (`claimed`, `discovery`, `eager`, `enums`, `graphql/query`, `manifest`, `nullfields`,
   `scope`, `tck`, `host`, ...). `example.tck.GraphQLToolsTckTest` runs the scenarios of `graphql-tools-tck`.
 - `src/serdeTest/java/example/nullfields`: the same null-field checks with Micronaut Serialization, in their own source
   set and task.
