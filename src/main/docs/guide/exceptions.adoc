@@ -78,3 +78,5 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 |===
 
 The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. `schema-invalid` is shared: the compile-time check reports a schema that cannot be parsed or merged, and the startup reports the same for the schema it loads.
+
+`nullable-primitive` and `coordinate-on-non-resolver` are registered for the compile-time check and are not emitted yet: no startup check reports them, and the compile-time check that does arrives with the visitor.
