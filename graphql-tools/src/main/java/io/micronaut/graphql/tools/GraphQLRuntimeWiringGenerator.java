@@ -928,12 +928,8 @@ final class GraphQLRuntimeWiringGenerator {
 
     private void bindInterfaceFields() {
         InterfaceFieldBinder.InterfaceBindings bindings = new InterfaceFieldBinder(typeDefinitionRegistry,
-                graphQLResolversRegistry, snapshot(processedTypes), configuration.getPrecedence(),
-                manifestRecorder,
-                new InterfaceFieldBinder.InterfaceFields(List.copyOf(unboundInterfaceFields),
-                        List.copyOf(ownInterfaceFields), List.copyOf(deferredModelMemberFields),
-                        List.copyOf(interfaceResolverFields)),
-                new InterfaceCallbacks()).bind();
+                graphQLResolversRegistry, Collections.unmodifiableMap(processedTypes), configuration.getPrecedence(),
+                manifestRecorder, new InterfaceCallbacks()).bind();
         fieldBindings.putAll(bindings.fieldBindings());
         bindings.resolverBindings().forEach((method, coordinates) ->
                 resolverBindings.computeIfAbsent(method, it -> new TreeSet<>()).addAll(coordinates));
@@ -1040,6 +1036,18 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     private final class InterfaceCallbacks implements InterfaceFieldBinder.Callbacks {
+
+        @Override
+        public InterfaceFieldBinder.InterfaceFields takeDiscoveredFields() {
+            return new InterfaceFieldBinder.InterfaceFields(drain(unboundInterfaceFields), drain(ownInterfaceFields),
+                    drain(deferredModelMemberFields), drain(interfaceResolverFields));
+        }
+
+        private static List<InterfaceField> drain(List<InterfaceField> fields) {
+            List<InterfaceField> taken = List.copyOf(fields);
+            fields.clear();
+            return taken;
+        }
 
         @Override
         public void bindModelMember(InterfaceField field) {

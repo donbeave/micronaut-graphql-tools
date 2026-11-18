@@ -43,8 +43,8 @@ import static io.micronaut.graphql.tools.MicronautUtils.toMap;
 /**
  * The phase that binds the fields which an object type shares with the interfaces it implements: a field that no member of
  * the Java type and no resolver of the type can bind may be bound by a resolver of the interface, and the precedence
- * decides when both can. It starts from the lists that the type phase collected, works on copies of them, and returns what
- * it bound as one immutable result.
+ * decides when both can. It works on its own lists, takes what the type phase collected, and again whatever binding a field
+ * makes the type phase reach, and returns what it bound as one immutable result.
  */
 @Internal
 final class InterfaceFieldBinder {
@@ -56,10 +56,10 @@ final class InterfaceFieldBinder {
     private final Callbacks callbacks;
     private final AmbiguityLog ambiguityLog;
 
-    private final List<InterfaceField> unboundInterfaceFields;
-    private final List<InterfaceField> interfaceResolverFields;
-    private final List<InterfaceField> ownInterfaceFields;
-    private final List<InterfaceField> deferredModelMemberFields;
+    private final List<InterfaceField> unboundInterfaceFields = new ArrayList<>();
+    private final List<InterfaceField> interfaceResolverFields = new ArrayList<>();
+    private final List<InterfaceField> ownInterfaceFields = new ArrayList<>();
+    private final List<InterfaceField> deferredModelMemberFields = new ArrayList<>();
     private final Map<String, String> fieldBindings = new HashMap<>();
     private final Map<String, Set<String>> resolverBindings = new HashMap<>();
     private final List<AbstractMappingException> failures = new ArrayList<>();
@@ -67,25 +67,21 @@ final class InterfaceFieldBinder {
     /**
      * @param typeDefinitionRegistry   the schema
      * @param graphQLResolversRegistry the resolvers
-     * @param processedTypes           a read-only view of the Java class that each schema type is bound to
+     * @param processedTypes           a read-only live view of the Java class that each schema type is bound to: binding
+     *                                 a field can reach a type that no field reached before
      * @param precedence               the configured precedence
      * @param manifestRecorder         the manifest sink
-     * @param fields                   what the type phase collected
      * @param callbacks                the binding work that stays with the type phase
      */
     InterfaceFieldBinder(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLResolversRegistry graphQLResolversRegistry,
                          Map<String, Class<?>> processedTypes, Precedence precedence,
-                         BindingManifestRecorder manifestRecorder, InterfaceFields fields, Callbacks callbacks) {
+                         BindingManifestRecorder manifestRecorder, Callbacks callbacks) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.graphQLResolversRegistry = graphQLResolversRegistry;
         this.processedTypes = processedTypes;
         this.precedence = precedence;
         this.callbacks = callbacks;
         this.ambiguityLog = new AmbiguityLog(precedence, manifestRecorder);
-        this.unboundInterfaceFields = new ArrayList<>(fields.unbound());
-        this.ownInterfaceFields = new ArrayList<>(fields.own());
-        this.deferredModelMemberFields = new ArrayList<>(fields.deferred());
-        this.interfaceResolverFields = new ArrayList<>(fields.resolverBound());
     }
 
     InterfaceBindings bind() {
@@ -116,6 +112,14 @@ final class InterfaceFieldBinder {
         return result;
     }
 
+    private void takeDiscoveredFields() {
+        InterfaceFields fields = callbacks.takeDiscoveredFields();
+        unboundInterfaceFields.addAll(fields.unbound());
+        ownInterfaceFields.addAll(fields.own());
+        deferredModelMemberFields.addAll(fields.deferred());
+        interfaceResolverFields.addAll(fields.resolverBound());
+    }
+
     private void bindInterfaceFields() {
         boolean rebound = true;
         while (rebound) {
@@ -125,6 +129,7 @@ final class InterfaceFieldBinder {
 
     private boolean bindInterfaceFieldsOnce() {
         while (true) {
+            takeDiscoveredFields();
             boolean progress = false;
             for (InterfaceField field : List.copyOf(unboundInterfaceFields)) {
                 List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
@@ -277,6 +282,11 @@ final class InterfaceFieldBinder {
      * as for any other field.
      */
     interface Callbacks {
+
+        /**
+         * @return the fields that the type phase collected since the last call; it forgets them
+         */
+        InterfaceFields takeDiscoveredFields();
 
         void bindModelMember(InterfaceField field);
 
