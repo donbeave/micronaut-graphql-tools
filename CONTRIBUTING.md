@@ -147,7 +147,8 @@ is a workaround for #297, which removes the recursion; remove the flag when #297
 `StartAndFirstRequestBenchmark` separate the binding at startup from the first request: the same schema with
 `micronaut.graphql.tools.eager-init` `true` or `false`, timing the context start, the first query after the start, and
 both together (`./gradlew :benchmarks:jmhJar`, then run the jar with `-f 10 -wi 0 -i 1 -bm ss -jvmArgs -Xss16m` for a cold
-JVM per sample). None has an allocation gate: a whole context start is not a path the library owns. A gain is claimed
+JVM per sample; the jar leaves `BindingBenchmark` and `RetainedHeapBenchmark` out unless one is named, because it
+generates the 1,600-field schema only). None has an allocation gate: a whole context start is not a path the library owns. A gain is claimed
 only with a figure from these benchmarks.
 
 Two checks run on every `./gradlew check`:

@@ -215,5 +215,13 @@ jmh {
     // The start-up benchmarks are measured cold, one fresh JVM per sample, by scripts/startup-report.py. The warm-up of
     // this task would start contexts in the same JVM first.
     excludes = listOf("BindingBenchmark", "RetainedHeapBenchmark")
+    // The jar does the same by itself: its main class leaves them out unless a benchmark is named
+    // (BenchmarkJarMain, which jmhJar below makes the Main-Class).
     includes = providers.gradleProperty("jmh.includes").map { listOf(it) }.orElse(listOf()).get()
+}
+
+tasks.named<Jar>("jmhJar") {
+    manifest {
+        attributes["Main-Class"] = "io.micronaut.graphql.tools.benchmarks.BenchmarkJarMain"
+    }
 }

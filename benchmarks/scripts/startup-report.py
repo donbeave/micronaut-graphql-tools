@@ -85,14 +85,18 @@ def run_jmh(json_path, forks):
     results = []
     with tempfile.TemporaryDirectory(prefix="startup-report-") as tmp:
         for size in SIZES:
+            # A jar of an earlier build (another project version or size) must not be taken for this one: remove them
+            # first, so that the build recreates the jar, and take the newest below in any case.
+            for stale in (ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"):
+                stale.unlink()
             subprocess.run([str(ROOT / "gradlew"), ":benchmarks:jmhJar", f"-PlargeFields={size}", "--no-daemon"],
                            cwd=ROOT, check=True)
-            jars = sorted((ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"))
-            if len(jars) != 1:
-                sys.exit(f"expected one benchmark jar, found {len(jars)}")
+            jars = sorted((ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"), key=lambda p: p.stat().st_mtime)
+            if not jars:
+                sys.exit("no benchmark jar in benchmarks/build/libs")
             jar = Path(tmp) / f"jmh-{size}.jar"
             part = Path(tmp) / f"jmh-{size}.json"
-            jar.write_bytes(jars[0].read_bytes())
+            jar.write_bytes(jars[-1].read_bytes())
             # -Xss16m: the 10,000-field schema recurses once per type of its chain (see CONTRIBUTING.md and #297).
             subprocess.run(["java", "-jar", str(jar), BENCHMARKS, "-p", f"fields={size}", "-f", str(forks),
                             "-wi", "0", "-i", "1", "-bm", "ss", "-jvmArgs", "-Xss16m", "-rf", "json", "-rff", str(part)],
