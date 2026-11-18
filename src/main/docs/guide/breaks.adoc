@@ -32,4 +32,4 @@ These changes are planned for the milestones of the tracker. Each one is _pendin
 * #236: `AmbiguousBindingException` becomes internal (_pending_).
 * #291: the visitor replaces the JSR-269 processor, and the processor options are renamed (_pending_).
 
-Issue #15 (BC-19, resolver parameters bound by name) is open. Its runtime half is on `master` and is listed for 1.0.0-M1; its compile-time half is _pending_ with #150.
+Issue #15 (BC-19, resolver parameters bound by name) is open. Its runtime half is on `master` and is listed for 1.0.0-M1; the visitor applies the same rule at compile time, and its registration in a build is _pending_ with #291.

@@ -34,7 +34,8 @@ public final class IncorrectArgumentNameException extends AbstractMappingExcepti
     public static IncorrectArgumentNameException parameterWithoutArgument(MappingContext mappingContext,
                                                                          String parameterName,
                                                                          String argumentName,
-                                                                         List<String> argumentNames) {
+                                                                         List<String> argumentNames,
+                                                                         boolean syntheticName) {
         if (!parameterName.equals(argumentName)) {
             return new IncorrectArgumentNameException(
                     String.format(
@@ -42,6 +43,18 @@ public final class IncorrectArgumentNameException extends AbstractMappingExcepti
                                     + " that does not exist (arguments: %s). Correct the annotation value.",
                             parameterName,
                             argumentName,
+                            argumentNames
+                    ),
+                    mappingContext
+            );
+        }
+        if (syntheticName) {
+            return new IncorrectArgumentNameException(
+                    String.format(
+                            "The method parameter '%s' has no GraphQL argument with that name (arguments: %s): the"
+                                    + " class file has no parameter names. Compile the class that declares the method"
+                                    + " with -parameters, or bind the parameter with @GraphQLArgument(\"<argument name>\").",
+                            parameterName,
                             argumentNames
                     ),
                     mappingContext

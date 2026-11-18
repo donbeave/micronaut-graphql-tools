@@ -85,8 +85,10 @@ public record ArgumentVerdict(List<Slot> slots, @Nullable Failure failure) {
      * @param parameter the index of the parameter
      * @param name      the name the parameter binds (its own name or its {@code @GraphQLArgument} value)
      * @param available the argument names of the field, in schema order
+     * @param syntheticName whether {@code name} is the parameter's own name and the class file did not carry it
      */
-    public record ParameterWithoutArgument(int parameter, String name, List<String> available) implements Failure {
+    public record ParameterWithoutArgument(int parameter, String name, List<String> available,
+                                           boolean syntheticName) implements Failure {
 
         public ParameterWithoutArgument {
             available = List.copyOf(available);

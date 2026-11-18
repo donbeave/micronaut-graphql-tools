@@ -28,6 +28,8 @@ class VisitorCompilation {
     private final Map<String, String> options = new LinkedHashMap<>()
     private boolean schemaOption = true
     private final List<File> extraDirectories = []
+    private final List<File> extraClasspath = []
+    private boolean parametersFlag = true
 
     VisitorCompilation schema(String path, String content) {
         schemaFiles.put(path, content)
@@ -47,6 +49,18 @@ class VisitorCompilation {
     /** Directories that follow the one with the schema files of this compilation in the option. */
     VisitorCompilation extraSchemaDirectory(File directory) {
         extraDirectories.add(directory)
+        return this
+    }
+
+    /** A directory of class files that the sources compile against and that the runtime loads with them. */
+    VisitorCompilation classpath(File directory) {
+        extraClasspath.add(directory)
+        return this
+    }
+
+    /** Compiles without {@code -parameters}, as a build that does not set it would. */
+    VisitorCompilation withoutParametersFlag() {
+        parametersFlag = false
         return this
     }
 
@@ -70,10 +84,13 @@ class VisitorCompilation {
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>()
         StandardJavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, StandardCharsets.UTF_8)
         fileManager.setLocation(StandardLocation.CLASS_PATH,
-                System.getProperty('java.class.path').split(File.pathSeparator).collect { new File(it) })
+                System.getProperty('java.class.path').split(File.pathSeparator).collect { new File(it) } + extraClasspath)
         fileManager.setLocation(StandardLocation.CLASS_OUTPUT, [classes.toFile()])
 
-        List<String> arguments = ['-proc:full', '-parameters']
+        List<String> arguments = ['-proc:full']
+        if (parametersFlag) {
+            arguments.add('-parameters')
+        }
         if (schemaOption) {
             arguments.add("-A${ProcessorOptions.SCHEMA_DIRS}=${([schemaDir.toFile()] + extraDirectories).join(File.pathSeparator)}".toString())
         }
