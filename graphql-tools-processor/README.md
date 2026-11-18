@@ -61,8 +61,7 @@ or `kapt` for Kotlin). `test-suite-java` does this in its build. Maintainers use
 ## Public and internal
 
 Application code does not import anything from this module. Its classes are used by `javac` only, through the processor's
-service registration. The `processing` package is not annotated `@Internal` (one file is); it is internal by use, and it
-is removed by #144.
+service registration. The `processing` package is annotated `@Internal` in its `package-info.java`; it is implementation and is removed by #144.
 
 ## Relation to other modules
 

@@ -117,7 +117,7 @@ class PackageDocumentationSpec extends Specification {
             }
             try (Stream<Path> stream = Files.walk(sources)) {
                 stream.filter { it.toString().endsWith('.java') }.collect(Collectors.toList()).groupBy { it.parent }.each { dir, files ->
-                    def name = sources.relativize(dir).toString().replace('/', '.')
+                    def name = sources.relativize(dir).iterator().collect { it.toString() }.join('.')
                     result[name] = [
                             dir        : dir,
                             packageInfo: files.find { it.fileName.toString() == 'package-info.java' },
