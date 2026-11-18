@@ -106,7 +106,7 @@ final class RuntimeWiringCustomizers {
                 customizer.customize(builder);
             } catch (RuntimeException e) {
                 String rejected = rejectedDuplicateField(e);
-                if (rejected == null) {
+                if (rejected == null || !before.hasDataFetcher(rejected) || claimed.containsKey(rejected)) {
                     throw e;
                 }
                 replacements.add("data fetcher of " + rejected + by);
@@ -181,6 +181,11 @@ final class RuntimeWiringCustomizers {
                     new TreeMap<>(runtimeWiring.getRegisteredDirectiveWiring()),
                     runtimeWiring.getCodeRegistry()
             );
+        }
+
+        boolean hasDataFetcher(String coordinate) {
+            int dot = coordinate.indexOf('.');
+            return dataFetchers.getOrDefault(coordinate.substring(0, dot), Map.of()).containsKey(coordinate.substring(dot + 1));
         }
 
         boolean restoreClearedDefaultDataFetchers(RuntimeWiring.Builder builder, Snapshot after) {

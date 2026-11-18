@@ -33,6 +33,7 @@ class RuntimeWiringCustomizerSpec extends AbstractTest {
     static final String SPEC_NAME_CODE_REGISTRY_UNWIRED = "RuntimeWiringCustomizerSpec.codeRegistryUnwired"
     static final String SPEC_NAME_SHADOW = "RuntimeWiringCustomizerSpec.shadow"
     static final String SPEC_NAME_SHADOW_JAVA = "RuntimeWiringCustomizerSpec.shadowJava"
+    static final String SPEC_NAME_SHADOW_UNBOUND_TWICE = "RuntimeWiringCustomizerSpec.shadowUnboundTwice"
     static final String SPEC_NAME_SHADOW_ALLOWED = "RuntimeWiringCustomizerSpec.shadowAllowed"
 
     // Some graphql-java lines make RuntimeWiring.Builder reject a replaced data fetcher itself, at the first one; others
@@ -210,6 +211,23 @@ scalar Long
         getGraphQLBean().graphQLSchema.codeRegistry.hasDataFetcher(FieldCoordinates.coordinates('Orphan', 'id'))
     }
 
+    void "a customizer registering a field the library does not bind twice is not reported as a replacement of library wiring"() {
+        given:
+        startContext(SCHEMA + '\ntype Orphan {\n  id: ID\n}\n',
+                SPEC_NAME_SHADOW_UNBOUND_TWICE, ['micronaut.graphql.tools.allow-unreachable': ['Orphan']])
+
+        when:
+        Throwable failure = null
+        try {
+            getGraphQLBean()
+        } catch (BeanInstantiationException e) {
+            failure = e.cause
+        }
+
+        then:
+        BUILDER_REJECTS_REPLACEMENTS ? failure.class.name == 'graphql.schema.idl.errors.StrictModeWiringException' : failure == null
+    }
+
     void "replacing the wiring factory fails the startup on every graphql-java line"() {
         given:
         startContext(SCHEMA, SPEC_NAME_WIRING_FACTORY)
@@ -299,6 +317,16 @@ scalar Long
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.type('Item') { it.dataFetcher('name', new StaticDataFetcher('HIJACKED')) }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_SHADOW_UNBOUND_TWICE)
+    @Singleton
+    static class RegisterUnboundTwice implements RuntimeWiringCustomizer {
+        @Override
+        void customize(RuntimeWiring.Builder builder) {
+            builder.type('Orphan') { it.dataFetcher('id', new StaticDataFetcher('one')) }
+            builder.type('Orphan') { it.dataFetcher('id', new StaticDataFetcher('two')) }
         }
     }
 

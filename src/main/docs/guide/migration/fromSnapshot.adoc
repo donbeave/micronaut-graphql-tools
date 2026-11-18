@@ -23,7 +23,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-10 `GraphQL` bean | The library creates its `GraphQL` bean only when the application has none. | Define your own `GraphQL` bean, or change the library's one with `GraphQLBuilderCustomizer`.
 | BC-11 bare `SchemaDirectiveWiring` bean | Startup fails with `UnwrappedDirectiveWiringException`. | Wrap the wiring in a `SchemaDirective` bean.
 | BC-12 directive without a wiring | Startup fails with `UnwiredDirectivesException`. | Add a wiring, or list the directive in `inert-directives`. Or set `strict: false`, which logs a warning.
-| BC-13 `RuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `RuntimeWiringOverrideException` (on graphql-java 25, `StrictModeWiringException` first). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
+| BC-13 `RuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `RuntimeWiringOverrideException` (on graphql-java 25, `StrictModeWiringException` first for a replaced default data fetcher, type resolver or scalar). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
 | BC-14 property and type resolver bind one field | Startup fails with `AmbiguousBindingException`. Before, the property won silently. | Remove one member, or choose the winner with `precedence` or `resolver-directives`. Or use `@GraphQLIgnore` on the getter.
 | BC-15 root resolvers per operation type | Startup fails when two root methods bind one field. Before, the first bean found won. | Remove one of two methods that bind the same field, or use `@Replaces` when one bean overrides another. Add `@GraphQLSchemaCoordinate` (for example `Query.field`) only when the methods serve different operation types.
 | BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding the startup reports, annotate it with `@GraphQLIgnore` (the compile-time processor does not read it yet), or set `strict: false`.
@@ -299,7 +299,7 @@ micronaut:
 
 === BC-13: a `RuntimeWiringCustomizer` that replaces the library's wiring
 
-A `RuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `RuntimeWiringOverrideException`. On graphql-java 25 the builder rejects the first replacement itself, with `StrictModeWiringException`, so the startup fails with that exception instead.
+A `RuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `RuntimeWiringOverrideException`. On graphql-java 25 the builder rejects the first replaced default data fetcher, type resolver or scalar itself, with `StrictModeWiringException`, so the startup fails with that exception instead. A replaced data fetcher of a library-wired field is always reported as `RuntimeWiringOverrideException`.
 
 Fix: add to the library's wiring in the customizer. To serve a field with a hand-written `DataFetcher`, return its coordinate from `claimedFields()`. The library then does not bind the field. The library does not traverse the return type of a claimed field, so that type must also be reached through another bound field, or listed in `allow-unreachable`.
 
