@@ -508,6 +508,7 @@ public final class InputBindingFindings {
      *
      * @param finding  the finding, or {@code null} for a silent stop
      * @param repeated whether the finding was reported before
+     * @param frame    not a stop: the input type that the walk reached and that the work stack binds next, or {@code null}
      */
     private record Halt(@Nullable Finding finding, boolean repeated, @Nullable InputFrame frame) {
 
@@ -517,7 +518,12 @@ public final class InputBindingFindings {
             this(finding, repeated, null);
         }
 
-        /** Not a stop: the walk reached an input type that has to be bound, which the work stack does. */
+        /**
+         * Not a stop: the walk reached an input type that has to be bound, which the work stack does.
+         *
+         * @param frame the input type to bind
+         * @return the pending step
+         */
         static Halt enter(InputFrame frame) {
             return new Halt(null, false, frame);
         }
