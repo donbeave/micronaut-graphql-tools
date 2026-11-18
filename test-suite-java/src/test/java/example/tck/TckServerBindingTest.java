@@ -32,13 +32,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * The server of a scenario binds the loopback address that its client connects to. On a wildcard address another process
  * that listens on the same port of the loopback address (a Gradle daemon does) takes the connections, and the request
- * fails with {@code header parser received no bytes} (#374).
+ * fails with {@code header parser received no bytes} (#374). The context ignores the test environment, whose
+ * properties also set the host, so that only {@code Tck.applicationProperties} decides it.
  */
 class TckServerBindingTest {
 
     @Test
     void anotherListenerCannotTakeThePortOfTheScenarioServer() throws IOException {
-        try (ApplicationContext context = ApplicationContext.builder().properties(Tck.applicationProperties("bean-scopes")).start()) {
+        try (ApplicationContext context = ApplicationContext.builder().deduceEnvironment(false)
+                .properties(Tck.applicationProperties("bean-scopes")).start()) {
             EmbeddedServer server = context.getBean(EmbeddedServer.class).start();
             assertEquals("127.0.0.1", server.getHost());
 
