@@ -35,4 +35,5 @@ Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven 
 
 - The compile-time manifest that the JSR-269 processor writes keeps the old words of the `!` lines until #144 removes the processor.
 - The diagnostics of the JSR-269 processor keep their `[graphql]` prefix until #144 removes it; the visitor that replaces it reports `[code]` from the registry.
+- `@GraphQLIgnore` and the lifecycle exclusion (#106) are applied by the visitor. The JSR-269 processor, which the build still runs, does not read `@GraphQLIgnore` and reports `@EventListener`, `@Scheduled` and `@PreDestroy` methods of a root resolver as unbound in strict mode until #291 makes the visitor the default.
 - The five compile-time checks are not relaxed by `checks.<code>`: the compile-time error stays (D-39); the JSR-269 processor keeps its own options until #291.

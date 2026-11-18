@@ -540,7 +540,7 @@ A member that binds no field on purpose does not need to relax a check for the w
   `@PreDestroy` on a resolver bean is not reported as unbound. It still binds a field if it has that field's name.
 - **`allow.findings`** accepts one finding by its manifest line, see [Allow lists](#allow-lists).
 
-The compile-time checks (`micronaut-graphql-tools-processor`) read the same annotations and apply the same rules, so a build and the startup agree.
+The compile-time visitor in `micronaut-graphql-tools-processor` reads the same annotations and applies the same rules, so a build and the startup agree. The visitor is not yet the default processor (#291): the JSR-269 processor that the build still runs does not read `@GraphQLIgnore` and does not exclude lifecycle methods.
 
 `strict: false` does not change `precedence`: with the default `strict` precedence, a field that both a getter and a
 type resolver can bind still fails the startup (`AmbiguousBindingException`).
