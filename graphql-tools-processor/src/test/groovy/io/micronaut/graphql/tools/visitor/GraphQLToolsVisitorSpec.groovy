@@ -14,6 +14,10 @@ type Query {
   books(genre: String): [Book!]!
   ping: String
   version: String
+  search(term: String!, limit: Int): String
+}
+type Orphan {
+  id: ID
 }
 type Mutation {
   save(title: String!): Book
@@ -103,6 +107,33 @@ public class QueryResolver {
 
         then:
         result.success
+    }
+
+    def "reordered parameters of different types are accepted; a duplicate binding and a missing parameter are rejected"() {
+        when:
+        def reordered = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String search(Integer limit, String term) { return term; }
+}''').compile()
+        def duplicate = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String search(String term, @GraphQLArgument("term") String other) { return term; }
+}''').compile()
+        def missing = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String search(String term) { return term; }
+}''').compile()
+
+        then:
+        reordered.success
+        duplicate.findings == ['[argument-mismatch] Query.search']
+        duplicate.errors[0].contains('two parameters bind the argument term of Query.search')
+        missing.findings == ['[argument-mismatch] Query.search']
+        missing.errors[0].contains('fewer parameters than the field needs: 1 found, 2 required')
+        missing.errors[0].contains('fix: declare it as search(String term, Int limit)')
     }
 
     def "the return type is checked against the field, after the arguments"() {
@@ -218,6 +249,18 @@ public interface IntroducedQuery {
 
         then:
         result.findings == ['[unbound-resolver-method] example.IntroducedQuery#stray()']
+    }
+
+    def "an unreachable type is not a compile-time finding: reachability is whole-program, a check of the startup (#83)"() {
+        when:
+        def result = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String version() { return "1"; }
+}''').compile()
+
+        then:
+        result.success
     }
 
     def "a class that no resolver annotation reaches is not checked, and says nothing"() {

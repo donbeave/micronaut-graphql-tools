@@ -104,7 +104,6 @@ val compileVisitorRelease17 by tasks.registering(JavaCompile::class) {
     destinationDirectory.set(layout.buildDirectory.dir("classes/visitor-release17"))
     options.release.set(17)
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror", "-Xlint:-processing"))
-    javaCompiler.set(javaToolchains.compilerFor { languageVersion.set(JavaLanguageVersion.of(21)) })
 }
 
 // The processor runs inside a compiler and must never put the runtime on its path (D-39): the main classpaths hold no

@@ -17,7 +17,6 @@ package io.micronaut.graphql.tools.visitor;
 
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
-import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationView;
 import io.micronaut.graphql.tools.binding.internal.model.JClass;

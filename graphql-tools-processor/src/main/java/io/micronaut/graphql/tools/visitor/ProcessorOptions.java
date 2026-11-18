@@ -64,11 +64,12 @@ record ProcessorOptions(List<Path> schemaDirs, boolean checks, List<Finding> err
         boolean checks = true;
         String checksValue = options.get(CHECKS);
         if (checksValue != null) {
-            switch (checksValue.trim().toLowerCase(Locale.ROOT)) {
-                case "true", "yes", "on" -> checks = true;
-                case "false", "no", "off" -> checks = false;
-                default -> errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, CHECKS + " must be true or false (or "
-                        + "yes/no, on/off), not '" + checksValue + "'"));
+            String normalized = checksValue.trim().toLowerCase(Locale.ROOT);
+            if (Set.of("false", "no", "off").contains(normalized)) {
+                checks = false;
+            } else if (!Set.of("true", "yes", "on").contains(normalized)) {
+                errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, CHECKS + " must be true or false (or yes/no, "
+                        + "on/off), not '" + checksValue + "'"));
             }
         }
 
