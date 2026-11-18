@@ -24,6 +24,7 @@ These changes are planned for the milestones of the tracker. Each one is _pendin
 * #17 (BC-24): the compile-time processor reads `*.graphqls` files only; a `*.graphql` file in the schema directory is no longer a schema file. See the migration page, entries for 1.0.0-M3.
 * #90 (BC-25): the binding manifest format is specified and versioned, and moves to version 2: ASCII separators, scalar lines that name the scalar, and a schema hash that does not depend on the order of the files. See the migration page, entries for 1.0.0-M3.
 * #36 (BC-26): Jackson leaves the `api` scope; an application that uses Jackson adds `micronaut-jackson-databind` itself. See the migration page, entries for 1.0.0-M3.
+* #159 (BC-28): the option `micronaut.graphql.tools.input.detect-omission` is removed; declaring `ArgumentValue` is enough. See the migration page, entries for 1.0.0-M3.
 * #86: per-check severity; the old keys are removed (_pending_).
 * #105: the default precedence becomes `fail` (_pending_).
 * #109: the exception subclasses become internal behind the public `SchemaBindingException` (_pending_; the base class and its `code()` are on `master` with BC-22).

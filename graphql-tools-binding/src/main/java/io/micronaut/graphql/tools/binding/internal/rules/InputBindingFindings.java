@@ -57,8 +57,7 @@ import java.util.stream.Collectors;
  *
  * <p>It reports what the class and the schema decide. It stops without a finding where the startup reports a code that is
  * not a compile-time code (a wrong class for a scalar, a list that is not a collection, a field without a property), where
- * the answer depends on a bean or a setting (a custom scalar, {@code ArgumentValue} under {@code input.detect-omission})
- * and where the type is bound to a different class by another resolver. A class problem of an input type or an enum is
+ * the answer depends on a bean (a custom scalar) and where the type is bound to a different class by another resolver. A class problem of an input type or an enum is
  * reported at the schema type, so that the coordinate does not depend on which field the startup reaches the type from.</p>
  *
  * <p>The findings are two lists, because the startup reports them in two phases: {@link #failures()} are binding
@@ -94,7 +93,7 @@ public final class InputBindingFindings {
 
     /**
      * @return whether the startup throws while it binds a type of this class: a failure, or a stop that has no finding of
-     * its own here (a wrong class for a scalar, a setting that this check cannot read)
+     * its own here (a wrong class for a scalar, a custom scalar)
      */
     public boolean halted() {
         return halted;
@@ -169,8 +168,8 @@ public final class InputBindingFindings {
         if (!declared.array() && InputTypeRules.ARGUMENT_VALUE.equals(declared.rawName())) {
             ArgumentValueMisuse misuse = InputTypeRules.argumentValueMisuse(declared, fieldLevel, nonNull);
             if (misuse == null) {
-                // fine or not with input.detect-omission, which only the startup reads
-                return Halt.SILENT;
+                // the startup binds what the wrapper wraps
+                return walk(site, declared.typeArguments().get(0), schemaType, fieldLevel);
             }
             return failed(site, BindingCode.UNSUPPORTED_INPUT_TYPE,
                     "the Java type is not supported for this argument or input field: "
@@ -275,6 +274,13 @@ public final class InputBindingFindings {
             Halt halt = walk(fieldSite, properties.get(field.getName()).type(), field.getType(), true);
             if (halt != null) {
                 return halt;
+            }
+            if (binding == FieldBinding.NOT_SETTABLE
+                    && InputTypeRules.ARGUMENT_VALUE.equals(properties.get(field.getName()).type().rawName())) {
+                return failed(fieldSite, BindingCode.UNSUPPORTED_INPUT_TYPE,
+                        "the Java type is not supported for this argument or input field: " + InputTypeRules.ARGUMENT_VALUE
+                                + " needs a writable property: it is set to omitted() when the client leaves it out.",
+                        null);
             }
             if (binding == FieldBinding.NOT_SETTABLE) {
                 return failed(fieldSite, BindingCode.INPUT_FIELD_NOT_SETTABLE,

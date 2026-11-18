@@ -97,9 +97,8 @@ def run_jmh(json_path, forks):
             jar = Path(tmp) / f"jmh-{size}.jar"
             part = Path(tmp) / f"jmh-{size}.json"
             jar.write_bytes(jars[-1].read_bytes())
-            # -Xss16m: the 10,000-field schema recurses once per type of its chain (see CONTRIBUTING.md and #297).
             subprocess.run(["java", "-jar", str(jar), BENCHMARKS, "-p", f"fields={size}", "-f", str(forks),
-                            "-wi", "0", "-i", "1", "-bm", "ss", "-jvmArgs", "-Xss16m", "-rf", "json", "-rff", str(part)],
+                            "-wi", "0", "-i", "1", "-bm", "ss", "-rf", "json", "-rff", str(part)],
                            cwd=ROOT, check=True)
             results.extend(load(part))
         Path(json_path).write_text(json.dumps(results, indent=2), encoding="utf-8")

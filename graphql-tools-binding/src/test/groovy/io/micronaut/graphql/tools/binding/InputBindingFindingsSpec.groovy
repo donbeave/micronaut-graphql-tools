@@ -154,18 +154,15 @@ enum Color { RED GREEN }
         check([count], collection('java.util.ArrayDeque')) == ['unsupported-input-type Query.count(ids:)']
     }
 
-    void "an ArgumentValue that can never work is unsupported-input-type, and one that depends on the configuration is left to the startup"() {
+    void "an ArgumentValue at a nullable position binds what it wraps"() {
         given:
         def wrapper = 'io.micronaut.graphql.tools.ArgumentValue'
-        def argument = { String name -> [name: { name }, nameIsSynthetic: { false }, type: { ref(wrapper, STRING) },
-                                         annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
-        def atNonNull = method('omitted', [:], [argument('a'), argument('b')], STRING, 'a.R#omitted(av,av)')
-        def nullable = method('omitted', [:], [argument('a'), FakeModel.parameter('b', 'java.lang.String')], STRING, 'a.R#omitted(av,String)')
+        def argument = { String name, TypeRef inner -> [name: { name }, nameIsSynthetic: { false }, type: { ref(wrapper, inner) },
+                                                        annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
+        def ok = method('omitted', [:], [argument('a', STRING), FakeModel.parameter('b', 'java.lang.String')], STRING, 'a.R#omitted(av,String)')
 
-        expect: 'a is nullable: whether it works depends on input.detect-omission, so the check says nothing and stops'
-        check([nullable]) == []
-        and: 'b is non-null: no configuration makes it work, but the startup stops at a first'
-        check([atNonNull]) == []
+        expect:
+        check([ok]) == []
     }
 
     void "an ArgumentValue at a non-null position is unsupported-input-type"() {

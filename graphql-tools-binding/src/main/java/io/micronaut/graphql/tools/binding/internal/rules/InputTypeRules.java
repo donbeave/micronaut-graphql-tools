@@ -93,8 +93,7 @@ public final class InputTypeRules {
     }
 
     /**
-     * Whether an {@code ArgumentValue} is declared where it can never work. A declaration that is none of these works
-     * or fails with the configuration ({@code input.detect-omission}), which the compile-time check cannot read.
+     * Whether an {@code ArgumentValue} is declared where it can never work.
      *
      * @param declared   the declared type
      * @param fieldLevel whether the type is the type of the argument or input field itself, not a list element

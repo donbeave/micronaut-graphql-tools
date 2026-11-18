@@ -20,8 +20,7 @@ import io.micronaut.graphql.tools.MappingContext;
 
 /**
  * Thrown when the declared Java type of an argument or an input object field cannot be used in that place, e.g. an
- * {@link io.micronaut.graphql.tools.ArgumentValue} without the option that enables it, on a non-null GraphQL type or
- * inside a list.
+ * {@link io.micronaut.graphql.tools.ArgumentValue} on a non-null GraphQL type or inside a list.
  */
 public final class UnsupportedInputTypeException extends AbstractMappingException {
 
