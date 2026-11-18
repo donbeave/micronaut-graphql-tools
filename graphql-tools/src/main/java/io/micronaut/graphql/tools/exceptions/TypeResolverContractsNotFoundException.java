@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 
 /**
@@ -23,12 +24,12 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
  * be read. This happens when class annotations are not available at runtime, for example in a native image without
  * reflection configuration for the contract types.
  */
-public final class TypeResolverContractsNotFoundException extends RuntimeException {
+public final class TypeResolverContractsNotFoundException extends SchemaBindingException {
 
     private final Class<?> beanType;
 
     public TypeResolverContractsNotFoundException(Class<?> beanType) {
-        super("The bean " + beanType.getName() + " is a @" + GraphQLTypeResolver.class.getSimpleName()
+        super(BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND, "The bean " + beanType.getName() + " is a @" + GraphQLTypeResolver.class.getSimpleName()
                 + " only through an inherited annotation, but no type of its class hierarchy declares the annotation "
                 + "at runtime, so its contracts cannot be read. Make the annotations of the contract types available "
                 + "to reflection (for example the reflection configuration of a native image), or annotate the bean "

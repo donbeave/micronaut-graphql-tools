@@ -10,7 +10,7 @@ Open issues are listed at [donbeave/micronaut-graphql-tools/issues](https://gith
 
 ## JDK Setup
 
-Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check` works: the processor module and the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
+Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check` works: the processor module and the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
 
 The tools are pinned in `mise.toml` and installed with [mise](https://mise.jdx.dev): run `mise install` in the project directory. It installs Oracle GraalVM 25 (the build JDK, and `native-image` for the native tests) and `jactionlint` (a fork of actionlint that lints the workflows and composite actions: run `jactionlint` in the project directory; CI runs the same command in the `actionlint` job, with the default profile, which adds the security rules). It is pinned in `mise.toml`; the [jactionlint documentation](https://jactionlint.jdx.dev) lists the other install methods. To build on another JDK line, select an overlay with `MISE_ENV`, for example `export MISE_ENV=jdk21` and then `mise install` (or one command at a time: `MISE_ENV=jdk21 mise exec -- ./gradlew build`; `mise install` alone does not activate the tools, so keep `MISE_ENV` set, or use `mise exec`, when you run Gradle) (`jdk17`, `jdk21`, `jdk25` and `jdk27` install Temurin; JDK 27 is for the canary only). Gradle is not installed by mise: use `./gradlew`.
 
@@ -24,7 +24,7 @@ The tests do not need Docker. These are the commands CI runs (all in `.github/wo
 
 - `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
 - `./gradlew build -PgraphqlJavaLeg=floor|ceiling` runs the same build on another graphql-java leg (`default` is the default; `latest` is for the canary). The versions of each role are in `gradle/libs.versions.toml`; the README explains the roles. `-PgraphqlJavaCompileLeg=default` compiles main code on the default leg while the tests run on the leg of `-PgraphqlJavaLeg` (the binary compatibility job).
-- `./gradlew :micronaut-graphql-tools:check` checks the library only; this is the one that works on JDK 17.
+- `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check` checks the library and its binding module only; this is the one that works on JDK 17.
 - `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` runs the native image tests (the build runs tasks in parallel by default, and each native build needs about 5 GB) (Oracle GraalVM 25); add `-PgraphqlJavaLeg=ceiling` for another leg.
 
 `.github/workflows/gradle.yml` is the source of truth if this list and the workflow ever disagree.
@@ -37,13 +37,13 @@ The example applications are three separate Gradle projects with the same schema
 | --- | --- | --- | --- |
 | `test-suite-java` | Java (annotation processors) | `./gradlew :test-suite-java:test` | `./gradlew :test-suite-java:nativeTest` |
 | `test-suite-kotlin` | Kotlin 2.1.21 with KSP2 (Java and Kotlin target 21) | `./gradlew :test-suite-kotlin:test` | `./gradlew :test-suite-kotlin:nativeTest` |
-| `test-suite-groovy` | Groovy (Spock) | `./gradlew :test-suite-groovy:test` | none (see below) |
+| `test-suite-groovy` | Groovy (Spock) | `./gradlew :test-suite-groovy:test` | no native test: `./gradlew :test-suite-groovy:nativeSmokeTest` (see below) |
 
 Each native test takes about 5 to 7 minutes and 5 GB of memory: run them one after another.
 
 The three schemas (`src/main/resources/schema.graphqls`) are copies; `./gradlew :test-suite-java:checkSuiteSchemaParity` (part of `check`) fails when they differ.
 
-Groovy has no native test. `:test-suite-groovy:nativeTest` was tried on Oracle GraalVM 25.0.5.0.3 and Micronaut 4.10: with Spock the native test launcher fails at discovery (`ClassNotFoundException: org.spockframework.runtime.extension.builtin.IncludeExcludeExtension`, Spock loads its extensions reflectively and ships no native metadata). With a JUnit 5 Groovy test instead, the image builds and starts, but the Groovy runtime needs build-time initialisation of `org.codehaus.groovy`, `groovy`, `org.apache.groovy` and `groovyjarjar*`, `indy` off, and reflection metadata for what Groovy's meta-class machinery and AST-generated code call at run time (enum `$INIT`, `ImmutableASTTransformation.checkPropNames`, `org.codehaus.groovy.runtime.dgm$N`); each fix exposed the next, and Groovy 4.0.x ships no GraalVM metadata. So the Groovy suite runs on the JVM only.
+Groovy has no native test, because Spock cannot run natively: its extensions are loaded reflectively and it ships no native metadata (D-38). The Groovy application is smoke-tested natively instead. `./gradlew :test-suite-groovy:nativeSmokeTest` (Oracle GraalVM 25, about 5 minutes and 5 GB) builds the native executable with `:test-suite-groovy:nativeCompile`, starts it on a free port, posts the queries of the Java and Kotlin smoke tests to `/graphql` (`src/nativeSmoke/groovy/NativeSmoke.groovy`), asserts the response bodies and stops the process; add `-PgraphqlJavaLeg=ceiling` for another leg. Groovy 4.0.x ships no GraalVM metadata, so the reachability metadata the Groovy runtime needs is in `test-suite-groovy/src/main/resources/META-INF/native-image`: the `invokedynamic` call sites are off, the example code is `@CompileStatic`, SAM arguments are Java lambdas (a closure passed as a SAM type is coerced at run time, which the image cannot do), and each closure class that a Groovy method (`findAll`, `collect`, ...) calls is listed in `reflect-config.json`; add one when you add such a closure, the smoke test fails without it. The Spock suite itself runs on the JVM only.
 
 Responses keep their null fields (#45): `example.nullfields` sends raw HTTP requests and checks that `null` values keep their keys, under each JSON configuration. The default stack (Jackson databind, with and without `jackson.serialization-inclusion=NON_NULL`) runs in `test`, so `nativeTest` runs it too. Micronaut Serialization (`micronaut-serde-jackson`, with the default inclusion, `NON_NULL` and `ALWAYS` set through `micronaut.serde.serialization.inclusion`) runs in its own source set and task, `./gradlew :test-suite-java:serdeTest` (part of `check`), because `micronaut-serde-jackson` makes its `JsonMapper` win and the two stacks cannot share a test classpath. `./gradlew :test-suite-java:nativeSerdeTest` runs the same classes as a native binary (the `native` CI job runs it). The guard test `usesTheExpectedJsonStack` asserts the mapper class in both runs. The native-image Gradle plugin builds the image classpath of every test binary from `testRuntimeClasspath`, which has no `micronaut-serde`; `test-suite-java/build.gradle.kts` therefore adds the serde source set's runtime classpath to `nativeImageSerdeTestClasspath`. Without that the image has no Serde bean definitions and selects `JacksonDatabindMapper`.
 
@@ -138,7 +138,7 @@ The `benchmarks` module measures the request hot path (D-02): a property fetch, 
 with its source, the conversion of scalar, enum, input object and list-of-inputs arguments, union and interface
 resolution from four threads, a directive-wrapped fetcher, and a whole query over 1,000 and 10,000 objects with four
 fields each. `BindingBenchmark` measures start-up: it starts a fresh application context and binds a generated schema of
-100, 1,600 or 10,000 fields (the `fields` parameter: 10, 160 or 1,000 object types of 10 fields, generated by the
+100, 1,600, 3,000, 10,000 or 20,000 fields (the `fields` parameter: 10, 160, 300, 1,000 or 2,000 object types of 10 fields, generated by the
 `generateLargeSchema` task), with the binding manifest recorded or not (`micronaut.graphql.tools.manifest.record`), one
 invocation per context. `RetainedHeapBenchmark` takes the same parameters and reports the heap a started context keeps
 as the secondary result `retainedBytes`: the heap in use after a full collection with the context open, minus the heap
@@ -149,7 +149,7 @@ the JSON. Both are measured cold, one fresh JVM per sample, only by `scripts/sta
 The benchmark jar generates the 1,600-field schema only, as before, so the other start-up benchmarks bind the same
 schema as before. Each other size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build), so
 that the JVM of a size has no other size on its classpath. `jmhSmokeTest` generates the 100 and 10,000-field schemas in
-its own source set. Measured: the 100-field context retained 14.4 MB with all three sizes on the
+its own source set and runs those two sizes only. Measured: the 100-field context retained 14.4 MB with all three sizes on the
 classpath and 4.7 MB with the 100-field classes alone. The 10,000-field schema is a chain of 1,000 types, and binding
 recurses once per type of the chain: the default thread stack overflows, so the benchmark JVMs run with `-Xss16m`. This
 is a workaround for #297, which removes the recursion; remove the flag when #297 lands (`jvmArgs` in
@@ -187,6 +187,13 @@ over the per-fork values in the JMH JSON. `--json <file>` keeps the JSON, `--pre
 an earlier JSON, and `--from <file>` reports a JSON without running anything. The report prints the JDK, so quote it with
 the figures. The last jar it builds is a one-size jar: run `./gradlew :benchmarks:jmhJar` again before the other benchmarks.
 
+The `Startup benchmark` workflow (`.github/workflows/startup-benchmark.yml`) runs the command every night and on demand
+(Actions, "Run workflow"). It archives the JSON as the `startup-benchmark` artifact (90 days), prints the medians and the
+change against the last successful run in the job summary, and is never part of the pull request gate: the figures are
+reported, not gated. Hosted runners are shared, so read the retained heap first and treat a binding-time change inside
+the spread of the forks as noise. To compare a change with master, run the command on each checkout with `--json` and
+pass the master JSON to `--previous`.
+
 When an allocation changes on purpose, record the new baselines of the three legs (`floor`, `default`, `ceiling`) and commit the file; the diff is the
 review of the change:
 
@@ -202,7 +209,7 @@ where the gate is skipped (the module is not built there). Run the update on 21 
 
 ## Creating a pull request
 
-`master` is protected: every change goes through a pull request, and the pull request is squash-merged once the `required checks` status check is green. `required checks` is the only check the ruleset requires: it is the gate job in `gradle.yml`, and a job that must block merging is added to the `needs:` of that job (no ruleset edit). The native image jobs (`native (GraalVM 25, ...)`) are in the same workflow but not part of the gate yet.
+`master` is protected: every change goes through a pull request, and the pull request is squash-merged once the `required checks` status check is green. `required checks` is the only check the ruleset requires: it is the gate job in `gradle.yml`, and a job that must block merging is added to the `needs:` of that job (no ruleset edit). The native image jobs (`native (GraalVM 25, ...)`) are in the same workflow but not part of the gate yet; the `native Groovy smoke (...)` jobs are in the gate.
 
 - Create a branch, commit with `git commit -s` (DCO sign-off) and push it to your fork or to a branch of the repository.
 - Use a [conventional commit](https://www.conventionalcommits.org/) style title for the pull request (`feat:`, `fix:`, `docs:`, `build:`, `ci:`, `perf:`, `test:`, `chore:`). It becomes the squashed commit message.
@@ -233,4 +240,4 @@ The plugin also adds a new tab in the bottom of the IDE to run Checkstyle and sh
 
 Only milestone versions (`1.0.0-M<n>`, later `1.0.0`) are published, to the GitHub Packages Maven registry of this repository (D-40). There is no Maven Central, GitHub Release or snapshot publishing. A maintainer cuts a release by pushing a version tag on `master`; the `Release` workflow (`.github/workflows/release.yml`) then builds the tagged commit, checks that the build version equals the tag and publishes the library, the annotation processor and the BOM. Contributors never publish. See [MAINTAINING.md](MAINTAINING.md#releases) for the steps and [README.md](README.md#consuming-milestone-previews) for how to consume a release.
 
-CI is one workflow, `.github/workflows/gradle.yml` (`Java CI`: build and tests, the native image tests, the guide, the workflow lint (the `actionlint` job, which runs `jactionlint`), plus the `required checks` gate), with the shared tool setup in `.github/actions/setup-build`.
+CI is one workflow, `.github/workflows/gradle.yml` (`Java CI`: build and tests, the native image tests, the Groovy native smoke test, the guide, the workflow lint (the `actionlint` job, which runs `jactionlint`), plus the `required checks` gate), with the shared tool setup in `.github/actions/setup-build`.

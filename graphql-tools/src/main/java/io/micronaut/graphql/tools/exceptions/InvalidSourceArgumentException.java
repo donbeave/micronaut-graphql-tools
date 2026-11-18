@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
@@ -27,7 +28,7 @@ public final class InvalidSourceArgumentException extends AbstractMappingExcepti
 
     public InvalidSourceArgumentException(MappingContext mappingContext, Class<?> providedClass,
                                           Class<?> requiredClass) {
-        super(
+        super(BindingCode.INVALID_SOURCE_PARAMETER,
                 String.format(
                         "The source argument must be instance of %s class, provided: %s.",
                         requiredClass.getName(),

@@ -1,1 +1,1 @@
-MethodNotFoundException Query.helper schema.graphqls:7:3
+field-not-bound Query.helper schema.graphqls:7:3

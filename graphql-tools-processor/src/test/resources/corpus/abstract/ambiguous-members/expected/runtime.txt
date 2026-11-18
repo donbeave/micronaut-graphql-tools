@@ -1,1 +1,1 @@
-AmbiguousAbstractTypeException example.BoxedAndBagged -
+ambiguous-abstract-type example.BoxedAndBagged -

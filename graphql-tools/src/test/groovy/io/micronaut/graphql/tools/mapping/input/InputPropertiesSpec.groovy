@@ -10,15 +10,8 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.PropertyNamingStrategies
-import io.micronaut.context.annotation.Bean
-import io.micronaut.context.annotation.Factory
 import io.micronaut.graphql.tools.exceptions.InputFieldNotSettableException
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
-import io.micronaut.jackson.modules.BeanIntrospectionModule
-import jakarta.inject.Named
-import jakarta.inject.Singleton
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
 import org.intellij.lang.annotations.Language
 
@@ -31,7 +24,6 @@ class InputPropertiesSpec extends AbstractTest {
     static final String SPEC_EXTRA = "InputPropertiesSpecExtra"
     static final String SPEC_EXACT = "InputPropertiesSpecExact"
     static final String SPEC_READ_ONLY = "InputPropertiesSpecReadOnly"
-    static final String SPEC_RENAMED = "InputPropertiesSpecRenamed"
     static final String SPEC_IGNORED = "InputPropertiesSpecIgnored"
 
     static final String UNMAPPED = GraphQLToolsConfiguration.PREFIX + '.input.unmapped-properties'
@@ -61,21 +53,6 @@ type Query {
   order(items: [ItemInput!]): String
 }
 """ + ITEM_INPUT
-
-    static final String SCHEMA_PRICED = """
-schema {
-  query: Query
-}
-
-type Query {
-  order(items: [ItemInput!]): String
-}
-
-input ItemInput {
-  sku: String!
-  unitPrice: Float
-}
-"""
 
     static final String SCHEMA_BASKET = """
 schema {
@@ -121,7 +98,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
+        e.cause.message == """[field-not-bound] The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
   GraphQL input object type: ItemInput
   GraphQL input value: quantity
@@ -174,7 +151,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnmappedInputPropertiesException
-        e.cause.message == """Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):
+        e.cause.message == """[unmapped-input-property] Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):
   GraphQL input object type: BasketInput, mapped class: ${ExtraBasket.name}, properties: giftWrap
   GraphQL input object type: ItemInput, mapped class: ${ExtraItem.name}, properties: discount, legacyCode"""
     }
@@ -212,7 +189,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InputFieldNotSettableException
-        e.cause.message == """The input field ItemInput.quantity cannot be set: the input ObjectMapper has no settable property `quantity` in ${ReadOnlyItem.name} (it is read-only, ignored or renamed for Jackson).
+        e.cause.message == """[input-field-not-settable] The input field ItemInput.quantity cannot be set: the property `quantity` of ${ReadOnlyItem.name} has no setter and is not a constructor parameter.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
   GraphQL input object type: ItemInput
   GraphQL input value: quantity
@@ -220,28 +197,16 @@ type Query {
   Mapped property: quantity"""
     }
 
-    void "an input field bound to a property the named mapper renames fails the startup"() {
-        when:
-        startContext(SCHEMA_PRICED, SPEC_RENAMED)
-        getGraphQLBean()
-
-        then: 'with SNAKE_CASE, Jackson knows the property as unit_price'
-        def e = thrown(BeanInstantiationException)
-        e.cause instanceof InputFieldNotSettableException
-        e.cause.message.startsWith("The input field ItemInput.unitPrice cannot be set: the input ObjectMapper has no " +
-                "settable property `unitPrice` in ${PricedItem.name}")
-    }
-
-    void "an input field bound to a JsonIgnore property fails the startup"() {
-        when:
+    void "a Jackson annotation is not part of the input contract: a JsonIgnore property is set"() {
+        given:
         startContext(SCHEMA_LIST, SPEC_IGNORED)
-        getGraphQLBean()
+
+        when:
+        def result = executeQuery('{ order(items: [{sku: "a", quantity: 3}]) }')
 
         then:
-        def e = thrown(BeanInstantiationException)
-        e.cause instanceof InputFieldNotSettableException
-        e.cause.message.startsWith("The input field ItemInput.quantity cannot be set: the input ObjectMapper has no " +
-                "settable property `quantity` in ${IgnoredItem.name}")
+        result.errors.isEmpty()
+        result.data.order == 'a x 3'
     }
 
     void "default: input classes that match their input types start"() {
@@ -338,38 +303,11 @@ type Query {
         }
     }
 
-    @Requires(property = 'spec.name', value = SPEC_RENAMED)
-    @GraphQLRootResolver
-    static class RenamedQuery {
-        String order(List<PricedItem> items) {
-            return null
-        }
-    }
-
-    @Requires(property = 'spec.name', value = SPEC_RENAMED)
-    @Factory
-    static class RenamingMappers {
-        @Bean
-        @Singleton
-        @Named(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER)
-        ObjectMapper graphQLToolsObjectMapper() {
-            return new ObjectMapper()
-                    .registerModule(new BeanIntrospectionModule())
-                    .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-        }
-    }
-
-    @GraphQLInput
-    static class PricedItem {
-        String sku
-        Double unitPrice
-    }
-
     @Requires(property = 'spec.name', value = SPEC_IGNORED)
     @GraphQLRootResolver
     static class IgnoredQuery {
         String order(List<IgnoredItem> items) {
-            return null
+            return items.collect { "${it.sku} x ${it.quantity}" }.join(', ')
         }
     }
 

@@ -16,34 +16,42 @@
 package io.micronaut.graphql.tools;
 
 import io.micronaut.aop.Intercepted;
+import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Infrastructure;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
+import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+import io.micronaut.graphql.tools.binding.internal.model.JMethod;
+import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.exceptions.AmbiguousTypeResolverException;
 import io.micronaut.graphql.tools.exceptions.IncorrectAnnotationException;
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
 import io.micronaut.graphql.tools.exceptions.TypeResolverContractsNotFoundException;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
+import io.micronaut.inject.qualifiers.Qualifiers;
 import jakarta.inject.Singleton;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -68,17 +76,30 @@ public final class GraphQLResolversRegistry {
     private Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader =
             GraphQLResolversRegistry::findTypeResolverContracts;
     private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
+    // by the signature of the method as the type model prints it
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
+    private final RuntimeTypeModel typeModel = new RuntimeTypeModel();
+
+    private final BeanContext beanContext;
+    private final Set<BeanDefinition<?>> seenRootResolvers = new HashSet<>();
+    private final Set<BeanDefinition<?>> seenTypeResolvers = new HashSet<>();
+    private final Set<BeanDefinition<?>> seenSchemaCoordinates = new HashSet<>();
+    private boolean introductionBeansRegistered;
+
+    public GraphQLResolversRegistry(BeanContext beanContext) {
+        this.beanContext = beanContext;
+    }
 
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        if (method.isAbstract()) {
+        seenRootResolvers.add(beanDefinition);
+        if (beanDefinition.isAbstract()) {
             return;
         }
         rootResolvers.stream()
                 .filter(it -> it.getBeanDefinition().equals(beanDefinition))
                 .findFirst()
                 .orElseGet(() -> {
-                    BeanDefinitionAndMethods item = new BeanDefinitionAndMethods(beanDefinition);
+                    BeanDefinitionAndMethods item = new BeanDefinitionAndMethods(beanDefinition, typeModel::method);
                     rootResolvers.add(item);
                     return item;
                 })
@@ -86,7 +107,8 @@ public final class GraphQLResolversRegistry {
     }
 
     public void registerTypeResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        if (method.isAbstract()) {
+        seenTypeResolvers.add(beanDefinition);
+        if (beanDefinition.isAbstract()) {
             return;
         }
         getTypeResolverValue(beanDefinition);
@@ -144,7 +166,7 @@ public final class GraphQLResolversRegistry {
                 .filter(it -> it.getBeanDefinition().equals(beanDefinition))
                 .findFirst()
                 .orElseGet(() -> {
-                    BeanDefinitionAndMethods item = new BeanDefinitionAndMethods(beanDefinition);
+                    BeanDefinitionAndMethods item = new BeanDefinitionAndMethods(beanDefinition, typeModel::method);
                     typeResolvers.get(modelClass).add(item);
                     return item;
                 })
@@ -156,24 +178,68 @@ public final class GraphQLResolversRegistry {
     }
 
     /**
-     * Records a method that carries {@link GraphQLSchemaCoordinate}, whatever the bean is.
+     * Records a method that carries {@code @GraphQLSchemaCoordinate}, whatever the bean is.
      *
      * @param beanDefinition the bean definition
      * @param method         the method
      */
     public void registerSchemaCoordinateExecutableMethod(BeanDefinition<?> beanDefinition,
                                                          ExecutableMethod<Object, ?> method) {
-        if (isIgnored(method)) {
+        seenSchemaCoordinates.add(beanDefinition);
+        JMethod view = typeModel.method(method);
+        if (ResolverClassRules.isIgnored(view)) {
             return;
         }
-        String coordinate = method.stringValue(GraphQLSchemaCoordinate.class).orElse("");
+        String coordinate = ResolverClassRules.declaredCoordinate(view);
 
         schemaCoordinateMethods.add(new SchemaCoordinateMethod(beanDefinition, method, coordinate));
         schemaCoordinateSignatures.computeIfAbsent(beanDefinition, it -> new HashMap<>())
-                .put(getExecutableMethodFullName(method), coordinate);
+                .put(view.signature(), coordinate);
+    }
+
+    /**
+     * Micronaut does not mark the bean definition of an introduction advice interface for startup method processing,
+     * so the processors never see it when no other resolver bean needs them. Registers those beans' methods.
+     */
+    private void registerIntroductionBeans() {
+        if (introductionBeansRegistered) {
+            return;
+        }
+        introductionBeansRegistered = true;
+        Collection<BeanDefinition<?>> roots = definitionsOf(GraphQLRootResolver.class);
+        Collection<BeanDefinition<?>> types = definitionsOf(GraphQLTypeResolver.class);
+        registerUnseen(GraphQLRootResolver.class, roots, seenRootResolvers, this::registerRootResolverExecutableMethod);
+        registerUnseen(GraphQLTypeResolver.class, types, seenTypeResolvers, this::registerTypeResolverExecutableMethod);
+        Set<BeanDefinition<?>> coordinateBeans = new LinkedHashSet<>(roots);
+        coordinateBeans.addAll(types);
+        coordinateBeans.addAll(definitionsOf(GraphQLSchemaCoordinate.class));
+        registerUnseen(GraphQLSchemaCoordinate.class, coordinateBeans, seenSchemaCoordinates,
+                this::registerSchemaCoordinateExecutableMethod);
+    }
+
+    private Collection<BeanDefinition<?>> definitionsOf(Class<? extends Annotation> annotation) {
+        return beanContext.getBeanDefinitions(Qualifiers.byStereotype(annotation));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void registerUnseen(Class<? extends Annotation> annotation,
+                                Collection<BeanDefinition<?>> definitions,
+                                Set<BeanDefinition<?>> seen,
+                                BiConsumer<BeanDefinition<?>, ExecutableMethod<Object, ?>> register) {
+        for (BeanDefinition<?> beanDefinition : definitions) {
+            if (seen.contains(beanDefinition)) {
+                continue;
+            }
+            for (ExecutableMethod method : beanDefinition.getExecutableMethods()) {
+                if (method.hasStereotype(annotation)) {
+                    register.accept(beanDefinition, method);
+                }
+            }
+        }
     }
 
     List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
+        registerIntroductionBeans();
         return schemaCoordinateMethods.stream()
                 .filter(it -> !isIgnored(it.method()))
                 .sorted(Comparator.comparing(SchemaCoordinateMethod::describe))
@@ -181,36 +247,27 @@ public final class GraphQLResolversRegistry {
     }
 
     private boolean isCandidate(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        if (isIgnored(method)) {
-            return false;
-        }
-        Map<String, String> signatures = schemaCoordinateSignatures.get(beanDefinition);
-        return signatures == null || signatures.containsKey(getExecutableMethodFullName(method));
+        return ResolverClassRules.isCandidate(typeModel.method(method), schemaCoordinateSignatures.get(beanDefinition));
     }
 
-    private static boolean isIgnored(ExecutableMethod<?, ?> method) {
-        return method.hasAnnotation(GraphQLIgnore.class);
+    private boolean isIgnored(ExecutableMethod<?, ?> method) {
+        return ResolverClassRules.isIgnored(typeModel.method(method));
     }
 
-    private static boolean isLifecycleMethod(ExecutableMethod<?, ?> method) {
-        return method.hasAnnotation("io.micronaut.runtime.event.annotation.EventListener")
-                || method.hasAnnotation("io.micronaut.scheduling.annotation.Scheduled")
-                // Scheduled is repeatable: Micronaut keeps its metadata under the container
-                || method.hasAnnotation("io.micronaut.scheduling.annotation.Schedules")
-                || method.hasAnnotation("jakarta.annotation.PreDestroy");
+    private boolean isLifecycleMethod(ExecutableMethod<?, ?> method) {
+        return ResolverClassRules.isLifecycle(typeModel.method(method));
     }
 
     private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String methodName,
                                                       Set<String> coordinates) {
         Map<String, String> signatures = schemaCoordinateSignatures.get(item.getBeanDefinition());
-        return item.getExecutableMethods().stream()
-                .filter(executableMethod -> executableMethod.getMethodName().equals(methodName))
-                .filter(executableMethod -> !isIgnored(executableMethod))
-                .filter(executableMethod -> signatures == null
-                        || signatures.containsKey(getExecutableMethodFullName(executableMethod))
-                        && coordinates.contains(signatures.get(getExecutableMethodFullName(executableMethod))))
-                .map(executableMethod -> new BeanDefinitionAndMethod(item.getBeanDefinition(), executableMethod))
-                .collect(Collectors.toList());
+        List<BeanDefinitionAndMethod> result = new ArrayList<>();
+        item.getMethodViews().forEach((executableMethod, view) -> {
+            if (ResolverClassRules.bindsField(view, methodName, coordinates, signatures)) {
+                result.add(new BeanDefinitionAndMethod(item.getBeanDefinition(), executableMethod));
+            }
+        });
+        return result;
     }
 
     private static Map<Class<?>, Class<?>> findTypeResolverContracts(Class<?> beanType) {
@@ -237,6 +294,7 @@ public final class GraphQLResolversRegistry {
     }
 
     void verifyTypeResolverContracts() {
+        registerIntroductionBeans();
         resolveTypeResolverMethods();
 
         unreadableTypeResolverContracts.stream()
@@ -297,12 +355,32 @@ public final class GraphQLResolversRegistry {
             }
         }
         unassignedTypeResolverMethods.forEach((beanDefinition, methods) -> methods.stream()
-                .filter(GraphQLResolversRegistry::isIgnored)
+                .filter(this::isIgnored)
                 .forEach(method -> result.add(new BeanDefinitionAndMethod(beanDefinition, method))));
         return result;
     }
 
+    List<BeanDefinition<?>> rootResolverBeans() {
+        return rootResolvers.stream().<BeanDefinition<?>>map(BeanDefinitionAndMethods::getBeanDefinition).toList();
+    }
+
+    List<BeanDefinition<?>> typeResolverBeans() {
+        return typeResolvers.values().stream()
+                .flatMap(List::stream)
+                .<BeanDefinition<?>>map(BeanDefinitionAndMethods::getBeanDefinition)
+                .distinct()
+                .toList();
+    }
+
+    List<String> contractTypesOf(BeanDefinition<?> beanDefinition) {
+        return typeResolverContracts.getOrDefault(beanDefinition, Map.of()).values().stream()
+                .map(Class::getName)
+                .sorted()
+                .toList();
+    }
+
     boolean hasRootResolvers() {
+        registerIntroductionBeans();
         return !rootResolvers.isEmpty();
     }
 

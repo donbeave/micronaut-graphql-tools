@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 
 import java.util.List;
@@ -26,7 +27,7 @@ import java.util.stream.Collectors;
  * contracts) and some of its methods cannot be assigned to one of them: the first parameter of such a method, the
  * source object, is none of those classes.
  */
-public final class AmbiguousTypeResolverException extends RuntimeException {
+public final class AmbiguousTypeResolverException extends SchemaBindingException {
 
     private final Class<?> beanType;
     private final List<String> methods;
@@ -37,7 +38,7 @@ public final class AmbiguousTypeResolverException extends RuntimeException {
      * @param methods   the methods that cannot be assigned, in the order to report them
      */
     public AmbiguousTypeResolverException(Class<?> beanType, Map<Class<?>, Class<?>> contracts, List<String> methods) {
-        super("The bean " + beanType.getName() + " is a @" + GraphQLTypeResolver.class.getSimpleName()
+        super(BindingCode.AMBIGUOUS_TYPE_RESOLVER, "The bean " + beanType.getName() + " is a @" + GraphQLTypeResolver.class.getSimpleName()
                 + " for several classes through "
                 + contracts.entrySet().stream()
                 .map(it -> it.getKey().getName() + " (" + it.getValue().getName() + ")")

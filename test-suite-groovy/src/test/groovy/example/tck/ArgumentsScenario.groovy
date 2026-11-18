@@ -2,6 +2,7 @@ package example.tck
 
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.graphql.tools.ArgumentValue
 import io.micronaut.graphql.tools.annotation.GraphQLInput
@@ -11,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 // The fixtures of the TCK scenario `arguments`.
 
+@Introspected
 enum Color {
     RED, GREEN, BLUE
 }
@@ -30,6 +32,28 @@ class Shape {
     List<Point> points
     String note
 }
+
+// tag::constructor-input[]
+@CompileStatic
+@GraphQLInput
+class Stock {
+    final String sku
+    final int quantity
+    final Float weight
+    final List<String> tags
+    final Set<Color> colors
+    final ArgumentValue<String> comment
+
+    Stock(String sku, int quantity, Float weight, List<String> tags, Set<Color> colors, ArgumentValue<String> comment) {
+        this.sku = sku
+        this.quantity = quantity
+        this.weight = weight
+        this.tags = tags
+        this.colors = colors
+        this.comment = comment
+    }
+}
+// end::constructor-input[]
 
 @CompileStatic
 @GraphQLRootResolver
@@ -57,6 +81,10 @@ class ArgumentsQueries {
 
     int grid(List<List<Integer>> rows) {
         return rows.collectMany { it }.sum(0) as int
+    }
+
+    String stock(Stock stock) {
+        return "sku=$stock.sku quantity=$stock.quantity weight=$stock.weight tags=$stock.tags colors=$stock.colors comment=${presence(stock.comment)}".toString()
     }
 
     String shape(Shape shape) {

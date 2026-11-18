@@ -9,11 +9,9 @@
 # exception subclasses into internal classes behind one public SchemaBindingException (#109); the error codes are #237.
 # Whichever of these is still public when #96 lands is documented there, and the rest leave this list with #109.
 exception:AbstractMappingException # base class of the mapping exceptions; internal under D-22 (#109)
-exception:ClassNotIntrospectedException # pending the error reference (#96); internal under D-22 (#109)
 exception:IncorrectAnnotationException # pending the error reference (#96); internal under D-22 (#109)
 exception:IncorrectImplementationException # pending the error reference (#96); internal under D-22 (#109)
 exception:InvalidAllowUnreachableException # pending the error reference (#96); internal under D-22 (#109)
 exception:InvalidSourceArgumentException # pending the error reference (#96); internal under D-22 (#109)
-exception:MissingEnumValuesException # pending the error reference (#96); internal under D-22 (#109)
 exception:RootResolverNotFoundException # pending the error reference (#96); internal under D-22 (#109)
 exception:SchemaDefinitionNotProvidedException # pending the error reference (#96); internal under D-22 (#109)

@@ -30,13 +30,14 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
+import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
+import io.micronaut.graphql.tools.binding.internal.plan.BindingPlan;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
@@ -57,11 +58,9 @@ final class BindingManifestRecorder {
     static final String KIND_PROPERTY = "property";
     static final String KIND_CLAIMED = "claimed";
 
-    private static final String ARROW = " → ";
-    private static final String DOT = " · ";
-    private static final String NONE = "-";
+    private static final String NONE = BindingPlan.NONE;
 
-    private final Map<String, Supplier<String>> lines = new HashMap<>();
+    private final Map<String, BindingPlan.Entry> entries = new HashMap<>();
     private final Set<String> diagnostics = new TreeSet<>();
     private final Set<String> ignored = new TreeSet<>();
     private final Set<String> scalars = new TreeSet<>();
@@ -79,7 +78,8 @@ final class BindingManifestRecorder {
         if (!recording) {
             return;
         }
-        lines.put(typeName, () -> line(typeName, kind, javaType == null ? NONE : javaType.getTypeName(), NONE, NONE));
+        entries.put(typeName, BindingPlan.Entry.of(typeName, kind,
+                () -> javaType == null ? NONE : javaType.getTypeName()));
     }
 
     void scalar(String typeName) {
@@ -91,17 +91,18 @@ final class BindingManifestRecorder {
         if (!recording) {
             return;
         }
-        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
-                () -> line(coordinate(objectTypeDefinition, fieldDefinition), kind, member.get(),
-                        JavaTypeNames.of(declaredType), ReturnTypes.convertedTypeName(declaredType, subscription)));
+        entries.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                new BindingPlan.Entry(coordinate(objectTypeDefinition, fieldDefinition), kind, member,
+                        () -> JavaTypeNames.of(declaredType),
+                        () -> ReturnTypes.convertedTypeName(declaredType, subscription, true)));
     }
 
     void claimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String customizer) {
         if (!recording) {
             return;
         }
-        lines.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
-                () -> line(coordinate(objectTypeDefinition, fieldDefinition), KIND_CLAIMED, customizer, NONE, NONE));
+        entries.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                BindingPlan.Entry.of(coordinate(objectTypeDefinition, fieldDefinition), KIND_CLAIMED, () -> customizer));
     }
 
     private static String coordinate(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition) {
@@ -119,17 +120,16 @@ final class BindingManifestRecorder {
         if (!recording) {
             return;
         }
-        lines.put(abstractTypeName + "/" + objectTypeName,
-                () -> line(abstractTypeName + "/" + objectTypeName, "resolves", javaType.getTypeName(), NONE, NONE));
+        entries.put(abstractTypeName + "/" + objectTypeName,
+                BindingPlan.Entry.of(abstractTypeName + "/" + objectTypeName, "resolves", javaType::getTypeName));
     }
 
     void enumValue(String enumTypeName, String value, Class<?> enumClass) {
         if (!recording) {
             return;
         }
-        lines.put(enumTypeName + "." + value,
-                () -> line(enumTypeName + "." + value, "enumValue", enumClass.getTypeName() + "#" + value, NONE,
-                        NONE));
+        entries.put(enumTypeName + "." + value, BindingPlan.Entry.of(enumTypeName + "." + value, "enumValue",
+                () -> enumClass.getTypeName() + "#" + value));
     }
 
     void inputField(String inputTypeName, String fieldName, graphql.language.Type<?> graphQlType, Class<?> inputClass,
@@ -137,25 +137,25 @@ final class BindingManifestRecorder {
         if (!recording) {
             return;
         }
-        lines.put(inputTypeName + "." + fieldName, () -> line(inputTypeName + "." + fieldName + ": "
-                        + printType(graphQlType), "inputField", inputClass.getTypeName() + "#" + property.getName(),
-                JavaTypeNames.of(property.asArgument()), ReturnTypes.convertedTypeName(property.asArgument(), false)));
+        entries.put(inputTypeName + "." + fieldName, new BindingPlan.Entry(
+                inputTypeName + "." + fieldName + ": " + printType(graphQlType), "inputField",
+                () -> inputClass.getTypeName() + "#" + property.getName(),
+                () -> JavaTypeNames.of(property.asArgument()),
+                () -> ReturnTypes.convertedTypeName(property.asArgument(), false, false)));
     }
 
-    void diagnostic(String kind, String... parts) {
+    void diagnostic(BindingCode code, String... parts) {
         if (!recording) {
             return;
         }
-        diagnostics.add("!" + kind + " " + Arrays.stream(parts)
-                .map(BindingManifestRecorder::requirePart)
-                .collect(Collectors.joining(DOT)));
+        diagnostics.add(ManifestRenderer.diagnostic(code.code(), parts));
     }
 
     void ignored(String member) {
         if (!recording) {
             return;
         }
-        ignored.add("~ignored " + requirePart(member));
+        ignored.add(ManifestRenderer.ignored(member));
     }
 
     boolean isScalarReached(String typeName) {
@@ -171,31 +171,25 @@ final class BindingManifestRecorder {
         if (!recording) {
             return null;
         }
-        Map<String, Supplier<String>> recorded = new HashMap<>(lines);
-        Set<String> recordedDiagnostics = new TreeSet<>(diagnostics);
-        Set<String> recordedScalars = new TreeSet<>(scalars);
-        Set<String> recordedIgnored = new TreeSet<>(ignored);
-        return new BindingManifest(() -> {
-            List<String> body = new ArrayList<>(recorded.size() + recordedDiagnostics.size() + recordedScalars.size());
-            recorded.values().forEach(it -> body.add(it.get()));
-            body.addAll(recordedDiagnostics);
-            body.addAll(recordedIgnored);
-            for (String scalar : recordedScalars) {
+        List<BindingPlan.Entry> bound = new ArrayList<>(entries.values());
+        for (String scalar : scalars) {
+            bound.add(BindingPlan.Entry.of(scalar, "scalar", () -> {
                 GraphQLType type = schema.getType(scalar);
                 Class<?> coercing = type instanceof GraphQLScalarType scalarType
                         ? scalarType.getCoercing().getClass() : null;
-                body.add(line(scalar, "scalar", coercing == null ? NONE : coercing.getTypeName(), NONE, NONE));
-            }
-            body.sort(Comparator.naturalOrder());
-
+                return coercing == null ? NONE : coercing.getTypeName();
+            }));
+        }
+        BindingPlan plan = new BindingPlan(bound, List.copyOf(diagnostics), List.copyOf(ignored));
+        return new BindingManifest(() -> {
             List<String> header = List.of(
-                    BindingManifest.FORMAT,
                     "# binder: micronaut-graphql-tools " + version(BindingManifestRecorder.class.getPackage()
                             .getImplementationVersion()),
                     "# graphql-java: " + GraphQLJavaVersion.get(),
                     "# schema-sha256: " + schemaSha256(registry)
             );
-            return new BindingManifest.Content(header, body);
+            ManifestRenderer.Rendered rendered = ManifestRenderer.render(plan, header);
+            return new BindingManifest.Content(rendered.header(), rendered.lines());
         });
     }
 
@@ -221,19 +215,6 @@ final class BindingManifestRecorder {
             return type.getSuperclass();
         }
         return type;
-    }
-
-    private static String line(String subject, String kind, String member, String declaredType, String convertedType) {
-        return requirePart(subject) + ARROW + kind + DOT + requirePart(member) + DOT + requirePart(declaredType) + DOT
-                + requirePart(convertedType);
-    }
-
-    private static String requirePart(String part) {
-        if (part.contains(ARROW) || part.contains(DOT) || part.contains("\n") || part.contains("\r")) {
-            throw new IllegalStateException("Cannot write the binding manifest: \"" + part
-                    + "\" contains a separator (\"" + ARROW.strip() + "\" or \"" + DOT.strip() + "\") or a line break.");
-        }
-        return part;
     }
 
     private static String version(@Nullable String version) {

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 
 import java.util.List;
@@ -23,12 +24,12 @@ import java.util.List;
  * Thrown when {@link GraphQLSchemaCoordinate} values do not match the schema, the method or the bean they are declared
  * on, or when the method is not bound to the field its coordinate names. All problems are reported in one error.
  */
-public final class InvalidSchemaCoordinateException extends RuntimeException {
+public final class InvalidSchemaCoordinateException extends SchemaBindingException {
 
     private final List<String> problems;
 
     public InvalidSchemaCoordinateException(List<String> problems) {
-        super(buildMessage(problems));
+        super(BindingCode.UNKNOWN_SCHEMA_COORDINATE, buildMessage(problems));
 
         this.problems = List.copyOf(problems);
     }

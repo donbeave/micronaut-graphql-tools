@@ -34,6 +34,33 @@ public interface ShelfContract {
         ]
     }
 
+    void "an introduction advice interface is its own bean and binds its fields"() {
+        when:
+        def result = compilation(['example.Shelved': '''
+package example;
+
+import io.micronaut.aop.Introduction;
+
+@Introduction
+@interface Shelved {
+}
+''', 'example.ShelfContract': '''
+package example;
+
+import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+
+@Shelved
+@GraphQLRootResolver
+public interface ShelfContract {
+    String shelf();
+}
+'''], SCHEMA.replace('books(limit: Int): [Book!]!', 'books(limit: Int): [Book!]!\n  shelf: String')).compile()
+
+        then:
+        result.success
+        result.graphqlErrors == []
+    }
+
     void "a schema field deleted while its resolver method stays fails in strict mode"() {
         when:
         def result = compilation([:], SCHEMA.replace('  books(limit: Int): [Book!]!\n', '')).compile()

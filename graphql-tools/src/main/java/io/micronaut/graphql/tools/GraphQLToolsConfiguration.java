@@ -16,7 +16,6 @@
 package io.micronaut.graphql.tools;
 
 import io.micronaut.context.annotation.ConfigurationProperties;
-import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArgumentUtils;
@@ -32,17 +31,13 @@ public class GraphQLToolsConfiguration {
 
     public static final String PREFIX = "micronaut.graphql.tools";
 
-    /**
-     * The bean name under which the input conversion mapper is looked up. Internal: not part of the API.
-     */
-    @Internal
-    public static final String INPUT_OBJECT_MAPPER = "graphql-tools";
-
     private UnreachableTypes unreachableTypes = UnreachableTypes.FAIL;
     private List<String> allowUnreachable = Collections.emptyList();
     private Precedence precedence = Precedence.STRICT;
     private List<String> resolverDirectives = Collections.emptyList();
     private List<String> inertDirectives = Collections.emptyList();
+    private List<String> schemaCustomizerDirectives = Collections.emptyList();
+    private UnwiredDirectives unwiredDirectives;
     private boolean strict = true;
     private boolean eagerInit = true;
     private InputConfiguration input = new InputConfiguration();
@@ -142,7 +137,8 @@ public class GraphQLToolsConfiguration {
 
     /**
      * Sets the directives the schema may apply without a wiring, because they have no effect at runtime (names
-     * without {@code @}). Any other directive the schema applies needs a wiring, except graphql-java's built-in
+     * without {@code @}; an entry with {@code *} is a pattern, such as {@code link*}, and must match a declared
+     * directive that lacks a wiring). Any other directive the schema applies needs a wiring, except graphql-java's built-in
      * ones; in strict mode ({@link #isStrict()}) an applied directive without either fails the startup, without it
      * that is a warning. Every name must be a directive the schema declares and that has no wiring; any other name
      * fails the startup in either mode, so the list cannot go stale. Default: empty.
@@ -152,6 +148,48 @@ public class GraphQLToolsConfiguration {
     public void setInertDirectives(@NonNull List<String> inertDirectives) {
         ArgumentUtils.requireNonNull("inertDirectives", inertDirectives);
         this.inertDirectives = List.copyOf(inertDirectives);
+    }
+
+    /**
+     * @return the directives that a {@link GraphQLSchemaCustomizer} handles where graphql-java calls no wiring
+     */
+    @NonNull
+    public List<String> getSchemaCustomizerDirectives() {
+        return schemaCustomizerDirectives;
+    }
+
+    /**
+     * Sets the directives (names without {@code @}) that a {@link GraphQLSchemaCustomizer} handles on the schema
+     * definition and on the arguments of directive definitions. graphql-java calls no
+     * {@link graphql.schema.idl.SchemaDirectiveWiring} there, so a wiring does not count for those places: a directive
+     * applied there needs an entry in this list or in {@link #getInertDirectives()}. Every name must be a directive
+     * the schema declares, that is not built in and that is applied on one of those places. Default: empty.
+     *
+     * @param schemaCustomizerDirectives the directive names
+     */
+    public void setSchemaCustomizerDirectives(@NonNull List<String> schemaCustomizerDirectives) {
+        ArgumentUtils.requireNonNull("schemaCustomizerDirectives", schemaCustomizerDirectives);
+        this.schemaCustomizerDirectives = List.copyOf(schemaCustomizerDirectives);
+    }
+
+    /**
+     * @return what happens to applied directives without a wiring, or {@code null} to follow strict mode
+     */
+    @Nullable
+    public UnwiredDirectives getUnwiredDirectives() {
+        return unwiredDirectives;
+    }
+
+    /**
+     * Sets what happens to directives the schema applies without a wiring. {@code null} (the default) follows
+     * {@link #isStrict()}: fail with it, warn without it. {@link UnwiredDirectives#IGNORE} skips the check, so tooling
+     * directives need no listing. Invalid {@link #getInertDirectives()} and {@link #getSchemaCustomizerDirectives()}
+     * entries fail in every mode.
+     *
+     * @param unwiredDirectives the handling of unwired directives, or {@code null} to follow strict mode
+     */
+    public void setUnwiredDirectives(@Nullable UnwiredDirectives unwiredDirectives) {
+        this.unwiredDirectives = unwiredDirectives;
     }
 
     /**
@@ -348,7 +386,7 @@ public class GraphQLToolsConfiguration {
         /**
          * Sets what happens to properties of input classes (settable through a setter or the constructor) that the
          * GraphQL input type does not define, so no request can ever set them. Either way each of them is an
-         * {@code !unbound} line of the binding manifest. Default: not set, which means {@link UnmappedProperties#FAIL}
+         * {@code !unmapped-input-property} line of the binding manifest. Default: not set, which means {@link UnmappedProperties#FAIL}
          * in strict mode ({@link GraphQLToolsConfiguration#isStrict()}) and {@link UnmappedProperties#IGNORE} without
          * it.
          *
@@ -419,6 +457,28 @@ public class GraphQLToolsConfiguration {
 
         /**
          * Keep the types in the schema with graphql-java's default data fetchers, and log them as a warning.
+         */
+        IGNORE
+
+    }
+
+    /**
+     * The handling of directives the schema applies without a wiring.
+     */
+    public enum UnwiredDirectives {
+
+        /**
+         * Fail the startup with one error that lists every such directive and where it is applied.
+         */
+        FAIL,
+
+        /**
+         * Log one warning that lists them; the schema keeps them without effect.
+         */
+        WARN,
+
+        /**
+         * Do not check.
          */
         IGNORE
 

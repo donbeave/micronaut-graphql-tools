@@ -15,10 +15,12 @@ import io.micronaut.graphql.tools.benchmarks.Fixtures.Circle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Color;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Figure;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Item;
+import io.micronaut.graphql.tools.benchmarks.Fixtures.LineInput;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.PointInput;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Rectangle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Shape;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Square;
+import io.micronaut.graphql.tools.benchmarks.Fixtures.StockInput;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Triangle;
 import jakarta.inject.Singleton;
 
@@ -64,6 +66,18 @@ public final class Resolvers {
 
         public String inputs(List<PointInput> inputs) {
             return "x";
+        }
+
+        public String tags(List<String> tags) {
+            return "x";
+        }
+
+        public String stock(StockInput stock) {
+            return stock.sku();
+        }
+
+        public String line(LineInput line) {
+            return line.getLabel();
         }
 
         public List<Item> items(int count) {

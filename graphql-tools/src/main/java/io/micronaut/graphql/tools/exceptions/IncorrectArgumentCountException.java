@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.MappingContext;
 
@@ -28,7 +29,7 @@ public final class IncorrectArgumentCountException extends AbstractMappingExcept
 
     public IncorrectArgumentCountException(MappingContext mappingContext, boolean few, int providedCount,
                                            int requiredCount, @Nullable String suggestedMethodArgs) {
-        super(
+        super(BindingCode.ARGUMENT_MISMATCH,
                 String.format(
                         "The method has too %s arguments, provided: %s, required %s arg(s)%s",
                         few ? "few" : "many",

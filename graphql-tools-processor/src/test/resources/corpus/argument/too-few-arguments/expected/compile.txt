@@ -1,1 +1,1 @@
-IncorrectArgumentCountException Query.username -
+argument-mismatch Query.username -

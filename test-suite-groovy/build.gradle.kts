@@ -19,6 +19,8 @@ dependencies {
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
 }
 
+graalvmNative.toolchainDetection = false
+
 application {
     mainClass.set("example.Application")
 }
@@ -47,4 +49,30 @@ configurations.configureEach {
             because("Groovy 4.0.33 reads JDK 27 class files; the BOM's 4.0.28 does not")
         }
     }
+}
+
+// invokedynamic call sites (Groovy's default) fail to bootstrap in a native image (IndyInterface.make throws a NullPointerException).
+tasks.named<GroovyCompile>("compileGroovy") {
+    groovyOptions.optimizationOptions = (groovyOptions.optimizationOptions ?: mutableMapOf()).apply { put("indy", false) }
+}
+
+// Spock cannot run natively (D-38), so the native executable of the application is smoke-tested instead (#276): the script
+// starts it, posts the queries of the Java and Kotlin smoke tests and asserts the response bodies. Not part of `check`:
+// a native build takes minutes and about 5 GB.
+val nativeSmoke: Configuration by configurations.creating
+dependencies {
+    nativeSmoke("org.apache.groovy:groovy:${libs.versions.groovy.get()}")
+    nativeSmoke("org.apache.groovy:groovy-json:${libs.versions.groovy.get()}")
+}
+tasks.register<JavaExec>("nativeSmokeTest") {
+    description = "Builds the native executable, starts it and asserts GraphQL responses (Groovy has no native test)."
+    group = "verification"
+    val executable = layout.buildDirectory.file("native/nativeCompile/${project.name}")
+    val script = layout.projectDirectory.file("src/nativeSmoke/groovy/NativeSmoke.groovy")
+    dependsOn("nativeCompile")
+    inputs.file(script)
+    classpath = nativeSmoke
+    mainClass.set("groovy.ui.GroovyMain")
+    argumentProviders.add(CommandLineArgumentProvider { listOf(script.asFile.absolutePath, executable.get().asFile.absolutePath) })
+    outputs.upToDateWhen { false }
 }

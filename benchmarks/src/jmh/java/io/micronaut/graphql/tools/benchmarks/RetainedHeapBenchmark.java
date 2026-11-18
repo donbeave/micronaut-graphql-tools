@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class RetainedHeapBenchmark {
 
-    @Param({"100", "1600", "10000"})
+    @Param({"100", "1600", "3000", "10000", "20000"})
     public int fields;
 
     @Param({"false", "true"})

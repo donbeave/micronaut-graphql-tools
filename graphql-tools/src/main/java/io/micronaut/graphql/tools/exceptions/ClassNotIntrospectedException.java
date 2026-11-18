@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
@@ -24,7 +25,7 @@ public final class ClassNotIntrospectedException extends AbstractMappingExceptio
 
     public ClassNotIntrospectedException(MappingContext mappingContext, Class<?> returningType,
                                          Class<?> annotationClass) {
-        super(
+        super(BindingCode.CLASS_NOT_INTROSPECTED,
                 String.format(
                         "The class %s is not introspected. Ensure the class is annotated with %s.",
                         returningType.getName(),

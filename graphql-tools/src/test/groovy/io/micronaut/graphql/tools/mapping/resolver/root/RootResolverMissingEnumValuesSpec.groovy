@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.exceptions.MissingEnumValuesException
@@ -38,7 +39,7 @@ enum Month {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MissingEnumValuesException
-        e.cause.message == """Some enum values are missing in class ${Month.name}.
+        e.cause.message == """[missing-enum-values] Some enum values are missing in class ${Month.name}.
   GraphQL coordinate: Query.month (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: month
@@ -60,6 +61,7 @@ enum Month {
         }
     }
 
+    @Introspected
     static enum Month {
         JANUARY,
         FEBRUARY

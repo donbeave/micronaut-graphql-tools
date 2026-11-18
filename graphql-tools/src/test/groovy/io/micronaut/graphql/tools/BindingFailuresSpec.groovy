@@ -8,6 +8,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException
@@ -53,13 +54,15 @@ type Book {
         failures.failures*.class == [MethodNotFoundException, IncorrectClassMappingException, MethodNotFoundException]
         failures.failures*.mappingContext*.coordinate == ['Book.isbn', 'Query.count', 'Query.missing']
         failures.cause.is(failures.failures[0])
+        failures.code() == BindingCode.BINDING_FAILURES
+        failures.failures*.code() == [BindingCode.FIELD_NOT_BOUND, BindingCode.INCORRECT_CLASS_MAPPING, BindingCode.FIELD_NOT_BOUND]
         failures.suppressed.toList() == failures.failures.drop(1)
-        failures.message == """The schema cannot be bound: 3 errors.
-  1) The property or method `isbn` not found in ${Book.name}'s type.
+        failures.message == """[binding-failures] The schema cannot be bound: 3 errors.
+  1) [field-not-bound] The property or method `isbn` not found in ${Book.name}'s type.
      GraphQL coordinate: Book.isbn (line 14, column 3)
      GraphQL object type: Book
      GraphQL field: isbn
-  2) The field is mapped to the incorrect class.
+  2) [incorrect-class-mapping] The field is mapped to the incorrect class.
      GraphQL coordinate: Query.count (line 8, column 3)
      GraphQL object type: Query
      GraphQL field: count
@@ -67,7 +70,7 @@ type Book {
      Mapped method: count()
      Provided class: java.lang.String
      Supported classes: int, java.lang.Integer
-  3) The method `missing` not found in any root resolvers: [${Query.name}].
+  3) [field-not-bound] The method `missing` not found in any root resolvers: [${Query.name}].
      GraphQL coordinate: Query.missing (line 9, column 3)
      GraphQL object type: Query
      GraphQL field: missing"""

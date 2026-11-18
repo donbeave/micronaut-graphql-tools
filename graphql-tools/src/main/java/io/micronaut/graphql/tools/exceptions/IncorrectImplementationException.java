@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
@@ -26,7 +27,7 @@ public final class IncorrectImplementationException extends AbstractMappingExcep
 
     public IncorrectImplementationException(MappingContext mappingContext,
                                             Class<?> interfaceClass, Class<?> implementationClass) {
-        super(
+        super(BindingCode.INCORRECT_IMPLEMENTATION,
                 String.format(
                         "The annotated implementation class is not implementing the %s interface.",
                         interfaceClass.getName()

@@ -163,7 +163,7 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
-        e.cause.message == """Found multiple methods for one GraphQL field.
+        e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.book (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: book
@@ -183,7 +183,7 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
-        e.cause.message == """Found multiple methods for one GraphQL field.
+        e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Book.summary (line 13, column 3)
   GraphQL object type: Book
   GraphQL field: summary
@@ -277,7 +277,7 @@ type Writer {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof AmbiguousTypeResolverException
-        e.cause.message == "The bean ${UnassignableResolvers.name} is a @GraphQLTypeResolver for several classes " +
+        e.cause.message == "[ambiguous-type-resolver] The bean ${UnassignableResolvers.name} is a @GraphQLTypeResolver for several classes " +
                 "through ${NovelContract.name} (${Novel.name}) and ${WriterContract.name} (${Writer.name}), and the " +
                 "first parameter of these methods is none of those classes, so they cannot be assigned to one: " +
                 "describe(java.lang.String text). Make them non-public or give them the source parameter of " +
@@ -357,7 +357,7 @@ type Writer {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof TypeResolverContractsNotFoundException
-        e.cause.message == "The bean ${BothResolvers.name} is a @GraphQLTypeResolver only through an inherited " +
+        e.cause.message == "[type-resolver-contracts-not-found] The bean ${BothResolvers.name} is a @GraphQLTypeResolver only through an inherited " +
                 "annotation, but no type of its class hierarchy declares the annotation at runtime, so its contracts " +
                 "cannot be read. Make the annotations of the contract types available to reflection (for example the " +
                 "reflection configuration of a native image), or annotate the bean class directly."

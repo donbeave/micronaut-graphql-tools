@@ -16,104 +16,49 @@
 package io.micronaut.graphql.tools;
 
 import graphql.execution.DataFetcherResult;
-import graphql.language.NonNullType;
 import graphql.language.Type;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
+import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
+import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
 import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
 import org.reactivestreams.Publisher;
 
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
-
-import static io.micronaut.graphql.tools.GraphQLUtils.printType;
 
 @Internal
 final class ReturnTypes {
 
-    private static final List<Class<?>> RETURN_TYPE_WRAPPERS =
-            List.of(CompletionStage.class, Publisher.class, DataFetcherResult.class, Optional.class);
+    // graphql-java's DefaultValueUnboxer unwraps these at runtime, like Optional
+    private static final Map<Class<?>, Class<?>> PRIMITIVE_OPTIONALS = Map.of(
+            OptionalInt.class, Integer.class, OptionalLong.class, Long.class, OptionalDouble.class, Double.class);
 
     private ReturnTypes() {
     }
 
-    static Argument<?> unwrap(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
-                                                boolean subscription, TypeMappingContext mappingContext) {
+    // Peels the wrappers of a declared return type: ResolverClassRules.returnAdaptation decides, this follows its verdict
+    // on the Argument and turns a violation into its exception.
+    static Argument<?> unwrap(RuntimeTypeModel typeModel, Argument<?> argument, Type<?> graphQlType,
+                              boolean fieldLevel, boolean subscription, TypeMappingContext mappingContext) {
+        ReturnVerdict verdict = ResolverClassRules.returnAdaptation(typeModel, typeModel.ref(argument), graphQlType,
+                fieldLevel, subscription);
+        if (verdict.failure() != null) {
+            throw new UnsupportedReturnTypeException(mappingContext, verdict.failure());
+        }
         Argument<?> result = argument;
-        Class<?> outer = null;
-
-        if (CompletionStage.class.isAssignableFrom(result.getType())) {
-            if (!fieldLevel) {
-                throw new UnsupportedReturnTypeException(mappingContext,
-                        CompletionStage.class.getName() + " is not allowed inside a list. Fix: return "
-                                + "CompletionStage<List<T>> instead (for example, combine the element futures with "
-                                + "CompletableFuture.allOf), or load the elements with a DataLoader.");
-            }
-            outer = CompletionStage.class;
-            result = typeArgument(result, CompletionStage.class, mappingContext);
+        for (int i = 0; i < verdict.depth(); i++) {
+            result = result.getFirstTypeVariable().get();
         }
-
-        boolean publisher = Publisher.class.isAssignableFrom(result.getType());
-
-        if (fieldLevel && subscription) {
-            if (!publisher) {
-                throw new UnsupportedReturnTypeException(mappingContext, "a field of the subscription type must return "
-                        + Publisher.class.getName() + " (optionally inside a CompletionStage), found "
-                        + result.getType().getName() + ". Fix: change the return type to Publisher<T> (for example "
-                        + "Flux<T>).");
-            }
-            outer = Publisher.class;
-            result = typeArgument(result, Publisher.class, mappingContext);
-        } else if (publisher) {
-            throw new UnsupportedReturnTypeException(mappingContext,
-                    Publisher.class.getName() + " is only allowed on fields of the subscription type. Fix: "
-                            + "return a CompletionStage instead (for example Mono#toFuture()).");
-        }
-
-        if (DataFetcherResult.class.isAssignableFrom(result.getType())) {
-            outer = DataFetcherResult.class;
-            result = typeArgument(result, DataFetcherResult.class, mappingContext);
-        }
-
-        if (Optional.class.equals(result.getType())) {
-            if (graphQlType instanceof NonNullType) {
-                throw new UnsupportedReturnTypeException(mappingContext, Optional.class.getName()
-                        + " is only allowed for a nullable GraphQL type, the field type is "
-                        + printType(graphQlType) + ". Fix: make the GraphQL field type nullable (remove the "
-                        + "trailing '!'), or return the value itself instead of an Optional.");
-            }
-            outer = Optional.class;
-            result = typeArgument(result, Optional.class, mappingContext);
-        }
-
-        if (outer != null) {
-            Class<?> inner = result.getType();
-
-            for (Class<?> wrapper : RETURN_TYPE_WRAPPERS) {
-                if (wrapper.isAssignableFrom(inner)) {
-                    throw new UnsupportedReturnTypeException(mappingContext, outer.getName() + " cannot wrap "
-                            + wrapper.getName() + ". Supported wrappers, outermost first: CompletionStage "
-                            + "(field level only), Publisher (subscription fields only), DataFetcherResult, Optional "
-                            + "(nullable types only), each at most once. Fix: remove the inner "
-                            + wrapper.getSimpleName() + " or declare the wrappers in that order.");
-                }
-            }
-        }
-
-        return result;
+        return verdict.primitiveOptional() ? Argument.of(PRIMITIVE_OPTIONALS.get(result.getType())) : result;
     }
 
-    private static Argument<?> typeArgument(Argument<?> argument, Class<?> wrapper,
-                                            TypeMappingContext mappingContext) {
-        return argument.getFirstTypeVariable()
-                .orElseThrow(() -> new UnsupportedReturnTypeException(mappingContext,
-                        wrapper.getName() + " must declare the type it wraps. Fix: add the type argument, "
-                                + "for example " + wrapper.getSimpleName() + "<String>."));
-    }
-
-    static String convertedTypeName(Argument<?> declaredType, boolean subscription) {
+    static String convertedTypeName(Argument<?> declaredType, boolean subscription, boolean returnType) {
         Argument<?> result = declaredType;
         if (CompletionStage.class.isAssignableFrom(result.getType()) || Future.class.isAssignableFrom(result.getType())) {
             result = result.getFirstTypeVariable().orElse(result);
@@ -126,6 +71,9 @@ final class ReturnTypes {
         }
         if (Optional.class.equals(result.getType())) {
             result = result.getFirstTypeVariable().orElse(result);
+        }
+        if (returnType && PRIMITIVE_OPTIONALS.containsKey(result.getType())) {
+            result = Argument.of(PRIMITIVE_OPTIONALS.get(result.getType()));
         }
         Argument<?>[] typeParameters = result.getTypeParameters();
         if (Iterable.class.isAssignableFrom(result.getType()) && typeParameters.length == 1

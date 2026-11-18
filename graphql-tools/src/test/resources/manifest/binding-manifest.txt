@@ -1,4 +1,4 @@
-!unreachable Legacy
+!unreachable-type Legacy
 Boolean → scalar · graphql.scalar.GraphqlBooleanCoercing · - · -
 ID → scalar · graphql.scalar.GraphqlIDCoercing · - · -
 Int → scalar · graphql.scalar.GraphqlIntCoercing · - · -

@@ -17,6 +17,7 @@ class JmhSmokeTest {
     void everyBenchmarkRuns() throws Exception {
         Options options = new OptionsBuilder()
                 .include("io\\.micronaut\\.graphql\\.tools\\.benchmarks\\..*Benchmark\\..*")
+                .param("fields", "100", "10000")
                 .forks(0)
                 .warmupIterations(0)
                 .measurementIterations(1)

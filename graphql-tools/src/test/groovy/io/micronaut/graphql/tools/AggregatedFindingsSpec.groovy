@@ -55,9 +55,9 @@ type Draft {
 
         BindingFailuresException failures = (BindingFailuresException) e.cause
         failures.failures*.class == [UnreachableTypesException, InvalidSchemaCoordinateException, StrictModeException]
-        failures.message.startsWith("The schema cannot be bound: 3 errors.\n  1) [unreachable-type] ")
-        failures.message.contains("\n  2) [invalid-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:")
-        failures.message.contains("\n  3) [strict] Strict mode found problems in the binding of the schema:")
+        failures.message.startsWith("[binding-failures] The schema cannot be bound: 3 errors.\n  1) [unreachable-type] ")
+        failures.message.contains("\n  2) [unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:")
+        failures.message.contains("\n  3) [strict-findings] Strict mode found problems in the binding of the schema:")
         failures.message.contains("Draft (type)")
         failures.message.contains("the method is not bound to Book.summary")
         failures.message.contains("${Query.name}#helper(java.lang.String) binds no schema field")

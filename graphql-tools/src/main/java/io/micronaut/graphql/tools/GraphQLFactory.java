@@ -22,11 +22,13 @@ import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.BeanRegistration;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import jakarta.inject.Singleton;
 
 import java.util.ArrayList;
@@ -60,6 +62,8 @@ public final class GraphQLFactory {
                                        List<TypeDefinitionRegistryCustomizer> typeDefinitionRegistryCustomizers,
                                        List<RuntimeWiringCustomizer> runtimeWiringCustomizers,
                                        List<GraphQLSchemaCustomizer> graphQLSchemaCustomizers,
+                                       List<BeanRegistration<SchemaDirectiveWiring>> directiveWirings,
+                                       List<BeanRegistration<SchemaDirective>> schemaDirectives,
                                        BindingManifestHolder bindingManifestHolder) {
         SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
         schemaMappingDictionaryCustomizer.customize(schemaMappingDictionary);
@@ -79,8 +83,8 @@ public final class GraphQLFactory {
 
         List<RuntimeWiringCustomizer> customizers = new ArrayList<>();
         SchemaDirectiveWirings schemaDirectiveWirings = new SchemaDirectiveWirings(
-                applicationContext.getBeanRegistrations(SchemaDirectiveWiring.class),
-                applicationContext.getBeanRegistrations(SchemaDirective.class)
+                directiveWirings,
+                schemaDirectives
         );
         customizers.add(schemaDirectiveWirings);
         customizers.addAll(runtimeWiringCustomizers);
@@ -91,8 +95,6 @@ public final class GraphQLFactory {
         DirectiveWiringCheck.check(registry, runtimeWiring, schemaDirectiveWirings.getEveryElementDirectiveNames(),
                 schemaDirectiveWirings.getDirectiveNames(), configuration,
                 graphQLRuntimeWiringGenerator.getManifestRecorder());
-
-        applicationContext.destroyBean(graphQLResolversRegistry);
 
         SchemaGenerator schemaGenerator = new SchemaGenerator();
         GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(registry, runtimeWiring);

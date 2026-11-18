@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools;
 
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -36,12 +37,17 @@ import java.util.function.Supplier;
  *     <li>{@code Type.field(arg: T): T → root|resolver|property · <member> · <declared type> · <converted type>}, where
  *     the member is {@code Class#method(parameter types)} and the converted type is the declared type without
  *     {@code CompletionStage}, {@code Publisher} (subscription fields), {@code DataFetcherResult} (also per list
- *     element) and {@code Optional}, unwrapped once in that order</li>
+ *     element) and {@code Optional}, unwrapped once in that order; the primitive optionals
+ *     ({@code OptionalInt}, {@code OptionalLong}, {@code OptionalDouble}) are unwrapped as well</li>
  *     <li>{@code Abstract/Member → resolves · <Java type> · - · -}</li>
  *     <li>{@code Enum.VALUE → enumValue · <Java enum>#VALUE · - · -}</li>
  *     <li>{@code Input.field: T → inputField · <Java type>#property · <declared type> · <converted type>}</li>
- *     <li>diagnostics, starting with {@code !}: {@code !unreachable <Type>}, {@code !ambiguous <coordinate> ·
- *     <member> | <member>} and the strict-mode findings</li>
+ *     <li>diagnostics, starting with {@code !} and the registry code of the finding
+ *     ({@link io.micronaut.graphql.tools.binding.BindingCode#code()}): {@code !unreachable-type <Type>} (an enum,
+ *     input or scalar type is {@code !unreachable-value-type}), {@code !precedence-ambiguity <coordinate> ·
+ *     <member> | <member>} and the strict-mode findings ({@code !unbound-resolver-method},
+ *     {@code !unbound-enum-constant}, {@code !unmapped-input-property}, {@code !unused-dictionary-entry},
+ *     {@code !unwired-directive})</li>
  *     <li>{@code ~ignored <member>}: a member marked {@code @GraphQLIgnore} that the binding met, which binds no
  *     field and is not reported</li>
  * </ul>
@@ -55,7 +61,7 @@ import java.util.function.Supplier;
  */
 public final class BindingManifest {
 
-    public static final String FORMAT = "# graphql-binding-manifest 1";
+    public static final String FORMAT = ManifestRenderer.FORMAT;
 
     private Supplier<Content> renderer;
     private volatile Content content;

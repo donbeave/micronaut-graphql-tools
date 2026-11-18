@@ -8,12 +8,15 @@ import graphql.schema.idl.TypeDefinitionRegistry
 import groovy.transform.CompileStatic
 import io.micronaut.context.ApplicationContext
 import io.micronaut.graphql.tools.BindingManifest
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException
 import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.exceptions.StrictModeException
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
+import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException
 
 import java.util.regex.Matcher
 
@@ -84,9 +87,11 @@ final class CorpusStartup {
             return failure.failures.collectMany { flatten(it) }
         } else if (failure instanceof AbstractMappingException) {
             SourceLocation at = failure.mappingContext.sourceLocation
-            return [[failure.getClass().simpleName, failure.mappingContext.coordinate, location(at)]]
+            return [[failure.code().code(), failure.mappingContext.coordinate, location(at)]]
         } else if (failure instanceof StrictModeException) {
-            return failure.problems.collect { classify(it) }
+            List<List<String>> problems = []
+            failure.problems.eachWithIndex { String problem, int index -> problems.add(classify(failure.codes[index], problem)) }
+            return problems
         } else if (failure instanceof UnreachableTypesException) {
             Map<String, String> kinds = [:]
             Matcher matcher = (failure.message =~ /(\w+) \((type|interface|union|enum|input|scalar)\)/)
@@ -96,6 +101,12 @@ final class CorpusStartup {
             return failure.typeNames.collect { String type ->
                 [kinds.get(type) in ['enum', 'input', 'scalar'] ? 'unreachable-value-type' : 'unreachable-type', type, '-']
             }
+        } else if (failure instanceof UnwiredDirectivesException) {
+            return failure.unwiredDirectives.collect { String name -> ['unwired-directive', name, '-'] } +
+                    failure.invalidInertDirectives.collect { String name -> ['invalid-inert-directives', name, '-'] } +
+                    failure.invalidSchemaCustomizerDirectives.collect { String name ->
+                        ['invalid-schema-customizer-directives', name, '-']
+                    }
         } else if (failure instanceof UnmappedInputPropertiesException) {
             return failure.unmappedProperties.collectMany { String type, Map.Entry<Class<?>, List<String>> entry ->
                 entry.value.collect { String property -> ['unmapped-input-property', type + '.' + property, '-'] }
@@ -103,20 +114,21 @@ final class CorpusStartup {
         } else if (failure instanceof InvalidSchemaCoordinateException) {
             return failure.problems.collect { String problem ->
                 Matcher matcher = (problem =~ SCHEMA_COORDINATE)
-                [failure.getClass().simpleName, matcher.find() ? matcher.group(1) : '-', '-']
+                [failure.code().code(), matcher.find() ? matcher.group(1) : '-', '-']
             }
         }
+        String code = ((SchemaBindingException) failure).code().code()
         // the exceptions that list their findings as lines: the first token of a line is the coordinate or the class
         List<String> lines = listOf(failure, 'getProblems') ?: listOf(failure, 'getAmbiguities')
         if (lines != null) {
-            return lines.collect { String line -> [failure.getClass().simpleName, line.split(/[\s:]/)[0], '-'] }
+            return lines.collect { String line -> [code, line.split(/[\s:]/)[0], '-'] }
         }
         // the exceptions that name the affected types or directives
         List<String> names = (listOf(failure, 'getGraphQlTypes') ?: listOf(failure, 'getDirectiveNames'))
         if (names != null && !names.empty) {
-            return names.collect { String name -> [failure.getClass().simpleName, name, '-'] }
+            return names.collect { String name -> [code, name, '-'] }
         }
-        return [[failure.getClass().simpleName, '-', '-']]
+        return [[code, '-', '-']]
     }
 
     private static List<String> listOf(Throwable failure, String getter) {
@@ -128,23 +140,10 @@ final class CorpusStartup {
         }
     }
 
-    /** The strict-mode problems, by the sentence each check writes, as the check names of D-30. */
-    private static List<String> classify(String problem) {
-        Matcher m
-        if ((m = problem =~ /^The resolver method (\S+) binds no schema field/).find()) {
-            return ['unbound-resolver-method', m.group(1), '-']
-        } else if ((m = problem =~ /^The root resolver method (\S+) binds fields of several operation types/).find()) {
-            return ['root-method-several-operations', m.group(1), '-']
-        } else if ((m = problem =~ /^The enum constant (\S+) has no value/).find()) {
-            return ['unbound-enum-constant', m.group(1), '-']
-        } else if ((m = problem =~ /^The SchemaMappingDictionary maps (\S+) to/).find()) {
-            return ['unused-dictionary-entry', m.group(1), '-']
-        } else if ((m = problem =~ /^The type (\S+) is mapped to the interface/).find()) {
-            return ['interface-read-through-implementation', m.group(1), '-']
-        } else if ((m = problem =~ /^The directive (\S+)/).find()) {
-            return ['unwired-directive', m.group(1), '-']
-        }
-        return ['strict-mode', '-', '-']
+    /** A strict-mode problem: its code and, by the sentence of the check, the coordinate it is about. */
+    private static List<String> classify(BindingCode code, String problem) {
+        Matcher m = (problem =~ /^The (?:resolver method|root resolver method|enum constant|SchemaMappingDictionary maps|type|directive) (\S+)/)
+        return [code.code(), m.find() ? m.group(1) : '-', '-']
     }
 
     private static String location(SourceLocation at) {

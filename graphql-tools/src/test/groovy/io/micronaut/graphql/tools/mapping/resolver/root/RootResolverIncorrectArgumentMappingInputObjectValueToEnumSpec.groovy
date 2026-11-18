@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -38,7 +39,7 @@ input PriceInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The argument is mapped to an enum, when required a custom class.
+        e.cause.message == """[incorrect-class-mapping] The argument is mapped to an enum, when required a custom class.
   GraphQL coordinate: Query.price(input:) (line 7, column 9)
   GraphQL object type: Query
   GraphQL field: price
@@ -63,6 +64,7 @@ input PriceInput {
     }
 
     @GraphQLInput
+    @Introspected
     static enum PriceInput {
         TEST
     }

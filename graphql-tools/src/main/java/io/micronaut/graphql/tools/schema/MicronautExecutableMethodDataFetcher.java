@@ -15,7 +15,6 @@
  */
 package io.micronaut.graphql.tools.schema;
 
-import com.fasterxml.jackson.databind.JavaType;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
@@ -40,25 +39,23 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     private static final int ARGUMENT_VALUE = 2;
     private static final int INPUT_VALUE = 3;
 
-    private final InputValueConverter inputValueConverter;
     private final Executable<Object, ?> executable;
     private final int[] kinds;
     private final String[] names;
-    private final JavaType[] javaTypes;
+    private final ValueConverter[] converters;
     private final Object instance;
+    private final PerCallResolver perCall;
 
     public MicronautExecutableMethodDataFetcher(
-            InputValueConverter inputValueConverter,
             Executable<Object, ?> executable,
             List<ArgumentDefinition> argumentDefinitions,
             @Nullable Object instance
     ) {
-        this.inputValueConverter = inputValueConverter;
         this.executable = executable;
         int size = argumentDefinitions.size();
         this.kinds = new int[size];
         this.names = new String[size];
-        this.javaTypes = new JavaType[size];
+        this.converters = new ValueConverter[size];
         for (int i = 0; i < size; i++) {
             ArgumentDefinition argumentDefinition = argumentDefinitions.get(i);
             names[i] = argumentDefinition.getName();
@@ -70,11 +67,12 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                 Argument<?> argument = argumentDefinition.getInputValueArgument().orElseThrow();
                 boolean argumentValue = ArgumentValue.class.equals(argument.getType());
                 kinds[i] = argumentValue ? ARGUMENT_VALUE : INPUT_VALUE;
-                javaTypes[i] = inputValueConverter.toJavaType(
-                        argumentValue ? argument.getFirstTypeVariable().orElseThrow() : argument);
+                ValueConverter converter = argumentDefinition.getConverter();
+                converters[i] = converter == ValueConverters.IDENTITY ? null : converter;
             }
         }
-        this.instance = instance;
+        this.perCall = instance instanceof PerCallResolver resolver ? resolver : null;
+        this.instance = perCall == null ? instance : null;
     }
 
     @Override
@@ -86,7 +84,11 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             arguments[i] = argument(environment, i);
         }
 
-        return executable.invoke(instance != null ? instance : environment.getSource(), arguments);
+        Object target = instance;
+        if (target == null) {
+            target = perCall != null ? perCall.supplier().get() : environment.getSource();
+        }
+        return executable.invoke(target, arguments);
     }
 
     private Object argument(DataFetchingEnvironment environment, int index) {
@@ -97,13 +99,17 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                 // graphql-java leaves an argument out of the map only if the client did not provide it and the
                 // schema declares no default value for it
                 if (environment.containsArgument(names[index])) {
-                    Object argumentValue = environment.getArgument(names[index]);
-                    yield ArgumentValue.ofNullable(inputValueConverter.convert(argumentValue, javaTypes[index]));
+                    yield ArgumentValue.ofNullable(convert(index, environment.getArgument(names[index])));
                 }
                 yield ArgumentValue.omitted();
             }
-            default -> inputValueConverter.convert(environment.getArgument(names[index]), javaTypes[index]);
+            default -> convert(index, environment.getArgument(names[index]));
         };
+    }
+
+    private Object convert(int index, Object value) {
+        ValueConverter converter = converters[index];
+        return converter == null ? value : converter.convert(value);
     }
 
 }

@@ -11,6 +11,7 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.DataFetchingEnvironmentImpl;
 import graphql.schema.FieldCoordinates;
+import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
@@ -43,6 +44,9 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String ENUM_ARGUMENT = "enumArgument";
     public static final String INPUT_OBJECT_ARGUMENT = "inputObjectArgument";
     public static final String LIST_OF_INPUTS_ARGUMENT = "listOfInputsArgument";
+    public static final String LIST_OF_SCALARS_ARGUMENT = "listOfScalarsArgument";
+    public static final String RECORD_INPUT_ARGUMENT = "recordInputArgument";
+    public static final String NESTED_INPUT_ARGUMENT = "nestedInputArgument";
     public static final String UNION_RESOLUTION = "unionResolution";
     public static final String INTERFACE_RESOLUTION = "interfaceResolution";
     public static final String DIRECTIVE_WRAPPED_FETCHER = "directiveWrappedFetcher";
@@ -64,12 +68,27 @@ public final class BenchmarkCases implements AutoCloseable {
               y: Int!
             }
 
+            input StockInput {
+              sku: String!
+              quantity: Int!
+              weight: Float
+            }
+
+            input LineInput {
+              label: String!
+              point: PointInput!
+              tags: [String!]
+            }
+
             type Query {
               ping: String
               scalar(n: Int!): String
               enumArg(color: Color!): String
               input(input: PointInput!): String
               inputs(inputs: [PointInput!]!): String
+              tags(tags: [String!]!): String
+              stock(stock: StockInput!): String
+              line(line: LineInput!): String
               items(count: Int!): [Item!]!
               shape(circle: Boolean!): Shape
               figure(triangle: Boolean!): Figure
@@ -105,6 +124,11 @@ public final class BenchmarkCases implements AutoCloseable {
     private final GraphQLSchema schema;
     private final Map<String, Op> ops = new LinkedHashMap<>();
 
+    // what graphql-java hands the data fetcher for an enum literal: the value of the enum type, not its name
+    private Object coercedEnum(String type, String name) {
+        return ((GraphQLEnumType) schema.getType(type)).getValue(name).getValue();
+    }
+
     public BenchmarkCases() {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
@@ -122,10 +146,15 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(TYPE_RESOLVER_METHOD_ARGUMENT,
                 fetch("Item", "labelWithArgument", new Item("id", "name", 1), Map.of("n", 3)));
         ops.put(SCALAR_ARGUMENT, fetch("Query", "scalar", null, Map.of("n", 42)));
-        ops.put(ENUM_ARGUMENT, fetch("Query", "enumArg", null, Map.of("color", "GREEN")));
+        ops.put(ENUM_ARGUMENT, fetch("Query", "enumArg", null, Map.of("color", coercedEnum("Color", "GREEN"))));
         ops.put(INPUT_OBJECT_ARGUMENT, fetch("Query", "input", null, Map.of("input", point("a", 1, 2))));
         ops.put(LIST_OF_INPUTS_ARGUMENT, fetch("Query", "inputs", null,
                 Map.of("inputs", List.of(point("a", 1, 2), point("b", 3, 4), point("c", 5, 6), point("d", 7, 8)))));
+        ops.put(LIST_OF_SCALARS_ARGUMENT, fetch("Query", "tags", null, Map.of("tags", List.of("a", "b", "c", "d"))));
+        ops.put(RECORD_INPUT_ARGUMENT, fetch("Query", "stock", null,
+                Map.of("stock", Map.of("sku", "a", "quantity", 3, "weight", 2.5d))));
+        ops.put(NESTED_INPUT_ARGUMENT, fetch("Query", "line", null,
+                Map.of("line", Map.of("label", "l", "point", point("a", 1, 2), "tags", List.of("x", "y")))));
         ops.put(DIRECTIVE_WRAPPED_FETCHER, fetch("Query", "guarded", null, Map.of()));
         ops.put(UNION_RESOLUTION, resolve(schema.getType("Shape"), new Circle(), new Square()));
         ops.put(INTERFACE_RESOLUTION, resolve(schema.getType("Figure"), new Triangle(), new Rectangle()));

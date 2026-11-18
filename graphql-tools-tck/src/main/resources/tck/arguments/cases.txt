@@ -10,3 +10,4 @@ mutations-run-in-order
 introspection-input
 introspection-enum
 introspection-roots
+inputs-constructor

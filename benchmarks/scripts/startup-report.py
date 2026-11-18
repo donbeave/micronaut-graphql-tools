@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BENCHMARKS = "BindingBenchmark|RetainedHeapBenchmark"
 STARTUP_CLASSES = ("BindingBenchmark", "RetainedHeapBenchmark")
-SIZES = (100, 1600, 10000)
+SIZES = (100, 1600, 3000, 10000, 20000)
 MB = 1e6
 
 

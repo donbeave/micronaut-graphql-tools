@@ -84,7 +84,7 @@ final class TypeNames {
                 .collect(Collectors.joining(", ", "(", ")"));
     }
 
-    String converted(TypeMirror declaredType, boolean subscription) {
+    String converted(TypeMirror declaredType, boolean subscription, boolean returnType) {
         TypeMirror result = declaredType;
         if (isA(result, BindingChecks.COMPLETION_STAGE) || isA(result, FUTURE)) {
             result = firstTypeArgument(result);
@@ -97,6 +97,10 @@ final class TypeNames {
         }
         if (result instanceof DeclaredType && javaTypes.is(result, BindingChecks.OPTIONAL)) {
             result = firstTypeArgument(result);
+        }
+        if (returnType && result instanceof DeclaredType && BindingChecks.PRIMITIVE_OPTIONALS
+                .containsKey(javaTypes.erasedName(result))) {
+            return render(javaTypes.classType(BindingChecks.PRIMITIVE_OPTIONALS.get(javaTypes.erasedName(result))));
         }
         if (isA(result, ITERABLE) && result instanceof DeclaredType list && list.getTypeArguments().size() == 1) {
             TypeMirror element = bound(list.getTypeArguments().get(0));
