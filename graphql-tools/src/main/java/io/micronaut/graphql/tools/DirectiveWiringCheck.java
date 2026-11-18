@@ -29,6 +29,7 @@ import graphql.language.TypeDefinition;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.GraphQLToolsConfiguration.UnwiredDirectives;
 import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 @Internal
 final class DirectiveWiringCheck {
@@ -59,7 +61,18 @@ final class DirectiveWiringCheck {
         wired.addAll(everyElementDirectiveNames);
         Set<String> resolverDirectives = new TreeSet<>(configuration.getResolverDirectives());
         wired.addAll(resolverDirectives);
-        Set<String> inert = new TreeSet<>(configuration.getInertDirectives());
+        Set<String> inert = new TreeSet<>();
+        List<Pattern> inertPatterns = new ArrayList<>();
+        List<String> inertPatternSources = new ArrayList<>();
+        for (String entry : configuration.getInertDirectives()) {
+            if (entry.indexOf('*') >= 0) {
+                inertPatternSources.add(entry);
+                inertPatterns.add(pattern(entry));
+            } else {
+                inert.add(entry);
+            }
+        }
+        Set<String> schemaCustomizer = new TreeSet<>(configuration.getSchemaCustomizerDirectives());
 
         Map<String, String> invalidInert = new TreeMap<>();
         for (String name : inert) {
@@ -73,28 +86,62 @@ final class DirectiveWiringCheck {
                 invalidInert.put(name, "has a wiring");
             }
         }
-
-        Map<String, List<String>> unwired = new TreeMap<>();
-        appliedDirectives(registry).forEach((name, coordinates) -> {
-            boolean declared = registry.getDirectiveDefinition(name).isPresent();
-            if (declared && !isBuiltIn(name) && !wired.contains(name) && !inert.contains(name)) {
-                unwired.put(name, List.copyOf(coordinates));
+        for (int i = 0; i < inertPatterns.size(); i++) {
+            Pattern pattern = inertPatterns.get(i);
+            boolean matches = registry.getDirectiveDefinitions().keySet().stream()
+                    .anyMatch(it -> !isBuiltIn(it) && !wired.contains(it) && pattern.matcher(it).matches());
+            if (!matches) {
+                invalidInert.put(inertPatternSources.get(i), "matches no declared directive that lacks a wiring");
             }
-        });
+        }
+        Map<String, String> invalidSchemaCustomizer = new TreeMap<>();
+        for (String name : schemaCustomizer) {
+            if (isBuiltIn(name)) {
+                invalidSchemaCustomizer.put(name, "built into graphql-java");
+            } else if (registry.getDirectiveDefinition(name).isEmpty()) {
+                invalidSchemaCustomizer.put(name, "not declared in the schema");
+            }
+        }
+
+        UnwiredDirectives mode = configuration.getUnwiredDirectives();
+        if (mode == null) {
+            mode = configuration.isStrict() ? UnwiredDirectives.FAIL : UnwiredDirectives.WARN;
+        }
+        Map<String, List<String>> unwired = new TreeMap<>();
+        if (mode != UnwiredDirectives.IGNORE) {
+            appliedDirectives(registry).forEach((name, coordinates) -> {
+                boolean declared = registry.getDirectiveDefinition(name).isPresent();
+                if (!declared || isBuiltIn(name) || inert.contains(name)
+                        || inertPatterns.stream().anyMatch(it -> it.matcher(name).matches())) {
+                    return;
+                }
+                boolean customizer = schemaCustomizer.contains(name);
+                boolean isWired = wired.contains(name);
+                List<String> missing = coordinates.stream()
+                        .filter(it -> isGraphQLJavaWiringless(it) ? !customizer : !isWired)
+                        .toList();
+                if (!missing.isEmpty()) {
+                    unwired.put(name, missing);
+                }
+            });
+        }
 
         unwired.keySet().forEach(name -> manifestRecorder.diagnostic("unwiredDirective", name));
-        boolean strict = configuration.isStrict();
-        if (!strict && !unwired.isEmpty()) {
-            LOG.warn("{} is false, so the startup goes on: {}", GraphQLToolsConfiguration.PREFIX + ".strict",
-                    UnwiredDirectivesException.describeUnwired(unwired));
+        boolean fail = mode == UnwiredDirectives.FAIL;
+        if (mode == UnwiredDirectives.WARN && !unwired.isEmpty()) {
+            String reason = configuration.getUnwiredDirectives() == null
+                    ? GraphQLToolsConfiguration.PREFIX + ".strict is false"
+                    : GraphQLToolsConfiguration.PREFIX + ".unwired-directives is warn";
+            LOG.warn("{}, so the startup goes on: {}", reason, UnwiredDirectivesException.describeUnwired(unwired));
         }
-        if ((strict && !unwired.isEmpty()) || !invalidInert.isEmpty()) {
-            throw new UnwiredDirectivesException(strict ? unwired : Map.of(), invalidInert);
+        if ((fail && !unwired.isEmpty()) || !invalidInert.isEmpty() || !invalidSchemaCustomizer.isEmpty()) {
+            throw new UnwiredDirectivesException(fail ? unwired : Map.of(), invalidInert, invalidSchemaCustomizer);
         }
 
-        if (!inert.isEmpty()) {
+        if (!configuration.getInertDirectives().isEmpty()) {
             LOG.info("Directives without a wiring, declared inert by {}: @{}",
-                    GraphQLToolsConfiguration.PREFIX + ".inert-directives", String.join(", @", inert));
+                    GraphQLToolsConfiguration.PREFIX + ".inert-directives",
+                    String.join(", @", new TreeSet<>(configuration.getInertDirectives())));
         }
         Set<String> notDeclared = new TreeSet<>();
         for (String name : schemaDirectiveNames) {
@@ -106,6 +153,22 @@ final class DirectiveWiringCheck {
             LOG.info("SchemaDirective beans wire directives that the schema does not declare; they are not used: @{}",
                     String.join(", @", notDeclared));
         }
+    }
+
+    // graphql-java calls no SchemaDirectiveWiring for the schema definition or for the arguments of a directive definition
+    static boolean isGraphQLJavaWiringless(String coordinate) {
+        return coordinate.equals("schema") || coordinate.startsWith("@");
+    }
+
+    private static Pattern pattern(String glob) {
+        StringBuilder regex = new StringBuilder();
+        for (String part : glob.split("\\*", -1)) {
+            if (regex.length() > 0) {
+                regex.append(".*");
+            }
+            regex.append(Pattern.quote(part));
+        }
+        return Pattern.compile(regex.toString());
     }
 
     // graphql-java implements these itself; @include and @skip cannot be applied in a schema, but are built in as well

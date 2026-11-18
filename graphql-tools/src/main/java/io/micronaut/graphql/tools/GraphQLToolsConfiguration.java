@@ -43,6 +43,8 @@ public class GraphQLToolsConfiguration {
     private Precedence precedence = Precedence.STRICT;
     private List<String> resolverDirectives = Collections.emptyList();
     private List<String> inertDirectives = Collections.emptyList();
+    private List<String> schemaCustomizerDirectives = Collections.emptyList();
+    private UnwiredDirectives unwiredDirectives;
     private boolean strict = true;
     private boolean eagerInit = true;
     private InputConfiguration input = new InputConfiguration();
@@ -142,7 +144,8 @@ public class GraphQLToolsConfiguration {
 
     /**
      * Sets the directives the schema may apply without a wiring, because they have no effect at runtime (names
-     * without {@code @}). Any other directive the schema applies needs a wiring, except graphql-java's built-in
+     * without {@code @}; an entry with {@code *} is a pattern, such as {@code link*}, and must match a declared
+     * directive that lacks a wiring). Any other directive the schema applies needs a wiring, except graphql-java's built-in
      * ones; in strict mode ({@link #isStrict()}) an applied directive without either fails the startup, without it
      * that is a warning. Every name must be a directive the schema declares and that has no wiring; any other name
      * fails the startup in either mode, so the list cannot go stale. Default: empty.
@@ -152,6 +155,48 @@ public class GraphQLToolsConfiguration {
     public void setInertDirectives(@NonNull List<String> inertDirectives) {
         ArgumentUtils.requireNonNull("inertDirectives", inertDirectives);
         this.inertDirectives = List.copyOf(inertDirectives);
+    }
+
+    /**
+     * @return the directives that a {@link GraphQLSchemaCustomizer} handles where graphql-java calls no wiring
+     */
+    @NonNull
+    public List<String> getSchemaCustomizerDirectives() {
+        return schemaCustomizerDirectives;
+    }
+
+    /**
+     * Sets the directives (names without {@code @}) that a {@link GraphQLSchemaCustomizer} handles on the schema
+     * definition and on the arguments of directive definitions. graphql-java calls no
+     * {@link graphql.schema.idl.SchemaDirectiveWiring} there, so a wiring does not count for those places: a directive
+     * applied there needs an entry in this list or in {@link #getInertDirectives()}. Every name must be a directive
+     * the schema declares and that is not built in. Default: empty.
+     *
+     * @param schemaCustomizerDirectives the directive names
+     */
+    public void setSchemaCustomizerDirectives(@NonNull List<String> schemaCustomizerDirectives) {
+        ArgumentUtils.requireNonNull("schemaCustomizerDirectives", schemaCustomizerDirectives);
+        this.schemaCustomizerDirectives = List.copyOf(schemaCustomizerDirectives);
+    }
+
+    /**
+     * @return what happens to applied directives without a wiring, or {@code null} to follow strict mode
+     */
+    @Nullable
+    public UnwiredDirectives getUnwiredDirectives() {
+        return unwiredDirectives;
+    }
+
+    /**
+     * Sets what happens to directives the schema applies without a wiring. {@code null} (the default) follows
+     * {@link #isStrict()}: fail with it, warn without it. {@link UnwiredDirectives#IGNORE} skips the check, so tooling
+     * directives need no listing. Invalid {@link #getInertDirectives()} and {@link #getSchemaCustomizerDirectives()}
+     * entries fail in every mode.
+     *
+     * @param unwiredDirectives the handling of unwired directives, or {@code null} to follow strict mode
+     */
+    public void setUnwiredDirectives(@Nullable UnwiredDirectives unwiredDirectives) {
+        this.unwiredDirectives = unwiredDirectives;
     }
 
     /**
@@ -419,6 +464,28 @@ public class GraphQLToolsConfiguration {
 
         /**
          * Keep the types in the schema with graphql-java's default data fetchers, and log them as a warning.
+         */
+        IGNORE
+
+    }
+
+    /**
+     * The handling of directives the schema applies without a wiring.
+     */
+    public enum UnwiredDirectives {
+
+        /**
+         * Fail the startup with one error that lists every such directive and where it is applied.
+         */
+        FAIL,
+
+        /**
+         * Log one warning that lists them; the schema keeps them without effect.
+         */
+        WARN,
+
+        /**
+         * Do not check.
          */
         IGNORE
 

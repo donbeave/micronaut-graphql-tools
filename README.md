@@ -381,8 +381,9 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
   has no `!` line in the manifest.
 - **Applied directives without a wiring** (`!unwiredDirective name`, one line per directive): a directive the schema
   applies that no `SchemaDirective` bean, `RuntimeWiringCustomizer` or `resolver-directives` entry implements and that
-  `inert-directives` does not list (see [Schema directives](#schema-directives)). They are reported in one
-  `UnwiredDirectivesException`, which lists where each is applied.
+  `inert-directives` does not list (see [Schema directives](#schema-directives)); a directive applied only on `schema { }` or on a
+  directive argument is reported even when a wiring names it, unless `inert-directives` or `schema-customizer-directives`
+  lists it. They are reported in one `UnwiredDirectivesException`, which lists where each is applied.
 
 All findings except unreachable types, unmapped input class properties, primitives for nullable scalars and unwired
 directives are reported in one `StrictModeException`. `!ambiguous` lines are allowed by
@@ -414,7 +415,7 @@ the startup (`AmbiguousBindingException`). `allow-unreachable` may still name un
 enum, input and scalar types, so switching strict mode off never makes a valid configuration fail; without strict mode
 those entries have no effect. Unmapped input class properties are accepted (unless `input.unmapped-properties: fail`)
 and primitives for nullable built-in scalars bind as before. Applied directives without a wiring are logged as one
-warning that lists them as the error would, and the schema keeps them without effect. Invalid `inert-directives`
+warning that lists them as the error would (unless `unwired-directives` says otherwise), and the schema keeps them without effect. Invalid `inert-directives`
 entries still fail the startup, as invalid `allow-unreachable` entries do.
 
 ## Custom scalars
@@ -587,7 +588,9 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
 | `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
 | `micronaut.graphql.tools.input.unmapped-properties` | not set \| `fail` \| `ignore` | Input class properties that the GraphQL input type does not define. Not set: they fail in [strict mode](#strict-mode) and are accepted without it. `fail` stops the startup with one error that lists them for every input class, also with `strict: false`; `ignore` accepts them, also in strict mode. See [Input classes and input types](#input-classes-and-input-types). |
-| `micronaut.graphql.tools.inert-directives` | list of directive names, without `@` (empty) | Directives the schema may apply without a wiring, because they have no effect at runtime; they are logged at INFO. Every other applied directive needs a wiring (see [Schema directives](#schema-directives)); without one it fails the startup in [strict mode](#strict-mode) and is a warning without it. Every entry must be a directive the schema declares, that is not built in, that has no wiring and that is not a `resolver-directives` entry, otherwise the startup fails in either mode, so the list cannot go stale. |
+| `micronaut.graphql.tools.inert-directives` | list of directive names, without `@` (empty) | Directives the schema may apply without a wiring, because they have no effect at runtime; they are logged at INFO. An entry with `*` is a pattern (`fed*`) that must match at least one declared directive without a wiring. Every other applied directive needs a wiring (see [Schema directives](#schema-directives)); without one it fails the startup in [strict mode](#strict-mode) and is a warning without it (see `unwired-directives`). Every exact entry must be a directive the schema declares, that is not built in, that has no wiring and that is not a `resolver-directives` entry, otherwise the startup fails in either mode, so the list cannot go stale. |
+| `micronaut.graphql.tools.schema-customizer-directives` | list of directive names, without `@` (empty) | Directives that a `GraphQLSchemaCustomizer` handles on the `schema` definition or on directive arguments, where graphql-java calls no wiring (see [Schema directives](#schema-directives)). Every entry must be a directive the schema declares that is not built in, otherwise the startup fails in either mode. |
+| `micronaut.graphql.tools.unwired-directives` | not set \| `fail` \| `warn` \| `ignore` | What happens to applied directives without a wiring. Not set: `fail` in [strict mode](#strict-mode), `warn` without it. `fail` stops the startup with one error that lists them and where they are applied, also with `strict: false`; `warn` logs one warning; `ignore` skips the check (invalid `inert-directives` and `schema-customizer-directives` entries still fail). |
 
 ```yaml
 micronaut:
@@ -964,7 +967,9 @@ and the customizer that made it. Code registry entries for fields the library do
 providers, are allowed.
 (On graphql-java 25.2 the builder itself already rejects the first replaced default data fetcher, type
 resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently. A second data fetcher for a
-field the library wired is reported as `RuntimeWiringOverrideException` on every line.) To wrap data fetchers, use a
+field the library wired is reported as `RuntimeWiringOverrideException` on every line. On some graphql-java lines `RuntimeWiring.Builder#type` for a
+type the library wired clears that type's default data fetcher; the library puts it back, so calling `type` to add a
+field fetcher is not a replacement.) To wrap data fetchers, use a
 `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
@@ -1060,9 +1065,16 @@ same list is a warning instead; either way each such directive is an `!unwiredDi
 manifest. A directive counts as wired if a `SchemaDirective` bean names it, if a `RuntimeWiringCustomizer` registers a
 wiring for it with `RuntimeWiring.Builder#directive`, or if `resolver-directives` lists it (the binding implements it). A
 directive that is meant to have no effect at runtime (documentation, or enforced elsewhere) is listed in
-`micronaut.graphql.tools.inert-directives`. `SchemaDirectiveWiring` has no hook for the schema definition or for
-directive arguments, so a directive applied there can only be listed as inert, or be handled by a
-`GraphQLSchemaCustomizer`. Exempt: graphql-java's built-in directives (`@deprecated`, `@specifiedBy`, `@oneOf`,
+`micronaut.graphql.tools.inert-directives`, by name or with `*` as a pattern (`fed*`; a pattern must match a declared
+directive that has no wiring, so it cannot go stale). `unwired-directives` (`fail`, `warn` or `ignore`) sets what the check does; unset it
+follows `strict`, and `ignore` skips the check, for schemas that apply many tooling directives.
+`SchemaDirectiveWiring` has no hook for the schema definition or for directive arguments, so a wiring does not count
+there: a directive applied on `schema { }` (coordinate `schema`) or on an argument of a directive definition
+(`@name(arg:)`) fails the check unless `inert-directives` lists it, or
+`micronaut.graphql.tools.schema-customizer-directives` lists it because a `GraphQLSchemaCustomizer` handles it. That list
+takes exact names of declared directives that are not built in. A directive that has a wiring may be applied at both
+kinds of places only through `schema-customizer-directives`, because `inert-directives` rejects a directive that has a
+wiring. Exempt: graphql-java's built-in directives (`@deprecated`, `@specifiedBy`, `@oneOf`,
 `@include`, `@skip`), directives the schema declares but never applies, and directives it applies without declaring
 them (graphql-java reports those). `SchemaDirective` names that the schema does not declare are logged at INFO and not
 used, so a shared module may wire more directives than one schema applies.

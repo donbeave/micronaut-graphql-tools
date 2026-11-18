@@ -1,0 +1,9 @@
+schema {
+  query: Query
+}
+
+directive @fedKey on FIELD_DEFINITION
+
+type Query {
+  hello: String @fedKey
+}

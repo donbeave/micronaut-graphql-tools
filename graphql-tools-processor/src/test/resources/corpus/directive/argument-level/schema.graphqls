@@ -1,0 +1,10 @@
+schema {
+  query: Query
+}
+
+directive @doc on ARGUMENT_DEFINITION
+directive @meta(x: Int @doc) on FIELD_DEFINITION
+
+type Query {
+  hello: String @meta(x: 1)
+}
