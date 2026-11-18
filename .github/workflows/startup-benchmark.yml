@@ -32,7 +32,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p previous
-          run_id=$(gh run list --workflow startup-benchmark.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          run_id=$(gh run list --workflow startup-benchmark.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
           if [ -n "$run_id" ]; then
             gh run download "$run_id" --name startup-benchmark --dir previous || echo "No archived JSON in run $run_id"
           fi
@@ -41,6 +41,7 @@ jobs:
           FORKS: ${{ inputs.forks || '10' }}
         run: |
           set -o pipefail
+          case "$FORKS" in ''|*[!0-9]*|0) echo "::error::forks must be a positive integer, not '$FORKS'"; exit 1 ;; esac
           args=(--forks "$FORKS" --json startup-benchmark.json)
           if [ -f previous/startup-benchmark.json ]; then args+=(--previous previous/startup-benchmark.json); fi
           python3 benchmarks/scripts/startup-report.py "${args[@]}" | tee report.txt
