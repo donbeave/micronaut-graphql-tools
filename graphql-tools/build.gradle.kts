@@ -2,6 +2,10 @@ plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
 
+// The quality plugin checks the headers of src/main only; this checks the test sources.
+extra["licenseSourceSets"] = "test"
+apply(from = rootProject.file("config/spotless.license.gradle"))
+
 dependencies {
     api(projects.micronautGraphqlToolsBinding)
     api(mnGraphql.micronaut.graphql)
