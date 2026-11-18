@@ -57,27 +57,6 @@ public final class LibraryBeanSelection {
     }
 
     /**
-     * An application bean that the context can resolve: a bean definition, or one expansion of an {@code @EachProperty}
-     * or {@code @EachBean} template.
-     *
-     * @param definition the bean definition, or the template
-     * @param qualifier  the qualifier of the bean, or null
-     * @param primary    whether the bean is primary
-     */
-    record Provided(BeanDefinition<?> definition, @Nullable Qualifier<?> qualifier, boolean primary) {
-        Provided(BeanDefinition<?> definition) {
-            this(definition, definition.getDeclaredQualifier(), definition.hasStereotype(Primary.class));
-        }
-    }
-
-    /** What is being resolved, so that templates and library beans that depend on each other end the recursion. */
-    private record Visits(Set<Class<?>> judging, Set<BeanDefinition<?>> expanding) {
-        Visits() {
-            this(new HashSet<>(), new HashSet<>());
-        }
-    }
-
-    /**
      * @param context the bean context to search
      * @param type    the bean type
      * @return the application bean that makes the library's bean of this type step aside, or null
@@ -240,6 +219,32 @@ public final class LibraryBeanSelection {
         }
         context.fail("the application provides " + describe(competitor));
         return false;
+    }
+
+    /**
+     * An application bean that the context can resolve: a bean definition, or one expansion of an {@code @EachProperty}
+     * or {@code @EachBean} template.
+     *
+     * @param definition the bean definition, or the template
+     * @param qualifier  the qualifier of the bean, or null
+     * @param primary    whether the bean is primary
+     */
+    record Provided(BeanDefinition<?> definition, @Nullable Qualifier<?> qualifier, boolean primary) {
+        Provided(BeanDefinition<?> definition) {
+            this(definition, definition.getDeclaredQualifier(), definition.hasStereotype(Primary.class));
+        }
+    }
+
+    /**
+     * What is being resolved, so that templates and library beans that depend on each other end the recursion.
+     *
+     * @param judging   the bean types whose competitor is being looked for
+     * @param expanding the templates being expanded
+     */
+    private record Visits(Set<Class<?>> judging, Set<BeanDefinition<?>> expanding) {
+        Visits() {
+            this(new HashSet<>(), new HashSet<>());
+        }
     }
 
     /** Matches when no application bean of {@code GraphQLSchema} competes with the library's schema. */
