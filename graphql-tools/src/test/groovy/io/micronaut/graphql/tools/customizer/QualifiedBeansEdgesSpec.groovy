@@ -17,6 +17,7 @@ import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.value.PropertyCatalog
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.inject.qualifiers.Qualifiers
@@ -38,6 +39,7 @@ class QualifiedBeansEdgesSpec extends AbstractTest {
     static final String REPLACED_EXPANSION = 'QualifiedBeansEdgesSpec.replacedExpansion'
     static final String REPLACED_FACTORY = 'QualifiedBeansEdgesSpec.replacedFactory'
     static final String EACH_LIST = 'QualifiedBeansEdgesSpec.eachList'
+    static final String EACH_RAW = 'QualifiedBeansEdgesSpec.eachRaw'
     static final String LIBRARY = 'QualifiedBeansEdgesSpec.library'
 
     @Language("GraphQL")
@@ -229,6 +231,14 @@ type AdminQuery {
         config                                  | count
         [:]                                     | 1
         ['qb.list[0].x': 1, 'qb.list[1].x': 2]  | 3
+    }
+
+    void "an @EachProperty template with the raw catalog is judged by the raw entry names"() {
+        given:
+        start(EACH_RAW, ['qb.raw.MainEngine.x': 1, 'qb.raw.other.x': 2])
+
+        expect:
+        applicationContext.getBeansOfType(GraphQL).size() == 2
     }
 
     void start(String spec, Map config = [:], boolean withRegistry = true, Closure customize = null) {
@@ -451,6 +461,16 @@ type AdminQuery {
     @Factory
     static class EachListFactory {
         @EachProperty(value = 'qb.list', list = true)
+        @Singleton
+        GraphQL engine(GraphQLSchema schema) {
+            GraphQL.newGraphQL(schema).build()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = EACH_RAW)
+    @Factory
+    static class EachRawFactory {
+        @EachProperty(value = 'qb.raw', primary = 'MainEngine', catalog = PropertyCatalog.RAW)
         @Singleton
         GraphQL engine(GraphQLSchema schema) {
             GraphQL.newGraphQL(schema).build()

@@ -30,6 +30,7 @@ import io.micronaut.context.condition.ConditionContext;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.value.PropertyCatalog;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.BeanDefinitionReference;
 import io.micronaut.inject.qualifiers.Qualifiers;
@@ -133,7 +134,7 @@ public final class LibraryBeanSelection {
         for (Provided replacing : beans) {
             AnnotationValue<Replaces> replaces = replacing.definition().getAnnotation(Replaces.class);
             if (replaces != null) {
-                kept.removeIf(candidate -> candidate != replacing && replaces(replaces, replacing.definition(), candidate));
+                kept.removeIf(candidate -> candidate.definition() != replacing.definition() && replaces(replaces, replacing.definition(), candidate));
             }
         }
         return kept;
@@ -182,8 +183,9 @@ public final class LibraryBeanSelection {
             return;
         }
         String primary = template.stringValue(EachProperty.class, "primary").orElse(null);
+        PropertyCatalog catalog = template.enumValue(EachProperty.class, "catalog", PropertyCatalog.class).orElse(PropertyCatalog.NORMALIZED);
         boolean templatePrimary = template.hasStereotype(Primary.class);
-        for (String key : applicationContext.getEnvironment().getPropertyEntries(prefix)) {
+        for (String key : applicationContext.getEnvironment().getPropertyEntries(prefix, catalog)) {
             beans.add(new Provided(template, Qualifiers.byName(key), templatePrimary || key.equals(primary)));
         }
     }
