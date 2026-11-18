@@ -1,8 +1,8 @@
 package io.micronaut.graphql.tools
 
 import graphql.GraphQL
-import io.micronaut.context.exceptions.DependencyInjectionException
-import io.micronaut.context.exceptions.NoSuchBeanException
+import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.graphql.tools.exceptions.SchemaDiscoveryException
 
 class InitializationSpec extends AbstractTest {
 
@@ -14,10 +14,9 @@ class InitializationSpec extends AbstractTest {
         applicationContext.getBean(GraphQL.class)
 
         then:
-        def e = thrown(DependencyInjectionException)
-        e.message.startsWith("Failed to inject value for parameter [typeDefinitionRegistry] of method [graphQLSchema] of class: io.micronaut.graphql.tools.GraphQLFactory")
-        e.cause instanceof NoSuchBeanException
-        e.cause.message.startsWith("No bean of type [graphql.schema.idl.TypeDefinitionRegistry] exists")
+def e = thrown(BeanInstantiationException)
+        e.cause instanceof SchemaDiscoveryException
+        e.cause.message.startsWith("No GraphQL schema files found for micronaut.graphql.tools.schema.locations=[classpath:graphql/**/*.graphqls]")
     }
 
 }

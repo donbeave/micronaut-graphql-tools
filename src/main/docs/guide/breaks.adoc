@@ -12,6 +12,12 @@ Tagged `1.0.0-M2` and published to GitHub Packages. The breaking changes are num
 
 * BC-20 (#173): the `graphql-tools` mapper seam is internal and no longer documented. See the migration page, entries for 1.0.0-M2.
 
+== 1.0.0-M3 (not released yet)
+
+The breaking changes are numbered after `BC-21`.
+
+* BC-22 (#17): the compile-time processor reads `*.graphqls` files only. A `*.graphql` file in the schema directory is no longer a schema file. See the migration page.
+
 == Planned after 1.0.0-M2
 
 These changes are planned for the milestones of the tracker. Each one is _pending_ until it lands on `master`; the migration page describes each one.

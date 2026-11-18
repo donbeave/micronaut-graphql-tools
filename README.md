@@ -55,11 +55,11 @@ Maven (the repository goes in the POM, the credentials in `~/.m2/settings.xml`, 
 
 2. Define GraphQL Schema
 
-Create a GraphQL schema file, `schema.graphqls` to define types, queries, and mutations, for example in `src/main/resources` resources folder.
+Create GraphQL schema files, `*.graphqls`, to define types, queries, and mutations, in `src/main/resources/graphql`. The library finds them at startup, see [Schema discovery](#schema-discovery); a `schema { }` block is optional.
 
 3. Configuring GraphQL Tools
 
-Define a `TypeDefinitionRegistry` bean to load the GraphQL schema.
+Nothing to configure for the default location. To load the schema yourself, define a `TypeDefinitionRegistry` bean; it replaces the discovered schema.
 
 ```java
 @Bean
@@ -82,6 +82,63 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
 These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
+
+## Schema discovery
+
+Without a `TypeDefinitionRegistry` bean the library reads the schema files of `micronaut.graphql.tools.schema.locations` at
+startup, merges them, and binds the result. The default is `classpath:graphql/**/*.graphqls`: every `.graphqls` file under
+`graphql/` of the classpath, in sorted order, each parsed with its own name, so that errors and the
+[binding manifest](#binding-manifest) name the file. No factory is needed.
+
+| Location | Reads |
+|---|---|
+| `classpath:graphql/**/*.graphqls` | the first classpath entry that has a `graphql/` directory (your application) |
+| `classpath*:graphql/**/*.graphqls` | every classpath entry that has one, dependency jars included |
+| `file:/etc/app/schema/*.graphqls` | the file system |
+
+A location is a scheme and an Ant-style path (`*`, `**`, `?`). A path without wildcards names one file and fails when it is
+missing. A wildcard needs a directory before it. Several locations are read in order and merged.
+
+- **Implicit roots.** A schema without a `schema { }` block uses the object types `Query`, `Mutation` and `Subscription`
+  that it defines as the root operation types.
+- **Operation files.** The default reads `*.graphqls` only. A file that holds only executable definitions (queries,
+  mutations, fragments) or nothing is skipped and logged at INFO, so client operation files in the same directory do not
+  break the startup. A file that mixes operations and type definitions fails.
+- **Override.** Any `TypeDefinitionRegistry` bean of the application is used instead and nothing is read. A
+  `TypeDefinitionRegistryCustomizer` still runs on top of the schema, with either source.
+- **Failures.** A file that does not parse or conflicts with another, a location that names a missing file, and locations
+  that match no file at all fail the startup with `SchemaDiscoveryException`; the message names the file or the locations.
+- **Compile time.** The processor reads the same `*.graphqls` files with the same code from its schema directory
+  (`micronaut.graphql.tools.sdlDir`, see [Compile-time checks](#compile-time-checks)): several directories may be listed
+  with the platform path separator. It cannot read classpath locations, so schema that comes from a dependency jar is
+  not checked at compile time; point the directory option at a copy of it, or accept that the startup checks it.
+
+### Native image
+
+A native image cannot list a classpath directory, so a wildcard `classpath:` or `classpath*:` location reads the schema
+index of the module instead: the resource `META-INF/micronaut-graphql-tools/schema-index.txt`, one classpath path per line
+(a jar that provides schema files ships its own). The index is read in a native image only; the JVM lists the directories.
+The index is not written by the processor. Generate it in the build, from the files that are packaged, and keep the schema
+files themselves in the native image resources (the Micronaut Gradle plugin includes `src/main/resources`):
+
+```kotlin
+val schemaIndex = tasks.register("graphqlSchemaIndex") {
+    val schemaFiles = fileTree("src/main/resources") { include("graphql/**/*.graphqls") }
+    val output = layout.buildDirectory.dir("generated/graphql-index")
+    inputs.files(schemaFiles).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(output)
+    doLast {
+        val index = output.get().file("META-INF/micronaut-graphql-tools/schema-index.txt").asFile
+        index.parentFile.mkdirs()
+        index.writeText(schemaFiles.files.map { "graphql/" + it.relativeTo(file("src/main/resources/graphql")).invariantSeparatorsPath }
+            .sorted().joinToString("\n", prefix = "# GraphQL schema files\n", postfix = "\n"))
+    }
+}
+sourceSets.main { resources.srcDir(schemaIndex) }
+```
+
+Without the index a wildcard location fails the startup of the native image, naming the resource. On the JVM, a jar that
+has no directory entries cannot be listed; the index of that jar is used then.
 
 ## Return types
 
@@ -579,6 +636,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 
 | Property | Values (default first) | Meaning |
 |---|---|---|
+| `micronaut.graphql.tools.schema.locations` | list of locations (`classpath:graphql/**/*.graphqls`) | Where the schema files are read from when the application has no `TypeDefinitionRegistry` bean: `classpath:`, `classpath*:` (dependency jars too) or `file:`, then an Ant-style path. See [Schema discovery](#schema-discovery). |
 | `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding; in [strict mode](#strict-mode) (the default) the same holds for enum, input and scalar types that nothing uses. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. An allowed type also allows the enum, input and scalar types that its fields and arguments use, and that those input types use in turn (transitive); list only the type itself. A type that only a type that is not allowed uses stays unreachable. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
@@ -676,7 +734,7 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 
 | Option | Runtime option |
 |---|---|
-| `micronaut.graphql.tools.sdlDir` | none: the schema directory, required when the compilation has GraphQL resolvers or types |
+| `micronaut.graphql.tools.sdlDir` | none: the schema directories (`*.graphqls` files, read recursively, joined with the platform path separator), required when the compilation has GraphQL resolvers or types. Read with the same rules as [Schema discovery](#schema-discovery): `*.graphql` files are not schema files |
 | `micronaut.graphql.tools.strict` | `strict` |
 | `micronaut.graphql.tools.precedence` | `precedence` |
 | `micronaut.graphql.tools.resolverDirectives` | `resolver-directives` (comma-separated) |
@@ -688,7 +746,7 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 
 Checked from the schema files and the options alone:
 
-- the schema has a schema definition (`schema { query: ... }`);
+- the schema has a schema definition (`schema { query: ... }`) or defines the implicit root types `Query`, `Mutation` or `Subscription`;
 - every applied directive is declared (graphql-java would fail to build the schema);
 - every `resolverDirectives` entry is declared;
 - unreachable types, with `allowUnreachable` and `unreachableTypes` as at startup (in strict mode also enum, input

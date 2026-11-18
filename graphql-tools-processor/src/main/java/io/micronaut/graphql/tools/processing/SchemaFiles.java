@@ -15,72 +15,56 @@
  */
 package io.micronaut.graphql.tools.processing;
 
-import graphql.GraphQLError;
-import graphql.parser.MultiSourceReader;
-import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import graphql.schema.idl.errors.SchemaProblem;
+import io.micronaut.graphql.tools.binding.internal.schema.SchemaSourceException;
+import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+/**
+ * Reads the schema directories of the compilation with the rules of the runtime ({@link SchemaSources}): the
+ * {@value SchemaSources#EXTENSION} files, files without type definitions skipped with a note, and the implicit root types.
+ */
 final class SchemaFiles {
 
     private SchemaFiles() {
     }
 
     static TypeDefinitionRegistry read(String sdlDir, Problems problems) {
-        Path dir = Path.of(sdlDir);
-        if (!Files.isDirectory(dir)) {
-            problems.error(ProcessorOptions.SDL_DIR + " is not a directory: " + dir.toAbsolutePath() + ".");
-            return null;
-        }
-
-        List<Path> files;
-        try (Stream<Path> paths = Files.walk(dir)) {
-            files = paths.filter(Files::isRegularFile)
-                    .filter(it -> it.toString().endsWith(".graphqls") || it.toString().endsWith(".graphql"))
-                    .sorted()
-                    .toList();
-        } catch (IOException e) {
-            problems.error("cannot list the schema files in " + dir.toAbsolutePath() + ": " + e.getMessage());
-            return null;
-        }
-        if (files.isEmpty()) {
-            problems.error(ProcessorOptions.SDL_DIR + " has no *.graphqls or *.graphql file: " + dir.toAbsolutePath()
-                    + ".");
-            return null;
-        }
-
-        TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
-        SchemaParser parser = new SchemaParser();
-        for (Path file : files) {
-            String sourceName = dir.relativize(file).toString().replace('\\', '/');
-            try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-                MultiSourceReader source = MultiSourceReader.newMultiSourceReader().reader(reader, sourceName).build();
-                registry.merge(parser.parse(source));
-            } catch (IOException e) {
-                problems.error("cannot read the schema file " + file.toAbsolutePath() + ": " + e.getMessage());
-                return null;
-            } catch (SchemaProblem e) {
-                problems.error("the schema file " + sourceName + " is not valid: " + describe(e.getErrors()));
+        List<Path> directories = new ArrayList<>();
+        for (String entry : sdlDir.split(File.pathSeparator)) {
+            if (entry.isBlank()) {
+                continue;
+            }
+            Path directory = Path.of(entry.trim());
+            if (!Files.isDirectory(directory)) {
+                problems.error(ProcessorOptions.SDL_DIR + " is not a directory: " + directory.toAbsolutePath() + ".");
                 return null;
             }
+            directories.add(directory);
         }
-        return registry;
-    }
-
-    private static String describe(List<GraphQLError> errors) {
-        return errors.stream()
-                .map(it -> it.getMessage() + (it.getLocations() == null || it.getLocations().isEmpty() ? ""
-                        : " (line " + it.getLocations().get(0).getLine() + ")"))
-                .collect(Collectors.joining("; "));
+        try {
+            List<SchemaSources.Source> sources = SchemaSources.readDirectories(directories);
+            if (sources.isEmpty()) {
+                problems.error(ProcessorOptions.SDL_DIR + " has no *" + SchemaSources.EXTENSION + " file: " + sdlDir
+                        + ". The runtime reads the same files by default; a client operation file such as "
+                        + "*.graphql is not a schema file.");
+                return null;
+            }
+            SchemaSources.Loaded loaded = SchemaSources.load(sources);
+            if (!loaded.skipped().isEmpty()) {
+                problems.info("skipped " + loaded.skipped() + " in " + sdlDir + ": only executable definitions or nothing.");
+            }
+            SchemaSources.addImplicitRoots(loaded.registry());
+            return loaded.registry();
+        } catch (SchemaSourceException e) {
+            problems.error(e.getMessage());
+            return null;
+        }
     }
 
 }

@@ -3,6 +3,8 @@ plugins {
 }
 
 dependencies {
+    // the schema rules shared with the runtime (SchemaSources): the compile-time checks read the same files
+    implementation(projects.micronautGraphqlToolsBinding)
     implementation(mnGraphql.graphql.java)
 
     testImplementation(projects.micronautGraphqlTools)

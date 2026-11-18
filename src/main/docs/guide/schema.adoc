@@ -1,1 +1,51 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+Without a `TypeDefinitionRegistry` bean the library reads the schema files of `micronaut.graphql.tools.schema.locations` at startup, merges them and binds the result. No factory is needed.
+
+== Locations
+
+The default is `classpath:graphql/**/*.graphqls`: every `.graphqls` file under `graphql/`, in sorted order, each parsed with its own name, so that errors and the binding manifest name the file.
+
+[cols="1,2"]
+|===
+| Location | Reads
+| `classpath:graphql/**/*.graphqls` | the first classpath entry that has a `graphql/` directory (your application)
+| `classpath*:graphql/**/*.graphqls` | every classpath entry that has one, dependency jars included
+| `file:/etc/app/schema/*.graphqls` | the file system
+|===
+
+A location is a scheme and an Ant-style path (`*`, `**`, `?`). A path without wildcards names one file and fails when it is missing. A wildcard needs a directory before it. Several locations are read in order and merged.
+
+== Rules
+
+* A schema without a `schema { }` block uses the object types `Query`, `Mutation` and `Subscription` that it defines as the root operation types.
+* The default reads `*.graphqls` only. A file that holds only executable definitions (queries, mutations, fragments) or nothing is skipped and logged at INFO, so client operation files in the same directory do not break the startup. A file that mixes operations and type definitions fails.
+* Any `TypeDefinitionRegistry` bean of the application is used instead and nothing is read. A `TypeDefinitionRegistryCustomizer` still runs on top of the schema, with either source.
+* A file that does not parse or conflicts with another, a location that names a missing file, and locations that match no file at all fail the startup with `SchemaDiscoveryException`. The message names the file or the locations.
+
+== Compile time
+
+The processor reads the same `*.graphqls` files with the same code from its schema directory (`micronaut.graphql.tools.sdlDir`, see the Compile-Time Verification page). Several directories may be listed with the platform path separator. It cannot read classpath locations, so schema that comes from a dependency jar is not checked at compile time: point the directory option at a copy of it, or accept that the startup checks it.
+
+== Native image
+
+A native image cannot list a classpath directory, so a wildcard `classpath:` or `classpath*:` location reads the schema index instead: the resource `META-INF/micronaut-graphql-tools/schema-index.txt`, one classpath path per line. A jar that provides schema files ships its own. The index is read in a native image only; the JVM lists the directories.
+
+The processor does not write the index. Generate it in the build from the files that are packaged, and keep the schema files in the native image resources (the Micronaut Gradle plugin includes `src/main/resources`). Without the index a wildcard location fails the startup of the native image and the message names the resource.
+
+[source,kotlin]
+----
+val schemaIndex = tasks.register("graphqlSchemaIndex") {
+    val schemaFiles = fileTree("src/main/resources") { include("graphql/**/*.graphqls") }
+    val output = layout.buildDirectory.dir("generated/graphql-index")
+    inputs.files(schemaFiles).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(output)
+    doLast {
+        val index = output.get().file("META-INF/micronaut-graphql-tools/schema-index.txt").asFile
+        index.parentFile.mkdirs()
+        index.writeText(schemaFiles.files.map { "graphql/" + it.relativeTo(file("src/main/resources/graphql")).invariantSeparatorsPath }
+            .sorted().joinToString("\n", prefix = "# GraphQL schema files\n", postfix = "\n"))
+    }
+}
+sourceSets.main { resources.srcDir(schemaIndex) }
+----
+
+On the JVM a jar without directory entries cannot be listed. When nothing else is found the index of that jar is used.
