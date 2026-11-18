@@ -6,7 +6,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.aop.InterceptorBean;
 
 @InterceptorBean(Answering.class)
-@Requires(property = "spec.name", value = "IntroductionResolverSpec")
+@Requires(property = "spec.name", pattern = "Introduction.*")
 class AnsweringInterceptor implements MethodInterceptor<Object, Object> {
 
     @Override

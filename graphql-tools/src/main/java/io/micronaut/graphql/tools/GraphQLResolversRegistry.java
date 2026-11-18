@@ -38,12 +38,14 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -200,17 +202,27 @@ public final class GraphQLResolversRegistry {
             return;
         }
         introductionBeansRegistered = true;
-        registerUnseen(GraphQLRootResolver.class, seenRootResolvers, this::registerRootResolverExecutableMethod);
-        registerUnseen(GraphQLTypeResolver.class, seenTypeResolvers, this::registerTypeResolverExecutableMethod);
-        registerUnseen(GraphQLSchemaCoordinate.class, seenSchemaCoordinates,
+        Collection<BeanDefinition<?>> roots = definitionsOf(GraphQLRootResolver.class);
+        Collection<BeanDefinition<?>> types = definitionsOf(GraphQLTypeResolver.class);
+        registerUnseen(GraphQLRootResolver.class, roots, seenRootResolvers, this::registerRootResolverExecutableMethod);
+        registerUnseen(GraphQLTypeResolver.class, types, seenTypeResolvers, this::registerTypeResolverExecutableMethod);
+        Set<BeanDefinition<?>> coordinateBeans = new LinkedHashSet<>(roots);
+        coordinateBeans.addAll(types);
+        coordinateBeans.addAll(definitionsOf(GraphQLSchemaCoordinate.class));
+        registerUnseen(GraphQLSchemaCoordinate.class, coordinateBeans, seenSchemaCoordinates,
                 this::registerSchemaCoordinateExecutableMethod);
+    }
+
+    private Collection<BeanDefinition<?>> definitionsOf(Class<? extends Annotation> annotation) {
+        return beanContext.getBeanDefinitions(Qualifiers.byStereotype(annotation));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void registerUnseen(Class<? extends Annotation> annotation,
+                                Collection<BeanDefinition<?>> definitions,
                                 Set<BeanDefinition<?>> seen,
                                 BiConsumer<BeanDefinition<?>, ExecutableMethod<Object, ?>> register) {
-        for (BeanDefinition<?> beanDefinition : beanContext.getBeanDefinitions(Qualifiers.byStereotype(annotation))) {
+        for (BeanDefinition<?> beanDefinition : definitions) {
             if (seen.contains(beanDefinition)) {
                 continue;
             }
