@@ -46,6 +46,7 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     private final String[] names;
     private final JavaType[] javaTypes;
     private final Object instance;
+    private final PerCallResolver perCall;
 
     public MicronautExecutableMethodDataFetcher(
             InputValueConverter inputValueConverter,
@@ -74,7 +75,8 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                         argumentValue ? argument.getFirstTypeVariable().orElseThrow() : argument);
             }
         }
-        this.instance = instance;
+        this.perCall = instance instanceof PerCallResolver resolver ? resolver : null;
+        this.instance = perCall == null ? instance : null;
     }
 
     @Override
@@ -86,7 +88,11 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             arguments[i] = argument(environment, i);
         }
 
-        return executable.invoke(instance != null ? instance : environment.getSource(), arguments);
+        Object target = instance;
+        if (target == null) {
+            target = perCall != null ? perCall.supplier().get() : environment.getSource();
+        }
+        return executable.invoke(target, arguments);
     }
 
     private Object argument(DataFetchingEnvironment environment, int index) {
