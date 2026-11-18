@@ -25,6 +25,7 @@ Profile.username: String! → property · example.graphql.type.Profile#getUserna
 Query → object · - · - · -
 Query.allBooks: [Book!]! → root · example.graphql.query.AllBooksQuery#allBooks() · java.util.List<example.data.Book> · java.util.List<example.data.Book>
 Query.currentUser: User → root · example.graphql.query.CurrentUserQuery#currentUser() · example.data.User · example.data.User
+Query.introduced: String! → root · example.graphql.query.IntroducedQuery#introduced() · java.lang.String · java.lang.String
 Query.searchProfile(contains: String!, limit: Int): [Profile!]! → root · example.graphql.query.SearchProfileQuery#searchProfile(java.lang.String, java.lang.Integer) · java.util.List<example.graphql.type.Profile> · java.util.List<example.graphql.type.Profile>
 SecurityError → object · example.graphql.type.SecurityError · - · -
 SecurityError.code: SecurityErrorCode! → property · example.graphql.type.SecurityError#getCode() · example.graphql.type.SecurityErrorCode · example.graphql.type.SecurityErrorCode

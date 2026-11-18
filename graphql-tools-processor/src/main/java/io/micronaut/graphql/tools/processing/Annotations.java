@@ -40,6 +40,8 @@ final class Annotations {
     static final String SCHEMA_COORDINATE = "io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate";
     static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
 
+    static final Set<String> INTRODUCTION = Set.of("io.micronaut.aop.Introduction");
+
     static final Set<String> BEAN_DEFINING = Set.of(
             "jakarta.inject.Singleton",
             "jakarta.inject.Scope",
