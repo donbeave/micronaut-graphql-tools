@@ -161,8 +161,11 @@ public final class InputBindingFindings {
     private Halt walk(Site site, TypeRef declared, Type<?> schemaType, boolean fieldLevel) {
         if (!declared.array() && !declared.primitive() && (isAssignable(declared, FUTURE)
                 || isAssignable(declared, COMPLETION_STAGE))) {
-            // the startup binds what an asynchronous argument wraps
-            return Halt.SILENT;
+            // the startup binds what an asynchronous argument wraps, once
+            if (declared.typeArguments().isEmpty()) {
+                return Halt.SILENT;
+            }
+            declared = declared.typeArguments().get(0);
         }
         boolean nonNull = schemaType instanceof NonNullType;
         if (!declared.array() && InputTypeRules.ARGUMENT_VALUE.equals(declared.rawName())) {
@@ -306,9 +309,11 @@ public final class InputBindingFindings {
     @Nullable
     private Halt enumType(Site site, EnumTypeDefinition definition, TypeRef declared) {
         String name = definition.getName();
-        if (boundClass.containsKey(name)) {
-            // an enum is bound once: a failure is not reported again
-            return null;
+        String bound = boundClass.get(name);
+        if (bound != null) {
+            // an enum is bound once and a failure is not reported again; another class for it is a mapping conflict, which
+            // only the startup reports
+            return bound.equals(declared.rawName()) ? null : Halt.SILENT;
         }
         boundClass.put(name, declared.rawName());
         if (declared.array() || declared.primitive()) {

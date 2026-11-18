@@ -35,16 +35,17 @@ final class Parity {
      * @param runtime    the startup verdict
      * @param compile    the compile-time verdict; {@code null} if none is recorded (read as: reports nothing)
      * @param divergences the known gaps
-     * @param relaxed    whether the case sets the severity of a check at startup, which the compile-time check ignores
+     * @param relaxed    the codes that the case relaxes at startup, which the compile-time check cannot (see {@link #relaxedCodes})
      * @return the violations, empty if the two verdicts are in parity
      */
     static List<String> check(String name, Language language, Verdict runtime, Verdict compile, Divergences divergences,
-                              boolean relaxed = false) {
+                              Set<String> relaxed = [] as Set<String>) {
         List<String> violations = []
         Set<String> runtimeKeys = runtime.keys()
         Set<String> compileKeys = compile == null ? [] as Set<String> : compile.keys()
-        // a case that relaxes a severity at startup is outside the rule: the compile error cannot be relaxed (D-30, point 6)
-        (relaxed ? [] : (compileKeys - runtimeKeys).sort()).each {
+        // a code that the case relaxes at startup is outside the rule: the compile error cannot be relaxed (D-30, point 6)
+        (compile == null ? [] : compile.findings).findAll { !(it.code in relaxed) && !runtimeKeys.contains(it.key()) }
+                .collect { it.key() }.sort().each {
             violations.add("soundness: the compile side reports '${it}' but the startup does not (a false compile error)".toString())
         }
         runtime.findings.findAll { it.code in PER_CLASS_CODES && !compileKeys.contains(it.key()) }.each { Finding f ->
@@ -55,9 +56,21 @@ final class Parity {
         return violations
     }
 
-    /** @return whether the case configures the severity of a check ({@code strict} or {@code checks.<code>}) */
-    static boolean relaxed(CorpusCase corpusCase) {
-        return corpusCase.config.keySet().any { it.startsWith('micronaut.graphql.tools.strict') || it.startsWith('micronaut.graphql.tools.checks.') }
+    /**
+     * @return the codes that the case relaxes at startup: the strict checks for {@code strict=false}, and the code of each
+     * {@code checks.<code>} that is {@code warn} or {@code ignore}
+     */
+    static Set<String> relaxedCodes(Map<String, String> config) {
+        String prefix = 'micronaut.graphql.tools.checks.'
+        Set<String> codes = [] as Set<String>
+        config.each { String key, String value ->
+            if (key == 'micronaut.graphql.tools.strict' && value.trim().equalsIgnoreCase('false')) {
+                codes.addAll(BindingCode.values().findAll { it.check() }*.code())
+            } else if (key.startsWith(prefix) && value.trim().toLowerCase() in ['warn', 'ignore']) {
+                codes.add(key.substring(prefix.length()))
+            }
+        }
+        return codes
     }
 
     /** @return the violations of the recorded expectations of every case and language */
@@ -76,7 +89,7 @@ final class Parity {
                 if (runtime == null) {
                     return
                 }
-                check(c.name, language, runtime, compile, corpus.divergences, relaxed(c))
+                check(c.name, language, runtime, compile, corpus.divergences, relaxedCodes(c.config))
                         .each { result.add("${c.name} [${language.dir}]: ${it}".toString()) }
             }
         }

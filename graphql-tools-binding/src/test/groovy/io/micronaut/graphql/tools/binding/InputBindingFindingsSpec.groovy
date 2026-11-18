@@ -222,6 +222,32 @@ enum Color { RED GREEN }
         check([tint], enumeration('a.Color', ['RED', 'GREEN', 'BLUE']), collection('java.util.List')) == []
     }
 
+    void "an asynchronous argument is judged by what it wraps"() {
+        given:
+        def async = { String name, String wrapper -> [name: { name }, nameIsSynthetic: { false }, type: { ref(wrapper, ref('a.Filter')) },
+                                                      annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
+        def search = { String wrapper -> method('search', [:], [async('filter', wrapper), FakeModel.parameter('other', 'a.Filter')],
+                STRING, 'a.R#search(async,a.Filter)') }
+        def notIntrospected = input('a.Filter', [property('text')], [], false)
+
+        expect:
+        check([search('java.util.concurrent.CompletionStage')], notIntrospected) == ['class-not-introspected Filter']
+        check([search('java.util.concurrent.Future')], notIntrospected) == ['class-not-introspected Filter']
+        check([search('java.util.concurrent.Future')], input('a.Filter', [property('text'), property('extra')])) ==
+                ['unmapped-input-property Filter.extra']
+    }
+
+    void "an enum that another use binds to a different class is a mapping conflict: the startup hides the strict checks"() {
+        given:
+        def paint = method('paint', [:], [FakeModel.parameter('color', 'a.Color')], STRING, 'a.R#paint(a.Color)')
+        def tint = method('tint', [:], [], ref('a.Other'), 'a.R#tint()')
+        def color = enumeration('a.Color', ['RED', 'GREEN', 'BLUE'])
+
+        expect:
+        check([paint], color) == ['unbound-enum-constant a.Color#BLUE']
+        check([paint, tint], color, enumeration('a.Other', ['RED', 'GREEN'])) == []
+    }
+
     void "a coordinate on a bean that is not a resolver is coordinate-on-non-resolver"() {
         given:
         JClass bean = [name: { 'a.Bean' }, annotations: { view([]) },
