@@ -419,7 +419,8 @@ entries still fail the startup, as invalid `allow-unreachable` entries do.
 
 GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`,
 `BigDecimal` and `BigInteger` are built in. Any other scalar of the schema needs a `GraphQLScalarMapping` bean: the
-graphql-java `GraphQLScalarType` that implements it, and the Java classes that stand for it.
+graphql-java `GraphQLScalarType` that implements it, and the Java classes that stand for it. A bare `GraphQLScalarType`
+bean is not registered; wrap it in a mapping.
 
 ```java
 @Factory
