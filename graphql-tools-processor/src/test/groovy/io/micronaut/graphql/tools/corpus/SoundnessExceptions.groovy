@@ -6,7 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * The documented exceptions to the soundness rule of DD-4: a compile error that the startup does not report with the same code
+ * The documented exceptions to the soundness rule: a compile error that the startup does not report with the same code
  * and coordinate, because the startup fails on something else first or does not bind the method at all. A line is
  * {@code <case> <java|groovy|kotlin|all> <code> <coordinate> <reason>}, and the reason is one of the {@link #REASONS}. The
  * list is per case and per finding: an exception never covers another finding of the case, and an entry that is not needed
@@ -21,7 +21,7 @@ final class SoundnessExceptions {
 
     static final String FILE = 'corpus-soundness-exceptions.txt'
 
-    /** the reasons, each the sentence of DD-4 that stops holding */
+    /** the reasons, each the sentence of the soundness rule that stops holding */
     static final Map<String, String> REASONS = [
             'two-classes-one-root-field'  : 'two resolver classes bind one root field: the startup reports the ambiguity and judges no argument of either',
             'customizer-claimed-field'    : 'a RuntimeWiringCustomizer claims the field: the startup binds no method to it and judges none of its arguments',

@@ -58,7 +58,7 @@ class ParitySpec extends Specification {
         !Verdict.failed([new Finding('class-not-introspected', 'Filter', '-', true), UNBOUND]).bound
     }
 
-    void "the documented exceptions of DD-4 excuse exactly the listed error, in the listed case and language"() {
+    void "the documented soundness exceptions excuse exactly the listed error, in the listed case and language"() {
         given:
         def exceptions = new SoundnessExceptions(1, [new SoundnessExceptions.Entry('case', 'java', UNBOUND.code, UNBOUND.coordinate,
                 'customizer-claimed-field')])

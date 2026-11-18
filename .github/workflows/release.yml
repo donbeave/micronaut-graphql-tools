@@ -1,6 +1,6 @@
 name: Release
-# Publishes a milestone (1.0.0-M<n>) or the final 1.0.0 to the GitHub Packages Maven registry of this repository (D-40).
-# Nothing else is published: no Maven Central, no GitHub Release, no snapshots (D-09 stays in force for those).
+# Publishes a milestone (1.0.0-M<n>) or the final 1.0.0 to the GitHub Packages Maven registry of this repository.
+# Nothing else is published: no Maven Central, no GitHub Release, no snapshots.
 #
 # Triggers: a pushed version tag, or a manual run with the tag to publish (this is how a tag that predates this workflow
 # is published). The workflow definition and the publishing setup (.github/gradle/publish-github-packages.init.gradle)

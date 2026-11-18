@@ -24,7 +24,7 @@ import io.micronaut.inject.visitor.VisitorContext;
 import java.util.Set;
 
 /**
- * The verification gate of the metadata channel (D-39, DD-8, 2.8): an isolating visitor writes the internal annotation of
+ * The verification gate of the metadata channel : an isolating visitor writes the internal annotation of
  * the contracts into the annotation metadata of a class with {@code Element#annotate}, and ContractsGateSpec shows that
  * the bean definition carries it at runtime in each language. It acts only on a class that carries the marker annotation of the
  * spec, so that it is inert in every other compilation of the test classpath.

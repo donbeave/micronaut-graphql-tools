@@ -2,7 +2,7 @@ package io.micronaut.graphql.tools.visitor
 
 import spock.lang.Specification
 
-/** The options and the failure modes of the compilation (D-39, 3.1 and 3.2): nothing is skipped silently. */
+/** The options and the failure modes of the compilation : nothing is skipped silently. */
 class ProcessorOptionsSpec extends Specification {
 
     static final String SCHEMA = 'type Query { ping: String }\n'

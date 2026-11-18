@@ -10,7 +10,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * The verification gate of the metadata channel (D-39, 2.8): what an isolating visitor writes with {@code Element#annotate} is
+ * The verification gate of the metadata channel: what an isolating visitor writes with {@code Element#annotate} is
  * on the bean definition at runtime, and is read without reflection. javac and the Groovy compiler run in process here; KSP
  * is the Kotlin corpus backend (#143), where the same visitor class runs.
  */

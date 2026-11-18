@@ -23,7 +23,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * The one table of default severities (D-30): every check code is {@link Severity#FAIL}. {@code strict=false} is
+ * The one table of default severities: every check code is {@link Severity#FAIL}. {@code strict=false} is
  * {@link Severity#WARN} for every code. An explicit {@code checks} entry for the code wins over both.
  */
 @Internal

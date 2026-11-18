@@ -5,13 +5,13 @@
 # An entry needs a tracker issue number. The spec fails when an entry names an item that is documented now or no longer
 # exists, so a fixed gap must be deleted from this file.
 #
-# The exceptions below are not in the guide or the README yet. #96 writes the error reference. D-22 turns the startup
+# The exceptions below are not in the guide or the README yet. #96 writes the error reference. Turning the startup
 # exception subclasses into internal classes behind one public SchemaBindingException (#109); the error codes are #237.
 # Whichever of these is still public when #96 lands is documented there, and the rest leave this list with #109.
-exception:AbstractMappingException # base class of the mapping exceptions; internal under D-22 (#109)
-exception:IncorrectAnnotationException # pending the error reference (#96); internal under D-22 (#109)
-exception:IncorrectImplementationException # pending the error reference (#96); internal under D-22 (#109)
-exception:InvalidAllowUnreachableException # pending the error reference (#96); internal under D-22 (#109)
-exception:InvalidSourceArgumentException # pending the error reference (#96); internal under D-22 (#109)
-exception:RootResolverNotFoundException # pending the error reference (#96); internal under D-22 (#109)
-exception:SchemaDefinitionNotProvidedException # pending the error reference (#96); internal under D-22 (#109)
+exception:AbstractMappingException # base class of the mapping exceptions; internal behind SchemaBindingException (#109)
+exception:IncorrectAnnotationException # pending the error reference (#96); internal behind SchemaBindingException (#109)
+exception:IncorrectImplementationException # pending the error reference (#96); internal behind SchemaBindingException (#109)
+exception:InvalidAllowUnreachableException # pending the error reference (#96); internal behind SchemaBindingException (#109)
+exception:InvalidSourceArgumentException # pending the error reference (#96); internal behind SchemaBindingException (#109)
+exception:RootResolverNotFoundException # pending the error reference (#96); internal behind SchemaBindingException (#109)
+exception:SchemaDefinitionNotProvidedException # pending the error reference (#96); internal behind SchemaBindingException (#109)

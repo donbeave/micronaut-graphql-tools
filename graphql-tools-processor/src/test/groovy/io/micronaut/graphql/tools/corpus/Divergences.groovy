@@ -6,7 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * The known completeness gaps (DD-4): a startup finding of a per-class code that the compile-time checks do not report,
+ * The known completeness gaps: a startup finding of a per-class code that the compile-time checks do not report,
  * on purpose or until a fix. A line is {@code <case> <java|groovy|kotlin|all> <code> <coordinate>}. The header
  * {@code max-entries: N} is the ceiling: it must equal the number of entries, so a removed entry forces the ceiling
  * down, and a new entry shows as a raised ceiling in the review. An entry that no longer diverges (the finding is gone

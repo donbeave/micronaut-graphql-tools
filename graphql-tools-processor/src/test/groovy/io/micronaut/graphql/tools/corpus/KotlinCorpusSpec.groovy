@@ -10,7 +10,7 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 /**
- * The Kotlin side of the binding corpus (DD-13): every case with a {@code kotlin/} directory, compiled in one batched
+ * The Kotlin side of the binding corpus: every case with a {@code kotlin/} directory, compiled in one batched
  * Gradle TestKit build with Kotlin and KSP2, then started and judged exactly like the in-process cases. It is the Gradle
  * task {@code corpusKotlin}, not part of {@code test}: it needs the network (plugin portal, Maven Central) unless the Gradle
  * user home is warm, and its budget is three minutes on JDK 25. The wall time of the build is written to
