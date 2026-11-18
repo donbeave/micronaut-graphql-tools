@@ -87,14 +87,16 @@ class PackageDocumentationSpec extends Specification {
     def "the audience of the API map agrees with the @Internal on the package"() {
         given:
         def mismatched = apiMap().findAll { name, audience ->
-            def internal = audience.startsWith('Internal')
             def info = packages[name]?.packageInfo
-            internal != (info != null && (Files.readString(info) =~ /(?m)^@Internal\s*$/).find())
+            def internal = info != null && (Files.readString(info) =~ /(?m)^@Internal\s*$/).find()
+            def hasInternalTypes = packages[name]?.types?.any { (Files.readString(it) =~ /(?m)^\s*@Internal\b/).find() }
+            audience.startsWith('Internal') != internal || (!internal && audience.startsWith('Mixed') != hasInternalTypes)
         }.keySet()
 
         expect:
         assert mismatched.empty: "Audience and @Internal disagree for: ${mismatched.toSorted()}. " +
-                "A package whose audience is Internal carries @Internal in package-info.java, and no other package does."
+                "A package whose audience is Internal carries @Internal in package-info.java, and no other package does. " +
+                "A package of another audience is Mixed exactly when one of its types is annotated @Internal."
     }
 
     private Map<String, String> apiMap() {
@@ -118,6 +120,8 @@ class PackageDocumentationSpec extends Specification {
             try (Stream<Path> stream = Files.walk(sources)) {
                 stream.filter { it.toString().endsWith('.java') }.collect(Collectors.toList()).groupBy { it.parent }.each { dir, files ->
                     def name = sources.relativize(dir).iterator().collect { it.toString() }.join('.')
+                    def foreign = files.findAll { !(Files.readString(it) =~ /(?m)^package\s+${Pattern.quote(name)}\s*;/).find() }
+                    assert foreign.empty: "The package statement of ${foreign.collect { root.relativize(it) }} does not match its directory ${name}"
                     result[name] = [
                             dir        : dir,
                             packageInfo: files.find { it.fileName.toString() == 'package-info.java' },

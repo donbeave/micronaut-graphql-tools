@@ -3,7 +3,7 @@ This page tells you which package holds what, which packages you may import from
 == The rules
 
 * A package has one responsibility. A package with more than 15 types is a smell: the build lists the ones that are over the limit, each with a reason, and a package that is no longer over the limit leaves the list.
-* The public API is what you import from application code: the annotations, the customizer, mapping and directive interfaces, the configuration class, `ArgumentValue`, `BindingManifest`, `BindingCode` and the exception. The table below lists where each one is. Everything else is implementation and can change in any release.
+* The public API is what you import from application code: the annotations, the customizer, mapping and directive interfaces and mapping contexts, `CustomWiring`, the configuration class, `ArgumentValue`, `BindingManifest`, `BindingCode` and the exception. The table below lists where each one is. Everything else is implementation and can change in any release.
 * Implementation is marked in two ways. A type is annotated `@Internal` (`io.micronaut.core.annotation.Internal`, the same marker Micronaut uses), and a package of implementation types carries the `internal` segment in its name and an `@Internal` on the package in its `package-info.java`. Micronaut itself follows this convention.
 * A public type never lives in an `internal` package, and an internal type belongs in an `internal` package. The code does not follow the second half yet; see <<plannedLayout,Planned layout>>.
 * If a package holds both, the Javadoc of its `package-info.java` says so, and an `@Internal` type is not API even when it is `public`.
@@ -35,7 +35,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |Package |Module |Audience |Holds
 |`io.micronaut.graphql.tools` |graphql-tools |Mixed |The configuration, the customizer, mapping and directive interfaces, `ArgumentValue` and `BindingManifest` (public); the binding implementation, the registries, the checks and the factories (`@Internal`)
 |`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes
-|`io.micronaut.graphql.tools.exceptions` |graphql-tools |Public API |The startup failures: `SchemaBindingException` and its subclasses
+|`io.micronaut.graphql.tools.exceptions` |graphql-tools |Mixed |The startup failures: `SchemaBindingException` and its subclasses (public, but only `SchemaBindingException` is meant to be caught); `MethodNotFoundException` (`@Internal`)
 |`io.micronaut.graphql.tools.processor` |graphql-tools |Internal |The runtime method processors that register the resolvers (not the compile-time processor module)
 |`io.micronaut.graphql.tools.schema` |graphql-tools |Internal |Schema discovery, the data fetchers, the type resolvers and the value conversion
 |`io.micronaut.graphql.tools.binding` |graphql-tools-binding |Public API |`BindingCode`, the registry of the error codes
