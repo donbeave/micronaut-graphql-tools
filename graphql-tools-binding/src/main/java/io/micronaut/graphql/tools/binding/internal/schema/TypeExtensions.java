@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools;
+package io.micronaut.graphql.tools.binding.internal.schema;
 
 import graphql.language.EnumTypeDefinition;
 import graphql.language.InputObjectTypeDefinition;
@@ -34,13 +34,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+/**
+ * Folds the type extensions of a schema into the types they extend, so that the rules see one definition per type.
+ */
 @Internal
-final class TypeExtensions {
+public final class TypeExtensions {
 
     private TypeExtensions() {
     }
 
-    static TypeDefinitionRegistry merge(TypeDefinitionRegistry registry) {
+    public static TypeDefinitionRegistry merge(TypeDefinitionRegistry registry) {
         TypeDefinitionRegistry result = new TypeDefinitionRegistry();
         registry.schemaDefinition().ifPresent(schema -> add(result, mergeSchema(schema, registry)));
         registry.getDirectiveDefinitions().values().forEach(it -> add(result, it));
@@ -53,7 +56,7 @@ final class TypeExtensions {
         return result;
     }
 
-    static Set<String> objectExtensionFields(TypeDefinitionRegistry registry) {
+    public static Set<String> objectExtensionFields(TypeDefinitionRegistry registry) {
         Set<String> coordinates = new HashSet<>();
         registry.objectTypeExtensions().forEach((name, extensions) -> extensions.forEach(extension ->
                 extension.getFieldDefinitions().forEach(field -> coordinates.add(name + "." + field.getName()))));

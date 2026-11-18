@@ -24,7 +24,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | graphql-java floor leg | `./gradlew build -PgraphqlJavaLeg=floor` | Any change that touches graphql-java use (JDK 25) |
 | graphql-java ceiling leg | `./gradlew build -PgraphqlJavaLeg=ceiling` | Same (JDK 25) |
 | Binary compatibility | `./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default` | Changes to main code (JDK 25) |
-| Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check` | Changes to the library module (JDK 17) |
+| Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check` | Changes to the library or binding module (JDK 17) |
 | Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
 | Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
 | Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |

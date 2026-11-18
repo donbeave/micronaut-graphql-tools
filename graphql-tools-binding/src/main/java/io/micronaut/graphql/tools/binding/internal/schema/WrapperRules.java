@@ -1,0 +1,117 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.micronaut.graphql.tools.binding.internal.schema;
+
+import io.micronaut.core.annotation.Internal;
+
+/**
+ * The rules of the return type wrappers, as the sentences that name a violation. The wrapper order and the wording live
+ * here once; the caller decides what a violation throws or reports.
+ */
+@Internal
+public final class WrapperRules {
+
+    private static final String COMPLETION_STAGE = "java.util.concurrent.CompletionStage";
+    private static final String PUBLISHER = "org.reactivestreams.Publisher";
+    private static final String OPTIONAL = "java.util.Optional";
+
+    private WrapperRules() {
+    }
+
+    /**
+     * @return the sentence for a {@code CompletionStage} inside a list
+     */
+    public static String completionStageInList() {
+        return COMPLETION_STAGE + " is not allowed inside a list. Fix: return "
+                + "CompletionStage<List<T>> instead (for example, combine the element futures with "
+                + "CompletableFuture.allOf), or load the elements with a DataLoader.";
+    }
+
+    /**
+     * @param found the Java type that a subscription field returns
+     * @return the sentence for a subscription field that does not return a {@code Publisher}
+     */
+    public static String subscriptionNeedsPublisher(String found) {
+        return "a field of the subscription type must return " + PUBLISHER
+                + " (optionally inside a CompletionStage), found " + found + ". Fix: change the return type to "
+                + "Publisher<T> (for example Flux<T>).";
+    }
+
+    /**
+     * @return the sentence for a {@code Publisher} outside the subscription type
+     */
+    public static String publisherOutsideSubscription() {
+        return PUBLISHER + " is only allowed on fields of the subscription type. Fix: "
+                + "return a CompletionStage instead (for example Mono#toFuture()).";
+    }
+
+    /**
+     * @param graphQlType the printed GraphQL type of the field
+     * @return the sentence for an {@code Optional} at a non-null position
+     */
+    public static String optionalAtNonNull(String graphQlType) {
+        return OPTIONAL + " is only allowed for a nullable GraphQL type, the field type is " + graphQlType
+                + ". Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself "
+                + "instead of an Optional.";
+    }
+
+    /**
+     * @param primitiveOptional the binary name of {@code OptionalInt}, {@code OptionalLong} or {@code OptionalDouble}
+     * @param graphQlType       the printed GraphQL type of the field
+     * @return the sentence for a primitive optional at a non-null position
+     */
+    public static String primitiveOptionalAtNonNull(String primitiveOptional, String graphQlType) {
+        return primitiveOptional + " is only allowed for a nullable GraphQL type, the field type is " + graphQlType
+                + ". Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself "
+                + "instead of an " + simpleName(primitiveOptional) + ".";
+    }
+
+    /**
+     * @param primitiveOptional the binary name of {@code OptionalInt}, {@code OptionalLong} or {@code OptionalDouble}
+     * @return the sentence for a primitive optional inside an {@code Optional}
+     */
+    public static String optionalCannotWrapPrimitiveOptional(String primitiveOptional) {
+        return OPTIONAL + " cannot wrap " + primitiveOptional + ". Fix: return the " + simpleName(primitiveOptional)
+                + " itself, it is nullable already.";
+    }
+
+    /**
+     * @param outer   the wrapper that was peeled last
+     * @param wrapper the wrapper found inside it
+     * @return the sentence for a wrapper inside a wrapper that cannot hold it
+     */
+    public static String cannotWrap(String outer, String wrapper) {
+        String simple = simpleName(wrapper);
+        return outer + " cannot wrap " + wrapper + ". Supported wrappers, outermost first: CompletionStage "
+                + "(field level only), Publisher (subscription fields only), DataFetcherResult, Optional "
+                + "(nullable types only), each at most once. Fix: remove the inner " + simple
+                + " or declare the wrappers in that order.";
+    }
+
+    /**
+     * @param wrapper the wrapper without a type argument
+     * @return the sentence for a wrapper that does not declare the type it wraps
+     */
+    public static String missingTypeArgument(String wrapper) {
+        String simple = simpleName(wrapper);
+        return wrapper + " must declare the type it wraps. Fix: add the type argument, for example " + simple
+                + "<String>.";
+    }
+
+    private static String simpleName(String binaryName) {
+        return binaryName.substring(binaryName.lastIndexOf('.') + 1);
+    }
+}

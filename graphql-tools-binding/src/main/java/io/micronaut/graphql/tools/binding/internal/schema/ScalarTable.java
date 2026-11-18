@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools;
+package io.micronaut.graphql.tools.binding.internal.schema;
 
 import graphql.language.ListType;
 import graphql.language.TypeName;
@@ -36,10 +36,13 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableSet;
 
 /**
+ * The built-in scalars and the Java classes each of them accepts, the one table that the runtime and the compile-time checks
+ * share.
+ *
  * @author Alexey Zhokhov
  */
 @Internal
-public final class SystemTypes {
+public final class ScalarTable {
 
     private static final Map<String, Set<Class<?>>> SYSTEM_TYPES = new HashMap<>();
 
@@ -62,7 +65,7 @@ public final class SystemTypes {
             .flatMap(Set::stream)
             .collect(Collectors.toSet());
 
-    private SystemTypes() {
+    private ScalarTable() {
     }
 
     public static Set<Class<?>> getSupportedClasses(@NonNull TypeName typeName) {
