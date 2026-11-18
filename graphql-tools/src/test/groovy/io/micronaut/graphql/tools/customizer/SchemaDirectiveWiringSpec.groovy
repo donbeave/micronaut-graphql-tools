@@ -206,7 +206,7 @@ type Query {
         e.cause.directiveNames == ['upper']
         e.cause.message == ("Directive @upper is wired by both a named and an every-element SchemaDirective bean, "
                 + "so it would take effect twice: named ${UpperWiring.name}, every element ${BangWiring.name}. "
-                + "Use one of them: drop the name from the every-element bean, or remove the named bean.").toString()
+                + "Use one of them: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.").toString()
     }
 
     void "a RuntimeWiringCustomizer may not replace the wiring of a SchemaDirective bean"() {

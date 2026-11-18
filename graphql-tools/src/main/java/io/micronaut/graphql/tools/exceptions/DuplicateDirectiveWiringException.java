@@ -49,7 +49,7 @@ public final class DuplicateDirectiveWiringException extends RuntimeException {
                         + "SchemaDirective bean, so it would take effect twice: "
                         + String.join(", ", it.getValue()) + ".")
                 .collect(Collectors.joining("\n"))
-                + " Use one of them: drop the name from the every-element bean, or remove the named bean.");
+                + " Use one of them: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.");
 
         this.directiveNames = List.copyOf(wirings.keySet());
     }

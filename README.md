@@ -1022,7 +1022,7 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
 - One directive may have either a `named` bean or any number of `everyElement` beans, not both: a `named` bean and an
   `everyElement` bean that lists the same name would apply the directive twice (two auth checks, a value transformed
   twice), so the startup fails with `DuplicateDirectiveWiringException`, which names the directive and both wirings.
-  Keep one of them: drop the name from the `everyElement` bean, or remove the `named` bean.
+  Keep one of them: remove the `named` bean, or make the `everyElement` wiring stop handling that directive and then drop its name.
 - All `named` wirings run before every `everyElement` wiring, so they are always innermost. `@Order` on a `named` bean
   has no effect: the library does not sort them, and they run in the order the SDL applies the directives to the
   element.
