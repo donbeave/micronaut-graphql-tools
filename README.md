@@ -484,7 +484,7 @@ A member that binds no field on purpose does not need `strict: false`, which tur
 - **Lifecycle methods are not resolver methods.** A method annotated with `@EventListener`, `@Scheduled` or
   `@PreDestroy` on a resolver bean is not reported as unbound. It still binds a field if it has that field's name.
 
-These apply to the runtime checks; the compile-time checks (`micronaut-graphql-tools-processor`) do not read them yet.
+The compile-time checks (`micronaut-graphql-tools-processor`) read the same annotations and apply the same rules, so a build and the startup agree.
 
 With `strict: false` the library skips these checks and binds as before strict mode existed: only object, interface and
 union types are checked for reachability, and the findings appear in the manifest only. It does not change
