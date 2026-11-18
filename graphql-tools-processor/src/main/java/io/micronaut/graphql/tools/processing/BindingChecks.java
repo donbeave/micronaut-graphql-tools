@@ -82,12 +82,13 @@ final class BindingChecks {
             "BigInteger", Set.of("java.math.BigInteger")
     );
 
-    private static final Pattern SCHEMA_COORDINATE = Pattern.compile("[_A-Za-z][_0-9A-Za-z]*\\.[_A-Za-z][_0-9A-Za-z]*");
-    private static final List<String> RETURN_TYPE_WRAPPERS = List.of(COMPLETION_STAGE, PUBLISHER, DATA_FETCHER_RESULT,
-            OPTIONAL);
     static final Map<String, String> PRIMITIVE_OPTIONALS = Map.of(
             "java.util.OptionalInt", "java.lang.Integer", "java.util.OptionalLong", "java.lang.Long",
             "java.util.OptionalDouble", "java.lang.Double");
+
+    private static final Pattern SCHEMA_COORDINATE = Pattern.compile("[_A-Za-z][_0-9A-Za-z]*\\.[_A-Za-z][_0-9A-Za-z]*");
+    private static final List<String> RETURN_TYPE_WRAPPERS = List.of(COMPLETION_STAGE, PUBLISHER, DATA_FETCHER_RESULT,
+            OPTIONAL);
 
     private final TypeDefinitionRegistry registry;
     private final ProcessorOptions options;
