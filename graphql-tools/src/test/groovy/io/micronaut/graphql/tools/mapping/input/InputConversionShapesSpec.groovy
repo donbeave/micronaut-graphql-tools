@@ -21,7 +21,7 @@ import org.intellij.lang.annotations.Language
 class InputConversionShapesSpec extends AbstractTest {
 
     static final String SPEC_NAME = "InputConversionShapesSpec"
-    static final Map DETECT = [(GraphQLToolsConfiguration.PREFIX + '.input.detect-omission'): true]
+    static final Map DETECT = [:]
     static final String SPEC_DECK = "InputConversionShapesSpecDeck"
     static final String SPEC_NULL_PRIMITIVE = "InputConversionShapesSpecNullPrimitive"
     static final String SPEC_WIDENED = "InputConversionShapesSpecWidened"
@@ -265,7 +265,7 @@ type Query {
         e.cause.message.contains('2 errors')
     }
 
-    void "without omission detection an ArgumentValue property that no input field defines keeps its value"() {
+    void "an ArgumentValue property that no input field defines is omitted"() {
         given:
         startContext(SCHEMA_UNMAPPED_WRAPPER, SPEC_UNMAPPED_WRAPPER, [(GraphQLToolsConfiguration.PREFIX + '.strict'): false])
 
@@ -274,7 +274,7 @@ type Query {
 
         then:
         result.errors.isEmpty()
-        result.data.labelled == 'l kept'
+        result.data.labelled == 'l omitted'
     }
 
     void "a list declared as a collection that no list converts to fails the startup"() {
@@ -382,7 +382,7 @@ type Query {
     @GraphQLRootResolver
     static class UnmappedWrapperQuery {
         String labelled(UnmappedWrapperInput input) {
-            return "${input.label} ${input.note.value}"
+            return "${input.label} ${input.note.omitted ? 'omitted' : input.note.get()}"
         }
     }
 

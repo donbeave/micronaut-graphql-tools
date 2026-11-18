@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 
 import static io.micronaut.graphql.tools.GraphQLUtils.getTypeName;
 import static io.micronaut.graphql.tools.GraphQLUtils.unsupportedTypeDefinition;
@@ -69,12 +70,13 @@ final class AbstractTypeWiring {
     }
 
     void wireUnion(UnionTypeDefinition unionTypeDefinition, Class<?> targetClass, TypeMappingContext mappingContext,
-                   MemberBinder memberBinder) {
-        runtimeWiringBuilder.type(unionTypeDefinition.getName(), typeRuntimeWiringBuilder -> {
-            Map<Class<?>, String> exactClasses = new HashMap<>();
-            Map<String, Class<?>> objectTypes = new HashMap<>();
+                   MemberBinder memberBinder, Consumer<List<Runnable>> inOrder) {
+        Map<Class<?>, String> exactClasses = new HashMap<>();
+        Map<String, Class<?>> objectTypes = new HashMap<>();
+        List<Runnable> actions = new ArrayList<>();
 
-            for (Type<?> type : unionTypeDefinition.getMemberTypes()) {
+        for (Type<?> type : unionTypeDefinition.getMemberTypes()) {
+            actions.add(() -> {
                 TypeName typeName = getTypeName(type);
                 TypeDefinition<?> typeDefinition = typeDefinitionRegistry.getType(typeName).get();
 
@@ -98,15 +100,18 @@ final class AbstractTypeWiring {
                 } else {
                     throw unsupportedTypeDefinition(typeDefinition);
                 }
-            }
+            });
+        }
 
+        actions.add(() -> {
             AbstractTypeResolver typeResolver = new AbstractTypeResolver(
                     "union", unionTypeDefinition.getName(), exactClasses, objectTypes
             );
             abstractTypeResolvers.add(typeResolver);
-            typeRuntimeWiringBuilder.typeResolver(typeResolver);
-            return typeRuntimeWiringBuilder;
+            runtimeWiringBuilder.type(unionTypeDefinition.getName(),
+                    typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder.typeResolver(typeResolver));
         });
+        inOrder.accept(actions);
     }
 
     /**
