@@ -1,6 +1,6 @@
 # micronaut-graphql-tools 1.0.0-M2 release notes
 
-Tag: `1.0.0-M2` (not released yet). This milestone follows the published [1.0.0-M1](RELEASE-NOTES-1.0.0-M1.md). The numbering continues from the M1 notes: `BC-01` to `BC-19` are described there, and the first change of this milestone is `BC-20`. See the migration page for the fix of each change.
+Tag: `1.0.0-M2` (not released yet). This milestone follows [1.0.0-M1](RELEASE-NOTES-1.0.0-M1.md). The numbering continues from the M1 notes: `BC-01` to `BC-19` are described there, and the first change of this milestone is `BC-20`. See the migration page for the fix of each change.
 
 ## Breaking changes (BC-20)
 
