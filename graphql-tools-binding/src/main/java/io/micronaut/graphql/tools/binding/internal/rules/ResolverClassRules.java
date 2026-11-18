@@ -123,7 +123,7 @@ public final class ResolverClassRules {
             String name = declared != null ? declared : parameter.name();
             if (!available.contains(name)) {
                 return new ArgumentVerdict(slots, new ParameterWithoutArgument(i, name, available,
-                        declared == null && parameter.nameIsSynthetic()));
+                        declared == null && parameter.nameIsSynthetic() && name.equals("arg" + i)));
             }
             if (!bound.add(name)) {
                 return new ArgumentVerdict(slots, new DuplicateParameter(name));

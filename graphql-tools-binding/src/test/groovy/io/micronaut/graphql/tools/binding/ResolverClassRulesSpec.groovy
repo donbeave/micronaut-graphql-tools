@@ -90,12 +90,15 @@ class ResolverClassRulesSpec extends Specification {
                 [FakeModel.parameter('arg0', 'java.lang.String', 'genre', true)], schema('genre'))
         def misspelled = ResolverClassRules.arguments(null,
                 [FakeModel.parameter('arg0', 'java.lang.String', 'gnere', true)], schema('genre'))
+        def otherIndex = ResolverClassRules.arguments(null,
+                [FakeModel.parameter('arg5', 'java.lang.String', null, true)], schema('genre'))
 
         then:
         unnamed.failure() == new ArgumentVerdict.ParameterWithoutArgument(0, 'arg0', ['genre'], true)
         renamed.failure() == null
         renamed.slots()*.argument() == ['genre']
         misspelled.failure() == new ArgumentVerdict.ParameterWithoutArgument(0, 'gnere', ['genre'], false)
+        otherIndex.failure() == new ArgumentVerdict.ParameterWithoutArgument(0, 'arg5', ['genre'], false)
     }
 
     void "two parameters that bind one argument fail"() {
