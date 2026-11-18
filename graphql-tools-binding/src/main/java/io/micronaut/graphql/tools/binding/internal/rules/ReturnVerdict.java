@@ -27,11 +27,25 @@ import io.micronaut.core.annotation.Nullable;
  * @param primitiveOptional whether the adapted type is the boxed type inside an {@code OptionalInt},
  *                          {@code OptionalLong} or {@code OptionalDouble}, which is then the type that was reached
  * @param failure           the sentence for the first violation, or {@code null} when the wrappers are valid
+ * @param element           for a list field, the verdict for the element type, which the runtime checks one level
+ *                          down with {@code fieldLevel} false; {@code null} otherwise
  */
 @Internal
-public record ReturnVerdict(int depth, boolean primitiveOptional, @Nullable String failure) {
+public record ReturnVerdict(int depth, boolean primitiveOptional, @Nullable String failure,
+                            @Nullable ReturnVerdict element) {
 
     static ReturnVerdict failed(String failure) {
-        return new ReturnVerdict(0, false, failure);
+        return new ReturnVerdict(0, false, failure, null);
+    }
+
+    /**
+     * @return the sentence for the first violation at this level or below, or {@code null} when there is none
+     */
+    @Nullable
+    public String firstFailure() {
+        if (failure != null) {
+            return failure;
+        }
+        return element == null ? null : element.firstFailure();
     }
 }

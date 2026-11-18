@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.binding.internal.rules;
 import graphql.language.FieldDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.InterfaceTypeDefinition;
+import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.Type;
@@ -60,6 +61,8 @@ public final class ResolverClassRules {
     private static final String PUBLISHER = "org.reactivestreams.Publisher";
     private static final String DATA_FETCHER_RESULT = "graphql.execution.DataFetcherResult";
     private static final String OPTIONAL = "java.util.Optional";
+    private static final String ITERABLE = "java.lang.Iterable";
+    private static final String ITERATOR = "java.util.Iterator";
     // the wrappers a return type may not nest, outermost first
     private static final List<String> WRAPPERS = List.of(COMPLETION_STAGE, PUBLISHER, DATA_FETCHER_RESULT, OPTIONAL);
     // graphql-java's DefaultValueUnboxer unwraps these at runtime, like Optional
@@ -319,7 +322,7 @@ public final class ResolverClassRules {
             }
         }
 
-        return new ReturnVerdict(depth, primitiveOptional, null);
+        return new ReturnVerdict(depth, primitiveOptional, null, null);
     }
 
     /**
@@ -361,7 +364,10 @@ public final class ResolverClassRules {
             }
             List<String> coordinates = new ArrayList<>();
             if (declared != null) {
-                coordinates.add(declared.get(method.signature()));
+                String coordinate = declared.get(method.signature());
+                if (bindsFieldNamed(coordinate, method.name())) {
+                    coordinates.add(coordinate);
+                }
             } else if (root) {
                 new TreeSet<>(rootTypes).forEach(type -> {
                     if (field(schema, type, method.name()) != null) {
@@ -388,11 +394,40 @@ public final class ResolverClassRules {
                 boolean subscription = schema.subscriptionType().filter(typeName::equals).isPresent();
                 fields.add(new FieldVerdict(coordinate,
                         arguments(rootField ? null : sourceType, method.parameters(), argumentNames),
-                        returnAdaptation(model, method.genericReturnType(), field.getType(), true, subscription)));
+                        fieldReturn(model, method.genericReturnType(), field.getType(), true, subscription)));
             }
             methods.add(new MethodVerdict(method.signature(), coordinates, fields));
         }
         return new ClassVerdict(resolver.name(), methods);
+    }
+
+    private static boolean bindsFieldNamed(String coordinate, String methodName) {
+        int dot = coordinate.indexOf('.');
+        return dot > 0 && coordinate.substring(dot + 1).equals(methodName);
+    }
+
+    /**
+     * The return adaptation of a method for a field, level by level as the runtime checks it: the wrappers of the
+     * declared type, then, where the field type is a list, the wrappers of the element type with {@code fieldLevel}
+     * false, down to the innermost element.
+     */
+    private static ReturnVerdict fieldReturn(TypeModel model, TypeRef declared, Type<?> fieldType, boolean fieldLevel,
+                                             boolean subscription) {
+        ReturnVerdict verdict = returnAdaptation(model, declared, fieldType, fieldLevel, subscription);
+        Type<?> unwrapped = fieldType instanceof NonNullType nonNull ? nonNull.getType() : fieldType;
+        if (verdict.failure() != null || verdict.primitiveOptional() || !(unwrapped instanceof ListType list)) {
+            return verdict;
+        }
+        TypeRef adapted = declared;
+        for (int i = 0; i < verdict.depth(); i++) {
+            adapted = adapted.typeArguments().get(0);
+        }
+        if (!isAssignableTo(model, adapted, ITERABLE) && !isAssignableTo(model, adapted, ITERATOR)
+                || adapted.typeArguments().isEmpty()) {
+            return verdict;
+        }
+        return new ReturnVerdict(verdict.depth(), false, null,
+                fieldReturn(model, adapted.typeArguments().get(0), list.getType(), false, subscription));
     }
 
     @Nullable

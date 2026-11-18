@@ -43,6 +43,8 @@ schema {
 }
 type Query {
   book(id: ID!): Book
+  books: [Book!]
+  titles: [Book]
   ping: String!
 }
 type Mutation {
@@ -129,8 +131,56 @@ type Book {
 
         then:
         verdict.methods()*.signature() == ['a.R#nowhere()', 'a.R#broken()']
-        verdict.methods()*.coordinates() == [['Query.nowhere'], ['nonsense']]
+        verdict.methods()*.coordinates() == [['Query.nowhere'], []]
         verdict.methods()*.fields() == [[], []]
+    }
+
+    void "a declared coordinate whose field name differs from the method name binds nothing"() {
+        given:
+        def methods = [method('titleText', coordinate('Book.title'), [FakeModel.parameter('book', 'a.Book')], STRING, 'a.T#titleText(Book)')]
+
+        when:
+        def verdict = ResolverClassRules.check(schema, model(), resolver('a.T', methods, AnnotationNames.TYPE_RESOLVER), 'a.Book')
+
+        then:
+        verdict.methods()*.coordinates() == [[]]
+        verdict.methods()*.fields() == [[]]
+    }
+
+    void "the wrappers of a list element are checked one level down, as the runtime does"() {
+        given:
+        def lists = model(['java.util.List': ['java.lang.Iterable']])
+        def methods = [
+                method('books', [:], [], ref('java.util.List', ref(STAGE, ref('a.Book'))), 'a.R#books()'),
+                method('titles', [:], [], ref(STAGE, ref('java.util.List', ref(OPTIONAL, ref('a.Book')))), 'a.R#titles()'),
+        ]
+
+        when:
+        def verdict = ResolverClassRules.check(schema, lists, resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+        def books = verdict.methods()[0].fields()[0].returns()
+        def titles = verdict.methods()[1].fields()[0].returns()
+
+        then:
+        books.failure() == null
+        books.element().failure() == WrapperRules.completionStageInList()
+        books.firstFailure() == WrapperRules.completionStageInList()
+        titles.depth() == 1
+        titles.failure() == null
+        titles.element().depth() == 1
+        titles.firstFailure() == null
+    }
+
+    void "a non-null list element rejects an Optional"() {
+        given:
+        def lists = model(['java.util.List': ['java.lang.Iterable']])
+        def methods = [method('books', [:], [], ref('java.util.List', ref(OPTIONAL, ref('a.Book'))), 'a.R#books()')]
+
+        when:
+        def returns = ResolverClassRules.check(schema, lists, resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+                .methods()[0].fields()[0].returns()
+
+        then:
+        returns.firstFailure() == WrapperRules.optionalAtNonNull('Book!')
     }
 
     void "a field of the subscription type needs a Publisher"() {
