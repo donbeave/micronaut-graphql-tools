@@ -26,6 +26,23 @@ input Stock {
   comment: String
 }
 
+input Dimensions {
+  width: Int!
+  unit: String
+}
+
+input Part {
+  name: String!
+  note: String
+}
+
+input Crate {
+  label: String!
+  dimensions: Dimensions!
+  parts: [Part!]!
+  memo: String
+}
+
 extend type Query {
   scalars(text: String!, number: Int!, ratio: Float!, flag: Boolean!, id: ID!): String!
 
@@ -40,6 +57,8 @@ extend type Query {
   shape(shape: Shape!): String!
 
   stock(stock: Stock!): String!
+
+  crate(crate: Crate!): String!
 }
 
 extend type Mutation {

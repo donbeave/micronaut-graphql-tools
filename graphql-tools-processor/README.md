@@ -11,10 +11,27 @@ returns. Each error names the schema coordinate and the schema file line. The gu
 
 Today the processor is a JSR-269 annotation processor (`GraphQLSchemaBindingProcessor`, registered in
 `META-INF/services/javax.annotation.processing.Processor`). It is being replaced by a `TypeElementVisitor` in the package
-`io.micronaut.graphql.tools.visitor` (#291). The JSR-269 code is deleted by #144 after the visitor reaches parity. The
-visitor is not in the tree yet.
+`io.micronaut.graphql.tools.visitor` (#150, #291). The JSR-269 code is deleted by #144 after the visitor reaches parity.
+
+The visitor (`GraphQLToolsVisitor`) is in the tree and is registered for the tests of this module only
+(`src/test/resources/META-INF/services/io.micronaut.inject.visitor.TypeElementVisitor`). The switch (#291) registers it in
+`main` and removes the JSR-269 registration; until then the published jar still carries the JSR-269 processor alone.
 
 ## Responsibility
+
+The visitor (package `io.micronaut.graphql.tools.visitor`):
+
+- `GraphQLToolsVisitor`: an isolating `TypeElementVisitor` that checks the concrete resolver classes (and an `@Introduction`
+  interface that is a resolver) with the per-class rules of `graphql-tools-binding` (`ResolverClassFindings`), and reports each
+  finding as a compile error. It keeps its state per `start()`, looks up no class by name, asks for no project directory and
+  writes no file (`VisitorArchitectureSpec`).
+- `ProcessorOptions`: the two options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
+  separator) and `micronaut.graphql.tools.processor.checks` (`true` or `false`). An unknown key under
+  `micronaut.graphql.tools.processor.` is an error; a runtime key that is present as a system property is not.
+- `CheckedSchema`: reads the schema once per compilation, on the first class that is checked.
+- `ElementTypeModel`: the adapter of the type model over `ClassElement` and `MethodElement`.
+
+The JSR-269 processor (`processing/`, until #144):
 
 - Read the schema files and the resolver beans of one compilation (`processing/`: `SchemaFiles`, `ResolverBeans`,
   `SchemaChecks`, `BindingChecks`).
@@ -52,7 +69,8 @@ The module compiles for Java 21 (`micronautBuild.javaVersion = 21`), so it does 
 ./gradlew :micronaut-graphql-tools-processor:check
 ```
 
-`check` runs the unit tests, the binding corpus (`BindingCorpusSpec`, about 70 seconds on the default graphql-java
+`check` runs the unit tests (the visitor under javac in process: `GraphQLToolsVisitorSpec`, `ProcessorOptionsSpec`,
+`ContractsGateSpec`), `compileVisitorRelease17` (the visitor package compiled alone at release 17), the binding corpus (`BindingCorpusSpec`, about 70 seconds on the default graphql-java
 leg), `ProcessorOptionsDocsSpec` (it fails when a processor option is not named in the options page) and
 `checkNoRuntimeDependency`. The floor and ceiling legs skip the corpus.
 
