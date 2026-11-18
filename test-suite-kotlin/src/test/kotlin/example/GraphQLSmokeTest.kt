@@ -142,8 +142,8 @@ class GraphQLSmokeTest(
     @Order(8)
     fun schemaEnumValuesAreTheKotlinConstants() {
         val security = schema.getType("SecurityErrorCode") as GraphQLEnumType
-        assertSame(SecurityErrorCode.NOT_AUTHENTICATED, security.getValue("NOT_AUTHENTICATED").value)
+        assertSame(SecurityErrorCode.NOT_AUTHENTICATED, security.getValue("NOT_AUTHENTICATED")!!.value)
         val validation = schema.getType("ValidationErrorCode") as GraphQLEnumType
-        assertSame(ValidationErrorCode.DUPLICATE, validation.getValue("DUPLICATE").value)
+        assertSame(ValidationErrorCode.DUPLICATE, validation.getValue("DUPLICATE")!!.value)
     }
 }

@@ -48,6 +48,7 @@ import java.util.regex.Pattern;
 @Internal
 final class RuntimeWiringCustomizers {
 
+    private static final Pattern DUPLICATE_ENUM_PROVIDER = Pattern.compile("The type (\\S+) already has a enum provider defined");
     private static final Pattern DUPLICATE_FIELD = Pattern.compile("The field (\\S+) on type (\\S+) has already been defined");
 
     private RuntimeWiringCustomizers() {
@@ -106,6 +107,11 @@ final class RuntimeWiringCustomizers {
             try {
                 customizer.customize(builder);
             } catch (RuntimeException e) {
+                String rejectedEnum = rejectedEnumValuesProvider(e);
+                if (rejectedEnum != null && before.hasEnumValuesProvider(rejectedEnum)) {
+                    replacements.add("enum values provider of " + rejectedEnum + by);
+                    throw new RuntimeWiringOverrideException(replacements);
+                }
                 String rejected = rejectedDuplicateField(e);
                 if (rejected == null || !before.hasDataFetcher(rejected) || claimed.containsKey(rejected)) {
                     throw e;
@@ -123,6 +129,15 @@ final class RuntimeWiringCustomizers {
         if (!replacements.isEmpty()) {
             throw new RuntimeWiringOverrideException(replacements);
         }
+    }
+
+    @Nullable
+    private static String rejectedEnumValuesProvider(RuntimeException e) {
+        if (!e.getClass().getName().equals("graphql.schema.idl.errors.StrictModeWiringException")) {
+            return null;
+        }
+        Matcher matcher = DUPLICATE_ENUM_PROVIDER.matcher(String.valueOf(e.getMessage()));
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     @Nullable
@@ -184,6 +199,10 @@ final class RuntimeWiringCustomizers {
                     new TreeMap<>(runtimeWiring.getEnumValuesProviders()),
                     runtimeWiring.getCodeRegistry()
             );
+        }
+
+        boolean hasEnumValuesProvider(String type) {
+            return enumValuesProviders.containsKey(type);
         }
 
         boolean hasDataFetcher(String coordinate) {
