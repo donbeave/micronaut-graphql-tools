@@ -277,8 +277,14 @@ public final class SchemaDiscovery {
 
     private static void add(String name, URL url, List<Source> found, Set<String> seen) throws IOException {
         if (seen.add(url.toExternalForm())) {
-            found.add(new Source(name, read(url)));
+            found.add(new Source(qualified(name, url), read(url)));
         }
+    }
+
+    private static String qualified(String name, URL url) {
+        String text = url.toExternalForm();
+        int bang = text.indexOf("!/");
+        return "jar".equals(url.getProtocol()) && bang > 0 ? text.substring(text.lastIndexOf('/', bang) + 1, bang) + "!/" + name : name;
     }
 
     private static String read(URL url) throws IOException {

@@ -78,6 +78,8 @@ class SchemaDiscoverySpec extends Specification {
 
         then:
         indexed.read().size() == 2
+        indexed.read().contains('lib.jar!/discovery/lib.graphqls')
+        listed.read().contains('lib.jar!/discovery/lib.graphqls')
         indexed.registry().types().keySet() == listed.registry().types().keySet()
         indexed.registry().getType('Lib').isPresent()
         indexed.registry().getType('Query').isPresent()

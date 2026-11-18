@@ -56,6 +56,11 @@ final class SchemaFiles {
                 return null;
             }
             SchemaSources.Loaded loaded = SchemaSources.load(sources);
+            if (loaded.read().isEmpty()) {
+                problems.error(ProcessorOptions.SDL_DIR + " has no schema: every " + SchemaSources.EXTENSION + " file in " + sdlDir
+                        + " is empty or holds only operations, skipped: " + loaded.skipped() + ".");
+                return null;
+            }
             if (!loaded.skipped().isEmpty()) {
                 problems.info("skipped " + loaded.skipped() + " in " + sdlDir + ": only executable definitions or nothing.");
             }

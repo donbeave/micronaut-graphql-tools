@@ -159,6 +159,17 @@ public class Clock {
         result.graphqlErrors.isEmpty()
     }
 
+    void "a schema directory whose files are all empty or operation-only fails and names the skipped files"() {
+        when:
+        def result = compilation('query Hello {\n  hello\n}\n').compile()
+
+        then:
+        !result.success
+        result.graphqlErrors.size() == 1
+        result.graphqlErrors[0].contains('has no schema')
+        result.graphqlErrors[0].contains('schema.graphqls')
+    }
+
     void "an unreachable object type fails the compilation with its coordinate, file and line"() {
         when:
         def result = compilation(SCHEMA + '''

@@ -59,7 +59,7 @@ Create GraphQL schema files, `*.graphqls`, to define types, queries, and mutatio
 
 3. Configuring GraphQL Tools
 
-Nothing to configure for the default location. To load the schema yourself, define a `TypeDefinitionRegistry` bean; it replaces the discovered schema.
+Nothing to configure for the default location. To load the schema yourself, define a `TypeDefinitionRegistry` bean; it replaces the discovered schema. The example reads `schema.graphqls` from the root of the classpath; a file in the default folder is `classpath:graphql/schema.graphqls`.
 
 ```java
 @Bean
