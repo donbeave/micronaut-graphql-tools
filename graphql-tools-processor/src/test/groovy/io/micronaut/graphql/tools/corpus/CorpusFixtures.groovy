@@ -29,7 +29,7 @@ final class CorpusFixtures {
 
     static CorpusRunner runner() {
         return new CorpusRunner(new Corpus(root()), [new JavaCaseCompiler(), new GroovyCaseCompiler()],
-                new RuntimeBinder(), NoCompileTimeBinder.INSTANCE, update())
+                new RuntimeBinder(), new VisitorCompileTimeBinder(), update())
     }
 
 }

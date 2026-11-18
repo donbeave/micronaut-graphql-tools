@@ -38,6 +38,8 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.binding.internal.model.JClass;
+import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
@@ -141,7 +143,9 @@ final class InputTypeBinder {
 
     private void bindInputObjectType(InputObjectTypeDefinition inputObjectTypeDefinition, Class<?> targetClass,
                                      MappingContext mappingContext, TypeFrame parent) {
-        if (targetClass.isInterface()) {
+        JClass inputClass = typeModel.of(targetClass);
+        InputTypeRules.ClassProblem classProblem = InputTypeRules.classProblem(inputClass);
+        if (classProblem == InputTypeRules.ClassProblem.NOT_A_CLASS) {
             throw IncorrectClassMappingException.forArgument(
                     IncorrectClassMappingException.MappingType.DETECT_TYPE,
                     IncorrectClassMappingException.MappingType.CUSTOM_CLASS,
@@ -150,24 +154,13 @@ final class InputTypeBinder {
                     null
             );
         }
-
+        if (classProblem == InputTypeRules.ClassProblem.NOT_INTROSPECTED) {
+            throw new ClassNotIntrospectedException(
+                    new TypeDefinitionMappingContext(inputObjectTypeDefinition, targetClass, mappingContext),
+                    targetClass, GraphQLInput.class);
+        }
         BeanIntrospection<Object> beanIntrospection = BeanIntrospector.SHARED
-                .findIntrospection((Class<Object>) targetClass)
-                .orElseThrow(() -> new ClassNotIntrospectedException(mappingContext, targetClass, GraphQLInput.class));
-
-        if (
-                beanIntrospection.getBeanType().isInterface()
-                        || beanIntrospection.getBeanType().isEnum()
-                        || beanIntrospection.getBeanType().isAnnotation()
-        ) {
-            throw IncorrectClassMappingException.forArgument(
-                    IncorrectClassMappingException.MappingType.DETECT_TYPE,
-                    IncorrectClassMappingException.MappingType.CUSTOM_CLASS,
-                    mappingContext,
-                    targetClass,
-                    null
-            );
-        }
+                .findIntrospection((Class<Object>) targetClass).orElseThrow();
 
         InputObjectConverter.Builder converter = InputObjectConverter.builder(beanIntrospection);
         ValueConverter custom = typeConverter(targetClass);
@@ -180,7 +173,7 @@ final class InputTypeBinder {
 
         TypeFrame frame = new TypeFrame(inputObjectTypeDefinition.getName(), parent);
         Binding binding = new Binding(frame, inputObjectTypeDefinition, targetClass, beanIntrospection, converter,
-                forward, custom, mapped, constructorArguments);
+                forward, custom, mapped, constructorArguments, InputTypeRules.fields(inputClass));
         steps.push(new Step(frame, () -> bindField(binding, 0)));
     }
 
@@ -196,7 +189,7 @@ final class InputTypeBinder {
         BeanIntrospection<Object> beanIntrospection = binding.beanIntrospection();
         Optional<BeanProperty<Object, Object>> property = beanIntrospection.getProperty(inputValueDefinition.getName());
 
-        if (property.isEmpty()) {
+        if (binding.inputFields().binding(inputValueDefinition.getName()) == InputTypeRules.FieldBinding.MISSING) {
             throw MethodNotFoundException.forInput(
                     inputValueDefinition.getName(),
                     new InputMappingContext(
@@ -234,7 +227,7 @@ final class InputTypeBinder {
                 inputValueDefinition.getType(), binding.beanIntrospection().getBeanType(), property);
 
         boolean argumentValue = ArgumentValue.class.equals(property.getType());
-        if (property.isReadOnly() && !binding.constructorArguments().contains(property.getName())) {
+        if (binding.inputFields().binding(inputValueDefinition.getName()) == InputTypeRules.FieldBinding.NOT_SETTABLE) {
             if (argumentValue) {
                 throw new UnsupportedInputTypeException(inputMappingContext, ArgumentValue.class.getName()
                         + " needs a writable property: it is set to omitted() when the client leaves it out.");
@@ -315,9 +308,8 @@ final class InputTypeBinder {
             }
 
             if (!ValueConverters.isSupportedList(returnType)) {
-                throw new UnsupportedInputTypeException(mappingContext, "a list is converted into a List, a "
-                        + "Collection, an Iterable, a Set, a SortedSet, a Deque or a Queue, but the declared type is "
-                        + returnType.getName() + ".");
+                throw new UnsupportedInputTypeException(mappingContext,
+                        InputTypeRules.unsupportedListReason(returnType.getName()));
             }
 
             Type<?> listFieldType = ((ListType) fieldType).getType();
@@ -434,22 +426,13 @@ final class InputTypeBinder {
         if (!ArgumentValue.class.equals(argument.getType())) {
             return argument;
         }
-        String wrapper = ArgumentValue.class.getName();
-        if (!fieldLevel) {
+        InputTypeRules.ArgumentValueMisuse misuse = InputTypeRules.argumentValueMisuse(typeModel.ref(argument), fieldLevel,
+                graphQlType instanceof NonNullType);
+        if (misuse != null) {
             throw new UnsupportedInputTypeException(mappingContext,
-                    wrapper + " is not allowed inside a list: a list element cannot be omitted.");
+                    InputTypeRules.argumentValueReason(misuse, printType(graphQlType)));
         }
-        if (graphQlType instanceof NonNullType) {
-            throw new UnsupportedInputTypeException(mappingContext, wrapper
-                    + " is only allowed for a nullable GraphQL type, the type is " + printType(graphQlType) + ".");
-        }
-        Argument<?> result = argument.getFirstTypeVariable()
-                .orElseThrow(() -> new UnsupportedInputTypeException(mappingContext,
-                        wrapper + " must declare the type it wraps."));
-        if (ArgumentValue.class.equals(result.getType())) {
-            throw new UnsupportedInputTypeException(mappingContext, wrapper + " cannot wrap " + wrapper + ".");
-        }
-        return result;
+        return argument.getFirstTypeVariable().orElseThrow();
     }
 
     /**
@@ -488,7 +471,7 @@ final class InputTypeBinder {
     private record Binding(TypeFrame frame, InputObjectTypeDefinition definition, Class<?> targetClass,
                            BeanIntrospection<Object> beanIntrospection, InputObjectConverter.Builder converter,
                            Forward forward, ValueConverter custom, Set<String> mapped,
-                           Set<String> constructorArguments) {
+                           Set<String> constructorArguments, InputTypeRules.InputFields inputFields) {
     }
 
     /**

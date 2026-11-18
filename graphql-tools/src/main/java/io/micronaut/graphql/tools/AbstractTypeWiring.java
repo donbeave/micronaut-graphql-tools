@@ -58,6 +58,7 @@ final class AbstractTypeWiring {
     private final BindingManifestRecorder manifestRecorder;
     private final RuntimeWiring.Builder runtimeWiringBuilder;
     private final List<AbstractTypeResolver> abstractTypeResolvers = new ArrayList<>();
+    private Map<String, List<ObjectTypeDefinition>> implementations;
 
     AbstractTypeWiring(TypeDefinitionRegistry typeDefinitionRegistry, SchemaMappingDictionary schemaMappingDictionary,
                        GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry,
@@ -236,9 +237,22 @@ final class AbstractTypeWiring {
     }
 
     List<ObjectTypeDefinition> getImplementations(InterfaceTypeDefinition interfaceTypeDefinition) {
-        return typeDefinitionRegistry.getImplementationsOf(interfaceTypeDefinition).stream()
+        if (implementations == null) {
+            implementations = indexImplementations();
+        }
+        return implementations.getOrDefault(interfaceTypeDefinition.getName(), List.of());
+    }
+
+    // the registry scans every type for each interface it is asked about; one pass indexes them all
+    private Map<String, List<ObjectTypeDefinition>> indexImplementations() {
+        Map<String, List<ObjectTypeDefinition>> index = new HashMap<>();
+        typeDefinitionRegistry.getTypes(ObjectTypeDefinition.class).stream()
                 .sorted(Comparator.comparing(ObjectTypeDefinition::getName))
-                .toList();
+                .forEach(objectType -> objectType.getImplements().stream()
+                        .map(it -> getTypeName(it).getName())
+                        .distinct()
+                        .forEach(name -> index.computeIfAbsent(name, it -> new ArrayList<>()).add(objectType)));
+        return index;
     }
 
     @FunctionalInterface

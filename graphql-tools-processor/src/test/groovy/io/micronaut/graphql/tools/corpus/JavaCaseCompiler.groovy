@@ -27,6 +27,8 @@ final class JavaCaseCompiler implements CaseCompiler {
     static final String LEGACY_PROCESSOR_PACKAGE = 'io.micronaut.graphql.tools.processing'
 
     /** The visitor of this module is on the test classpath: this compilation only builds the case, a binder checks it. */
+    static final String SCHEMA_DIRS = 'micronaut.graphql.tools.processor.schema.dirs'
+
     static final String CHECKS_OFF = 'micronaut.graphql.tools.processor.checks=false'
 
     @Override
@@ -36,6 +38,20 @@ final class JavaCaseCompiler implements CaseCompiler {
 
     @Override
     CompiledCase compile(CorpusCase corpusCase, Path work) {
+        return compileWith(corpusCase, work, ['-A' + CHECKS_OFF])
+    }
+
+    /**
+     * Compiles the case with the compile-time checks on, the schema files of the case directory being the schema directory
+     * of the checks. The result is not started: its errors are the findings of the visitor.
+     */
+    CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
+        Path schemaDir = Files.createDirectories(work.resolve('schema'))
+        corpusCase.schemaFiles().each { Files.copy(it, schemaDir.resolve(it.fileName.toString())) }
+        return compileWith(corpusCase, work, ["-A${SCHEMA_DIRS}=${schemaDir}".toString()])
+    }
+
+    private CompiledCase compileWith(CorpusCase corpusCase, Path work, List<String> options) {
         Path classes = Files.createDirectories(work.resolve('classes'))
         JavaCompiler compiler = ToolProvider.systemJavaCompiler
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>()
@@ -52,7 +68,7 @@ final class JavaCaseCompiler implements CaseCompiler {
                 }
             }
             JavaCompiler.CompilationTask task = compiler.getTask(null, files, diagnostics,
-                    ['-proc:full', '-parameters', '-A' + CHECKS_OFF],
+                    ['-proc:full', '-parameters'] + options,
                     null, files.getJavaFileObjectsFromPaths(corpusCase.sources(Language.JAVA)))
             task.setProcessors(processors)
             clearSystemProperties()

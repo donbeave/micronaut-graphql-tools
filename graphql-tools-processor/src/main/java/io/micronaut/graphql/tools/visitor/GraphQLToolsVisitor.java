@@ -25,6 +25,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassFindings;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
+import io.micronaut.inject.ast.ElementQuery;
 import io.micronaut.inject.ast.MethodElement;
 import io.micronaut.inject.visitor.TypeElementQuery;
 import io.micronaut.inject.visitor.TypeElementVisitor;
@@ -94,8 +95,8 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     @Override
     public void visitClass(ClassElement element, VisitorContext context) {
         Compilation current = compilation;
-        if (current == null || current.failed || !current.options.checks() || !isResolver(element)
-                || !ElementTypeModel.isBeanClass(element)) {
+        if (current == null || current.failed || !current.options.checks()
+                || !isResolver(element) && !hasCoordinateMethod(element) || !ElementTypeModel.isBeanClass(element)) {
             return;
         }
         try {
@@ -157,6 +158,12 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());
             report(context, finding, method != null && element.equals(method.getDeclaringType()) ? method : element);
         }
+    }
+
+    // a bean that is not a resolver can still declare a coordinate, which the startup rejects
+    private static boolean hasCoordinateMethod(ClassElement element) {
+        return element.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance()).stream()
+                .anyMatch(it -> it.hasStereotype(AnnotationNames.SCHEMA_COORDINATE));
     }
 
     private static boolean isResolver(ClassElement element) {

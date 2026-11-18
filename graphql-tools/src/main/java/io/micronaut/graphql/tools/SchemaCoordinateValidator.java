@@ -26,6 +26,8 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates.ResolverKind;
+import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
 import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException;
 import io.micronaut.inject.BeanDefinition;
 import org.slf4j.Logger;
@@ -50,6 +52,9 @@ final class SchemaCoordinateValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphQLRuntimeWiringGenerator.class);
 
+    private static final String NOT_A_RESOLVER = "the bean is neither a @" + GraphQLRootResolver.class.getSimpleName()
+            + " nor a @" + GraphQLTypeResolver.class.getSimpleName() + ".";
+
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final GraphQLResolversRegistry graphQLResolversRegistry;
     private final GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry;
@@ -71,15 +76,29 @@ final class SchemaCoordinateValidator {
                 .collect(Collectors.toCollection(TreeSet::new));
 
         List<String> problems = new ArrayList<>();
+        List<String> onNonResolvers = new ArrayList<>();
         for (SchemaCoordinateMethod coordinateMethod : graphQLResolversRegistry.getSchemaCoordinateMethods()) {
             String problem = checkSchemaCoordinate(coordinateMethod, operationTypeNames);
-            if (problem != null) {
+            if (problem == NOT_A_RESOLVER) {
+                onNonResolvers.add(describe(coordinateMethod) + ": " + problem);
+            } else if (problem != null) {
                 problems.add(describe(coordinateMethod) + ": " + problem);
             }
         }
 
+        // each kind has its own code, which the compile-time check reports for the same situation
+        List<RuntimeException> failures = new ArrayList<>();
+        if (!onNonResolvers.isEmpty()) {
+            failures.add(new InvalidSchemaCoordinateException(BindingCode.COORDINATE_ON_NON_RESOLVER, onNonResolvers));
+        }
         if (!problems.isEmpty()) {
-            throw new InvalidSchemaCoordinateException(problems);
+            failures.add(new InvalidSchemaCoordinateException(problems));
+        }
+        if (failures.size() == 1) {
+            throw failures.get(0);
+        }
+        if (!failures.isEmpty()) {
+            throw new BindingFailuresException(failures);
         }
     }
 
@@ -90,8 +109,7 @@ final class SchemaCoordinateValidator {
         boolean typeResolver = beanDefinition.hasStereotype(GraphQLTypeResolver.class);
 
         if (!rootResolver && !typeResolver) {
-            return "the bean is neither a @" + GraphQLRootResolver.class.getSimpleName() + " nor a @"
-                    + GraphQLTypeResolver.class.getSimpleName() + ".";
+            return NOT_A_RESOLVER;
         }
 
         Set<ResolverKind> kinds = EnumSet.noneOf(ResolverKind.class);

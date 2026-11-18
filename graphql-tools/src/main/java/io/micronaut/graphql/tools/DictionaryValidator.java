@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
@@ -50,25 +51,36 @@ final class DictionaryValidator {
                 .sorted(Map.Entry.comparingByKey())
                 .toList();
 
-        List<String> conflicts = new ArrayList<>();
+        // only an entry mapped to an interface can conflict, so those are compared against all entries; a pair reports
+        // once, as the entry that comes first in the sort order is the interface, when both could be
+        Map<Long, String> byPair = new TreeMap<>();
         Set<String> graphQlTypes = new TreeSet<>();
-
-        for (int i = 0; i < entries.size(); i++) {
-            for (int j = i + 1; j < entries.size(); j++) {
-                Map.Entry<String, Class<?>> first = entries.get(i);
-                Map.Entry<String, Class<?>> second = entries.get(j);
-
-                String conflict = describeAmbiguity(first, second);
+        int size = entries.size();
+        for (int i = 0; i < size; i++) {
+            Map.Entry<String, Class<?>> interfaceEntry = entries.get(i);
+            if (!interfaceEntry.getValue().isInterface()) {
+                continue;
+            }
+            for (int j = 0; j < size; j++) {
+                if (i == j) {
+                    continue;
+                }
+                Map.Entry<String, Class<?>> other = entries.get(j);
+                String conflict = describeAmbiguity(interfaceEntry, other);
                 if (conflict == null) {
-                    conflict = describeAmbiguity(second, first);
+                    continue;
                 }
-                if (conflict != null) {
-                    conflicts.add(conflict);
-                    graphQlTypes.add(first.getKey());
-                    graphQlTypes.add(second.getKey());
+                long pair = (long) Math.min(i, j) * size + Math.max(i, j);
+                if (i < j) {
+                    byPair.put(pair, conflict);
+                } else {
+                    byPair.putIfAbsent(pair, conflict);
                 }
+                graphQlTypes.add(interfaceEntry.getKey());
+                graphQlTypes.add(other.getKey());
             }
         }
+        List<String> conflicts = new ArrayList<>(byPair.values());
 
         if (!conflicts.isEmpty()) {
             throw new AmbiguousTypeMappingException(conflicts, new ArrayList<>(graphQlTypes));

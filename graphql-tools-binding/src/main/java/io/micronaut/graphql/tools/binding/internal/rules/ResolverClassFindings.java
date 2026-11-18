@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,9 +55,12 @@ import java.util.TreeSet;
  * method, how the fields of the other types are mapped and whether the class is an enabled bean are whole-program facts
  * that it never reads.
  *
- * <p>A violation of a method with a declared coordinate is reported once, as the coordinate failure; the argument and
- * return rules then do not run for that method. A field has at most one finding: the arguments are judged before the return
- * type, as the startup does.</p>
+ * <p>The findings are those of one stage, as at startup: the declared coordinates are checked first and any problem is the
+ * only finding (the startup stops there); then the binding failures of the fields, a field having at most one, the
+ * arguments and the input types and enums they reach being judged before the return type; the strict checks
+ * ({@code unbound-resolver-method}, {@code root-method-several-operations}, {@code unmapped-input-property},
+ * {@code unbound-enum-constant}) only when the class has no binding failure, because the startup runs them after a binding
+ * that failed nowhere.</p>
  */
 @Internal
 public final class ResolverClassFindings {
@@ -74,7 +78,7 @@ public final class ResolverClassFindings {
         boolean root = resolver.annotations().has(AnnotationNames.ROOT_RESOLVER);
         boolean type = resolver.annotations().has(AnnotationNames.TYPE_RESOLVER);
         if (!root && !type) {
-            return List.of();
+            return nonResolver(resolver);
         }
         Set<String> contracts = contracts(resolver);
         String sourceType = contracts.size() == 1 ? contracts.iterator().next() : null;
@@ -113,38 +117,37 @@ public final class ResolverClassFindings {
             }
         }
 
+        if (!findings.isEmpty()) {
+            // the startup reports the invalid coordinates before it binds anything
+            return findings;
+        }
+
         ClassVerdict verdict = ResolverClassRules.check(schema, model, resolver, sourceType);
+        InputBindingFindings inputs = new InputBindingFindings(schema, model);
+        List<Finding> failures = new ArrayList<>();
+        List<Finding> strict = new ArrayList<>();
+        boolean failed = false;
         // several methods that can bind one field are an ambiguity of the startup, which judges no argument of them
         Map<String, Integer> claims = new HashMap<>();
         for (MethodVerdict methodVerdict : verdict.methods()) {
-            if (!invalidCoordinates.contains(methodVerdict.signature())) {
-                methodVerdict.coordinates().forEach(it -> claims.merge(it, 1, Integer::sum));
-            }
+            methodVerdict.coordinates().forEach(it -> claims.merge(it, 1, Integer::sum));
         }
         Set<String> objectFields = null;
         for (MethodVerdict methodVerdict : verdict.methods()) {
             JMethod method = bySignature.get(methodVerdict.signature());
-            if (method == null || invalidCoordinates.contains(method.signature())) {
+            if (method == null) {
                 continue;
             }
-            boolean clean = true;
             for (FieldVerdict field : methodVerdict.fields()) {
                 boolean rootField = rootTypes.contains(SchemaCoordinates.typeName(field.coordinate()));
                 if (!rootField && sourceType == null || claims.getOrDefault(field.coordinate(), 0) > 1) {
                     // the source type of the fields of the other types is a whole-program fact for this class
                     continue;
                 }
-                Finding failure = fieldFinding(schema, resolver, method, field, sourceType);
-                if (failure != null) {
-                    clean = false;
-                    findings.add(failure);
-                }
-            }
-            if (!clean) {
-                continue;
+                failed |= !bindField(schema, inputs, failures, resolver, method, field, sourceType);
             }
             if (methodVerdict.coordinates().size() > 1) {
-                findings.add(finding(resolver, method, BindingCode.ROOT_METHOD_SEVERAL_OPERATIONS, method.signature(),
+                strict.add(finding(resolver, method, BindingCode.ROOT_METHOD_SEVERAL_OPERATIONS, method.signature(),
                         "the root resolver method " + method.signature() + " binds fields of several operation types: "
                                 + String.join(", ", methodVerdict.coordinates()),
                         null, null,
@@ -160,11 +163,42 @@ public final class ResolverClassFindings {
                     unbound = contracts.size() == 1 && !objectFields.contains(method.name());
                 }
                 if (unbound) {
-                    findings.add(finding(resolver, method, BindingCode.UNBOUND_RESOLVER_METHOD, method.signature(),
+                    strict.add(finding(resolver, method, BindingCode.UNBOUND_RESOLVER_METHOD, method.signature(),
                             "the resolver method " + method.signature() + " binds no schema field",
                             null, null,
                             "annotate it with @GraphQLIgnore, make it non-public, or move it out of the resolver bean"));
                 }
+            }
+        }
+        failures.addAll(inputs.failures());
+        if (failed || inputs.halted() || !failures.isEmpty()) {
+            // the startup throws the binding failures before it runs a strict check
+            return dedupe(failures);
+        }
+        strict.addAll(inputs.checks());
+        return dedupe(strict);
+    }
+
+    private static List<Finding> dedupe(List<Finding> findings) {
+        Map<String, Finding> byKey = new LinkedHashMap<>();
+        findings.forEach(it -> byKey.putIfAbsent(it.code() + " " + it.coordinate(), it));
+        return List.copyOf(byKey.values());
+    }
+
+    private static List<Finding> nonResolver(JClass bean) {
+        Map<String, String> declared = ResolverClassRules.declaredCoordinates(bean.bindableMethods());
+        if (declared == null) {
+            return List.of();
+        }
+        List<Finding> findings = new ArrayList<>();
+        for (JMethod method : bean.bindableMethods()) {
+            String coordinate = declared.get(method.signature());
+            if (coordinate != null) {
+                findings.add(finding(bean, method, BindingCode.COORDINATE_ON_NON_RESOLVER, coordinate,
+                        "the @GraphQLSchemaCoordinate on " + method.signature() + " is on a bean that is neither a @"
+                                + "GraphQLRootResolver nor a @GraphQLTypeResolver",
+                        null, null,
+                        "annotate the class with @GraphQLRootResolver or @GraphQLTypeResolver, or remove the coordinate"));
             }
         }
         return findings;
@@ -185,47 +219,81 @@ public final class ResolverClassFindings {
         return contracts;
     }
 
-    @Nullable
-    private static Finding fieldFinding(SchemaModel schema, JClass resolver, JMethod method, FieldVerdict field,
-                                        @Nullable String sourceType) {
+    /**
+     * Binds one field of a method as the startup does: the arguments (each argument type down to the input classes and
+     * enums it reaches), then the return type.
+     *
+     * @return whether the binding of the field did not fail, so that the startup goes on to the next field
+     */
+    private static boolean bindField(SchemaModel schema, InputBindingFindings inputs, List<Finding> failures, JClass resolver,
+                                     JMethod method, FieldVerdict field, @Nullable String sourceType) {
         String coordinate = field.coordinate();
+        FieldDefinition definition = fieldDefinition(schema, SchemaCoordinates.typeName(coordinate),
+                SchemaCoordinates.fieldName(coordinate));
         ArgumentVerdict.Failure failure = field.arguments().failure();
         if (failure instanceof CountMismatch mismatch) {
             String suggested = ResolverClassRules.suggestedMethod(method.name(),
                     SchemaCoordinates.typeName(coordinate), schema.rootTypeNames().contains(
                             SchemaCoordinates.typeName(coordinate)) ? null : sourceType, schemaArguments(schema, coordinate));
-            return finding(resolver, method, BindingCode.ARGUMENT_MISMATCH, coordinate,
+            failures.add(finding(resolver, method, BindingCode.ARGUMENT_MISMATCH, coordinate,
                     "the method has " + (mismatch.tooMany() ? "more" : "fewer") + " parameters than the field needs: "
                             + mismatch.found() + " found, " + mismatch.required() + " required",
                     schema, coordinate,
-                    suggested == null ? "remove the parameters" : "declare it as " + suggested);
+                    suggested == null ? "remove the parameters" : "declare it as " + suggested));
+            return false;
+        }
+        // the startup binds the type of each argument before it reports a problem with the arguments after it
+        if (definition != null) {
+            for (ArgumentVerdict.Slot slot : field.arguments().slots()) {
+                if (slot.kind() != ArgumentVerdict.SlotKind.ARGUMENT) {
+                    continue;
+                }
+                InputValueDefinition argument = definition.getInputValueDefinitions().stream()
+                        .filter(it -> it.getName().equals(slot.argument())).findFirst().orElse(null);
+                if (argument != null && !inputs.argument(method.signature(), method.parameters().get(slot.parameter()).type(),
+                        argument, coordinate + "(" + slot.argument() + ":)")) {
+                    return false;
+                }
+            }
         }
         if (failure instanceof ParameterWithoutArgument without) {
-            return finding(resolver, method, BindingCode.ARGUMENT_MISMATCH, coordinate,
+            failures.add(finding(resolver, method, BindingCode.ARGUMENT_MISMATCH, coordinate,
                     "the parameter " + method.parameters().get(without.parameter()).name() + " binds no argument of "
                             + coordinate + " (arguments: " + String.join(", ", without.available()) + ")",
                     schema, coordinate,
                     "rename the parameter to an argument name, annotate it with @GraphQLArgument(\"<name>\"), or add the "
-                            + "argument to the schema");
+                            + "argument to the schema"));
+            return false;
         }
         if (failure instanceof DuplicateParameter duplicate) {
-            return finding(resolver, method, BindingCode.ARGUMENT_MISMATCH, coordinate,
+            failures.add(finding(resolver, method, BindingCode.ARGUMENT_MISMATCH, coordinate,
                     "two parameters bind the argument " + duplicate.name() + " of " + coordinate,
-                    schema, coordinate, "give each parameter a different argument name");
+                    schema, coordinate, "give each parameter a different argument name"));
+            return false;
         }
         if (failure instanceof InvalidSource invalid) {
-            return finding(resolver, method, BindingCode.INVALID_SOURCE_PARAMETER, coordinate,
+            failures.add(finding(resolver, method, BindingCode.INVALID_SOURCE_PARAMETER, coordinate,
                     "the parameter " + method.parameters().get(invalid.parameter()).name() + " must be the source "
                             + "object of type " + sourceType,
-                    schema, coordinate, "declare the source object as the first parameter");
+                    schema, coordinate, "declare the source object as the first parameter"));
+            return false;
         }
         String returns = field.returns().firstFailure();
         if (returns != null) {
-            return finding(resolver, method, BindingCode.UNSUPPORTED_RETURN_TYPE, coordinate,
+            failures.add(finding(resolver, method, BindingCode.UNSUPPORTED_RETURN_TYPE, coordinate,
                     "the return type of " + method.signature() + " cannot be bound to " + coordinate + ": " + returns,
-                    schema, coordinate, null);
+                    schema, coordinate, null));
+            return false;
         }
-        return null;
+        if (definition != null) {
+            InputBindingFindings.Leaf leaf = InputBindingFindings.leaf(method.genericReturnType(), definition.getType(),
+                    field.returns());
+            if (leaf != null) {
+                inputs.returned(method.signature(), leaf.type(), leaf.schemaType(), coordinate,
+                        definition.getSourceLocation());
+            }
+        }
+        return true;
     }
 
     private static List<ResolverClassRules.SchemaArgument> schemaArguments(SchemaModel schema, String coordinate) {

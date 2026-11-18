@@ -51,7 +51,8 @@ enum Genre {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidSchemaCoordinateException
-        e.cause.message == "[unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
+        e.cause.message == "[" + code + "] Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
+        e.cause.code().code() == code
         e.cause.problems == [problem]
 
         where:
@@ -64,6 +65,7 @@ enum Genre {
         'rootOnObjectType' | "@GraphQLSchemaCoordinate(\"Book.title\") on ${RootOnObjectTypeQuery.name} title(): a @GraphQLRootResolver binds fields of the root operation types [Mutation, Query] only, not of Book."
         'typeOnRootType'   | "@GraphQLSchemaCoordinate(\"Query.book\") on ${TypeOnRootTypeResolver.name} book(${Book.name} book): a @GraphQLTypeResolver cannot bind a field of the root operation type Query."
         'notAResolver'     | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${NotAResolver.name} summary(${Book.name} book): the bean is neither a @GraphQLRootResolver nor a @GraphQLTypeResolver."
+        code = name == 'notAResolver' ? 'coordinate-on-non-resolver' : 'unknown-schema-coordinate'
     }
 
     void "all invalid coordinates are reported in one error"() {
