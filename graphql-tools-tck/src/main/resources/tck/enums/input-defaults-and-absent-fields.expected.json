@@ -1,0 +1,6 @@
+{
+  "data": {
+    "empty": "from=LOW to=null only=null",
+    "full": "from=HIGH to=HIGH only=[LOW, MEDIUM]"
+  }
+}

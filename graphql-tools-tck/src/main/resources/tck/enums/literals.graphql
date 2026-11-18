@@ -1,0 +1,5 @@
+{
+  low: next(level: LOW)
+  high: next(level: HIGH)
+  rank: rank(level: MEDIUM)
+}

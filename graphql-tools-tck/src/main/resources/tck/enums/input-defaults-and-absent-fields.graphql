@@ -1,0 +1,4 @@
+{
+  empty: window(window: {})
+  full: window(window: { from: HIGH, to: HIGH, only: [LOW, MEDIUM] })
+}
