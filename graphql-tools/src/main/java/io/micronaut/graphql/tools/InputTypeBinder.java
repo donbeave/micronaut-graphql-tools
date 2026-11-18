@@ -60,10 +60,6 @@ import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isG
 @Internal
 final class InputTypeBinder {
 
-    /**
-     * What this phase needs from the type phase: a type is bound once, whichever side reaches it first, and an enum is
-     * bound the same way for an argument and for a return type.
-     */
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final ScalarMappings scalarMappings;
     private final GraphQLToolsConfiguration configuration;
@@ -307,6 +303,10 @@ final class InputTypeBinder {
         return result;
     }
 
+    /**
+     * What this phase needs from the type phase: a type is bound once, whichever side reaches it first, and an enum is
+     * bound the same way for an argument and for a return type.
+     */
     interface Callbacks {
 
         void processIfNotProcessed(TypeDefinition<?> typeDefinition, Class<?> targetClass,
