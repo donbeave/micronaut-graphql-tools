@@ -1731,14 +1731,22 @@ final class GraphQLRuntimeWiringGenerator {
         return result;
     }
 
+    private boolean bareScalarTypeExists(String scalarName) {
+        try {
+            return applicationContext.getBeansOfType(GraphQLScalarType.class).stream()
+                    .anyMatch(it -> it.getName().equals(scalarName));
+        } catch (RuntimeException e) {
+            // The hint is best effort: a scalar bean that cannot be created must not hide the missing mapping.
+            return false;
+        }
+    }
+
     private GraphQLScalarMapping requireScalarMapping(ScalarTypeDefinition scalarTypeDefinition,
                                                       MappingContext mappingContext) {
         String scalarName = scalarTypeDefinition.getName();
         GraphQLScalarMapping scalarMapping = scalarMappings.get(scalarName);
         if (scalarMapping == null) {
-            boolean bareScalarTypeExists = applicationContext.getBeansOfType(GraphQLScalarType.class).stream()
-                    .anyMatch(it -> it.getName().equals(scalarName));
-            throw new ScalarMappingNotProvidedException(mappingContext, scalarName, bareScalarTypeExists);
+            throw new ScalarMappingNotProvidedException(mappingContext, scalarName, bareScalarTypeExists(scalarName));
         }
         manifestRecorder.scalar(scalarTypeDefinition.getName());
         return scalarMapping;

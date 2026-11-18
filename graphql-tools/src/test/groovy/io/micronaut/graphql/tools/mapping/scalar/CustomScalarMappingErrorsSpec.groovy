@@ -24,6 +24,7 @@ class CustomScalarMappingErrorsSpec extends AbstractTest {
 
     static final String SPEC_UNMAPPED = "CustomScalarMappingErrorsSpecUnmapped"
     static final String SPEC_BARE = "CustomScalarMappingErrorsSpecBare"
+    static final String SPEC_BROKEN_BARE = "CustomScalarMappingErrorsSpecBrokenBare"
     static final String SPEC_MAPPED = "CustomScalarMappingErrorsSpecMapped"
     static final String SPEC_DUPLICATE = "CustomScalarMappingErrorsSpecDuplicate"
     static final String SPEC_BUILT_IN = "CustomScalarMappingErrorsSpecBuiltIn"
@@ -91,6 +92,32 @@ type Query {
   GraphQL field: today
   Mapped class: ${UnmappedQuery.name}
   Mapped method: today()"""
+    }
+
+    void "a broken unrelated GraphQLScalarType bean does not hide the missing mapping error"() {
+        given:
+        @Language("GraphQL")
+        String schema = """
+scalar LocalDate
+
+schema {
+  query: Query
+}
+
+type Query {
+  today: LocalDate
+}
+"""
+        startContext(schema, SPEC_BROKEN_BARE)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof ScalarMappingNotProvidedException
+        e.cause.scalarName == 'LocalDate'
+        !e.cause.message.contains('Found a GraphQLScalarType bean')
     }
 
     void "an argument of an unmapped scalar fails the startup with its coordinate"() {
@@ -435,7 +462,7 @@ type Query {
         !mapping.isOutputClass(Number)
     }
 
-    @Requires(property = 'spec.name', pattern = SPEC_UNMAPPED + '|' + SPEC_BARE)
+    @Requires(property = 'spec.name', pattern = SPEC_UNMAPPED + '|' + SPEC_BARE + '|' + SPEC_BROKEN_BARE)
     @GraphQLRootResolver
     static class UnmappedQuery {
         LocalDate today() {
@@ -463,6 +490,16 @@ type Query {
         @Singleton
         GraphQLScalarType localDate() {
             return LocalDateScalar.create(null, false, null)
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_BROKEN_BARE)
+    @Factory
+    static class BrokenBareScalarTypes {
+        @Bean
+        @Singleton
+        GraphQLScalarType brokenScalar() {
+            throw new IllegalStateException("broken scalar bean")
         }
     }
 
