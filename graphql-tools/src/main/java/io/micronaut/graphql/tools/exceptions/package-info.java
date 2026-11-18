@@ -18,7 +18,7 @@
  * the subclasses name one failure each, and each carries a stable error code. The guide page "Exceptions" is the
  * error reference.
  *
- * <p><b>Audience.</b> Mixed. The exceptions are public API, but only {@code SchemaBindingException} is meant to be caught: match on its code,
+ * <p><b>Audience.</b> Public API, but only {@code SchemaBindingException} is meant to be caught: match on its code,
  * not on a subclass. The subclasses are being made internal and the package is being reduced to the one exception
  * (see the guide page "API Map").</p>
  */

@@ -89,14 +89,14 @@ class PackageDocumentationSpec extends Specification {
         def mismatched = apiMap().findAll { name, audience ->
             def info = packages[name]?.packageInfo
             def internal = info != null && (Files.readString(info) =~ /(?m)^@Internal\s*$/).find()
-            def hasInternalTypes = packages[name]?.types?.any { (Files.readString(it) =~ /(?m)^\s*@Internal\b/).find() }
+            def hasInternalTypes = packages[name]?.types?.any { (Files.readString(it) =~ /(?m)^@Internal\b/).find() }
             audience.startsWith('Internal') != internal || (!internal && audience.startsWith('Mixed') != hasInternalTypes)
         }.keySet()
 
         expect:
         assert mismatched.empty: "Audience and @Internal disagree for: ${mismatched.toSorted()}. " +
                 "A package whose audience is Internal carries @Internal in package-info.java, and no other package does. " +
-                "A package of another audience is Mixed exactly when one of its types is annotated @Internal."
+                "A package of another audience is Mixed exactly when one of its top-level types is annotated @Internal."
     }
 
     def "the module column of the API map names the module that holds each package"() {
