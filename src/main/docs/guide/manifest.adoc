@@ -5,7 +5,7 @@ The binding manifest says what every schema coordinate is bound to: which Java m
 The first lines are the header: the format (`# graphql-binding-manifest 1`), the binder and its version, the graphql-java version and a SHA-256 of the schema definitions. Every other line has the shape `subject → kind · member · declared type · converted type`:
 
 * object, interface, union, enum, input and scalar types: the Java type or `Coercing` class that serves them;
-* fields: `root`, `resolver` or `property`, the member, the declared Java type and the converted type (the declared type without `CompletionStage`, `Publisher`, `DataFetcherResult` and `Optional`);
+* fields: `root`, `resolver` or `property`, the member, the declared Java type and the converted type (the declared type without `CompletionStage`, `Publisher`, `DataFetcherResult`, `Optional` and the primitive optionals);
 * `resolves`, `enumValue` and `inputField` lines;
 * diagnostics, which start with `!`: unreachable types, ambiguous bindings and the findings of strict mode.
 

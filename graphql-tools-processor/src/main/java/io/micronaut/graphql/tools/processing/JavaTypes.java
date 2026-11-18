@@ -146,6 +146,10 @@ final class JavaTypes {
         return element != null && element.getQualifiedName().contentEquals(className);
     }
 
+    TypeMirror classType(String className) {
+        return elements.getTypeElement(className).asType();
+    }
+
     TypeMirror firstTypeArgument(TypeMirror type) {
         if (!(type instanceof DeclaredType declaredType) || declaredType.getTypeArguments().isEmpty()) {
             return null;

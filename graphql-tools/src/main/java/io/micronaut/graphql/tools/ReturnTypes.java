@@ -24,7 +24,11 @@ import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
 import org.reactivestreams.Publisher;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 
@@ -35,6 +39,10 @@ final class ReturnTypes {
 
     private static final List<Class<?>> RETURN_TYPE_WRAPPERS =
             List.of(CompletionStage.class, Publisher.class, DataFetcherResult.class, Optional.class);
+
+    // graphql-java's DefaultValueUnboxer unwraps these at runtime, like Optional
+    private static final Map<Class<?>, Class<?>> PRIMITIVE_OPTIONALS = Map.of(
+            OptionalInt.class, Integer.class, OptionalLong.class, Long.class, OptionalDouble.class, Double.class);
 
     private ReturnTypes() {
     }
@@ -88,6 +96,23 @@ final class ReturnTypes {
             result = typeArgument(result, Optional.class, mappingContext);
         }
 
+        Class<?> primitiveOptional = PRIMITIVE_OPTIONALS.get(result.getType());
+        if (primitiveOptional != null) {
+            if (graphQlType instanceof NonNullType) {
+                throw new UnsupportedReturnTypeException(mappingContext, result.getType().getName()
+                        + " is only allowed for a nullable GraphQL type, the field type is "
+                        + printType(graphQlType) + ". Fix: make the GraphQL field type nullable (remove the "
+                        + "trailing '!'), or return the value itself instead of an "
+                        + result.getType().getSimpleName() + ".");
+            }
+            if (Optional.class.equals(outer)) {
+                throw new UnsupportedReturnTypeException(mappingContext, Optional.class.getName() + " cannot wrap "
+                        + result.getType().getName() + ". Fix: return the " + result.getType().getSimpleName()
+                        + " itself, it is nullable already.");
+            }
+            result = Argument.of(primitiveOptional);
+        }
+
         if (outer != null) {
             Class<?> inner = result.getType();
 
@@ -126,6 +151,9 @@ final class ReturnTypes {
         }
         if (Optional.class.equals(result.getType())) {
             result = result.getFirstTypeVariable().orElse(result);
+        }
+        if (PRIMITIVE_OPTIONALS.containsKey(result.getType())) {
+            result = Argument.of(PRIMITIVE_OPTIONALS.get(result.getType()));
         }
         Argument<?>[] typeParameters = result.getTypeParameters();
         if (Iterable.class.isAssignableFrom(result.getType()) && typeParameters.length == 1

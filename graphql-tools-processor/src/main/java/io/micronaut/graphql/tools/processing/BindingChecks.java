@@ -85,6 +85,9 @@ final class BindingChecks {
     private static final Pattern SCHEMA_COORDINATE = Pattern.compile("[_A-Za-z][_0-9A-Za-z]*\\.[_A-Za-z][_0-9A-Za-z]*");
     private static final List<String> RETURN_TYPE_WRAPPERS = List.of(COMPLETION_STAGE, PUBLISHER, DATA_FETCHER_RESULT,
             OPTIONAL);
+    private static final Map<String, String> PRIMITIVE_OPTIONALS = Map.of(
+            "java.util.OptionalInt", "java.lang.Integer", "java.util.OptionalLong", "java.lang.Long",
+            "java.util.OptionalDouble", "java.lang.Double");
 
     private final TypeDefinitionRegistry registry;
     private final ProcessorOptions options;
@@ -878,6 +881,21 @@ final class BindingChecks {
             if (result == null) {
                 return null;
             }
+        }
+
+        String primitiveOptional = PRIMITIVE_OPTIONALS.get(javaTypes.erasedName(result));
+        if (primitiveOptional != null) {
+            if (graphQlType instanceof NonNullType) {
+                problems.error(coordinate, javaTypes.erasedName(result) + " is only allowed for a nullable GraphQL "
+                        + "type, the field type is " + printType(graphQlType) + ".", node, element);
+                return null;
+            }
+            if (OPTIONAL.equals(outer)) {
+                problems.error(coordinate, OPTIONAL + " cannot wrap " + javaTypes.erasedName(result) + ".", node,
+                        element);
+                return null;
+            }
+            result = javaTypes.classType(primitiveOptional);
         }
 
         if (outer != null) {
