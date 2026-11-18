@@ -1,0 +1,17 @@
+schema {
+  query: Query
+}
+
+type Query {
+  create(input: CreateInput!): String
+  other(input: OtherInput!): String
+}
+
+input CreateInput {
+  name: String!
+}
+
+input OtherInput {
+  id: Int!
+  extra: String!
+}

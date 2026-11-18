@@ -48,29 +48,29 @@ public final class InputClassCoverage {
     }
 
     /**
-     * @param others the input types that were not added, with their fields: another resolver may bind them to any class, so
-     *               their fields cover a property as well
+     * @param others the input types that were not added, with their fields: another resolver may bind them to a class, so the
+     *               fields of one that the class can take (every field is a settable property of it) cover a property as well
      * @return the verdict of each class, in the order the classes were first added
      */
     public List<ClassCoverage> verdicts(Map<String, ? extends Collection<String>> others) {
         List<ClassCoverage> result = new ArrayList<>();
         for (Entry entry : byClass.values()) {
+            Set<String> settable = new HashSet<>();
+            entry.inputClass.writableProperties().forEach(it -> settable.add(it.name()));
             Set<String> covered = new HashSet<>(entry.fields);
-            others.values().forEach(covered::addAll);
+            // the startup names a finding after the smallest input type bound to the class: an unseen type that the class can
+            // take and that sorts before the seen ones may be bound to it, so the name is unknown
+            boolean named = true;
+            for (Map.Entry<String, ? extends Collection<String>> other : others.entrySet()) {
+                if (settable.containsAll(other.getValue())) {
+                    covered.addAll(other.getValue());
+                    named &= other.getKey().compareTo(entry.types.first()) > 0;
+                }
+            }
             result.add(new ClassCoverage(entry.types.first(), List.copyOf(entry.types), entry.inputClass,
-                    InputTypeRules.check(covered, entry.inputClass), !smallerCandidate(entry, others)));
+                    InputTypeRules.check(covered, entry.inputClass), named));
         }
         return result;
-    }
-
-    // The startup names a finding after the smallest input type bound to the class. An input type that was not added and sorts
-    // before it, with every field settable on the class, may be bound to it by another resolver: the smallest name is unknown.
-    private static boolean smallerCandidate(Entry entry, Map<String, ? extends Collection<String>> others) {
-        Set<String> settable = new HashSet<>();
-        entry.inputClass.writableProperties().forEach(it -> settable.add(it.name()));
-        String smallest = entry.types.first();
-        return others.entrySet().stream()
-                .anyMatch(it -> it.getKey().compareTo(smallest) < 0 && settable.containsAll(it.getValue()));
     }
 
     /**

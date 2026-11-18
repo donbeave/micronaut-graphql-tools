@@ -58,6 +58,15 @@ class InputClassCoverageSpec extends Specification {
         coverage.verdicts([OtherBook: ['id']])[0].verdict().unmappedProperties().isEmpty()
     }
 
+    void "an input type with a field that the class cannot set does not cover for the class"() {
+        given:
+        def coverage = new InputClassCoverage()
+        coverage.add('CreateBook', ['title'], book)
+
+        expect:
+        coverage.verdicts([OtherBook: ['id', 'extra']])[0].verdict().unmappedProperties() == ['id']
+    }
+
     void "classes are judged apart"() {
         given:
         def coverage = new InputClassCoverage()

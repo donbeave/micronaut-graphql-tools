@@ -318,7 +318,8 @@ public final class InputBindingFindings {
     }
 
     // An input type of the schema that this walk did not reach may be bound to a class of this walk by another resolver, so
-    // its fields cover a property here: a finding is only what no input type of the schema can cover. When such a type could
+    // its fields cover a property here when the class can take them all: a finding is only what no input type of the schema can
+    // cover. When such a type could
     // sort before the types of this walk, the startup names the finding after it, and this walk reports nothing.
     private List<Finding> unmappedProperties() {
         Set<String> reached = coverage.inputTypes();
