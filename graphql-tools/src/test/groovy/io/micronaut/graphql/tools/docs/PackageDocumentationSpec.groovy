@@ -99,14 +99,26 @@ class PackageDocumentationSpec extends Specification {
                 "A package of another audience is Mixed exactly when one of its types is annotated @Internal."
     }
 
+    def "the module column of the API map names the module that holds each package"() {
+        given:
+        def wrong = apiRows().findAll { name, cells -> packages[name] != null && packages[name].module != cells[1].trim() }.keySet()
+
+        expect:
+        assert wrong.empty: "The module column of the API map is wrong for: ${wrong.toSorted()}"
+    }
+
     private Map<String, String> apiMap() {
+        apiRows().collectEntries { name, cells -> [(name): cells[2].trim()] }
+    }
+
+    private Map<String, List<String>> apiRows() {
         def page = Files.readString(root.resolve('src/main/docs/guide/apiMap.adoc'))
         def section = page.split('(?m)^== ').find { it.startsWith('Current layout') }
         assert section: 'The API map has no "Current layout" section'
         def rows = section.readLines().findAll { it.startsWith('|`io.micronaut.') }
         rows.collectEntries {
             def cells = it.substring(1).split(/ \|/)
-            [(cells[0].replace('`', '').trim()): cells[2].trim()]
+            [(cells[0].replace('`', '').trim()): cells.toList()]
         }
     }
 
@@ -123,6 +135,7 @@ class PackageDocumentationSpec extends Specification {
                     def foreign = files.findAll { !(Files.readString(it) =~ /(?m)^package\s+${Pattern.quote(name)}\s*;/).find() }
                     assert foreign.empty: "The package statement of ${foreign.collect { root.relativize(it) }} does not match its directory ${name}"
                     result[name] = [
+                            module     : module,
                             dir        : dir,
                             packageInfo: files.find { it.fileName.toString() == 'package-info.java' },
                             types      : files.findAll { it.fileName.toString() != 'package-info.java' },
