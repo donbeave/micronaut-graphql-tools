@@ -161,18 +161,23 @@ public final class InputBindingFindings {
     private Halt walk(Site site, TypeRef declared, Type<?> schemaType, boolean fieldLevel) {
         if (!declared.array() && !declared.primitive() && (isAssignable(declared, FUTURE)
                 || isAssignable(declared, COMPLETION_STAGE))) {
-            // the startup binds what an asynchronous argument wraps, once
+            // the startup binds what an asynchronous argument wraps, once, before it unwraps an ArgumentValue
             if (declared.typeArguments().isEmpty()) {
                 return Halt.SILENT;
             }
-            declared = declared.typeArguments().get(0);
+            return walkType(site, declared.typeArguments().get(0), schemaType, fieldLevel);
         }
+        return walkType(site, declared, schemaType, fieldLevel);
+    }
+
+    @Nullable
+    private Halt walkType(Site site, TypeRef declared, Type<?> schemaType, boolean fieldLevel) {
         boolean nonNull = schemaType instanceof NonNullType;
         if (!declared.array() && InputTypeRules.ARGUMENT_VALUE.equals(declared.rawName())) {
             ArgumentValueMisuse misuse = InputTypeRules.argumentValueMisuse(declared, fieldLevel, nonNull);
             if (misuse == null) {
                 // the startup binds what the wrapper wraps
-                return walk(site, declared.typeArguments().get(0), schemaType, fieldLevel);
+                return walkType(site, declared.typeArguments().get(0), schemaType, fieldLevel);
             }
             return failed(site, BindingCode.UNSUPPORTED_INPUT_TYPE,
                     "the Java type is not supported for this argument or input field: "

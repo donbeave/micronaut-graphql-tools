@@ -48,6 +48,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The compile-time adapter of the type model: it reads {@link ClassElement} and {@link MethodElement}, and the annotation
@@ -361,9 +362,12 @@ final class ElementTypeModel implements TypeModel {
 
         @Override
         public List<JProperty> writableProperties() {
-            Set<String> constructorArguments = element.getPrimaryConstructor()
-                    .map(it -> Arrays.stream(it.getParameters()).map(ParameterElement::getName).collect(Collectors.toSet()))
-                    .orElse(Set.of());
+            // the parameters of the primary constructor and of the static creator: the introspection sets a property from either
+            Set<String> constructorArguments = Stream.of(element.getPrimaryConstructor(), element.findStaticCreator())
+                    .flatMap(Optional::stream)
+                    .flatMap(it -> Arrays.stream(it.getParameters()))
+                    .map(ParameterElement::getName)
+                    .collect(Collectors.toSet());
             return beanProperties().stream()
                     .filter(it -> !it.isReadOnly() || constructorArguments.contains(it.getName()))
                     .<JProperty>map(ElementProperty::new)

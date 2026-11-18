@@ -237,6 +237,30 @@ enum Color { RED GREEN }
                 ['unmapped-input-property Filter.extra']
     }
 
+    void "an ArgumentValue around an asynchronous type is not unwrapped again: the startup rejects the class mapping"() {
+        given:
+        def wrapper = 'io.micronaut.graphql.tools.ArgumentValue'
+        def argument = { String name, TypeRef type -> [name: { name }, nameIsSynthetic: { false }, type: { type },
+                                                       annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
+        def omitted = method('omitted', [:], [argument('a', ref(wrapper, ref('java.util.concurrent.CompletionStage', ref('a.Filter')))),
+                                              FakeModel.parameter('b', 'java.lang.String')], STRING, 'a.R#omitted(av,String)')
+
+        expect:
+        check([omitted], input('a.Filter', [property('text')], [], false)) == []
+    }
+
+    void "an ArgumentValue around an asynchronous type is not unwrapped again: the startup rejects the class mapping"() {
+        given:
+        def wrapper = 'io.micronaut.graphql.tools.ArgumentValue'
+        def argument = { String name, TypeRef type -> [name: { name }, nameIsSynthetic: { false }, type: { type },
+                                                       annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
+        def omitted = method('omitted', [:], [argument('a', ref(wrapper, ref('java.util.concurrent.CompletionStage', ref('a.Filter')))),
+                                              FakeModel.parameter('b', 'java.lang.String')], STRING, 'a.R#omitted(av,String)')
+
+        expect:
+        check([omitted], input('a.Filter', [property('text')], [], false)) == []
+    }
+
     void "an enum that another use binds to a different class is a mapping conflict: the startup hides the strict checks"() {
         given:
         def paint = method('paint', [:], [FakeModel.parameter('color', 'a.Color')], STRING, 'a.R#paint(a.Color)')
