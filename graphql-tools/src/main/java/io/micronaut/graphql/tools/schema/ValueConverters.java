@@ -89,7 +89,7 @@ public final class ValueConverters {
     /**
      * @param listClass the declared collection class
      * @return whether {@link #list} supports it: {@code Iterable}, {@code Collection}, {@code List}, {@code Set},
-     * {@code SortedSet}, {@code Deque} and the classes that these collections instantiate
+     * {@code SortedSet}, {@code Deque}, {@code Queue} and the classes that these collections instantiate
      */
     public static boolean isSupportedList(Class<?> listClass) {
         return factory(listClass) != null;

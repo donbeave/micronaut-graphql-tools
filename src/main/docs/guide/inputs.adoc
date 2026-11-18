@@ -11,7 +11,7 @@ graphql-java coerces every value first: scalar values, enum constants, a `Map` p
 | `float`, `Float` | Narrowed from the `Double` that graphql-java coerces for a Float.
 | A Java enum | None: the values provider of the enum makes graphql-java coerce the enum value to the Java constant.
 | `List`, `Collection`, `Iterable` | A new mutable `ArrayList`; the element converter runs on each element.
-| `Set`, `SortedSet`, `Deque` | A new `LinkedHashSet` (the order of the list is kept), `TreeSet` or `LinkedList`.
+| `Set`, `SortedSet`, `Deque`, `Queue` | A new `LinkedHashSet` (the order of the list is kept), `TreeSet` or `LinkedList`.
 | An input class | A new instance, built from the class's introspection.
 | The class of a custom scalar | None when the scalar parsed an instance of it; otherwise the Micronaut `ConversionService`.
 |===

@@ -80,6 +80,8 @@ final class InputTypeBinder {
     // the converter of each input type, by the name of the type, registered before its fields are bound so that a type
     // that refers to itself finds it
     private final Map<String, ValueConverter> inputConverters = new HashMap<>();
+    // the failure of an input type whose binding failed, so that every later use reports it again
+    private final Map<String, RuntimeException> inputFailures = new HashMap<>();
 
     InputTypeBinder(TypeDefinitionRegistry typeDefinitionRegistry, ScalarMappings scalarMappings,
                     GraphQLToolsConfiguration configuration, BindingManifestRecorder manifestRecorder,
@@ -95,8 +97,26 @@ final class InputTypeBinder {
         this.callbacks = callbacks;
     }
 
-    private void processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,
-                                                  Class<?> targetClass, MappingContext mappingContext) {
+    private ValueConverter processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,
+                                                            Class<?> targetClass, MappingContext mappingContext) {
+        String name = inputObjectTypeDefinition.getName();
+        try {
+            bindInputObjectTypeDefinition(inputObjectTypeDefinition, targetClass, mappingContext);
+        } catch (RuntimeException e) {
+            if (!inputConverters.containsKey(name)) {
+                inputFailures.putIfAbsent(name, e);
+            }
+            throw e;
+        }
+        ValueConverter converter = inputConverters.get(name);
+        if (converter == null) {
+            throw inputFailures.get(name);
+        }
+        return converter;
+    }
+
+    private void bindInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,
+                                               Class<?> targetClass, MappingContext mappingContext) {
         callbacks.processIfNotProcessed(inputObjectTypeDefinition, targetClass, mappingContext, () -> {
             if (targetClass.isInterface()) {
                 throw IncorrectClassMappingException.forArgument(
@@ -219,7 +239,7 @@ final class InputTypeBinder {
 
             if (!ValueConverters.isSupportedList(returnType)) {
                 throw new UnsupportedInputTypeException(mappingContext, "a list is converted into a List, a "
-                        + "Collection, an Iterable, a Set, a SortedSet or a Deque, but the declared type is "
+                        + "Collection, an Iterable, a Set, a SortedSet, a Deque or a Queue, but the declared type is "
                         + returnType.getName() + ".");
             }
 
@@ -235,12 +255,11 @@ final class InputTypeBinder {
         TypeDefinition<?> typeDefinition = typeDefinitionRegistry.getType(typeName).get();
 
         if (typeDefinition instanceof InputObjectTypeDefinition inputObjectTypeDefinition) {
-            processInputObjectTypeDefinition(
+            return processInputObjectTypeDefinition(
                     inputObjectTypeDefinition,
                     returnType,
                     mappingContext
             );
-            return inputConverters.get(inputObjectTypeDefinition.getName());
         } else if (typeDefinition instanceof EnumTypeDefinition enumTypeDefinition) {
             callbacks.processEnum(enumTypeDefinition, returnType, true, mappingContext);
             return ValueConverters.IDENTITY;

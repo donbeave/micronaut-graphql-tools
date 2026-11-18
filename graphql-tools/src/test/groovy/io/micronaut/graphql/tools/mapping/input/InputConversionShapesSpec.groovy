@@ -13,6 +13,7 @@ import io.micronaut.graphql.tools.GraphQLScalarMapping
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.graphql.tools.exceptions.BindingFailuresException
 import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
@@ -23,6 +24,8 @@ class InputConversionShapesSpec extends AbstractTest {
     static final Map DETECT = [(GraphQLToolsConfiguration.PREFIX + '.input.detect-omission'): true]
     static final String SPEC_DECK = "InputConversionShapesSpecDeck"
     static final String SPEC_NULL_PRIMITIVE = "InputConversionShapesSpecNullPrimitive"
+    static final String SPEC_WIDENED = "InputConversionShapesSpecWidened"
+    static final String SPEC_BROKEN = "InputConversionShapesSpecBroken"
 
     @Language("GraphQL")
     static final String SCHEMA = """
@@ -74,6 +77,37 @@ input CountInput {
   total: Int
   flag: Boolean
   label: String
+}
+"""
+
+    @Language("GraphQL")
+    static final String SCHEMA_WIDENED = """
+schema {
+  query: Query
+}
+
+type Query {
+  widened(input: WidenedInput): String!
+}
+
+input WidenedInput {
+  count: Int
+}
+"""
+
+    @Language("GraphQL")
+    static final String SCHEMA_BROKEN = """
+schema {
+  query: Query
+}
+
+type Query {
+  first(input: BrokenInput): String
+  second(input: BrokenInput): String
+}
+
+input BrokenInput {
+  value: Int
 }
 """
 
@@ -179,6 +213,30 @@ type Query {
         omitted.data.count == 'total=7 flag=false label=default'
     }
 
+    void "a null for a primitive constructor parameter keeps the default, whatever the type of the property"() {
+        given:
+        startContext(SCHEMA_WIDENED, SPEC_WIDENED, [(GraphQLToolsConfiguration.PREFIX + '.strict'): false])
+
+        when:
+        def result = executeQuery('{ widened(input: {count: null}) }')
+
+        then:
+        result.errors.isEmpty()
+        result.data.widened == 'count=0'
+    }
+
+    void "an input type that fails to bind fails the startup with its own error at every use"() {
+        when:
+        startContext(SCHEMA_BROKEN, SPEC_BROKEN)
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof BindingFailuresException
+        e.cause.message.contains('2 errors')
+        e.cause.message.count('[class-not-introspected]') == 2
+    }
+
     void "a list declared as a collection that no list converts to fails the startup"() {
         when:
         startContext(SCHEMA_DECK, SPEC_DECK)
@@ -248,6 +306,26 @@ type Query {
         }
     }
 
+    @Requires(property = 'spec.name', value = SPEC_WIDENED)
+    @GraphQLRootResolver
+    static class WidenedQuery {
+        String widened(WidenedInput input) {
+            return "count=${input.count}"
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_BROKEN)
+    @GraphQLRootResolver
+    static class BrokenQuery {
+        String first(BrokenInput input) {
+            return null
+        }
+
+        String second(BrokenInput input) {
+            return null
+        }
+    }
+
     @Requires(property = 'spec.name', value = SPEC_DECK)
     @GraphQLRootResolver
     static class DeckQuery {
@@ -286,6 +364,23 @@ type Query {
             this.size = size
             this.tag = tag
         }
+    }
+
+    @GraphQLInput
+    static class WidenedInput {
+        private final int count
+
+        WidenedInput(int count) {
+            this.count = count
+        }
+
+        Integer getCount() {
+            return count
+        }
+    }
+
+    static class BrokenInput {
+        Integer value
     }
 
     @GraphQLInput

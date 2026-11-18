@@ -73,8 +73,9 @@ public final class InputObjectConverter implements ValueConverter {
                 index = i;
             }
         }
+        Class<?> target = index >= 0 ? constructorArguments[index].getType() : property.getType();
         pending.add(new Slot(name, property, converter == ValueConverters.IDENTITY ? null : converter, argumentValue,
-                property.getType().isPrimitive(), index));
+                target.isPrimitive(), index));
     }
 
     /**

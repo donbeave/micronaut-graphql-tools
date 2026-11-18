@@ -550,7 +550,7 @@ Jackson on the request path:
   is narrowed from graphql-java's `Double`;
 - an enum is the Java constant already, from the values provider of the enum (see [Enums](#enums));
 - a list becomes a new, mutable `ArrayList` for `List`, `Collection` and `Iterable`, a `LinkedHashSet` for `Set` (it
-  keeps the order of the list), a `TreeSet` for `SortedSet`, or a `LinkedList` for `Deque`; any other declared collection
+  keeps the order of the list), a `TreeSet` for `SortedSet`, or a `LinkedList` for `Deque` and `Queue`; any other declared collection
   fails the startup with `UnsupportedInputTypeException`;
 - an input object becomes an instance of its input class, built from the class's bean introspection
   (`BeanIntrospection`, generated at compile time because `@GraphQLInput` is `@Introspected`): the introspected
