@@ -38,6 +38,7 @@ data class Stock(
 )
 // end::constructor-input[]
 
+// tag::nested-constructor-input[]
 @GraphQLInput
 data class Dimensions(val width: Int, val unit: ArgumentValue<String> = ArgumentValue.omitted())
 
@@ -51,6 +52,7 @@ data class Crate(
     val parts: List<Part>,
     val memo: ArgumentValue<String> = ArgumentValue.omitted(),
 )
+// end::nested-constructor-input[]
 
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "arguments")

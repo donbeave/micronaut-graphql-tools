@@ -55,6 +55,7 @@ class Stock {
 }
 // end::constructor-input[]
 
+// tag::nested-constructor-input[]
 @CompileStatic
 @GraphQLInput
 class Dimensions {
@@ -94,6 +95,7 @@ class Crate {
         this.memo = memo
     }
 }
+// end::nested-constructor-input[]
 
 @CompileStatic
 @GraphQLRootResolver
