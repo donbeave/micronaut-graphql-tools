@@ -8,7 +8,7 @@ Tagged `1.0.0-M1` and published to GitHub Packages. The breaking changes are num
 
 == 1.0.0-M2
 
-Not released yet. The breaking changes are numbered from `BC-20`, as in the release notes of 1.0.0-M2.
+Tagged `1.0.0-M2` and published to GitHub Packages. The breaking changes are numbered from `BC-20`, as in the release notes of 1.0.0-M2.
 
 * BC-20 (#173): the `graphql-tools` mapper seam is internal and no longer documented. See the migration page, entries for 1.0.0-M2.
 
