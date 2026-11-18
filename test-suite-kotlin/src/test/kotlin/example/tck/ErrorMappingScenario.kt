@@ -2,7 +2,8 @@ package example.tck
 
 import graphql.ErrorType
 import graphql.GraphQL
-import graphql.GraphqlErrorBuilder
+import graphql.GraphQLError
+import graphql.language.SourceLocation
 import graphql.execution.DataFetcherExceptionHandler
 import graphql.execution.DataFetcherExceptionHandlerResult
 import io.micronaut.context.annotation.Requires
@@ -18,6 +19,20 @@ import java.util.concurrent.CompletionStage
 
 class NotFoundException(val id: Int) : RuntimeException("no item $id")
 
+// GraphqlErrorBuilder is not used: its self-referencing generics overflow the Kotlin compiler on graphql-java 26.2.
+class MappedError(
+    private val text: String,
+    private val errorPath: List<Any>,
+    private val location: SourceLocation?,
+    private val data: Map<String, Any>
+) : GraphQLError {
+    override fun getMessage(): String = text
+    override fun getLocations(): List<SourceLocation> = listOfNotNull(location)
+    override fun getErrorType(): ErrorType = ErrorType.DataFetchingException
+    override fun getPath(): List<Any> = errorPath
+    override fun getExtensions(): Map<String, Any> = data
+}
+
 @Singleton
 @Requires(property = "tck.scenario", value = "error-mapping")
 class ErrorMappingCustomizer : GraphQLBuilderCustomizer {
@@ -27,16 +42,12 @@ class ErrorMappingCustomizer : GraphQLBuilderCustomizer {
             if (cause is CompletionException && cause.cause != null) {
                 cause = cause.cause!!
             }
-            val error = GraphqlErrorBuilder.newError()
-                .path(parameters.path)
-                .location(parameters.sourceLocation)
-                .errorType(ErrorType.DataFetchingException)
-            if (cause is NotFoundException) {
-                error.message(cause.message).extensions(mapOf("code" to "NOT_FOUND", "id" to cause.id))
+            val error = if (cause is NotFoundException) {
+                MappedError(cause.message!!, parameters.path.toList(), parameters.sourceLocation, mapOf("code" to "NOT_FOUND", "id" to cause.id))
             } else {
-                error.message("Internal error").extensions(mapOf("code" to "INTERNAL"))
+                MappedError("Internal error", parameters.path.toList(), parameters.sourceLocation, mapOf("code" to "INTERNAL"))
             }
-            CompletableFuture.completedFuture(DataFetcherExceptionHandlerResult.newResult(error.build()).build())
+            CompletableFuture.completedFuture(DataFetcherExceptionHandlerResult.newResult(error).build())
         }
         builder.defaultDataFetcherExceptionHandler(handler)
     }
