@@ -35,16 +35,19 @@ import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLScalarType;
+import graphql.schema.idl.MapEnumValuesProvider;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.TypeRuntimeWiring;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanMethod;
+import io.micronaut.core.beans.EnumBeanIntrospection;
 import io.micronaut.core.annotation.AnnotationMetadataProvider;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
@@ -740,19 +743,22 @@ final class GraphQLRuntimeWiringGenerator {
                     .sorted()
                     .toList();
 
-            List<String> existingValues = Arrays.stream(targetClass.getEnumConstants())
-                    .map(it -> ((Enum<?>) it).name())
-                    .distinct()
-                    .sorted()
-                    .toList();
+            EnumBeanIntrospection<?> introspection = EnumIntrospections.find(targetClass).orElseThrow(
+                    () -> new ClassNotIntrospectedException(mappingContext, targetClass, Introspected.class));
+            Map<String, Object> constants = EnumIntrospections.constantsByName(introspection);
 
             List<String> missingValues = expectedValues.stream()
-                    .filter(it -> !existingValues.contains(it))
+                    .filter(it -> !constants.containsKey(it))
                     .toList();
 
             if (!missingValues.isEmpty()) {
                 throw new MissingEnumValuesException(mappingContext, targetClass, missingValues);
             }
+
+            Map<String, Object> values = new HashMap<>();
+            expectedValues.forEach(it -> values.put(it, constants.get(it)));
+            rootRuntimeWiringBuilder.type(enumTypeDefinition.getName(),
+                    typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder.enumValues(new MapEnumValuesProvider(values)));
 
             manifestRecorder.type(enumTypeDefinition.getName(), "enum", targetClass);
             expectedValues.forEach(it -> manifestRecorder.enumValue(enumTypeDefinition.getName(), it, targetClass));
