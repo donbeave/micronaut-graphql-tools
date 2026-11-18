@@ -1,1 +1,6 @@
 NOTE: This page is pending. It will be written with the user guide (epic #97).
+
+A `GraphQLScalarType` bean is not registered on its own. Each custom scalar of the schema needs a `GraphQLScalarMapping`
+bean: wrap the scalar type with `GraphQLScalarMapping.of(scalarType, JavaClass.class)`, or use
+`GraphQLScalarMapping.builder(scalarType)` for different output and input classes. When a scalar has no mapping but a bare
+`GraphQLScalarType` bean with its name exists, the startup error names that bean and this fix.
