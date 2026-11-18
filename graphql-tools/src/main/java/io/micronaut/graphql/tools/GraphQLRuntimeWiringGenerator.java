@@ -114,7 +114,6 @@ final class GraphQLRuntimeWiringGenerator {
     private final GraphQLResolversRegistry graphQLResolversRegistry;
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final SchemaMappingDictionary schemaMappingDictionary;
-    private final InputClassChecks inputClassChecks;
     private final GraphQLToolsConfiguration configuration;
     private final ScalarMappings scalarMappings;
     private final RuntimeWiring.Builder rootRuntimeWiringBuilder;
@@ -202,7 +201,6 @@ final class GraphQLRuntimeWiringGenerator {
         this.scalarMappings = new ScalarMappings(applicationContext.getBeansOfType(GraphQLScalarMapping.class),
                 manifestRecorder, applicationContext);
 
-        this.inputClassChecks = new InputClassChecks();
         this.rootRuntimeWiringBuilder = RuntimeWiring.newRuntimeWiring()
                 .scalar(ExtendedScalars.GraphQLLong)
                 .scalar(ExtendedScalars.GraphQLShort)
@@ -210,7 +208,7 @@ final class GraphQLRuntimeWiringGenerator {
                 .scalar(ExtendedScalars.GraphQLBigInteger);
         scalarMappings.all().forEach(it -> rootRuntimeWiringBuilder.scalar(it.getScalarType()));
         this.inputTypeBinder = new InputTypeBinder(typeDefinitionRegistry, scalarMappings, configuration,
-                manifestRecorder, inputClassChecks, typeModel, applicationContext, new InputCallbacks());
+                manifestRecorder, typeModel, applicationContext, new InputCallbacks());
         this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,
@@ -256,7 +254,7 @@ final class GraphQLRuntimeWiringGenerator {
 
             GraphQLToolsConfiguration.UnmappedProperties unmappedProperties =
                     configuration.getInput().getUnmappedProperties();
-            inputClassChecks.checkCollected(unmappedProperties == null
+            inputTypeBinder.inputClassChecks().checkCollected(unmappedProperties == null
                     ? configuration.isStrict()
                     : unmappedProperties == GraphQLToolsConfiguration.UnmappedProperties.FAIL, manifestRecorder);
 
