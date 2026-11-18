@@ -10,7 +10,7 @@ class SchemaDefinitionNotProvidedSpec extends AbstractTest {
         given:
         @Language("GraphQL")
         String schema = """
-type Query {
+type Hello {
   hello: String
 }
 """
@@ -23,7 +23,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaDefinitionNotProvidedException
-        e.cause.message == """[schema-definition-not-provided] Schema definition is not set. Make sure your GraphQL schema contains such definition:
+        e.cause.message == """[schema-definition-not-provided] Schema definition is not set, and the schema has no object type named Query. Define one, or make sure your GraphQL schema contains such definition:
   schema {
     query: Query
     mutation: Mutation
