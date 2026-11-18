@@ -261,8 +261,11 @@ public final class ResolverClassFindings {
                     "the parameter " + method.parameters().get(without.parameter()).name() + " binds no argument of "
                             + coordinate + " (arguments: " + String.join(", ", without.available()) + ")",
                     schema, coordinate,
-                    "rename the parameter to an argument name, annotate it with @GraphQLArgument(\"<name>\"), or add the "
-                            + "argument to the schema"));
+                    without.syntheticName()
+                            ? "the class file of " + method.declaringType().name() + " has no parameter names: compile it "
+                                    + "with -parameters, or annotate the parameter with @GraphQLArgument(\"<name>\")"
+                            : "rename the parameter to an argument name, annotate it with @GraphQLArgument(\"<name>\"), "
+                                    + "or add the argument to the schema"));
             return false;
         }
         if (failure instanceof DuplicateParameter duplicate) {

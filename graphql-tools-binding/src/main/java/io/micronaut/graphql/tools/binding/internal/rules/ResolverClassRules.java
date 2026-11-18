@@ -119,10 +119,11 @@ public final class ResolverClassRules {
         Set<String> bound = new HashSet<>();
         for (int i = first; i < end; i++) {
             JParameter parameter = parameters.get(i);
-            String name = parameter.annotations().stringValue(AnnotationNames.ARGUMENT, "value")
-                    .orElse(parameter.name());
+            String declared = parameter.annotations().stringValue(AnnotationNames.ARGUMENT, "value").orElse(null);
+            String name = declared != null ? declared : parameter.name();
             if (!available.contains(name)) {
-                return new ArgumentVerdict(slots, new ParameterWithoutArgument(i, name, available));
+                return new ArgumentVerdict(slots, new ParameterWithoutArgument(i, name, available,
+                        declared == null && parameter.nameIsSynthetic() && name.equals("arg" + i)));
             }
             if (!bound.add(name)) {
                 return new ArgumentVerdict(slots, new DuplicateParameter(name));
