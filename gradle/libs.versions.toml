@@ -1,22 +1,22 @@
 [versions]
+# Build-tool inputs, not dependency pins: micronaut-build reads `micronaut` (core BOM) and `micronaut-test` for the `mn` and
+# `mnTest` catalogs, the Micronaut Gradle plugin reads `micronaut-platform`. D-34, D-41.
 micronaut = "4.10.37"
 micronaut-platform = "4.10.24"
 micronaut-docs = "3.0.0"
 micronaut-test = "4.10.3"
 micronaut-graphql = "4.8.0"
 
+# Override of the BOM-managed Groovy 4.0.28, which cannot read JDK 27 class files: until the Micronaut BOM catches up. Applied
+# by resolutionStrategy (buildSrc convention plugin and the test-suite builds); the only override of a managed version.
 groovy = "4.0.33"
 
+# Not managed by the Micronaut BOMs or catalogs
 apollo = "4.4.4"
 jmh = "1.37"
-junit = "5.13.4"
 jetbrains-annotations = "26.1.0"
-logback = "1.5.38"
 # test oracle for the scalar SPI: the date/time scalars many graphql-java applications use
 graphql-java-datetime = "6.0.0"
-
-# what micronaut-graphql 4.8.0 manages: the default leg takes it as is
-managed-graphql-java-extended-scalars = "22.0"
 
 # test scope only; the default leg uses it as is (the line of the managed graphql-java 22.4), build.gradle.kts moves it with
 # the floor and ceiling legs
@@ -40,18 +40,15 @@ ceiling-extended-validation = "24.0"
 [libraries]
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
 jmh-generator-annprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
-junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
-# Core
+# Micronaut BOMs: the versions above are build-tool inputs; the platform BOM also manages logback and JUnit for the library
+# modules' tests and the benchmarks (the core BOM behind the `mn` catalog does not)
 micronaut-core = { module = "io.micronaut:micronaut-core-bom", version.ref = "micronaut" }
-
-managed-graphql-java-extended-scalars = { module = "com.graphql-java:graphql-java-extended-scalars", version.ref = "managed-graphql-java-extended-scalars" }
-graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-extended-validation", version.ref = "graphql-java-extended-validation" }
-
-# BOMs
+micronaut-platform = { module = "io.micronaut.platform:micronaut-platform", version.ref = "micronaut-platform" }
 micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", version.ref = "micronaut-graphql" }
+
+graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-extended-validation", version.ref = "graphql-java-extended-validation" }
 
 apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
 apollo-rx3-support = { module = "com.apollographql.apollo:apollo-rx3-support", version.ref = "apollo" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 graphql-java-datetime = { module = "com.tailrocks.graphql:graphql-java-datetime", version.ref = "graphql-java-datetime" }

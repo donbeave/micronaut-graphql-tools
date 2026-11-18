@@ -12,7 +12,7 @@ dependencies {
     testImplementation(mn.micronaut.inject.groovy)
     // the Kotlin side of the corpus compiles its cases in a batched TestKit build
     testImplementation(gradleTestKit())
-    testRuntimeOnly(libs.logback.classic)
+    testRuntimeOnly("ch.qos.logback:logback-classic")
 }
 
 micronautBuild {

@@ -73,6 +73,14 @@ The fixtures serve a plain `DataLoaderRegistry` in every scenario except the one
 
 Out of scope here: HTTP transport details and WebSocket scenarios (#50), subscriptions (a `Publisher` return type is allowed on subscription fields only), and per-request context propagation.
 
+## Dependencies
+
+Dependencies come from the Micronaut version catalog (`mn.*`) first; `gradle/libs.versions.toml` only holds what Micronaut does not manage; overrides need a recorded reason.
+
+- A dependency that Micronaut's BOMs manage is declared without a version, or through the generated `mn`, `mnGraphql` and `mnTest` catalogs. `logback` and JUnit come from the Micronaut platform BOM (`libs.micronaut.platform`) in the tests and the benchmarks.
+- The `micronaut`, `micronaut-platform` and `micronaut-test` entries of `gradle/libs.versions.toml` are inputs of micronaut-build and the Micronaut Gradle plugin, not dependency pins.
+- An override of a managed version (today only Groovy 4.0.33, because the BOM's 4.0.28 cannot read JDK 27 class files) needs a comment with its reason next to it and an exception in `.github/scripts/versions-audit.sh`.
+
 ## Building Documentation
 
 The documentation sources are located at `src/main/docs/guide`.

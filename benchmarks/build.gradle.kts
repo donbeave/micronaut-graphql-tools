@@ -13,10 +13,11 @@ java {
 }
 
 dependencies {
+    implementation(platform(libs.micronaut.platform))
     implementation(projects.micronautGraphqlTools)
     implementation(mn.micronaut.inject)
     annotationProcessor(mn.micronaut.inject.java)
-    runtimeOnly(libs.logback.classic)
+    runtimeOnly("ch.qos.logback:logback-classic")
 
     jmh(libs.jmh.core)
     jmhAnnotationProcessor(libs.jmh.generator.annprocess)
@@ -129,7 +130,6 @@ configurations {
 
 dependencies {
     for (testSourceSet in listOf(allocationTest, jmhSmokeTest)) {
-        add(testSourceSet.implementationConfigurationName, platform(libs.junit.bom))
         add(testSourceSet.implementationConfigurationName, "org.junit.jupiter:junit-jupiter")
         add(testSourceSet.implementationConfigurationName, sourceSets.main.get().output)
         add(testSourceSet.runtimeOnlyConfigurationName, "org.junit.platform:junit-platform-launcher")
