@@ -14,7 +14,7 @@ import java.nio.file.Path
 class CorpusRunnerSpec extends Specification {
 
     static final Finding UNBOUND = new Finding('unbound-resolver-method', 'example.A#stray()')
-    static final Finding MISSING = new Finding('MethodNotFoundException', 'Query.missing', 'schema.graphqls:3:3')
+    static final Finding MISSING = new Finding('field-not-bound', 'Query.missing', 'schema.graphqls:3:3')
 
     @TempDir
     Path dir
@@ -139,10 +139,10 @@ class CorpusRunnerSpec extends Specification {
         where:
         expected                                                         | actual                        | fragment
         'ok\n'                                                           | Verdict.bound()               | null
-        'MethodNotFoundException Query.missing schema.graphqls:3:3\n'    | Verdict.failed([MISSING])     | null
-        'ok\n'                                                           | Verdict.failed([MISSING])     | '+ actual:   MethodNotFoundException Query.missing schema.graphqls:3:3'
-        'MethodNotFoundException Query.missing schema.graphqls:3:3\n'    | Verdict.bound()               | '- expected: MethodNotFoundException Query.missing schema.graphqls:3:3'
-        'MethodNotFoundException Query.missing schema.graphqls:4:3\n'    | Verdict.failed([MISSING])     | '- expected: MethodNotFoundException Query.missing schema.graphqls:4:3'
+        'field-not-bound Query.missing schema.graphqls:3:3\n'    | Verdict.failed([MISSING])     | null
+        'ok\n'                                                           | Verdict.failed([MISSING])     | '+ actual:   field-not-bound Query.missing schema.graphqls:3:3'
+        'field-not-bound Query.missing schema.graphqls:3:3\n'    | Verdict.bound()               | '- expected: field-not-bound Query.missing schema.graphqls:3:3'
+        'field-not-bound Query.missing schema.graphqls:4:3\n'    | Verdict.failed([MISSING])     | '- expected: field-not-bound Query.missing schema.graphqls:4:3'
     }
 
     void "the binding manifest of a bound startup is compared where one is recorded"() {
@@ -335,7 +335,7 @@ class CorpusRunnerSpec extends Specification {
 
         then: 'a failing startup has no manifest, so the recorded manifest expectation is removed'
         !Files.exists(dir.resolve('a/expected/manifest.txt'))
-        Files.readString(dir.resolve('a/expected/runtime.txt')) == "MethodNotFoundException Query.missing schema.graphqls:3:3\nunbound-resolver-method example.A#stray() -\n"
+        Files.readString(dir.resolve('a/expected/runtime.txt')) == "field-not-bound Query.missing schema.graphqls:3:3\nunbound-resolver-method example.A#stray() -\n"
 
         when: 'the expectation is recorded again (an empty manifest file marks the case)'
         Files.writeString(dir.resolve('a/expected/manifest.txt'), '')
@@ -355,14 +355,14 @@ class CorpusRunnerSpec extends Specification {
         runner(root, Verdict.failed([MISSING]), Verdict.unavailable(), true).run(new Corpus(root).byName('a'), Language.JAVA)
 
         then:
-        Files.readString(dir.resolve('a/expected/runtime.txt')) == "MethodNotFoundException Query.missing schema.graphqls:3:3\n"
+        Files.readString(dir.resolve('a/expected/runtime.txt')) == "field-not-bound Query.missing schema.graphqls:3:3\n"
         Files.readString(dir.resolve('a/expected/kotlin/runtime.txt')) == 'ok\n'
         new Corpus(root).problems == []
     }
 
     void "a duplicated divergence entry is a problem"() {
         given:
-        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 2\na all MethodNotFoundException Query.x\na all MethodNotFoundException Query.x\n')
+        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 2\na all field-not-bound Query.x\na all field-not-bound Query.x\n')
 
         expect:
         new Corpus(root).problems.any { it.contains('is listed twice') }

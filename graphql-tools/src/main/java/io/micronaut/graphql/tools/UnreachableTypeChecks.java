@@ -30,6 +30,7 @@ import graphql.schema.idl.ScalarInfo;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException;
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException;
 import org.slf4j.Logger;
@@ -141,8 +142,8 @@ final class UnreachableTypeChecks {
             }
         }
 
-        unbound.forEach(it -> manifestRecorder.diagnostic("unreachable", it));
-        unreachableValueTypes.keySet().forEach(it -> manifestRecorder.diagnostic("unreachable", it));
+        unbound.forEach(it -> manifestRecorder.diagnostic(BindingCode.UNREACHABLE_TYPE, it));
+        unreachableValueTypes.keySet().forEach(it -> manifestRecorder.diagnostic(BindingCode.UNREACHABLE_VALUE_TYPE, it));
 
         for (String name : unbound) {
             TypeDefinition<?> typeDefinition = unreachableTypes.get(name);

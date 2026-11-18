@@ -49,17 +49,32 @@ class CompileTimeManifestTest {
         }
     }
 
+    // the omitted record names the kinds that the JSR-269 processor writes; the startup writes the codes (#237)
+    private static List<String> startupKinds(String kind) {
+        return switch (kind) {
+            case "unbound" -> List.of("unbound-resolver-method", "unbound-enum-constant", "unmapped-input-property");
+            case "unusedDictionary" -> List.of("unused-dictionary-entry");
+            case "unwiredDirective" -> List.of("unwired-directive");
+            case "ambiguous" -> List.of("precedence-ambiguity");
+            case "unreachable" -> List.of("unreachable-type", "unreachable-value-type");
+            default -> List.of(kind);
+        };
+    }
+
     private static boolean isOmitted(String line, List<String> omitted) {
         for (String entry : omitted) {
             String kind = entry.substring(0, entry.indexOf(' '));
             String value = entry.substring(entry.indexOf(' ') + 1);
             boolean match = switch (kind) {
-                case "kind" -> line.startsWith("!" + value + " ") || line.contains(" → " + value + " · ");
+                case "kind" -> startupKinds(value).stream().anyMatch(it -> line.startsWith("!" + it + " "))
+                        || line.contains(" → " + value + " · ");
                 case "type" -> line.startsWith(value + " → ") || line.startsWith(value + ".")
-                        || line.startsWith(value + "/") || line.startsWith("!ambiguous " + value + ".");
+                        || line.startsWith(value + "/") || line.startsWith("!precedence-ambiguity " + value + ".");
                 case "field" -> line.startsWith(value + "(") || line.startsWith(value + ":")
-                        || line.startsWith("!ambiguous " + value + " ");
-                case "unbound" -> line.equals("!unbound " + value);
+                        || line.startsWith("!precedence-ambiguity " + value + " ");
+                case "unbound" -> line.equals("!unbound-resolver-method " + value)
+                        || line.equals("!unbound-enum-constant " + value)
+                        || line.equals("!unmapped-input-property " + value);
                 default -> throw new IllegalStateException("unknown entry in the omitted record: " + entry);
             };
             if (match) {

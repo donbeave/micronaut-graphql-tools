@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
@@ -27,7 +28,7 @@ public final class UnsupportedReturnTypeException extends AbstractMappingExcepti
     private final String reason;
 
     public UnsupportedReturnTypeException(MappingContext mappingContext, String reason) {
-        super("The return type of the method is not supported for this field: " + reason, mappingContext);
+        super(BindingCode.UNSUPPORTED_RETURN_TYPE, "The return type of the method is not supported for this field: " + reason, mappingContext);
 
         this.reason = reason;
     }

@@ -31,6 +31,7 @@ import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -142,11 +143,11 @@ final class BindingManifestRecorder {
                 JavaTypeNames.of(property.asArgument()), ReturnTypes.convertedTypeName(property.asArgument(), false, false)));
     }
 
-    void diagnostic(String kind, String... parts) {
+    void diagnostic(BindingCode code, String... parts) {
         if (!recording) {
             return;
         }
-        diagnostics.add("!" + kind + " " + Arrays.stream(parts)
+        diagnostics.add("!" + code.code() + " " + Arrays.stream(parts)
                 .map(BindingManifestRecorder::requirePart)
                 .collect(Collectors.joining(DOT)));
     }

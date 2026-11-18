@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 
 /**
@@ -23,7 +24,7 @@ import java.util.List;
  *
  * @since 1.0.0
  */
-public final class AmbiguousTypeMappingException extends RuntimeException {
+public final class AmbiguousTypeMappingException extends SchemaBindingException {
 
     private final transient List<String> graphQlTypes;
 
@@ -32,7 +33,7 @@ public final class AmbiguousTypeMappingException extends RuntimeException {
      * @param graphQlTypes the GraphQL types involved, sorted
      */
     public AmbiguousTypeMappingException(List<String> conflicts, List<String> graphQlTypes) {
-        super("The SchemaMappingDictionary maps GraphQL object types ambiguously:\n  "
+        super(BindingCode.AMBIGUOUS_TYPE_MAPPING, "The SchemaMappingDictionary maps GraphQL object types ambiguously:\n  "
                 + String.join("\n  ", conflicts)
                 + "\nAn object of the implementing class would match both GraphQL types. Map each GraphQL object type "
                 + "to its own class, or map only one of them to the interface.");

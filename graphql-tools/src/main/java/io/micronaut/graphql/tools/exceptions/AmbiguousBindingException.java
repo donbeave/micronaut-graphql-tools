@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 import java.util.List;
@@ -30,7 +31,7 @@ public final class AmbiguousBindingException extends AbstractMappingException {
     private final Map<Class<?>, List<String>> members;
 
     public AmbiguousBindingException(MappingContext mappingContext, Map<Class<?>, List<String>> members) {
-        super("Both a member of the Java type and a type resolver method can bind one GraphQL field.", mappingContext);
+        super(BindingCode.PRECEDENCE_AMBIGUITY, "Both a member of the Java type and a type resolver method can bind one GraphQL field.", mappingContext);
 
         this.members = members;
     }

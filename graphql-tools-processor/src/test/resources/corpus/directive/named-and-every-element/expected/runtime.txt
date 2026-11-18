@@ -1,1 +1,1 @@
-DuplicateDirectiveWiringException audit -
+duplicate-directive-wiring audit -

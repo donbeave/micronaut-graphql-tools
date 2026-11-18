@@ -190,7 +190,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The field is mapped to a custom class, when required an interface.
+        e.cause.message == """[incorrect-class-mapping] The field is mapped to a custom class, when required an interface.
   GraphQL coordinate: Book.sections (line 13, column 3)
   GraphQL object type: Book
   GraphQL field: sections
@@ -217,7 +217,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InterfaceTypeMappingNotProvidedException
-        e.cause.message == """Can not detect representation class for type MediaSection, implementation of Section interface. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
+        e.cause.message == """[interface-type-mapping-not-provided] Can not detect representation class for type MediaSection, implementation of Section interface. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
   GraphQL coordinate: Book.sections (line 13, column 3)
   GraphQL object type: Book
   GraphQL field: sections
@@ -254,7 +254,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `title` not found in ${UntitledSection.name}'s type.
+        e.cause.message == """[field-not-bound] The property or method `title` not found in ${UntitledSection.name}'s type.
   GraphQL coordinate: MediaSection.title (line 29, column 3)
   GraphQL object type: MediaSection
   GraphQL field: title"""

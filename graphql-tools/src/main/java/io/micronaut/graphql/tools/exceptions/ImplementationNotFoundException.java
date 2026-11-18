@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
@@ -23,7 +24,7 @@ import io.micronaut.graphql.tools.MappingContext;
 public final class ImplementationNotFoundException extends AbstractMappingException {
 
     public ImplementationNotFoundException(MappingContext mappingContext, Class<?> interfaceClass) {
-        super(
+        super(BindingCode.IMPLEMENTATION_NOT_FOUND,
                 String.format(
                         "Can not find implementation class for the interface %s. Annotate the interface with "
                                 + "@GraphQLType, or one implementation class with @GraphQLType(%s.class).",

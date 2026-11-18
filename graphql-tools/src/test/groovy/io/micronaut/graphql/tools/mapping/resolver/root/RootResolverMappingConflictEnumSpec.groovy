@@ -40,7 +40,7 @@ enum Month {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MappingConflictException
-        e.cause.message == """Unable to map GraphQL enum `Month` to ${AnotherMonth.name}, as it is already mapped to ${Month.name}.
+        e.cause.message == """[mapping-conflict] Unable to map GraphQL enum `Month` to ${AnotherMonth.name}, as it is already mapped to ${Month.name}.
   GraphQL coordinate: Query.nextMonth (line 8, column 3)
   GraphQL object type: Query
   GraphQL field: nextMonth
