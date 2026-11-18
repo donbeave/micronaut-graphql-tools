@@ -1,7 +1,11 @@
-schema {
+schema @audit {
   query: Query
   mutation: Mutation
 }
+
+directive @audit on SCHEMA
+directive @upper on FIELD_DEFINITION
+directive @tagged(label: String!) on FIELD_DEFINITION
 
 type Query {
   searchProfile(contains: String!, limit: Int): [Profile!]!
@@ -11,6 +15,10 @@ type Query {
   currentUser: User
 
   introduced: String!
+
+  shout: String! @upper
+
+  tagged: String! @tagged(label: "t")
 }
 
 type Mutation {
