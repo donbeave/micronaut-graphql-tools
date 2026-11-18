@@ -514,7 +514,7 @@ final class GraphQLRuntimeWiringGenerator {
                 executable,
                 executable.getReturnType(),
                 null,
-                applicationContext.getBean(beanDefinitionAndMethod.getBeanDefinition()),
+                ResolverInstances.of(applicationContext, beanDefinitionAndMethod.getBeanDefinition()),
                 typeRuntimeWiringBuilder,
                 mappingContext
         );
@@ -893,7 +893,7 @@ final class GraphQLRuntimeWiringGenerator {
                 executable,
                 executable.getReturnType(),
                 sourceClass,
-                applicationContext.getBean(beanDefinitionAndMethod.getBeanDefinition()),
+                ResolverInstances.of(applicationContext, beanDefinitionAndMethod.getBeanDefinition()),
                 typeRuntimeWiringBuilder,
                 mappingContext
         );
@@ -1055,7 +1055,7 @@ final class GraphQLRuntimeWiringGenerator {
                     executable,
                     executable.getReturnType(),
                     method.interfaceClass(),
-                    applicationContext.getBean(method.method().getBeanDefinition()),
+                    ResolverInstances.of(applicationContext, method.method().getBeanDefinition()),
                     objectTypeWirings.get(field.objectTypeDefinition().getName()),
                     field.mappingContext()
             );
