@@ -117,7 +117,7 @@ missing. A wildcard needs a directory before it. Several locations are read in o
 
 A native image cannot list a classpath directory, so a wildcard `classpath:` or `classpath*:` location reads the schema
 index of the module instead: the resource `META-INF/micronaut-graphql-tools/schema-index.txt`, one classpath path per line
-(a jar that provides schema files ships its own). The index is read in a native image only; the JVM lists the directories. A `classpath:` location reads the first index that has a matching file, because the index does not record which classpath entries have the directory: an application whose `graphql/` directory holds only operation files does not shadow the schema of a dependency in a native image, as it does on the JVM.
+(a jar that provides schema files ships its own, and the native image resource metadata of those files: the index only lists them). The index is read in a native image only; the JVM lists the directories. A `classpath:` location reads the first index that has a matching file, because the index does not record which classpath entries have the directory: an application whose `graphql/` directory holds only operation files does not shadow the schema of a dependency in a native image, as it does on the JVM.
 The index is not written by the processor. Generate it in the build, from the files that are packaged, and keep the schema
 files themselves in the native image resources (the Micronaut Gradle plugin includes `src/main/resources`):
 

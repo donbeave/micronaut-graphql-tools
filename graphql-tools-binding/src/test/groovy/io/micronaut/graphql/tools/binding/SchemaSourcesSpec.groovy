@@ -189,6 +189,11 @@ class SchemaSourcesSpec extends Specification {
         'file:/work/sdl/**/*.graphqls'        | '/work/sdl/' | true  | '/work/sdl/a.graphqls' | true
     }
 
+    void "a file location written with backslashes has the same pattern as one with slashes"() {
+        expect:
+        SchemaLocation.parse('file:C:\\schemas\\**\\*.graphqls').pattern() == 'C:/schemas/**/*.graphqls'
+    }
+
     void "a location that cannot work fails with a message that says why"() {
         when:
         SchemaLocation.parse(text)

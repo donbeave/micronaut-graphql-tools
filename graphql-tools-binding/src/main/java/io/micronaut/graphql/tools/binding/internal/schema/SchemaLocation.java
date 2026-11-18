@@ -70,7 +70,9 @@ public record SchemaLocation(Scheme scheme, String pattern) {
         for (Scheme scheme : Scheme.values()) {
             if (text.startsWith(scheme.prefix())) {
                 String path = text.substring(scheme.prefix().length());
-                if (scheme != Scheme.FILE) {
+                if (scheme == Scheme.FILE) {
+                    path = path.replace('\\', '/');
+                } else {
                     path = path.replaceFirst("^/+", "");
                 }
                 SchemaLocation result = new SchemaLocation(scheme, path);
