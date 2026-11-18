@@ -268,7 +268,7 @@ final class GraphQLRuntimeWiringGenerator {
 
             objectTypeWirings.values().forEach(it -> rootRuntimeWiringBuilder.type(it.build()));
 
-            Set<String> implementedInterfaces = abstractTypeWiring.wireInterfaces(processedTypes);
+            Set<String> implementedInterfaces = abstractTypeWiring.wireInterfaces(snapshot(processedTypes));
 
             abstractTypeWiring.checkAmbiguity();
 
@@ -324,8 +324,9 @@ final class GraphQLRuntimeWiringGenerator {
         checks.unboundResolverMethods(graphQLResolversRegistry.getResolverMethods(), accountedMethods);
         checks.ignoredResolverMethods(graphQLResolversRegistry.getIgnoredMethods());
         checks.rootMethodsOfSeveralOperationTypes(rootMethodBindings);
-        checks.unboundEnumConstants(snapshot(processedTypes), typeDefinitionRegistry, typeModel);
-        checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processedTypes.keySet(), allowedTypes);
+        Map<String, Class<?>> processed = snapshot(processedTypes);
+        checks.unboundEnumConstants(processed, typeDefinitionRegistry, typeModel);
+        checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processed.keySet(), allowedTypes);
         checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
 
         return configuration.isStrict() && !checks.getProblems().isEmpty()
