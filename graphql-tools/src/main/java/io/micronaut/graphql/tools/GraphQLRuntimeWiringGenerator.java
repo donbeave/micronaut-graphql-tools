@@ -1608,8 +1608,9 @@ final class GraphQLRuntimeWiringGenerator {
             }
 
             if (!argumentValueProperties.isEmpty() || !inputObjectProperties.isEmpty()) {
-                omissionPlans.put(targetClass,
-                        new InputValueConverter.OmissionPlan(argumentValueProperties, inputObjectProperties));
+                omissionPlans.merge(targetClass,
+                        new InputValueConverter.OmissionPlan(argumentValueProperties, inputObjectProperties),
+                        InputValueConverter.OmissionPlan::merge);
             }
 
             inputClassChecks.collectUnmappedInputProperties(inputObjectTypeDefinition, beanIntrospection);
