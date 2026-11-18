@@ -10,6 +10,27 @@ This is not an official Micronaut module yet: it is developed here and is intend
 
 The guide sources are in `src/main/docs/guide`; build them with `./gradlew docs` (see [CONTRIBUTING.md](CONTRIBUTING.md)). No documentation site is published yet.
 
+## Modules
+
+The repository is a Gradle build with one project per folder. The table lists each project, its Gradle path and what it is
+for. Every folder has a README with its purpose, its responsibility, what is public and what is internal, and how to build
+and test it.
+
+| Module | Gradle project | Purpose |
+| --- | --- | --- |
+| [`graphql-tools`](graphql-tools/README.md) | `:micronaut-graphql-tools` | The runtime library that applications depend on. |
+| [`graphql-tools-binding`](graphql-tools-binding/README.md) | `:micronaut-graphql-tools-binding` | The binding rules used by the runtime library. |
+| [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
+| [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
+| [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
+| [`benchmarks`](benchmarks/README.md) | `:benchmarks` | JMH benchmarks and the allocation gate. |
+| [`test-suite-java`](test-suite-java/README.md) | `:test-suite-java` | The example application in Java, with its tests. |
+| [`test-suite-kotlin`](test-suite-kotlin/README.md) | `:test-suite-kotlin` | The example application in Kotlin, with its tests. |
+| [`test-suite-groovy`](test-suite-groovy/README.md) | `:test-suite-groovy` | The example application in Groovy, with its tests and a native smoke test. |
+
+The root project (`graphql-tools-parent`, `build.gradle.kts`) aggregates the modules and the shared build settings. The
+guide is in `src/main/docs/guide`, and the build convention plugin is in `buildSrc`.
+
 ## Quick start
 
 1. Add the repository and the dependency in build.gradle or pom.xml. Milestone previews come from the GitHub Packages registry of this repository, which needs a token even for downloads ([Consuming milestone previews](#consuming-milestone-previews) has the full setup; no version is on Maven Central):

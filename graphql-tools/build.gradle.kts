@@ -37,6 +37,13 @@ tasks.named<Test>("test") {
     inputs.files(repositoryRoot.file("README.md"))
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsReadme")
+    // ModuleReadmesSpec compares the module map with settings.gradle.kts and reads each module's README.
+    inputs.files(repositoryRoot.file("settings.gradle.kts"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("settingsFile")
+    inputs.files(repositoryRoot.asFileTree.matching { include("*/README.md") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("moduleReadmes")
     inputs.files(repositoryRoot.asFileTree.matching { include("src/main/docs/guide/**", "test-suite-*/src/main/**", "test-suite-*/src/test/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsSources")

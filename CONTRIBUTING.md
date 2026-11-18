@@ -18,6 +18,10 @@ The tools are pinned in `mise.toml` and installed with [mise](https://mise.jdx.d
 
 Micronaut GraphQL Tools can be imported into IntelliJ IDEA by opening the project directory (or `settings.gradle.kts`).
 
+## Modules
+
+The module map and the purpose of each Gradle project are in the [Modules](README.md#modules) section of the README. Each module folder has a README with its responsibility, its public and internal parts, and its build and test commands. Read the README of a module before you change it.
+
 ## Running Tests
 
 The tests do not need Docker. These are the commands CI runs (all in `.github/workflows/gradle.yml`, workflow `Java CI`):
