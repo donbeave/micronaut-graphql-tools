@@ -101,117 +101,117 @@ final class InputTypeBinder {
     private ValueConverter processInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,
                                                             Class<?> targetClass, MappingContext mappingContext) {
         String name = inputObjectTypeDefinition.getName();
-        try {
-            bindInputObjectTypeDefinition(inputObjectTypeDefinition, targetClass, mappingContext);
-        } catch (RuntimeException e) {
-            if (!inputConverters.containsKey(name)) {
-                inputFailures.putIfAbsent(name, e);
+        callbacks.processIfNotProcessed(inputObjectTypeDefinition, targetClass, mappingContext, () -> {
+            try {
+                bindInputObjectType(inputObjectTypeDefinition, targetClass, mappingContext);
+            } catch (RuntimeException e) {
+                inputFailures.put(name, e);
+                throw e;
             }
-            throw e;
+        });
+        RuntimeException failure = inputFailures.get(name);
+        if (failure != null) {
+            throw failure;
         }
-        ValueConverter converter = inputConverters.get(name);
-        if (converter == null) {
-            throw inputFailures.get(name);
-        }
-        return converter;
+        return inputConverters.get(name);
     }
 
-    private void bindInputObjectTypeDefinition(InputObjectTypeDefinition inputObjectTypeDefinition,
-                                               Class<?> targetClass, MappingContext mappingContext) {
-        callbacks.processIfNotProcessed(inputObjectTypeDefinition, targetClass, mappingContext, () -> {
-            if (targetClass.isInterface()) {
-                throw IncorrectClassMappingException.forArgument(
-                        IncorrectClassMappingException.MappingType.DETECT_TYPE,
-                        IncorrectClassMappingException.MappingType.CUSTOM_CLASS,
-                        mappingContext,
-                        targetClass,
-                        null
-                );
-            }
+    private void bindInputObjectType(InputObjectTypeDefinition inputObjectTypeDefinition, Class<?> targetClass,
+                                     MappingContext mappingContext) {
+        if (targetClass.isInterface()) {
+            throw IncorrectClassMappingException.forArgument(
+                    IncorrectClassMappingException.MappingType.DETECT_TYPE,
+                    IncorrectClassMappingException.MappingType.CUSTOM_CLASS,
+                    mappingContext,
+                    targetClass,
+                    null
+            );
+        }
 
-            BeanIntrospection<Object> beanIntrospection = BeanIntrospector.SHARED
-                    .findIntrospection((Class<Object>) targetClass)
-                    .orElseThrow(() -> new ClassNotIntrospectedException(mappingContext, targetClass, GraphQLInput.class));
+        BeanIntrospection<Object> beanIntrospection = BeanIntrospector.SHARED
+                .findIntrospection((Class<Object>) targetClass)
+                .orElseThrow(() -> new ClassNotIntrospectedException(mappingContext, targetClass, GraphQLInput.class));
 
-            if (
-                    beanIntrospection.getBeanType().isInterface()
-                            || beanIntrospection.getBeanType().isEnum()
-                            || beanIntrospection.getBeanType().isAnnotation()
-            ) {
-                throw IncorrectClassMappingException.forArgument(
-                        IncorrectClassMappingException.MappingType.DETECT_TYPE,
-                        IncorrectClassMappingException.MappingType.CUSTOM_CLASS,
-                        mappingContext,
-                        targetClass,
-                        null
-                );
-            }
+        if (
+                beanIntrospection.getBeanType().isInterface()
+                        || beanIntrospection.getBeanType().isEnum()
+                        || beanIntrospection.getBeanType().isAnnotation()
+        ) {
+            throw IncorrectClassMappingException.forArgument(
+                    IncorrectClassMappingException.MappingType.DETECT_TYPE,
+                    IncorrectClassMappingException.MappingType.CUSTOM_CLASS,
+                    mappingContext,
+                    targetClass,
+                    null
+            );
+        }
 
-            InputObjectConverter converter = new InputObjectConverter(beanIntrospection);
-            ValueConverter custom = typeConverter(targetClass);
-            inputConverters.put(inputObjectTypeDefinition.getName(), custom != null ? custom : converter);
-            Set<String> mapped = new HashSet<>();
-            Set<String> constructorArguments = Arrays.stream(beanIntrospection.getConstructorArguments())
-                    .map(Argument::getName)
-                    .collect(Collectors.toSet());
+        InputObjectConverter converter = new InputObjectConverter(beanIntrospection);
+        ValueConverter custom = typeConverter(targetClass);
+        inputConverters.put(inputObjectTypeDefinition.getName(), custom != null ? custom : converter);
+        Set<String> mapped = new HashSet<>();
+        Set<String> constructorArguments = Arrays.stream(beanIntrospection.getConstructorArguments())
+                .map(Argument::getName)
+                .collect(Collectors.toSet());
 
-            for (InputValueDefinition inputValueDefinition : inputObjectTypeDefinition.getInputValueDefinitions()) {
-                Optional<BeanProperty<Object, Object>> property =
-                        beanIntrospection.getProperty(inputValueDefinition.getName());
+        for (InputValueDefinition inputValueDefinition : inputObjectTypeDefinition.getInputValueDefinitions()) {
+            Optional<BeanProperty<Object, Object>> property =
+                    beanIntrospection.getProperty(inputValueDefinition.getName());
 
-                if (property.isEmpty()) {
-                    throw MethodNotFoundException.forInput(
-                            inputValueDefinition.getName(),
-                            new InputMappingContext(
-                                    inputObjectTypeDefinition,
-                                    inputValueDefinition.getName(),
-                                    targetClass,
-                                    null
-                            ),
-                            beanIntrospection.getBeanType()
-                    );
-                }
-
-                InputMappingContext inputMappingContext = new InputMappingContext(
-                        inputObjectTypeDefinition,
+            if (property.isEmpty()) {
+                throw MethodNotFoundException.forInput(
                         inputValueDefinition.getName(),
-                        targetClass,
-                        property.get().getName()
+                        new InputMappingContext(
+                                inputObjectTypeDefinition,
+                                inputValueDefinition.getName(),
+                                targetClass,
+                                null
+                        ),
+                        beanIntrospection.getBeanType()
                 );
-
-                ValueConverter fieldConverter = processInputType(inputValueDefinition.getType(),
-                        property.get().asArgument(), inputMappingContext);
-
-                manifestRecorder.inputField(inputObjectTypeDefinition.getName(), inputValueDefinition.getName(),
-                        inputValueDefinition.getType(), beanIntrospection.getBeanType(), property.get());
-
-                boolean argumentValue = ArgumentValue.class.equals(property.get().getType());
-                if (property.get().isReadOnly() && !constructorArguments.contains(property.get().getName())) {
-                    if (argumentValue) {
-                        throw new UnsupportedInputTypeException(inputMappingContext, ArgumentValue.class.getName()
-                                + " needs a writable property: it is set to omitted() when the client leaves it out.");
-                    }
-                    throw new InputFieldNotSettableException(inputMappingContext);
-                }
-
-                converter.addField(inputValueDefinition.getName(), property.get(), fieldConverter, argumentValue);
-                mapped.add(property.get().getName());
             }
-            // an ArgumentValue that this input type does not define, e.g. one that another input type backed by the same
-            // class defines, is omitted
+
+            InputMappingContext inputMappingContext = new InputMappingContext(
+                    inputObjectTypeDefinition,
+                    inputValueDefinition.getName(),
+                    targetClass,
+                    property.get().getName()
+            );
+
+            ValueConverter fieldConverter = processInputType(inputValueDefinition.getType(),
+                    property.get().asArgument(), inputMappingContext);
+
+            manifestRecorder.inputField(inputObjectTypeDefinition.getName(), inputValueDefinition.getName(),
+                    inputValueDefinition.getType(), beanIntrospection.getBeanType(), property.get());
+
+            boolean argumentValue = ArgumentValue.class.equals(property.get().getType());
+            if (property.get().isReadOnly() && !constructorArguments.contains(property.get().getName())) {
+                if (argumentValue) {
+                    throw new UnsupportedInputTypeException(inputMappingContext, ArgumentValue.class.getName()
+                            + " needs a writable property: it is set to omitted() when the client leaves it out.");
+                }
+                throw new InputFieldNotSettableException(inputMappingContext);
+            }
+
+            converter.addField(inputValueDefinition.getName(), property.get(), fieldConverter, argumentValue);
+            mapped.add(property.get().getName());
+        }
+        // with omission detection, an ArgumentValue that this input type does not define, e.g. one that another input
+        // type backed by the same class defines, is omitted
+        if (configuration.getInput().isDetectOmission()) {
             for (BeanProperty<Object, Object> property : beanIntrospection.getBeanProperties()) {
                 if (ArgumentValue.class.equals(property.getType()) && !mapped.contains(property.getName())
                         && (!property.isReadOnly() || constructorArguments.contains(property.getName()))) {
                     converter.addField(property.getName(), property, ValueConverters.IDENTITY, true);
                 }
             }
-            converter.seal();
+        }
+        converter.seal();
 
-            inputClassChecks.collectUnmappedInputProperties(inputObjectTypeDefinition,
-                    typeModel.of(beanIntrospection), beanIntrospection.getBeanType());
+        inputClassChecks.collectUnmappedInputProperties(inputObjectTypeDefinition,
+                typeModel.of(beanIntrospection), beanIntrospection.getBeanType());
 
-            manifestRecorder.type(inputObjectTypeDefinition.getName(), "input", targetClass);
-        });
+        manifestRecorder.type(inputObjectTypeDefinition.getName(), "input", targetClass);
     }
 
     ValueConverter processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext) {

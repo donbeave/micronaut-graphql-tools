@@ -37,7 +37,7 @@ Jackson does not shape the input. `@JsonIgnore`, `@JsonProperty`, `@JsonCreator`
 
 Customization goes through Micronaut `TypeConverter` beans and the scalar mapping, not through a mapper:
 
-* A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInput` itself. The class keeps its introspection, because the startup checks read it.
+* A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInput` itself, `ArgumentValue` properties included: the library does not touch the result. The class keeps its introspection, because the startup checks read it.
 * A `GraphQLScalarMapping` declares which Java classes a custom scalar produces. A value that is not an instance of the declared class goes through the Micronaut `ConversionService`, which holds the application's `TypeConverter` beans.
 
 == ArgumentValue

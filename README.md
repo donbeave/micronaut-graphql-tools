@@ -485,8 +485,9 @@ public class ScalarsFactory {
 
 - **Output classes** are the classes the scalar's `serialize` accepts. A field of the scalar type may be backed by one
   of them or a subclass.
-- **Input classes** are the classes the scalar's `parseValue`/`parseLiteral` produce. An argument or an input object
-  field of the scalar type must be declared as exactly one of them.
+- **Input classes** are the classes an argument or an input object field of the scalar type may be declared as, exactly
+  one of them. They are normally the classes that `parseValue`/`parseLiteral` produce; a parsed value that is not an
+  instance of the declared class is converted by the Micronaut `ConversionService`.
 - A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type
   (`Count!`), because `null` cannot be passed to it.
 
@@ -502,9 +503,9 @@ The startup fails:
 - with `InvalidScalarMappingException` when two mappings have the same scalar name, or a mapping names a built-in
   scalar.
 
-Values of custom scalars inside input objects reach the input class as the instances the scalar parsed. A value that
-is not an instance of the declared input class goes through the Micronaut `ConversionService`, which has the
-application's `TypeConverter` beans (see [Converting input values](#converting-input-values)).
+Values of custom scalars inside input objects reach the input class as the instances the scalar parsed. When the
+declared class is another one of the mapping's input classes, the value goes through the Micronaut `ConversionService`,
+which has the application's `TypeConverter` beans (see [Converting input values](#converting-input-values)).
 
 ## Arguments and input objects
 
@@ -563,7 +564,8 @@ Jackson on the request path:
 
 Customization goes through Micronaut `TypeConverter` beans and the [scalar mapping](#custom-scalars), not through a
 mapper. A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInput` itself (the class still needs its
-introspection, because the startup checks below read it); a `TypeConverter` for another pair converts the values of a
+introspection, because the startup checks below read it, and the bean owns the whole instance, including its
+`ArgumentValue` properties: the library does not touch the result); a `TypeConverter` for another pair converts the values of a
 custom scalar that its scalar parsed to another class.
 
 **Migration (breaking, BC-23):** Jackson no longer shapes the input. `@JsonIgnore`, `@JsonProperty`, `@JsonCreator`,

@@ -26,6 +26,8 @@ class InputConversionShapesSpec extends AbstractTest {
     static final String SPEC_NULL_PRIMITIVE = "InputConversionShapesSpecNullPrimitive"
     static final String SPEC_WIDENED = "InputConversionShapesSpecWidened"
     static final String SPEC_BROKEN = "InputConversionShapesSpecBroken"
+    static final String SPEC_BROKEN_FIELD = "InputConversionShapesSpecBrokenField"
+    static final String SPEC_UNMAPPED_WRAPPER = "InputConversionShapesSpecUnmappedWrapper"
 
     @Language("GraphQL")
     static final String SCHEMA = """
@@ -108,6 +110,21 @@ type Query {
 
 input BrokenInput {
   value: Int
+}
+"""
+
+    @Language("GraphQL")
+    static final String SCHEMA_UNMAPPED_WRAPPER = """
+schema {
+  query: Query
+}
+
+type Query {
+  labelled(input: LabelInput): String!
+}
+
+input LabelInput {
+  label: String
 }
 """
 
@@ -237,6 +254,29 @@ type Query {
         e.cause.message.count('[class-not-introspected]') == 2
     }
 
+    void "an input type that fails to bind after its converter was registered fails the startup at every use"() {
+        when:
+        startContext(SCHEMA_BROKEN, SPEC_BROKEN_FIELD)
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof BindingFailuresException
+        e.cause.message.contains('2 errors')
+    }
+
+    void "without omission detection an ArgumentValue property that no input field defines keeps its value"() {
+        given:
+        startContext(SCHEMA_UNMAPPED_WRAPPER, SPEC_UNMAPPED_WRAPPER, [(GraphQLToolsConfiguration.PREFIX + '.strict'): false])
+
+        when:
+        def result = executeQuery('{ labelled(input: {label: "l"}) }')
+
+        then:
+        result.errors.isEmpty()
+        result.data.labelled == 'l kept'
+    }
+
     void "a list declared as a collection that no list converts to fails the startup"() {
         when:
         startContext(SCHEMA_DECK, SPEC_DECK)
@@ -326,6 +366,26 @@ type Query {
         }
     }
 
+    @Requires(property = 'spec.name', value = SPEC_BROKEN_FIELD)
+    @GraphQLRootResolver
+    static class BrokenFieldQuery {
+        String first(MissingPropertyInput input) {
+            return null
+        }
+
+        String second(MissingPropertyInput input) {
+            return null
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_UNMAPPED_WRAPPER)
+    @GraphQLRootResolver
+    static class UnmappedWrapperQuery {
+        String labelled(UnmappedWrapperInput input) {
+            return "${input.label} ${input.note.value}"
+        }
+    }
+
     @Requires(property = 'spec.name', value = SPEC_DECK)
     @GraphQLRootResolver
     static class DeckQuery {
@@ -381,6 +441,17 @@ type Query {
 
     static class BrokenInput {
         Integer value
+    }
+
+    @GraphQLInput
+    static class MissingPropertyInput {
+        Integer other
+    }
+
+    @GraphQLInput
+    static class UnmappedWrapperInput {
+        String label
+        ArgumentValue<String> note = ArgumentValue.ofNullable('kept')
     }
 
     @GraphQLInput

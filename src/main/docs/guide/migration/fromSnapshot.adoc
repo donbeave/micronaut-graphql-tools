@@ -526,7 +526,7 @@ What stops being the input contract:
 * A list argument or input field is converted into `List`, `Collection`, `Iterable` (an `ArrayList`), `Set` (a `LinkedHashSet`), `SortedSet` (a `TreeSet`), `Deque` or `Queue` (a `LinkedList`). Any other declared collection fails the startup with `UnsupportedInputTypeException`.
 * `InputFieldNotSettableException` now says that the property has no setter and no constructor parameter. A property with an `ArgumentValue` type may be write-only, and an `ArgumentValue` property that an input type does not define is set to `omitted()`.
 
-Fix: name the properties and the constructor parameters of an input class like the input fields. Put a `TypeConverter<Map, SomeInput>` bean in the application for an input class that needs a conversion of its own, and a `GraphQLScalarMapping` for a custom scalar. A scalar value that is not an instance of the declared class goes through the Micronaut `ConversionService`, which holds the application's `TypeConverter` beans.
+Fix: name the properties and the constructor parameters of an input class like the input fields. Put a `TypeConverter<Map, SomeInput>` bean in the application for an input class that needs a conversion of its own (the bean builds the whole instance, `ArgumentValue` properties included), and a `GraphQLScalarMapping` for a custom scalar. A scalar value that is not an instance of the declared class goes through the Micronaut `ConversionService`, which holds the application's `TypeConverter` beans.
 
 [source,java]
 ----
