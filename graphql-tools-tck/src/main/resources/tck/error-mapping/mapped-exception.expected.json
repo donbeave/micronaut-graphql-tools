@@ -1,0 +1,25 @@
+{
+  "errors": [
+    {
+      "message": "no item 7",
+      "locations": [
+        {
+          "line": 3,
+          "column": 3
+        }
+      ],
+      "path": [
+        "missing"
+      ],
+      "extensions": {
+        "id": 7,
+        "code": "NOT_FOUND",
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": {
+    "fine": "fine",
+    "missing": null
+  }
+}

@@ -1,0 +1,4 @@
+query ($level: Level!) {
+  next(level: $level)
+  rank(level: $level)
+}
