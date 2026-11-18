@@ -1,0 +1,2 @@
+argument-mismatch Query.other schema.graphqls:7:3
+unbound-resolver-method example.Pings#stray() -

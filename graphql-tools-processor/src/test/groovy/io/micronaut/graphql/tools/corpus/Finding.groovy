@@ -11,27 +11,38 @@ import groovy.transform.EqualsAndHashCode
  *
  * <p>Two findings are the same verdict when code and coordinate are equal ({@link #key()}); the location is part of
  * the recorded expectation but is not compared across the binders.</p>
+ *
+ * <p>A compile-time finding can be a {@link #warning}: the line starts with {@code warning }. A check that cannot prove its fact
+ * from one class reports it as a warning (a class made introspected by another class, DD-4), and the startup decides. A
+ * warning is not a compile error, so it is outside the soundness rule, and it counts as the compile side having seen the
+ * finding for the completeness rule.</p>
  */
 @CompileStatic
 @EqualsAndHashCode
 final class Finding implements Comparable<Finding> {
 
+    static final String WARNING = 'warning'
+
     final String code
     final String coordinate
     final String location
+    final boolean warning
 
-    Finding(String code, String coordinate, String location = '-') {
+    Finding(String code, String coordinate, String location = '-', boolean warning = false) {
         this.code = code
         this.coordinate = coordinate
         this.location = location
+        this.warning = warning
     }
 
     static Finding parse(String line) {
-        List<String> parts = line.trim().split(/\s+/, 3).toList()
+        String text = line.trim()
+        boolean warning = text.startsWith(WARNING + ' ')
+        List<String> parts = (warning ? text.substring(WARNING.length() + 1) : text).split(/\s+/, 3).toList()
         if (parts.size() != 3) {
-            throw new IllegalArgumentException("Not a finding line (<code> <coordinate> <location>): '${line}'")
+            throw new IllegalArgumentException("Not a finding line ([warning ]<code> <coordinate> <location>): '${line}'")
         }
-        return new Finding(parts[0], parts[1], parts[2])
+        return new Finding(parts[0], parts[1], parts[2], warning)
     }
 
     /** @return code and coordinate: what the binders must agree on */
@@ -40,7 +51,7 @@ final class Finding implements Comparable<Finding> {
     }
 
     String line() {
-        return "${code} ${coordinate} ${location}".toString()
+        return "${warning ? WARNING + ' ' : ''}${code} ${coordinate} ${location}".toString()
     }
 
     @Override

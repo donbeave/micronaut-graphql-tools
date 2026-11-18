@@ -1,0 +1,12 @@
+schema {
+  query: Query
+}
+
+type Query {
+  first(filter: Filter): String
+  second(filter: Filter): String
+}
+
+input Filter {
+  text: String
+}

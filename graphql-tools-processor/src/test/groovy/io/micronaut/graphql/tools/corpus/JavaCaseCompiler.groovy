@@ -22,7 +22,7 @@ import java.nio.file.Path
  * {@code micronaut.graphql.tools.processor.*} property is cleared, and the properties are restored, around each compilation.
  */
 @CompileStatic
-final class JavaCaseCompiler implements CaseCompiler {
+final class JavaCaseCompiler implements CheckedCaseCompiler {
 
     static final String LEGACY_PROCESSOR_PACKAGE = 'io.micronaut.graphql.tools.processing'
 
@@ -43,8 +43,9 @@ final class JavaCaseCompiler implements CaseCompiler {
 
     /**
      * Compiles the case with the compile-time checks on, the schema files of the case directory being the schema directory
-     * of the checks. The result is not started: its errors are the findings of the visitor.
+     * of the checks. The result is not started: its errors and warnings are the findings of the visitor.
      */
+    @Override
     CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
         Path schemaDir = Files.createDirectories(work.resolve('schema'))
         corpusCase.schemaFiles().each { Files.copy(it, schemaDir.resolve(it.fileName.toString())) }
@@ -75,7 +76,10 @@ final class JavaCaseCompiler implements CaseCompiler {
             boolean success = task.call()
             List<String> errors = diagnostics.diagnostics.findAll { it.kind == Diagnostic.Kind.ERROR }
                     .collect { it.toString() }
-            return new CompiledCase(success, classes, errors)
+            List<String> warnings = diagnostics.diagnostics
+                    .findAll { it.kind == Diagnostic.Kind.WARNING || it.kind == Diagnostic.Kind.MANDATORY_WARNING }
+                    .collect { it.toString() }
+            return new CompiledCase(success, classes, errors, [], warnings)
         } finally {
             files.close()
             System.properties = saved
