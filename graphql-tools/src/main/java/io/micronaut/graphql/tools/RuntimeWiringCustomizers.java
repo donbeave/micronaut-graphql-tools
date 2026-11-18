@@ -96,13 +96,18 @@ final class RuntimeWiringCustomizers {
                       List<RuntimeWiringCustomizer> customizers,
                       TypeDefinitionRegistry registry,
                       Map<String, String> claimed) {
-        if (customizers.isEmpty()) {
+        int first = 0;
+        if (!customizers.isEmpty() && customizers.get(0) instanceof SchemaDirectiveWirings library) {
+            library.customize(builder);
+            first = 1;
+        }
+        if (customizers.size() == first) {
             return;
         }
         Map<String, Set<String>> fieldsByType = objectTypeFields(registry);
         List<String> replacements = new ArrayList<>();
         Snapshot before = Snapshot.of(builder.build(), fieldsByType.keySet());
-        for (RuntimeWiringCustomizer customizer : customizers) {
+        for (RuntimeWiringCustomizer customizer : customizers.subList(first, customizers.size())) {
             String by = " (" + customizer.getClass().getName() + ")";
             try {
                 customizer.customize(builder);
@@ -264,6 +269,9 @@ final class RuntimeWiringCustomizers {
         private List<String> replacedThroughCodeRegistry(Snapshot after, Map<String, Set<String>> fieldsByType,
                                                          Set<String> claimed) {
             List<String> replaced = new ArrayList<>();
+            if (after.codeRegistry == codeRegistry) {
+                return replaced;
+            }
             GraphQLCodeRegistry.Builder now = GraphQLCodeRegistry.newCodeRegistry(after.codeRegistry);
             GraphQLCodeRegistry.Builder then = GraphQLCodeRegistry.newCodeRegistry(codeRegistry);
             Set<String> wiredFields = new TreeSet<>();
