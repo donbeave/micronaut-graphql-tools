@@ -111,6 +111,8 @@ A missing file or tag does not fail `./gradlew docs`: the macro prints a warning
 - Every public exception in `io.micronaut.graphql.tools.exceptions` and every public annotation in `io.micronaut.graphql.tools.annotation` is named in the guide or in `README.md`. The failure message names the item and the page to edit.
 - Every `snippet::` in the guide (except those with an explicit `project=`) has its `.java`, `.kt` and `.groovy` file in the three suites, with every tag named by the macro.
 
+`ProcessorOptionsDocsSpec` (in the `graphql-tools-processor` module) fails when a compile-time processor option is not named in `src/main/docs/guide/compileTime/options.adoc`. Its allowlist is `graphql-tools-processor/src/test/resources/docs-coverage-allowlist.txt`, with the same rules.
+
 A deliberate gap goes into `graphql-tools/src/test/resources/docs-coverage-allowlist.txt` with a reason and a tracker issue number. The list may only shrink: the spec fails on an entry whose item is documented now or no longer exists. A new key, exception or annotation needs documentation in the same pull request.
 
 ## Working on the code base
