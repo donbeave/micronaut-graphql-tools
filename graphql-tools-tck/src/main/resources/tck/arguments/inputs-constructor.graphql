@@ -1,0 +1,5 @@
+{
+  given: stock(stock: {sku: "a", quantity: 2, weight: 2.5, tags: ["x", "y"], colors: [RED, BLUE, RED], comment: "hi"})
+  omitted: stock(stock: {sku: "b", quantity: 1})
+  explicitNull: stock(stock: {sku: "c", quantity: 1, comment: null})
+}

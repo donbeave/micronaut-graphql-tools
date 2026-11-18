@@ -7,6 +7,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -84,6 +85,13 @@ public final class ArgumentsScenario {
         }
     }
 
+    // tag::constructor-input[]
+    @GraphQLInput
+    public record Stock(String sku, int quantity, Float weight, List<String> tags, Set<Color> colors,
+                        ArgumentValue<String> comment) {
+    }
+    // end::constructor-input[]
+
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "arguments")
     public static class Queries {
@@ -109,6 +117,11 @@ public final class ArgumentsScenario {
 
         public int grid(List<List<Integer>> rows) {
             return rows.stream().flatMap(List::stream).mapToInt(Integer::intValue).sum();
+        }
+
+        public String stock(Stock stock) {
+            return "sku=" + stock.sku() + " quantity=" + stock.quantity() + " weight=" + stock.weight() + " tags="
+                    + stock.tags() + " colors=" + stock.colors() + " comment=" + presence(stock.comment());
         }
 
         public String shape(Shape shape) {

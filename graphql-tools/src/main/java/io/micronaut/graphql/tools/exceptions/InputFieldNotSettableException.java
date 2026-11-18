@@ -18,17 +18,16 @@ package io.micronaut.graphql.tools.exceptions;
 import io.micronaut.graphql.tools.InputMappingContext;
 
 /**
- * Thrown when a field of a GraphQL input type maps to a Java property that the input {@code ObjectMapper} cannot set:
- * the property is read-only, ignored ({@code @JsonIgnore}) or known to Jackson under another name (a naming
- * strategy, {@code @JsonProperty}). A request that sends the field would fail, or the value would be dropped.
+ * Thrown when a field of a GraphQL input type maps to a Java property that the input class cannot set: the property is
+ * read-only and no constructor parameter has its name. A request that sends the field could not deliver the value.
  */
 public final class InputFieldNotSettableException extends AbstractMappingException {
 
     public InputFieldNotSettableException(InputMappingContext mappingContext) {
         super(
                 String.format(
-                        "The input field %s.%s cannot be set: the input ObjectMapper has no settable property `%s` "
-                                + "in %s (it is read-only, ignored or renamed for Jackson).",
+                        "The input field %s.%s cannot be set: the property `%s` of %s has no setter and is not a "
+                                + "constructor parameter.",
                         mappingContext.getGraphQlInputObjectType(),
                         mappingContext.getGraphQlInputValue(),
                         mappingContext.getMappedProperty(),

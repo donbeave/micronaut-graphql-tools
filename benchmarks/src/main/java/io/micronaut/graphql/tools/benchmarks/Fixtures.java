@@ -3,6 +3,8 @@ package io.micronaut.graphql.tools.benchmarks;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 
+import java.util.List;
+
 public final class Fixtures {
 
     private Fixtures() {
@@ -41,6 +43,42 @@ public final class Fixtures {
 
         public void setY(int y) {
             this.y = y;
+        }
+    }
+
+    @GraphQLInput
+    public record StockInput(String sku, int quantity, Float weight) {
+    }
+
+    @GraphQLInput
+    public static class LineInput {
+
+        private String label;
+        private PointInput point;
+        private List<String> tags;
+
+        public String getLabel() {
+            return label;
+        }
+
+        public void setLabel(String label) {
+            this.label = label;
+        }
+
+        public PointInput getPoint() {
+            return point;
+        }
+
+        public void setPoint(PointInput point) {
+            this.point = point;
+        }
+
+        public List<String> getTags() {
+            return tags;
+        }
+
+        public void setTags(List<String> tags) {
+            this.tags = tags;
         }
     }
 

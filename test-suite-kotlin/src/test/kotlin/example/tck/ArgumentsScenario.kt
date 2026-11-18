@@ -24,6 +24,18 @@ class Shape {
     var note: String? = null
 }
 
+// tag::constructor-input[]
+@GraphQLInput
+data class Stock(
+    val sku: String,
+    val quantity: Int,
+    val weight: Float?,
+    val tags: List<String>?,
+    val colors: Set<Color>?,
+    val comment: ArgumentValue<String>,
+)
+// end::constructor-input[]
+
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "arguments")
 class ArgumentsQueries {
@@ -42,6 +54,10 @@ class ArgumentsQueries {
     fun total(numbers: List<Int>): Int = numbers.sum()
 
     fun grid(rows: @JvmSuppressWildcards List<List<Int>>): Int = rows.flatten().sum()
+
+    fun stock(stock: Stock): String =
+        "sku=${stock.sku} quantity=${stock.quantity} weight=${stock.weight} tags=${stock.tags} colors=${stock.colors} " +
+            "comment=${presence(stock.comment)}"
 
     fun shape(shape: Shape): String =
         "name=${shape.name} color=${shape.color} points=${shape.points.joinToString(";") { "${it.x},${it.y}" }} note=${shape.note}"

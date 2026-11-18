@@ -17,6 +17,15 @@ input Shape {
   note: String
 }
 
+input Stock {
+  sku: String!
+  quantity: Int!
+  weight: Float
+  tags: [String!]
+  colors: [Color!]
+  comment: String
+}
+
 extend type Query {
   scalars(text: String!, number: Int!, ratio: Float!, flag: Boolean!, id: ID!): String!
 
@@ -29,6 +38,8 @@ extend type Query {
   grid(rows: [[Int!]!]!): Int!
 
   shape(shape: Shape!): String!
+
+  stock(stock: Stock!): String!
 }
 
 extend type Mutation {

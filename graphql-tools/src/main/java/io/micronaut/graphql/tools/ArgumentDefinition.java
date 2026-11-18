@@ -19,6 +19,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.ArgumentUtils;
+import io.micronaut.graphql.tools.schema.ValueConverter;
 
 import java.util.Optional;
 
@@ -33,24 +34,29 @@ public final class ArgumentDefinition {
 
     private final String name;
     private final Argument<?> inputValueArgument;
+    private final ValueConverter converter;
 
-    private ArgumentDefinition(String name, @Nullable Argument<?> inputValueArgument) {
+    private ArgumentDefinition(String name, @Nullable Argument<?> inputValueArgument,
+                               @Nullable ValueConverter converter) {
         ArgumentUtils.requireNonNull("name", name);
         this.name = name;
         this.inputValueArgument = inputValueArgument;
+        this.converter = converter;
     }
 
     static ArgumentDefinition ofSourceArgument() {
-        return new ArgumentDefinition(SOURCE_ARGUMENT, null);
+        return new ArgumentDefinition(SOURCE_ARGUMENT, null, null);
     }
 
     static ArgumentDefinition ofDataFetchingEnvironmentArgument() {
-        return new ArgumentDefinition(DATA_FETCHING_ENVIRONMENT_ARGUMENT, null);
+        return new ArgumentDefinition(DATA_FETCHING_ENVIRONMENT_ARGUMENT, null, null);
     }
 
-    static ArgumentDefinition ofInputValueArgument(String name, Argument<?> inputValueArgument) {
+    static ArgumentDefinition ofInputValueArgument(String name, Argument<?> inputValueArgument,
+                                                   ValueConverter converter) {
         ArgumentUtils.requireNonNull("inputValueArgument", inputValueArgument);
-        return new ArgumentDefinition(name, inputValueArgument);
+        ArgumentUtils.requireNonNull("converter", converter);
+        return new ArgumentDefinition(name, inputValueArgument, converter);
     }
 
     public boolean isSourceArgument() {
@@ -75,6 +81,15 @@ public final class ArgumentDefinition {
      */
     public Optional<Argument<?>> getInputValueArgument() {
         return Optional.ofNullable(inputValueArgument);
+    }
+
+    /**
+     * @return the converter of the value into the declared type (of the wrapped type for an {@code ArgumentValue}),
+     * built at startup; {@code null} for the source and the {@code DataFetchingEnvironment}
+     */
+    @Nullable
+    public ValueConverter getConverter() {
+        return converter;
     }
 
 }

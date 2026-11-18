@@ -25,24 +25,33 @@ import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import io.micronaut.context.ApplicationContext;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanProperty;
+import io.micronaut.core.convert.ConversionContext;
+import io.micronaut.core.convert.ConversionService;
+import io.micronaut.core.convert.TypeConverter;
 import io.micronaut.core.type.Argument;
+import io.micronaut.inject.BeanDefinition;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
 import io.micronaut.graphql.tools.exceptions.InputFieldNotSettableException;
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException;
-import io.micronaut.graphql.tools.schema.InputValueConverter;
+import io.micronaut.graphql.tools.schema.InputObjectConverter;
+import io.micronaut.graphql.tools.schema.ValueConverter;
+import io.micronaut.graphql.tools.schema.ValueConverters;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static io.micronaut.graphql.tools.GraphQLUtils.printType;
 import static io.micronaut.graphql.tools.GraphQLUtils.requireTypeName;
@@ -54,8 +63,8 @@ import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isG
 
 /**
  * Binds the Java type of an argument or of an input field to its schema type: input objects, enums and scalars, recursively
- * through lists and input fields. The omission plans of the input classes it finds are written into the map that the input
- * converter reads.
+ * through lists and input fields, and builds the {@link ValueConverter} that turns the value graphql-java coerced into
+ * that Java type. Every converter is built here, at startup.
  */
 @Internal
 final class InputTypeBinder {
@@ -65,21 +74,25 @@ final class InputTypeBinder {
     private final GraphQLToolsConfiguration configuration;
     private final BindingManifestRecorder manifestRecorder;
     private final InputClassChecks inputClassChecks;
-    private final Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans;
     private final RuntimeTypeModel typeModel;
+    private final ApplicationContext applicationContext;
     private final Callbacks callbacks;
+    // the converter of each input type, by the name of the type, registered before its fields are bound so that a type
+    // that refers to itself finds it
+    private final Map<String, ValueConverter> inputConverters = new HashMap<>();
+    private final Map<Class<?>, ValueConverter> enumConverters = new HashMap<>();
 
     InputTypeBinder(TypeDefinitionRegistry typeDefinitionRegistry, ScalarMappings scalarMappings,
                     GraphQLToolsConfiguration configuration, BindingManifestRecorder manifestRecorder,
-                    InputClassChecks inputClassChecks, Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans,
-                    RuntimeTypeModel typeModel, Callbacks callbacks) {
+                    InputClassChecks inputClassChecks, RuntimeTypeModel typeModel,
+                    ApplicationContext applicationContext, Callbacks callbacks) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.scalarMappings = scalarMappings;
         this.configuration = configuration;
         this.manifestRecorder = manifestRecorder;
         this.inputClassChecks = inputClassChecks;
-        this.omissionPlans = omissionPlans;
         this.typeModel = typeModel;
+        this.applicationContext = applicationContext;
         this.callbacks = callbacks;
     }
 
@@ -114,13 +127,13 @@ final class InputTypeBinder {
                 );
             }
 
-            Set<String> settableProperties = inputClassChecks.findSettableProperties(targetClass);
-            if (settableProperties == null) {
-                inputClassChecks.addOwnDeserializer(inputObjectTypeDefinition.getName(), targetClass);
-            }
-            boolean detectOmission = configuration.getInput().isDetectOmission();
-            List<BeanProperty<Object, Object>> argumentValueProperties = new ArrayList<>();
-            List<BeanProperty<Object, Object>> inputObjectProperties = new ArrayList<>();
+            InputObjectConverter converter = new InputObjectConverter(beanIntrospection);
+            ValueConverter custom = typeConverter(targetClass);
+            inputConverters.put(inputObjectTypeDefinition.getName(), custom != null ? custom : converter);
+            Set<String> mapped = new HashSet<>();
+            Set<String> constructorArguments = Arrays.stream(beanIntrospection.getConstructorArguments())
+                    .map(Argument::getName)
+                    .collect(Collectors.toSet());
 
             for (InputValueDefinition inputValueDefinition : inputObjectTypeDefinition.getInputValueDefinitions()) {
                 Optional<BeanProperty<Object, Object>> property =
@@ -146,44 +159,33 @@ final class InputTypeBinder {
                         property.get().getName()
                 );
 
-                processInputType(inputValueDefinition.getType(), property.get().asArgument(), inputMappingContext);
+                ValueConverter fieldConverter = processInputType(inputValueDefinition.getType(),
+                        property.get().asArgument(), inputMappingContext);
 
                 manifestRecorder.inputField(inputObjectTypeDefinition.getName(), inputValueDefinition.getName(),
                         inputValueDefinition.getType(), beanIntrospection.getBeanType(), property.get());
 
-                if (ArgumentValue.class.equals(property.get().getType()) && property.get().isReadOnly()) {
-                    throw new UnsupportedInputTypeException(inputMappingContext, ArgumentValue.class.getName()
-                            + " needs a writable property: it is set to omitted() when the client leaves it out.");
-                }
-
-                if (settableProperties != null && !settableProperties.contains(inputValueDefinition.getName())) {
+                boolean argumentValue = ArgumentValue.class.equals(property.get().getType());
+                if (property.get().isReadOnly() && !constructorArguments.contains(property.get().getName())) {
+                    if (argumentValue) {
+                        throw new UnsupportedInputTypeException(inputMappingContext, ArgumentValue.class.getName()
+                                + " needs a writable property: it is set to omitted() when the client leaves it out.");
+                    }
                     throw new InputFieldNotSettableException(inputMappingContext);
                 }
 
-                if (detectOmission) {
-                    if (ArgumentValue.class.equals(property.get().getType())) {
-                        if (property.get().isWriteOnly()) {
-                            throw new UnsupportedInputTypeException(inputMappingContext, ArgumentValue.class.getName()
-                                    + " needs a readable property: it is read to set it to omitted() when the client "
-                                    + "leaves it out.");
-                        }
-                        argumentValueProperties.add(property.get());
-                    } else if (isInputObjectType(inputValueDefinition.getType())) {
-                        if (property.get().isWriteOnly()) {
-                            inputClassChecks.addWriteOnlyInputObjectProperty(inputMappingContext,
-                                    InputClassChecks.elementClass(property.get().asArgument()));
-                        } else {
-                            inputObjectProperties.add(property.get());
-                        }
-                    }
+                converter.addField(inputValueDefinition.getName(), property.get(), fieldConverter, argumentValue);
+                mapped.add(property.get().getName());
+            }
+            // an ArgumentValue that this input type does not define, e.g. one that another input type backed by the same
+            // class defines, is omitted
+            for (BeanProperty<Object, Object> property : beanIntrospection.getBeanProperties()) {
+                if (ArgumentValue.class.equals(property.getType()) && !mapped.contains(property.getName())
+                        && (!property.isReadOnly() || constructorArguments.contains(property.getName()))) {
+                    converter.addField(property.getName(), property, ValueConverters.IDENTITY, true);
                 }
             }
-
-            if (!argumentValueProperties.isEmpty() || !inputObjectProperties.isEmpty()) {
-                omissionPlans.merge(targetClass,
-                        new InputValueConverter.OmissionPlan(argumentValueProperties, inputObjectProperties),
-                        InputValueConverter.OmissionPlan::merge);
-            }
+            converter.seal();
 
             inputClassChecks.collectUnmappedInputProperties(inputObjectTypeDefinition,
                     typeModel.of(beanIntrospection), beanIntrospection.getBeanType());
@@ -192,22 +194,12 @@ final class InputTypeBinder {
         });
     }
 
-    void processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext) {
-        processInputType(graphQlType, argument, mappingContext, true);
+    ValueConverter processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext) {
+        return processInputType(graphQlType, argument, mappingContext, true);
     }
 
-    private boolean isInputObjectType(Type<?> graphQlType) {
-        Type<?> type = graphQlType;
-        while (!(type instanceof TypeName)) {
-            type = type instanceof NonNullType nonNullType ? nonNullType.getType() : ((ListType) type).getType();
-        }
-        return typeDefinitionRegistry.getType(((TypeName) type).getName())
-                .filter(InputObjectTypeDefinition.class::isInstance)
-                .isPresent();
-    }
-
-    private void processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext,
-                                  boolean fieldLevel) {
+    private ValueConverter processInputType(Type<?> graphQlType, Argument<?> argument, MappingContext mappingContext,
+                                            boolean fieldLevel) {
         argument = unwrapArgumentValue(unwrapArgument(argument), graphQlType, fieldLevel, mappingContext);
         boolean nonNull = graphQlType instanceof NonNullType;
         graphQlType = unwrapNonNullType(graphQlType);
@@ -226,11 +218,17 @@ final class InputTypeBinder {
                 );
             }
 
+            if (!ValueConverters.isSupportedList(returnType)) {
+                throw new UnsupportedInputTypeException(mappingContext, "a list is converted into a List, a "
+                        + "Collection, an Iterable, a Set, a SortedSet or a Deque, but the declared type is "
+                        + returnType.getName() + ".");
+            }
+
             Type<?> listFieldType = ((ListType) fieldType).getType();
             Argument<?> listArgument = argument.getFirstTypeVariable().get();
 
-            processInputType(listFieldType, listArgument, mappingContext, false);
-            return;
+            return ValueConverters.list(returnType,
+                    processInputType(listFieldType, listArgument, mappingContext, false));
         }
 
         TypeName typeName = requireTypeName(graphQlType);
@@ -243,8 +241,10 @@ final class InputTypeBinder {
                     returnType,
                     mappingContext
             );
+            return inputConverters.get(inputObjectTypeDefinition.getName());
         } else if (typeDefinition instanceof EnumTypeDefinition enumTypeDefinition) {
             callbacks.processEnum(enumTypeDefinition, returnType, true, mappingContext);
+            return enumConverters.computeIfAbsent(returnType, ValueConverters::enumeration);
         } else if (isGraphQlBuiltInType(typeName)) {
             manifestRecorder.scalar(typeName.getName());
             Set<Class<?>> supportedClasses = getSupportedClasses(typeName);
@@ -256,6 +256,7 @@ final class InputTypeBinder {
                 throw IncorrectClassMappingException.forNullablePrimitiveInStrictMode(mappingContext, returnType,
                         typeName.getName(), supportedClasses);
             }
+            return ValueConverters.builtIn(returnType);
         } else if (typeDefinition instanceof ScalarTypeDefinition scalarTypeDefinition) {
             GraphQLScalarMapping scalarMapping = scalarMappings.require(scalarTypeDefinition, mappingContext);
 
@@ -271,9 +272,42 @@ final class InputTypeBinder {
                 throw IncorrectClassMappingException.forNullablePrimitive(mappingContext, returnType,
                         scalarMapping.getName(), scalarMapping.getInputClasses());
             }
+            return ValueConverters.scalar(returnType, conversionService());
         } else {
             throw unsupportedTypeDefinition(typeDefinition);
         }
+    }
+
+    private ConversionService conversionService() {
+        return applicationContext.getConversionService();
+    }
+
+    /**
+     * @param target an input class
+     * @return the converter of the application's {@code TypeConverter<Map, target>} bean, if it has one; the library
+     * builds the instance from the introspection otherwise
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private ValueConverter typeConverter(Class<?> target) {
+        for (BeanDefinition<TypeConverter> definition : applicationContext.getBeanDefinitions(TypeConverter.class)) {
+            var typeArguments = definition.getTypeArguments(TypeConverter.class);
+            if (typeArguments.size() == 2 && typeArguments.get(1).getType().equals(target)
+                    && typeArguments.get(0).getType().isAssignableFrom(Map.class)) {
+                TypeConverter converter = applicationContext.getBean(definition);
+                return value -> {
+                    if (value == null || target.isInstance(value)) {
+                        return value;
+                    }
+                    Optional<?> converted = converter.convert(value, target, ConversionContext.DEFAULT);
+                    if (converted.isEmpty()) {
+                        throw new IllegalArgumentException("The TypeConverter bean " + converter.getClass().getName()
+                                + " cannot convert the input object `" + value + "` to " + target.getName());
+                    }
+                    return converted.get();
+                };
+            }
+        }
+        return null;
     }
 
     private Argument<?> unwrapArgumentValue(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,

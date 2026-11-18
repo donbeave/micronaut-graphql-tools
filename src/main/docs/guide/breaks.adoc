@@ -12,6 +12,12 @@ Tagged `1.0.0-M2` and published to GitHub Packages. The breaking changes are num
 
 * BC-20 (#173): the `graphql-tools` mapper seam is internal and no longer documented. See the migration page, entries for 1.0.0-M2.
 
+== 1.0.0-M3 (not released yet)
+
+The breaking changes of this milestone continue the numbering of the release notes.
+
+* BC-22 (#37): arguments and input objects are converted from `BeanIntrospection`; Jackson annotations and an `ObjectMapper` stop being the input contract. See the migration page, entries for 1.0.0-M3.
+
 == Planned after 1.0.0-M2
 
 These changes are planned for the milestones of the tracker. Each one is _pending_ until it lands on `master`; the migration page describes each one.
@@ -19,7 +25,6 @@ These changes are planned for the milestones of the tracker. Each one is _pendin
 === 1.0.0-M3
 
 * #36: Jackson leaves the `api` scope (_pending_).
-* #37: input conversion from `BeanIntrospection` (_pending_).
 * #86: per-check severity; the old keys are removed (_pending_).
 * #105: the default precedence becomes `fail` (_pending_).
 * #109: one public `SchemaBindingException` with error codes (_pending_).
