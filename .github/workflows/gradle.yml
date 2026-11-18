@@ -166,6 +166,28 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # Groovy has no native test (D-38): this builds the native executable of test-suite-groovy, starts it and asserts the
+  # GraphQL responses (#276).
+  native-groovy-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        graalvm: ['25']
+        graphql-java: [default, ceiling]
+    name: native Groovy smoke (GraalVM ${{ matrix.graalvm }}, graphql-java ${{ matrix.graphql-java }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          tools: java
+      - name: Run the native smoke test
+        run: ./gradlew :test-suite-groovy:nativeSmokeTest --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        env:
+          GRAALVM_QUICK_BUILD: 'true'
+          PREDICTIVE_TEST_SELECTION: 'false'
+
   actionlint:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -288,7 +310,7 @@ jobs:
   required:
     name: required checks
     if: always()
-    needs: [actionlint, build, check-library, binary-compatibility, docs, consumer-name-guard]
+    needs: [actionlint, build, check-library, binary-compatibility, native-groovy-smoke, docs, consumer-name-guard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

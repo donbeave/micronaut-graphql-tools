@@ -8,6 +8,7 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.core.io.ResourceResolver
+import io.micronaut.graphql.tools.SchemaMappingDictionary
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import jakarta.inject.Singleton
 
@@ -28,10 +29,13 @@ class GraphQLFactory {
     @Bean
     @Singleton
     SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
-        return { schemaMappingDictionary ->
-            schemaMappingDictionary
-                    .registerType('SecurityError', SecurityError)
-                    .registerType('ValidationError', ValidationError)
-        } as SchemaMappingDictionaryCustomizer
+        return new SchemaMappingDictionaryCustomizer() {
+            @Override
+            void customize(SchemaMappingDictionary schemaMappingDictionary) {
+                schemaMappingDictionary
+                        .registerType('SecurityError', SecurityError)
+                        .registerType('ValidationError', ValidationError)
+            }
+        }
     }
 }
