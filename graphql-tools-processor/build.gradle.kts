@@ -81,3 +81,25 @@ tasks.named<Test>("test") {
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsOptionsPage")
 }
+
+// The processor runs inside a compiler and must never put the runtime on its path (D-39): the main classpaths hold no
+// `graphql-tools` project and no `micronaut-graphql-tools` artifact. The test classpath may, for the dual-binder corpus.
+val checkNoRuntimeDependency by tasks.registering {
+    description = "Fails when a main classpath of this module contains the graphql-tools runtime."
+    group = "verification"
+    val components = listOf("compileClasspath", "runtimeClasspath").map { name ->
+        configurations.named(name).map { configuration ->
+            configuration.incoming.resolutionResult.allComponents.map { it.id.displayName }
+        }
+    }
+    inputs.property("components", providers.provider { components.flatMap { it.get() } })
+    doLast {
+        val runtime = components.flatMap { it.get() }.filter {
+            it == "project :graphql-tools" || it.startsWith("io.micronaut.graphql.tools:micronaut-graphql-tools:")
+        }
+        check(runtime.isEmpty()) { "graphql-tools-processor must not depend on the runtime, found: $runtime" }
+    }
+}
+tasks.named("check") {
+    dependsOn(checkNoRuntimeDependency)
+}

@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.exceptions;
 
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.MappingContext;
-import io.micronaut.graphql.tools.SystemTypes;
+import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -182,7 +182,7 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
         if (clazz.isEnum()) {
             return "an enum";
         }
-        if (SystemTypes.isJavaBuiltInClass(clazz)) {
+        if (ScalarTable.isJavaBuiltInClass(clazz)) {
             return "a built-in class";
         }
         return "a custom class";
