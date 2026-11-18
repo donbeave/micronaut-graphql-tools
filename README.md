@@ -761,7 +761,7 @@ changes with them.
 Errors about an unchanged class that javac did not recompile (it is read from the class output) have no Java file and
 line, but name the coordinate and the class. With Micronaut's processor, set
 `micronaut.processing.incremental=true` (the Micronaut Gradle plugin does), or every compilation is a full one.
-It reads every `*.graphqls` and `*.graphql` file under the directory.
+It reads every `*.graphqls` file under the directory (`*.graphql` files are client operation files, not schema).
 
 A processor that is not applied does not fail anything, it just does not run: under kapt, `compileJava` runs with
 `-proc:none` and a processor on `annotationProcessor` is ignored, so register it with `kapt` too (and declare the schema

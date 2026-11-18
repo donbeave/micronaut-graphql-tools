@@ -132,6 +132,21 @@ class SchemaDiscoverySpec extends Specification {
         e.message.contains('TypeDefinitionRegistry bean')
     }
 
+    void "files that are all empty or operation-only fail as not found and name the skipped files"() {
+        given:
+        Files.writeString(dir.resolve('empty.graphqls'), '# nothing\n')
+        Files.writeString(dir.resolve('client.graphqls'), 'query { hello }')
+
+        when:
+        SchemaDiscovery.discover(["file:${dir}/*.graphqls".toString()], getClass().classLoader)
+
+        then:
+        def e = thrown(SchemaDiscoveryException)
+        e.code() == BindingCode.SCHEMA_NOT_FOUND
+        e.message.contains('client.graphqls')
+        e.message.contains('empty.graphqls')
+    }
+
     void "a literal location that is missing fails, and an invalid location is reported with its key"() {
         when:
         SchemaDiscovery.discover([location], getClass().classLoader, false)

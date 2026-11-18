@@ -102,11 +102,17 @@ public final class SchemaDiscovery {
                     + locations + ". Put the schema in a " + SchemaSources.EXTENSION + " file under the first location, set the "
                     + "locations, or provide a TypeDefinitionRegistry bean.");
         }
+        SchemaSources.Loaded loaded;
         try {
-            return SchemaSources.load(sources);
+            loaded = SchemaSources.load(sources);
         } catch (SchemaSourceException e) {
             throw new SchemaDiscoveryException(BindingCode.SCHEMA_INVALID, "Cannot load the GraphQL schema: " + e.getMessage(), e);
         }
+        if (loaded.read().isEmpty()) {
+            throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "No GraphQL schema found for micronaut.graphql.tools.schema.locations="
+                    + locations + ": every file that matched is empty or holds only operations, skipped: " + loaded.skipped() + ".");
+        }
+        return loaded;
     }
 
     private static List<Source> find(SchemaLocation location, ClassLoader loader, boolean useIndex, Set<String> seen)
