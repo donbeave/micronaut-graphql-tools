@@ -12,6 +12,7 @@ import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.BindingManifest
 import io.micronaut.graphql.tools.BindingManifestRecorder
@@ -223,6 +224,7 @@ type Legacy {
         String note
     }
 
+    @Introspected
     static enum ItemState {
         NEW, SOLD
     }

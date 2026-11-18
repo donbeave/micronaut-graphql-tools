@@ -3,6 +3,7 @@ package io.micronaut.graphql.tools.mapping.interfacetype
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -99,10 +100,12 @@ enum AccessErrorCode { DENIED }
         String message
     }
 
+    @Introspected
     static enum ServerErrorCode {
         INTERNAL
     }
 
+    @Introspected
     static enum AccessErrorCode {
         DENIED
     }

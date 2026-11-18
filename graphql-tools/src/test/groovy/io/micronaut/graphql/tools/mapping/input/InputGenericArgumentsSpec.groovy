@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.mapping.input
 
 import graphql.ExecutionInput
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -287,11 +288,13 @@ input GridInput {
         String name
     }
 
+    @Introspected
     static enum Color {
         RED,
         GREEN
     }
 
+    @Introspected
     static enum BlockType {
         BESTSELLERS,
         BANNERS

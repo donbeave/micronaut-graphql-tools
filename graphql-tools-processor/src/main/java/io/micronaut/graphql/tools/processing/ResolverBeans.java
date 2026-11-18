@@ -66,6 +66,9 @@ final class ResolverBeans {
     }
 
     boolean isBean(TypeElement type) {
+        if (isIntroduction(type)) {
+            return true;
+        }
         if (type.getKind() != ElementKind.CLASS || type.getModifiers().contains(Modifier.ABSTRACT)) {
             return false;
         }
@@ -74,6 +77,10 @@ final class ResolverBeans {
         }
         return javaTypes.superclasses(type).stream().anyMatch(it -> Annotations.has(it, Annotations.ROOT_RESOLVER)
                 || Annotations.has(it, Annotations.TYPE_RESOLVER));
+    }
+
+    private static boolean isIntroduction(TypeElement type) {
+        return type.getKind() == ElementKind.INTERFACE && Annotations.hasStereotype(type, Annotations.INTRODUCTION);
     }
 
     private Bean createBean(TypeElement type) {
@@ -92,7 +99,7 @@ final class ResolverBeans {
         List<Method> methods = new ArrayList<>();
         for (ExecutableElement method : ElementFilter.methodsIn(javaTypes.elements().getAllMembers(type))) {
             if (!method.getModifiers().contains(Modifier.PUBLIC) || method.getModifiers().contains(Modifier.STATIC)
-                    || method.getModifiers().contains(Modifier.ABSTRACT)) {
+                    || method.getModifiers().contains(Modifier.ABSTRACT) && !isIntroduction(type)) {
                 continue;
             }
             TypeElement declaring = (TypeElement) method.getEnclosingElement();
