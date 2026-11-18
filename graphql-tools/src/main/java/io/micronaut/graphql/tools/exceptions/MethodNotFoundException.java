@@ -115,7 +115,7 @@ public final class MethodNotFoundException extends AbstractMappingException {
     @Internal
     public MethodNotFoundException forExtensionField() {
         return new MethodNotFoundException(
-                getMessage() + " If a RuntimeWiringCustomizer serves the field with a data fetcher of its own, return "
+                reason + " If a RuntimeWiringCustomizer serves the field with a data fetcher of its own, return "
                         + "its coordinate from RuntimeWiringCustomizer#claimedFields().",
                 getMappingContext(),
                 methodName

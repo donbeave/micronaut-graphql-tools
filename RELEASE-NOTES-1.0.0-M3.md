@@ -17,4 +17,5 @@ Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven 
 ## Known limitations
 
 - The compile-time manifest that the JSR-269 processor writes keeps the old words of the `!` lines until #144 removes the processor.
+- The diagnostics of the JSR-269 processor keep their `[graphql]` prefix until #144 removes it; the visitor that replaces it reports `[code]` from the registry.
 - Per-check severity (`checks.<code>`, `allow.findings`) is #86; the codes it will use are the ones of the registry.
