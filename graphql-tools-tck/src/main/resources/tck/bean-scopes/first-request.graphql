@@ -1,0 +1,9 @@
+{
+  a: singletonCount
+  b: singletonCount
+  c: requestScopedCount
+  d: requestScopedCount
+  injected: injectedPrototypeId
+  fresh1: freshPrototypeId
+  fresh2: freshPrototypeId
+}

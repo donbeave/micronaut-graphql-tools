@@ -1,0 +1,24 @@
+{
+  "errors": [
+    {
+      "message": "Internal error",
+      "locations": [
+        {
+          "line": 3,
+          "column": 3
+        }
+      ],
+      "path": [
+        "crash"
+      ],
+      "extensions": {
+        "code": "INTERNAL",
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": {
+    "fine": "fine",
+    "crash": null
+  }
+}

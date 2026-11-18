@@ -1,0 +1,12 @@
+literals
+variable
+list
+single-value-becomes-a-list
+input-defaults-and-absent-fields
+optional-null-and-omitted
+unknown-literal
+lower-case-literal
+string-literal
+unknown-variable-value
+null-in-a-list-of-non-null
+introspection

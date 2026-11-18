@@ -1,0 +1,20 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+enum Level {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+input Window {
+  from: Level = LOW
+  to: Level
+  only: [Level!]
+}
+
+extend type Query {
+  rank(level: Level!): Int!
+  next(level: Level!): Level!
+  pick(levels: [Level!]!): [Level!]!
+  maybe(level: Level): Level
+  window(window: Window!): String!
+}

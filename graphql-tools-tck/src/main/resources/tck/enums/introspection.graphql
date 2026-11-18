@@ -1,0 +1,6 @@
+{
+  __type(name: "Level") {
+    kind
+    enumValues { name }
+  }
+}
