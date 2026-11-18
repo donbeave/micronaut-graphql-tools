@@ -142,17 +142,16 @@ public final class LibraryBeanSelection {
 
     private static boolean replaces(AnnotationValue<Replaces> replaces, BeanDefinition<?> replacing, Provided candidate) {
         Class<?> replaced = replaces.classValue("bean").orElse(replacing.getBeanType());
-        Optional<String> named = replaces.stringValue("named");
-        if (named.isPresent()) {
-            return qualifiedByName(named.get(), replaced, candidate);
-        }
         if (replaces.annotationClassValue("qualifier").isPresent()) {
             return false;
         }
         Optional<Class<?>> factory = replaces.classValue("factory").map(type -> (Class<?>) type);
-        if (factory.isPresent()) {
-            return candidate.definition().getDeclaringType().filter(factory.get()::equals).isPresent()
-                    && candidate.definition().getBeanType() == replaced;
+        if (factory.isPresent() && candidate.definition().getDeclaringType().filter(factory.get()::equals).isEmpty()) {
+            return false;
+        }
+        Optional<String> named = replaces.stringValue("named");
+        if (named.isPresent()) {
+            return qualifiedByName(named.get(), replaced, candidate);
         }
         return candidate.definition().getBeanType() == replaced;
     }
