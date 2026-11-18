@@ -1,0 +1,22 @@
+{
+  "errors": [
+    {
+      "message": "no item 8",
+      "locations": [
+        {
+          "line": 3,
+          "column": 3
+        }
+      ],
+      "path": [
+        "missingNonNull"
+      ],
+      "extensions": {
+        "id": 8,
+        "code": "NOT_FOUND",
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": null
+}

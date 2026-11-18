@@ -1,0 +1,8 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+extend type Query {
+  fine: String!
+  missing(id: Int!): String
+  missingNonNull(id: Int!): String!
+  missingLater(id: Int!): String
+  crash: String
+}

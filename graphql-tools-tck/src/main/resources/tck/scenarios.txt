@@ -5,4 +5,7 @@ return-types
 abstract-types
 errors
 data-loader
+enums
+error-mapping
+bean-scopes
 input-errors

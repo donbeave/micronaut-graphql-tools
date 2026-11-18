@@ -1,0 +1,5 @@
+mapped-exception
+unmapped-exception-is-hidden
+mapped-exception-in-a-non-null-field
+mapped-exception-of-a-failed-completion-stage
+two-errors-keep-their-own-paths

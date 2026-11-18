@@ -1,0 +1,18 @@
+{
+  "data": {
+    "__type": {
+      "kind": "ENUM",
+      "enumValues": [
+        {
+          "name": "LOW"
+        },
+        {
+          "name": "MEDIUM"
+        },
+        {
+          "name": "HIGH"
+        }
+      ]
+    }
+  }
+}

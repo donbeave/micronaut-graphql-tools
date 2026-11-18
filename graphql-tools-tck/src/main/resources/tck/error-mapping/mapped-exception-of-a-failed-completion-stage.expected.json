@@ -1,0 +1,24 @@
+{
+  "errors": [
+    {
+      "message": "no item 9",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "missingLater"
+      ],
+      "extensions": {
+        "id": 9,
+        "code": "NOT_FOUND",
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": {
+    "missingLater": null
+  }
+}
