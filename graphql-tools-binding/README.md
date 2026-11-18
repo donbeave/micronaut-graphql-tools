@@ -28,6 +28,21 @@ The module owns, under `io.micronaut.graphql.tools.binding.internal`:
 Not in this module: the runtime wiring, the Micronaut bean lookup and the compile-time processor. Those use the rules
 and stay in their own modules.
 
+## Packages
+
+Each package has a `package-info.java`. All packages below `internal` are implementation; see the [API map](../src/main/docs/guide/apiMap.adoc).
+
+| Package | Audience | Holds |
+| --- | --- | --- |
+| `io.micronaut.graphql.tools.binding` | Public API | `BindingCode` |
+| `...binding.internal.finding` | Internal | Findings and their rendering |
+| `...binding.internal.manifest` | Internal | The manifest renderer and the schema hash |
+| `...binding.internal.meta` | Internal | The resolver contracts annotation |
+| `...binding.internal.model` | Internal | The model of classes and members that the rules read |
+| `...binding.internal.plan` | Internal | The binding plan and the bean model |
+| `...binding.internal.rules` | Internal | The per-class rules and their verdicts |
+| `...binding.internal.schema` | Internal | Reading the schema files and the schema model |
+
 ## Who uses it
 
 Maintainers, and the two modules that depend on it. Application code does not use this module directly: applications

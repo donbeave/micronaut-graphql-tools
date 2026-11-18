@@ -25,6 +25,18 @@ Not in this module:
   `graphql-tools-binding`, and this module uses them.
 - The compile-time checks. They live in `graphql-tools-processor`.
 
+## Packages
+
+Each package has a `package-info.java`. The [API map](../src/main/docs/guide/apiMap.adoc) says which packages are public API and which are internal, and the target layout.
+
+| Package | Audience | Holds |
+| --- | --- | --- |
+| `io.micronaut.graphql.tools` | Mixed | The configuration, the customizers, the mapping and directive interfaces (public) and the binding implementation (`@Internal`) |
+| `io.micronaut.graphql.tools.annotation` | Public API | The annotations of resolvers and input classes |
+| `io.micronaut.graphql.tools.exceptions` | Public API | The startup failures (`SchemaBindingException` and subclasses) |
+| `io.micronaut.graphql.tools.processor` | Internal | The runtime method processors that register the resolvers |
+| `io.micronaut.graphql.tools.schema` | Internal | Schema discovery, the data fetchers, the type resolvers, the value conversion |
+
 ## Who uses it
 
 Library users: applications built with Micronaut that serve GraphQL. Maintainers develop it here. The three example suites

@@ -1,0 +1,87 @@
+This page tells you which package holds what, which packages you may import from, and which ones are implementation. Every Java package of the library modules has a `package-info.java` that says the same thing in the Javadoc, and the build checks that each of them exists.
+
+== The rules
+
+* A package has one responsibility. A package with more than 15 types is a smell: the build lists the ones that are over the limit, each with a reason, and a package that is no longer over the limit leaves the list.
+* The public API is what you import from application code: the annotations, the customizer, mapping and directive interfaces and mapping contexts, `CustomWiring`, the configuration class, `ArgumentValue`, `BindingManifest`, `BindingCode` and the exceptions (catch `SchemaBindingException`; its subclasses are being made internal). The table below lists where each one is. Everything else is implementation and can change in any release.
+* Implementation is marked in two ways. A type is annotated `@Internal` (`io.micronaut.core.annotation.Internal`, the same marker Micronaut uses), and a package of implementation types carries the `internal` segment in its name and an `@Internal` on the package in its `package-info.java`. Micronaut itself follows this convention.
+* A public type never lives in an `internal` package, and an internal type belongs in an `internal` package. The code does not follow the second half yet; see <<plannedLayout,Planned layout>>.
+* If a package holds both, the Javadoc of its `package-info.java` says so, and an `@Internal` type is not API even when it is `public`.
+
+== Which package do I import from?
+
+[cols="4,5", options="header"]
+|===
+|I want to |Import from
+|Mark a resolver class, a method, a parameter or an input class |`io.micronaut.graphql.tools.annotation`
+|Catch a startup failure |`io.micronaut.graphql.tools.exceptions` (`SchemaBindingException`; match on its code)
+|Read an error code |`io.micronaut.graphql.tools.binding` (`BindingCode`)
+|Change a setting in code |`io.micronaut.graphql.tools` (`GraphQLToolsConfiguration`)
+|Change the `GraphQL` builder, the schema, the runtime wiring or the type registry |`io.micronaut.graphql.tools` (the `*Customizer` interfaces)
+|Map a custom scalar, or a union member to a Java type |`io.micronaut.graphql.tools` (`GraphQLScalarMapping`, `SchemaMappingDictionary`)
+|Tell an omitted argument from an explicit `null` |`io.micronaut.graphql.tools` (`ArgumentValue`)
+|Wire a directive |`io.micronaut.graphql.tools` (`SchemaDirective`)
+|Read what the schema is bound to |`io.micronaut.graphql.tools` (`BindingManifest`)
+|===
+
+Do not import any type annotated `@Internal`, and nothing from a package named `internal`.
+
+== Current layout
+
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+
+[cols="5,2,2,6", options="header"]
+|===
+|Package |Module |Audience |Holds
+|`io.micronaut.graphql.tools` |graphql-tools |Mixed |The configuration, the customizer, mapping and directive interfaces, `ArgumentValue` and `BindingManifest` (public); the binding implementation, the registries, the checks and the factories (`@Internal`)
+|`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes
+|`io.micronaut.graphql.tools.exceptions` |graphql-tools |Public API |The startup failures: `SchemaBindingException` and its subclasses (only `SchemaBindingException` is meant to be caught)
+|`io.micronaut.graphql.tools.processor` |graphql-tools |Internal |The runtime method processors that register the resolvers (not the compile-time processor module)
+|`io.micronaut.graphql.tools.schema` |graphql-tools |Internal |Schema discovery, the data fetchers, the type resolvers and the value conversion
+|`io.micronaut.graphql.tools.binding` |graphql-tools-binding |Public API |`BindingCode`, the registry of the error codes
+|`io.micronaut.graphql.tools.binding.internal.finding` |graphql-tools-binding |Internal |Findings and their rendering
+|`io.micronaut.graphql.tools.binding.internal.manifest` |graphql-tools-binding |Internal |The binding manifest renderer and the schema hash
+|`io.micronaut.graphql.tools.binding.internal.meta` |graphql-tools-binding |Internal |The resolver contracts annotation
+|`io.micronaut.graphql.tools.binding.internal.model` |graphql-tools-binding |Internal |The model of classes and members that the rules read
+|`io.micronaut.graphql.tools.binding.internal.plan` |graphql-tools-binding |Internal |The binding plan and the bean model
+|`io.micronaut.graphql.tools.binding.internal.rules` |graphql-tools-binding |Internal |The per-class rules and their verdicts
+|`io.micronaut.graphql.tools.binding.internal.schema` |graphql-tools-binding |Internal |Reading the schema files and the schema model
+|`io.micronaut.graphql.tools.visitor` |graphql-tools-processor |Compiler plug-in |The compile-time `TypeElementVisitor`, loaded by the compiler and never imported
+|`io.micronaut.graphql.tools.processing` |graphql-tools-processor |Internal |The legacy JSR-269 processor, to be deleted
+|`io.micronaut.graphql.tools.tck` |graphql-tools-tck |Test helper |The TCK runner; not published
+|===
+
+Kotlin and Groovy sources need no `package-info`; the library modules are Java.
+
+[[plannedLayout]]
+== Planned layout
+
+Nothing in this section exists yet. It is the target of the package structure work, which lands as small changes, one area at a time, so that it does not collide with other work. Each public type that moves gets an entry in <<breaks,Breaking Changes>> and in the migration page.
+
+[cols="5,2,6", options="header"]
+|===
+|Package |Audience |Will hold
+|`io.micronaut.graphql.tools.annotation` |Public API |The annotations (unchanged)
+|`io.micronaut.graphql.tools.config` |Public API |`GraphQLToolsConfiguration`
+|`io.micronaut.graphql.tools.customizer` |Public API |The five `*Customizer` interfaces
+|`io.micronaut.graphql.tools.mapping` |Public API |`SchemaMappingDictionary`, `GraphQLScalarMapping` and the mapping contexts
+|`io.micronaut.graphql.tools.directive` |Public API |`SchemaDirective` and `CustomWiring`
+|`io.micronaut.graphql.tools.input` |Public API |`ArgumentValue`
+|`io.micronaut.graphql.tools.manifest` |Public API |`BindingManifest`
+|`io.micronaut.graphql.tools.exceptions` |Public API |`SchemaBindingException` only; its subclasses become internal
+|`io.micronaut.graphql.tools.internal` |Internal |The factories that create the beans
+|`io.micronaut.graphql.tools.internal.registry` |Internal |The resolver registry, the bean selection and the method processors (today `processor`)
+|`io.micronaut.graphql.tools.internal.wiring` |Internal |The runtime wiring generator and the directive wirings
+|`io.micronaut.graphql.tools.internal.resolver` |Internal |The data fetchers and the type resolvers
+|`io.micronaut.graphql.tools.internal.input` |Internal |Input binding and the value conversion
+|`io.micronaut.graphql.tools.internal.checks` |Internal |The strict checks and the validators
+|`io.micronaut.graphql.tools.internal.discovery` |Internal |Schema discovery
+|`io.micronaut.graphql.tools.internal.manifest` |Internal |Recording and writing the binding manifest
+|`io.micronaut.graphql.tools.internal.exceptions` |Internal |The exception subclasses
+|===
+
+`io.micronaut.graphql.tools` itself will hold no types. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, `processing` is deleted when the visitor replaces the JSR-269 processor, and `visitor` stays.
+
+== How the build keeps this true
+
+`PackageDocumentationSpec` fails when a Java package of the four modules has no `package-info.java`, when a `package-info.java` has no description, when a package has more than 15 types without a listed exception, when the package list of this page differs from the packages of the code, or when `@Internal` on a package and the audience column of this page disagree.

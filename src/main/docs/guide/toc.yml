@@ -24,6 +24,7 @@ codegen: Code Generation
 nativeImage: Native Image
 testing: Testing
 performance: Performance
+apiMap: API Map
 configuration: Configuration
 exceptions: Exceptions
 migration:

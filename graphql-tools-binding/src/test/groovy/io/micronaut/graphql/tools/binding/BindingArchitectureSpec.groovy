@@ -62,12 +62,12 @@ class BindingArchitectureSpec extends Specification {
 
     void "the code registry is the only public type; every other class is in an internal package"() {
         expect:
-        files().findAll { !it.toString().contains('/internal/') }.collect { it.fileName.toString() } == ['BindingCode.java']
+        files().findAll { !it.toString().contains('/internal/') && it.fileName.toString() != 'package-info.java' }.collect { it.fileName.toString() } == ['BindingCode.java']
     }
 
     void "every class is internal API"() {
         expect:
-        files().findAll { !it.toFile().text.contains('@Internal') && !(it.fileName.toString() in ['NoAnnotations.java', 'BindingCode.java']) }
+        files().findAll { !it.toFile().text.contains('@Internal') && !(it.fileName.toString() in ['NoAnnotations.java', 'BindingCode.java', 'package-info.java']) }
                 .collect { SOURCES.relativize(it).toString() }.isEmpty()
     }
 
