@@ -64,6 +64,12 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
 
     @Test
     @Order(3)
+    fun introductionAdviceResolverBindsItsAbstractMethod() {
+        assertEquals("introduced introduced", execute("{ introduced }")["introduced"])
+    }
+
+    @Test
+    @Order(4)
     fun searchProfileWithLimit() {
         val profiles = execute(
             "query(\$contains: String!, \$limit: Int) { searchProfile(contains: \$contains, limit: \$limit) { username fullName } }",
@@ -75,7 +81,7 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     fun signInFailures() {
         val query = "mutation(\$u: String!, \$p: String!) { signIn(username: \$u, password: \$p) { data { username } error { __typename ... on ValidationError { validationCode: code message } ... on SecurityError { securityCode: code message } } } }"
         val unknown = execute(query, mapOf("u" to "unknown-user", "p" to "test")).obj("signIn")
@@ -90,7 +96,7 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun signUpThenDuplicate() {
         val query = "mutation(\$input: SignUpInput!) { signUp(input: \$input) { data { username firstName lastName books { id } } error { __typename ... on ValidationError { validationCode: code message } } } }"
         val input = mapOf("username" to "john", "password" to "test", "firstName" to "John", "lastName" to "Johnathan")
@@ -106,7 +112,7 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun signInThenAddBook() {
         val signIn = execute("mutation { signIn(username: \"bob\", password: \"bodi\") { data { username } } }").obj("signIn")
         assertEquals("bob", signIn.obj("data")["username"])
@@ -120,7 +126,7 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun ignoredAndEventListenerMethodsPassStrictModeAndTheManifestListsTheIgnoredOne() {
         assertTrue(manifest.diagnostics.none { it.contains("onStartup") || it.contains("helper") }, manifest.diagnostics.toString())
         assertEquals(
