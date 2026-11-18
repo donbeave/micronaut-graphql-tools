@@ -12,7 +12,9 @@ micronaut-graphql = "4.8.0"
 groovy = "4.0.33"
 
 # Not managed by the Micronaut BOMs or catalogs
-apollo = "4.4.4"
+apollo = "5.2.0"
+# Apollo Kotlin 5 moved its Java API (client and RxJava 3 support) to a separate project; apollo-rx3-support has no 5.x release
+apollo-java = "1.0.0"
 jmh = "1.37"
 jetbrains-annotations = "26.1.0"
 # test oracle for the scalar SPI: the date/time scalars many graphql-java applications use
@@ -28,7 +30,7 @@ graphql-java-extended-validation = "22.0"
 # floor: the oldest supported line
 floor-graphql-java = "21.5"
 floor-extended-scalars = "21.0"
-floor-java-dataloader = "3.2.1"
+floor-java-dataloader = "3.2.2"
 floor-extended-validation = "21.0"
 # ceiling: the newest tested line. graphql-java-extended-scalars has no 25.x or 26.x release; 24.0 links against 26.2.
 # extended-validation 21.0 calls a GraphQLCodeRegistry overload that 25.x removed; 24.0 does not.
@@ -48,7 +50,8 @@ micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", ver
 
 graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-extended-validation", version.ref = "graphql-java-extended-validation" }
 
-apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
-apollo-rx3-support = { module = "com.apollographql.apollo:apollo-rx3-support", version.ref = "apollo" }
+apollo-java-client = { module = "com.apollographql.java:client", version.ref = "apollo-java" }
+apollo-java-rx3 = { module = "com.apollographql.java:rx3", version.ref = "apollo-java" }
+apollo-api = { module = "com.apollographql.apollo:apollo-api", version.ref = "apollo" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 graphql-java-datetime = { module = "com.tailrocks.graphql:graphql-java-datetime", version.ref = "graphql-java-datetime" }
