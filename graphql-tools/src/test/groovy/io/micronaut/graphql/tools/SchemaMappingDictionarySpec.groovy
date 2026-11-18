@@ -1,5 +1,6 @@
 package io.micronaut.graphql.tools
 
+import io.micronaut.core.annotation.Introspected
 import spock.lang.Specification
 
 class SchemaMappingDictionarySpec extends Specification {
@@ -67,6 +68,7 @@ class SchemaMappingDictionarySpec extends Specification {
         String cardNumber
     }
 
+    @Introspected
     static enum Status {
         ACTIVE
     }

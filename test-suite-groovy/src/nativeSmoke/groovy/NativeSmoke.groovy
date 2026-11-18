@@ -102,6 +102,7 @@ try {
     assert current.username == 'bob'
     assert current.books*.id == ['ax']
     assert current.books.first().label != null
+    assert execute('{ introduced }').introduced == 'introduced introduced'
 
     println "Native smoke test passed: 6 scenarios against ${executable.name} on port $port"
 } finally {

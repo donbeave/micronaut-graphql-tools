@@ -54,4 +54,4 @@ The library provides these annotations (package `io.micronaut.graphql.tools.anno
 * `@GraphQLField` marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
 * `@GraphQLSchemaCoordinate("Type.field")` names the field a resolver method binds; it is meant for resolver contracts (interfaces).
 
-GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own.
+GraphQL enums map to Java enums annotated with `@Introspected`, and unions and interfaces to Java interfaces, without an annotation of their own.

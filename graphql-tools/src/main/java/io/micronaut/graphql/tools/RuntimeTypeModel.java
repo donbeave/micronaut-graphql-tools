@@ -204,7 +204,6 @@ final class RuntimeTypeModel implements TypeModel {
         private boolean introspectionLooked;
 
         @Nullable
-        private Map<String, AnnotationView> constantAnnotations;
 
         RuntimeClass(Class<?> type, @Nullable BeanDefinition<?> beanDefinition,
                      @Nullable BeanIntrospection<?> introspection) {
@@ -301,28 +300,15 @@ final class RuntimeTypeModel implements TypeModel {
 
         @Override
         public List<JEnumConstant> enumConstants() {
-            Object[] constants = type.getEnumConstants();
-            if (!type.isEnum() || constants == null) {
+            if (!(introspection() instanceof EnumBeanIntrospection<?> enumIntrospection)) {
                 return List.of();
             }
-            List<JEnumConstant> result = new ArrayList<>(constants.length);
-            for (Object constant : constants) {
-                String name = ((Enum<?>) constant).name();
-                result.add(new JEnumConstant(name, new LazyView(() -> constantAnnotations().get(name))));
-            }
+            List<JEnumConstant> result = new ArrayList<>();
+            enumIntrospection.getConstants().forEach(it -> {
+                String name = ((Enum<?>) it.getValue()).name();
+                result.add(new JEnumConstant(name, new LazyView(() -> view(it.getAnnotationMetadata()))));
+            });
             return result;
-        }
-
-        private Map<String, AnnotationView> constantAnnotations() {
-            if (constantAnnotations == null) {
-                Map<String, AnnotationView> annotated = new HashMap<>();
-                if (introspection() instanceof EnumBeanIntrospection<?> enumIntrospection) {
-                    enumIntrospection.getConstants().forEach(it ->
-                            annotated.put(((Enum<?>) it.getValue()).name(), view(it.getAnnotationMetadata())));
-                }
-                constantAnnotations = annotated;
-            }
-            return constantAnnotations;
         }
 
         @Override

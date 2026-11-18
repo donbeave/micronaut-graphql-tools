@@ -184,6 +184,9 @@ public class Review {
             'example.Genre'         : '''
 package example;
 
+import io.micronaut.core.annotation.Introspected;
+
+@Introspected
 public enum Genre {
     NOVEL, POETRY
 }
@@ -379,6 +382,9 @@ public class BookResolver {
             'example.Genre'       : '''
 package example;
 
+import io.micronaut.core.annotation.Introspected;
+
+@Introspected
 public enum Genre {
     NOVEL, POETRY
 }
