@@ -262,6 +262,18 @@ public class QueryResolver extends Base<CompletionStage<String>> {
         result.findings == ['[unsupported-return-type] Query.version']
     }
 
+    def "a Java method whose name starts with a dollar sign is a resolver method like any other"() {
+        when:
+        def result = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String $helper() { return ""; }
+}''').compile()
+
+        then:
+        result.findings == ['[unbound-resolver-method] example.QueryResolver#$helper()']
+    }
+
     def "an @Introduction interface that is a resolver is a bean, and its abstract methods are checked"() {
         when:
         def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)

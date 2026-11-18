@@ -160,6 +160,14 @@ type Book {
         check(resolver(methods, [TYPE], ['a.Book', 'a.Other'])) == []
     }
 
+    void "a method of a type resolver that carries the name of a root field only is unbound: a type resolver cannot bind a root field"() {
+        given:
+        def methods = [method('ping', [:], [FakeModel.parameter('b', 'a.Book')], STRING, 'a.R#ping(Book)')]
+
+        expect:
+        check(resolver(methods, [TYPE], ['a.Book'])) == ['unbound-resolver-method a.R#ping(Book)']
+    }
+
     void "the contracts are those of the class and of its supertypes"() {
         given:
         JClass contract = [name: { 'a.Contract' }, annotations: { annotationsOf([TYPE], ['a.Book']) }] as JClass

@@ -324,7 +324,8 @@ final class ElementTypeModel implements TypeModel {
                 return false;
             }
             String name = method.getName();
-            if (name.startsWith("$") || GROOVY_OBJECT.contains(name) && element.isAssignable("groovy.lang.GroovyObject")) {
+            // the members that the Groovy compiler adds, which the startup never binds; a Java method may start with $
+            if ((name.startsWith("$") || GROOVY_OBJECT.contains(name)) && element.isAssignable("groovy.lang.GroovyObject")) {
                 return false;
             }
             if (method.getDeclaringType().getName().equals("java.lang.Object")) {

@@ -278,8 +278,13 @@ public final class ResolverClassFindings {
     }
 
     private static Set<String> objectFieldNames(SchemaModel schema) {
+        // the fields of the root types are left out: a type resolver cannot bind them
         Set<String> names = new HashSet<>();
+        Set<String> rootTypes = schema.rootTypeNames();
         schema.registry().types().values().forEach(it -> {
+            if (rootTypes.contains(it.getName())) {
+                return;
+            }
             if (it instanceof ObjectTypeDefinition object) {
                 object.getFieldDefinitions().forEach(field -> names.add(field.getName()));
             } else if (it instanceof InterfaceTypeDefinition iface) {
