@@ -15,7 +15,6 @@
  */
 package io.micronaut.graphql.tools;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.EnumValueDefinition;
 import graphql.language.FieldDefinition;
@@ -66,20 +65,15 @@ import io.micronaut.graphql.tools.exceptions.ResolverRequiredException;
 import io.micronaut.graphql.tools.exceptions.RootResolverNotFoundException;
 import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedException;
 import io.micronaut.graphql.tools.exceptions.StrictModeException;
-import io.micronaut.graphql.tools.schema.ArgumentValueModule;
 import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
-import io.micronaut.graphql.tools.schema.InputValueConverter;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautPropertyDataFetcher;
 import io.micronaut.inject.ExecutableMethod;
-import io.micronaut.inject.qualifiers.Qualifiers;
-import io.micronaut.jackson.modules.BeanIntrospectionModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -93,7 +87,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -121,8 +114,6 @@ final class GraphQLRuntimeWiringGenerator {
     private final GraphQLResolversRegistry graphQLResolversRegistry;
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final SchemaMappingDictionary schemaMappingDictionary;
-    private final InputValueConverter inputValueConverter;
-    private final Map<Class<?>, InputValueConverter.OmissionPlan> omissionPlans = new ConcurrentHashMap<>();
     private final InputClassChecks inputClassChecks;
     private final GraphQLToolsConfiguration configuration;
     private final ScalarMappings scalarMappings;
@@ -211,11 +202,7 @@ final class GraphQLRuntimeWiringGenerator {
         this.scalarMappings = new ScalarMappings(applicationContext.getBeansOfType(GraphQLScalarMapping.class),
                 manifestRecorder, applicationContext);
 
-        this.inputValueConverter = new InputValueConverter(
-                createInputObjectMapper(applicationContext, scalarMappings.all(), configuration),
-                omissionPlans
-        );
-        this.inputClassChecks = new InputClassChecks(inputValueConverter, omissionPlans);
+        this.inputClassChecks = new InputClassChecks();
         this.rootRuntimeWiringBuilder = RuntimeWiring.newRuntimeWiring()
                 .scalar(ExtendedScalars.GraphQLLong)
                 .scalar(ExtendedScalars.GraphQLShort)
@@ -223,25 +210,11 @@ final class GraphQLRuntimeWiringGenerator {
                 .scalar(ExtendedScalars.GraphQLBigInteger);
         scalarMappings.all().forEach(it -> rootRuntimeWiringBuilder.scalar(it.getScalarType()));
         this.inputTypeBinder = new InputTypeBinder(typeDefinitionRegistry, scalarMappings, configuration,
-                manifestRecorder, inputClassChecks, omissionPlans, typeModel, new InputCallbacks());
+                manifestRecorder, inputClassChecks, typeModel, applicationContext, new InputCallbacks());
         this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,
                 graphQLBeanIntrospectionRegistry, manifestRecorder, rootRuntimeWiringBuilder);
-    }
-
-    private static ObjectMapper createInputObjectMapper(ApplicationContext applicationContext,
-                                                        Collection<GraphQLScalarMapping> scalarMappings,
-                                                        GraphQLToolsConfiguration configuration) {
-        ObjectMapper objectMapper = applicationContext
-                .findBean(ObjectMapper.class, Qualifiers.byName(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER))
-                .map(ObjectMapper::copy)
-                .orElseGet(() -> new ObjectMapper().registerModule(new BeanIntrospectionModule()));
-        objectMapper.registerModule(new ScalarValuesModule(scalarMappings));
-        if (configuration.getInput().isDetectOmission()) {
-            objectMapper.registerModule(new ArgumentValueModule());
-        }
-        return objectMapper;
     }
 
     BindingManifestRecorder getManifestRecorder() {
@@ -396,7 +369,7 @@ final class GraphQLRuntimeWiringGenerator {
 
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
-                new MicronautExecutableMethodDataFetcher(inputValueConverter, executable, argumentDefinitions, instance)
+                new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance)
         );
 
         processFieldReturnType(returnType.asArgument(), mappingContext.getFieldDefinition().getType(),

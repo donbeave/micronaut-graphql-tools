@@ -44,6 +44,9 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String ENUM_ARGUMENT = "enumArgument";
     public static final String INPUT_OBJECT_ARGUMENT = "inputObjectArgument";
     public static final String LIST_OF_INPUTS_ARGUMENT = "listOfInputsArgument";
+    public static final String LIST_OF_SCALARS_ARGUMENT = "listOfScalarsArgument";
+    public static final String RECORD_INPUT_ARGUMENT = "recordInputArgument";
+    public static final String NESTED_INPUT_ARGUMENT = "nestedInputArgument";
     public static final String UNION_RESOLUTION = "unionResolution";
     public static final String INTERFACE_RESOLUTION = "interfaceResolution";
     public static final String DIRECTIVE_WRAPPED_FETCHER = "directiveWrappedFetcher";
@@ -65,12 +68,27 @@ public final class BenchmarkCases implements AutoCloseable {
               y: Int!
             }
 
+            input StockInput {
+              sku: String!
+              quantity: Int!
+              weight: Float
+            }
+
+            input LineInput {
+              label: String!
+              point: PointInput!
+              tags: [String!]
+            }
+
             type Query {
               ping: String
               scalar(n: Int!): String
               enumArg(color: Color!): String
               input(input: PointInput!): String
               inputs(inputs: [PointInput!]!): String
+              tags(tags: [String!]!): String
+              stock(stock: StockInput!): String
+              line(line: LineInput!): String
               items(count: Int!): [Item!]!
               shape(circle: Boolean!): Shape
               figure(triangle: Boolean!): Figure
@@ -132,6 +150,11 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(INPUT_OBJECT_ARGUMENT, fetch("Query", "input", null, Map.of("input", point("a", 1, 2))));
         ops.put(LIST_OF_INPUTS_ARGUMENT, fetch("Query", "inputs", null,
                 Map.of("inputs", List.of(point("a", 1, 2), point("b", 3, 4), point("c", 5, 6), point("d", 7, 8)))));
+        ops.put(LIST_OF_SCALARS_ARGUMENT, fetch("Query", "tags", null, Map.of("tags", List.of("a", "b", "c", "d"))));
+        ops.put(RECORD_INPUT_ARGUMENT, fetch("Query", "stock", null,
+                Map.of("stock", Map.of("sku", "a", "quantity", 3, "weight", 2.5d))));
+        ops.put(NESTED_INPUT_ARGUMENT, fetch("Query", "line", null,
+                Map.of("line", Map.of("label", "l", "point", point("a", 1, 2), "tags", List.of("x", "y")))));
         ops.put(DIRECTIVE_WRAPPED_FETCHER, fetch("Query", "guarded", null, Map.of()));
         ops.put(UNION_RESOLUTION, resolve(schema.getType("Shape"), new Circle(), new Square()));
         ops.put(INTERFACE_RESOLUTION, resolve(schema.getType("Figure"), new Triangle(), new Rectangle()));
