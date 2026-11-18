@@ -40,6 +40,7 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
 
     private final List<SchemaDirective> namedDirectives = new ArrayList<>();
     private final List<SchemaDirectiveWiring> everyElementWirings;
+    private final List<SchemaDirective> everyElementDirectives;
     private final List<BeanRegistration<SchemaDirectiveWiring>> wirings;
     private final List<SchemaDirectiveWiring> wrappedWirings;
     private final Set<String> everyElementDirectiveNames = new LinkedHashSet<>();
@@ -60,6 +61,7 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
         }
         everyElement.sort(Comparator.comparingInt(BeanRegistration::getOrder));
         this.everyElementWirings = everyElement.stream().map(it -> it.getBean().getWiring()).toList();
+        this.everyElementDirectives = everyElement.stream().map(BeanRegistration::getBean).toList();
 
         this.wirings = List.copyOf(wirings);
         this.wrappedWirings = namedAndEveryElement(directives);
@@ -118,6 +120,23 @@ final class SchemaDirectiveWirings implements RuntimeWiringCustomizer {
         });
         if (!duplicates.isEmpty()) {
             throw new DuplicateDirectiveWiringException(duplicates);
+        }
+
+        Map<String, List<String>> namedAndEveryElement = new TreeMap<>();
+        byName.forEach((name, list) -> {
+            List<String> owners = new ArrayList<>();
+            owners.add("named " + list.get(0).getWiring().getClass().getName());
+            for (SchemaDirective everyElement : everyElementDirectives) {
+                if (everyElement.getDirectiveNames().contains(name)) {
+                    owners.add("every element " + everyElement.getWiring().getClass().getName());
+                }
+            }
+            if (owners.size() > 1) {
+                namedAndEveryElement.put(name, owners);
+            }
+        });
+        if (!namedAndEveryElement.isEmpty()) {
+            throw new DuplicateDirectiveWiringException(namedAndEveryElement, true);
         }
 
         byName.forEach((name, list) -> builder.directive(name, list.get(0).getWiring()));

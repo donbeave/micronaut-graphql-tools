@@ -32,6 +32,7 @@ class SchemaDirectiveWiringSpec extends AbstractTest {
     static final String SPEC_NAME = "SchemaDirectiveWiringSpec"
     static final String SPEC_NAME_VALIDATION = "SchemaDirectiveWiringSpec.validation"
     static final String SPEC_NAME_DUPLICATE = "SchemaDirectiveWiringSpec.duplicate"
+    static final String SPEC_NAME_NAMED_AND_EVERY_ELEMENT = "SchemaDirectiveWiringSpec.namedAndEveryElement"
     static final String SPEC_NAME_REPLACED = "SchemaDirectiveWiringSpec.replaced"
     static final String SPEC_NAME_WRAPPED_BEAN = "SchemaDirectiveWiringSpec.wrappedBean"
     static final String SPEC_NAME_UNWRAPPED_BEAN = "SchemaDirectiveWiringSpec.unwrappedBean"
@@ -192,6 +193,22 @@ type Query {
         e.cause.message == "More than one SchemaDirective bean wires directive @upper: ${UpperWiring.name}, ${UpperWiring.name}. Keep one.".toString()
     }
 
+    void "a directive wired by a named and an every-element SchemaDirective fails the startup, naming both"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME_NAMED_AND_EVERY_ELEMENT)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof DuplicateDirectiveWiringException
+        e.cause.directiveNames == ['upper']
+        e.cause.message == ("Directive @upper is wired by both a named and an every-element SchemaDirective bean, "
+                + "so it would take effect twice: named ${UpperWiring.name}, every element ${BangWiring.name}. "
+                + "Use one of them: drop the name from the every-element bean, or remove the named bean.").toString()
+    }
+
     void "a RuntimeWiringCustomizer may not replace the wiring of a SchemaDirective bean"() {
         given:
         startContext(SCHEMA, SPEC_NAME_REPLACED)
@@ -231,7 +248,7 @@ type Query {
         }
     }
 
-    @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec(|\\.duplicate|\\.replaced)')
+    @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec(|\\.duplicate|\\.namedAndEveryElement|\\.replaced)')
     @Factory
     static class DirectiveWiringFactory {
         @Bean
@@ -269,6 +286,23 @@ type Query {
         @Singleton
         SchemaDirective anotherUpper() {
             return SchemaDirective.named('upper', new UpperWiring())
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_NAMED_AND_EVERY_ELEMENT)
+    @Factory
+    static class NamedAndEveryElementFactory {
+        @Bean
+        @Singleton
+        SchemaDirective bang() {
+            return SchemaDirective.everyElement(['upper'], new BangWiring())
+        }
+    }
+
+    static class BangWiring implements SchemaDirectiveWiring {
+        @Override
+        GraphQLFieldDefinition onField(SchemaDirectiveWiringEnvironment<GraphQLFieldDefinition> environment) {
+            return environment.element
         }
     }
 
@@ -355,7 +389,7 @@ type Query {
         }
     }
 
-    @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec(|\\.duplicate|\\.replaced|\\.wrappedBean|\\.unwrappedBean|\\.prototype|\\.prototypeUnwrapped|\\.customizerBean)')
+    @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec(|\\.duplicate|\\.namedAndEveryElement|\\.replaced|\\.wrappedBean|\\.unwrappedBean|\\.prototype|\\.prototypeUnwrapped|\\.customizerBean)')
     @GraphQLRootResolver
     static class Query {
         String hello() {
