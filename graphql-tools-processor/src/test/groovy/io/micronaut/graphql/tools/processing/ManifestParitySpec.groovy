@@ -17,6 +17,7 @@ type Query {
   books(ids: [ID!], first: Int!): [Book!]!
   shelf: Shelf!
   reviews: [Review]
+  count: Int
 }
 
 type Mutation {
@@ -231,11 +232,16 @@ import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 @GraphQLRootResolver
 public class BookQuery {
+    public OptionalInt count() {
+        return OptionalInt.empty();
+    }
+
     public Book book(String id) {
         return null;
     }
@@ -310,6 +316,7 @@ public class BookSubscription {
                 'Shelf.size: Int! → property · example.Library$Shelf#size() · int · int',
                 'Query.shelf: Shelf! → root · example.BookQuery#shelf() · java.util.concurrent.CompletionStage<graphql.execution.DataFetcherResult<example.Library$Shelf>> · example.Library$Shelf',
                 'Query.reviews: [Review] → root · example.BookQuery#reviews() · java.util.List<example.Review> · java.util.List<example.Review>',
+                'Query.count: Int → root · example.BookQuery#count() · java.util.OptionalInt · java.lang.Integer',
                 'Subscription.bookAdded: Book! → root · example.BookSubscription#bookAdded() · org.reactivestreams.Publisher<example.Book> · example.Book',
                 'BookInput.tags: [String!] → inputField · example.BookInput#tags · java.util.List<java.lang.String> · java.util.List<java.lang.String>',
                 'Genre.POETRY → enumValue · example.Genre#POETRY · - · -',

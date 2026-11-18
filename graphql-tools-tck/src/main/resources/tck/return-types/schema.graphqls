@@ -15,6 +15,11 @@ extend type Query {
   nulls: [Int]!
   nothing: String
   scalars: Scalars!
+
+  primitiveCount: Int
+  primitiveAbsentCount: Int
+  primitiveRatio: Float
+  primitiveCounts: [Int]
 }
 
 type Greeting {
