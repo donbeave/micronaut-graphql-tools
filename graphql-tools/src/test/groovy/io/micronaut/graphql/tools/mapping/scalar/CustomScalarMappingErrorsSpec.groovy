@@ -55,7 +55,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ScalarMappingNotProvidedException
-        e.cause.message == """The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
+        e.cause.message == """[scalar-mapping-not-provided] The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
   GraphQL coordinate: Query.today (line 9, column 3)
   GraphQL object type: Query
   GraphQL field: today
@@ -86,7 +86,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ScalarMappingNotProvidedException
-        e.cause.message == """The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes. Found a GraphQLScalarType bean 'LocalDate'; wrap it with GraphQLScalarMapping.of(type, JavaClass.class).
+        e.cause.message == """[scalar-mapping-not-provided] The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes. Found a GraphQLScalarType bean 'LocalDate'; wrap it with GraphQLScalarMapping.of(type, JavaClass.class).
   GraphQL coordinate: Query.today (line 9, column 3)
   GraphQL object type: Query
   GraphQL field: today
@@ -142,7 +142,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ScalarMappingNotProvidedException
-        e.cause.message == """The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
+        e.cause.message == """[scalar-mapping-not-provided] The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
   GraphQL coordinate: Query.daysUntil(date:) (line 9, column 13)
   GraphQL object type: Query
   GraphQL field: daysUntil
@@ -177,7 +177,7 @@ input BookingInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ScalarMappingNotProvidedException
-        e.cause.message == """The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
+        e.cause.message == """[scalar-mapping-not-provided] The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
   GraphQL coordinate: BookingInput.day (line 13, column 3)
   GraphQL input object type: BookingInput
   GraphQL input value: day
@@ -207,7 +207,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The field is mapped to the incorrect class.
+        e.cause.message == """[incorrect-class-mapping] The field is mapped to the incorrect class.
   GraphQL coordinate: Query.todayAsString (line 9, column 3)
   GraphQL object type: Query
   GraphQL field: todayAsString
@@ -239,7 +239,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The argument is mapped to the incorrect class.
+        e.cause.message == """[incorrect-class-mapping] The argument is mapped to the incorrect class.
   GraphQL coordinate: Query.anything(date:) (line 9, column 12)
   GraphQL object type: Query
   GraphQL field: anything
@@ -294,7 +294,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidScalarMappingException
-        e.cause.message == "Invalid ${GraphQLScalarMapping.name} beans: the scalar LocalDate is mapped 2 times."
+        e.cause.message == "[invalid-scalar-mapping] Invalid ${GraphQLScalarMapping.name} beans: the scalar LocalDate is mapped 2 times."
     }
 
     void "a mapping of a scalar the library provides fails the startup"() {
@@ -317,7 +317,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidScalarMappingException
-        e.cause.message == "Invalid ${GraphQLScalarMapping.name} beans: the scalars Long, String are built in."
+        e.cause.message == "[invalid-scalar-mapping] Invalid ${GraphQLScalarMapping.name} beans: the scalars Long, String are built in."
     }
 
     void "a scalar without input classes cannot be used for an argument"() {
@@ -342,7 +342,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The mapping of the GraphQL scalar LocalDate declares no input classes, so the scalar cannot be used for an argument or an input field.
+        e.cause.message == """[incorrect-class-mapping] The mapping of the GraphQL scalar LocalDate declares no input classes, so the scalar cannot be used for an argument or an input field.
   GraphQL coordinate: Query.echo(date:) (line 9, column 8)
   GraphQL object type: Query
   GraphQL field: echo
@@ -376,7 +376,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The argument is mapped to the primitive long, but the GraphQL type Count is nullable, so null cannot be passed. Use ${Long.name} or make the GraphQL type non-null.
+        e.cause.message == """[incorrect-class-mapping] The argument is mapped to the primitive long, but the GraphQL type Count is nullable, so null cannot be passed. Use ${Long.name} or make the GraphQL type non-null.
   GraphQL coordinate: Query.repeat(times:) (line 9, column 10)
   GraphQL object type: Query
   GraphQL field: repeat
@@ -413,7 +413,7 @@ input RepeatInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message.startsWith("The argument is mapped to the primitive long, but the GraphQL type Count is nullable")
+        e.cause.message.startsWith("[incorrect-class-mapping] The argument is mapped to the primitive long, but the GraphQL type Count is nullable")
         e.cause.message.contains("GraphQL input object type: RepeatInput\n  GraphQL input value: times")
     }
 

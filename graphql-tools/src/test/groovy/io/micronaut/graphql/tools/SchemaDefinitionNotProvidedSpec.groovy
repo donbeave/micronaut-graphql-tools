@@ -23,7 +23,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaDefinitionNotProvidedException
-        e.cause.message == """Schema definition is not set. Make sure your GraphQL schema contains such definition:
+        e.cause.message == """[schema-definition-not-provided] Schema definition is not set. Make sure your GraphQL schema contains such definition:
   schema {
     query: Query
     mutation: Mutation

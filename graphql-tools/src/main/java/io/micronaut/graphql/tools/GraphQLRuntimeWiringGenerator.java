@@ -354,7 +354,7 @@ final class GraphQLRuntimeWiringGenerator {
         checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
 
         return configuration.isStrict() && !checks.getProblems().isEmpty()
-                ? Optional.of(new StrictModeException(checks.getProblems()))
+                ? Optional.of(new StrictModeException(checks.getCodes(), checks.getProblems()))
                 : Optional.empty();
     }
 

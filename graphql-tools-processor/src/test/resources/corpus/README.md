@@ -21,11 +21,11 @@ Issue #142 (the design is D-39, DD-4 and DD-13).
     <lang>/<file>            overrides one of the three files for one language
 ```
 
-A finding line is `<code> <coordinate> <schema-file>:<line>:<col>` (`-` where there is no location). Until the stable
-codes of #237 land the code is a check name of D-30 for the strict-mode checks (`unbound-resolver-method`,
+A finding line is `<code> <coordinate> <schema-file>:<line>:<col>` (`-` where there is no location). The code is a code of the
+registry in `graphql-tools-binding` (`BindingCode`, #237): the check name of D-30 for a strict-mode check (`unbound-resolver-method`,
 `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `unused-dictionary-entry`,
-`interface-read-through-implementation`, `unreachable-type`, `unreachable-value-type`) and the simple name of the startup
-exception for the other failures. The coordinate is the schema coordinate (`Query.book`, `Book.isbn`) where the finding has
+`interface-read-through-implementation`, `unreachable-type`, `unreachable-value-type`, `unwired-directive`) and the code of the
+exception for the other failures (`field-not-bound`, `argument-mismatch`, ...). The coordinate is the schema coordinate (`Query.book`, `Book.isbn`) where the finding has
 one, and the Java member (`example.Query#stray(java.lang.String)`) or the schema type name where it has not. Parity is
 defined at the default severities (D-30).
 

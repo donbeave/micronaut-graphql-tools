@@ -10,6 +10,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.StrictModeException
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
 import jakarta.inject.Singleton
@@ -52,13 +53,16 @@ enum Color {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof StrictModeException
-        e.cause.message == """Strict mode found problems in the binding of the schema:
-  1) The resolver method ${ItemResolver.name}#legacyName(${Item.name}) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
-  2) The resolver method ${Query.name}#helper(java.lang.String) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
-  3) The enum constant ${Color.name}#BLUE has no value in the schema enum Color. Add the value to the schema or remove the constant.
-  4) The SchemaMappingDictionary maps Ghost to ${Item.name}, but the schema binds no type Ghost. Remove the entry or correct its name.
+        e.cause.message == """[strict-findings] Strict mode found problems in the binding of the schema:
+  1) [unbound-resolver-method] The resolver method ${ItemResolver.name}#legacyName(${Item.name}) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
+  2) [unbound-resolver-method] The resolver method ${Query.name}#helper(java.lang.String) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
+  3) [unbound-enum-constant] The enum constant ${Color.name}#BLUE has no value in the schema enum Color. Add the value to the schema or remove the constant.
+  4) [unused-dictionary-entry] The SchemaMappingDictionary maps Ghost to ${Item.name}, but the schema binds no type Ghost. Remove the entry or correct its name.
   Fix them, or set micronaut.graphql.tools.strict to false."""
         e.cause.problems.size() == 4
+        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.codes == [BindingCode.UNBOUND_RESOLVER_METHOD, BindingCode.UNBOUND_RESOLVER_METHOD,
+                          BindingCode.UNBOUND_ENUM_CONSTANT, BindingCode.UNUSED_DICTIONARY_ENTRY]
     }
 
     void "strict mode can be set explicitly"() {
@@ -84,10 +88,10 @@ enum Color {
         result.errors.isEmpty()
         result.data == [item: [name: 'pen', color: 'GREEN']]
         applicationContext.getBean(BindingManifest).diagnostics == [
-                "!unbound ${Color.name}#BLUE".toString(),
-                "!unbound ${ItemResolver.name}#legacyName(${Item.name})".toString(),
-                "!unbound ${Query.name}#helper(java.lang.String)".toString(),
-                "!unusedDictionary Ghost = ${Item.name}".toString()
+                "!unbound-enum-constant ${Color.name}#BLUE".toString(),
+                "!unbound-resolver-method ${ItemResolver.name}#legacyName(${Item.name})".toString(),
+                "!unbound-resolver-method ${Query.name}#helper(java.lang.String)".toString(),
+                "!unused-dictionary-entry Ghost = ${Item.name}".toString()
         ]
     }
 
@@ -280,7 +284,7 @@ type Item {
         then:
         result.data == [item: [name: 'pen']]
         applicationContext.getBean(BindingManifest).diagnostics == [
-                "!ambiguous Item.name · ${Item.name}#name | ${ShadowingResolver.name}#name(${Item.name})".toString()
+                "!precedence-ambiguity Item.name · ${Item.name}#name | ${ShadowingResolver.name}#name(${Item.name})".toString()
         ]
     }
 
@@ -336,7 +340,7 @@ input Filter {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnreachableTypesException
         e.cause.typeNames == ['Filter', 'Long', 'Orphan', 'Size']
-        e.cause.message.startsWith('The schema defines types that no field reachable from a root operation type ' +
+        e.cause.message.startsWith('[unreachable-type] The schema defines types that no field reachable from a root operation type ' +
                 'returns, so nothing binds them: Filter (input), Long (scalar), Orphan (type), Size (enum).')
     }
 
@@ -351,7 +355,7 @@ input Filter {
         then:
         result.data == [label: 'label']
         applicationContext.getBean(BindingManifest).diagnostics ==
-                ['!unreachable Filter', '!unreachable Long', '!unreachable Orphan', '!unreachable Size']
+                ['!unreachable-type Orphan', '!unreachable-value-type Filter', '!unreachable-value-type Long', '!unreachable-value-type Size']
     }
 
     void "in strict mode an allow-unreachable entry naming a reached enum fails the startup"() {
@@ -364,7 +368,7 @@ input Filter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidAllowUnreachableException
-        e.cause.message == """micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Color (not an unreachable object, interface, union, enum, input or scalar type).
+        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Color (not an unreachable object, interface, union, enum, input or scalar type).
   Remove them from the list."""
     }
 
@@ -390,7 +394,7 @@ input Filter {
         then:
         result.data == [label: 'label']
         applicationContext.getBean(BindingManifest).diagnostics ==
-                ['!unreachable Filter', '!unreachable Long', '!unreachable Orphan', '!unreachable Size']
+                ['!unreachable-type Orphan', '!unreachable-value-type Filter', '!unreachable-value-type Long', '!unreachable-value-type Size']
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".valueTypes")
@@ -729,7 +733,7 @@ input Nested {
 
         then:
         result.data == [label: 'label']
-        applicationContext.getBean(BindingManifest).diagnostics.contains('!unreachable Era')
+        applicationContext.getBean(BindingManifest).diagnostics.contains('!unreachable-value-type Era')
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".transitive")
@@ -751,7 +755,7 @@ input Nested {
         then:
         result.data == [label: 'label']
         applicationContext.getBean(BindingManifest).diagnostics ==
-                ['!unreachable Filter', '!unreachable Long', '!unreachable Orphan', '!unreachable Size']
+                ['!unreachable-type Orphan', '!unreachable-value-type Filter', '!unreachable-value-type Long', '!unreachable-value-type Size']
     }
 
 }

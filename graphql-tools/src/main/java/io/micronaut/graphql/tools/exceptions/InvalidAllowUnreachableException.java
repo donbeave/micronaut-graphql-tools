@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,7 +25,7 @@ import java.util.stream.Stream;
  * schema (object, interface or union type; in strict mode also enum, input or scalar type): the entry is stale or
  * misspelled.
  */
-public final class InvalidAllowUnreachableException extends RuntimeException {
+public final class InvalidAllowUnreachableException extends SchemaBindingException {
 
     private final List<String> undefinedTypeNames;
     private final List<String> notUnreachableTypeNames;
@@ -46,7 +47,7 @@ public final class InvalidAllowUnreachableException extends RuntimeException {
      */
     public InvalidAllowUnreachableException(List<String> undefinedTypeNames, List<String> notUnreachableTypeNames,
                                             String kinds) {
-        super("micronaut.graphql.tools.allow-unreachable lists types that are not unreachable " + kinds
+        super(BindingCode.INVALID_ALLOW_UNREACHABLE, "micronaut.graphql.tools.allow-unreachable lists types that are not unreachable " + kinds
                 + " types of the schema: "
                 + Stream.concat(
                         undefinedTypeNames.stream().map(it -> it + " (not defined in the schema)"),

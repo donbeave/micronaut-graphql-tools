@@ -1,6 +1,7 @@
 package io.micronaut.graphql.tools.corpus
 
 import groovy.transform.CompileStatic
+import io.micronaut.graphql.tools.binding.BindingCode
 
 /**
  * The parity rules between the compile-time and the startup verdict of one case (DD-4), at the default severities (D-30).
@@ -15,26 +16,15 @@ import groovy.transform.CompileStatic
  * </ul>
  *
  * <p>The set of per-class codes is the design of the compile-time checks: the five check codes of the parity set (DD-3) and the
- * per-class failures, by the exception name that stands for the stable code until #237 lands.</p>
+ * per-class failures. It is read from the code registry (#237): the codes that run at compile time, without the codes that exist
+ * only there.</p>
  */
 @CompileStatic
 final class Parity {
 
-    static final Set<String> PER_CLASS_CODES = [
-            'unbound-resolver-method',
-            'root-method-several-operations',
-            'unbound-enum-constant',
-            'unmapped-input-property',
-            'nullable-primitive',
-            'InvalidSchemaCoordinateException',
-            'IncorrectArgumentCountException',
-            'IncorrectArgumentNameException',
-            'InvalidSourceArgumentException',
-            'UnsupportedReturnTypeException',
-            'UnsupportedInputTypeException',
-            'InputFieldNotSettableException',
-            'ClassNotIntrospectedException',
-    ] as Set<String>
+    static final Set<String> PER_CLASS_CODES = BindingCode.values()
+            .findAll { it.compileTime() && !it.code().startsWith('processor-') && it != BindingCode.SCHEMA_INVALID }
+            *.code() as Set<String>
 
     private Parity() {
     }

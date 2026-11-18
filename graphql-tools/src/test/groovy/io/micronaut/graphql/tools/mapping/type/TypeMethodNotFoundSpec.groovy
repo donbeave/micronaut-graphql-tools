@@ -37,7 +37,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `username` not found in ${User.name}'s type.
+        e.cause.message == """[field-not-bound] The property or method `username` not found in ${User.name}'s type.
   GraphQL coordinate: User.username (line 11, column 3)
   GraphQL object type: User
   GraphQL field: username"""

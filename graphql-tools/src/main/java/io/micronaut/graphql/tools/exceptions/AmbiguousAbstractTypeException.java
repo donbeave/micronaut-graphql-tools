@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 
 /**
@@ -24,12 +25,12 @@ import java.util.List;
  *
  * @since 1.0.0
  */
-public final class AmbiguousAbstractTypeException extends RuntimeException {
+public final class AmbiguousAbstractTypeException extends SchemaBindingException {
 
     private final transient List<String> ambiguities;
 
     public AmbiguousAbstractTypeException(List<String> ambiguities) {
-        super("Objects of these classes cannot be resolved to one object type of a union or interface, because no "
+        super(BindingCode.AMBIGUOUS_ABSTRACT_TYPE, "Objects of these classes cannot be resolved to one object type of a union or interface, because no "
                 + "single object type is the most specific one:\n  "
                 + String.join("\n  ", ambiguities)
                 + "\nMap each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement "

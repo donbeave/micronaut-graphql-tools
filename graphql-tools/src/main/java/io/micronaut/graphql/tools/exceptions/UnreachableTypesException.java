@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -23,12 +24,12 @@ import java.util.stream.Collectors;
  * Thrown when the schema defines object, interface or union types that no field reachable from a root operation
  * type returns, so that no Java class is bound to them.
  */
-public final class UnreachableTypesException extends RuntimeException {
+public final class UnreachableTypesException extends SchemaBindingException {
 
     private final List<String> typeNames;
 
     public UnreachableTypesException(Map<String, String> types) {
-        super("The schema defines types that no field reachable from a root operation type returns, so nothing "
+        super(codeOf(types), "The schema defines types that no field reachable from a root operation type returns, so nothing "
                 + "binds them: "
                 + types.entrySet().stream()
                 .map(it -> it.getKey() + " (" + it.getValue() + ")")
@@ -37,6 +38,11 @@ public final class UnreachableTypesException extends RuntimeException {
                 + "micronaut.graphql.tools.allow-unreachable, or set micronaut.graphql.tools.unreachable-types to ignore.");
 
         this.typeNames = List.copyOf(types.keySet());
+    }
+
+    private static BindingCode codeOf(Map<String, String> types) {
+        return types.values().stream().allMatch(it -> it.equals("enum") || it.equals("input") || it.equals("scalar"))
+                ? BindingCode.UNREACHABLE_VALUE_TYPE : BindingCode.UNREACHABLE_TYPE;
     }
 
     public List<String> getTypeNames() {

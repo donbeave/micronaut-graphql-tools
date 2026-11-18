@@ -126,7 +126,7 @@ ${scalar ? '''
 
         then:
         result.success
-        startupFails(result, 'Can not detect representation class for type Magazine, member of SearchResult union. '
+        startupFails(result, 'union-type-mapping-not-provided', 'Can not detect representation class for type Magazine, member of SearchResult union. '
                 + 'Ensure the representation class is registered via '
                 + 'io.micronaut.graphql.tools.SchemaMappingDictionary.', 'Query.search (line 6, column 3)')
     }
@@ -139,7 +139,7 @@ ${scalar ? '''
 
         then:
         result.success
-        startupFails(result, 'The union SearchResult is returned as example.SearchResult, but its object type Magazine '
+        startupFails(result, 'incorrect-member-mapping', 'The union SearchResult is returned as example.SearchResult, but its object type Magazine '
                 + 'is mapped to example.Magazine, and no object can be an instance of both example.SearchResult and '
                 + 'example.Magazine, so no object the field returns can resolve to Magazine. Map Magazine to a Java '
                 + 'type that example.SearchResult can implement or extend.', 'Query.search (line 6, column 3)')
@@ -153,13 +153,13 @@ ${scalar ? '''
 
         then:
         result.success
-        startupFails(result, 'The GraphQL scalar Date has no mapping. Register a io.micronaut.graphql.tools.GraphQLScalarMapping '
+        startupFails(result, 'scalar-mapping-not-provided', 'The GraphQL scalar Date has no mapping. Register a io.micronaut.graphql.tools.GraphQLScalarMapping '
                 + 'bean with its graphql.schema.GraphQLScalarType and Java classes.', 'Query.today (line 7, column 3)')
     }
 
-    static boolean startupFails(Compilation.Result result, String message, String coordinate) {
+    static boolean startupFails(Compilation.Result result, String code, String message, String coordinate) {
         String startup = result.startupManifest()
-        assert startup.startsWith('FAILED: ' + message)
+        assert startup.startsWith('FAILED: [' + code + '] ' + message)
         assert startup.contains('GraphQL coordinate: ' + coordinate)
         return true
     }

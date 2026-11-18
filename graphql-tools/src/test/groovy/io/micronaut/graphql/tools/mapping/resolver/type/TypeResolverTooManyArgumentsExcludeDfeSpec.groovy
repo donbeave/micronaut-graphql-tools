@@ -39,7 +39,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectArgumentCountException
-        e.cause.message == """The method has too many arguments, provided: 2, required 1 arg(s): username(${User.name} user)
+        e.cause.message == """[argument-mismatch] The method has too many arguments, provided: 2, required 1 arg(s): username(${User.name} user)
   GraphQL coordinate: User.username (line 11, column 3)
   GraphQL object type: User
   GraphQL field: username

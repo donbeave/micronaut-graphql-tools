@@ -5,3 +5,20 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQL
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$InputConfiguration.adoc[]
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$ManifestConfiguration.adoc[]
+
+== Check codes
+
+Each strict check has a code, from the code registry (`BindingCode` in `graphql-tools-binding`). Today the checks are switched together by `micronaut.graphql.tools.strict`. The per-check severity of issue #86 uses the same codes as the keys `checks.<code>` and in `allow.findings`. The same code starts the startup error (`[unbound-enum-constant] ...`) and follows `!` in a line of the binding manifest. The checks that the compile-time check also reports are marked; relaxing one at startup does not relax the compile error.
+
+* `unbound-resolver-method` (compile time)
+* `root-method-several-operations` (compile time)
+* `unbound-enum-constant` (compile time)
+* `unmapped-input-property` (compile time)
+* `nullable-primitive` (compile time)
+* `unreachable-type`
+* `unreachable-value-type`
+* `unused-dictionary-entry`
+* `interface-read-through-implementation`
+* `unwired-directive`
+
+A precedence ambiguity under `precedence: fail` is a binding failure with the code `precedence-ambiguity`, not a check. The error reference lists every code of the registry.

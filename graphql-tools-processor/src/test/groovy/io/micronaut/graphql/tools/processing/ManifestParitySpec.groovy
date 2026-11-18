@@ -755,7 +755,7 @@ public class GreetingQuery {
         then:
         result.success
         result.omitted.readLines().contains('kind unwiredDirective')
-        result.startupManifest().startsWith('FAILED: The schema applies directives that have no wiring: @audit (Query.greeting).')
+        result.startupManifest().startsWith('FAILED: [unwired-directive] The schema applies directives that have no wiring: @audit (Query.greeting).')
 
         when:
         def options = [strict: 'false']

@@ -38,7 +38,7 @@ input PriceInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The argument is mapped to an interface, when required a custom class.
+        e.cause.message == """[incorrect-class-mapping] The argument is mapped to an interface, when required a custom class.
   GraphQL coordinate: Query.price(input:) (line 7, column 9)
   GraphQL object type: Query
   GraphQL field: price

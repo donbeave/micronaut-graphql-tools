@@ -38,7 +38,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidSourceArgumentException
-        e.cause.message == """The source argument must be instance of ${User.name} class, provided: ${String.name}.
+        e.cause.message == """[invalid-source-parameter] The source argument must be instance of ${User.name} class, provided: ${String.name}.
   GraphQL coordinate: User.username (line 11, column 3)
   GraphQL object type: User
   GraphQL field: username

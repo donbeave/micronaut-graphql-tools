@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
@@ -27,7 +28,7 @@ public final class UnsupportedInputTypeException extends AbstractMappingExceptio
     private final String reason;
 
     public UnsupportedInputTypeException(MappingContext mappingContext, String reason) {
-        super("The Java type is not supported for this argument or input field: " + reason, mappingContext);
+        super(BindingCode.UNSUPPORTED_INPUT_TYPE, "The Java type is not supported for this argument or input field: " + reason, mappingContext);
         this.reason = reason;
     }
 

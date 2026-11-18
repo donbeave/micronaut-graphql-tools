@@ -102,7 +102,7 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnwrappedDirectiveWiringException
         e.cause.beans == ["${UpperWiring.name} (Definition: ${UnwrappedFactory.name})".toString()]
-        e.cause.message == "SchemaDirectiveWiring beans that no SchemaDirective bean wraps: ${e.cause.beans[0]}.\n" +
+        e.cause.message == "[unwrapped-directive-wiring] SchemaDirectiveWiring beans that no SchemaDirective bean wraps: ${e.cause.beans[0]}.\n" +
                 "  The library applies a wiring only through a SchemaDirective: wrap each one in " +
                 "SchemaDirective.named(name, wiring) (called where the directive is applied) or " +
                 "SchemaDirective.everyElement(names, wiring) (called for every schema element), injecting the bean " +
@@ -190,7 +190,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof DuplicateDirectiveWiringException
-        e.cause.message == "More than one SchemaDirective bean wires directive @upper: ${UpperWiring.name}, ${UpperWiring.name}. Keep one.".toString()
+        e.cause.message == "[duplicate-directive-wiring] More than one SchemaDirective bean wires directive @upper: ${UpperWiring.name}, ${UpperWiring.name}. Keep one.".toString()
     }
 
     void "a directive wired by a named and an every-element SchemaDirective fails the startup, naming both"() {
@@ -204,7 +204,7 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof DuplicateDirectiveWiringException
         e.cause.directiveNames == ['upper']
-        e.cause.message == ("Directive @upper is wired by both a named and an every-element SchemaDirective bean, "
+        e.cause.message == ("[duplicate-directive-wiring] Directive @upper is wired by both a named and an every-element SchemaDirective bean, "
                 + "so it would take effect twice: named ${UpperWiring.name}, every element ${BangWiring.name}. "
                 + "Use one of them: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.").toString()
     }

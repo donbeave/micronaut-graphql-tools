@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 
 /**
@@ -22,12 +23,12 @@ import java.util.List;
  * package and names its schema coordinate; all of them are reported at once. The first failure is the cause, the
  * others are suppressed exceptions, and {@link #getFailures()} lists them all. A single failure is thrown as is.
  */
-public final class BindingFailuresException extends RuntimeException {
+public final class BindingFailuresException extends SchemaBindingException {
 
     private final List<RuntimeException> failures;
 
     public BindingFailuresException(List<? extends RuntimeException> failures) {
-        super(buildMessage(failures), failures.get(0));
+        super(BindingCode.BINDING_FAILURES, buildMessage(failures), failures.get(0));
 
         this.failures = List.copyOf(failures);
         failures.stream().skip(1).forEach(this::addSuppressed);
@@ -44,21 +45,9 @@ public final class BindingFailuresException extends RuntimeException {
         int position = 0;
         for (RuntimeException failure : failures) {
             builder.append("\n  ").append(++position).append(") ")
-                    .append(label(failure))
                     .append(failure.getMessage().replace("\n", "\n   "));
         }
         return builder.toString();
-    }
-
-    private static String label(RuntimeException failure) {
-        if (failure instanceof UnreachableTypesException) {
-            return "[unreachable-type] ";
-        } else if (failure instanceof InvalidSchemaCoordinateException) {
-            return "[invalid-schema-coordinate] ";
-        } else if (failure instanceof StrictModeException) {
-            return "[strict] ";
-        }
-        return "";
     }
 
 }
