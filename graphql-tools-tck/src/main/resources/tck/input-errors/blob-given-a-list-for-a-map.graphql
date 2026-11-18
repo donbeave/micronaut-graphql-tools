@@ -1,0 +1,4 @@
+query ($data: Blob!) {
+  fine
+  blob(data: $data)
+}

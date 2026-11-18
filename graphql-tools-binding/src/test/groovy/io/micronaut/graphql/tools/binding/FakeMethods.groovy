@@ -61,7 +61,8 @@ class FakeMethods {
 
     static JMethod method(String name, Map<String, Map<String, String>> annotations = [:], List<JParameter> parameters = [],
                           TypeRef returns = ref('java.lang.String'), String signature = null) {
-        [name: { name }, signature: { signature ?: "a.R#${name}()".toString() }, parameters: { parameters },
+        String sig = signature ?: "a.R#${name}()".toString()
+        [name: { name }, signature: { sig }, parameters: { parameters }, declaringType: { [name: { sig.substring(0, sig.indexOf('#')) }] as JClass },
          genericReturnType: { returns }, annotations: { view(annotations) }] as JMethod
     }
 

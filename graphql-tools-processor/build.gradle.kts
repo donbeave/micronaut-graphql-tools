@@ -3,7 +3,11 @@ plugins {
 }
 
 dependencies {
+    // the schema rules shared with the runtime (SchemaSources): the compile-time checks read the same files
+    implementation(projects.micronautGraphqlToolsBinding)
     implementation(mnGraphql.graphql.java)
+    // the visitor API: the processor path of a build brings its own copy
+    compileOnly(mn.micronaut.core.processor)
 
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)
@@ -82,6 +86,26 @@ tasks.named<Test>("test") {
         .withPropertyName("docsOptionsPage")
 }
 
+// VisitorArchitectureSpec reads the sources of the visitor behind Gradle's back.
+tasks.named<Test>("test") {
+    val visitorSources = layout.projectDirectory.dir("src/main/java/io/micronaut/graphql/tools/visitor")
+    systemProperty("visitor.sources", visitorSources.asFile.absolutePath)
+    inputs.files(visitorSources.asFileTree).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("visitorSources")
+}
+
+// The visitor code is written for release 17 although this module compiles at 21 until #144 (the JSR-269 code needs
+// Elements.getFileObjectOf, JDK 18): this task compiles the visitor package alone at release 17, so that a JDK 18+ API in it fails
+// the build.
+val compileVisitorRelease17 by tasks.registering(JavaCompile::class) {
+    description = "Compiles the visitor package at release 17."
+    group = "verification"
+    source(layout.projectDirectory.dir("src/main/java/io/micronaut/graphql/tools/visitor"))
+    classpath = sourceSets["main"].compileClasspath
+    destinationDirectory.set(layout.buildDirectory.dir("classes/visitor-release17"))
+    options.release.set(17)
+    options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror", "-Xlint:-processing"))
+}
+
 // The processor runs inside a compiler and must never put the runtime on its path (D-39): the main classpaths hold no
 // `graphql-tools` project and no `micronaut-graphql-tools` artifact. The test classpath may, for the dual-binder corpus.
 val checkNoRuntimeDependency by tasks.registering {
@@ -101,5 +125,5 @@ val checkNoRuntimeDependency by tasks.registering {
     }
 }
 tasks.named("check") {
-    dependsOn(checkNoRuntimeDependency)
+    dependsOn(checkNoRuntimeDependency, compileVisitorRelease17)
 }

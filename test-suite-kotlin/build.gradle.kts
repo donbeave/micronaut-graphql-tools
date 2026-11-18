@@ -11,6 +11,8 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.
+    runtimeOnly(mn.micronaut.jackson.databind)
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -54,3 +56,19 @@ micronaut {
 tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative") {
     jdkVersion = "25"
 }
+
+// The schema index of the discovery test (SchemaDiscoveryTest): a native image cannot list a classpath directory, so the
+// wildcard location reads this file. The same task is in the Schema page of the guide.
+val graphqlSchemaIndex = tasks.register("graphqlSchemaIndex") {
+    val schemaFiles = fileTree("src/test/resources") { include("discovery/**/*.graphqls") }
+    val output = layout.buildDirectory.dir("generated/graphql-index")
+    inputs.files(schemaFiles).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(output)
+    doLast {
+        val index = output.get().file("META-INF/micronaut-graphql-tools/schema-index.txt").asFile
+        index.parentFile.mkdirs()
+        index.writeText(schemaFiles.files.map { it.relativeTo(file("src/test/resources")).invariantSeparatorsPath }
+            .sorted().joinToString("\n", prefix = "# GraphQL schema files\n", postfix = "\n"))
+    }
+}
+sourceSets.test { resources.srcDir(graphqlSchemaIndex) }

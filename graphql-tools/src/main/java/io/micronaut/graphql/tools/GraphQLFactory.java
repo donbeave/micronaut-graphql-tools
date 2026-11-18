@@ -28,6 +28,7 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import jakarta.inject.Singleton;
 
@@ -70,6 +71,7 @@ public final class GraphQLFactory {
 
         TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(typeDefinitionRegistry);
         typeDefinitionRegistryCustomizers.forEach(customizer -> customizer.customize(registry));
+        SchemaSources.addImplicitRoots(registry);
 
         GraphQLRuntimeWiringGenerator graphQLRuntimeWiringGenerator = new GraphQLRuntimeWiringGenerator(
                 applicationContext,
@@ -105,7 +107,7 @@ public final class GraphQLFactory {
                             + " returned null instead of a schema");
         }
 
-        bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder().build(registry, graphQLSchema));
+        bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder().build(registry));
 
         return graphQLSchema;
     }

@@ -108,9 +108,9 @@ interface Node {
         def lines = applicationContext.getBean(BindingManifest).lines
 
         then:
-        lines.contains("Query.version: String → claimed · ${ClaimingCustomizer.name} · - · -".toString())
-        lines.contains("Book.isbn: String → claimed · ${ClaimingCustomizer.name} · - · -".toString())
-        lines.any { it.startsWith('Query.hello: String → root · ') }
+        lines.contains("Query.version: String -> claimed ; ${ClaimingCustomizer.name} ; - ; -".toString())
+        lines.contains("Book.isbn: String -> claimed ; ${ClaimingCustomizer.name} ; - ; -".toString())
+        lines.any { it.startsWith('Query.hello: String -> root ; ') }
     }
 
     void "an extension field nothing binds names claimedFields() in the failure, and a claim serves it"() {

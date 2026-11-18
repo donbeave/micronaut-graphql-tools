@@ -5,6 +5,10 @@ return-types
 abstract-types
 errors
 data-loader
+<<<<<<< HEAD
 enums
 error-mapping
 bean-scopes
+=======
+input-errors
+>>>>>>> origin/master

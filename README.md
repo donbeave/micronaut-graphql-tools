@@ -10,6 +10,27 @@ This is not an official Micronaut module yet: it is developed here and is intend
 
 The guide sources are in `src/main/docs/guide`; build them with `./gradlew docs` (see [CONTRIBUTING.md](CONTRIBUTING.md)). No documentation site is published yet.
 
+## Modules
+
+The repository is a Gradle build with one project per folder. The table lists each project, its Gradle path and what it is
+for. Every folder has a README with its purpose, its responsibility, what is public and what is internal, and how to build
+and test it.
+
+| Module | Gradle project | Purpose |
+| --- | --- | --- |
+| [`graphql-tools`](graphql-tools/README.md) | `:micronaut-graphql-tools` | The runtime library that applications depend on. |
+| [`graphql-tools-binding`](graphql-tools-binding/README.md) | `:micronaut-graphql-tools-binding` | The binding rules used by the runtime library. |
+| [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
+| [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
+| [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
+| [`benchmarks`](benchmarks/README.md) | `:benchmarks` | JMH benchmarks and the allocation gate. |
+| [`test-suite-java`](test-suite-java/README.md) | `:test-suite-java` | The example application in Java, with its tests. |
+| [`test-suite-kotlin`](test-suite-kotlin/README.md) | `:test-suite-kotlin` | The example application in Kotlin, with its tests. |
+| [`test-suite-groovy`](test-suite-groovy/README.md) | `:test-suite-groovy` | The example application in Groovy, with its tests and a native smoke test. |
+
+The root project (`graphql-tools-parent`, `build.gradle.kts`) aggregates the modules and the shared build settings. The
+guide is in `src/main/docs/guide`, and the build convention plugin is in `buildSrc`.
+
 ## Quick start
 
 1. Add the repository and the dependency in build.gradle or pom.xml. Milestone previews come from the GitHub Packages registry of this repository, which needs a token even for downloads ([Consuming milestone previews](#consuming-milestone-previews) has the full setup; no version is on Maven Central):
@@ -34,6 +55,8 @@ dependencies {
 }
 ```
 
+The library does not bring a JSON codec (BC-26). Add the one your application uses, for example `micronaut-jackson-databind` or `micronaut-serde-jackson`.
+
 Maven (the repository goes in the POM, the credentials in `~/.m2/settings.xml`, see [Consuming milestone previews](#consuming-milestone-previews)):
 
 ```xml
@@ -55,11 +78,11 @@ Maven (the repository goes in the POM, the credentials in `~/.m2/settings.xml`, 
 
 2. Define GraphQL Schema
 
-Create a GraphQL schema file, `schema.graphqls` to define types, queries, and mutations, for example in `src/main/resources` resources folder.
+Create GraphQL schema files, `*.graphqls`, to define types, queries, and mutations, in `src/main/resources/graphql`. The library finds them at startup, see [Schema discovery](#schema-discovery); a `schema { }` block is optional.
 
 3. Configuring GraphQL Tools
 
-Define a `TypeDefinitionRegistry` bean to load the GraphQL schema.
+Nothing to configure for the default location. To load the schema yourself, define a `TypeDefinitionRegistry` bean; it replaces the discovered schema. The example reads `schema.graphqls` from the root of the classpath; a file in the default folder is `classpath:graphql/schema.graphqls`.
 
 ```java
 @Bean
@@ -82,6 +105,63 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
 These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums (with `@Introspected`, see [Enums](#enums)), and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
+
+## Schema discovery
+
+Without a `TypeDefinitionRegistry` bean the library reads the schema files of `micronaut.graphql.tools.schema.locations` at
+startup, merges them, and binds the result. The default is `classpath:graphql/**/*.graphqls`: every `.graphqls` file under
+`graphql/` of the classpath, in sorted order, each parsed with its own name, so that errors and the
+[binding manifest](#binding-manifest) name the file. No factory is needed.
+
+| Location | Reads |
+|---|---|
+| `classpath:graphql/**/*.graphqls` | the first classpath entry that has a `graphql/` directory (your application) |
+| `classpath*:graphql/**/*.graphqls` | every classpath entry that has one, dependency jars included |
+| `file:/etc/app/schema/*.graphqls` | the file system |
+
+A location is a scheme and an Ant-style path (`*`, `**`, `?`). A path without wildcards names one file and fails when it is
+missing. A wildcard needs a directory before it. Several locations are read in order and merged.
+
+- **Implicit roots.** A schema without a `schema { }` block, and with a `Query` type, uses the object types `Query`, `Mutation` and `Subscription`
+  that it defines as the root operation types.
+- **Operation files.** The default reads `*.graphqls` only. A file that holds only executable definitions (queries,
+  mutations, fragments) or nothing is skipped and logged at INFO, so client operation files in the same directory do not
+  break the startup. A file that mixes operations and type definitions fails.
+- **Override.** Any `TypeDefinitionRegistry` bean of the application is used instead and nothing is read. A
+  `TypeDefinitionRegistryCustomizer` still runs on top of the schema, with either source.
+- **Failures.** A file that does not parse or conflicts with another, a location that names a missing file, and locations
+  that match no file at all fail the startup with `SchemaDiscoveryException`: code `schema-invalid` for a file that does not parse or conflicts, `schema-not-found` for the rest. The message names the file or the locations.
+- **Compile time.** The processor reads the same `*.graphqls` files with the same code from its schema directory
+  (`micronaut.graphql.tools.sdlDir`, see [Compile-time checks](#compile-time-checks)): several directories may be listed
+  with the platform path separator. It cannot read classpath locations, so schema that comes from a dependency jar is
+  not checked at compile time; point the directory option at a copy of it, or accept that the startup checks it.
+
+### Native image
+
+A native image cannot list a classpath directory, so a wildcard `classpath:` or `classpath*:` location reads the schema
+index of the module instead: the resource `META-INF/micronaut-graphql-tools/schema-index.txt`, one classpath path per line
+(a jar that provides schema files ships its own, and the native image resource metadata of those files: the index only lists them). The index is read in a native image only; the JVM lists the directories. A `classpath:` location reads the first index that has a matching file, because the index does not record which classpath entries have the directory: an application whose `graphql/` directory holds only operation files does not shadow the schema of a dependency in a native image, as it does on the JVM.
+The index is not written by the processor. Generate it in the build, from the files that are packaged, and keep the schema
+files themselves in the native image resources (the Micronaut Gradle plugin includes `src/main/resources`):
+
+```kotlin
+val schemaIndex = tasks.register("graphqlSchemaIndex") {
+    val schemaFiles = fileTree("src/main/resources") { include("graphql/**/*.graphqls") }
+    val output = layout.buildDirectory.dir("generated/graphql-index")
+    inputs.files(schemaFiles).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(output)
+    doLast {
+        val index = output.get().file("META-INF/micronaut-graphql-tools/schema-index.txt").asFile
+        index.parentFile.mkdirs()
+        index.writeText(schemaFiles.files.map { "graphql/" + it.relativeTo(file("src/main/resources/graphql")).invariantSeparatorsPath }
+            .sorted().joinToString("\n", prefix = "# GraphQL schema files\n", postfix = "\n"))
+    }
+}
+sourceSets.main { resources.srcDir(schemaIndex) }
+```
+
+Without the index a wildcard location fails the startup of the native image, naming the resource. On the JVM, a jar that
+has no directory entries cannot be listed. For `classpath*:` the index of such a jar is read next to the roots that were listed, and the files of both are merged; for `classpath:` the index is used only when no classpath entry has the directory.
 
 ## Return types
 
@@ -314,62 +394,26 @@ kind (`argument-mismatch`, `unsupported-return-type`, `scalar-mapping-not-provid
 ## Binding manifest
 
 The `BindingManifest` bean says what the schema is bound to: one line per schema coordinate, naming the Java member
-that serves it, in a stable text format (`graphql-binding-manifest 1`) that can be checked into a repository and
-diffed. Recording is opt-in: set `micronaut.graphql.tools.manifest.record: true` to record it while the schema is
+that serves it, in a stable, versioned text format (`graphql-binding-manifest 2`) that can be checked into a repository
+and diffed. Recording is opt-in: set `micronaut.graphql.tools.manifest.record: true` to record it while the schema is
 bound (without it nothing is recorded and getting the bean fails with a message saying so). Getting the bean binds the
 schema first. With `micronaut.graphql.tools.manifest.enabled: true` it is written
 at startup to `micronaut.graphql.tools.manifest.path` (directories are created), or logged at INFO when no path is
-set.
+set. The format is specified in the guide page "Binding Manifest" (`src/main/docs/guide/manifest.adoc`): the grammar,
+the line kinds, the sorting, the escape of non-ASCII characters and the schema hash, which does not depend on the order
+of the schema files or of the extensions.
 
 ```
-# graphql-binding-manifest 1
+# graphql-binding-manifest 2
 # binder: micronaut-graphql-tools 1.0.0
 # graphql-java: 21.3
 # schema-sha256: 207c5aaec4894a775f03ae20eaa6b97ba4293ed6608936aa65c812af3a469469
 !unreachable-type Legacy
-Book → object · example.data.Book · - · -
-Book.sellers: [BookSeller!]! → resolver · example.graphql.type.resolver.BookResolver#sellers(example.data.Book, graphql.schema.DataFetchingEnvironment) · java.util.concurrent.CompletionStage<java.util.List<example.data.BookSeller>> · java.util.List<example.data.BookSeller>
-Book.title: String! → property · example.data.Book#getTitle() · java.lang.String · java.lang.String
-Error → union · example.graphql.type.Error · - · -
-Error/SecurityError → resolves · example.graphql.type.SecurityError · - · -
-Query.allBooks: [Book!]! → root · example.graphql.query.AllBooksQuery#allBooks() · java.util.List<example.data.Book> · java.util.List<example.data.Book>
-SecurityErrorCode.NOT_AUTHENTICATED → enumValue · example.graphql.type.SecurityErrorCode#NOT_AUTHENTICATED · - · -
-SignUpInput.username: String! → inputField · example.graphql.input.SignUpInput#username · java.lang.String · java.lang.String
-String → scalar · graphql.scalar.GraphqlStringCoercing · - · -
+Book -> object ; example.data.Book ; - ; -
+Book.title: String! -> property ; example.data.Book#getTitle() ; java.lang.String ; java.lang.String
+Query.allBooks: [Book!]! -> root ; example.graphql.query.AllBooksQuery#allBooks() ; java.util.List<example.data.Book> ; java.util.List<example.data.Book>
+String -> scalar ; String ; - ; -
 ```
-
-- The header names the format, the library version (`unknown` outside a jar), the graphql-java version and the SHA-256
-  of the schema definitions (sorted by name, printed by graphql-java's `AstPrinter`).
-- Type lines: `object`, `interface`, `union`, `enum`, `input` with their Java type, `scalar` with its `Coercing` class
-  (only scalars that a bound field, argument or input field uses). Root operation types have no Java type (`-`).
-- Field lines: `Type.field(argument: Type): Type → kind · member · declared type · converted type`. The kind is `root`,
-  `resolver` (a type resolver method, also of an interface), `property` (a getter or a `@GraphQLField` method of the
-  Java type) or `claimed` (a field a [`RuntimeWiringCustomizer` claims](#fields-a-customizer-serves); the member is the
-  class name of the customizer, the declared and converted types are `-`). Methods are written `Class#method(parameter types)` with every Java parameter: a root or type resolver
-  method on its bean class, also when the bean inherits it (AOP proxies are unwrapped), a `@GraphQLField` method on the
-  class it is written in; getters on the class that declares them. Parameter and declared types are those of the
-  declaration, so a type variable of a generic superclass stays a type variable (`T`). The converted type is the
-  declared type without `CompletionStage`, `Publisher` (subscription fields only), `DataFetcherResult` (also per list
-  element) and `Optional`, unwrapped once in that order. Interface fields have no lines of their own: each object type
-  that implements them has its line.
-- `resolves` lines map each member of a union and each implementation of an interface to its Java type;
-  `enumValue` and `inputField` lines list enum values and input fields.
-- Lines starting with `!` are findings. The word after `!` is the code of the finding, the same code that starts the
-  startup error as `[code]` and that names the check (see [Codes](#error-codes)): `!unreachable-type Type` (or
-  `!unreachable-value-type Type` for an enum, input or scalar type) for a declared type nothing binds (allowed or ignored, see
-  [Configuration](#configuration); an enum, input or scalar type that an argument of a directive definition uses,
-  directly or through input fields, is reached), `!precedence-ambiguity Type.field · member | member` for a field decided by a lenient
-  `precedence`, and the findings of [strict mode](#strict-mode) (`!unbound-resolver-method`, `!unbound-enum-constant`,
-  `!unmapped-input-property`, `!unused-dictionary-entry`, `!unwired-directive`).
-- `~ignored Class#member` lines list the members marked `@GraphQLIgnore` that the binding met (see
-  [Escape hatches](#escape-hatches)): they bind no field and are not findings.
-- Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from the reflected method or getter.
-  Where reflection cannot find it (for example a native image without reflection configuration), they are written from
-  Micronaut's compile-time metadata, which keeps no wildcards (`List<? extends Book>` is written
-  `java.util.List<Book>`), no raw types (`List` is written `java.util.List<java.lang.Object>`) and no type arguments of
-  array components (`List<String>[]` is written `java.util.List[]`); the first such member is logged at INFO. The body is
-  sorted by `String#compareTo`, UTF-8, `LF`; nothing is escaped, and a part that would contain ` → ` or ` · ` fails
-  instead.
 
 ## Strict mode
 
@@ -401,7 +445,7 @@ mistakes. Each finding is also a `!` line of the [binding manifest](#binding-man
   introspection of its own is read through the introspection of its one `@GraphQLType(TheInterface.class)` class, so
   a getter only the implementation declares binds silently (see [Java interfaces as object types](#java-interfaces-as-object-types)).
   Annotate the interface with `@GraphQLType` or `@Introspected`. This finding has no `!` line of its own in the
-  manifest (format version 1 has no kind for it).
+  manifest (the format has no kind for it).
 - **Input class properties that the input type does not define** (`!unmapped-input-property InputClass#property`): a property the
   class can set (through a setter or the constructor) that no request can ever set. They are reported in one
   `UnmappedInputPropertiesException`. `input.unmapped-properties` decides on its own when it is set: `fail` fails
@@ -543,8 +587,8 @@ names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<a
 graphql-java hands a data fetcher the coerced argument values: scalar values, enum constants, a `Map` per input object
 and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
 including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`). Every converter is built
-once at startup, from the declared type and the GraphQL type, and a request only runs it. There is no reflection and no
-Jackson on the request path:
+once at startup, from the declared type and the GraphQL type, and a request only runs it. There is no reflection on the
+request path:
 
 - a `String`, `Boolean`, `Integer` (also for an `int` parameter), `Long`, `Short`, `BigDecimal`, `BigInteger` or `Double`
   value is the declared type already and is passed on as it is; a `Float` argument for a `float` parameter or property
@@ -568,12 +612,14 @@ introspection, because the startup checks below read it, and the bean owns the w
 `ArgumentValue` properties: the library does not touch the result); a `TypeConverter` for another pair converts the values of a
 custom scalar that its scalar parsed to another class.
 
-**Migration (breaking, BC-23):** Jackson no longer shapes the input. `@JsonIgnore`, `@JsonProperty`, `@JsonCreator`,
-`@JsonDeserialize`, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean of any name have no effect
-on an input class. Name the input class's properties and constructor parameters like the input fields, and use a
-`TypeConverter` bean where an input class needs a conversion of its own.
-
 An input field that the input class cannot take fails the startup (see [Input classes and input types](#input-classes-and-input-types)).
+
+A value that cannot be converted at request time (a custom scalar value that no class of the mapping or the
+`ConversionService` accepts, such as a list where the parameter is a `Map`, or an input class whose constructor or setter
+throws) is a GraphQL error of the field: `extensions.code` is `INPUT_CONVERSION_FAILED`, `extensions.coordinate` names the
+argument as `Type.field(argument)`, and `extensions.inputPath` the input fields and list indexes down to the value. The
+message is worded in GraphQL terms, with no Java class name and no stack detail; the cause is logged at debug level. The
+field is `null` and the other fields still run.
 
 ### Input classes and input types
 
@@ -631,6 +677,10 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
   type needs a setter or a constructor parameter (the library sets it to `ArgumentValue.omitted()` when the client
   leaves it out, and also when the input type does not define it, for example when another input type backed by the
   same class does). Otherwise, and without the option, the startup fails with `UnsupportedInputTypeException`.
+- A record component, a Kotlin data class `val` (a default argument is not used for it) or a constructor parameter of
+  the type is filled at construction: `ArgumentValue.omitted()` when the client leaves the field out and the schema
+  declares no default, otherwise `ArgumentValue.ofNullable(value)` (the schema default counts as the value). It works the same in nested input classes and in lists of them. A Groovy class
+  declares its constructor itself: `@TupleConstructor` and `@Immutable` add theirs after the introspection is built.
 - The conversion decides what is omitted from the keys of the `Map` that graphql-java coerced, while it builds the
   instance. It calls no getter and never walks the converted object again: a write-only property is enough.
 
@@ -638,6 +688,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 
 | Property | Values (default first) | Meaning |
 |---|---|---|
+| `micronaut.graphql.tools.schema.locations` | list of locations (`classpath:graphql/**/*.graphqls`) | Where the schema files are read from when the application has no `TypeDefinitionRegistry` bean: `classpath:`, `classpath*:` (dependency jars too) or `file:`, then an Ant-style path. See [Schema discovery](#schema-discovery). |
 | `micronaut.graphql.tools.unreachable-types` | `fail` \| `ignore` | Object, interface and union types of the schema that no field reachable from a root operation type returns have no binding; in [strict mode](#strict-mode) (the default) the same holds for enum, input and scalar types that nothing uses. `fail` stops the startup with one error that lists all of them; `ignore` keeps them in the schema with graphql-java's default data fetchers and logs them as a warning. |
 | `micronaut.graphql.tools.allow-unreachable` | list of type names (empty) | Unreachable types that are allowed even with `fail`; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar; enum, input and scalar entries take effect in [strict mode](#strict-mode) only), otherwise the startup fails, so the list cannot go stale. An allowed type also allows the enum, input and scalar types that its fields and arguments use, and that those input types use in turn (transitive); list only the type itself. A type that only a type that is not allowed uses stays unreachable. |
 | `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
@@ -703,7 +754,7 @@ changes with them.
 Errors about an unchanged class that javac did not recompile (it is read from the class output) have no Java file and
 line, but name the coordinate and the class. With Micronaut's processor, set
 `micronaut.processing.incremental=true` (the Micronaut Gradle plugin does), or every compilation is a full one.
-It reads every `*.graphqls` and `*.graphql` file under the directory.
+It reads every `*.graphqls` file under the directory (`*.graphql` files are client operation files, not schema).
 
 A processor that is not applied does not fail anything, it just does not run: under kapt, `compileJava` runs with
 `-proc:none` and a processor on `annotationProcessor` is ignored, so register it with `kapt` too (and declare the schema
@@ -735,7 +786,7 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 
 | Option | Runtime option |
 |---|---|
-| `micronaut.graphql.tools.sdlDir` | none: the schema directory, required when the compilation has GraphQL resolvers or types |
+| `micronaut.graphql.tools.sdlDir` | none: the schema directories (`*.graphqls` files, read recursively, joined with the platform path separator), required when the compilation has GraphQL resolvers or types. Read with the same rules as [Schema discovery](#schema-discovery): `*.graphql` files are not schema files |
 | `micronaut.graphql.tools.strict` | `strict` |
 | `micronaut.graphql.tools.precedence` | `precedence` |
 | `micronaut.graphql.tools.resolverDirectives` | `resolver-directives` (comma-separated) |
@@ -747,7 +798,7 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 
 Checked from the schema files and the options alone:
 
-- the schema has a schema definition (`schema { query: ... }`);
+- the schema has a schema definition (`schema { query: ... }`) or defines the implicit root type `Query`;
 - every applied directive is declared (graphql-java would fail to build the schema);
 - every `resolverDirectives` entry is declared;
 - unreachable types, with `allowUnreachable` and `unreachableTypes` as at startup (in strict mode also enum, input

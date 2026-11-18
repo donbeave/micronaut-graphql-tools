@@ -4,7 +4,6 @@ plugins {
 
 dependencies {
     api(projects.micronautGraphqlToolsBinding)
-    api(mn.micronaut.jackson.databind)
     api(mnGraphql.micronaut.graphql)
     api(mnGraphql.graphql.java.extended.scalars)
 
@@ -13,9 +12,19 @@ dependencies {
     testAnnotationProcessor(mn.micronaut.inject.java)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(libs.jetbrains.annotations)
+    // InputPropertiesSpec: a Jackson annotation on an input class has no effect (BC-23). Annotations only, no databind.
+    testImplementation("com.fasterxml.jackson.core:jackson-annotations")
+    // DocsCoverageSpec reads spring-configuration-metadata.json with groovy.json.JsonSlurper
+    testImplementation("org.apache.groovy:groovy-json")
     testImplementation("ch.qos.logback:logback-classic")
     testImplementation(libs.graphql.java.datetime)
     testImplementation(libs.graphql.java.extended.validation)
+    // SerdeInputMutationSpec: an input class with Micronaut Serialization, and no Jackson databind on the test classpath (#36).
+    // The Serde version comes from the Micronaut platform BOM, as in graphql-tools-tck.
+    testImplementation(platform(libs.micronaut.platform))
+    testAnnotationProcessor(platform(libs.micronaut.platform))
+    testImplementation("io.micronaut.serde:micronaut-serde-api")
+    testAnnotationProcessor("io.micronaut.serde:micronaut-serde-processor")
 }
 
 micronautBuild {
@@ -37,6 +46,13 @@ tasks.named<Test>("test") {
     inputs.files(repositoryRoot.file("README.md"))
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsReadme")
+    // ModuleReadmesSpec compares the module map with settings.gradle.kts and reads each module's README.
+    inputs.files(repositoryRoot.file("settings.gradle.kts"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("settingsFile")
+    inputs.files(repositoryRoot.asFileTree.matching { include("*/README.md") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("moduleReadmes")
     inputs.files(repositoryRoot.asFileTree.matching { include("src/main/docs/guide/**", "test-suite-*/src/main/**", "test-suite-*/src/test/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsSources")

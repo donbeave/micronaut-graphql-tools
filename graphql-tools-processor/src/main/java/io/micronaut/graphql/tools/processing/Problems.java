@@ -45,6 +45,10 @@ final class Problems {
         notes.add(PREFIX + coordinate + ": not checked at compile time, the startup checks it: " + reason + ".");
     }
 
+    void info(String message) {
+        notes.add(PREFIX + message);
+    }
+
     boolean hasErrors() {
         return !problems.isEmpty();
     }

@@ -66,6 +66,7 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 |`unwrapped-directive-wiring` |failure |no |A SchemaDirectiveWiring bean is not wrapped by a SchemaDirective.
 |`schema-definition-not-provided` |failure |no |No schema definition is configured.
 |`schema-invalid` |failure |yes |The schema files cannot be parsed or merged.
+|`schema-not-found` |failure |no |No schema file is found at the configured locations, or a location is invalid.
 |`unexpected-binding-error` |failure |no |Binding a field failed with an unexpected exception; the cause is attached.
 |`binding-failures` |failure |no |Several fields or types cannot be bound; each failure carries its own code.
 |`strict-findings` |failure |no |Strict mode found problems; each finding carries its own check code.
@@ -77,6 +78,6 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 |`processor-internal-error` |failure |yes |The processor failed with an internal error.
 |===
 
-The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup does not emit it yet: a schema that graphql-java rejects still fails with graphql-java's own `SchemaProblem`.
+The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup emits it as `SchemaDiscoveryException` for a schema file that the discovery cannot parse or merge; a schema that graphql-java rejects later still fails with graphql-java's own `SchemaProblem`. `schema-not-found` is a startup code: no file at `micronaut.graphql.tools.schema.locations`, a missing literal file, or an invalid location.
 
 `nullable-primitive` and `coordinate-on-non-resolver` are registered for the compile-time check and are not emitted yet: no startup check reports them, and the compile-time check that does arrives with the visitor.

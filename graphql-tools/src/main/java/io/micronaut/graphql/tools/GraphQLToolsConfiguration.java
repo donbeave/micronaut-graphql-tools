@@ -19,6 +19,7 @@ import io.micronaut.context.annotation.ConfigurationProperties;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArgumentUtils;
+import io.micronaut.graphql.tools.binding.internal.schema.SchemaLocation;
 
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +41,7 @@ public class GraphQLToolsConfiguration {
     private UnwiredDirectives unwiredDirectives;
     private boolean strict = true;
     private boolean eagerInit = true;
+    private SchemaConfiguration schema = new SchemaConfiguration();
     private InputConfiguration input = new InputConfiguration();
     private ManifestConfiguration manifest = new ManifestConfiguration();
 
@@ -237,6 +239,22 @@ public class GraphQLToolsConfiguration {
     }
 
     /**
+     * @return the options of the schema files, under {@value #PREFIX}.schema
+     */
+    @NonNull
+    public SchemaConfiguration getSchema() {
+        return schema;
+    }
+
+    /**
+     * @param schema the options of the schema files
+     */
+    public void setSchema(@NonNull SchemaConfiguration schema) {
+        ArgumentUtils.requireNonNull("schema", schema);
+        this.schema = schema;
+    }
+
+    /**
      * @return the options for arguments and input objects, under {@value #PREFIX}.input
      */
     @NonNull
@@ -266,6 +284,39 @@ public class GraphQLToolsConfiguration {
     public void setManifest(@NonNull ManifestConfiguration manifest) {
         ArgumentUtils.requireNonNull("manifest", manifest);
         this.manifest = manifest;
+    }
+
+    /**
+     * Options of the schema files, under {@value GraphQLToolsConfiguration#PREFIX}{@code .schema}.
+     */
+    @ConfigurationProperties("schema")
+    public static class SchemaConfiguration {
+
+        private List<String> locations = List.of(SchemaLocation.DEFAULT);
+
+        /**
+         * @return where the schema files are read from when the application provides no {@code TypeDefinitionRegistry} bean
+         */
+        @NonNull
+        public List<String> getLocations() {
+            return locations;
+        }
+
+        /**
+         * Sets where the schema files are read from when the application provides no {@code TypeDefinitionRegistry} bean:
+         * {@code classpath:} (the first classpath entry that holds the directory), {@code classpath*:} (every entry,
+         * including dependency jars) or {@code file:}, followed by an Ant-style path with {@code *}, {@code **} and
+         * {@code ?}. A file that holds only executable definitions (client operations) is skipped; a schema without a
+         * {@code schema} block uses the types {@code Query}, {@code Mutation} and {@code Subscription} as its roots.
+         * Default: {@code classpath:graphql/**}{@code /*.graphqls}.
+         *
+         * @param locations the locations
+         */
+        public void setLocations(@NonNull List<String> locations) {
+            ArgumentUtils.requireNonNull("locations", locations);
+            this.locations = List.copyOf(locations);
+        }
+
     }
 
     /**
