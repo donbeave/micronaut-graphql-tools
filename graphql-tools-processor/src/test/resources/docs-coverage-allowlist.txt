@@ -1,0 +1,16 @@
+# Deliberate gaps in the processor option documentation check (ProcessorOptionsDocsSpec). The list may only shrink.
+#
+# Format: processor-option:<name> # <reason> (#<tracker issue>)
+# The spec fails when an entry names an option that is documented now or no longer exists.
+#
+# compileTime/options.adoc is written by #12. #144 and #291 replace the JSR-269 processor and rename its options, so the
+# entries below leave this list with #12 or are replaced by the new option names.
+processor-option:micronaut.graphql.tools.sdlDir # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.strict # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.precedence # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.resolverDirectives # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.allowUnreachable # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.unreachableTypes # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.input.unmappedProperties # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.input.detectOmission # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.manifest # pending the compile-time guide page (#12)

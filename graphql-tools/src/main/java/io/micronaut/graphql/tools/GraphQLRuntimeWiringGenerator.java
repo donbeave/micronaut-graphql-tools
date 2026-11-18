@@ -34,6 +34,7 @@ import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.GraphQLScalarType;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.TypeRuntimeWiring;
@@ -1730,11 +1731,22 @@ final class GraphQLRuntimeWiringGenerator {
         return result;
     }
 
+    private boolean bareScalarTypeExists(String scalarName) {
+        try {
+            return applicationContext.getBeansOfType(GraphQLScalarType.class).stream()
+                    .anyMatch(it -> it.getName().equals(scalarName));
+        } catch (RuntimeException e) {
+            // The hint is best effort: a scalar bean that cannot be created must not hide the missing mapping.
+            return false;
+        }
+    }
+
     private GraphQLScalarMapping requireScalarMapping(ScalarTypeDefinition scalarTypeDefinition,
                                                       MappingContext mappingContext) {
-        GraphQLScalarMapping scalarMapping = scalarMappings.get(scalarTypeDefinition.getName());
+        String scalarName = scalarTypeDefinition.getName();
+        GraphQLScalarMapping scalarMapping = scalarMappings.get(scalarName);
         if (scalarMapping == null) {
-            throw new ScalarMappingNotProvidedException(mappingContext, scalarTypeDefinition.getName());
+            throw new ScalarMappingNotProvidedException(mappingContext, scalarName, bareScalarTypeExists(scalarName));
         }
         manifestRecorder.scalar(scalarTypeDefinition.getName());
         return scalarMapping;
