@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, and `BC-20` is the one of the 1.0.0-M2 release notes. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, and `BC-21` is the first of 1.0.0-M3. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -31,6 +31,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-18 unreachable types | Startup fails and lists every unreachable type. An `allow-unreachable` entry that is no longer unreachable fails startup. | Bind the type, remove it, or list it in `allow-unreachable`. Remove stale entries. Or set `unreachable-types: ignore`.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time check is _pending_ with #150. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
 | BC-20 `@Named("graphql-tools")` mapper seam (#173) | The `graphql-tools` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Input conversion is not configurable through a public bean. | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion; it is not supported. Its replacement is planned with #37.
+| BC-21 enums need a bean introspection (#33) | Startup fails with `ClassNotIntrospectedException` for a bound Java enum without a bean introspection. Enum arguments now arrive as the Java constants from the schema's enum values, not as names converted by Jackson. | Annotate the enum with `@Introspected`. An input `ObjectMapper` that serializes enums by `toString()` now also sees the constants.
 | #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. Jackson annotations stop being the input contract. | Plan for Micronaut Serialization and introspection annotations.
 | #37 input conversion | _Pending._ Arguments and input objects are converted from `BeanIntrospection` instead of Jackson. | Plan for introspection-based conversion and the scalar SPI.
 | #86 check severity and removed keys | _Pending._ Four keys are removed and their replacements named. `strict: false` also warns on unreachable object, interface and union types. | Use the replacement keys listed under #86 in the pending changes below.
@@ -469,6 +470,26 @@ public Book book(@GraphQLArgument("id") String isbn) { ... }
 The `@Named("graphql-tools")` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. The README no longer describes Jackson-defined input behaviour (`@JsonIgnore`, naming strategies, a named mapper). Applications should not depend on the bean. Input conversion is not configurable through a public bean until #37 replaces it.
 
 Fix: remove the `graphql-tools` bean and any reference to `INPUT_OBJECT_MAPPER`. Input conversion has no public configuration until #37.
+
+== Entries for 1.0.0-M3
+
+=== BC-21: enums need a bean introspection (#33)
+
+The library wires one values provider per bound enum, built at startup from the enum's bean introspection (`EnumBeanIntrospection`, generated at compile time). graphql-java then coerces an enum argument, an enum input field and an enum default value to the Java constant itself, so the resolver receives it without a conversion call. The library no longer reads enum constants by reflection (`Class#getEnumConstants()`). An enum without a bean introspection fails the startup with `ClassNotIntrospectedException`, which names the class and the annotation to add.
+
+Fix: annotate each Java enum that a field, argument or input field uses with `@Introspected`. Micronaut Serialization's `@Serdeable` also introspects the enum. The compile-time processor does not check this yet.
+
+A `RuntimeWiringCustomizer` that registers its own `enumValues` provider for a bound enum now fails the startup with `RuntimeWiringOverrideException`, like any other replacement of the library's wiring.
+
+[source,java]
+----
+// Before: accepted, the resolver received the constant through a conversion of the enum name
+public enum Color { RED, GREEN }
+
+// After: bean introspection generated at compile time
+@Introspected
+public enum Color { RED, GREEN }
+----
 
 == Pending changes
 

@@ -9,6 +9,8 @@ type Query {
   allBooks: [Book!]!
 
   currentUser: User
+
+  introduced: String!
 }
 
 type Mutation {

@@ -1,5 +1,9 @@
 package example
 
+import example.graphql.type.SecurityErrorCode
+import example.graphql.type.ValidationErrorCode
+import graphql.schema.GraphQLEnumType
+import graphql.schema.GraphQLSchema
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
@@ -13,11 +17,16 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 
 @MicronautTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val manifest: BindingManifest) {
+class GraphQLSmokeTest(
+    @Client("/") private val client: HttpClient,
+    private val manifest: BindingManifest,
+    private val schema: GraphQLSchema,
+) {
 
     @Suppress("UNCHECKED_CAST")
     private fun execute(query: String, variables: Map<String, Any> = HashMap()): Map<String, Any?> {
@@ -64,6 +73,12 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
 
     @Test
     @Order(3)
+    fun introductionAdviceResolverBindsItsAbstractMethod() {
+        assertEquals("introduced introduced", execute("{ introduced }")["introduced"])
+    }
+
+    @Test
+    @Order(4)
     fun searchProfileWithLimit() {
         val profiles = execute(
             "query(\$contains: String!, \$limit: Int) { searchProfile(contains: \$contains, limit: \$limit) { username fullName } }",
@@ -75,7 +90,7 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     fun signInFailures() {
         val query = "mutation(\$u: String!, \$p: String!) { signIn(username: \$u, password: \$p) { data { username } error { __typename ... on ValidationError { validationCode: code message } ... on SecurityError { securityCode: code message } } } }"
         val unknown = execute(query, mapOf("u" to "unknown-user", "p" to "test")).obj("signIn")
@@ -90,7 +105,7 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     fun signUpThenDuplicate() {
         val query = "mutation(\$input: SignUpInput!) { signUp(input: \$input) { data { username firstName lastName books { id } } error { __typename ... on ValidationError { validationCode: code message } } } }"
         val input = mapOf("username" to "john", "password" to "test", "firstName" to "John", "lastName" to "Johnathan")
@@ -106,7 +121,7 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     fun signInThenAddBook() {
         val signIn = execute("mutation { signIn(username: \"bob\", password: \"bodi\") { data { username } } }").obj("signIn")
         assertEquals("bob", signIn.obj("data")["username"])
@@ -120,12 +135,21 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
     }
 
     @Test
-    @Order(7)
+    @Order(8)
     fun ignoredAndEventListenerMethodsPassStrictModeAndTheManifestListsTheIgnoredOne() {
         assertTrue(manifest.diagnostics.none { it.contains("onStartup") || it.contains("helper") }, manifest.diagnostics.toString())
         assertEquals(
             listOf("~ignored example.graphql.query.AllBooksQuery#helper(java.lang.String)"),
             manifest.lines.filter { it.startsWith("~ignored ") },
         )
+    }
+
+    @Test
+    @Order(8)
+    fun schemaEnumValuesAreTheKotlinConstants() {
+        val security = schema.getType("SecurityErrorCode") as GraphQLEnumType
+        assertSame(SecurityErrorCode.NOT_AUTHENTICATED, security.getValue("NOT_AUTHENTICATED")!!.value)
+        val validation = schema.getType("ValidationErrorCode") as GraphQLEnumType
+        assertSame(ValidationErrorCode.DUPLICATE, validation.getValue("DUPLICATE")!!.value)
     }
 }

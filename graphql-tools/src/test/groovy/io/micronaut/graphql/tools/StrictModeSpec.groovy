@@ -157,6 +157,7 @@ enum Color {
         Color color
     }
 
+    @Introspected
     static enum Color {
         RED, GREEN, BLUE
     }

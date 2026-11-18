@@ -18,6 +18,7 @@ These changes are planned for the milestones of the tracker. Each one is _pendin
 
 === 1.0.0-M3
 
+* #33 (BC-21): a bound Java enum needs a bean introspection (`@Introspected`); the startup fails without one. See the migration page, entries for 1.0.0-M3.
 * #36: Jackson leaves the `api` scope (_pending_).
 * #37: input conversion from `BeanIntrospection` (_pending_).
 * #86: per-check severity; the old keys are removed (_pending_).
