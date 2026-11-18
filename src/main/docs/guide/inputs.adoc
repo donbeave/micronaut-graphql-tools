@@ -45,4 +45,10 @@ An `ArgumentValue<T>` argument or input field tells an omitted value from an exp
 * `asOptional()` returns an `Optional` that is empty for an omitted value and for an explicit `null`.
 * `ifPresent(Consumer)` runs the consumer only for a provided, non-null value.
 
+A constructor parameter of that type works too, so a record or a Kotlin data class can hold an `ArgumentValue` without a setter. The constructor receives `ArgumentValue.omitted()` when the client leaves the field out and the schema declares no default, and `ArgumentValue.ofNullable(value)` otherwise, including the schema default. Nested input classes and lists of them behave the same way:
+
+snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="nested-constructor-input", indent="0"]
+
+In Kotlin, a data class `val` of that type gets its value from the request; its default argument is not used. In Groovy, write the constructor yourself: `@TupleConstructor` and `@Immutable` add theirs after the introspection is built, so the class would be instantiated without arguments.
+
 snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="optional-helpers", indent="0"]

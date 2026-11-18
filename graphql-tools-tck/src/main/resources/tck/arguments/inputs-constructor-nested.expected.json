@@ -1,0 +1,7 @@
+{
+  "data": {
+    "given": "label=a dimensions=2 unit=present:cm parts=[p:present:n, q:omitted, r:null] memo=present:m",
+    "omitted": "label=b dimensions=3 unit=omitted parts=[] memo=omitted",
+    "explicitNull": "label=c dimensions=4 unit=null parts=[s:null] memo=null"
+  }
+}
