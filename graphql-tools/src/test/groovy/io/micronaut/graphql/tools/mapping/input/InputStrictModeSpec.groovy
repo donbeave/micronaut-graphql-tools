@@ -1,11 +1,16 @@
 package io.micronaut.graphql.tools.mapping.input
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.convert.ConversionContext
 import io.micronaut.core.convert.TypeConverter
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.BindingManifest
+import io.micronaut.graphql.tools.GraphQLRuntimeWiringGenerator
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -13,6 +18,7 @@ import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import org.slf4j.LoggerFactory
 
 class InputStrictModeSpec extends AbstractTest {
 
@@ -24,6 +30,22 @@ class InputStrictModeSpec extends AbstractTest {
 
     static final String STRICT = GraphQLToolsConfiguration.PREFIX + '.strict'
     static final String UNMAPPED = GraphQLToolsConfiguration.PREFIX + '.checks.unmapped-input-property'
+
+    ListAppender<ILoggingEvent> appender
+
+    void setup() {
+        appender = new ListAppender<>()
+        appender.start()
+        generatorLogger().addAppender(appender)
+    }
+
+    void cleanup() {
+        generatorLogger().detachAppender(appender)
+    }
+
+    private static Logger generatorLogger() {
+        return (Logger) LoggerFactory.getLogger(GraphQLRuntimeWiringGenerator)
+    }
 
     @Language("GraphQL")
     static final String SCHEMA_PRIMITIVE_ARGUMENT = """
