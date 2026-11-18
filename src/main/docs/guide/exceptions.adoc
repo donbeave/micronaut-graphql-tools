@@ -61,7 +61,7 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 |`invalid-claimed-fields` |failure |no |A RuntimeWiringCustomizer claims fields that the schema does not define.
 |`invalid-allow-unreachable` |failure |no |allow-unreachable names a type that is not an unreachable type.
 |`invalid-inert-directives` |failure |no |inert-directives lists a directive that is built in, undeclared or wired.
-|`invalid-schema-customizer-directives` |failure |no |schema-customizer-directives lists a built-in or undeclared directive.
+|`invalid-schema-customizer-directives` |failure |no |schema-customizer-directives lists a built-in or undeclared directive, or one it never applies to the schema definition or a directive argument.
 |`duplicate-directive-wiring` |failure |no |More than one SchemaDirective binds a wiring to the same directive.
 |`unwrapped-directive-wiring` |failure |no |A SchemaDirectiveWiring bean is not wrapped by a SchemaDirective.
 |`schema-definition-not-provided` |failure |no |No schema definition is configured.

@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools;
 
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -60,7 +61,7 @@ import java.util.function.Supplier;
  */
 public final class BindingManifest {
 
-    public static final String FORMAT = "# graphql-binding-manifest 1";
+    public static final String FORMAT = ManifestRenderer.FORMAT;
 
     private Supplier<Content> renderer;
     private volatile Content content;

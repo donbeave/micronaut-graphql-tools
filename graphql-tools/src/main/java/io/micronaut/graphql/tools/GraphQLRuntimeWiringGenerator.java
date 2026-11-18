@@ -383,7 +383,8 @@ final class GraphQLRuntimeWiringGenerator {
     private void processFieldReturnType(Argument<?> argument, Type<?> graphQlType, TypeMappingContext mappingContext,
                                         boolean fieldLevel) {
         boolean subscription = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
-        argument = ReturnTypes.unwrap(argument, graphQlType, fieldLevel, subscription, mappingContext);
+        argument = ReturnTypes.unwrap(typeModel, argument, graphQlType, fieldLevel, subscription,
+                mappingContext);
         graphQlType = unwrapNonNullType(graphQlType);
 
         Class<?> returnClass = argument.getType();

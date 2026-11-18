@@ -165,9 +165,13 @@ public enum BindingCode {
     /** Failure: inert-directives lists a directive that cannot be inert. */
     INVALID_INERT_DIRECTIVES("invalid-inert-directives", false, false,
             "inert-directives lists a directive that is built in, undeclared or wired."),
-    /** Failure: schema-customizer-directives lists a built-in or undeclared directive. */
+    /**
+     * Failure: schema-customizer-directives lists a built-in or undeclared directive, or one never applied to the
+     * schema definition or a directive argument.
+     */
     INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES("invalid-schema-customizer-directives", false, false,
-            "schema-customizer-directives lists a built-in or undeclared directive."),
+            "schema-customizer-directives lists a built-in or undeclared directive, or one it never applies to the "
+                    + "schema definition or a directive argument."),
     /** Failure: a directive is wired twice. */
     DUPLICATE_DIRECTIVE_WIRING("duplicate-directive-wiring", false, false,
             "More than one SchemaDirective binds a wiring to the same directive."),
