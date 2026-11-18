@@ -1,0 +1,5 @@
+{
+  given: crate(crate: {label: "a", dimensions: {width: 2, unit: "cm"}, parts: [{name: "p", note: "n"}, {name: "q"}, {name: "r", note: null}], memo: "m"})
+  omitted: crate(crate: {label: "b", dimensions: {width: 3}, parts: []})
+  explicitNull: crate(crate: {label: "c", dimensions: {width: 4, unit: null}, parts: [{name: "s", note: null}], memo: null})
+}
