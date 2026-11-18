@@ -113,10 +113,10 @@ public final class LibraryBeanSelection {
             }
         }
         List<Provided> beans = new ArrayList<>();
-        for (BeanDefinition<?> definition : withoutReplaced(enabled)) {
+        for (BeanDefinition<?> definition : enabled) {
             expand(context, definition, visits, beans);
         }
-        return beans;
+        return withoutReplaced(beans);
     }
 
     private static boolean libraryEnabled(BeanContext context, BeanDefinitionReference<?> reference,
@@ -128,18 +128,18 @@ public final class LibraryBeanSelection {
         return reference.isEnabled(context);
     }
 
-    private static List<BeanDefinition<?>> withoutReplaced(List<BeanDefinition<?>> definitions) {
-        List<BeanDefinition<?>> kept = new ArrayList<>(definitions);
-        for (BeanDefinition<?> replacing : definitions) {
-            AnnotationValue<Replaces> replaces = replacing.getAnnotation(Replaces.class);
+    private static List<Provided> withoutReplaced(List<Provided> beans) {
+        List<Provided> kept = new ArrayList<>(beans);
+        for (Provided replacing : beans) {
+            AnnotationValue<Replaces> replaces = replacing.definition().getAnnotation(Replaces.class);
             if (replaces != null) {
-                kept.removeIf(candidate -> candidate != replacing && replaces(replaces, replacing, candidate));
+                kept.removeIf(candidate -> candidate != replacing && replaces(replaces, replacing.definition(), candidate));
             }
         }
         return kept;
     }
 
-    private static boolean replaces(AnnotationValue<Replaces> replaces, BeanDefinition<?> replacing, BeanDefinition<?> candidate) {
+    private static boolean replaces(AnnotationValue<Replaces> replaces, BeanDefinition<?> replacing, Provided candidate) {
         Class<?> replaced = replaces.classValue("bean").orElse(replacing.getBeanType());
         Optional<String> named = replaces.stringValue("named");
         if (named.isPresent()) {
@@ -150,14 +150,16 @@ public final class LibraryBeanSelection {
         }
         Optional<Class<?>> factory = replaces.classValue("factory").map(type -> (Class<?>) type);
         if (factory.isPresent()) {
-            return candidate.getDeclaringType().filter(factory.get()::equals).isPresent() && candidate.getBeanType() == replaced;
+            return candidate.definition().getDeclaringType().filter(factory.get()::equals).isPresent()
+                    && candidate.definition().getBeanType() == replaced;
         }
-        return candidate.getBeanType() == replaced;
+        return candidate.definition().getBeanType() == replaced;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static boolean qualifiedByName(String name, Class<?> replaced, BeanDefinition<?> candidate) {
-        return ((Qualifier) Qualifiers.byName(name)).doesQualify(replaced, candidate);
+    private static boolean qualifiedByName(String name, Class<?> replaced, Provided candidate) {
+        Qualifier byName = Qualifiers.byName(name);
+        return byName.equals(candidate.qualifier()) || byName.doesQualify(replaced, candidate.definition());
     }
 
     private static void expand(BeanContext context, BeanDefinition<?> definition, Visits visits, List<Provided> beans) {
@@ -172,15 +174,17 @@ public final class LibraryBeanSelection {
 
     private static void expandProperties(BeanContext context, BeanDefinition<?> template, List<Provided> beans) {
         String prefix = template.stringValue(ConfigurationReader.class, ConfigurationReader.PREFIX)
-                .filter(value -> value.endsWith(".*")).map(value -> value.substring(0, value.length() - 2)).orElse(null);
+                .filter(value -> value.endsWith(".*") || value.endsWith("[*]"))
+                .map(value -> value.substring(0, value.length() - (value.endsWith("[*]") ? 3 : 2))).orElse(null);
         // a nested template (a prefix with another star) is not expanded here and stays unqualified
         if (prefix == null || prefix.contains("*") || !(context instanceof ApplicationContext applicationContext)) {
             beans.add(new Provided(template));
             return;
         }
         String primary = template.stringValue(EachProperty.class, "primary").orElse(null);
+        boolean templatePrimary = template.hasStereotype(Primary.class);
         for (String key : applicationContext.getEnvironment().getPropertyEntries(prefix)) {
-            beans.add(new Provided(template, Qualifiers.byName(key), key.equals(primary)));
+            beans.add(new Provided(template, Qualifiers.byName(key), templatePrimary || key.equals(primary)));
         }
     }
 
@@ -191,7 +195,8 @@ public final class LibraryBeanSelection {
         } else if (visits.expanding().add(template)) {
             try {
                 for (Provided targetBean : provided(context, target.get(), true, visits)) {
-                    beans.add(new Provided(template, targetBean.qualifier(), targetBean.primary()));
+                    beans.add(new Provided(template, targetBean.qualifier(),
+                            template.hasStereotype(Primary.class) || targetBean.primary()));
                 }
             } finally {
                 visits.expanding().remove(template);

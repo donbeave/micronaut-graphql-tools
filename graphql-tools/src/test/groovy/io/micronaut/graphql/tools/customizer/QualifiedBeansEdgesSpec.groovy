@@ -34,6 +34,10 @@ class QualifiedBeansEdgesSpec extends AbstractTest {
     static final String EACH_BEAN_SCHEMA = 'QualifiedBeansEdgesSpec.eachBeanSchema'
     static final String EACH_BEAN_NONE = 'QualifiedBeansEdgesSpec.eachBeanNone'
     static final String EACH_BEAN_PRIMARY = 'QualifiedBeansEdgesSpec.eachBeanPrimary'
+    static final String TEMPLATE_PRIMARY = 'QualifiedBeansEdgesSpec.templatePrimary'
+    static final String REPLACED_EXPANSION = 'QualifiedBeansEdgesSpec.replacedExpansion'
+    static final String REPLACED_FACTORY = 'QualifiedBeansEdgesSpec.replacedFactory'
+    static final String EACH_LIST = 'QualifiedBeansEdgesSpec.eachList'
     static final String LIBRARY = 'QualifiedBeansEdgesSpec.library'
 
     @Language("GraphQL")
@@ -187,6 +191,44 @@ type AdminQuery {
 
         expect:
         getGraphQLBean().is(applicationContext.getBean(GraphQL, Qualifiers.byName('main')))
+    }
+
+    void "a @Primary @EachProperty template replaces the library's engine even over named entries"() {
+        given:
+        start(TEMPLATE_PRIMARY, ['qb.tp.a.x': 1, 'qb.tp.b.x': 2])
+
+        expect:
+        applicationContext.getBeansOfType(GraphQL).size() == 2
+    }
+
+    void "a primary expansion that a named @Replaces bean replaces is not a competitor"() {
+        given:
+        start(REPLACED_EXPANSION, ['qb.re.a.x': 1, 'qb.re.b.x': 2])
+
+        expect:
+        applicationContext.getBeansOfType(GraphQL).size() == 3
+        executeQuery('{ hello }').data == [hello: 'world']
+    }
+
+    void "replacing a whole factory does not remove its beans, so they still replace the library's engine"() {
+        given:
+        start(REPLACED_FACTORY)
+
+        expect:
+        applicationContext.getBeansOfType(GraphQL).size() == 2
+    }
+
+    void "a list @EachProperty template is judged by its entries"() {
+        given:
+        start(EACH_LIST, config)
+
+        expect:
+        applicationContext.getBeansOfType(GraphQL).size() == count
+
+        where:
+        config                                  | count
+        [:]                                     | 1
+        ['qb.list[0].x': 1, 'qb.list[1].x': 2]  | 3
     }
 
     void start(String spec, Map config = [:], boolean withRegistry = true, Closure customize = null) {
@@ -344,6 +386,71 @@ type AdminQuery {
         GraphQLSchema main() { otherSchema('main') }
 
         @EachBean(GraphQLSchema)
+        @Singleton
+        GraphQL engine(GraphQLSchema schema) {
+            GraphQL.newGraphQL(schema).build()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = TEMPLATE_PRIMARY)
+    @Factory
+    static class PrimaryTemplateFactory {
+        @EachProperty('qb.tp')
+        @Primary
+        @Singleton
+        GraphQL engine(GraphQLSchema schema) {
+            GraphQL.newGraphQL(schema).build()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = REPLACED_EXPANSION)
+    @Factory
+    static class ReplacedExpansionFactory {
+        @EachProperty(value = 'qb.re', primary = 'a')
+        @Singleton
+        GraphQL engine(GraphQLSchema schema) {
+            GraphQL.newGraphQL(schema).build()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = REPLACED_EXPANSION)
+    @Factory
+    static class ReplacingExpansionFactory {
+        @Bean
+        @Singleton
+        @Named('c')
+        @Replaces(value = GraphQL, named = 'a')
+        GraphQL replacement(GraphQLSchema schema) {
+            GraphQL.newGraphQL(schema).build()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = REPLACED_FACTORY)
+    @Factory
+    static class WholeReplacedFactory {
+        @Bean
+        @Singleton
+        GraphQL own(GraphQLSchema schema) {
+            GraphQL.newGraphQL(schema).build()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = REPLACED_FACTORY)
+    @Factory
+    @Replaces(WholeReplacedFactory)
+    static class WholeReplacingFactory {
+        @Bean
+        @Singleton
+        @Named('admin')
+        GraphQL admin(GraphQLSchema schema) {
+            GraphQL.newGraphQL(schema).build()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = EACH_LIST)
+    @Factory
+    static class EachListFactory {
+        @EachProperty(value = 'qb.list', list = true)
         @Singleton
         GraphQL engine(GraphQLSchema schema) {
             GraphQL.newGraphQL(schema).build()
