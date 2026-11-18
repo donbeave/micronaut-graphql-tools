@@ -17,8 +17,6 @@ package io.micronaut.graphql.tools;
 
 import graphql.language.FieldDefinition;
 import graphql.language.InterfaceTypeDefinition;
-import graphql.language.ObjectTypeDefinition;
-import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
@@ -29,15 +27,17 @@ import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException;
 import io.micronaut.graphql.tools.exceptions.ResolverRequiredException;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
-import static io.micronaut.graphql.tools.GraphQLUtils.getTypeName;
 import static io.micronaut.graphql.tools.MicronautUtils.toMap;
 
 /**
@@ -49,14 +49,20 @@ import static io.micronaut.graphql.tools.MicronautUtils.toMap;
 @Internal
 final class InterfaceFieldBinder {
 
-    private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final GraphQLResolversRegistry graphQLResolversRegistry;
     private final Map<String, Class<?>> processedTypes;
     private final Precedence precedence;
     private final Callbacks callbacks;
     private final AmbiguityLog ambiguityLog;
 
-    private final List<InterfaceField> unboundInterfaceFields = new ArrayList<>();
+    private final DeclaringInterfaces declaringInterfaces;
+    // the fields that nothing binds yet, in the order they were collected, by sequence number
+    private final NavigableMap<Long, WaitingField> waiting = new TreeMap<>();
+    // the sequence numbers of the waiting fields whose answer may have changed since they were last asked
+    private final NavigableSet<Long> dirty = new TreeSet<>();
+    // the waiting fields that an interface not yet bound to a Java class could still bind, by interface name
+    private final Map<String, List<WaitingField>> waitingOnInterface = new HashMap<>();
+    private long nextSequence;
     private final List<InterfaceField> interfaceResolverFields = new ArrayList<>();
     private final List<InterfaceField> ownInterfaceFields = new ArrayList<>();
     private final List<InterfaceField> deferredModelMemberFields = new ArrayList<>();
@@ -65,7 +71,7 @@ final class InterfaceFieldBinder {
     private final List<AbstractMappingException> failures = new ArrayList<>();
 
     /**
-     * @param typeDefinitionRegistry   the schema
+     * @param declaringInterfaces      the interfaces that declare each field
      * @param graphQLResolversRegistry the resolvers
      * @param processedTypes           a read-only live view of the Java class that each schema type is bound to: binding
      *                                 a field can reach a type that no field reached before
@@ -73,10 +79,10 @@ final class InterfaceFieldBinder {
      * @param manifestRecorder         the manifest sink
      * @param callbacks                the binding work that stays with the type phase
      */
-    InterfaceFieldBinder(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLResolversRegistry graphQLResolversRegistry,
+    InterfaceFieldBinder(DeclaringInterfaces declaringInterfaces, GraphQLResolversRegistry graphQLResolversRegistry,
                          Map<String, Class<?>> processedTypes, Precedence precedence,
                          BindingManifestRecorder manifestRecorder, Callbacks callbacks) {
-        this.typeDefinitionRegistry = typeDefinitionRegistry;
+        this.declaringInterfaces = declaringInterfaces;
         this.graphQLResolversRegistry = graphQLResolversRegistry;
         this.processedTypes = processedTypes;
         this.precedence = precedence;
@@ -95,7 +101,7 @@ final class InterfaceFieldBinder {
         String fieldName = field.fieldDefinition().getName();
 
         for (InterfaceTypeDefinition interfaceTypeDefinition
-                : getDeclaringInterfaces(typeDefinitionRegistry, field.objectTypeDefinition(), fieldName)) {
+                : declaringInterfaces.of(field.objectTypeDefinition(), fieldName)) {
             Class<?> interfaceClass = processedTypes.get(interfaceTypeDefinition.getName());
 
             if (interfaceClass == null || interfaceClass.equals(field.ownSourceClass())) {
@@ -114,7 +120,7 @@ final class InterfaceFieldBinder {
 
     private void takeDiscoveredFields() {
         InterfaceFields fields = callbacks.takeDiscoveredFields();
-        unboundInterfaceFields.addAll(fields.unbound());
+        fields.unbound().forEach(this::wait);
         ownInterfaceFields.addAll(fields.own());
         deferredModelMemberFields.addAll(fields.deferred());
         interfaceResolverFields.addAll(fields.resolverBound());
@@ -127,27 +133,69 @@ final class InterfaceFieldBinder {
         }
     }
 
+    private void wait(InterfaceField field) {
+        WaitingField waitingField = new WaitingField(field, nextSequence++);
+        waiting.put(waitingField.sequence(), waitingField);
+        dirty.add(waitingField.sequence());
+    }
+
+    // a field is asked again only when an interface that declares it has been bound to a Java class since
+    private void blockOnUnboundInterfaces(WaitingField waitingField) {
+        InterfaceField field = waitingField.field();
+        for (InterfaceTypeDefinition declaring
+                : declaringInterfaces.of(field.objectTypeDefinition(), field.fieldDefinition().getName())) {
+            if (!processedTypes.containsKey(declaring.getName())) {
+                waitingOnInterface.computeIfAbsent(declaring.getName(), it -> new ArrayList<>()).add(waitingField);
+            }
+        }
+    }
+
+    private void wakeFieldsOfBoundInterfaces() {
+        if (waitingOnInterface.isEmpty()) {
+            return;
+        }
+        waitingOnInterface.entrySet().removeIf(entry -> {
+            if (!processedTypes.containsKey(entry.getKey())) {
+                return false;
+            }
+            for (WaitingField waitingField : entry.getValue()) {
+                if (waiting.containsKey(waitingField.sequence())) {
+                    dirty.add(waitingField.sequence());
+                }
+            }
+            return true;
+        });
+    }
+
     private boolean bindInterfaceFieldsOnce() {
         while (true) {
             takeDiscoveredFields();
+            wakeFieldsOfBoundInterfaces();
             boolean progress = false;
-            for (InterfaceField field : List.copyOf(unboundInterfaceFields)) {
+            long position = -1;
+            Long next;
+            while ((next = dirty.higher(position)) != null) {
+                position = next;
+                dirty.remove(next);
+                WaitingField waitingField = waiting.get(next);
+                InterfaceField field = waitingField.field();
                 List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
                 if (methods.isEmpty()) {
+                    blockOnUnboundInterfaces(waitingField);
                     continue;
                 }
 
-                unboundInterfaceFields.remove(field);
+                waiting.remove(next);
                 progress = true;
 
                 if (methods.size() > 1) {
                     failures.add(new MultipleMethodsFoundException(field.mappingContext(),
                             toInterfaceMethodsMap(methods)));
-                    continue;
+                } else {
+                    interfaceResolverFields.add(field);
+                    collectFailure(field.mappingContext(), () -> bindInterfaceField(field, methods.get(0)));
                 }
-
-                interfaceResolverFields.add(field);
-                collectFailure(field.mappingContext(), () -> bindInterfaceField(field, methods.get(0)));
+                wakeFieldsOfBoundInterfaces();
             }
 
             if (progress) {
@@ -157,8 +205,9 @@ final class InterfaceFieldBinder {
                 break;
             }
 
-            for (InterfaceField field : sortedByCoordinate(deferredModelMemberFields)) {
-                deferredModelMemberFields.remove(field);
+            List<InterfaceField> deferred = sortedByCoordinate(deferredModelMemberFields);
+            deferredModelMemberFields.clear();
+            for (InterfaceField field : deferred) {
                 List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
                 if (methods.isEmpty()) {
                     ownInterfaceFields.add(field);
@@ -169,8 +218,12 @@ final class InterfaceFieldBinder {
             }
         }
 
-        for (InterfaceField field : sortedByCoordinate(unboundInterfaceFields)) {
-            unboundInterfaceFields.remove(field);
+        List<InterfaceField> stillUnbound = sortedByCoordinate(waiting.values().stream()
+                .map(WaitingField::field).toList());
+        waiting.clear();
+        dirty.clear();
+        waitingOnInterface.clear();
+        for (InterfaceField field : stillUnbound) {
             if (field.modelMember() != null) {
                 failures.add(new ResolverRequiredException(field.mappingContext(),
                         callbacks.resolverDirective(field.fieldDefinition()), field.ownMembers()));
@@ -180,14 +233,17 @@ final class InterfaceFieldBinder {
             }
         }
 
+        Set<InterfaceField> removed = Collections.newSetFromMap(new IdentityHashMap<>());
         for (InterfaceField field : sortedByCoordinate(interfaceResolverFields)) {
             List<InterfaceResolverMethod> methods = findInterfaceResolverMethods(field);
             if (methods.size() > 1) {
-                interfaceResolverFields.remove(field);
+                removed.add(field);
                 failures.add(new MultipleMethodsFoundException(field.mappingContext(),
                         toInterfaceMethodsMap(methods)));
             }
         }
+        interfaceResolverFields.removeIf(removed::contains);
+        removed.clear();
 
         boolean rebound = false;
         for (InterfaceField field : sortedByCoordinate(ownInterfaceFields)) {
@@ -200,21 +256,21 @@ final class InterfaceFieldBinder {
                 Map<Class<?>, List<String>> members = toInterfaceMethodsMap(methods);
                 field.ownMembers().forEach((clazz, names) ->
                         members.computeIfAbsent(clazz, it -> new ArrayList<>()).addAll(names));
-                ownInterfaceFields.remove(field);
+                removed.add(field);
                 failures.add(new MultipleMethodsFoundException(field.mappingContext(), members));
                 continue;
             }
 
             switch (precedence) {
                 case STRICT -> {
-                    ownInterfaceFields.remove(field);
+                    removed.add(field);
                     failures.add(new AmbiguousBindingException(field.mappingContext(),
                             AmbiguityLog.merge(field.ownMembers(), toInterfaceMethodsMap(methods))));
                 }
                 case PROPERTY_FIRST -> ambiguityLog.record(field.mappingContext(), field.modelMember(),
                         methods.stream().map(InterfaceResolverMethod::method).toList());
                 case RESOLVER_FIRST -> {
-                    ownInterfaceFields.remove(field);
+                    removed.add(field);
                     collectFailure(field.mappingContext(), () -> bindResolverOverModelMember(field, methods));
                     rebound = true;
                 }
@@ -222,6 +278,7 @@ final class InterfaceFieldBinder {
             }
         }
 
+        ownInterfaceFields.removeIf(removed::contains);
         return rebound;
     }
 
@@ -253,7 +310,12 @@ final class InterfaceFieldBinder {
     }
 
     private static List<InterfaceField> sortedByCoordinate(List<InterfaceField> fields) {
-        return fields.stream().sorted(Comparator.comparing(InterfaceField::coordinate)).toList();
+        // the coordinate is built once per field, not once per comparison
+        return fields.stream()
+                .map(it -> Map.entry(it.coordinate(), it))
+                .sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue)
+                .toList();
     }
 
     private void collectFailure(MappingContext mappingContext, Runnable action) {
@@ -266,15 +328,7 @@ final class InterfaceFieldBinder {
         }
     }
 
-    static List<InterfaceTypeDefinition> getDeclaringInterfaces(TypeDefinitionRegistry typeDefinitionRegistry,
-                                                               ObjectTypeDefinition objectTypeDefinition,
-                                                               String fieldName) {
-        return objectTypeDefinition.getImplements().stream()
-                .map(it -> typeDefinitionRegistry.getType(getTypeName(it).getName(), InterfaceTypeDefinition.class))
-                .flatMap(Optional::stream)
-                .filter(it -> it.getFieldDefinitions().stream().anyMatch(field -> field.getName().equals(fieldName)))
-                .sorted(Comparator.comparing(InterfaceTypeDefinition::getName))
-                .toList();
+    private record WaitingField(InterfaceField field, long sequence) {
     }
 
     /**
