@@ -36,7 +36,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-23 input conversion from `BeanIntrospection` (#37) | Arguments and input objects are converted by converters that startup builds from the bean introspection, not by Jackson. Jackson annotations, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean stop being the input contract. A list is converted into `List`, `Collection`, `Iterable`, `Set`, `SortedSet`, `Deque` or `Queue` only. `InputFieldNotSettableException` has a new message. | Name the properties and constructor parameters of an input class like the input fields. Use a `TypeConverter` bean for a conversion of your own, and the scalar mapping for custom scalars.
 | BC-24 schema files are `*.graphqls` (#17) | The compile-time processor no longer reads `*.graphql` files of its schema directory, so a schema kept in one is missing at compile time. | Rename the schema files to `.graphqls`. Client operation files may stay `.graphql`; they are never read.
 | BC-25 binding manifest format 2 (#90) | The manifest is written in format version 2: ASCII separators (` -> ` and ` ; ` replace the arrow and the middle dot), a `scalar` line names the scalar (not the `Coercing` class), characters outside ASCII are escaped, and the schema hash does not depend on the order of the files and the extensions. The first line is `# graphql-binding-manifest 2`. | Regenerate checked-in manifests. A reader checks the version on the first line. New in 1.0.0-M3, no opt-out.
-| #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. | Add `micronaut-jackson-databind` to your own build if you use it.
+| BC-26 Jackson leaves the `api` scope (#36) | `micronaut-jackson-databind` is no longer a dependency of the library. An application that serves HTTP without another JSON codec fails at startup, with `No bean of type [io.micronaut.json.JsonConfiguration] exists`. | Add `micronaut-jackson-databind` (or `micronaut-serde-jackson`) to your own build.
 | #86 check severity and removed keys | _Pending._ Four keys are removed and their replacements named. `strict: false` also warns on unreachable object, interface and union types. | Use the replacement keys listed under #86 in the pending changes below.
 | #105 precedence default | _Pending._ The default value `strict` of `precedence` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
 | #109 public exceptions | _Pending._ The startup exception subclasses become internal behind `SchemaBindingException`, which already carries the code (BC-22). | Match on the error code, not on the exception subclass.
@@ -558,13 +558,23 @@ The manifest format is specified on the "Binding Manifest" page and its version 
 
 Fix: regenerate every checked-in manifest, and change a reader that splits lines on the arrow or the middle dot to split on ` -> ` and ` ; `. A reader should check the version on the first line and refuse a version it does not know. The compile-time manifest of the JSR-269 processor and the manifest of the startup are both written in version 2.
 
+=== BC-26: Jackson leaves the `api` scope (#36)
+
+The library's `api` scope brought `micronaut-jackson-databind` to every application. The library itself does not use Jackson (#37, BC-23), so the dependency leaves the `api` scope and the library no longer declares Jackson at compile or runtime. An application that gets its JSON from Jackson declares `micronaut-jackson-databind` itself. An application that uses Micronaut Serialization declares `micronaut-serde-jackson` (or another Serde JSON module). Without any JSON codec, an application that serves HTTP fails at startup with `No bean of type [io.micronaut.json.JsonConfiguration] exists`.
+
+Fix: add the JSON dependency your application uses to its build, for example:
+
+[source,groovy]
+----
+dependencies {
+    implementation("io.micronaut:micronaut-jackson-databind") // or io.micronaut.serde:micronaut-serde-jackson
+}
+----
+
+
 == Pending changes
 
 The following changes are planned and are not on `master` yet. Their behaviour is not described as current. Each entry names the issue that makes the change.
-
-=== #36: Jackson leaves the `api` scope
-
-The library's `api` scope brings `micronaut-jackson-databind` to every application. The library itself no longer uses Jackson (#37, BC-23), and #36 removes the dependency from the `api` scope. An application that uses Jackson adds `micronaut-jackson-databind` (or `micronaut-serde-jackson`) to its own build.
 
 === #86: per-check severity and removed keys
 
