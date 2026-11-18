@@ -237,6 +237,18 @@ enum Color { RED GREEN }
                 ['unmapped-input-property Filter.extra']
     }
 
+    void "a wrong class for a built-in scalar return is a class mapping failure of the startup, which hides the strict checks"() {
+        given:
+        def stray = method('stray', [:], [], STRING, 'a.R#stray()')
+        def search = { String returned -> method('search', [:], [FakeModel.parameter('filter', 'a.Filter'), FakeModel.parameter('other', 'a.Filter')],
+                ref(returned), 'a.R#search(a.Filter,a.Filter)') }
+        def filter = input('a.Filter', [property('text')])
+
+        expect:
+        check([search('java.lang.String'), stray], filter) == ['unbound-resolver-method a.R#stray()']
+        check([search('java.lang.Integer'), stray], filter) == []
+    }
+
     void "an ArgumentValue around an asynchronous type is not unwrapped again: the startup rejects the class mapping"() {
         given:
         def wrapper = 'io.micronaut.graphql.tools.ArgumentValue'

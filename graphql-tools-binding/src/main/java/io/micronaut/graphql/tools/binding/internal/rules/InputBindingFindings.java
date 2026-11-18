@@ -140,6 +140,15 @@ public final class InputBindingFindings {
         if (!(unwrapped instanceof TypeName name)) {
             return;
         }
+        if (ScalarTable.isGraphQlBuiltInType(name.getName())) {
+            Set<String> supported = ScalarTable.getSupportedClasses(name).stream().map(Class::getName)
+                    .collect(Collectors.toSet());
+            if (leaf.array() || !supported.contains(leaf.rawName())) {
+                // a wrong class for a built-in scalar is a class mapping failure, which only the startup reports
+                halted = true;
+            }
+            return;
+        }
         TypeDefinition<?> definition = schema.registry().getType(name.getName()).orElse(null);
         if (definition instanceof EnumTypeDefinition enumType) {
             finish(enumType(new Site(member, coordinate, location), enumType, leaf));
