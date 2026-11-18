@@ -5,6 +5,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaIndex
 import io.micronaut.graphql.tools.exceptions.SchemaDiscoveryException
 import io.micronaut.graphql.tools.schema.SchemaDiscovery
@@ -124,6 +125,7 @@ class SchemaDiscoverySpec extends Specification {
 
         then:
         def e = thrown(SchemaDiscoveryException)
+        e.code() == BindingCode.SCHEMA_INVALID
         e.message.contains('broken.graphqls')
     }
 

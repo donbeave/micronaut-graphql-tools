@@ -1,1 +1,83 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+This page is the error reference. Every startup failure, every strict check and every compile-time diagnostic has one code. The same code is the token in square brackets at the start of the message (`[unbound-enum-constant] ...`, at startup and at compile time), the value of `SchemaBindingException#code()`, the word after `!` in a binding manifest line (`!unbound-enum-constant example.Color#BLUE`), and the name of the check in `checks.<code>` and `allow.findings`. The codes are lower-case kebab-case words. They are the values of the `BindingCode` enum of `graphql-tools-binding`, the one public type of that module: a code never changes after a release, and a new failure adds a new code.
+
+== The exception
+
+Every startup failure is a `SchemaBindingException` (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnreachableTypesException`, `StrictModeException`, `BindingFailuresException`, and the others in the `exceptions` package). `code()` returns its code. An aggregate has a code of its own and carries its findings: `BindingFailuresException` (`binding-failures`) lists the failures of several fields, and each of them has its own code; `StrictModeException` (`strict-findings`) lists the strict findings, `getCodes()` returns the check code of each one, and each line of the message starts with it. Issue #109 collapses the subclasses into internal classes behind one public exception; the codes stay.
+
+== Checks
+
+A check is a strict-mode finding. In the compile-time column, `yes` means the compile-time check reports it too, with the same code and coordinate; the other checks need the whole program and run at startup only.
+
+[cols="3,1,1,6", options="header"]
+|===
+|Code |Kind |Compile time |Meaning
+|`unbound-resolver-method` |check |yes |A resolver method binds no schema field.
+|`root-method-several-operations` |check |yes |A root resolver method binds fields of several operation types.
+|`unbound-enum-constant` |check |yes |A Java enum constant has no value in the schema enum.
+|`unmapped-input-property` |check |yes |A settable property of an input class has no field in the GraphQL input type.
+|`nullable-primitive` |check |yes |A primitive parameter or input property sits at a nullable schema position.
+|`unreachable-type` |check |no |The schema defines an object, interface or union type that no root field reaches.
+|`unreachable-value-type` |check |no |The schema defines an enum, input or scalar type that no root field reaches.
+|`unused-dictionary-entry` |check |no |A SchemaMappingDictionary entry names a type that the schema does not bind.
+|`interface-read-through-implementation` |check |no |An interface type is read through one of its implementations.
+|`unwired-directive` |check |no |The schema applies a directive that has no wiring.
+|===
+
+== Failures
+
+[cols="3,1,1,6", options="header"]
+|===
+|Code |Kind |Compile time |Meaning
+|`precedence-ambiguity` |failure |no |A property and a resolver method can both bind one field, and the precedence is fail.
+|`unknown-schema-coordinate` |failure |yes |A @GraphQLSchemaCoordinate value does not match the schema or the method.
+|`coordinate-on-non-resolver` |failure |yes |A @GraphQLSchemaCoordinate is declared on a class that is not a resolver.
+|`argument-mismatch` |failure |yes |A resolver parameter and a field argument cannot be matched by name or count.
+|`invalid-source-parameter` |failure |yes |The source parameter of a type resolver method does not fit the mapped type.
+|`unsupported-return-type` |failure |yes |The return type of a method cannot be bound to the field type.
+|`unsupported-input-type` |failure |yes |The Java type of an argument or input field cannot be used there.
+|`input-field-not-settable` |failure |yes |An input field maps to a property that cannot be set.
+|`class-not-introspected` |failure |yes |A class that backs an input or enum type has no bean introspection.
+|`field-not-bound` |failure |no |No property or method binds a schema field.
+|`multiple-methods-found` |failure |no |Several resolver methods can bind one field.
+|`root-resolver-not-found` |failure |no |The schema has a root operation type and no resolver bean serves it.
+|`resolver-required` |failure |no |A field with a resolver directive has no type resolver method.
+|`incorrect-class-mapping` |failure |no |A Java class is mapped to a type it cannot serve.
+|`incorrect-member-mapping` |failure |no |An object type of a union or interface is mapped to a Java type disjoint from the declared one.
+|`incorrect-implementation` |failure |no |A mapped implementation does not fit its interface or union.
+|`implementation-not-found` |failure |no |No class is registered for an object type of an interface or union.
+|`multiple-implementations-found` |failure |no |Several classes are registered for one object type.
+|`interface-type-mapping-not-provided` |failure |no |An object type that implements an interface has no registered class.
+|`union-type-mapping-not-provided` |failure |no |A member type of a union has no registered class.
+|`mapping-conflict` |failure |no |Two mappings of one schema type conflict.
+|`ambiguous-type-mapping` |failure |no |The SchemaMappingDictionary maps object types so that one Java object matches several.
+|`ambiguous-abstract-type` |failure |no |Objects of one class cannot be resolved to one object type of a union or interface.
+|`ambiguous-type-resolver` |failure |no |A bean inherits the type resolver annotation for several classes.
+|`type-resolver-contracts-not-found` |failure |no |A bean is a type resolver only through an inherited annotation, and no contract names a type.
+|`incorrect-annotation` |failure |no |A library annotation is used where it has no meaning.
+|`missing-enum-values` |failure |no |A schema enum value has no constant in the Java enum.
+|`scalar-mapping-not-provided` |failure |no |A custom scalar of the schema has no GraphQLScalarMapping.
+|`invalid-scalar-mapping` |failure |no |GraphQLScalarMapping beans contradict each other or the library.
+|`runtime-wiring-override` |failure |no |A RuntimeWiringCustomizer replaced what the library wired.
+|`invalid-claimed-fields` |failure |no |A RuntimeWiringCustomizer claims fields that the schema does not define.
+|`invalid-allow-unreachable` |failure |no |allow-unreachable names a type that is not an unreachable type.
+|`invalid-inert-directives` |failure |no |inert-directives lists a directive that is built in, undeclared or wired.
+|`invalid-schema-customizer-directives` |failure |no |schema-customizer-directives lists a built-in or undeclared directive.
+|`duplicate-directive-wiring` |failure |no |More than one SchemaDirective binds a wiring to the same directive.
+|`unwrapped-directive-wiring` |failure |no |A SchemaDirectiveWiring bean is not wrapped by a SchemaDirective.
+|`schema-definition-not-provided` |failure |no |No schema definition is configured.
+|`schema-invalid` |failure |yes |The schema files cannot be parsed or merged.
+|`schema-not-found` |failure |no |No schema file is found at the configured locations, or a location is invalid.
+|`unexpected-binding-error` |failure |no |Binding a field failed with an unexpected exception; the cause is attached.
+|`binding-failures` |failure |no |Several fields or types cannot be bound; each failure carries its own code.
+|`strict-findings` |failure |no |Strict mode found problems; each finding carries its own check code.
+|`processor-option-unknown` |failure |yes |A micronaut.graphql.tools.processor option is not known.
+|`processor-option-invalid` |failure |yes |A processor option has an invalid value.
+|`processor-option-removed` |failure |yes |A processor option was removed; the message names its replacement.
+|`processor-schema-not-configured` |failure |yes |The processor has no schema directory option.
+|`processor-schema-not-found` |failure |yes |The configured schema directory has no schema file.
+|`processor-internal-error` |failure |yes |The processor failed with an internal error.
+|===
+
+The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup emits it as `SchemaDiscoveryException` for a schema file that the discovery cannot parse or merge; a schema that graphql-java rejects later still fails with graphql-java's own `SchemaProblem`. `schema-not-found` is a startup code: no file at `micronaut.graphql.tools.schema.locations`, a missing literal file, or an invalid location.
+
+`nullable-primitive` and `coordinate-on-non-resolver` are registered for the compile-time check and are not emitted yet: no startup check reports them, and the compile-time check that does arrives with the visitor.

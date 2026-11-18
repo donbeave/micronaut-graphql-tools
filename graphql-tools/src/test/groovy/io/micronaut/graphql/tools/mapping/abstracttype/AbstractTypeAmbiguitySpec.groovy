@@ -104,7 +104,7 @@ type Long {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof AmbiguousAbstractTypeException
-        e.cause.message == """Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type is the most specific one:
+        e.cause.message == """[ambiguous-abstract-type] Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type is the most specific one:
   ${BoxedAndBagged.name} is an instance of Bagged (${Bagged.name}), Boxed (${Boxed.name}) of ${kind == 'union' ? 'union Holder' : 'interface Container'}
 Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement only one of their Java types."""
         e.cause.ambiguities.size() == 1

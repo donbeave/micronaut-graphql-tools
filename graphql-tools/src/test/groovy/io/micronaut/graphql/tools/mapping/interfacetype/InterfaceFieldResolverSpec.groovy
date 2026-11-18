@@ -145,7 +145,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof AmbiguousBindingException
-        e.cause.message == """Both a member of the Java type and a type resolver method can bind one GraphQL field.
+        e.cause.message == """[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: TextSection.summary (line 19, column 3)
   GraphQL object type: TextSection
   GraphQL field: summary
@@ -185,7 +185,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
-        e.cause.message == """Found multiple methods for one GraphQL field.
+        e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: MediaSection.summary (line 26, column 3)
   GraphQL object type: MediaSection
   GraphQL field: summary
@@ -236,7 +236,7 @@ type Tag implements Item & Labelled {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
-        e.cause.message == """Found multiple methods for one GraphQL field.
+        e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Tag.label (line 22, column 3)
   GraphQL object type: Tag
   GraphQL field: label

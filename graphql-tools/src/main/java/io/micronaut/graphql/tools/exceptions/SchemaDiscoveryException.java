@@ -15,17 +15,21 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
-/**
- * The schema files cannot be found, read, parsed or merged. The message names the file or the location.
- */
-public final class SchemaDiscoveryException extends RuntimeException {
+import io.micronaut.graphql.tools.binding.BindingCode;
 
-    public SchemaDiscoveryException(String message) {
-        super(message);
+/**
+ * The schema files cannot be found, read, parsed or merged. The code is {@link BindingCode#SCHEMA_NOT_FOUND} for a
+ * location that matches nothing or is invalid, and {@link BindingCode#SCHEMA_INVALID} for a file that does not parse or
+ * conflicts with another. The message names the file or the locations.
+ */
+public final class SchemaDiscoveryException extends SchemaBindingException {
+
+    public SchemaDiscoveryException(BindingCode code, String message) {
+        super(code, message);
     }
 
-    public SchemaDiscoveryException(String message, Throwable cause) {
-        super(message, cause);
+    public SchemaDiscoveryException(BindingCode code, String message, Throwable cause) {
+        super(code, message, cause);
     }
 
 }

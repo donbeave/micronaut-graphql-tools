@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, and `BC-21` and `BC-22` are the first of 1.0.0-M3. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, and `BC-21`, `BC-22` and `BC-23` are the first of 1.0.0-M3. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -32,15 +32,15 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time check is _pending_ with #150. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
 | BC-20 `@Named("graphql-tools")` mapper seam (#173) | The `graphql-tools` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Input conversion is not configurable through a public bean. | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion; it is not supported. Its replacement is planned with #37.
 | BC-21 enums need a bean introspection (#33) | Startup fails with `ClassNotIntrospectedException` for a bound Java enum without a bean introspection. Enum arguments now arrive as the Java constants from the schema's enum values, not as names converted by Jackson. | Annotate the enum with `@Introspected`. An input `ObjectMapper` that serializes enums by `toString()` now also sees the constants.
-| BC-22 schema files are `*.graphqls` (#17) | The compile-time processor no longer reads `*.graphql` files of its schema directory, so a schema kept in one is missing at compile time. | Rename the schema files to `.graphqls`. Client operation files may stay `.graphql`; they are never read.
+| BC-22 one code system (#237) | Every startup message starts with `[code]`. The `!` lines of the binding manifest are named by the code (`!unbound` is `!unbound-resolver-method`, `!unbound-enum-constant` or `!unmapped-input-property`; `!unusedDictionary` is `!unused-dictionary-entry`; `!ambiguous` is `!precedence-ambiguity`; `!unreachable` is `!unreachable-type` or `!unreachable-value-type`; `!unwiredDirective` is `!unwired-directive`). The labels of `BindingFailuresException` are `[unknown-schema-coordinate]` and `[strict-findings]` (were `[invalid-schema-coordinate]` and `[strict]`). | Match on `SchemaBindingException#code()`, not on message text. Read the new kinds from the manifest. New in 1.0.0-M3, no opt-out.
+| BC-23 schema files are `*.graphqls` (#17) | The compile-time processor no longer reads `*.graphql` files of its schema directory, so a schema kept in one is missing at compile time. | Rename the schema files to `.graphqls`. Client operation files may stay `.graphql`; they are never read.
 | #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. Jackson annotations stop being the input contract. | Plan for Micronaut Serialization and introspection annotations.
 | #37 input conversion | _Pending._ Arguments and input objects are converted from `BeanIntrospection` instead of Jackson. | Plan for introspection-based conversion and the scalar SPI.
 | #86 check severity and removed keys | _Pending._ Four keys are removed and their replacements named. `strict: false` also warns on unreachable object, interface and union types. | Use the replacement keys listed under #86 in the pending changes below.
 | #105 precedence default | _Pending._ The default value `strict` of `precedence` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
-| #109 public exceptions | _Pending._ Startup exceptions collapse into one `SchemaBindingException` with error codes. | Match on the error code, not on the exception subclass.
+| #109 public exceptions | _Pending._ The startup exception subclasses become internal behind `SchemaBindingException`, which already carries the code (BC-22). | Match on the error code, not on the exception subclass.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
 | #236 ambiguity exception | _Pending._ `AmbiguousBindingException` becomes internal. | Match on the error code.
-| #237 error codes | _Pending._ Check codes, error codes and manifest lines share one code system. | Match on codes, not on message text.
 | #291 processor options | _Pending._ The JSR-269 options are replaced by `micronaut.graphql.tools.processor.schema.dirs` and `micronaut.graphql.tools.processor.checks`. | Rename the options; the old `sdlDir` option will name its replacement.
 |===
 
@@ -492,6 +492,30 @@ public enum Color { RED, GREEN }
 public enum Color { RED, GREEN }
 ----
 
+=== BC-22: one code system for checks and errors (#237)
+
+Every strict check, every startup failure and every compile-time diagnostic has one code, from the `BindingCode` enum of `graphql-tools-binding`. The code is the same token in four places: the `[code]` at the start of the message, `SchemaBindingException#code()`, the word after `!` in a binding manifest line, and the check name that `checks.<code>` and `allow.findings` use. The list is in the error reference.
+
+What breaks for code that read the old forms:
+
+* Every startup exception extends the new public `SchemaBindingException`, and its message starts with `[code] `. A test that compares a whole message, or that checks `startsWith`, needs the prefix. A test that checks `contains` is not affected.
+* The manifest `!` lines changed their first word, as the summary table lists. Code that reads `!unbound`, `!unusedDictionary`, `!ambiguous`, `!unreachable` or `!unwiredDirective` lines reads the codes now. The compile-time manifest that the JSR-269 processor writes keeps the old words until #144 removes the processor.
+* `BindingFailuresException` and `StrictModeException` tag each finding with its own code. `StrictModeException#getCodes()` returns the check code of each problem.
+
+Fix: match on `exception.code()` (or on the `[code]` token), and read the manifest kinds from the table in the error reference.
+
+[source,java]
+----
+try {
+    applicationContext.getBean(GraphQL.class);
+} catch (BeanInstantiationException e) {
+    if (e.getCause() instanceof SchemaBindingException failure
+            && failure.code() == BindingCode.UNBOUND_ENUM_CONSTANT) {
+        // ...
+    }
+}
+----
+
 == Pending changes
 
 The following changes are planned and are not on `master` yet. Their behaviour is not described as current. Each entry names the issue that makes the change.
@@ -519,7 +543,7 @@ With `strict: false`, every check becomes `warn`. That includes unreachable obje
 
 The default `micronaut.graphql.tools.precedence` value `strict` becomes `fail`, and `property-first` and `resolver-first` stay. `precedence` does not depend on `strict`. Until #105 lands, the default is `strict`, which fails on an ambiguity, as described under BC-14.
 
-=== BC-22: schema files are `*.graphqls` (#17)
+=== BC-23: schema files are `*.graphqls` (#17)
 
 The runtime finds the schema files itself (`micronaut.graphql.tools.schema.locations`, default `classpath:graphql/**/*.graphqls`), and the compile-time processor reads the same files with the same code. Both read `*.graphqls` only, so a client operation file (`*.graphql`) in the schema directory is not a schema file and cannot break the build. Before, the processor read every `*.graphql` file as schema.
 
@@ -529,9 +553,9 @@ Rename the schema files that end in `.graphql` to `.graphqls`. A `TypeDefinition
 
 Startup failures collapse into one public `SchemaBindingException` with a stable error code. The subclasses become internal, and the error codes are listed in the guide. Match on the code, not on the exception subclass. Internal types move out of the API packages.
 
-=== #236 and #237: error codes
+=== #236: the ambiguity exception
 
-Check codes, error codes and manifest lines will share one code system. The startup failures behind BC-01, BC-02, BC-04, BC-05, BC-06, BC-11, BC-13 and BC-17 each carry a code. Match on the code, not on message text.
+`AmbiguousBindingException` becomes internal. Match on the code `precedence-ambiguity`, which is on `master` since BC-22.
 
 === #144 and #291: the compile-time processor
 

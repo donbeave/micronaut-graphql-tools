@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -57,7 +58,7 @@ final class AmbiguityLog {
                     it.getBeanDefinition(), it.getExecutableMethod())));
         }
         if (manifestRecorder.isRecording()) {
-            manifestRecorder.diagnostic("ambiguous", coordinate, Stream.concat(
+            manifestRecorder.diagnostic(BindingCode.PRECEDENCE_AMBIGUITY, coordinate, Stream.concat(
                             Stream.of(modelMember.manifestMember()),
                             resolvers.stream().map(it -> BindingManifestRecorder.methodMember(it.getExecutableMethod(),
                                     it.getExecutableMethod().getDeclaringType())).sorted())

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.InputMappingContext;
 
 /**
@@ -25,7 +26,7 @@ import io.micronaut.graphql.tools.InputMappingContext;
 public final class InputFieldNotSettableException extends AbstractMappingException {
 
     public InputFieldNotSettableException(InputMappingContext mappingContext) {
-        super(
+        super(BindingCode.INPUT_FIELD_NOT_SETTABLE,
                 String.format(
                         "The input field %s.%s cannot be set: the input ObjectMapper has no settable property `%s` "
                                 + "in %s (it is read-only, ignored or renamed for Jackson).",

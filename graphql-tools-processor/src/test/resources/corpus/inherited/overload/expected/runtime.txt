@@ -1,1 +1,1 @@
-MultipleMethodsFoundException Query.hello schema.graphqls:6:3
+multiple-methods-found Query.hello schema.graphqls:6:3

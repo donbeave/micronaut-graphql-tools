@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.schema;
 
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaIndex;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaLocation;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaLocation.Scheme;
@@ -83,7 +84,7 @@ public final class SchemaDiscovery {
             try {
                 location = SchemaLocation.parse(text);
             } catch (IllegalArgumentException e) {
-                throw new SchemaDiscoveryException("Invalid schema location in micronaut.graphql.tools.schema.locations: "
+                throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "Invalid schema location in micronaut.graphql.tools.schema.locations: "
                         + e.getMessage(), e);
             }
             try {
@@ -91,18 +92,18 @@ public final class SchemaDiscovery {
                     sources.add(source);
                 }
             } catch (IOException e) {
-                throw new SchemaDiscoveryException("Cannot read the schema location " + location + ": " + e.getMessage(), e);
+                throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "Cannot read the schema location " + location + ": " + e.getMessage(), e);
             }
         }
         if (sources.isEmpty()) {
-            throw new SchemaDiscoveryException("No GraphQL schema files found for micronaut.graphql.tools.schema.locations="
+            throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "No GraphQL schema files found for micronaut.graphql.tools.schema.locations="
                     + locations + ". Put the schema in a " + SchemaSources.EXTENSION + " file under the first location, set the "
                     + "locations, or provide a TypeDefinitionRegistry bean.");
         }
         try {
             return SchemaSources.load(sources);
         } catch (SchemaSourceException e) {
-            throw new SchemaDiscoveryException("Cannot load the GraphQL schema: " + e.getMessage(), e);
+            throw new SchemaDiscoveryException(BindingCode.SCHEMA_INVALID, "Cannot load the GraphQL schema: " + e.getMessage(), e);
         }
     }
 
@@ -129,7 +130,7 @@ public final class SchemaDiscovery {
         if (!location.isPattern()) {
             Path file = Path.of(location.pattern());
             if (!Files.isRegularFile(file)) {
-                throw new SchemaDiscoveryException("The schema file " + location + " does not exist.");
+                throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "The schema file " + location + " does not exist.");
             }
             found.add(new Source(file.getFileName().toString(), Files.readString(file, StandardCharsets.UTF_8)));
             return;
@@ -154,7 +155,7 @@ public final class SchemaDiscovery {
             throws IOException {
         List<URL> urls = Collections.list(loader.getResources(location.pattern()));
         if (urls.isEmpty()) {
-            throw new SchemaDiscoveryException("The schema file " + location + " is not on the classpath.");
+            throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "The schema file " + location + " is not on the classpath.");
         }
         for (URL url : location.scheme() == Scheme.CLASSPATH ? urls.subList(0, 1) : urls) {
             add(location.pattern(), url, found, seen);
@@ -165,7 +166,7 @@ public final class SchemaDiscovery {
             throws IOException {
         List<URL> indexes = Collections.list(loader.getResources(SchemaIndex.RESOURCE));
         if (indexes.isEmpty()) {
-            throw new SchemaDiscoveryException("The wildcard schema location " + location + " cannot list the classpath in a "
+            throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "The wildcard schema location " + location + " cannot list the classpath in a "
                     + "native image, and no " + SchemaIndex.RESOURCE + " is on it. Generate the index of the schema files "
                     + "at build time, or name each file in micronaut.graphql.tools.schema.locations.");
         }
@@ -196,7 +197,7 @@ public final class SchemaDiscovery {
             switch (root.getProtocol()) {
                 case "file" -> listDirectory(location, root, inRoot, seen);
                 case "jar" -> listJar(location, root, inRoot, seen);
-                default -> throw new SchemaDiscoveryException("Cannot list " + root + " for the schema location " + location
+                default -> throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "Cannot list " + root + " for the schema location " + location
                         + ": only directories and jar files can be listed. Name each file in "
                         + "micronaut.graphql.tools.schema.locations.");
             }

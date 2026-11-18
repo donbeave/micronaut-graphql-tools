@@ -16,13 +16,14 @@
 package io.micronaut.graphql.tools;
 
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
 
 @Internal
 final class UnexpectedBindingException extends AbstractMappingException {
 
     UnexpectedBindingException(MappingContext mappingContext, RuntimeException cause) {
-        super(cause.getClass().getSimpleName() + ": " + cause.getMessage(), mappingContext);
+        super(BindingCode.UNEXPECTED_BINDING_ERROR, cause.getClass().getSimpleName() + ": " + cause.getMessage(), mappingContext);
         initCause(cause);
     }
 

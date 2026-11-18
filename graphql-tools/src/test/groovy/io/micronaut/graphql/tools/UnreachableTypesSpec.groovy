@@ -80,7 +80,7 @@ input Filter {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnreachableTypesException
         e.cause.typeNames == ['Lonely', 'Orphan', 'Shape', 'Stray']
-        e.cause.message == """The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Lonely (type), Orphan (type), Shape (interface), Stray (union).
+        e.cause.message == """[unreachable-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Lonely (type), Orphan (type), Shape (interface), Stray (union).
   Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow-unreachable, or set micronaut.graphql.tools.unreachable-types to ignore."""
     }
 
@@ -243,7 +243,7 @@ type Item implements Node {
         e.cause instanceof InvalidAllowUnreachableException
         e.cause.undefinedTypeNames == ['Missing']
         e.cause.notUnreachableTypeNames == ['Item', 'String']
-        e.cause.message == """micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Missing (not defined in the schema), Item (not an unreachable object, interface, union, enum, input or scalar type), String (not an unreachable object, interface, union, enum, input or scalar type).
+        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow-unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Missing (not defined in the schema), Item (not an unreachable object, interface, union, enum, input or scalar type), String (not an unreachable object, interface, union, enum, input or scalar type).
   Remove them from the list."""
 
         where:

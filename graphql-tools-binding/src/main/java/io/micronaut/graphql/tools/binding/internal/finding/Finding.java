@@ -16,12 +16,13 @@
 package io.micronaut.graphql.tools.binding.internal.finding;
 
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.core.annotation.Nullable;
 
 /**
  * One finding of a rule, before it is rendered.
  *
- * @param code           the check code
+ * @param code           the code of the registry ({@link BindingCode#code()})
  * @param coordinate     the schema coordinate, or {@code null} when the finding has none
  * @param sentence       one sentence that says what is wrong
  * @param member         the Java member as {@code binary.Name#member(parameter types)}, or {@code null}
@@ -32,6 +33,12 @@ import io.micronaut.core.annotation.Nullable;
 @Internal
 public record Finding(String code, @Nullable String coordinate, String sentence, @Nullable String member,
                       @Nullable String declaredIn, @Nullable SchemaLocation schemaLocation, @Nullable String fix) {
+
+    public Finding {
+        if (BindingCode.fromCode(code) == null) {
+            throw new IllegalArgumentException("Not a code of the registry: " + code);
+        }
+    }
 
     /**
      * @param code       the check code

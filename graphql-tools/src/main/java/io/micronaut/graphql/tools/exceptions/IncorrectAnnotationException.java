@@ -15,15 +15,16 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 
 /**
  * @author Alexey Zhokhov
  */
-public final class IncorrectAnnotationException extends RuntimeException {
+public final class IncorrectAnnotationException extends SchemaBindingException {
 
     public IncorrectAnnotationException(Class<?> annotatedClass) {
-        super(
+        super(BindingCode.INCORRECT_ANNOTATION,
                 String.format(
                         "Empty value member for @%s annotation in %s class.",
                         GraphQLTypeResolver.class.getSimpleName(),
