@@ -71,7 +71,7 @@ public final class GraphQLResolversRegistry {
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
 
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        if (method.isAbstract()) {
+        if (method.isAbstract() || beanDefinition.isAbstract()) {
             return;
         }
         rootResolvers.stream()
@@ -86,7 +86,7 @@ public final class GraphQLResolversRegistry {
     }
 
     public void registerTypeResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        if (method.isAbstract()) {
+        if (method.isAbstract() || beanDefinition.isAbstract()) {
             return;
         }
         getTypeResolverValue(beanDefinition);
