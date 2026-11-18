@@ -1,28 +1,14 @@
-The binding manifest says what every schema coordinate is bound to: which Java member serves a field, which Java type an object type maps to, which class coerces a scalar. It is one text, sorted, so that a change of binding shows up as a change of a line.
+The binding manifest says what every schema coordinate is bound to: which Java member serves a field, which Java type an object type maps to, which scalar a type is. It is one text, sorted, so that a change of binding shows up as a change of a line. This page is the specification of the format. The format has a version, and the library that writes it and the library that reads it agree on the version through the first line.
 
-== What it contains
-
-The first lines are the header: the format (`# graphql-binding-manifest 1`), the binder and its version, the graphql-java version and a SHA-256 of the schema definitions. Every other line has the shape `subject → kind · member · declared type · converted type`:
-
-* object, interface, union, enum, input and scalar types: the Java type or `Coercing` class that serves them;
-* fields: `root`, `resolver` or `property`, the member, the declared Java type and the converted type (the declared type without `CompletionStage`, `Publisher`, `DataFetcherResult`, `Optional` and the primitive optionals);
-* `resolves`, `enumValue` and `inputField` lines;
-* diagnostics, which start with `!`: unreachable types, ambiguous bindings and the findings of strict mode.
-
-Java types are written as `java.lang.reflect.Type#getTypeName()` writes them, from Micronaut's compile-time type information. That information keeps no wildcards, raw types or type arguments of array components: `List<? extends Book>` reads `java.util.List<Book>`, a raw `List` reads `java.util.List<java.lang.Object>` and `List<String>[]` reads `java.util.List[]`.
+NOTE: The current version is *2*. Version 1 was the format of 1.0.0-M1 and 1.0.0-M2; version 2 is the breaking change BC-25. The migration page lists the differences.
 
 == Where the text comes from
 
 Recording is opt-in: set `micronaut.graphql.tools.manifest.record` to `true`, or `micronaut.graphql.tools.manifest.enabled` (which implies it). Without either, nothing is recorded while the schema is bound, the `BindingManifest` bean cannot be created (it fails with a message that names `manifest.record`), and with `strict` set to `false` the strict-mode checks that only feed the manifest are skipped. Strict mode itself does not need the manifest and fails on the same findings either way.
 
-When it is recorded, the manifest is recorded as cheap facts and rendered the first time it is read: by the `BindingManifest` bean, or by the startup writer when `micronaut.graphql.tools.manifest.enabled` is `true`. A start that does not read the manifest renders nothing.
+When it is recorded, the manifest is recorded as cheap facts (the binding plan) and rendered the first time it is read: by the `BindingManifest` bean, or by the startup writer when `micronaut.graphql.tools.manifest.enabled` is `true`. A start that does not read the manifest renders nothing, and a start that does not record costs nothing.
 
-Rendering never uses reflection, so *the text is identical on the JVM and in a native image*:
-
-* the member of a property is the getter that the compile-time checks (the annotation processor) recorded in `META-INF/micronaut-graphql-tools/accessors.txt`, because Micronaut's bean introspection does not say which method reads a property. Without the processor, or for a class it did not see, the member reads `Type#property`;
-* the graphql-java version is the `Bundle-Version` of the manifest of its jar, read when the manifest is rendered; graphql-java 26 declares no version there, and the header says `unknown` on it. The library registers `META-INF/MANIFEST.MF` and `META-INF/micronaut-graphql-tools/*` as native image resources.
-
-== Options
+Rendering never uses reflection, so *the text is identical on the JVM and in a native image*. The library registers `META-INF/MANIFEST.MF` and `META-INF/micronaut-graphql-tools/*` as native image resources: the header reads the graphql-java version from the manifest of its jar.
 
 [configuration]
 ----
@@ -36,3 +22,157 @@ micronaut:
 ----
 
 Without `path` the manifest is logged at INFO.
+
+== The format
+
+A manifest is a text file: UTF-8 without a byte order mark, every line ended by `LF`, and the last line ended too. The characters of the text are ASCII (see <<manifestAscii,ASCII only>>). It has a header of four lines and a body of any number of lines.
+
+[source,text]
+----
+manifest    = header body
+header      = format-line binder-line java-line hash-line
+format-line = "# graphql-binding-manifest " version LF
+binder-line = "# binder: micronaut-graphql-tools " (release | "unknown") LF
+java-line   = "# graphql-java: " (release | "unknown") LF
+hash-line   = "# schema-sha256: " 64*64 lower-hex LF
+body        = *(line LF)
+line        = entry | finding | ignored
+entry       = subject " -> " kind " ; " member " ; " declared " ; " converted
+finding     = "!" code " " part *(" ; " part)
+ignored     = "~ignored " part
+----
+
+`version` is the integer of the format, `2` here. A reader that does not know the version must not read the body. The header lines come in this order and exactly once. `release` is the version of the library or of graphql-java. The binder is `unknown` outside a jar, and graphql-java is `unknown` when its jar declares no version (graphql-java 26 declares none).
+
+=== Entries
+
+An entry has five parts. `-` stands for a part that has no value. Every entry that names a Java type or member writes it as `java.lang.reflect.Type#getTypeName()` writes a type, `Class#method(parameter types)` for a method, `Class#property` for a field of a Java type, and `Class#CONSTANT` for an enum constant.
+
+[cols="2,2,3,2"]
+|===
+|Subject |Kind |Member |Declared type, converted type
+
+|`Type`
+|`object`, `interface`, `union`, `enum`, `input`
+|the Java type, or `-` when none serves it (an operation type, an interface or union that only resolves)
+|`-`, `-`
+
+|`Scalar`
+|`scalar`
+|the name of the scalar, again. Never the `Coercing` class. Only scalars that a bound field, argument or input field uses.
+|`-`, `-`
+
+|`Type.field(argument: T): T`
+|`root`, `resolver`, `property`
+|`Class#method(parameter types)` of the root resolver method, the type resolver method, or the getter or `@GraphQLField` method
+|the declared Java type, and the converted type (the declared type without `CompletionStage`, `Publisher` (subscription fields only), `DataFetcherResult` (also per list element) and `Optional` or a primitive optional, unwrapped once in that order)
+
+|`Type.field(argument: T): T`
+|`claimed`
+|the class name of the `RuntimeWiringCustomizer` that claims the field. An anonymous or lambda class is named by its enclosing class or its interface.
+|`-`, `-`
+
+|`Abstract/Member`
+|`resolves`
+|the Java type of the member of the union or of the implementation of the interface
+|`-`, `-`
+
+|`Enum.VALUE`
+|`enumValue`
+|`Class#VALUE`
+|`-`, `-`
+
+|`Input.field: T`
+|`inputField`
+|`Class#property`
+|the declared Java type, and the converted type
+|===
+
+The subject of a field is its coordinate with its arguments and its type, printed by graphql-java (`Query.book(id: ID!): Book`). Interface fields have no line of their own: every object type that implements the interface has its line.
+
+Java types are written from Micronaut's compile-time type information, which keeps no wildcards, raw types or type arguments of array components: `List<? extends Book>` reads `java.util.List<Book>`, a raw `List` reads `java.util.List<java.lang.Object>` and `List<String>[]` reads `java.util.List[]`. A type variable of a generic superclass stays a type variable (`T`). The member of a property is the getter that the compile-time checks (the annotation processor) recorded in `META-INF/micronaut-graphql-tools/accessors.txt`; without the processor, or for a class it did not see, it reads `Class#property`.
+
+=== Findings
+
+A line that starts with `!` is a finding. The word after `!` is the code of the finding in the registry, the same code that starts the startup error as `[code]` and that names the check. The parts are separated by ` ; `.
+
+[cols="2,3"]
+|===
+|Line |Meaning
+
+|`!unreachable-type Type`
+|a declared type that nothing binds and that is not allowed (`allow-unreachable`)
+
+|`!unreachable-value-type Type`
+|the same for an enum, input or scalar type
+
+|`!precedence-ambiguity Type.field ; member \| member`
+|a field decided by a lenient `precedence`: the coordinate, then the members that compete
+
+|`!unbound-resolver-method member`, `!unbound-enum-constant member`, `!unmapped-input-property member`, `!unused-dictionary-entry Type = Class`, `!unwired-directive name`
+|the findings of strict mode
+|===
+
+=== Ignored members
+
+`~ignored Class#member` names a member marked `@GraphQLIgnore` that the binding met. It binds no field and is not a finding.
+
+=== Sorting
+
+The body is sorted as a whole: every line, entries, findings and ignored lines together, in the order of `String#compareTo` (the order of UTF-16 code units, which is the order of the bytes for ASCII). So the findings (`!`, 0x21) come first, then the entries, then the ignored lines (`~`, 0x7e). Two lines never compare equal: a line is recorded once.
+
+[[manifestAscii]]
+=== ASCII only
+
+A character outside `0x20` to `0x7e`, and the backslash, in a part is written as a backslash, `u` and four lower case hex digits of the UTF-16 code unit (`example.Caf\u00e9#name`, a backslash is `\u005c`). Nothing else is escaped. A part that holds the separator ` -> ` or ` ; ` cannot be written, and the rendering fails with a message that names the part.
+
+=== The schema hash
+
+`schema-sha256` is the SHA-256 of the definitions of the merged schema, printed by graphql-java's `AstPrinter` and joined by `LF`. The definitions are ordered by name, then the definition before its extensions, then by their printed text. So loading the same schema files in any order, and merging the extensions of a type in any order, gives one hash. The order of the fields inside one definition is part of the hash. The built-in scalars and the directives that graphql-java defines on its own are left out. The hash does not cover comments or insignificant white space.
+
+== Example
+
+[source,text]
+----
+# graphql-binding-manifest 2
+# binder: micronaut-graphql-tools 1.0.0
+# graphql-java: 22.4
+# schema-sha256: 207c5aaec4894a775f03ae20eaa6b97ba4293ed6608936aa65c812af3a469469
+!precedence-ambiguity Book.title ; example.data.Book#getTitle() | example.graphql.type.resolver.BookResolver#title(example.data.Book)
+!unreachable-type Legacy
+Book -> object ; example.data.Book ; - ; -
+Book.sellers: [BookSeller!]! -> resolver ; example.graphql.type.resolver.BookResolver#sellers(example.data.Book, graphql.schema.DataFetchingEnvironment) ; java.util.concurrent.CompletionStage<java.util.List<example.data.BookSeller>> ; java.util.List<example.data.BookSeller>
+Book.title: String! -> property ; example.data.Book#getTitle() ; java.lang.String ; java.lang.String
+Error -> union ; example.graphql.type.Error ; - ; -
+Error/SecurityError -> resolves ; example.graphql.type.SecurityError ; - ; -
+Genre -> enum ; example.data.Genre ; - ; -
+Genre.NOVEL -> enumValue ; example.data.Genre#NOVEL ; - ; -
+Long -> scalar ; Long ; - ; -
+Query -> object ; - ; - ; -
+Query.allBooks: [Book!]! -> root ; example.graphql.query.AllBooksQuery#allBooks() ; java.util.List<example.data.Book> ; java.util.List<example.data.Book>
+Query.version: String -> claimed ; example.config.VersionCustomizer ; - ; -
+SignUpInput.username: String! -> inputField ; example.graphql.input.SignUpInput#username ; java.lang.String ; java.lang.String
+String -> scalar ; String ; - ; -
+~ignored example.data.Book#internalNotes()
+----
+
+A second example shows the escape of a character outside ASCII.
+
+[source,text]
+----
+# graphql-binding-manifest 2
+# binder: micronaut-graphql-tools unknown
+# graphql-java: unknown
+# schema-sha256: 0000000000000000000000000000000000000000000000000000000000000000
+Cafe -> object ; example.Caf\u00e9 ; - ; -
+----
+
+The examples of this page are tested: the build parses each block and checks the grammar, the order and the escapes, and renders it again from the binding plan to the same text.
+
+== Compile-time manifest
+
+The compile-time checks (#150) write the same format, so that the manifest of a build and the manifest of a start can be compared line by line. A compile-time manifest cannot know what the runtime serves: the `scalar` lines, `resolves` lines of interfaces that are only implemented, `claimed` lines, and findings that need the beans at start are left out, and the checks name each omission in a companion file, `binding-manifest-omitted.txt`. Its first line is `# graphql-binding-manifest-omitted 1`. Each following line is `kind <entry kind or finding word>`, `type <Type>` (every line about the type), `field <coordinate>` or `unbound <member>`. A reader subtracts what the record names from the start manifest and compares the rest.
+
+== Versioning
+
+The format version changes when a reader of the previous version would read a line wrongly: a changed separator, a changed meaning of a part, a changed sort, a changed header. A new entry kind or a new finding code is not a change of the version: a reader skips what it does not know. Every change of the version is a breaking change in the release notes.

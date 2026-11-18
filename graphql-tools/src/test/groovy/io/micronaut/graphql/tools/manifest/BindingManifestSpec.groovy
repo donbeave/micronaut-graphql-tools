@@ -134,7 +134,7 @@ type Legacy {
 
         then:
         manifest.header.size() == 4
-        manifest.header[0] == '# graphql-binding-manifest 1'
+        manifest.header[0] == '# graphql-binding-manifest 2'
         manifest.header[1] == '# binder: micronaut-graphql-tools unknown'
         // graphql-java 26 declares no version in its jar (no Bundle-Version), and the header says unknown then
         manifest.header[2] ==~ (hasBundleVersion() ? /# graphql-java: \d+\.\d+(\.\d+)?/ : /# graphql-java: unknown/)
@@ -155,6 +155,40 @@ type Legacy {
 
         then:
         applicationContext.getBean(BindingManifest).header[3] == first
+    }
+
+    void "the schema hash is one for every order of the definitions"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, CONFIG)
+        String first = applicationContext.getBean(BindingManifest).header[3]
+        applicationContext.close()
+
+        when:
+        List<String> blocks = SCHEMA.trim().split('\n\n').toList()
+        startContext(blocks.reverse().join('\n\n') + '\n', SPEC_NAME, CONFIG)
+
+        then:
+        applicationContext.getBean(BindingManifest).header[3] == first
+    }
+
+    void "the manifest names no anonymous, hidden or generated class"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, CONFIG)
+
+        expect:
+        applicationContext.getBean(BindingManifest).lines.every { !(it =~ /\$\d|\$\$|Lambda|Intercepted/) }
+    }
+
+    void "a class is named by the class a reader can find"() {
+        given:
+        Runnable lambda = { }
+        Object anonymous = new Object() { }
+
+        expect:
+        BindingManifestRecorder.nameOf(String) == 'java.lang.String'
+        BindingManifestRecorder.nameOf(Map.Entry) == 'java.util.Map$Entry'
+        BindingManifestRecorder.nameOf(anonymous.getClass()) == getClass().name
+        !BindingManifestRecorder.nameOf(lambda.getClass()).contains('$$')
     }
 
     static String golden(String name) {
@@ -263,8 +297,8 @@ type Legacy {
         BindingManifest manifest = applicationContext.getBean(BindingManifest)
 
         then:
-        manifest.lines.contains(("Item.price: Long! → resolver · ${ItemResolver.name}#price(${Item.name}) · " +
-                "java.util.concurrent.CompletionStage<java.lang.Long> · java.lang.Long").toString())
+        manifest.lines.contains(("Item.price: Long! -> resolver ; ${ItemResolver.name}#price(${Item.name}) ; " +
+                "java.util.concurrent.CompletionStage<java.lang.Long> ; java.lang.Long").toString())
         manifest.diagnostics == ['!unreachable-type Legacy']
     }
 
@@ -280,9 +314,9 @@ type Legacy {
         BindingManifest manifest = applicationContext.getBean(BindingManifest)
 
         then:
-        manifest.lines.contains("Item.price: Long! → property · ${Item.name}#getPrice() · java.lang.Long · java.lang.Long".toString())
+        manifest.lines.contains("Item.price: Long! -> property ; ${Item.name}#getPrice() ; java.lang.Long ; java.lang.Long".toString())
         manifest.diagnostics == [
-                "!precedence-ambiguity Item.price · ${Item.name}#getPrice() | ${ItemResolver.name}#price(${Item.name})".toString(),
+                "!precedence-ambiguity Item.price ; ${Item.name}#getPrice() | ${ItemResolver.name}#price(${Item.name})".toString(),
                 '!unreachable-type Legacy'
         ]
     }
@@ -311,8 +345,8 @@ type Book {
         executeQuery('{ book { summary } }').data == [book: [summary: 'Summary of Dune']]
         TracedInterceptor.CALLS.get() == 2
         manifest.lines.findAll { it.startsWith('Query.book') || it.startsWith('Book.summary') } == [
-                "Book.summary: String! → resolver · ${TracedBookResolver.name}#summary(${Book.name}) · java.lang.String · java.lang.String".toString(),
-                "Query.book: Book → root · ${TracedBookQuery.name}#book() · ${Book.name} · ${Book.name}".toString()
+                "Book.summary: String! -> resolver ; ${TracedBookResolver.name}#summary(${Book.name}) ; java.lang.String ; java.lang.String".toString(),
+                "Query.book: Book -> root ; ${TracedBookQuery.name}#book() ; ${Book.name} ; ${Book.name}".toString()
         ]
     }
 
@@ -417,11 +451,11 @@ type Book {
 
     void "a part that contains a separator cannot be written"() {
         when:
-        new BindingManifestRecorder(true).diagnostic(BindingCode.UNREACHABLE_TYPE, 'a · b')
+        new BindingManifestRecorder(true).diagnostic(BindingCode.UNREACHABLE_TYPE, 'a ; b')
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == 'Cannot write the binding manifest: "a · b" contains a separator ("→" or "·") or a line break.'
+        e.message == 'Cannot write the binding manifest: "a ; b" contains a separator ("->" or ";").'
     }
 
     void "enum, input and scalar types that only directive definitions use are not unreachable"() {
@@ -495,7 +529,7 @@ type Unlisted {
         BindingManifest manifest = applicationContext.getBean(BindingManifest)
 
         then:
-        manifest.lines.contains("Unlisted.title: String! → property · ${UnlistedType.name}#title · java.lang.String · java.lang.String".toString())
+        manifest.lines.contains("Unlisted.title: String! -> property ; ${UnlistedType.name}#title ; java.lang.String ; java.lang.String".toString())
     }
 
     void "the manifest is rendered when it is first read, not while the schema is bound or queried"() {
@@ -564,8 +598,8 @@ type Book {
 
         then:
         manifest.lines.findAll { it.startsWith('Query.books') || it.startsWith('Book.label') } == [
-                "Book.label(upper: Boolean): String → property · ${LabelledBase.name}#label(java.lang.Boolean) · java.lang.String · java.lang.String".toString(),
-                "Query.books: [Book!]! → root · ${WildcardQuery.name}#books() · java.util.concurrent.CompletionStage<java.util.List<${LabelledBook.name}>> · java.util.List<${LabelledBook.name}>".toString()
+                "Book.label(upper: Boolean): String -> property ; ${LabelledBase.name}#label(java.lang.Boolean) ; java.lang.String ; java.lang.String".toString(),
+                "Query.books: [Book!]! -> root ; ${WildcardQuery.name}#books() ; java.util.concurrent.CompletionStage<java.util.List<${LabelledBook.name}>> ; java.util.List<${LabelledBook.name}>".toString()
         ]
     }
 

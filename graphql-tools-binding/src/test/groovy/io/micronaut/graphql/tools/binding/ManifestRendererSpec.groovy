@@ -34,12 +34,12 @@ class ManifestRendererSpec extends Specification {
         def rendered = ManifestRenderer.render(plan, ['# binder: test'])
 
         then:
-        rendered.header() == ['# graphql-binding-manifest 1', '# binder: test']
+        rendered.header() == ['# graphql-binding-manifest 2', '# binder: test']
         rendered.lines() == [
                 '!unreachable Orphan',
-                'Book → object · a.Book · - · -',
-                'Genre.FICTION → enumValue · a.Genre#FICTION · - · -',
-                'Query.book(id: ID!): Book → root · a.R#book(java.lang.String) · a.Book · a.Book',
+                'Book -> object ; a.Book ; - ; -',
+                'Genre.FICTION -> enumValue ; a.Genre#FICTION ; - ; -',
+                'Query.book(id: ID!): Book -> root ; a.R#book(java.lang.String) ; a.Book ; a.Book',
                 '~ignored a.R#hidden()',
         ]
     }
@@ -59,20 +59,39 @@ class ManifestRendererSpec extends Specification {
         reads == 3
     }
 
-    void "a part that holds a separator or a line break cannot be written"() {
+    void "a part that holds a separator cannot be written"() {
         when:
         action()
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == 'Cannot write the binding manifest: "' + part + '" contains a separator ("→" or "·") or a line break.'
+        e.message == 'Cannot write the binding manifest: "' + part + '" contains a separator ("->" or ";").'
 
         where:
         part     | action
-        'a · b'  | { ManifestRenderer.diagnostic('unreachable', 'a · b') }
-        'a → b'  | { ManifestRenderer.ignored('a → b') }
-        'a\nb'   | { ManifestRenderer.render(new BindingPlan([Entry.of('a\nb', 'object', { 'x' })], [], []), []) }
-        'a · b'  | { ManifestRenderer.render(new BindingPlan([Entry.of('T', 'object', { 'a · b' })], [], []), []) }
+        'a ; b'  | { ManifestRenderer.diagnostic('unreachable', 'a ; b') }
+        'a -> b'  | { ManifestRenderer.ignored('a -> b') }
+        'a ; b'  | { ManifestRenderer.render(new BindingPlan([Entry.of('T', 'object', { 'a ; b' })], [], []), []) }
+    }
+
+    void "the text is ASCII: a character outside printable ASCII and the backslash are written as backslash-u and four hex digits"() {
+        expect:
+        ManifestRenderer.ignored(part) == '~ignored ' + escaped
+
+        where:
+        part         | escaped
+        'a.B#plain'  | 'a.B#plain'
+        'a.\u00c9#x' | 'a.\\u00c9#x'
+        'a\nb'       | 'a\\u000ab'
+        'a\\b'       | 'a\\u005cb'
+        'a\u20acb'   | 'a\\u20acb'
+    }
+
+    void "the header has the three lines after the format line, in this order"() {
+        expect:
+        ManifestRenderer.header('1.0.0', 'unknown', 'ab') == [
+                '# binder: micronaut-graphql-tools 1.0.0', '# graphql-java: unknown', '# schema-sha256: ab']
+        ManifestRenderer.FORMAT == '# graphql-binding-manifest ' + ManifestRenderer.VERSION
     }
 
     void "a plan does not change when the lists it was built from do"() {

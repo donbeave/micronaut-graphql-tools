@@ -15,9 +15,9 @@ class InheritedAbstractResolverSpec extends AbstractTest {
         then:
         result.errors.isEmpty()
         result.data == [hello: 'hello']
-        applicationContext.getBean(BindingManifest).lines.contains('Query.hello: String → root · '
-                + 'io.micronaut.graphql.tools.mapping.resolver.inherited.JavaRootResolverImplementation#hello() · '
-                + 'java.lang.String · java.lang.String')
+        applicationContext.getBean(BindingManifest).lines.contains('Query.hello: String -> root ; '
+                + 'io.micronaut.graphql.tools.mapping.resolver.inherited.JavaRootResolverImplementation#hello() ; '
+                + 'java.lang.String ; java.lang.String')
     }
 
 }
