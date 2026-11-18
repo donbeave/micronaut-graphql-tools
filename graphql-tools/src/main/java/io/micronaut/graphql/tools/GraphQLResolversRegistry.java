@@ -43,7 +43,6 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,9 +76,9 @@ public final class GraphQLResolversRegistry {
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
 
     private final BeanContext beanContext;
-    private final Set<BeanDefinition<?>> seenRootResolvers = Collections.newSetFromMap(new IdentityHashMap<>());
-    private final Set<BeanDefinition<?>> seenTypeResolvers = Collections.newSetFromMap(new IdentityHashMap<>());
-    private final Set<BeanDefinition<?>> seenSchemaCoordinates = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<BeanDefinition<?>> seenRootResolvers = new HashSet<>();
+    private final Set<BeanDefinition<?>> seenTypeResolvers = new HashSet<>();
+    private final Set<BeanDefinition<?>> seenSchemaCoordinates = new HashSet<>();
     private boolean introductionBeansRegistered;
 
     public GraphQLResolversRegistry(BeanContext beanContext) {
