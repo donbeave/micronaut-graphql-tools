@@ -1,0 +1,9 @@
+schema {
+  query: Query
+}
+
+directive @audit on FIELD_DEFINITION
+
+type Query {
+  hello: String @audit
+}

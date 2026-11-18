@@ -14,6 +14,7 @@ import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
 import io.micronaut.graphql.tools.exceptions.StrictModeException
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
 import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
+import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException
 
 import java.util.regex.Matcher
 
@@ -96,6 +97,11 @@ final class CorpusStartup {
             return failure.typeNames.collect { String type ->
                 [kinds.get(type) in ['enum', 'input', 'scalar'] ? 'unreachable-value-type' : 'unreachable-type', type, '-']
             }
+        } else if (failure instanceof UnwiredDirectivesException) {
+            return failure.unwiredDirectives.collect { String name -> ['unwired-directive', name, '-'] } +
+                    (failure.invalidInertDirectives + failure.invalidSchemaCustomizerDirectives).collect { String name ->
+                        [failure.getClass().simpleName, name, '-']
+                    }
         } else if (failure instanceof UnmappedInputPropertiesException) {
             return failure.unmappedProperties.collectMany { String type, Map.Entry<Class<?>, List<String>> entry ->
                 entry.value.collect { String property -> ['unmapped-input-property', type + '.' + property, '-'] }
