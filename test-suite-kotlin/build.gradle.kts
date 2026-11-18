@@ -11,6 +11,8 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.
+    runtimeOnly(mn.micronaut.jackson.databind)
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")

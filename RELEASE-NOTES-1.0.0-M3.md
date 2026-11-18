@@ -1,6 +1,6 @@
 # micronaut-graphql-tools 1.0.0-M3 release notes
 
-Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven registry of this repository by the `Release` workflow (D-40). This milestone follows [1.0.0-M2](RELEASE-NOTES-1.0.0-M2.md). The numbering continues from the M2 notes: `BC-01` to `BC-19` are described in the M1 notes, `BC-20` in the M2 notes, and `BC-21` to `BC-25` are the numbered changes of this milestone so far. See the migration page for the fix of each change. This file grows as the milestone's changes land.
+Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven registry of this repository by the `Release` workflow (D-40). This milestone follows [1.0.0-M2](RELEASE-NOTES-1.0.0-M2.md). The numbering continues from the M2 notes: `BC-01` to `BC-19` are described in the M1 notes, `BC-20` in the M2 notes, and `BC-21` to `BC-25` and `BC-26` are the numbered changes of this milestone so far. See the migration page for the fix of each change. This file grows as the milestone's changes land.
 
 ## What this release changes
 
@@ -10,7 +10,7 @@ Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven 
 - Schema discovery (#17): without a `TypeDefinitionRegistry` bean the library reads `micronaut.graphql.tools.schema.locations` (default `classpath:graphql/**/*.graphqls`; `classpath*:` for dependency jars, `file:` for the file system) and merges the files, each parsed with its own name. A schema without a `schema { }` block uses `Query`, `Mutation` and `Subscription` as root types. A file that holds only operations is skipped. A native image reads the schema index `META-INF/micronaut-graphql-tools/schema-index.txt`. The compile-time processor reads its schema directory with the same code.
 - Binding manifest: the format is specified in the guide page "Binding Manifest" and versioned in its first line, `# graphql-binding-manifest 2` (#90, BC-25). The schema hash does not depend on the order of the schema files and extensions, a `scalar` line names the scalar and not the `Coercing` class, the text is ASCII, and the examples of the specification are golden files. A start that does not record the manifest still costs nothing. The graphql-java line of the header stays `unknown` on graphql-java 26, whose jar declares no version.
 
-## Breaking changes (BC-21 to BC-25)
+## Breaking changes (BC-21 to BC-25, BC-26)
 
 | ID | PR | What changes | Opt-out | Migration hint | Status |
 |---|---|---|---|---|---|
@@ -19,6 +19,7 @@ Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven 
 | BC-23 | #37 | Arguments and input objects are converted from `BeanIntrospection`. Jackson annotations on input classes, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean stop being the input contract, and the `GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER` constant is removed. A list is converted into `List`, `Collection`, `Iterable`, `Set`, `SortedSet`, `Deque` or `Queue` only. | none | Name the properties and constructor parameters of an input class like the input fields. Use a `TypeConverter` bean for a conversion of your own, and the scalar mapping for custom scalars. | Not released yet. Not covered by D-33 |
 | BC-24 | #17 | The compile-time processor reads `*.graphqls` files only; a `*.graphql` file in its schema directory is no longer read. | none | Rename schema files to `.graphqls`. Operation files may stay `.graphql`. | Not released yet. Not covered by D-33 |
 | BC-25 | #90 | The binding manifest is written in format version 2: ASCII separators (` -> ` and ` ; ` replace the arrow and the middle dot), a `scalar` line names the scalar and not the `Coercing` class, characters outside ASCII are written `\uXXXX`, and the schema hash does not depend on the order of the files and the extensions. The first line is `# graphql-binding-manifest 2`. | none | Regenerate checked-in manifests; split lines on ` -> ` and ` ; `; check the version on the first line. | Not released yet. Not covered by D-33 |
+| BC-26 | #36 | `micronaut-jackson-databind` leaves the library's `api` scope. The library no longer brings a Jackson JSON mapper to an application. An application that uses Jackson declares `micronaut-jackson-databind` itself, and an application on Micronaut Serialization declares `micronaut-serde-jackson` or its own JSON stack. | none | Add the JSON dependency your application uses to its own build. | Not released yet. Not covered by D-33 |
 
 ## Other behaviour changes
 
