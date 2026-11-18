@@ -193,9 +193,6 @@ val jmhSmokeTestTask = tasks.register<Test>("jmhSmokeTest") {
     testClassesDirs = jmhSmokeTest.output.classesDirs
     classpath = jmhSmokeTest.runtimeClasspath + sourceSets["jmh"].output + sourceSets["jmh"].runtimeClasspath +
             files(tasks.named("jmhCompileGeneratedClasses"))
-    // The 10,000-field schema is a chain of 1,000 types, and binding recurses once per type of the chain: the default
-    // thread stack overflows (measured), so the JVM that runs it gets a larger one.
-    jvmArgs("-Xss16m")
     // JMH locks jmh.lock in java.io.tmpdir, so builds on one machine collide there. The JVM gets a temp directory of
     // its own under this project's build directory, which only this build uses. The path is relative to the test's
     // working directory (this project), so it is the same on every machine.
@@ -220,8 +217,6 @@ jmh {
     timeOnIteration = "1s"
     profilers = listOf("gc")
     resultFormat = "JSON"
-    // the 10,000-field schema binds recursively along its chain of types (see jmhSmokeTest)
-    jvmArgs = listOf("-Xss16m")
     // The start-up benchmarks are measured cold, one fresh JVM per sample, by scripts/startup-report.py. The warm-up of
     // this task would start contexts in the same JVM first.
     excludes = listOf("BindingBenchmark", "RetainedHeapBenchmark")
