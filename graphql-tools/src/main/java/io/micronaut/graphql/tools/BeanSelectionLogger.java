@@ -21,7 +21,6 @@ import io.micronaut.context.BeanContext;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.BeanDefinition;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +54,7 @@ final class BeanSelectionLogger implements ApplicationEventListener<StartupEvent
 
     private void log(Class<?> type) {
         String name = type.getSimpleName();
-        BeanDefinition<?> competitor = LibraryBeanSelection.competitor(beanContext, type);
+        LibraryBeanSelection.Provided competitor = LibraryBeanSelection.competitor(beanContext, type);
         if (competitor != null) {
             LOG.info("The library does not create a {} bean: the application provides {}, which is used for every unqualified {} injection point",
                     name, LibraryBeanSelection.describe(competitor), name);
@@ -67,8 +66,8 @@ final class BeanSelectionLogger implements ApplicationEventListener<StartupEvent
 
     private String ignoredSuffix(Class<?> type) {
         List<String> others = new ArrayList<>();
-        for (BeanDefinition<?> definition : LibraryBeanSelection.applicationBeans(beanContext, type)) {
-            others.add(LibraryBeanSelection.describe(definition));
+        for (LibraryBeanSelection.Provided bean : LibraryBeanSelection.applicationBeans(beanContext, type)) {
+            others.add(LibraryBeanSelection.describe(bean));
         }
         return others.isEmpty() ? "" : "; the application's qualified beans do not replace it: " + String.join(", ", others);
     }
