@@ -1,0 +1,24 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+scalar Ticket
+scalar Blob
+
+input Basket {
+  lines: [BasketLine!]!
+}
+
+input BasketLine {
+  ticket: Ticket!
+}
+
+input Guarded {
+  size: Int!
+}
+
+extend type Query {
+  fine: String!
+  ticket(id: Ticket!): String
+  ticketNonNull(id: Ticket!): String!
+  blob(data: Blob!): String
+  basket(basket: Basket!): String
+  guarded(guarded: Guarded!): String
+}
