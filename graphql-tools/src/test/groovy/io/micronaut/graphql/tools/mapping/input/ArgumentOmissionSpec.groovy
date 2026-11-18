@@ -23,6 +23,8 @@ class ArgumentOmissionSpec extends AbstractTest {
     static final String SPEC_WRITE_ONLY = "ArgumentOmissionSpecWriteOnly"
     static final String SPEC_WRITE_ONLY_WRAPPER = "ArgumentOmissionSpecWriteOnlyWrapper"
     static final String SPEC_WRITE_ONLY_NESTED = "ArgumentOmissionSpecWriteOnlyNested"
+    static final String SPEC_SHARED_CLASS = "ArgumentOmissionSpecSharedClass"
+    static final String SPEC_SHARED_CLASS_REVERSED = "ArgumentOmissionSpecSharedClassReversed"
 
     static final Map DETECT = [(GraphQLToolsConfiguration.PREFIX + '.input.detect-omission'): true]
 
@@ -275,6 +277,64 @@ input LoginInput {
         e.cause.mappingContext.graphQlInputValue == 'address'
     }
 
+    @Language("GraphQL")
+    static final String SHARED_SCHEMA = """
+schema {
+  query: Query
+}
+
+type Query {
+  create(input: CreateW): String
+  rename(input: RenameW): String
+}
+
+input CreateW {
+  name: String
+  email: String
+}
+
+input RenameW {
+  name: String
+}
+"""
+
+    @Language("GraphQL")
+    static final String SHARED_SCHEMA_REVERSED = """
+schema {
+  query: Query
+}
+
+type Query {
+  rename(input: RenameW): String
+  create(input: CreateW): String
+}
+
+input RenameW {
+  name: String
+}
+
+input CreateW {
+  name: String
+  email: String
+}
+"""
+
+    void "detect-omission: a class backing two input types keeps the omitted properties of both"() {
+        given:
+        startContext(schema, spec, DETECT + [(GraphQLToolsConfiguration.PREFIX + '.input.unmapped-properties'): 'ignore'])
+
+        expect:
+        result('create', '{ create(input: {name: "a"}) }') == 'name=value(a) email=omitted'
+        result('create', '{ create(input: {email: null}) }') == 'name=omitted email=null'
+        result('rename', '{ rename(input: {name: "b"}) }') == 'name=value(b) email=omitted'
+        result('rename', '{ rename(input: {}) }') == 'name=omitted email=omitted'
+
+        where:
+        schema                 | spec
+        SHARED_SCHEMA          | SPEC_SHARED_CLASS
+        SHARED_SCHEMA_REVERSED | SPEC_SHARED_CLASS_REVERSED
+    }
+
     void "ArgumentValue states"() {
         expect:
         ArgumentValue.omitted().isOmitted()
@@ -299,6 +359,12 @@ input LoginInput {
         def result = executeQuery(query)
         assert result.errors.isEmpty()
         return result.data.update
+    }
+
+    private String result(String field, String query) {
+        def result = executeQuery(query)
+        assert result.errors.isEmpty()
+        return result.data[field]
     }
 
     private String execute(String query, Map variables) {
@@ -463,6 +529,36 @@ input LoginInput {
 
         void setAddress(DetectAddressInput address) {
         }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_SHARED_CLASS)
+    @GraphQLRootResolver
+    static class SharedQuery {
+        String create(SharedW input) {
+            return "name=${show(input.name)} email=${show(input.email)}"
+        }
+
+        String rename(SharedW input) {
+            return "name=${show(input.name)} email=${show(input.email)}"
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_SHARED_CLASS_REVERSED)
+    @GraphQLRootResolver
+    static class SharedReversedQuery {
+        String create(SharedW input) {
+            return "name=${show(input.name)} email=${show(input.email)}"
+        }
+
+        String rename(SharedW input) {
+            return "name=${show(input.name)} email=${show(input.email)}"
+        }
+    }
+
+    @GraphQLInput
+    static class SharedW {
+        ArgumentValue<String> name
+        ArgumentValue<String> email
     }
 
     static enum Color {
