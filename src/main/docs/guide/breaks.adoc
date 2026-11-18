@@ -12,7 +12,7 @@ These changes are planned for the milestones of the tracker. Each one is _pendin
 
 === 1.0.0-M2
 
-* #173: the `graphql-tools` mapper seam becomes internal (_pending_).
+* #173: the `graphql-tools` mapper seam is internal and no longer documented (on `master`).
 
 === 1.0.0-M3
 

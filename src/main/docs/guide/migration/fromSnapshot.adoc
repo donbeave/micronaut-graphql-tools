@@ -30,7 +30,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-17 `extend type` fields | Startup fails for an extension field that nothing binds. Before, graphql-java served it without a check. | Give the field a resolver or property, or claim it with `claimedFields()`.
 | BC-18 unreachable types | Startup fails and lists every unreachable type. An `allow-unreachable` entry that is no longer unreachable fails startup. | Bind the type, remove it, or list it in `allow-unreachable`. Remove stale entries. Or set `unreachable-types: ignore`.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time check is _pending_ with #150. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
-| #173 `@Named("graphql-tools")` mapper seam | _Pending._ The mapper becomes internal and is removed from the documented API. | Do not depend on it. Its replacement is planned with #37.
+| #173 `@Named("graphql-tools")` mapper seam | The `graphql-tools` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Input conversion is not configurable through a public bean. | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion; it is not supported. Its replacement is planned with #37.
 | #36 Jackson dependency | _Pending._ `micronaut-jackson-databind` leaves the `api` scope. Jackson annotations stop being the input contract. | Plan for Micronaut Serialization and introspection annotations.
 | #37 input conversion | _Pending._ Arguments and input objects are converted from `BeanIntrospection` instead of Jackson. | Plan for introspection-based conversion and the scalar SPI.
 | #86 check severity and removed keys | _Pending._ Four keys are removed and their replacements named. `strict: false` also warns on unreachable object, interface and union types. | Use the replacement keys listed under #86 in the pending changes below.
@@ -460,13 +460,17 @@ public Book book(String id) { ... }
 public Book book(@GraphQLArgument("id") String isbn) { ... }
 ----
 
+== Entries for 1.0.0-M2
+
+=== #173: the `graphql-tools` mapper seam is internal
+
+The `@Named("graphql-tools")` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. The README no longer describes Jackson-defined input behaviour (`@JsonIgnore`, naming strategies, a named mapper). Applications should not depend on the bean. Input conversion is not configurable through a public bean until #37 replaces it.
+
+Fix: remove the `graphql-tools` bean and any reference to `INPUT_OBJECT_MAPPER`. Input conversion has no public configuration until #37.
+
 == Pending changes
 
 The following changes are planned and are not on `master` yet. Their behaviour is not described as current. Each entry names the issue that makes the change.
-
-=== #173: the `graphql-tools` mapper seam becomes internal
-
-The `@Named("graphql-tools")` Jackson `ObjectMapper` bean and the `INPUT_OBJECT_MAPPER` constant are public today. #173 makes them internal and removes the Jackson-defined input sections of the README. Applications should not depend on the bean.
 
 === #36 and #37: Jackson leaves the input contract
 
