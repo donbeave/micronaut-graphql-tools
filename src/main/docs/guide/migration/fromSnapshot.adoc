@@ -239,6 +239,8 @@ public Book reserve(Integer quantity) { ... }
 
 The library creates its `GraphQL` bean only when the application does not define one. The `GraphQLSchema` bean is exposed, so the application can use it. The schema is still bound at startup, so a broken binding fails the startup even when the application defines its own `GraphQL` bean.
 
+Which application bean makes the library step aside: the library's `GraphQL` and `GraphQLSchema` beans step aside only for an application bean of the same type that has no qualifier, or that is `@Primary`. A bean with a qualifier, such as `@Named("admin")`, is a secondary bean that is injected by its qualifier. It does not replace the library's bean, and the library's beans are `@Primary`, so an unqualified injection point still gets them. When the application provides its own `GraphQLSchema` bean, the library binds nothing, and the `BindingManifest` bean fails with a message that names that bean. At startup the library logs at INFO which `GraphQL` and `GraphQLSchema` beans are in use and why the library's bean was or was not created (logger `io.micronaut.graphql.tools.BeanSelectionLogger`).
+
 Fix: to change the library's `GraphQL` without replacing it, add a `GraphQLBuilderCustomizer`. To replace it, define your own `GraphQL` bean.
 
 Status: approved, no opt-out.
