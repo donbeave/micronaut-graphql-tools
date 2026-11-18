@@ -21,6 +21,14 @@ run every scenario against their own resolvers.
 Not in this module: the resolvers and the fixtures of a scenario. Each suite has them in `src/test/{java,kotlin,groovy}`
 under `example/tck`.
 
+## Packages
+
+The package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
+
+| Package | Audience | Holds |
+| --- | --- | --- |
+| `io.micronaut.graphql.tools.tck` | Test helper | The TCK runner (`Tck`, `Scenarios`, `Scenario`, `JsonDiff`) |
+
 ## Who uses it
 
 Maintainers. The test suites use it: `test-suite-java`, `test-suite-kotlin` and `test-suite-groovy` add it as a test

@@ -21,6 +21,16 @@ of the JSON tests. The guide's code snippets come from the three suites (`snippe
 
 Not in this module: the library itself (`graphql-tools`) and the shared scenarios (`graphql-tools-tck`).
 
+## Packages
+
+Example application code, not a library package: no `package-info.java`. Nothing here is API.
+
+| Package | Audience | Holds |
+| --- | --- | --- |
+| `example` | Example | The application class and the elapsed-time interceptor |
+| `example.data` | Example | The data classes and the in-memory repositories |
+| `example.graphql` | Example | The `GraphQLFactory` bean, the DataLoaders, and below it the resolvers by operation and type (`query`, `mutation`, `type`, `input`, `directive`) |
+
 ## Who uses it
 
 Maintainers and CI. Application developers can read it as an example of a Java application.

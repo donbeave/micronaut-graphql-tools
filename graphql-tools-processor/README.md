@@ -44,6 +44,15 @@ The JSR-269 processor (`processing/`, until #144):
 - Not in this module: the runtime library and the Micronaut bean lookup. The processor must not depend on the runtime:
   the `checkNoRuntimeDependency` task fails `check` when a main classpath contains `graphql-tools`.
 
+## Packages
+
+Each package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
+
+| Package | Audience | Holds |
+| --- | --- | --- |
+| `io.micronaut.graphql.tools.visitor` | Compiler plug-in | The compile-time `TypeElementVisitor`; loaded by the compiler, never imported |
+| `io.micronaut.graphql.tools.processing` | Internal | The legacy JSR-269 processor, deleted by #144 |
+
 ## Who uses it
 
 Application developers, who add it to the annotation processor path next to Micronaut's processor (`annotationProcessor`,

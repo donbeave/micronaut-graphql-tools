@@ -20,6 +20,14 @@ runs, or when they claim a performance gain.
   `generateLargeSchema` task writes the large schema that the start-up benchmarks bind to `build/generated/large-schema`.
 - `benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
 
+## Packages
+
+Benchmark code, not a library package: no `package-info.java`. Nothing here is API.
+
+| Package | Audience | Holds |
+| --- | --- | --- |
+| `io.micronaut.graphql.tools.benchmarks` | Test helper | The JMH benchmarks, the allocation tests and the shared benchmark classes |
+
 ## Who uses it
 
 Maintainers and CI. The CI `check` runs `jmhSmokeTest` and `allocationTest`. No application depends on this module.

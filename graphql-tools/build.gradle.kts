@@ -53,6 +53,10 @@ tasks.named<Test>("test") {
     inputs.files(repositoryRoot.asFileTree.matching { include("*/README.md") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("moduleReadmes")
+    // PackageDocumentationSpec lists the Java packages of the library modules and compares them with the API map.
+    inputs.files(repositoryRoot.asFileTree.matching { include("graphql-tools*/src/main/java/**") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("moduleSources")
     inputs.files(repositoryRoot.asFileTree.matching { include("src/main/docs/guide/**", "test-suite-*/src/main/**", "test-suite-*/src/test/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsSources")
