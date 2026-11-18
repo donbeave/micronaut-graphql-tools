@@ -49,59 +49,6 @@ public final class InputTypeRules {
     private InputTypeRules() {
     }
 
-    /** What is wrong with the Java class of an input object before its fields are read. */
-    public enum ClassProblem {
-        /** An interface or an enum: the mapping is wrong, which only the startup reports. */
-        NOT_A_CLASS,
-        /** The class has no bean introspection. */
-        NOT_INTROSPECTED
-    }
-
-    /** What an input field of the schema finds in the Java class. */
-    public enum FieldBinding {
-        /** The class has no property of that name: the mapping is wrong, which only the startup reports. */
-        MISSING,
-        /** The property is read-only and no constructor parameter sets it. */
-        NOT_SETTABLE,
-        /** The property can be set. */
-        SETTABLE
-    }
-
-    /** The ways to declare an {@code ArgumentValue} that fail whatever the configuration is. */
-    public enum ArgumentValueMisuse {
-        IN_LIST, AT_NON_NULL, NO_TYPE_ARGUMENT, NESTED
-    }
-
-    /**
-     * The properties of a Java input class, read once, for the fields of the input type that it is bound to.
-     */
-    public static final class InputFields {
-
-        private final Set<String> existing = new HashSet<>();
-        private final Set<String> settable = new HashSet<>();
-
-        private InputFields(JClass inputClass) {
-            for (JProperty property : inputClass.readableProperties()) {
-                existing.add(property.name());
-            }
-            for (JProperty property : inputClass.writableProperties()) {
-                existing.add(property.name());
-                settable.add(property.name());
-            }
-        }
-
-        /**
-         * @param field the name of an input field
-         * @return what the class has for it
-         */
-        public FieldBinding binding(String field) {
-            if (!existing.contains(field)) {
-                return FieldBinding.MISSING;
-            }
-            return settable.contains(field) ? FieldBinding.SETTABLE : FieldBinding.NOT_SETTABLE;
-        }
-    }
-
     /**
      * @param inputClass a Java class bound to a schema input type
      * @return its properties
@@ -206,5 +153,58 @@ public final class InputTypeRules {
             }
         }
         return new InputVerdict(List.copyOf(unmapped), List.copyOf(ignored));
+    }
+
+    /** What is wrong with the Java class of an input object before its fields are read. */
+    public enum ClassProblem {
+        /** An interface or an enum: the mapping is wrong, which only the startup reports. */
+        NOT_A_CLASS,
+        /** The class has no bean introspection. */
+        NOT_INTROSPECTED
+    }
+
+    /** What an input field of the schema finds in the Java class. */
+    public enum FieldBinding {
+        /** The class has no property of that name: the mapping is wrong, which only the startup reports. */
+        MISSING,
+        /** The property is read-only and no constructor parameter sets it. */
+        NOT_SETTABLE,
+        /** The property can be set. */
+        SETTABLE
+    }
+
+    /** The ways to declare an {@code ArgumentValue} that fail whatever the configuration is. */
+    public enum ArgumentValueMisuse {
+        IN_LIST, AT_NON_NULL, NO_TYPE_ARGUMENT, NESTED
+    }
+
+    /**
+     * The properties of a Java input class, read once, for the fields of the input type that it is bound to.
+     */
+    public static final class InputFields {
+
+        private final Set<String> existing = new HashSet<>();
+        private final Set<String> settable = new HashSet<>();
+
+        private InputFields(JClass inputClass) {
+            for (JProperty property : inputClass.readableProperties()) {
+                existing.add(property.name());
+            }
+            for (JProperty property : inputClass.writableProperties()) {
+                existing.add(property.name());
+                settable.add(property.name());
+            }
+        }
+
+        /**
+         * @param field the name of an input field
+         * @return what the class has for it
+         */
+        public FieldBinding binding(String field) {
+            if (!existing.contains(field)) {
+                return FieldBinding.MISSING;
+            }
+            return settable.contains(field) ? FieldBinding.SETTABLE : FieldBinding.NOT_SETTABLE;
+        }
     }
 }

@@ -158,16 +158,6 @@ public final class InputBindingFindings {
         return false;
     }
 
-    /** Where the walk is: the member for the message, the coordinate and location of the startup's mapping context. */
-    private record Site(String member, String coordinate, @Nullable SourceLocation location) {
-    }
-
-    /** The walk stops here: with a finding, silently, or with a finding that was reported before. */
-    private record Halt(@Nullable Finding finding, boolean repeated) {
-
-        static final Halt SILENT = new Halt(null, false);
-    }
-
     @Nullable
     private Halt walk(Site site, TypeRef declared, Type<?> schemaType, boolean fieldLevel) {
         if (!declared.array() && !declared.primitive() && (isAssignable(declared, FUTURE)
@@ -399,5 +389,26 @@ public final class InputBindingFindings {
      * @param schemaType the schema type of the element
      */
     public record Leaf(TypeRef type, Type<?> schemaType) {
+    }
+
+    /**
+     * Where the walk is: the member for the message, the coordinate and location of the startup's mapping context.
+     *
+     * @param member     the Java member
+     * @param coordinate the coordinate
+     * @param location   where the schema defines it
+     */
+    private record Site(String member, String coordinate, @Nullable SourceLocation location) {
+    }
+
+    /**
+     * The walk stops here: with a finding, silently, or with a finding that was reported before.
+     *
+     * @param finding  the finding, or {@code null} for a silent stop
+     * @param repeated whether the finding was reported before
+     */
+    private record Halt(@Nullable Finding finding, boolean repeated) {
+
+        static final Halt SILENT = new Halt(null, false);
     }
 }
