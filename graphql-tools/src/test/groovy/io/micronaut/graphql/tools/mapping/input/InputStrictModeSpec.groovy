@@ -132,7 +132,7 @@ input PointInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """[incorrect-class-mapping] The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. Strict mode rejects this for built-in scalars too; with micronaut.graphql.tools.strict=false a null reaches the primitive as its default value or fails the request.
+        e.cause.message == """[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. Strict mode rejects this for built-in scalars too; with micronaut.graphql.tools.strict=false a null reaches the primitive as its default value or fails the request.
   GraphQL coordinate: Query.repeat(times:) (line 7, column 25)
   GraphQL object type: Query
   GraphQL field: repeat
@@ -154,7 +154,7 @@ input PointInput {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
         e.cause.mappingContext.graphQlInputObjectType == 'LineInput'
-        e.cause.message.startsWith("[incorrect-class-mapping] The argument is mapped to the primitive int, but the GraphQL type Int is nullable")
+        e.cause.message.startsWith("[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable")
     }
 
     void "strict false: a primitive for a nullable built-in scalar is accepted, as before"() {

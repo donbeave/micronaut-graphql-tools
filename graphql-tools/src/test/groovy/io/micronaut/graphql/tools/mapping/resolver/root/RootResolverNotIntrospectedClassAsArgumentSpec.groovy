@@ -5,6 +5,7 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException
 import org.intellij.lang.annotations.Language
 
@@ -38,20 +39,13 @@ input PriceInput {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ClassNotIntrospectedException
         e.cause.message == """[class-not-introspected] The class ${PriceInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
-  GraphQL coordinate: Query.price(input:) (line 7, column 9)
-  GraphQL object type: Query
-  GraphQL field: price
-  GraphQL argument: input
-  Mapped class: ${Query.name}
-  Mapped method: price(${PriceInput.name} input)"""
-        e.cause.mappingContext.graphQlObjectType == 'Query'
-        e.cause.mappingContext.graphQlField == 'price'
-        e.cause.mappingContext.graphQlArgument == 'input'
-        e.cause.mappingContext.objectTypeDefinition.name == 'Query'
-        e.cause.mappingContext.fieldDefinition.name == 'price'
-        e.cause.mappingContext.inputValueDefinition.get().name == 'input'
-        e.cause.mappingContext.mappedClass == Query
-        e.cause.mappingContext.mappedMethod == "price(${PriceInput.name} input)"
+  GraphQL coordinate: PriceInput (line 10, column 1)
+  GraphQL type: PriceInput
+  Mapped class: ${PriceInput.name}
+  Reached from: Query.price(input:) (line 7, column 9)"""
+        e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
+        e.cause.mappingContext.coordinate == 'PriceInput'
+        e.cause.mappingContext.mappedClass == PriceInput
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

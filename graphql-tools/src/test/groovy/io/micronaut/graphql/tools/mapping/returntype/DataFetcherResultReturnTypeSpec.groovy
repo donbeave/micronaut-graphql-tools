@@ -186,7 +186,7 @@ input FilterInput {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ClassNotIntrospectedException
         e.cause.message.startsWith("[class-not-introspected] The class ${DataFetcherResult.name} is not introspected.")
-        e.cause.message.contains("GraphQL argument: filter")
+        e.cause.message.contains("Reached from: Query.search(filter:)")
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

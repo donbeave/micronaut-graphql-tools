@@ -1,0 +1,1 @@
+class-not-introspected Color schema.graphqls:9:1

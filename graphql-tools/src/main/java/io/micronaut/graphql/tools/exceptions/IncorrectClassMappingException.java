@@ -33,7 +33,12 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
 
     IncorrectClassMappingException(String message, MappingContext mappingContext, Class<?> providedClass,
                                    @Nullable Set<Class<?>> supportedClasses) {
-        super(BindingCode.INCORRECT_CLASS_MAPPING, message, mappingContext);
+        this(BindingCode.INCORRECT_CLASS_MAPPING, message, mappingContext, providedClass, supportedClasses);
+    }
+
+    IncorrectClassMappingException(BindingCode code, String message, MappingContext mappingContext,
+                                   Class<?> providedClass, @Nullable Set<Class<?>> supportedClasses) {
+        super(code, message, mappingContext);
 
         this.providedClass = providedClass;
         this.supportedClasses = supportedClasses;
@@ -137,7 +142,8 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
      * @param primitiveClass   the declared primitive Java type
      * @param scalarName       the name of the nullable built-in scalar type
      * @param supportedClasses the Java types the scalar accepts
-     * @return the exception for a primitive Java type bound to a nullable built-in scalar, which strict mode rejects
+     * @return the exception for a primitive Java type bound to a nullable built-in scalar, which strict mode rejects,
+     * with the code {@code nullable-primitive}
      */
     public static IncorrectClassMappingException forNullablePrimitiveInStrictMode(MappingContext mappingContext,
                                                                                   Class<?> primitiveClass,
@@ -147,6 +153,7 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
                 .filter(it -> !it.isPrimitive())
                 .collect(Collectors.toSet());
         return new IncorrectClassMappingException(
+                BindingCode.NULLABLE_PRIMITIVE,
                 String.format("The argument is mapped to the primitive %s, but the GraphQL type %s is nullable, so "
                                 + "null cannot be passed. Use %s or make the GraphQL type non-null. Strict mode "
                                 + "rejects this for built-in scalars too; with micronaut.graphql.tools.strict=false a "

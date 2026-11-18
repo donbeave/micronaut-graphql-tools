@@ -48,10 +48,12 @@ processor of this module** (DD-13). The result is started through the real appli
    (field not bound, reachability, ambiguity, the dictionary, customizers) is not a gap: the compile side cannot see it, and
    the case records `compile.txt` as `ok`.
 
-Soundness and completeness are also asserted on the recorded `compile.txt` and `runtime.txt` of every case, so they hold now,
-before the compile-time backend exists. Until the visitor (#150) lands the `CompileTimeBinder` is a stub
-(`NoCompileTimeBinder`): `compile.txt` holds the verdicts the compile-time design predicts, they are not yet produced by a
-compilation, and #150 turns the assertion on by passing its binder to `CorpusRunner`.
+Soundness and completeness are also asserted on the recorded `compile.txt` and `runtime.txt` of every case. For Java the
+`CompileTimeBinder` is real (`VisitorCompileTimeBinder`): it compiles the case again with javac and the visitor with the checks on, and
+its findings must equal `compile.txt`. The other languages answer `NoCompileTimeBinder`'s "unavailable" until #143, and their `compile.txt`
+holds the verdicts the compile-time design predicts. The codes that a case relaxes at startup (the strict checks for
+`config.micronaut.graphql.tools.strict=false`, the code of a `config.micronaut.graphql.tools.checks.<code>` that is `warn` or `ignore`)
+are outside the soundness rule: the compile error cannot be relaxed at startup (D-30). Every other finding of the case is compared.
 
 Structure is checked too (`BindingCorpusSpec`, "the corpus is well formed"): an orphan or stale file, an override equal to
 its base, an unsorted or malformed verdict, a missing `runtime.txt`, an unknown property, a directory without a case.
