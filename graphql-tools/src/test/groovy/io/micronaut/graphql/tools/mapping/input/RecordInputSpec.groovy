@@ -2,7 +2,6 @@ package io.micronaut.graphql.tools.mapping.input
 
 import graphql.ExecutionInput
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.context.annotation.Requires
 import org.intellij.lang.annotations.Language
@@ -10,7 +9,7 @@ import org.intellij.lang.annotations.Language
 class RecordInputSpec extends AbstractTest {
 
     static final String SPEC_NAME = "RecordInputSpec"
-    static final Map DETECT = [(GraphQLToolsConfiguration.PREFIX + '.input.detect-omission'): true]
+    static final Map DETECT = [:]
 
     @Language("GraphQL")
     static final String SCHEMA = """

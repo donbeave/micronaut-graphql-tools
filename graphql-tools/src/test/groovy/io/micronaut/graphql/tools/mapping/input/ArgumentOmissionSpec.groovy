@@ -27,7 +27,7 @@ class ArgumentOmissionSpec extends AbstractTest {
     static final String SPEC_SHARED_CLASS = "ArgumentOmissionSpecSharedClass"
     static final String SPEC_SHARED_CLASS_REVERSED = "ArgumentOmissionSpecSharedClassReversed"
 
-    static final Map DETECT = [(GraphQLToolsConfiguration.PREFIX + '.input.detect-omission'): true]
+    static final Map DETECT = [:]
 
     @Language("GraphQL")
     static final String SCHEMA = """
@@ -74,41 +74,7 @@ input AddressInput {
                 'name=null color=null limit=10 profile={nickname=null color=RED(Color) tags=null address=null}'
     }
 
-    void "default: an ArgumentValue parameter fails the startup and names the option"() {
-        given:
-        startContext(SCHEMA, SPEC_WRAPPER_WITHOUT_OPTION)
-
-        when:
-        getGraphQLBean()
-
-        then:
-        def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedInputTypeException
-        e.cause.message.startsWith("[unsupported-input-type] The Java type is not supported for this argument or input field: " +
-                "${ArgumentValue.name} needs micronaut.graphql.tools.input.detect-omission=true.\n" +
-                "  GraphQL coordinate: Query.update(name:) (line 7, column 10)\n" +
-                "  GraphQL object type: Query\n  GraphQL field: update\n  GraphQL argument: name")
-    }
-
-    void "default: an ArgumentValue property of an input class fails the startup and names the option"() {
-        given:
-        startContext(SCHEMA, SPEC_WRAPPER_IN_INPUT_WITHOUT_OPTION)
-
-        when:
-        getGraphQLBean()
-
-        then:
-        def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedInputTypeException
-        e.cause.message == """[unsupported-input-type] The Java type is not supported for this argument or input field: ${ArgumentValue.name} needs micronaut.graphql.tools.input.detect-omission=true.
-  GraphQL coordinate: ProfileInput.nickname (line 16, column 3)
-  GraphQL input object type: ProfileInput
-  GraphQL input value: nickname
-  Mapped class: ${WrappedProfileInput.name}
-  Mapped property: nickname"""
-    }
-
-    void "detect-omission: ArgumentValue arguments tell omitted, null and value apart; SDL defaults and enums apply"() {
+    void "ArgumentValue arguments tell omitted, null and value apart; SDL defaults and enums apply"() {
         given:
         startContext(SCHEMA, SPEC_DETECT, DETECT)
 
@@ -121,7 +87,7 @@ input AddressInput {
                 'name=value(Jane) color=value(RED Color) limit=value(3) profile=omitted'
     }
 
-    void "detect-omission: ArgumentValue properties of input objects, also nested ones"() {
+    void "ArgumentValue properties of input objects, also nested ones"() {
         given:
         startContext(SCHEMA, SPEC_DETECT, DETECT)
 
@@ -140,7 +106,7 @@ input AddressInput {
                 'profile=value({nickname=omitted color=value(GREEN Color) tags=[unset] address=value({city=null zip=null})})'
     }
 
-    void "detect-omission: a variable that is not provided is omitted, a variable set to null is null"() {
+    void "a variable that is not provided is omitted, a variable set to null is null"() {
         given:
         startContext(SCHEMA, SPEC_DETECT, DETECT)
         String query = 'query ($n: String, $p: ProfileInput) { update(name: $n, profile: $p) }'
@@ -156,7 +122,7 @@ input AddressInput {
                 'profile=value({nickname=omitted color=value(GREEN Color) tags=[unset] address=omitted})'
     }
 
-    void "detect-omission: ArgumentValue on a non-null type fails the startup"() {
+    void "ArgumentValue on a non-null type fails the startup"() {
         given:
         @Language("GraphQL")
         String schema = """
@@ -179,7 +145,7 @@ type Query {
         e.cause.reason == "${ArgumentValue.name} is only allowed for a nullable GraphQL type, the type is String!."
     }
 
-    void "detect-omission: ArgumentValue as a list element fails the startup"() {
+    void "ArgumentValue as a list element fails the startup"() {
         given:
         @Language("GraphQL")
         String schema = """
@@ -202,7 +168,7 @@ type Query {
         e.cause.reason == "${ArgumentValue.name} is not allowed inside a list: a list element cannot be omitted."
     }
 
-    void "detect-omission: a read-only ArgumentValue property fails the startup"() {
+    void "a read-only ArgumentValue property fails the startup"() {
         given:
         startContext(SCHEMA, SPEC_READ_ONLY, DETECT)
 
@@ -220,7 +186,7 @@ type Query {
   Mapped property: nickname"""
     }
 
-    void "detect-omission: write-only properties and computed getters of input classes are never read"() {
+    void "write-only properties and computed getters of input classes are never read"() {
         given:
         @Language("GraphQL")
         String schema = """
@@ -247,7 +213,7 @@ input LoginInput {
         result.data.login == 'user=omitted password stored=true'
     }
 
-    void "detect-omission: a write-only ArgumentValue property is set, and omitted when the client leaves it out"() {
+    void "a write-only ArgumentValue property is set, and omitted when the client leaves it out"() {
         given:
         startContext(SCHEMA, SPEC_WRITE_ONLY_WRAPPER, DETECT)
 
@@ -262,7 +228,7 @@ input LoginInput {
         given.data.update == 'nickname=value(n)'
     }
 
-    void "detect-omission: a write-only property whose input class has ArgumentValue properties is set"() {
+    void "a write-only property whose input class has ArgumentValue properties is set"() {
         given:
         startContext(SCHEMA, SPEC_WRITE_ONLY_NESTED, DETECT)
 
@@ -317,7 +283,7 @@ input CreateW {
 }
 """
 
-    void "detect-omission: a class backing two input types keeps the omitted properties of both"() {
+    void "a class backing two input types keeps the omitted properties of both"() {
         given:
         startContext(schema, spec, DETECT + [(GraphQLToolsConfiguration.PREFIX + '.input.unmapped-properties'): 'ignore'])
 
@@ -423,22 +389,6 @@ input CreateW {
     static class DefaultQuery {
         String update(String name, Color color, Integer limit, ProfileInput profile) {
             return "name=${name} color=${show(color)} limit=${limit} profile=${show(profile)}"
-        }
-    }
-
-    @Requires(property = 'spec.name', value = SPEC_WRAPPER_WITHOUT_OPTION)
-    @GraphQLRootResolver
-    static class WrapperWithoutOptionQuery {
-        String update(ArgumentValue<String> name, Color color, Integer limit, ProfileInput profile) {
-            return null
-        }
-    }
-
-    @Requires(property = 'spec.name', value = SPEC_WRAPPER_IN_INPUT_WITHOUT_OPTION)
-    @GraphQLRootResolver
-    static class WrapperInInputWithoutOptionQuery {
-        String update(String name, Color color, Integer limit, WrappedProfileInput profile) {
-            return null
         }
     }
 
@@ -610,14 +560,6 @@ input CreateW {
     static class AddressInput {
         String city
         String zip
-    }
-
-    @GraphQLInput
-    static class WrappedProfileInput {
-        ArgumentValue<String> nickname
-        Color color
-        List<String> tags
-        AddressInput address
     }
 
     @GraphQLInput

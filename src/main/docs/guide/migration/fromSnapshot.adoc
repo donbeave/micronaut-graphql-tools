@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-25` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-26` and `BC-28` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -37,6 +37,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-24 schema files are `*.graphqls` (#17) | The compile-time processor no longer reads `*.graphql` files of its schema directory, so a schema kept in one is missing at compile time. | Rename the schema files to `.graphqls`. Client operation files may stay `.graphql`; they are never read.
 | BC-25 binding manifest format 2 (#90) | The manifest is written in format version 2: ASCII separators (` -> ` and ` ; ` replace the arrow and the middle dot), a `scalar` line names the scalar (not the `Coercing` class), characters outside ASCII are escaped, and the schema hash does not depend on the order of the files and the extensions. The first line is `# graphql-binding-manifest 2`. | Regenerate checked-in manifests. A reader checks the version on the first line. New in 1.0.0-M3, no opt-out.
 | BC-26 Jackson leaves the `api` scope (#36) | `micronaut-jackson-databind` is no longer a dependency of the library. An application that serves HTTP without another JSON codec fails at startup, with `No bean of type [io.micronaut.json.JsonConfiguration] exists`. | Add `micronaut-jackson-databind` (or `micronaut-serde-jackson`) to your own build.
+| BC-28 `ArgumentValue` needs no option (#159) | The option `input.detect-omission` is removed, and so is the compile-time option `input.detectOmission`. A declared `ArgumentValue` is detected on its own, including an `ArgumentValue` property that the input type does not define: it is set to `omitted()`, where it kept its initial value without the option. | Delete the key. An application that set it to `true` behaves as before. New in 1.0.0-M3, no opt-out.
 | #86 check severity and removed keys | _Pending._ Four keys are removed and their replacements named. `strict: false` also warns on unreachable object, interface and union types. | Use the replacement keys listed under #86 in the pending changes below.
 | #105 precedence default | _Pending._ The default value `strict` of `precedence` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
 | #109 public exceptions | _Pending._ The startup exception subclasses become internal behind `SchemaBindingException`, which already carries the code (BC-22). | Match on the error code, not on the exception subclass.
@@ -571,6 +572,15 @@ dependencies {
 }
 ----
 
+
+=== BC-28: `ArgumentValue` needs no option (#159)
+
+`micronaut.graphql.tools.input.detect-omission` (default `false`) was a second opt-in next to the declared `ArgumentValue` type: with the option off, an `ArgumentValue` parameter or property failed the startup. The option is removed. The converter of an input type handles omission when the type has an `ArgumentValue` property or constructor parameter, and a type without one pays nothing.
+
+* A configuration key `micronaut.graphql.tools.input.detect-omission` is ignored.
+* The compile-time option `-Amicronaut.graphql.tools.input.detectOmission` fails the compilation as an unknown option under the `micronaut.graphql.tools.` prefix.
+
+Fix: delete the key or the option. Nothing else changes for an application that set it to `true`.
 
 == Pending changes
 

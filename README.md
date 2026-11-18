@@ -659,8 +659,8 @@ By default an omitted argument and an explicit `null` both reach the resolver as
 client leaves out keeps the value the class gives it). Default values of the schema apply in any case, and enum values
 arrive as the Java enum constants of the same name.
 
-To tell them apart, set `micronaut.graphql.tools.input.detect-omission: true` and declare the resolver parameter or the
-input class property as `ArgumentValue<T>`:
+To tell them apart, declare the resolver parameter or the input class property as `ArgumentValue<T>`; nothing else is
+configured, and input types without an `ArgumentValue` pay nothing for it:
 
 ```java
 String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput> profile) {
@@ -698,7 +698,6 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded, and with `strict: false` the strict-mode checks that only feed the manifest are skipped. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
-| `micronaut.graphql.tools.input.detect-omission` | `false` \| `true` | Enables `ArgumentValue<T>` parameters and input properties, which tell an omitted value from an explicit `null`; see [Omitted values and `null`](#omitted-values-and-null). |
 | `micronaut.graphql.tools.input.unmapped-properties` | not set \| `fail` \| `ignore` | Input class properties that the GraphQL input type does not define. Not set: they fail in [strict mode](#strict-mode) and are accepted without it. `fail` stops the startup with one error that lists them for every input class, also with `strict: false`; `ignore` accepts them, also in strict mode. See [Input classes and input types](#input-classes-and-input-types). |
 | `micronaut.graphql.tools.inert-directives` | list of directive names, without `@` (empty) | Directives the schema may apply without a wiring, because they have no effect at runtime; they are logged at INFO. An entry with `*` is a pattern (`fed*`) that must match at least one declared directive without a wiring. Every other applied directive needs a wiring (see [Schema directives](#schema-directives)); without one it fails the startup in [strict mode](#strict-mode) and is a warning without it (see `unwired-directives`). Every exact entry must be a directive the schema declares, that is not built in, that has no wiring and that is not a `resolver-directives` entry, otherwise the startup fails in either mode, so the list cannot go stale. |
 | `micronaut.graphql.tools.schema-customizer-directives` | list of directive names, without `@` (empty) | Directives that a `GraphQLSchemaCustomizer` handles on the `schema` definition or on directive arguments, where graphql-java calls no wiring (see [Schema directives](#schema-directives)). Every entry must be a directive the schema declares that is not built in and that it applies on the schema definition or on a directive argument, otherwise the startup fails in either mode. |
@@ -793,7 +792,6 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 | `micronaut.graphql.tools.allowUnreachable` | `allow-unreachable` (comma-separated) |
 | `micronaut.graphql.tools.unreachableTypes` | `unreachable-types` |
 | `micronaut.graphql.tools.input.unmappedProperties` | `input.unmapped-properties` |
-| `micronaut.graphql.tools.input.detectOmission` | `input.detect-omission` |
 | `micronaut.graphql.tools.manifest` | none: `true` (default) writes the [binding manifest](#the-manifest-as-a-build-artifact) to the class output, `false` does not |
 
 Checked from the schema files and the options alone:

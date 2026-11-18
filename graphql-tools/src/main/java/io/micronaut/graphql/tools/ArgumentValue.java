@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 /**
  * The value of a nullable GraphQL argument or input object field that tells an omitted value from an explicit
  * {@code null}. Declare a resolver parameter or an input class property as {@code ArgumentValue<T>} instead of
- * {@code T}; this needs {@code micronaut.graphql.tools.input.detect-omission=true}.
+ * {@code T}; declaring it is all it takes.
  * <ul>
  *     <li>{@link #isOmitted()}: the client did not provide the value, and the schema declares no default for it;</li>
  *     <li>{@link #isNull()}: the client provided an explicit {@code null};</li>

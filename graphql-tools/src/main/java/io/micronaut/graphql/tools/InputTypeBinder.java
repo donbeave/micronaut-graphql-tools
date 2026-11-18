@@ -205,14 +205,12 @@ final class InputTypeBinder {
             converter.addField(inputValueDefinition.getName(), property.get(), fieldConverter, argumentValue);
             mapped.add(property.get().getName());
         }
-        // with omission detection, an ArgumentValue that this input type does not define, e.g. one that another input
-        // type backed by the same class defines, is omitted
-        if (configuration.getInput().isDetectOmission()) {
-            for (BeanProperty<Object, Object> property : beanIntrospection.getBeanProperties()) {
-                if (ArgumentValue.class.equals(property.getType()) && !mapped.contains(property.getName())
-                        && (!property.isReadOnly() || constructorArguments.contains(property.getName()))) {
-                    converter.addField(property.getName(), property, ValueConverters.IDENTITY, true);
-                }
+        // an ArgumentValue that this input type does not define, e.g. one that another input type backed by the same
+        // class defines, is omitted
+        for (BeanProperty<Object, Object> property : beanIntrospection.getBeanProperties()) {
+            if (ArgumentValue.class.equals(property.getType()) && !mapped.contains(property.getName())
+                    && (!property.isReadOnly() || constructorArguments.contains(property.getName()))) {
+                converter.addField(property.getName(), property, ValueConverters.IDENTITY, true);
             }
         }
         ValueConverter built = custom != null ? custom : converter.build();
@@ -348,10 +346,6 @@ final class InputTypeBinder {
             return argument;
         }
         String wrapper = ArgumentValue.class.getName();
-        if (!configuration.getInput().isDetectOmission()) {
-            throw new UnsupportedInputTypeException(mappingContext,
-                    wrapper + " needs " + GraphQLToolsConfiguration.PREFIX + ".input.detect-omission=true.");
-        }
         if (!fieldLevel) {
             throw new UnsupportedInputTypeException(mappingContext,
                     wrapper + " is not allowed inside a list: a list element cannot be omitted.");

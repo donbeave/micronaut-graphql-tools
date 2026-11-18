@@ -60,7 +60,7 @@ A scenario is a directory under `graphql-tools-tck/src/main/resources/tck/`:
 | File | Content |
 | --- | --- |
 | `schema.graphqls` | `extend type Query` (and `extend type Mutation`) with the fields of the scenario, plus its own types. Every suite serves its example schema and merges this file into it, so the type names must not clash with the example's (`Book`, `User`, `Error`, ...). |
-| `config.properties` | Optional: Micronaut properties for the application of this scenario (for example `micronaut.graphql.tools.input.detect-omission=true`). |
+| `config.properties` | Optional: Micronaut properties for the application of this scenario (for example `micronaut.graphql.tools.input.unmapped-properties=ignore`). |
 | `cases.txt` | The cases, one name per line, run in this order against one application: state (a counter, a DataLoader's statistics) carries over from case to case. |
 | `<case>.graphql` | The operation document, sent as a raw HTTP POST to `/graphql`. |
 | `<case>.variables.json` | Optional: the variables. |
