@@ -25,93 +25,106 @@ dependencies {
 
 val graphqlJavaLeg = providers.gradleProperty("graphqlJavaLeg").getOrElse("default")
 
-val largeTypes = 160
+// Each size is a package of its own (large.f<fields>), selected by benchmarks.large.fields. The benchmark jar generates
+// the 1,600-field schema, the one the other start-up benchmarks bind. -PlargeFields=<fields> generates another size
+// instead, so that the benchmark JVM of that size has no other generated bean on its classpath (scripts/startup-report.py
+// builds one jar per size). jmhSmokeTest needs the 100 and 10,000-field schemas as well: they are generated into its
+// own source set.
+val largeTypeCounts = providers.gradleProperty("largeFields").map { listOf(it.toInt() / 10) }.orElse(listOf(160)).get()
+val smokeTypeCounts = listOf(10, 1000)
 val generatedLargeSchema = layout.buildDirectory.dir("generated/large-schema")
+val generatedSmokeSchema = layout.buildDirectory.dir("generated/smoke-schema")
 
-val generateLargeSchema = tasks.register("generateLargeSchema") {
-    val output = generatedLargeSchema
-    val types = largeTypes
-    inputs.property("types", types)
+fun registerLargeSchema(name: String, output: org.gradle.api.provider.Provider<org.gradle.api.file.Directory>,
+                        typeCounts: List<Int>) = tasks.register(name) {
+    inputs.property("typeCounts", typeCounts)
     outputs.dir(output)
     doLast {
         val root = output.get().asFile
         root.deleteRecursively()
-        val pkg = "io.micronaut.graphql.tools.benchmarks.large"
-        val javaDir = root.resolve("java/" + pkg.replace('.', '/')).also { it.mkdirs() }
         val resourceDir = root.resolve("resources").also { it.mkdirs() }
-        val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n  root: Node0\n}\n")
-        for (i in 0 until types) {
-            val next = (i + 1) % types
-            sdl.append(
-                """
-                |
-                |type Node$i {
-                |  id: ID!
-                |  name: String!
-                |  count: Int!
-                |  price: Float!
-                |  active: Boolean!
-                |  label: String
-                |  note: String
-                |  tags: [String!]!
-                |  next: Node$next
-                |  computed(n: Int!): String
-                |}
-                |""".trimMargin()
-            )
-            javaDir.resolve("Node$i.java").writeText(
-                """
-                |package $pkg;
-                |
-                |import io.micronaut.graphql.tools.annotation.GraphQLType;
-                |import java.util.List;
-                |
-                |@GraphQLType
-                |public class Node$i {
-                |    public String getId() { return "id"; }
-                |    public String getName() { return "name"; }
-                |    public int getCount() { return 1; }
-                |    public double getPrice() { return 1.5; }
-                |    public boolean isActive() { return true; }
-                |    public String getLabel() { return "label"; }
-                |    public String getNote() { return "note"; }
-                |    public List<String> getTags() { return List.of("tag"); }
-                |    public Node$next getNext() { return null; }
-                |}
-                |""".trimMargin()
-            )
-            javaDir.resolve("Node${i}Resolver.java").writeText(
+        for (types in typeCounts) {
+            val fields = types * 10
+            val pkg = "io.micronaut.graphql.tools.benchmarks.large.f$fields"
+            val javaDir = root.resolve("java/" + pkg.replace('.', '/')).also { it.mkdirs() }
+            val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n  root: Node0\n}\n")
+            for (i in 0 until types) {
+                val next = (i + 1) % types
+                sdl.append(
+                    """
+                    |
+                    |type Node$i {
+                    |  id: ID!
+                    |  name: String!
+                    |  count: Int!
+                    |  price: Float!
+                    |  active: Boolean!
+                    |  label: String
+                    |  note: String
+                    |  tags: [String!]!
+                    |  next: Node$next
+                    |  computed(n: Int!): String
+                    |}
+                    |""".trimMargin()
+                )
+                javaDir.resolve("Node$i.java").writeText(
+                    """
+                    |package $pkg;
+                    |
+                    |import io.micronaut.context.annotation.Requires;
+                    |import io.micronaut.graphql.tools.annotation.GraphQLType;
+                    |import java.util.List;
+                    |
+                    |@Requires(property = "benchmarks.large.fields", value = "$fields")
+                    |@GraphQLType
+                    |public class Node$i {
+                    |    public String getId() { return "id"; }
+                    |    public String getName() { return "name"; }
+                    |    public int getCount() { return 1; }
+                    |    public double getPrice() { return 1.5; }
+                    |    public boolean isActive() { return true; }
+                    |    public String getLabel() { return "label"; }
+                    |    public String getNote() { return "note"; }
+                    |    public List<String> getTags() { return List.of("tag"); }
+                    |    public Node$next getNext() { return null; }
+                    |}
+                    |""".trimMargin()
+                )
+                javaDir.resolve("Node${i}Resolver.java").writeText(
+                    """
+                    |package $pkg;
+                    |
+                    |import io.micronaut.context.annotation.Requires;
+                    |import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+                    |
+                    |@Requires(property = "benchmarks.large.fields", value = "$fields")
+                    |@GraphQLTypeResolver(Node$i.class)
+                    |public class Node${i}Resolver {
+                    |    public String computed(Node$i node, int n) { return "computed"; }
+                    |}
+                    |""".trimMargin()
+                )
+            }
+            javaDir.resolve("LargeQuery.java").writeText(
                 """
                 |package $pkg;
                 |
                 |import io.micronaut.context.annotation.Requires;
-                |import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+                |import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
                 |
-                |@Requires(property = "benchmarks.large", value = "true")
-                |@GraphQLTypeResolver(Node$i.class)
-                |public class Node${i}Resolver {
-                |    public String computed(Node$i node, int n) { return "computed"; }
+                |@Requires(property = "benchmarks.large.fields", value = "$fields")
+                |@GraphQLRootResolver
+                |public class LargeQuery {
+                |    public Node0 root() { return new Node0(); }
                 |}
                 |""".trimMargin()
             )
+            resourceDir.resolve("large-schema-$fields.graphqls").writeText(sdl.toString())
         }
-        javaDir.resolve("LargeQuery.java").writeText(
-            """
-            |package $pkg;
-            |
-            |import io.micronaut.context.annotation.Requires;
-            |import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
-            |
-            |@Requires(property = "benchmarks.large", value = "true")
-            |@GraphQLRootResolver
-            |public class LargeQuery {
-            |    public Node0 root() { return new Node0(); }
-            |}
-            |""".trimMargin()
-        )
-        resourceDir.resolve("large-schema.graphqls").writeText(sdl.toString())
     }
 }
+val generateLargeSchema = registerLargeSchema("generateLargeSchema", generatedLargeSchema, largeTypeCounts)
+val generateSmokeSchema = registerLargeSchema("generateSmokeSchema", generatedSmokeSchema, smokeTypeCounts)
 
 sourceSets.main {
     java.srcDir(files(generatedLargeSchema.map { it.dir("java") }).builtBy(generateLargeSchema))
@@ -120,6 +133,9 @@ sourceSets.main {
 
 val allocationTest by sourceSets.creating
 val jmhSmokeTest by sourceSets.creating
+
+jmhSmokeTest.java.srcDir(files(generatedSmokeSchema.map { it.dir("java") }).builtBy(generateSmokeSchema))
+jmhSmokeTest.resources.srcDir(files(generatedSmokeSchema.map { it.dir("resources") }).builtBy(generateSmokeSchema))
 
 configurations {
     named(allocationTest.implementationConfigurationName) { extendsFrom(configurations.implementation.get()) }
@@ -135,6 +151,7 @@ dependencies {
         add(testSourceSet.runtimeOnlyConfigurationName, "org.junit.platform:junit-platform-launcher")
     }
     add(jmhSmokeTest.implementationConfigurationName, libs.jmh.core)
+    add(jmhSmokeTest.annotationProcessorConfigurationName, mn.micronaut.inject.java)
 }
 
 val allocationBaselines = layout.projectDirectory.file("allocation-baselines.properties")
@@ -172,6 +189,9 @@ val jmhSmokeTestTask = tasks.register<Test>("jmhSmokeTest") {
     testClassesDirs = jmhSmokeTest.output.classesDirs
     classpath = jmhSmokeTest.runtimeClasspath + sourceSets["jmh"].output + sourceSets["jmh"].runtimeClasspath +
             files(tasks.named("jmhCompileGeneratedClasses"))
+    // The 10,000-field schema is a chain of 1,000 types, and binding recurses once per type of the chain: the default
+    // thread stack overflows (measured), so the JVM that runs it gets a larger one.
+    jvmArgs("-Xss16m")
     useJUnitPlatform()
 }
 
@@ -190,5 +210,18 @@ jmh {
     timeOnIteration = "1s"
     profilers = listOf("gc")
     resultFormat = "JSON"
+    // the 10,000-field schema binds recursively along its chain of types (see jmhSmokeTest)
+    jvmArgs = listOf("-Xss16m")
+    // The start-up benchmarks are measured cold, one fresh JVM per sample, by scripts/startup-report.py. The warm-up of
+    // this task would start contexts in the same JVM first.
+    excludes = listOf("BindingBenchmark", "RetainedHeapBenchmark")
+    // The jar does the same by itself: its main class leaves them out unless a benchmark is named
+    // (BenchmarkJarMain, which jmhJar below makes the Main-Class).
     includes = providers.gradleProperty("jmh.includes").map { listOf(it) }.orElse(listOf()).get()
+}
+
+tasks.named<Jar>("jmhJar") {
+    manifest {
+        attributes["Main-Class"] = "io.micronaut.graphql.tools.benchmarks.BenchmarkJarMain"
+    }
 }
