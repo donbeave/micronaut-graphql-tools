@@ -1,0 +1,16 @@
+{
+  "data": null,
+  "errors": [
+    {
+      "message": "Invalid value for argument Query.ticketNonNull(id): the value is not accepted by the scalar Ticket.",
+      "locations": [{ "line": 3, "column": 3 }],
+      "path": ["ticketNonNull"],
+      "extensions": {
+        "code": "INPUT_CONVERSION_FAILED",
+        "coordinate": "Query.ticketNonNull(id)",
+        "inputPath": [],
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

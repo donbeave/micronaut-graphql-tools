@@ -614,6 +614,13 @@ custom scalar that its scalar parsed to another class.
 
 An input field that the input class cannot take fails the startup (see [Input classes and input types](#input-classes-and-input-types)).
 
+A value that cannot be converted at request time (a custom scalar value that no class of the mapping or the
+`ConversionService` accepts, such as a list where the parameter is a `Map`, or an input class whose constructor or setter
+throws) is a GraphQL error of the field: `extensions.code` is `INPUT_CONVERSION_FAILED`, `extensions.coordinate` names the
+argument as `Type.field(argument)`, and `extensions.inputPath` the input fields and list indexes down to the value. The
+message is worded in GraphQL terms, with no Java class name and no stack detail; the cause is logged at debug level. The
+field is `null` and the other fields still run.
+
 ### Input classes and input types
 
 Input classes are checked against their GraphQL input types at startup, in both directions:
