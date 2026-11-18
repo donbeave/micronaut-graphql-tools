@@ -3,6 +3,7 @@ package example.nullfields;
 import example.data.AuthenticationService;
 import io.micronaut.json.JsonMapper;
 import io.micronaut.runtime.server.EmbeddedServer;
+import io.micronaut.serde.annotation.Serdeable;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 abstract class AbstractNullFieldsTest {
 
+    @Serdeable
+    record NullableProperty(String name) {
+    }
+
     @Inject
     EmbeddedServer embeddedServer;
 
@@ -38,9 +43,16 @@ abstract class AbstractNullFieldsTest {
 
     abstract String expectedMapperClassName();
 
+    abstract String expectedNullPropertyJson();
+
     @Test
     void usesTheExpectedJsonStack() {
         assertEquals(expectedMapperClassName(), jsonMapper.getClass().getName());
+    }
+
+    @Test
+    void inclusionSettingDecidesWhetherANullBeanPropertyIsWritten() throws Exception {
+        assertEquals(expectedNullPropertyJson(), jsonMapper.writeValueAsString(new NullableProperty(null)));
     }
 
     @Test
