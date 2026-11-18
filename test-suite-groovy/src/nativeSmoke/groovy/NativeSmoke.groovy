@@ -23,6 +23,7 @@ HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).
 Map<String, Object> post(HttpClient http, int port, String query, Map<String, Object> variables = [:]) {
     HttpResponse<String> response = http.send(
             HttpRequest.newBuilder(URI.create("http://localhost:$port/graphql"))
+                    .timeout(Duration.ofSeconds(30))
                     .header('Content-Type', 'application/json')
                     .POST(HttpRequest.BodyPublishers.ofString(JsonOutput.toJson([query: query, variables: variables])))
                     .build(),
@@ -52,6 +53,7 @@ try {
             [id: 'ab']).addBook
     assert payload.error.__typename == 'SecurityError'
     assert payload.error.securityCode == 'NOT_AUTHENTICATED'
+    assert payload.error.message != null
 
     List<Map> books = execute('{ allBooks { id title year label sellers { name price } } }').allBooks
     assert books.size() == 5
@@ -77,6 +79,7 @@ try {
     assert wrong.data == null
     assert wrong.error.__typename == 'SecurityError'
     assert wrong.error.securityCode == 'INCORRECT_CREDENTIALS'
+    assert wrong.error.message != null
 
     String signUpQuery = 'mutation($input: SignUpInput!) { signUp(input: $input) { data { username firstName lastName books { id } } error { __typename ... on ValidationError { validationCode: code message } } } }'
     Map input = [username: 'john', password: 'test', firstName: 'John', lastName: 'Johnathan']
@@ -84,6 +87,8 @@ try {
     Map duplicate = execute(signUpQuery, [input: input]).signUp
     assert created.error == null
     assert created.data.username == 'john'
+    assert created.data.firstName == 'John'
+    assert created.data.lastName == 'Johnathan'
     assert created.data.books == []
     assert duplicate.data == null
     assert duplicate.error.validationCode == 'DUPLICATE'
