@@ -51,7 +51,7 @@ public final class StrictModeException extends SchemaBindingException {
     }
 
     private static String buildMessage(List<BindingCode> codes, List<String> problems) {
-        StringBuilder builder = new StringBuilder("Strict mode found problems in the binding of the schema:");
+        StringBuilder builder = new StringBuilder("The strict checks found problems in the binding of the schema:");
         for (int i = 0; i < problems.size(); i++) {
             builder.append("\n  ").append(i + 1).append(") ").append(codes.get(i).tag(problems.get(i)));
         }

@@ -19,6 +19,7 @@ import graphql.language.SchemaDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.binding.internal.finding.Severity;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.GraphQLResolversRegistry.SchemaCoordinateMethod;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
@@ -142,7 +143,7 @@ final class SchemaCoordinateValidator {
             return Optional.of(new InvalidSchemaCoordinateException(problems));
         }
 
-        if (!unboundMethods.isEmpty() && !checkPolicy.failing(BindingCode.UNBOUND_RESOLVER_METHOD)) {
+        if (!unboundMethods.isEmpty() && checkPolicy.severity(BindingCode.UNBOUND_RESOLVER_METHOD) == Severity.WARN) {
             LOG.warn("Methods whose @GraphQLSchemaCoordinate names an unreachable type are not bound: {}",
                     String.join("; ", unboundMethods));
         }

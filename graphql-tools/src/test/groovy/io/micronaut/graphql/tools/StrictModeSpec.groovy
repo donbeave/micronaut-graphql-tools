@@ -53,7 +53,7 @@ enum Color {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof StrictModeException
-        e.cause.message == """[strict-findings] Strict mode found problems in the binding of the schema:
+        e.cause.message == """[strict-findings] The strict checks found problems in the binding of the schema:
   1) [unbound-resolver-method] The resolver method ${ItemResolver.name}#legacyName(${Item.name}) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
   2) [unbound-resolver-method] The resolver method ${Query.name}#helper(java.lang.String) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
   3) [unbound-enum-constant] The enum constant ${Color.name}#BLUE has no value in the schema enum Color. Add the value to the schema or remove the constant.

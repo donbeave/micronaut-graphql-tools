@@ -50,6 +50,7 @@ import io.micronaut.graphql.tools.schema.ValueConverter;
 import io.micronaut.graphql.tools.schema.ValueConverters;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -80,6 +81,7 @@ final class InputTypeBinder {
     private final ScalarMappings scalarMappings;
     private final GraphQLToolsConfiguration configuration;
     private final CheckPolicy policy;
+    private final List<String> nullablePrimitiveWarnings = new ArrayList<>();
     private final BindingManifestRecorder manifestRecorder;
     private final InputClassChecks.Builder inputClassChecks = new InputClassChecks.Builder();
     private final RuntimeTypeModel typeModel;
@@ -419,9 +421,12 @@ final class InputTypeBinder {
         if (policy.failing(BindingCode.NULLABLE_PRIMITIVE)) {
             throw finding;
         }
-        policy.warn(BindingCode.NULLABLE_PRIMITIVE,
-                List.of(mappingContext.getMessage(IncorrectClassMappingException.nullablePrimitiveText(primitive,
-                        scalarName, supportedClasses))));
+        nullablePrimitiveWarnings.add(mappingContext.getMessage(IncorrectClassMappingException.nullablePrimitiveText(
+                primitive, scalarName, supportedClasses)));
+    }
+
+    void logNullablePrimitiveWarnings() {
+        policy.warn(BindingCode.NULLABLE_PRIMITIVE, nullablePrimitiveWarnings);
     }
 
     private Argument<?> unwrapArgumentValue(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,

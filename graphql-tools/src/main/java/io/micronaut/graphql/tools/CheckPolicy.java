@@ -48,7 +48,8 @@ final class CheckPolicy {
 
     static {
         REMOVED.put("unreachable-types", use("checks.unreachable-type and " + PREFIX + "checks.unreachable-value-type "
-                + "(fail, warn or ignore; ignore is the old unreachable-types: ignore)"));
+                + "(fail, warn or ignore; the old ignore still logged the types and listed them in the manifest, so warn is "
+                + "its equivalent)"));
         REMOVED.put("allow-unreachable", use("allow.unreachable"));
         REMOVED.put("input.unmapped-properties", use("checks.unmapped-input-property"));
         REMOVED.put("inert-directives", use("allow.inert-directives"));

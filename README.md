@@ -360,7 +360,7 @@ a single finding is thrown as its own exception (`UnreachableTypesException`, `I
      Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks.unreachable-type to warn or ignore.
   2) [unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:
        1) @GraphQLSchemaCoordinate("Book.summary") on example.AuthorResolver summary(example.Author author): the method is not bound to Book.summary, ...
-  3) [strict-findings] Strict mode found problems in the binding of the schema:
+  3) [strict-findings] The strict checks found problems in the binding of the schema:
        1) [unbound-resolver-method] The resolver method example.BookQuery#helper(java.lang.String) binds no schema field. Remove it, ...
        Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore.
 ```

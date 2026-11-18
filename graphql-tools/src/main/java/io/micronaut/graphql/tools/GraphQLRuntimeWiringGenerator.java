@@ -270,6 +270,7 @@ final class GraphQLRuntimeWiringGenerator {
 
             throwBindingFailures();
 
+            inputTypeBinder.logNullablePrimitiveWarnings();
             inputTypeBinder.inputClassChecks().checkCollected(checkPolicy, manifestRecorder);
 
             if (!ambiguities.bindings().isEmpty()) {

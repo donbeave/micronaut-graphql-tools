@@ -204,7 +204,7 @@ public enum BindingCode {
             "Several fields or types cannot be bound; each failure carries its own code."),
     /** Aggregate: several strict findings at startup. */
     STRICT_FINDINGS("strict-findings", false, false,
-            "Strict mode found problems; each finding carries its own check code."),
+            "The strict checks found problems; each finding carries its own check code."),
 
     /** Compile-time failure: an unknown processor option. */
     PROCESSOR_OPTION_UNKNOWN("processor-option-unknown", false, true,
