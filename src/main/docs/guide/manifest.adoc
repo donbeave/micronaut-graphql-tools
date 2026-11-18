@@ -4,7 +4,7 @@ NOTE: The current version is *2*. Version 1 was the format of 1.0.0-M1 and 1.0.0
 
 == Where the text comes from
 
-Recording is opt-in: set `micronaut.graphql.tools.manifest.record` to `true`, or `micronaut.graphql.tools.manifest.enabled` (which implies it). Without either, nothing is recorded while the schema is bound, the `BindingManifest` bean cannot be created (it fails with a message that names `manifest.record`), and with `strict` set to `false` the strict-mode checks that only feed the manifest are skipped. Strict mode itself does not need the manifest and fails on the same findings either way.
+Recording is opt-in: set `micronaut.graphql.tools.manifest.record` to `true`, or `micronaut.graphql.tools.manifest.enabled` (which implies it). Without either, nothing is recorded while the schema is bound, the `BindingManifest` bean cannot be created (it fails with a message that names `manifest.record`). The checks do not need the manifest: they fail, warn or are skipped by their severity either way, and the manifest only lists what they find.
 
 When it is recorded, the manifest is recorded as cheap facts (the binding plan) and rendered the first time it is read: by the `BindingManifest` bean, or by the startup writer when `micronaut.graphql.tools.manifest.enabled` is `true`. A start that does not read the manifest renders nothing, and a start that does not record costs nothing.
 

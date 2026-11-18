@@ -139,7 +139,11 @@ final class SchemaCoordinateValidator {
             }
 
             if (bound.isEmpty() && unboundTypes.contains(typeName)) {
-                unboundMethods.add(describe(coordinateMethod));
+                if (!checkPolicy.allowed(BindingManifestRecorder.diagnosticLine(BindingCode.UNBOUND_RESOLVER_METHOD,
+                        BindingManifestRecorder.methodMember(coordinateMethod.method(),
+                                coordinateMethod.method().getDeclaringType())))) {
+                    unboundMethods.add(describe(coordinateMethod));
+                }
                 continue;
             }
 

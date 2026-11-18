@@ -254,8 +254,8 @@ public class GraphQLToolsConfiguration {
         /**
          * Sets whether the binding manifest is recorded while the schema is bound, so that the
          * {@link BindingManifest} bean can be read. Default: {@code false}: nothing is recorded, the bean cannot be
-         * created, and the strict-mode checks that only feed the manifest are skipped when
-         * {@link GraphQLToolsConfiguration#isStrict()} is {@code false} too. {@link #isEnabled()} implies it.
+         * created. The checks run the same either way: the manifest only lists what they find. {@link #isEnabled()}
+         * implies it.
          *
          * @param record whether to record it
          */
