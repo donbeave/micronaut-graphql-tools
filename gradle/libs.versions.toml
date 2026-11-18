@@ -52,5 +52,6 @@ graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-ext
 
 apollo-java-client = { module = "com.apollographql.java:client", version.ref = "apollo-java" }
 apollo-java-rx3 = { module = "com.apollographql.java:rx3", version.ref = "apollo-java" }
+apollo-api = { module = "com.apollographql.apollo:apollo-api", version.ref = "apollo" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 graphql-java-datetime = { module = "com.tailrocks.graphql:graphql-java-datetime", version.ref = "graphql-java-datetime" }
