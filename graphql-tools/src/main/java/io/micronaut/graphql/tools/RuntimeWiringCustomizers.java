@@ -24,6 +24,7 @@ import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLScalarType;
 import graphql.schema.TypeResolver;
+import graphql.schema.idl.EnumValuesProvider;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -47,6 +48,7 @@ import java.util.regex.Pattern;
 @Internal
 final class RuntimeWiringCustomizers {
 
+    private static final Pattern DUPLICATE_ENUM_PROVIDER = Pattern.compile("The type (\\S+) already has a enum provider defined");
     private static final Pattern DUPLICATE_FIELD = Pattern.compile("The field (\\S+) on type (\\S+) has already been defined");
 
     private RuntimeWiringCustomizers() {
@@ -105,6 +107,11 @@ final class RuntimeWiringCustomizers {
             try {
                 customizer.customize(builder);
             } catch (RuntimeException e) {
+                String rejectedEnum = rejectedEnumValuesProvider(e);
+                if (rejectedEnum != null && before.hasEnumValuesProvider(rejectedEnum)) {
+                    replacements.add("enum values provider of " + rejectedEnum + by);
+                    throw new RuntimeWiringOverrideException(replacements);
+                }
                 String rejected = rejectedDuplicateField(e);
                 if (rejected == null || !before.hasDataFetcher(rejected) || claimed.containsKey(rejected)) {
                     throw e;
@@ -122,6 +129,15 @@ final class RuntimeWiringCustomizers {
         if (!replacements.isEmpty()) {
             throw new RuntimeWiringOverrideException(replacements);
         }
+    }
+
+    @Nullable
+    private static String rejectedEnumValuesProvider(RuntimeException e) {
+        if (!e.getClass().getName().equals("graphql.schema.idl.errors.StrictModeWiringException")) {
+            return null;
+        }
+        Matcher matcher = DUPLICATE_ENUM_PROVIDER.matcher(String.valueOf(e.getMessage()));
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     @Nullable
@@ -159,6 +175,7 @@ final class RuntimeWiringCustomizers {
             Map<String, GraphQLScalarType> scalars,
             Map<String, TypeResolver> typeResolvers,
             Map<String, SchemaDirectiveWiring> directiveWirings,
+            Map<String, EnumValuesProvider> enumValuesProviders,
             GraphQLCodeRegistry codeRegistry
     ) {
 
@@ -179,8 +196,13 @@ final class RuntimeWiringCustomizers {
                     new TreeMap<>(runtimeWiring.getScalars()),
                     new TreeMap<>(runtimeWiring.getTypeResolvers()),
                     new TreeMap<>(runtimeWiring.getRegisteredDirectiveWiring()),
+                    new TreeMap<>(runtimeWiring.getEnumValuesProviders()),
                     runtimeWiring.getCodeRegistry()
             );
+        }
+
+        boolean hasEnumValuesProvider(String type) {
+            return enumValuesProviders.containsKey(type);
         }
 
         boolean hasDataFetcher(String coordinate) {
@@ -228,6 +250,11 @@ final class RuntimeWiringCustomizers {
             directiveWirings.forEach((name, wiring) -> {
                 if (after.directiveWirings.get(name) != wiring) {
                     replaced.add("directive wiring @" + name);
+                }
+            });
+            enumValuesProviders.forEach((type, provider) -> {
+                if (after.enumValuesProviders.get(type) != provider) {
+                    replaced.add("enum values provider of " + type);
                 }
             });
             replaced.addAll(replacedThroughCodeRegistry(after, fieldsByType, claimed));

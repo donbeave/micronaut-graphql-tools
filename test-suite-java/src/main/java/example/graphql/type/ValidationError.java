@@ -1,5 +1,6 @@
 package example.graphql.type;
 
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 
 @GraphQLType

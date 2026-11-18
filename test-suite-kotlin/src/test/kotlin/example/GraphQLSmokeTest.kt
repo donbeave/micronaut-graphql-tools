@@ -1,5 +1,9 @@
 package example
 
+import example.graphql.type.SecurityErrorCode
+import example.graphql.type.ValidationErrorCode
+import graphql.schema.GraphQLEnumType
+import graphql.schema.GraphQLSchema
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
@@ -13,11 +17,16 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 
 @MicronautTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val manifest: BindingManifest) {
+class GraphQLSmokeTest(
+    @Client("/") private val client: HttpClient,
+    private val manifest: BindingManifest,
+    private val schema: GraphQLSchema,
+) {
 
     @Suppress("UNCHECKED_CAST")
     private fun execute(query: String, variables: Map<String, Any> = HashMap()): Map<String, Any?> {
@@ -127,5 +136,14 @@ class GraphQLSmokeTest(@Client("/") private val client: HttpClient, private val 
             listOf("~ignored example.graphql.query.AllBooksQuery#helper(java.lang.String)"),
             manifest.lines.filter { it.startsWith("~ignored ") },
         )
+    }
+
+    @Test
+    @Order(8)
+    fun schemaEnumValuesAreTheKotlinConstants() {
+        val security = schema.getType("SecurityErrorCode") as GraphQLEnumType
+        assertSame(SecurityErrorCode.NOT_AUTHENTICATED, security.getValue("NOT_AUTHENTICATED")!!.value)
+        val validation = schema.getType("ValidationErrorCode") as GraphQLEnumType
+        assertSame(ValidationErrorCode.DUPLICATE, validation.getValue("DUPLICATE")!!.value)
     }
 }

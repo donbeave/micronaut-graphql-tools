@@ -40,8 +40,9 @@ import java.util.Set;
  * {@link GraphQLSchemaCustomizer} (graphql-java 25 removed {@code RuntimeWiring.Builder#transformer}).</p>
  *
  * <p>Allowed: code registry entries for fields and types the library does not wire (such as those of an allowed
- * unreachable type), and enum value providers ({@code TypeRuntimeWiring.Builder#enumValues}), which the library does
- * not register.</p>
+ * unreachable type), and enum value providers ({@code TypeRuntimeWiring.Builder#enumValues}) for enums the library does
+ * not bind (the library registers the provider of every enum a resolver uses, and replacing it is reported like any
+ * other replacement).</p>
  *
  * <p>graphql-java 25.1's builder already rejects the first replaced default data fetcher, type resolver or scalar
  * itself ({@code StrictModeWiringException}); graphql-java 21.3 accepts them silently. A replaced data fetcher of a
