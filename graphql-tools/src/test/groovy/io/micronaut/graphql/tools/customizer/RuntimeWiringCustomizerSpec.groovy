@@ -31,6 +31,10 @@ class RuntimeWiringCustomizerSpec extends AbstractTest {
     static final String SPEC_NAME_WIRING_FACTORY = "RuntimeWiringCustomizerSpec.wiringFactory"
     static final String SPEC_NAME_CODE_REGISTRY = "RuntimeWiringCustomizerSpec.codeRegistry"
     static final String SPEC_NAME_CODE_REGISTRY_UNWIRED = "RuntimeWiringCustomizerSpec.codeRegistryUnwired"
+    static final String SPEC_NAME_SHADOW = "RuntimeWiringCustomizerSpec.shadow"
+    static final String SPEC_NAME_SHADOW_JAVA = "RuntimeWiringCustomizerSpec.shadowJava"
+    static final String SPEC_NAME_SHADOW_UNBOUND_TWICE = "RuntimeWiringCustomizerSpec.shadowUnboundTwice"
+    static final String SPEC_NAME_SHADOW_ALLOWED = "RuntimeWiringCustomizerSpec.shadowAllowed"
 
     // Some graphql-java lines make RuntimeWiring.Builder reject a replaced data fetcher itself, at the first one; others
     // accept it silently. Whether a class exists says nothing about that (StrictModeWiringException exists on 22.4,
@@ -114,8 +118,8 @@ scalar Long
         then:
         def e = thrown(BeanInstantiationException)
         if (BUILDER_REJECTS_REPLACEMENTS) {
-            assert e.cause.class.name == 'graphql.schema.idl.errors.StrictModeWiringException'
-            assert e.cause.message == 'The field hello on type Query has already been defined'
+            assert e.cause instanceof RuntimeWiringOverrideException
+            assert e.cause.replacements == ["data fetcher of Query.hello (${ReplaceFetchers.name})".toString()]
         } else {
             assert e.cause instanceof RuntimeWiringOverrideException
             assert e.cause.replacements == [
@@ -131,7 +135,7 @@ scalar Long
   wiring factory (${ReplaceFetchers.name})
   scalar Long (${ReplaceScalarAndTypeResolver.name})
   type resolver of Payload (${ReplaceScalarAndTypeResolver.name})
-  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field with the customizer's own data fetcher by returning its coordinate from RuntimeWiringCustomizer#claimedFields(), or change the built schema with a GraphQLSchemaCustomizer."""
+  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field with the customizer's own data fetcher by returning its coordinate from RuntimeWiringCustomizer#claimedFields() (or remove the registration to keep the library's binding), or change the built schema with a GraphQLSchemaCustomizer."""
         }
     }
 
@@ -163,6 +167,65 @@ scalar Long
         then:
         schema.codeRegistry.hasDataFetcher(FieldCoordinates.coordinates('Orphan', 'id'))
         executeQuery('{ hello }').data == [hello: 'world']
+    }
+
+    void "a data fetcher for a property-bound field fails the startup on every graphql-java line, naming the coordinate, the customizer and the fix"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME_SHADOW)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof RuntimeWiringOverrideException
+        e.cause.replacements == [
+                "data fetcher of Item.name (${ShadowBoundField.name})".toString()
+        ]
+        e.cause.message.contains('RuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('remove the registration')
+    }
+
+    void "a Java customizer shadowing a property-bound field fails the same way"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME_SHADOW_JAVA)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof RuntimeWiringOverrideException
+        e.cause.replacements == [
+                "data fetcher of Item.name (${JavaShadowingCustomizer.name})".toString()
+        ]
+    }
+
+    void "data fetchers for a claimed field and for a field the library does not bind are allowed"() {
+        given: 'Orphan is an allowed unreachable type with no library binding; Item.label is claimed'
+        startContext(SCHEMA.replace('name: String\n}', 'name: String\n  label: String\n}') + '\ntype Orphan {\n  id: ID\n}\n',
+                SPEC_NAME_SHADOW_ALLOWED, ['micronaut.graphql.tools.allow-unreachable': ['Orphan']])
+
+        expect:
+        executeQuery('{ item { name label } }').data == [item: [name: 'item', label: 'claimed']]
+        getGraphQLBean().graphQLSchema.codeRegistry.hasDataFetcher(FieldCoordinates.coordinates('Orphan', 'id'))
+    }
+
+    void "a customizer registering a field the library does not bind twice is not reported as a replacement of library wiring"() {
+        given:
+        startContext(SCHEMA + '\ntype Orphan {\n  id: ID\n}\n',
+                SPEC_NAME_SHADOW_UNBOUND_TWICE, ['micronaut.graphql.tools.allow-unreachable': ['Orphan']])
+
+        when:
+        Throwable failure = null
+        try {
+            getGraphQLBean()
+        } catch (BeanInstantiationException e) {
+            failure = e.cause
+        }
+
+        then:
+        BUILDER_REJECTS_REPLACEMENTS ? failure.class.name == 'graphql.schema.idl.errors.StrictModeWiringException' : failure == null
     }
 
     void "replacing the wiring factory fails the startup on every graphql-java line"() {
@@ -245,6 +308,40 @@ scalar Long
         void customize(RuntimeWiring.Builder builder) {
             builder.codeRegistry(GraphQLCodeRegistry.newCodeRegistry()
                     .dataFetcher(FieldCoordinates.coordinates('Orphan', 'id'), new StaticDataFetcher('orphan')))
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_SHADOW)
+    @Singleton
+    static class ShadowBoundField implements RuntimeWiringCustomizer {
+        @Override
+        void customize(RuntimeWiring.Builder builder) {
+            builder.type('Item') { it.dataFetcher('name', new StaticDataFetcher('HIJACKED')) }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_SHADOW_UNBOUND_TWICE)
+    @Singleton
+    static class RegisterUnboundTwice implements RuntimeWiringCustomizer {
+        @Override
+        void customize(RuntimeWiring.Builder builder) {
+            builder.type('Orphan') { it.dataFetcher('id', new StaticDataFetcher('one')) }
+            builder.type('Orphan') { it.dataFetcher('id', new StaticDataFetcher('two')) }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_SHADOW_ALLOWED)
+    @Singleton
+    static class ClaimAndAddUnbound implements RuntimeWiringCustomizer {
+        @Override
+        Set<FieldCoordinates> claimedFields() {
+            return [FieldCoordinates.coordinates('Item', 'label')] as Set
+        }
+
+        @Override
+        void customize(RuntimeWiring.Builder builder) {
+            builder.type('Item') { it.dataFetcher('label', new StaticDataFetcher('claimed')) }
+            builder.type('Orphan') { it.dataFetcher('id', new StaticDataFetcher('orphan')) }
         }
     }
 

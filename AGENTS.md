@@ -60,8 +60,9 @@ Run the checks that cover what you changed, and before you push run the full bui
   with `snippet::`.
 - **Native.** Each runtime feature has a native test in `test-suite-java` and `test-suite-kotlin`.
 - **No Jackson in the public API.** Use Micronaut Serialization (`micronaut-serde`). Build input conversion on
-  compile-time metadata (`BeanIntrospection`, Serde), not on an `ObjectMapper`. Until #36, #37 and #173 land, input
-  binding still uses Jackson through `GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER`: keep that API working and add no new Jackson.
+  compile-time metadata (`BeanIntrospection`, Serde), not on an `ObjectMapper`. Until #36 and #37 land, input binding
+  still uses Jackson. The seam that selects its mapper, `GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER`, is `@Internal`
+  and undocumented (#173): keep it working and add no new Jackson.
 - **Dependencies.** Dependencies come from the Micronaut version catalog (`mn.*`) first; `gradle/libs.versions.toml` only holds what Micronaut does not manage; overrides need a recorded reason.
 - **Micronaut 4 practice.** Follow the current Micronaut 4 line and its conventions. Do not design for Micronaut 5.
 - **Publishing.** Nothing goes to Maven Central or GitHub Releases, and there are no snapshots; milestone versions are

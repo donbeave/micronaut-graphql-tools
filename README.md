@@ -502,43 +502,22 @@ names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<a
 
 graphql-java hands a data fetcher the coerced argument values: scalar values, enum names, a `Map` per input object
 and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
-including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`), with a Jackson
-`ObjectMapper`.
+including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`). The current conversion runs on
+an internal Jackson mapper that reads the input classes through their bean introspection (`BeanIntrospection`), unless a
+class has a deserializer of its own. It is not part of the API and is not configurable through a documented one. #37
+replaces it with introspection-based conversion, so the Jackson-based behaviour is not a promise and may change before 1.0.
 
-By default that is a private mapper with Jackson's defaults plus Micronaut's `BeanIntrospectionModule`. In particular
-`FAIL_ON_UNKNOWN_PROPERTIES` stays `true`. An input field that the input class cannot take fails the startup in any
-case (see [Input classes and input types](#input-classes-and-input-types)). To convert with your own settings, define an `ObjectMapper` bean named `graphql-tools`
-(`GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER`):
-
-```java
-@Bean
-@Singleton
-@Named(GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER)
-ObjectMapper graphQLToolsObjectMapper() {
-    return new ObjectMapper()
-            .registerModule(new BeanIntrospectionModule())
-            .registerModule(new JavaTimeModule());
-}
-```
-
-- Only a bean with exactly this name is used; the application's default `ObjectMapper` and the `jackson.*`
-  configuration do not affect input conversion.
-- The library works on a copy of the bean and adds its own module to the copy (custom scalar values pass through
-  unchanged, see [Custom scalars](#custom-scalars)); the bean itself is not changed.
-- The bean is used as it is otherwise: register `BeanIntrospectionModule` yourself if input classes must be read
-  without reflection (GraalVM native image).
+An input field that the input class cannot take fails the startup (see [Input classes and input types](#input-classes-and-input-types)).
 
 ### Input classes and input types
 
 Input classes are checked against their GraphQL input types at startup, in both directions:
 
-- Every field of an input type needs a property of the same name that the input `ObjectMapper` can set: a setter, a
-  field or a constructor parameter, under the name Jackson uses. A missing property fails the startup with
-  `MethodNotFoundException`; a read-only, `@JsonIgnore`d or renamed one (naming strategy, `@JsonProperty`) with
-  `InputFieldNotSettableException`, which names the field as `InputType.field`. Such a field would otherwise fail every
-  request that sends it, or be dropped silently by a lenient mapper. The check uses the mapper that converts requests,
-  including a [named mapper](#arguments-and-input-objects); it is skipped for a class the mapper converts with a
-  deserializer of its own, and the startup logs such classes at INFO.
+- Every field of an input type needs a settable property of the same name: a setter, a field or a constructor
+  parameter. A missing property fails the startup with `MethodNotFoundException`; a read-only one, or one that the
+  conversion cannot set, fails with `InputFieldNotSettableException`, which names the field as `InputType.field`. Such
+  a field would otherwise fail every request that sends it, or be dropped silently. The check is skipped for a class
+  converted by a custom deserializer, and the startup logs such classes at INFO.
 - A property the class can set (through a setter or the constructor) that the input type does not define fails the
   startup in [strict mode](#strict-mode), all of them in one `UnmappedInputPropertiesException`, because no request can
   set it. Each one is also an `!unbound InputClass#property` line of the binding manifest.
@@ -741,7 +720,7 @@ green compilation says what it left out:
 - a Java interface of a dependency, returned by a field, whose implementation is not in the compilation (a JDK
   interface, or one of the compilation, without an implementation fails);
 - a model or input class introspected with `@Introspected(accessKind = FIELD)`, which the processor does not model;
-- what the input `ObjectMapper` can set (custom deserializers, naming strategies).
+- what input conversion can set (custom deserializers).
 
 ### The manifest as a build artifact
 
@@ -964,8 +943,9 @@ data fetcher or type resolver for a field or type the library wired into a code 
 which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
 and the customizer that made it. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
-(On graphql-java 25.2 the builder itself already rejects the first replaced data fetcher, default data fetcher, type
-resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently.) To wrap data fetchers, use a
+(On graphql-java 25.2 the builder itself already rejects the first replaced default data fetcher, type
+resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently. A second data fetcher for a
+field the library wired is reported as `RuntimeWiringOverrideException` on every line.) To wrap data fetchers, use a
 `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
