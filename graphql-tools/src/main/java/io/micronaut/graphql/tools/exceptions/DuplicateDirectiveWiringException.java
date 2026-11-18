@@ -21,7 +21,9 @@ import java.util.stream.Collectors;
 
 /**
  * Thrown when more than one {@link io.micronaut.graphql.tools.SchemaDirective} bean binds a wiring to the same
- * directive name: graphql-java keeps only one wiring per name, so the others would be dropped silently.
+ * directive name: graphql-java keeps only one wiring per name, so the others would be dropped silently. It is also
+ * thrown when one directive is wired by both a named bean and an every-element bean, because the directive would
+ * take effect twice. Several every-element beans for one directive are allowed.
  */
 public final class DuplicateDirectiveWiringException extends RuntimeException {
 
@@ -33,6 +35,21 @@ public final class DuplicateDirectiveWiringException extends RuntimeException {
                         + String.join(", ", it.getValue()) + ".")
                 .collect(Collectors.joining("\n"))
                 + " Keep one.");
+
+        this.directiveNames = List.copyOf(wirings.keySet());
+    }
+
+    /**
+     * @param wirings              directive name to the wirings that apply it, each described with its kind and class
+     * @param namedAndEveryElement {@code true}: each directive is wired by a named bean and an every-element bean
+     */
+    public DuplicateDirectiveWiringException(Map<String, List<String>> wirings, boolean namedAndEveryElement) {
+        super(wirings.entrySet().stream()
+                .map(it -> "Directive @" + it.getKey() + " is wired by both a named and an every-element "
+                        + "SchemaDirective bean, so it would take effect twice: "
+                        + String.join(", ", it.getValue()) + ".")
+                .collect(Collectors.joining("\n"))
+                + " Use one of them: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.");
 
         this.directiveNames = List.copyOf(wirings.keySet());
     }
