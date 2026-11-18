@@ -5,7 +5,6 @@ Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven 
 ## What this release changes
 
 - Performance (D-02): a GraphQL enum is wired with a values provider built at startup from the enum's bean introspection, so an enum argument reaches the resolver as the Java constant without a conversion call. The allocation baseline of the enum argument case drops from 504 B to 24 B (#33).
-
 - Schema discovery (#17): without a `TypeDefinitionRegistry` bean the library reads `micronaut.graphql.tools.schema.locations` (default `classpath:graphql/**/*.graphqls`; `classpath*:` for dependency jars, `file:` for the file system) and merges the files, each parsed with its own name. A schema without a `schema { }` block uses `Query`, `Mutation` and `Subscription` as root types. A file that holds only operations is skipped. A native image reads the schema index `META-INF/micronaut-graphql-tools/schema-index.txt`. The compile-time processor reads its schema directory with the same code.
 
 ## Breaking changes (BC-21, BC-22)
