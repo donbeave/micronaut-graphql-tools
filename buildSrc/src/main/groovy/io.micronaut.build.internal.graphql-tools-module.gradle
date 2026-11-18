@@ -8,6 +8,12 @@ tasks.withType(JavaCompile).configureEach {
     options.release = provider { micronautBuild.javaVersion.get() as Integer }
 }
 
+// logback and JUnit are managed by the Micronaut platform BOM, which the core BOM behind `mn` is not: tests only, so that
+// nothing published changes.
+dependencies {
+    testImplementation platform(libs.micronaut.platform)
+}
+
 // Gradle 9 does not put junit-platform-launcher on the test runtime classpath by itself.
 dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

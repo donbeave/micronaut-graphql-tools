@@ -2,17 +2,19 @@ This page lists the breaking changes of each release. Each entry names the chang
 
 == 1.0.0-M1
 
-Not tagged yet. The breaking changes are numbered `BC-01` to `BC-19`, as in the release notes. See the migration page for what breaks and how to fix it.
+Tagged `1.0.0-M1` and published to GitHub Packages. The breaking changes are numbered `BC-01` to `BC-19`, as in the release notes. See the migration page for what breaks and how to fix it.
 
 * BC-01 to BC-19: see the migration page, entries for 1.0.0-M1.
 
-== Planned after 1.0.0-M1
+== 1.0.0-M2
+
+Not released yet. The breaking changes are numbered from `BC-20`, as in the release notes of 1.0.0-M2.
+
+* BC-20 (#173): the `graphql-tools` mapper seam is internal and no longer documented. See the migration page, entries for 1.0.0-M2.
+
+== Planned after 1.0.0-M2
 
 These changes are planned for the milestones of the tracker. Each one is _pending_ until it lands on `master`; the migration page describes each one.
-
-=== 1.0.0-M2
-
-* #173: the `graphql-tools` mapper seam becomes internal (_pending_).
 
 === 1.0.0-M3
 

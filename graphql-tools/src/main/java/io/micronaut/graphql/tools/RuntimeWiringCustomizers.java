@@ -41,9 +41,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Internal
 final class RuntimeWiringCustomizers {
+
+    private static final Pattern DUPLICATE_FIELD = Pattern.compile("The field (\\S+) on type (\\S+) has already been defined");
 
     private RuntimeWiringCustomizers() {
     }
@@ -97,18 +101,36 @@ final class RuntimeWiringCustomizers {
         List<String> replacements = new ArrayList<>();
         Snapshot before = Snapshot.of(builder.build(), fieldsByType.keySet());
         for (RuntimeWiringCustomizer customizer : customizers) {
-            customizer.customize(builder);
+            String by = " (" + customizer.getClass().getName() + ")";
+            try {
+                customizer.customize(builder);
+            } catch (RuntimeException e) {
+                String rejected = rejectedDuplicateField(e);
+                if (rejected == null || !before.hasDataFetcher(rejected) || claimed.containsKey(rejected)) {
+                    throw e;
+                }
+                replacements.add("data fetcher of " + rejected + by);
+                throw new RuntimeWiringOverrideException(replacements);
+            }
             Snapshot after = Snapshot.of(builder.build(), fieldsByType.keySet());
             if (before.restoreClearedDefaultDataFetchers(builder, after)) {
                 after = Snapshot.of(builder.build(), fieldsByType.keySet());
             }
-            String by = " (" + customizer.getClass().getName() + ")";
             before.replacedIn(after, fieldsByType, claimed.keySet()).forEach(it -> replacements.add(it + by));
             before = after;
         }
         if (!replacements.isEmpty()) {
             throw new RuntimeWiringOverrideException(replacements);
         }
+    }
+
+    @Nullable
+    private static String rejectedDuplicateField(RuntimeException e) {
+        if (!e.getClass().getName().equals("graphql.schema.idl.errors.StrictModeWiringException")) {
+            return null;
+        }
+        Matcher matcher = DUPLICATE_FIELD.matcher(String.valueOf(e.getMessage()));
+        return matcher.matches() ? matcher.group(2) + "." + matcher.group(1) : null;
     }
 
     private static Map<String, Set<String>> objectTypeFields(TypeDefinitionRegistry registry) {
@@ -159,6 +181,11 @@ final class RuntimeWiringCustomizers {
                     new TreeMap<>(runtimeWiring.getRegisteredDirectiveWiring()),
                     runtimeWiring.getCodeRegistry()
             );
+        }
+
+        boolean hasDataFetcher(String coordinate) {
+            int dot = coordinate.indexOf('.');
+            return dataFetchers.getOrDefault(coordinate.substring(0, dot), Map.of()).containsKey(coordinate.substring(dot + 1));
         }
 
         boolean restoreClearedDefaultDataFetchers(RuntimeWiring.Builder builder, Snapshot after) {

@@ -59,17 +59,21 @@ bom_pom=$(curl -fsSL --retry 3 "$CENTRAL/io/micronaut/micronaut-core-bom/$core_b
 compare "kotlin" "$(plugin_pin org.jetbrains.kotlin.jvm)" "$(sed -n 's:.*<kotlin2.version>\(.*\)</kotlin2.version>.*:\1:p' <<<"$bom_pom")" "core BOM $core_bom kotlin2.version"
 compare "ksp" "$(plugin_pin com.google.devtools.ksp)" "$(sed -n 's:.*<ksp2.version>\(.*\)</ksp2.version>.*:\1:p' <<<"$bom_pom")" "core BOM $core_bom ksp2.version"
 
-compare "groovy" "$(catalog groovy)" "$(newest $CENTRAL org.apache.groovy groovy '^4\.0\.[0-9]+$')" "4.0.x (the Micronaut 4 line)"
+# Exception (D-41): the only pin of a Micronaut-managed version. The BOM manages 4.0.28, which cannot read JDK 27 class files; the pin stays until the BOM catches up.
+compare "groovy (override of the BOM)" "$(catalog groovy)" "$(newest $CENTRAL org.apache.groovy groovy '^4\.0\.[0-9]+$')" "4.0.x (the Micronaut 4 line)"
 compare "shadow" "$(plugin_pin com.gradleup.shadow)" "$(newest $PORTAL com.gradleup.shadow com.gradleup.shadow.gradle.plugin '^8\.[0-9.]+$')" "8.x (the line micronaut-gradle-plugin builds against)"
+
+# Micronaut-managed dependencies (logback, JUnit, graphql-java and its extended scalars through micronaut-graphql, Spock, ...) have no
+# pin here: they come from the Micronaut BOMs and move with micronaut-platform above (D-41).
 
 # Outside Micronaut's control: the newest stable release.
 compare "apollo" "$(catalog apollo)" "$(newest $CENTRAL com.apollographql.apollo apollo-runtime '^[0-9.]+$')" "newest"
 compare "apollo plugin" "$(plugin_pin com.apollographql.apollo)" "$(newest $CENTRAL com.apollographql.apollo apollo-runtime '^[0-9.]+$')" "newest"
+compare "apollo-java client" "$(catalog apollo-java)" "$(newest $CENTRAL com.apollographql.java client '^[0-9.]+$')" "newest"
+compare "apollo-java rx3" "$(catalog apollo-java)" "$(newest $CENTRAL com.apollographql.java rx3 '^[0-9.]+$')" "newest"
 compare "jmh" "$(catalog jmh)" "$(newest $CENTRAL org.openjdk.jmh jmh-core '^[0-9.]+$')" "newest"
 compare "jmh plugin" "$(plugin_pin me.champeau.jmh)" "$(newest $PORTAL me.champeau.jmh me.champeau.jmh.gradle.plugin '^[0-9.]+$')" "newest"
-compare "junit" "$(catalog junit)" "$(newest $CENTRAL org.junit junit-bom '^5\.[0-9.]+$')" "5.x (the Micronaut 4 line)"
 compare "jetbrains-annotations" "$(catalog jetbrains-annotations)" "$(newest $CENTRAL org.jetbrains annotations '^[0-9.]+$')" "newest"
-compare "logback" "$(catalog logback)" "$(newest $CENTRAL ch.qos.logback logback-classic '^1\.5\.[0-9]+$')" "1.5.x (the Micronaut 4 line)"
 compare "graphql-java-datetime" "$(catalog graphql-java-datetime)" "$(newest $CENTRAL com.tailrocks.graphql graphql-java-datetime '^[0-9.]+$')" "newest"
 
 # graphql-java legs: each pin is the newest release of its line (floor 21.x, default 22.x, ceiling 25.x until GJ26).
@@ -90,7 +94,6 @@ leg ceiling-graphql-java com.graphql-java graphql-java major
 leg ceiling-extended-scalars com.graphql-java graphql-java-extended-scalars major
 leg ceiling-java-dataloader com.graphql-java java-dataloader minor
 leg ceiling-extended-validation com.graphql-java graphql-java-extended-validation major
-leg managed-graphql-java-extended-scalars com.graphql-java graphql-java-extended-scalars major
 leg graphql-java-extended-validation com.graphql-java graphql-java-extended-validation major
 row "graphql-java (newest, canary)" "-" "$(newest $CENTRAL com.graphql-java graphql-java '^[0-9]+\.[0-9]+$')" "info: exercised by the latest leg" "info"
 

@@ -43,8 +43,9 @@ import java.util.Set;
  * unreachable type), and enum value providers ({@code TypeRuntimeWiring.Builder#enumValues}), which the library does
  * not register.</p>
  *
- * <p>graphql-java 25.1's builder already rejects the first replaced data fetcher, default data fetcher, type resolver
- * or scalar itself ({@code StrictModeWiringException}); graphql-java 21.3 accepts them silently. The library's check
+ * <p>graphql-java 25.1's builder already rejects the first replaced default data fetcher, type resolver or scalar
+ * itself ({@code StrictModeWiringException}); graphql-java 21.3 accepts them silently. A replaced data fetcher of a
+ * field the library wired is always reported as {@code RuntimeWiringOverrideException}. The library's check
  * covers both lines, the wiring factory included, and lists every replacement at once where the builder lets the
  * customizers finish.</p>
  *

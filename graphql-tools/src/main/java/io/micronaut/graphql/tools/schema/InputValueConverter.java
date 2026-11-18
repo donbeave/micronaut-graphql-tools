@@ -24,6 +24,7 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.ArgumentValue;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -138,6 +139,26 @@ public final class InputValueConverter {
         public OmissionPlan {
             argumentValueProperties = List.copyOf(argumentValueProperties);
             inputObjectProperties = List.copyOf(inputObjectProperties);
+        }
+
+        /**
+         * Merges the plans of two input types that one Java class backs: the union of their properties, by name.
+         * Runs at startup only.
+         *
+         * @param other the plan of another input type backed by the same class
+         * @return a plan that visits the properties of both
+         */
+        public OmissionPlan merge(OmissionPlan other) {
+            return new OmissionPlan(union(argumentValueProperties, other.argumentValueProperties),
+                    union(inputObjectProperties, other.inputObjectProperties));
+        }
+
+        private static List<BeanProperty<Object, Object>> union(List<BeanProperty<Object, Object>> first,
+                                                                List<BeanProperty<Object, Object>> second) {
+            Map<String, BeanProperty<Object, Object>> byName = new LinkedHashMap<>();
+            first.forEach(it -> byName.put(it.getName(), it));
+            second.forEach(it -> byName.putIfAbsent(it.getName(), it));
+            return List.copyOf(byName.values());
         }
 
     }
