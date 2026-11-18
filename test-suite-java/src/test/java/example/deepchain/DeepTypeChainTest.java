@@ -11,8 +11,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// Runs on the JVM and as a native binary (nativeTest): a chain of 1,000 object types and 1,000 input types binds on the
-// default thread stack.
+// Runs on the JVM and as a native binary (nativeTest): a chain of 200 object types and 200 input types is bound and queried on the
+// default thread stack. The chain is as long as graphql-java's own recursive schema build allows; DeepTypeChainSpec binds
+// 1,000 and 5,000 types without that build.
 @MicronautTest(environments = DeepTypeChainFactory.ENVIRONMENT)
 class DeepTypeChainTest {
 

@@ -20,7 +20,7 @@ public class DeepTypeChainFactory {
 
     public static final String ENVIRONMENT = "deep-type-chain";
 
-    public static final int TYPES = 1000;
+    public static final int TYPES = 200;
 
     // The example schema and a chain of types that extends its Query. One Java class backs every type of the chain: it is
     // the length of the chain of schema types that matters.

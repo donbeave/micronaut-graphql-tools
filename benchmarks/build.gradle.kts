@@ -32,6 +32,10 @@ val graphqlJavaLeg = providers.gradleProperty("graphqlJavaLeg").getOrElse("defau
 // own source set.
 val largeTypeCounts = providers.gradleProperty("largeFields").map { listOf(it.toInt() / 10) }.orElse(listOf(160)).get()
 val smokeTypeCounts = listOf(10, 1000)
+// The types form rings of at most this many types, each reached from a root field of its own. graphql-java builds the
+// executable schema with one recursive call per type of a chain, so one ring of a thousand types overflows the default
+// thread stack of a cold JVM (on CI); rings of this length leave the benchmark JVMs on the default stack.
+val ringLength = 100
 val generatedLargeSchema = layout.buildDirectory.dir("generated/large-schema")
 val generatedSmokeSchema = layout.buildDirectory.dir("generated/smoke-schema")
 
@@ -47,9 +51,15 @@ fun registerLargeSchema(name: String, output: org.gradle.api.provider.Provider<o
             val fields = types * 10
             val pkg = "io.micronaut.graphql.tools.benchmarks.large.f$fields"
             val javaDir = root.resolve("java/" + pkg.replace('.', '/')).also { it.mkdirs() }
-            val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n  root: Node0\n}\n")
+            val rings = (types + ringLength - 1) / ringLength
+            val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n  root: Node0\n")
+            for (ring in 1 until rings) {
+                sdl.append("  root$ring: Node${ring * ringLength}\n")
+            }
+            sdl.append("}\n")
             for (i in 0 until types) {
-                val next = (i + 1) % types
+                val ringStart = i / ringLength * ringLength
+                val next = if (i + 1 < minOf(ringStart + ringLength, types)) i + 1 else ringStart
                 sdl.append(
                     """
                     |
@@ -105,6 +115,9 @@ fun registerLargeSchema(name: String, output: org.gradle.api.provider.Provider<o
                     |""".trimMargin()
                 )
             }
+            val ringRoots = (1 until rings).joinToString("\n") {
+                "                |    public Node${it * ringLength} root$it() { return new Node${it * ringLength}(); }"
+            }
             javaDir.resolve("LargeQuery.java").writeText(
                 """
                 |package $pkg;
@@ -116,6 +129,7 @@ fun registerLargeSchema(name: String, output: org.gradle.api.provider.Provider<o
                 |@GraphQLRootResolver
                 |public class LargeQuery {
                 |    public Node0 root() { return new Node0(); }
+$ringRoots
                 |}
                 |""".trimMargin()
             )

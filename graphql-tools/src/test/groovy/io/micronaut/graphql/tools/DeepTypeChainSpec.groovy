@@ -17,25 +17,25 @@ class DeepTypeChainSpec extends AbstractTest {
 
     static final String SPEC_NAME = "DeepTypeChainSpec"
 
-    void "start with a chain of 1000 object types and 1000 input types"() {
+    // graphql-java builds the executable schema with one recursive call per type, and a chain of a thousand types
+    // overflows the default stack of a cold JVM, so the application starts with a chain it can build
+    void "start with a chain of 200 object types and 200 input types"() {
         when:
-        startContext(chainSchema(1000), SPEC_NAME, ["micronaut.graphql.tools.strict": true])
+        startContext(chainSchema(200), SPEC_NAME, ["micronaut.graphql.tools.strict": true])
         getGraphQLBean()
 
         then:
         noExceptionThrown()
-        applicationContext.getBean(BindingManifest).lines.any { it.contains("Node999") }
+        applicationContext.getBean(BindingManifest).lines.any { it.contains("Node199") }
 
         and:
         executeQuery("{ root { name next { name } } }").data == [root: [name: "n", next: [name: "n"]]]
         executeQuery('{ echo(input: {name: "a", next: {name: "b"}}) }').data == [echo: "a>b"]
     }
 
-    // graphql-java builds the executable schema recursively too, and overflows the default stack with a chain this
-    // deep, so the binding of the longer chain is run without it
-    void "bind a chain of 5000 object types and 5000 input types"() {
+    // the binding of the longer chains is run without graphql-java's schema build, which recurses per type
+    void "bind a chain of #types object types and #types input types"() {
         given:
-        int types = 5000
         startContext(chainSchema(types), SPEC_NAME, ["micronaut.graphql.tools.strict": true])
         TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(new SchemaParser().parse(chainSchema(types)))
         SchemaSources.addImplicitRoots(registry)
@@ -51,6 +51,9 @@ class DeepTypeChainSpec extends AbstractTest {
         then:
         noExceptionThrown()
         manifest.lines.any { it.contains("Node${types - 1}") }
+
+        where:
+        types << [1000, 5000]
     }
 
     private static String chainSchema(int types) {

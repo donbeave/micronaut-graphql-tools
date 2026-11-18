@@ -154,8 +154,10 @@ The benchmark jar generates the 1,600-field schema only, as before, so the other
 schema as before. Each other size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build), so
 that the JVM of a size has no other size on its classpath. `jmhSmokeTest` generates the 100 and 10,000-field schemas in
 its own source set and runs those two sizes only. Measured: the 100-field context retained 14.4 MB with all three sizes on the
-classpath and 4.7 MB with the 100-field classes alone. The 10,000-field schema is a chain of 1,000 types; binding walks
-a chain with a work stack, so the benchmark JVMs run on the default thread stack. `ContextStartBenchmark`, `FirstRequestBenchmark` and
+classpath and 4.7 MB with the 100-field classes alone. The 10,000-field schema is 1,000 types in rings of 100 types, each reached from a root field of its own: graphql-java
+builds the executable schema with one recursive call per type of a chain, so one ring of 1,000 types overflows the default
+thread stack of a cold JVM, and the benchmark JVMs run on the default thread stack. Binding itself walks a chain with a work
+stack (`DeepTypeChainSpec`). `ContextStartBenchmark`, `FirstRequestBenchmark` and
 `StartAndFirstRequestBenchmark` separate the binding at startup from the first request: the same schema with
 `micronaut.graphql.tools.eager-init` `true` or `false`, timing the context start, the first query after the start, and
 both together (`./gradlew :benchmarks:jmhJar`, then run the jar with `-f 10 -wi 0 -i 1 -bm ss` for a cold
