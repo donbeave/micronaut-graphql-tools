@@ -401,29 +401,8 @@ public class GraphQLToolsConfiguration {
     @ConfigurationProperties("input")
     public static class InputConfiguration {
 
-        private boolean detectOmission;
         @Nullable
         private UnmappedProperties unmappedProperties;
-
-        /**
-         * @return whether resolver parameters and input class properties declared as {@link ArgumentValue} tell an
-         * omitted value from an explicit {@code null}
-         */
-        public boolean isDetectOmission() {
-            return detectOmission;
-        }
-
-        /**
-         * Enables {@link ArgumentValue} for resolver parameters and input class properties, so that they tell an
-         * omitted value from an explicit {@code null}. Without it a declared {@link ArgumentValue} fails the startup,
-         * and an omitted value and an explicit {@code null} both reach the resolver as {@code null}. Default:
-         * {@code false}.
-         *
-         * @param detectOmission whether to enable {@link ArgumentValue}
-         */
-        public void setDetectOmission(boolean detectOmission) {
-            this.detectOmission = detectOmission;
-        }
 
         /**
          * @return what happens to properties of input classes that the GraphQL input type does not define, or

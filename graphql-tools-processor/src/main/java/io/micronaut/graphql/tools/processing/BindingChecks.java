@@ -551,7 +551,7 @@ final class BindingChecks {
             manifest.inputField(type.getName(), field.getName(), field.getType(), javaTypes.name(javaClass),
                     property.name(), typeNames.render(property.type()),
                     typeNames.converted(property.type(), false, false));
-            if (options.detectOmission() && javaTypes.is(property.type(), ARGUMENT_VALUE)) {
+            if (javaTypes.is(property.type(), ARGUMENT_VALUE)) {
                 boolean writeOnly = !property.accessor().getParameters().isEmpty();
                 if (!property.settable() || writeOnly) {
                     problems.error(fieldCoordinate, ARGUMENT_VALUE + " needs a " + (writeOnly ? "readable" : "writable")
@@ -924,9 +924,7 @@ final class BindingChecks {
                                 Node<?> node, Element element) {
         TypeMirror type = javaType;
         if (javaTypes.is(type, ARGUMENT_VALUE)) {
-            String problem = !options.detectOmission() ? "needs " + ProcessorOptions.DETECT_OMISSION + "=true (as at startup "
-                    + "micronaut.graphql.tools.input.detect-omission=true)."
-                    : !fieldLevel ? "is not allowed inside a list: a list element cannot be omitted."
+            String problem = !fieldLevel ? "is not allowed inside a list: a list element cannot be omitted."
                     : graphQlType instanceof NonNullType ? "is only allowed for a nullable GraphQL type, the type is "
                     + printType(graphQlType) + "." : null;
             type = javaTypes.firstTypeArgument(type);
