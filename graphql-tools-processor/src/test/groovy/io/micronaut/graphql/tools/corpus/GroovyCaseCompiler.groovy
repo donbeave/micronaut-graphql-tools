@@ -74,7 +74,6 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
             System.setErr(new PrintStream(captured, true, 'UTF-8'))
             CompilerConfiguration configuration = new CompilerConfiguration()
             configuration.targetDirectory = classes.toFile()
-            configuration.parameters = true
             CompilationUnit unit = new CompilationUnit(configuration, null, loader)
             corpusCase.sources(Language.GROOVY).each { unit.addSource(it.toFile()) }
             try {

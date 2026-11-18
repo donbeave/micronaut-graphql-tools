@@ -1,0 +1,7 @@
+schema {
+  query: Query
+}
+
+type Query {
+  page(first: Int!, offset: Int!): String!
+}

@@ -84,7 +84,7 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
                 }
             }
             JavaCompiler.CompilationTask task = compiler.getTask(null, files, diagnostics,
-                    ['-proc:full', '-parameters'] + options,
+                    ['-proc:full'] + options,
                     null, files.getJavaFileObjectsFromPaths(corpusCase.sources(Language.JAVA)))
             task.setProcessors(processors)
             clearSystemProperties()

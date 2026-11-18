@@ -113,6 +113,20 @@ type Book {
         findings[0].sentence() == 'the parameter limit binds no argument of Query.book (arguments: id)'
     }
 
+    void "a parameter without a name in the class file says to compile with -parameters or to use @GraphQLArgument"() {
+        given:
+        def findings = ResolverClassFindings.check(schema, model(),
+                resolver([method('book', [:], [FakeModel.parameter('arg0', 'java.lang.String', null, true)], STRING,
+                        'a.R#book(java.lang.String)')], [ROOT]))
+
+        expect:
+        findings*.code() == ['argument-mismatch']
+        findings[0].coordinate() == 'Query.book'
+        findings[0].sentence() == 'the parameter arg0 binds no argument of Query.book (arguments: id)'
+        findings[0].fix() == ('the class file of a.R has no parameter names: compile it with -parameters, or annotate '
+                + 'the parameter with @GraphQLArgument("<name>")')
+    }
+
     void "a return type that the field cannot take is unsupported-return-type, after the arguments"() {
         given:
         def methods = [method('book', [:], [FakeModel.parameter('id', 'java.lang.String')],

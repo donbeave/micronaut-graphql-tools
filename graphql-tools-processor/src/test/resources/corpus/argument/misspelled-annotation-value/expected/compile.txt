@@ -1,0 +1,1 @@
+argument-mismatch Query.page schema.graphqls:6:3

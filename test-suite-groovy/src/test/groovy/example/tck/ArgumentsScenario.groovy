@@ -20,6 +20,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.graphql.tools.ArgumentValue
+import io.micronaut.graphql.tools.annotation.GraphQLArgument
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
@@ -148,6 +149,12 @@ class ArgumentsQueries {
         String parts = crate.parts.collect { "${it.name}:${presence(it.note)}" }.join(', ')
         return "label=$crate.label dimensions=$crate.dimensions.width unit=${presence(crate.dimensions.unit)} parts=[$parts] memo=${presence(crate.memo)}".toString()
     }
+
+    // tag::by-name[]
+    String window(@GraphQLArgument('in') String scope, int offset, int first) {
+        return "first=$first offset=$offset in=$scope".toString()
+    }
+    // end::by-name[]
 
     String shape(Shape shape) {
         String points = shape.points.collect { "${it.x},${it.y}" }.join(';')
