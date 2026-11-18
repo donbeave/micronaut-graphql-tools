@@ -34,7 +34,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 - Leg values are roles (`floor`, `default`, `ceiling`, `latest`). The floor and ceiling versions are in
   `gradle/libs.versions.toml`; the default leg takes the graphql-java that micronaut-graphql manages; `latest` is resolved in `build.gradle.kts`.
   `-PgraphqlJavaVersion` is rejected. `latest` is for the canary only.
-- Groovy has no native test: the Groovy suite runs on the JVM only (`:test-suite-groovy:test`).
+- Groovy has no native test (Spock cannot run natively): the Groovy suite runs on the JVM, and `./gradlew :test-suite-groovy:nativeSmokeTest` builds the Groovy example's native executable and asserts its GraphQL responses (CI job `native Groovy smoke`, gated).
 - Add `-PgraphqlJavaLeg=ceiling` to the native command to run it on that leg.
 - Run the guide as `set -o pipefail; ./gradlew docs 2>&1 | tee docs.log`. `./gradlew docs` exits 0 even when a snippet is
   missing. CI fails on the log, so run this after `docs`:
@@ -58,7 +58,7 @@ Run the checks that cover what you changed, and before you push run the full bui
   `test-suite-groovy`. A processor-only change is tested in `graphql-tools-processor` and `test-suite-java`, the only suite
   that uses the processor. A guide example exists in all three suites with the same class name and tags, and is included
   with `snippet::`.
-- **Native.** Each runtime feature has a native test in `test-suite-java` and `test-suite-kotlin`.
+- **Native.** Each runtime feature has a native test in `test-suite-java` and `test-suite-kotlin`; the Groovy example has the native smoke test.
 - **No Jackson in the public API.** Use Micronaut Serialization (`micronaut-serde`). Build input conversion on
   compile-time metadata (`BeanIntrospection`, Serde), not on an `ObjectMapper`. Until #36 and #37 land, input binding
   still uses Jackson. The seam that selects its mapper, `GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER`, is `@Internal`
@@ -85,7 +85,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 - Open the PR ready for review, not as a draft. Do not merge it yourself.
 - Merge: squash only. Merge commits and rebase merges are disabled. Resolve every review conversation first.
 - Required status check: `required checks` only. It is green when every job in its `needs:` list in `gradle.yml`
-  succeeded. A new gated job is added to that list, never to the ruleset. The native jobs are not gated yet.
+  succeeded. A new gated job is added to that list, never to the ruleset. The `native Groovy smoke` jobs are gated; the other native jobs are not gated yet.
 - No admin bypass: a red, cancelled or pending check blocks the merge.
 
 ## Model routing
