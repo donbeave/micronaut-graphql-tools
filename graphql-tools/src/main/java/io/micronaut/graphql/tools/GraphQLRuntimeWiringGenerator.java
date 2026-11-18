@@ -48,9 +48,9 @@ import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.rules.EnumTypeRules;
+import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
@@ -277,7 +277,7 @@ final class GraphQLRuntimeWiringGenerator {
 
             if (!ambiguities.bindings().isEmpty()) {
                 LOG.warn("{} is {}: fields that both a member of the Java type and a type resolver method can bind: {}",
-                        GraphQLToolsConfiguration.PREFIX + ".precedence", configuration.getPrecedence(),
+                        GraphQLToolsConfiguration.PREFIX + ".precedence", configuration.getPrecedence().name().toLowerCase(java.util.Locale.ROOT).replace('_', '-'),
                         ambiguities.bindings().entrySet().stream()
                                 .map(it -> it.getKey() + " (" + it.getValue() + ")")
                                 .collect(Collectors.joining("; ")));
@@ -787,7 +787,7 @@ final class GraphQLRuntimeWiringGenerator {
                                          Class<?> sourceClass, List<InterfaceTypeDefinition> declaringInterfaces) {
         TypeMappingContext mappingContext = TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
         String directive = getResolverDirective(fieldDefinition);
-        Precedence precedence = configuration.getPrecedence();
+        PrecedenceRules.Setting setting = PrecedenceRules.Setting.valueOf(configuration.getPrecedence().name());
 
         List<BeanDefinitionAndMethod> resolvers = sourceClass.isPrimitive() || sourceClass.isEnum()
                 || sourceClass.isAnnotation()
@@ -796,13 +796,15 @@ final class GraphQLRuntimeWiringGenerator {
                         fieldDefinition.getName());
 
         if (!resolvers.isEmpty()) {
-            if (directive == null && precedence == Precedence.STRICT) {
+            boolean intent = directive != null || resolvers.stream().anyMatch(graphQLResolversRegistry::declaresCoordinate);
+            PrecedenceRules.Outcome outcome = PrecedenceRules.decide(setting, intent);
+            if (outcome == PrecedenceRules.Outcome.FAIL) {
                 throw new AmbiguousBindingException(mappingContext, AmbiguityLog.merge(modelMember.members(), toMap(resolvers)));
             }
-            if (directive == null) {
+            if (!intent) {
                 ambiguityLog.record(mappingContext, modelMember, resolvers);
             }
-            if (directive == null && precedence == Precedence.PROPERTY_FIRST) {
+            if (outcome == PrecedenceRules.Outcome.MEMBER) {
                 if (!declaringInterfaces.isEmpty()) {
                     ownInterfaceFields.add(new InterfaceField(objectTypeDefinition, fieldDefinition, sourceClass,
                             modelMember.members(), modelMember));
@@ -821,7 +823,8 @@ final class GraphQLRuntimeWiringGenerator {
             return;
         }
 
-        if (!declaringInterfaces.isEmpty() && precedence == Precedence.RESOLVER_FIRST) {
+        if (!declaringInterfaces.isEmpty() && (setting == PrecedenceRules.Setting.RESOLVER_FIRST
+                || declaresInterfaceCoordinate(declaringInterfaces, fieldDefinition.getName()))) {
             deferredModelMemberFields.add(new InterfaceField(objectTypeDefinition, fieldDefinition, sourceClass,
                     modelMember.members(), modelMember));
             return;
@@ -836,6 +839,11 @@ final class GraphQLRuntimeWiringGenerator {
                     modelMember.members(), modelMember));
         }
         bindModelMember(objectTypeDefinition, fieldDefinition, typeRuntimeWiringBuilder, modelMember);
+    }
+
+    private boolean declaresInterfaceCoordinate(List<InterfaceTypeDefinition> interfaces, String fieldName) {
+        return interfaces.stream().anyMatch(it -> graphQLResolversRegistry.isCoordinateDeclared(
+                it.getName() + "." + fieldName));
     }
 
     private void bindModelMember(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,

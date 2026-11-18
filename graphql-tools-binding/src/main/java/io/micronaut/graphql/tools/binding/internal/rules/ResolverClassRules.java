@@ -217,6 +217,16 @@ public final class ResolverClassRules {
     }
 
     /**
+     * @param method   a method of a resolver class
+     * @param declared the declared coordinate by method signature for the class, or {@code null} when no method of the
+     *                 class declares one
+     * @return whether the method declares its coordinate with {@code @GraphQLSchemaCoordinate}
+     */
+    public static boolean declaresCoordinate(JMethod method, @Nullable Map<String, String> declared) {
+        return declared != null && declared.containsKey(method.signature());
+    }
+
+    /**
      * @param methods the methods of a resolver class
      * @return the declared coordinate by method signature, without the ignored methods, or {@code null} when no method
      * declares one

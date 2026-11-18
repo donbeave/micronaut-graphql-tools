@@ -226,8 +226,8 @@ Methods of beans without coordinates are matched by name. The coordinate is also
   that differs from the method name, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
   `@GraphQLTypeResolver`, or sits on a bean that is neither.
 - It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
-  class that the `@GraphQLTypeResolver` does not resolve, a property of the mapped class binds the field (with
-  `precedence: property-first`, see [Property or type resolver](#property-or-type-resolver)). A coordinate whose type
+  class that the `@GraphQLTypeResolver` does not resolve (a method that declares its coordinate wins over a property of
+  the mapped class, see [Property or type resolver](#property-or-type-resolver)). A coordinate whose type
   is unreachable and allowed (see [Configuration](#configuration)) is not bound; with `unbound-resolver-method` at `fail` (the default)
   it is an error, otherwise it is logged as a warning.
 
@@ -284,16 +284,33 @@ types available to reflection.
 
 A field of an object type is bound by a member of its Java type (a property, or a `@GraphQLField` method) or by a
 type resolver method (of a `@GraphQLTypeResolver` for that type, or for the Java interface of an SDL interface that
-declares the field). When both exist for one field, `micronaut.graphql.tools.precedence` decides:
+declares the field). One rule covers object and interface fields. When both exist for one field,
+`micronaut.graphql.tools.precedence` decides:
 
-- `strict` (default): the startup fails with `AmbiguousBindingException`, naming the field and both members.
+- `fail` (default): the startup fails with `[precedence-ambiguity]` (`AmbiguousBindingException`), naming the field and
+  both members. `strict` does not relax it. The value `strict`, the former name of this default, is rejected with
+  `[removed-configuration-key]` (BC-29).
 - `property-first`: the member of the Java type binds, and the type resolver method is never called. This was the
   only behaviour before the option existed.
-- `resolver-first`: the type resolver method binds, and the member is not read.
+- `resolver-first`: the type resolver method binds, and the member is not read. This is the migration setting for
+  applications that come from graphql-java-tools or graphql-java-kickstart, where the resolver wins.
 
-A field may say which one it wants: list directives in `micronaut.graphql.tools.resolver-directives`, and a field
-that carries one of them is bound by its type resolver method whatever the precedence. Such a field fails the startup
-with `ResolverRequiredException` when only a member of the Java type could bind it. Every listed directive must be
+Under `property-first` and `resolver-first` every ambiguity is logged at WARN and written to the binding manifest as a
+`!precedence-ambiguity` line.
+
+A field may say which one it wants, and then the setting is not consulted and nothing is logged:
+
+- list directives in `micronaut.graphql.tools.resolver-directives`: a field that carries one of them is bound by its
+  type resolver method whatever the precedence;
+- declare the coordinate on the type resolver method with `@GraphQLSchemaCoordinate("Item.price")`, or the coordinate
+  of the interface (`@GraphQLSchemaCoordinate("Node.id")`): the method binds the field whatever the precedence. This
+  is how a Relay-style `Node.id` resolver sits next to an entity that has `getId()`;
+- annotate the member with `@GraphQLIgnore`: it is no member, so the type resolver method binds the field.
+
+The error message of an ambiguity names every one of these and says that `strict` does not change it.
+
+A field with a resolver directive fails the startup with `ResolverRequiredException` when only a member of the Java
+type could bind it. Every listed directive must be
 declared in the schema. The directive is read from the field of the object type: graphql-java does not carry
 directives of an SDL interface field over to the implementations, so a directive written only on the interface's
 field has no effect here (the field then follows the precedence).
@@ -315,7 +332,7 @@ micronaut:
         - computed
 ```
 
-With the `strict` default, a getter that happens to have the name of a field a type resolver computes no longer
+With the `fail` default, a getter that happens to have the name of a field a type resolver computes no longer
 shadows the type resolver silently. An application that relied on the getter winning sets `precedence: property-first`
 (and gets a warning that lists the fields where it applies). A field without both members binds as before in every
 mode.
@@ -441,7 +458,7 @@ micronaut:
 `false` makes every check `warn`, including `unreachable-type` for object, interface and union types. An explicit
 `checks.<code>` entry wins over both. An unknown code or a value that is not `fail`, `warn` or `ignore` fails the startup
 with `[invalid-check-setting]`. The severity settings apply to the startup only. `precedence` is independent of
-`strict` and is not a check: a precedence ambiguity under `precedence: strict` stays a binding failure.
+`strict` and is not a check: a precedence ambiguity under `precedence: fail` stays a binding failure.
 
 The compile-time checks (`micronaut-graphql-tools-processor`) never read these settings. Five checks also run at
 compile time (`unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`,
@@ -543,8 +560,8 @@ A member that binds no field on purpose does not need to relax a check for the w
 
 The compile-time visitor in `micronaut-graphql-tools-processor` reads the same annotations and applies the same rules, so a build and the startup agree. The visitor is not yet the default processor (#291): the JSR-269 processor that the build still runs does not read `@GraphQLIgnore` and does not exclude lifecycle methods.
 
-`strict: false` does not change `precedence`: with the default `strict` precedence, a field that both a getter and a
-type resolver can bind still fails the startup (`AmbiguousBindingException`).
+`strict: false` does not change `precedence`: with the default `fail` precedence, a field that both a getter and a
+type resolver can bind still fails the startup (`[precedence-ambiguity]`).
 
 ## Custom scalars
 
@@ -742,7 +759,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | Property | Values (default first) | Meaning |
 |---|---|---|
 | `micronaut.graphql.tools.schema.locations` | list of locations (`classpath:graphql/**/*.graphqls`) | Where the schema files are read from when the application has no `TypeDefinitionRegistry` bean: `classpath:`, `classpath*:` (dependency jars too) or `file:`, then an Ant-style path. See [Schema discovery](#schema-discovery). |
-| `micronaut.graphql.tools.precedence` | `strict` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `strict` fails the startup. |
+| `micronaut.graphql.tools.precedence` | `fail` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `fail` (default) fails the startup; a field that carries a resolver directive, or whose resolver method declares its coordinate, is not ambiguous. |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
 | `micronaut.graphql.tools.strict` | `true` \| `false` | The shorthand for the severity of every check that has no `checks` entry: `true` leaves every check at `fail`, `false` makes every check `warn` (the findings are logged and listed in the manifest). It does not change `precedence`. See [Strict mode](#strict-mode). |
 | `micronaut.graphql.tools.checks` | map of check code to `fail` \| `warn` \| `ignore` (empty) | The severity of single checks, for example `checks.unwired-directive: ignore`: `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`, `unreachable-type`, `unreachable-value-type`, `unused-dictionary-entry`, `interface-read-through-implementation`, `unwired-directive`. An entry wins over `strict`. An unknown code or severity fails the startup. The five compile-time checks (`unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`) are not relaxed at compile time. |
@@ -860,7 +877,7 @@ a method or property returns is the Java type of the field's GraphQL type):
 
 - every root field has exactly one root resolver method, and every field of a bound object type has a property or
   `@GraphQLField` method of the introspected Java type or a type resolver method, decided by `precedence` and
-  `resolverDirectives` exactly as at startup (an ambiguous field fails with `precedence: strict`; a field with a
+  `resolverDirectives` exactly as at startup (an ambiguous field fails with `precedence: fail`; a field with a
   resolver directive needs a type resolver method);
 - the number of parameters besides `DataFetchingEnvironment`, the source object first for a type resolver, and the
   Java type of each argument in the schema's order (lists, built-in scalars, `ArgumentValue`; a primitive for a

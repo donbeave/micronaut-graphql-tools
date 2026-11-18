@@ -349,7 +349,7 @@ public class BookSubscription {
         nonNull.success
     }
 
-    void "precedence strict: a property and a type resolver method for one field fail"() {
+    void "precedence fail: a property and a type resolver method for one field fail"() {
         when:
         def result = compilation(['example.BookResolver': BOOK_RESOLVER.replace('public Optional<String> author(Book book) {',
                 '''public String title(Book book) {
@@ -364,8 +364,41 @@ public class BookSubscription {
                                          + 'example.Book#getTitle() and the type resolver method '
                                          + 'example.BookResolver#title(example.Book) can both bind the field. Remove one, '
                                          + 'mark the field with a directive listed in '
-                                         + 'micronaut.graphql.tools.resolverDirectives, or set '
-                                         + 'micronaut.graphql.tools.precedence. (schema.graphqls:11)']
+                                         + 'micronaut.graphql.tools.resolverDirectives, declare @GraphQLSchemaCoordinate '
+                                         + 'on the resolver method, annotate the member with @GraphQLIgnore, or set '
+                                         + 'micronaut.graphql.tools.precedence (strict does not change it). '
+                                         + '(schema.graphqls:11)']
+    }
+
+    void "a resolver method that declares its coordinate wins over the property, whatever the precedence is"() {
+        given:
+        def resolver = BOOK_RESOLVER.replace('public Optional<String> author(Book book) {', '''@io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate("Book.title")
+    public String title(Book book) {
+        return null;
+    }
+
+    @io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate("Book.author")
+    public Optional<String> author(Book book) {''')
+
+        when:
+        def byDefault = compilation(['example.BookResolver': resolver]).compile()
+        def propertyFirst = compilation(['example.BookResolver': resolver])
+                .option(ProcessorOptions.PRECEDENCE, 'property-first').compile()
+        def lenient = compilation(['example.BookResolver': resolver]).option(ProcessorOptions.STRICT, 'false').compile()
+
+        then:
+        byDefault.success
+        propertyFirst.success
+        lenient.success
+    }
+
+    void "the old precedence value strict is rejected and names fail"() {
+        when:
+        def result = compilation([:]).option(ProcessorOptions.PRECEDENCE, 'strict').compile()
+
+        then:
+        !result.success
+        result.graphqlErrors[0].startsWith('[graphql] micronaut.graphql.tools.precedence=strict was renamed fail')
     }
 
     void "a resolver directive binds the type resolver; property-first and resolver-first decide; a marked field without resolver fails"() {

@@ -378,7 +378,7 @@ type Query {
 
         then:
         !result.success
-        result.graphqlErrors == ['[graphql] micronaut.graphql.tools.precedence must be strict, property-first or '
+        result.graphqlErrors == ['[graphql] micronaut.graphql.tools.precedence must be fail, property-first or '
                                          + 'resolver-first, not first.']
     }
 

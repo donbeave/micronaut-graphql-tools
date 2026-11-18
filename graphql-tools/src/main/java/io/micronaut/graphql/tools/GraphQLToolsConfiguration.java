@@ -33,7 +33,7 @@ public class GraphQLToolsConfiguration {
 
     public static final String PREFIX = "micronaut.graphql.tools";
 
-    private Precedence precedence = Precedence.STRICT;
+    private Precedence precedence = Precedence.FAIL;
     private List<String> resolverDirectives = Collections.emptyList();
     private boolean strict = true;
     private Map<String, String> checks = Collections.emptyMap();
@@ -53,7 +53,8 @@ public class GraphQLToolsConfiguration {
 
     /**
      * Sets how a field is bound when both a member of its Java type (a property or a {@code @GraphQLField} method) and
-     * a type resolver method can bind it. Default: {@link Precedence#STRICT}.
+     * a type resolver method can bind it. Independent of {@link #isStrict()}.
+     * Default: {@link Precedence#FAIL}.
      *
      * @param precedence the precedence
      */
@@ -403,16 +404,18 @@ public class GraphQLToolsConfiguration {
 
     /**
      * How a field is bound when both a member of its Java type (a property or a {@code @GraphQLField} method) and a
-     * type resolver method (of the type or of one of its interfaces) can bind it. A field that carries a directive
-     * listed in {@link #getResolverDirectives()} is always bound by the type resolver method.
+     * type resolver method (of the type or of one of its interfaces) can bind it. The rule is the same for object and
+     * interface fields. A field that carries a directive listed in {@link #getResolverDirectives()}, or whose type
+     * resolver method declares its coordinate with {@code @GraphQLSchemaCoordinate}, is always bound by the type
+     * resolver method, and a member marked {@code @GraphQLIgnore} binds nothing.
      */
     public enum Precedence {
 
         /**
          * Fail the startup with {@link io.micronaut.graphql.tools.exceptions.AmbiguousBindingException}, naming the
-         * field and both members.
+         * field and both members. {@code strict} does not relax it.
          */
-        STRICT,
+        FAIL,
 
         /**
          * Bind the member of the Java type; the type resolver method is not called. This was the only behaviour before

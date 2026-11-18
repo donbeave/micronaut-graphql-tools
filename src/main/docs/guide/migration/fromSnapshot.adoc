@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-28` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-29` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -39,7 +39,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-26 Jackson leaves the `api` scope (#36) | `micronaut-jackson-databind` is no longer a dependency of the library. An application that serves HTTP without another JSON codec fails at startup, with `No bean of type [io.micronaut.json.JsonConfiguration] exists`. | Add `micronaut-jackson-databind` (or `micronaut-serde-jackson`) to your own build.
 | BC-27 per-check severity (#86) | `checks.<code>` sets `fail`, `warn` or `ignore` for each of the ten checks, and `strict: false` is `warn` for every check, including unreachable object, interface and union types. Six keys are removed and fail the startup with `[removed-configuration-key]`: `unreachable-types`, `allow-unreachable`, `input.unmapped-properties`, `inert-directives`, `schema-customizer-directives` and `unwired-directives`. | Use the replacement keys: see BC-27 below. No opt-out for the removal.
 | BC-28 `ArgumentValue` needs no option (#159) | The option `input.detect-omission` is removed, and so is the compile-time option `input.detectOmission`. A declared `ArgumentValue` is detected on its own, including an `ArgumentValue` property that the input type does not define: it is set to `omitted()`, where it kept its initial value without the option. | Delete the key. An application that set it to `true` behaves as before. New in 1.0.0-M3, no opt-out.
-| #105 precedence default | _Pending._ The default value `strict` of `precedence` becomes `fail`. | Set `precedence: property-first` or `resolver-first` where you relied on the old outcome.
+| BC-29 one precedence rule (#105) | The value `strict` of `micronaut.graphql.tools.precedence` is named `fail` and `strict` is rejected with `[removed-configuration-key]`. A type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate` wins over a getter or a `@GraphQLField` method, for object and interface fields, whatever the setting is. | Write `precedence: fail`, or delete the line (it is the default). To let a resolver win for one field, declare its coordinate or put a resolver directive on the field.
 | #109 public exceptions | _Pending._ The startup exception subclasses become internal behind `SchemaBindingException`, which already carries the code (BC-22). | Match on the error code, not on the exception subclass.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
 | #236 ambiguity exception | _Pending._ `AmbiguousBindingException` becomes internal. | Match on the error code.
@@ -357,7 +357,7 @@ Fix: remove one of the two members. Or choose the winner: set `micronaut.graphql
 
 Opt-out: `micronaut.graphql.tools.precedence: property-first`. `strict: false` does not change this outcome.
 
-Pending #105 and #236 (M3): the default `strict` value becomes `fail`, and the ambiguity becomes a `SchemaBindingException` with an error code. The behaviour of the options above is unchanged.
+The default value of `precedence` is named `fail` (BC-29). Pending #236 (M3): the ambiguity becomes a `SchemaBindingException` with an error code. The behaviour of the options above is unchanged.
 
 [source,yaml]
 ----
@@ -626,14 +626,38 @@ micronaut:
 
 Fix: delete the key or the option. Nothing else changes for an application that set it to `true`.
 
+=== BC-29: one precedence rule for object and interface fields (#105)
+
+A field can be bound by a member of its Java type (a property or a `@GraphQLField` method) and by a type resolver method (of the type, or of an interface that declares the field). One rule decides it, for object and interface fields alike, at startup and in the compile-time checks that apply it:
+
+. A member marked `@GraphQLIgnore` is no member, so the type resolver method binds the field.
+. A field that carries a directive listed in `resolver-directives`, or whose type resolver method declares its coordinate with `@GraphQLSchemaCoordinate`, is bound by the type resolver method. Nothing is logged.
+. Any other ambiguity follows `micronaut.graphql.tools.precedence`: `fail` (the default) fails the startup with `[precedence-ambiguity]`, `resolver-first` binds the resolver method and `property-first` binds the member; both log the ambiguity at WARN and write a `!precedence-ambiguity` line to the manifest.
+
+`precedence` does not depend on `strict`, and it is not a `checks.<code>` entry. `property-first` stays through 1.0.
+
+What breaks:
+
+* The value `strict` is renamed `fail`, and `strict` is rejected: the startup fails with `[removed-configuration-key]` that names `fail`. The default does not change.
+* A type resolver method that declares its coordinate now wins over a member of the same field. Before, with the default it was an ambiguity, and with `property-first` the startup failed with `[unknown-schema-coordinate]` because the property bound the field.
+
+The Relay `Node.id` case is written with the coordinate on the interface resolver, so an entity keeps its own `getId()`:
+
+[source,java]
+----
+@GraphQLTypeResolver(Node.class)
+public class NodeResolver {
+    @GraphQLSchemaCoordinate("Node.id")
+    public String id(Node node) { return globalId(node); }
+}
+----
+
+Fix: write `precedence: fail` or delete the line. The error message names the options for one field (a resolver directive, `@GraphQLSchemaCoordinate`, `@GraphQLIgnore`) and for every field (`precedence: resolver-first` or `property-first`).
+
 == Pending changes
 
 The following changes are planned and are not on `master` yet. Their behaviour is not described as current. Each entry names the issue that makes the change.
 
-
-=== #105: the precedence default
-
-The default `micronaut.graphql.tools.precedence` value `strict` becomes `fail`, and `property-first` and `resolver-first` stay. `precedence` does not depend on `strict`. Until #105 lands, the default is `strict`, which fails on an ambiguity, as described under BC-14.
 
 === BC-24: schema files are `*.graphqls` (#17)
 

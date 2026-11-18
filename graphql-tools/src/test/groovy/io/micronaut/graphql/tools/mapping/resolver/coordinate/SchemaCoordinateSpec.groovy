@@ -183,7 +183,6 @@ type Book {
         where:
         name                 | schema                       | config                                                   | problem
         'typeMappedElsewhere' | AUTHOR_SCHEMA               | ['micronaut.graphql.tools.strict': false]                                               | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
-        'propertyBinds'      | SCHEMA                       | ['micronaut.graphql.tools.precedence': 'property-first'] | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${ShadowedBookResolver.name} summary(${BookWithSummary.name} book): the method is not bound to Book.summary, Book.summary is bound to property ${BookWithSummary.name}.getSummary()."
     }
 
     @Language("GraphQL")
@@ -240,30 +239,6 @@ type Author {
     @GraphQLType
     static class Author {
         String name
-    }
-
-    @Requires(property = 'spec.name', value = SPEC_NAME + ".propertyBinds")
-    @GraphQLRootResolver
-    static class ShadowedBookQuery {
-        BookWithSummary book(String id) {
-            return new BookWithSummary(id: id, title: "Title " + id, summary: 'stored summary')
-        }
-    }
-
-    @Requires(property = 'spec.name', value = SPEC_NAME + ".propertyBinds")
-    @GraphQLTypeResolver(BookWithSummary.class)
-    static class ShadowedBookResolver {
-        @GraphQLSchemaCoordinate("Book.summary")
-        String summary(BookWithSummary book) {
-            return "Summary of " + book.title
-        }
-    }
-
-    @GraphQLType
-    static class BookWithSummary {
-        String id
-        String title
-        String summary
     }
 
     void "a coordinate of an allowed unreachable type is not bound, and that is logged"() {
