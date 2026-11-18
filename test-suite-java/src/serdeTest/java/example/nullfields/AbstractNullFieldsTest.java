@@ -61,6 +61,11 @@ abstract class AbstractNullFieldsTest {
     abstract String expectedNullPropertyJson();
 
     @Test
+    void serverIsBoundToTheLoopbackAddressItsClientConnectsTo() {
+        assertEquals("127.0.0.1", embeddedServer.getHost());
+    }
+
+    @Test
     void usesTheExpectedJsonStack() {
         assertEquals(expectedMapperClassName(), jsonMapper.getClass().getName());
     }
