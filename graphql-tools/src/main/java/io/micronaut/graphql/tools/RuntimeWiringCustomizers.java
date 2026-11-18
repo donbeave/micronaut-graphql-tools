@@ -24,6 +24,7 @@ import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLScalarType;
 import graphql.schema.TypeResolver;
+import graphql.schema.idl.EnumValuesProvider;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -159,6 +160,7 @@ final class RuntimeWiringCustomizers {
             Map<String, GraphQLScalarType> scalars,
             Map<String, TypeResolver> typeResolvers,
             Map<String, SchemaDirectiveWiring> directiveWirings,
+            Map<String, EnumValuesProvider> enumValuesProviders,
             GraphQLCodeRegistry codeRegistry
     ) {
 
@@ -179,6 +181,7 @@ final class RuntimeWiringCustomizers {
                     new TreeMap<>(runtimeWiring.getScalars()),
                     new TreeMap<>(runtimeWiring.getTypeResolvers()),
                     new TreeMap<>(runtimeWiring.getRegisteredDirectiveWiring()),
+                    new TreeMap<>(runtimeWiring.getEnumValuesProviders()),
                     runtimeWiring.getCodeRegistry()
             );
         }
@@ -228,6 +231,11 @@ final class RuntimeWiringCustomizers {
             directiveWirings.forEach((name, wiring) -> {
                 if (after.directiveWirings.get(name) != wiring) {
                     replaced.add("directive wiring @" + name);
+                }
+            });
+            enumValuesProviders.forEach((type, provider) -> {
+                if (after.enumValuesProviders.get(type) != provider) {
+                    replaced.add("enum values provider of " + type);
                 }
             });
             replaced.addAll(replacedThroughCodeRegistry(after, fieldsByType, claimed));

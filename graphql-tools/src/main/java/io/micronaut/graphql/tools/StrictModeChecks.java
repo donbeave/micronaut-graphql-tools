@@ -19,7 +19,6 @@ import graphql.language.EnumTypeDefinition;
 import graphql.language.EnumValueDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.EnumBeanIntrospection;
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.inject.ExecutableMethod;
@@ -122,11 +121,14 @@ final class StrictModeChecks {
             Set<String> values = enumDefinition.getEnumValueDefinitions().stream()
                     .map(EnumValueDefinition::getName)
                     .collect(Collectors.toSet());
-            List<String> missing = Arrays.stream(enumClass.getEnumConstants())
-                    .map(it -> ((Enum<?>) it).name())
+            EnumBeanIntrospection<?> introspection = EnumIntrospections.find(enumClass).orElse(null);
+            if (introspection == null) {
+                return;
+            }
+            List<String> missing = EnumIntrospections.constantsByName(introspection).keySet().stream()
                     .filter(it -> !values.contains(it))
                     .toList();
-            Set<String> ignored = missing.isEmpty() ? Set.of() : ignoredEnumConstants(enumClass);
+            Set<String> ignored = missing.isEmpty() ? Set.of() : ignoredEnumConstants(introspection);
             missing.stream()
                     .filter(it -> {
                         if (!ignored.contains(it)) {
@@ -145,15 +147,11 @@ final class StrictModeChecks {
         });
     }
 
-    private static Set<String> ignoredEnumConstants(Class<?> enumClass) {
+    private static Set<String> ignoredEnumConstants(EnumBeanIntrospection<?> introspection) {
         Set<String> names = new HashSet<>();
-        BeanIntrospector.SHARED.findIntrospection((Class<Object>) enumClass).ifPresent(introspection -> {
-            if (introspection instanceof EnumBeanIntrospection<?> enumIntrospection) {
-                enumIntrospection.getConstants().stream()
-                        .filter(it -> it.hasAnnotation(GraphQLIgnore.class))
-                        .forEach(it -> names.add(((Enum<?>) it.getValue()).name()));
-            }
-        });
+        introspection.getConstants().stream()
+                .filter(it -> it.hasAnnotation(GraphQLIgnore.class))
+                .forEach(it -> names.add(((Enum<?>) it.getValue()).name()));
         return names;
     }
 
