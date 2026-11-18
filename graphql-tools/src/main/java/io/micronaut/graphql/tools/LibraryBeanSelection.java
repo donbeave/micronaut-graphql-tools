@@ -159,7 +159,8 @@ public final class LibraryBeanSelection {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static boolean qualifiedByName(String name, Class<?> replaced, Provided candidate) {
         Qualifier byName = Qualifiers.byName(name);
-        return byName.equals(candidate.qualifier()) || byName.doesQualify(replaced, candidate.definition());
+        return replaced.isAssignableFrom(candidate.definition().getBeanType())
+                && (byName.equals(candidate.qualifier()) || byName.doesQualify(replaced, candidate.definition()));
     }
 
     private static void expand(BeanContext context, BeanDefinition<?> definition, Visits visits, List<Provided> beans) {
