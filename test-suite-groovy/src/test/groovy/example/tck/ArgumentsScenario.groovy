@@ -76,3 +76,17 @@ class ArgumentsMutations {
         return total.addAndGet(amount)
     }
 }
+
+// tag::optional-helpers[]
+@CompileStatic
+class OptionalHelpers {
+
+    static String describePresence(ArgumentValue<String> text) {
+        return text.asOptional().map { 'present:' + it }.orElse('absent')
+    }
+
+    static void rememberIfPresent(ArgumentValue<String> text, List<String> seen) {
+        text.ifPresent { seen << it }
+    }
+}
+// end::optional-helpers[]

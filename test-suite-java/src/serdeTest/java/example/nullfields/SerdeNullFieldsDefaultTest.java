@@ -10,4 +10,9 @@ class SerdeNullFieldsDefaultTest extends AbstractNullFieldsTest {
         return "io.micronaut.serde.jackson.JacksonJsonMapper";
     }
 
+    @Override
+    String expectedNullPropertyJson() {
+        return "{}";
+    }
+
 }

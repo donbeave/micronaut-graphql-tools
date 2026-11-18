@@ -1,1 +1,10 @@
 NOTE: This page is pending. It will be written with the user guide (epic #97).
+
+== ArgumentValue
+
+An `ArgumentValue<T>` argument or input field tells an omitted value from an explicit `null`. It needs a nullable GraphQL type and `micronaut.graphql.tools.input.detect-omission=true`. Besides `isOmitted()`, `isNull()`, `isPresent()` and `get()`, two methods read the value without a branch:
+
+* `asOptional()` returns an `Optional` that is empty for an omitted value and for an explicit `null`.
+* `ifPresent(Consumer)` runs the consumer only for a provided, non-null value.
+
+snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="optional-helpers", indent="0"]

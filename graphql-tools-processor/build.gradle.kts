@@ -72,3 +72,12 @@ tasks.register<Test>("corpusKotlin") {
     systemProperty("corpus.kotlin.dir", layout.buildDirectory.dir("corpus-kotlin").get().asFile.absolutePath)
     outputs.upToDateWhen { false }
 }
+
+// ProcessorOptionsDocsSpec reads the options page next to this module behind Gradle's back, so it is a declared input.
+tasks.named<Test>("test") {
+    val repositoryRoot = rootProject.layout.projectDirectory
+    systemProperty("docs.root", repositoryRoot.asFile.absolutePath)
+    inputs.files(repositoryRoot.asFileTree.matching { include("src/main/docs/guide/compileTime/**") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("docsOptionsPage")
+}

@@ -196,6 +196,12 @@ val jmhSmokeTestTask = tasks.register<Test>("jmhSmokeTest") {
     // The 10,000-field schema is a chain of 1,000 types, and binding recurses once per type of the chain: the default
     // thread stack overflows (measured), so the JVM that runs it gets a larger one.
     jvmArgs("-Xss16m")
+    // JMH locks jmh.lock in java.io.tmpdir, so builds on one machine collide there. The JVM gets a temp directory of
+    // its own under this project's build directory, which only this build uses. The path is relative to the test's
+    // working directory (this project), so it is the same on every machine.
+    val jmhTempDir = layout.buildDirectory.dir("tmp/jmhSmokeTest")
+    systemProperty("java.io.tmpdir", "build/tmp/jmhSmokeTest")
+    doFirst { jmhTempDir.get().asFile.mkdirs() }
     useJUnitPlatform()
 }
 

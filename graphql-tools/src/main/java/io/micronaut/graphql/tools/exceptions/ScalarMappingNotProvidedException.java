@@ -27,17 +27,26 @@ public final class ScalarMappingNotProvidedException extends AbstractMappingExce
 
     private final String scalarName;
 
-    public ScalarMappingNotProvidedException(MappingContext mappingContext, String scalarName) {
-        super(
-                String.format(
-                        "The GraphQL scalar %s has no mapping. Register a %s bean with its %s and Java classes.",
-                        scalarName,
-                        GraphQLScalarMapping.class.getName(),
-                        GraphQLScalarType.class.getName()
-                ),
-                mappingContext
-        );
+    public ScalarMappingNotProvidedException(MappingContext mappingContext, String scalarName,
+                                             boolean bareScalarTypeExists) {
+        super(message(scalarName, bareScalarTypeExists), mappingContext);
         this.scalarName = scalarName;
+    }
+
+    private static String message(String scalarName, boolean bareScalarTypeExists) {
+        String message = String.format(
+                "The GraphQL scalar %s has no mapping. Register a %s bean with its %s and Java classes.",
+                scalarName,
+                GraphQLScalarMapping.class.getName(),
+                GraphQLScalarType.class.getName()
+        );
+        if (!bareScalarTypeExists) {
+            return message;
+        }
+        return message + String.format(
+                " Found a GraphQLScalarType bean '%s'; wrap it with GraphQLScalarMapping.of(type, JavaClass.class).",
+                scalarName
+        );
     }
 
     public String getScalarName() {

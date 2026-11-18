@@ -1,6 +1,6 @@
 # micronaut-graphql-tools 1.0.0-M1 release notes
 
-Tag: `1.0.0-M1` (not created yet). This tag is not a published release. There is no released version before it, so none of the changes below breaks a published API. They matter for applications that run `1.0.0-SNAPSHOT`.
+Tag: `1.0.0-M1`. Tagged and published to GitHub Packages as 1.0.0-M1. There is no released version before it, so none of the changes below breaks a published API. They matter for applications that run `1.0.0-SNAPSHOT`.
 
 ## What this release changes
 
@@ -22,7 +22,7 @@ The stack makes the binding between the SDL schema and the Java code safe: drift
 |---|---|---|---|---|---|
 | BC-01 | #2 `11293ef` | `List<CompletionStage<T>>` return type is a startup error (`UnsupportedReturnTypeException`). Before, the client received the future's `toString()`. | none | Return `CompletionStage<List<T>>`. | Approved, no opt-out (D-33) |
 | BC-02 | #2 `11293ef`, `9bd50b9` | `Optional` on a non-null type, misplaced or doubled wrappers, `Publisher` outside a subscription field, and a subscription field that does not return `Publisher` are startup errors. | none | Remove `Optional` from non-null types. Return `Publisher` only on subscription fields. Reactive applications that return `Publisher` or `Flux` on other fields will hit this error. | Approved, no opt-out (D-33). The `Publisher` part is a stop-gap until #75 |
-| BC-03 | #2 `92f361d` | The published POM declares extended-scalars 21.0 (was 20.2). The library compiles to Java 17 bytecode (`--release 17`). Snapshot publishing: nothing is published automatically; see [Known limitations](#known-limitations). | none | Run on Java 17 or newer. Build the full project on JDK 21 or newer (the processor needs it). If you pin extended-scalars, use 21.0. | Not covered by #79 |
+| BC-03 | #2 `92f361d` | The published POM declares extended-scalars 21.0 (was 20.2). The library compiles to Java 17 bytecode (`--release 17`). Snapshot publishing: no snapshot is published; milestone versions are published to GitHub Packages on a version tag (D-40); see [Known limitations](#known-limitations). | none | Run on Java 17 or newer. Build the full project on JDK 21 or newer (the processor needs it). If you pin extended-scalars, use 21.0. | Not covered by #79 |
 | BC-04 | #3 `feb7dcf` | Resolver stereotypes are `@Inherited`. A `@Singleton` subclass of an annotated class now registers as a resolver, which can create new ambiguities. | none | Annotate the subclass (a fake, a decorator) with `@Replaces(<original>.class)`; `@Requires(env = "test")` alone does not work, because both beans are active in the test environment. | Approved, no opt-out (D-33). #73 removes the stereotype from contracts |
 | BC-05 | #3 `66679ed` | For an interface with its own introspection, properties are read through that introspection. Getters that only an implementation declares stop binding. | none | Declare the getter on the interface. | Approved, no opt-out (D-33). #74 logs the mode |
 | BC-06 | #3 `118c40d` | A union member or interface implementation that is mapped to a Java type provably disjoint from the field's declared Java interface (a `final` class that does not implement it, or unrelated classes) is a startup error (`IncorrectMemberMappingException`). Narrowed by #78: other mappings are accepted. | none | Map the member so that it matches the field's declared Java interface. | Approved, no opt-out (D-33). Narrowed by #78 |
@@ -62,7 +62,7 @@ The annotation processor reads the same settings as build options, with camelCas
   - kapt is documented in the README but is not exercised by the library's tests.
 - **Review findings.** Blocking review findings are fixed on top of this stack in separate changes tracked in issue #172. The stack PRs themselves are not changed.
 - **Decisions.** Issue #79 is closed. Its decisions are recorded in D-33: BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 are approved with no opt-out. The other statuses in the table are not part of that decision.
-- **Snapshot publishing (BC-03).** Nothing is published. The README "Snapshots and Releases" section and CONTRIBUTING state that no snapshot or release is available and no workflow publishes one (only `.github/workflows/gradle.yml` builds and tests). To use this stack, build it yourself and publish it to a local or private repository.
+- **Snapshot publishing (BC-03).** No snapshot is published. Milestone versions are published to GitHub Packages by `.github/workflows/release.yml` on a version tag (D-40); the README "Snapshots and Releases" section and CONTRIBUTING describe this. Milestone 1.0.0-M1 is published to GitHub Packages (see the README); to use an unreleased snapshot of this stack, build it yourself and publish it to a local or private repository.
 
 ## Stack PRs on master
 
