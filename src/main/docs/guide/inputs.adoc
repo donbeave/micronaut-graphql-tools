@@ -1,8 +1,48 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+The values of arguments and input objects reach a resolver in the Java type the method declares. The library builds one converter for each argument and each input field at startup, from the declared type and the GraphQL type, and a request only runs it. The conversion uses the bean introspection that Micronaut generates at compile time. It uses no reflection and no Jackson, so it behaves the same on the JVM and in a native image.
+
+== What the converters do
+
+graphql-java coerces every value first: scalar values, enum constants, a `Map` per input object and a `List` per list. The converter of each declared type then does the least that is needed:
+
+[cols="2,3", options="header"]
+|===
+| Declared type | Conversion
+| `String`, `Boolean`, `Integer`, `Long`, `Short`, `BigDecimal`, `BigInteger`, `Double` (also `int`, `long` and the other primitives) | None: the value is the declared type already, and an unboxed parameter takes it as it is.
+| `float`, `Float` | Narrowed from the `Double` that graphql-java coerces for a Float.
+| A Java enum | None: the values provider of the enum makes graphql-java coerce the enum value to the Java constant.
+| `List`, `Collection`, `Iterable` | A new mutable `ArrayList`; the element converter runs on each element.
+| `Set`, `SortedSet`, `Deque`, `Queue` | A new `LinkedHashSet` (the order of the list is kept), `TreeSet` or `LinkedList`.
+| An input class | A new instance, built from the class's introspection.
+| The class of a custom scalar | None when the scalar parsed an instance of it; otherwise the Micronaut `ConversionService`.
+|===
+
+Any other declared collection fails the startup with `UnsupportedInputTypeException`.
+
+== Input classes
+
+An input class is a class annotated with `@GraphQLInput`, which is `@Introspected`. The library instantiates it through the introspected constructor, which takes the input fields that match its parameters. Every other input field is then set through its property. A record, a Kotlin data class and an immutable class need nothing but the annotation:
+
+snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="constructor-input", indent="0"]
+
+The rules:
+
+* A field that the client leaves out is not set, so the class keeps the value it gives itself. An explicit `null` is set as `null`; for a primitive property the default stays.
+* A constructor parameter that no input field provides gets `null`, or the default of a primitive.
+* Every input field needs a property of the same name. The startup fails with `MethodNotFoundException` for a missing one, and with `InputFieldNotSettableException` for a read-only property that no constructor parameter of the same name takes.
+* In strict mode, a settable property that the input type does not define fails the startup (`UnmappedInputPropertiesException`).
+
+Jackson does not shape the input. `@JsonIgnore`, `@JsonProperty`, `@JsonCreator`, `@JsonDeserialize`, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean have no effect on an input class (BC-23).
+
+== Customization
+
+Customization goes through Micronaut `TypeConverter` beans and the scalar mapping, not through a mapper:
+
+* A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInput` itself, `ArgumentValue` properties included: the library does not touch the result. The class keeps its introspection, because the startup checks read it.
+* A `GraphQLScalarMapping` declares which Java classes a custom scalar produces. A value that is not an instance of the declared class goes through the Micronaut `ConversionService`, which holds the application's `TypeConverter` beans.
 
 == ArgumentValue
 
-An `ArgumentValue<T>` argument or input field tells an omitted value from an explicit `null`. It needs a nullable GraphQL type and `micronaut.graphql.tools.input.detect-omission=true`. Besides `isOmitted()`, `isNull()`, `isPresent()` and `get()`, two methods read the value without a branch:
+An `ArgumentValue<T>` argument or input field tells an omitted value from an explicit `null`. It needs a nullable GraphQL type and `micronaut.graphql.tools.input.detect-omission=true`. The converter sets it from the keys of the coerced `Map`, while it builds the instance: no getter is called, and no second pass walks the converted object. Besides `isOmitted()`, `isNull()`, `isPresent()` and `get()`, two methods read the value without a branch:
 
 * `asOptional()` returns an `Optional` that is empty for an omitted value and for an explicit `null`.
 * `ifPresent(Consumer)` runs the consumer only for a provided, non-null value.
