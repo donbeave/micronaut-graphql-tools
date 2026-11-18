@@ -59,6 +59,8 @@ extend type Query {
   stock(stock: Stock!): String!
 
   crate(crate: Crate!): String!
+
+  window(first: Int!, offset: Int!, in: String!): String!
 }
 
 extend type Mutation {

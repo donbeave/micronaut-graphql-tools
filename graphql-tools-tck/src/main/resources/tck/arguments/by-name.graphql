@@ -1,0 +1,4 @@
+{
+  declared: window(first: 10, offset: 200, in: "books")
+  reordered: window(in: "pages", offset: 5, first: 1)
+}

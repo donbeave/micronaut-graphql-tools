@@ -85,7 +85,7 @@ final class ArgumentPlanner {
         }
         if (verdict.failure() instanceof ArgumentVerdict.ParameterWithoutArgument without) {
             throw IncorrectArgumentNameException.parameterWithoutArgument(mappingContext,
-                    arguments[without.parameter()].getName(), without.name(), without.available());
+                    arguments[without.parameter()].getName(), without.name(), without.available(), without.syntheticName());
         }
         if (verdict.failure() instanceof ArgumentVerdict.DuplicateParameter duplicate) {
             throw IncorrectArgumentNameException.duplicateParameter(mappingContext, duplicate.name());
