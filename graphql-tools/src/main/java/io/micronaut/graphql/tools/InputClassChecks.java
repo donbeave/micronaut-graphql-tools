@@ -20,11 +20,11 @@ import graphql.language.InputValueDefinition;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.model.JClass;
-import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules;
-import io.micronaut.graphql.tools.binding.internal.rules.InputVerdict;
+import io.micronaut.graphql.tools.binding.internal.rules.InputClassCoverage;
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,21 +63,26 @@ record InputClassChecks(Map<String, Map.Entry<Class<?>, List<String>>> unmappedI
      */
     static final class Builder {
 
-        private final Map<String, Map.Entry<Class<?>, List<String>>> unmapped = new TreeMap<>();
-        private final Set<String> ignored = new TreeSet<>();
+        private final InputClassCoverage coverage = new InputClassCoverage();
+        private final Map<String, Class<?>> classes = new HashMap<>();
 
         void collect(InputObjectTypeDefinition inputObjectTypeDefinition, JClass inputClass, Class<?> beanType) {
-            InputVerdict verdict = InputTypeRules.check(inputObjectTypeDefinition.getInputValueDefinitions().stream()
+            coverage.add(inputObjectTypeDefinition.getName(), inputObjectTypeDefinition.getInputValueDefinitions().stream()
                     .map(InputValueDefinition::getName)
                     .toList(), inputClass);
-            ignored.addAll(verdict.ignoredProperties());
-            if (!verdict.unmappedProperties().isEmpty()) {
-                unmapped.put(inputObjectTypeDefinition.getName(),
-                        Map.entry(beanType, List.copyOf(verdict.unmappedProperties())));
-            }
+            classes.put(inputClass.name(), beanType);
         }
 
         InputClassChecks build() {
+            Map<String, Map.Entry<Class<?>, List<String>>> unmapped = new TreeMap<>();
+            Set<String> ignored = new TreeSet<>();
+            for (InputClassCoverage.ClassCoverage entry : coverage.verdicts(List.of())) {
+                ignored.addAll(entry.verdict().ignoredProperties());
+                if (!entry.verdict().unmappedProperties().isEmpty()) {
+                    unmapped.put(entry.inputType(),
+                            Map.entry(classes.get(entry.inputClass().name()), entry.verdict().unmappedProperties()));
+                }
+            }
             return new InputClassChecks(unmapped, ignored);
         }
     }

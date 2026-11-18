@@ -42,7 +42,9 @@ import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaTypes;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +82,8 @@ public final class InputBindingFindings {
     private final Map<String, Halt> inputHalts = new HashMap<>();
     private final Map<String, Finding> failures = new LinkedHashMap<>();
     private final Map<String, Finding> checks = new LinkedHashMap<>();
+    private final InputClassCoverage coverage = new InputClassCoverage();
+    private final Map<String, String> coverageMembers = new HashMap<>();
     private boolean halted;
 
     /**
@@ -110,7 +114,9 @@ public final class InputBindingFindings {
      * @return the strict findings found so far, without repeats
      */
     public List<Finding> checks() {
-        return List.copyOf(checks.values());
+        Map<String, Finding> all = new LinkedHashMap<>(checks);
+        unmappedProperties().forEach(it -> all.putIfAbsent(it.code() + " " + it.coordinate(), it));
+        return List.copyOf(all.values());
     }
 
     /**
@@ -306,18 +312,37 @@ public final class InputBindingFindings {
                         "add a setter or a constructor parameter for it, or remove the field from the input type");
             }
         }
-        InputVerdict verdict = InputTypeRules.check(definition.getInputValueDefinitions().stream()
+        coverage.add(definition.getName(), definition.getInputValueDefinitions().stream()
                 .map(InputValueDefinition::getName).toList(), inputClass);
-        for (String property : verdict.unmappedProperties()) {
-            String coordinate = definition.getName() + "." + property;
-            checks.putIfAbsent(BindingCode.UNMAPPED_INPUT_PROPERTY.code() + " " + coordinate,
-                    new Finding(BindingCode.UNMAPPED_INPUT_PROPERTY.code(), coordinate,
-                            "the settable property " + property + " of " + inputClass.name()
-                                    + " has no field in the input type " + definition.getName() + ", so no request can set it",
-                            site.member, null, null,
-                            "add the field to the input type, or annotate the property with @GraphQLIgnore"));
-        }
+        coverageMembers.putIfAbsent(inputClass.name(), site.member);
         return null;
+    }
+
+    // An input type of the schema that this walk did not reach may be bound to a class of this walk by another resolver, so
+    // its fields cover a property here: a finding is only what no input type of the schema can cover.
+    private List<Finding> unmappedProperties() {
+        Set<String> reached = coverage.inputTypes();
+        Set<String> otherFields = new HashSet<>();
+        for (InputObjectTypeDefinition other : schema.registry().getTypes(InputObjectTypeDefinition.class)) {
+            if (!reached.contains(other.getName())) {
+                other.getInputValueDefinitions().forEach(it -> otherFields.add(it.getName()));
+            }
+        }
+        List<Finding> result = new ArrayList<>();
+        for (InputClassCoverage.ClassCoverage entry : coverage.verdicts(otherFields)) {
+            for (String property : entry.verdict().unmappedProperties()) {
+                String coordinate = entry.inputType() + "." + property;
+                result.add(new Finding(BindingCode.UNMAPPED_INPUT_PROPERTY.code(), coordinate,
+                        "the settable property " + property + " of " + entry.inputClass().name()
+                                + " has no field in " + (entry.inputTypes().size() == 1
+                                ? "the input type " + entry.inputType()
+                                : "any of the input types " + String.join(", ", entry.inputTypes()))
+                                + ", so no request can set it",
+                        coverageMembers.get(entry.inputClass().name()), null, null,
+                        "add the field to an input type, or annotate the property with @GraphQLIgnore"));
+            }
+        }
+        return result;
     }
 
     @Nullable

@@ -1,0 +1,29 @@
+package example;
+
+import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
+import io.micronaut.graphql.tools.annotation.GraphQLInput;
+
+@GraphQLInput
+public class Filter {
+
+    private String text;
+    @GraphQLIgnore
+    private String extra;
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
+    }
+
+    public String getExtra() {
+        return extra;
+    }
+
+    public void setExtra(String extra) {
+        this.extra = extra;
+    }
+
+}
