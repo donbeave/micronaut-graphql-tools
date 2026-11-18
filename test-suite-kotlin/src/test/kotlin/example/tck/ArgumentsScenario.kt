@@ -55,3 +55,9 @@ class ArgumentsMutations {
 
     fun add(amount: Int): Int = total.addAndGet(amount)
 }
+
+// tag::optional-helpers[]
+fun describePresence(text: ArgumentValue<String>): String = text.asOptional().map { "present:$it" }.orElse("absent")
+
+fun rememberIfPresent(text: ArgumentValue<String>, seen: MutableList<String>) = text.ifPresent { seen.add(it) }
+// end::optional-helpers[]
