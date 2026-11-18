@@ -11,6 +11,7 @@ import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.DataFetchingEnvironmentImpl;
 import graphql.schema.FieldCoordinates;
+import graphql.schema.GraphQLEnumType;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
@@ -123,6 +124,11 @@ public final class BenchmarkCases implements AutoCloseable {
     private final GraphQLSchema schema;
     private final Map<String, Op> ops = new LinkedHashMap<>();
 
+    // what graphql-java hands the data fetcher for an enum literal: the value of the enum type, not its name
+    private Object coercedEnum(String type, String name) {
+        return ((GraphQLEnumType) schema.getType(type)).getValue(name).getValue();
+    }
+
     public BenchmarkCases() {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
@@ -140,7 +146,7 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(TYPE_RESOLVER_METHOD_ARGUMENT,
                 fetch("Item", "labelWithArgument", new Item("id", "name", 1), Map.of("n", 3)));
         ops.put(SCALAR_ARGUMENT, fetch("Query", "scalar", null, Map.of("n", 42)));
-        ops.put(ENUM_ARGUMENT, fetch("Query", "enumArg", null, Map.of("color", "GREEN")));
+        ops.put(ENUM_ARGUMENT, fetch("Query", "enumArg", null, Map.of("color", coercedEnum("Color", "GREEN"))));
         ops.put(INPUT_OBJECT_ARGUMENT, fetch("Query", "input", null, Map.of("input", point("a", 1, 2))));
         ops.put(LIST_OF_INPUTS_ARGUMENT, fetch("Query", "inputs", null,
                 Map.of("inputs", List.of(point("a", 1, 2), point("b", 3, 4), point("c", 5, 6), point("d", 7, 8)))));

@@ -16,11 +16,13 @@
 package io.micronaut.graphql.tools;
 
 import io.micronaut.aop.Intercepted;
+import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Infrastructure;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
+import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.exceptions.AmbiguousTypeResolverException;
@@ -29,21 +31,26 @@ import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
 import io.micronaut.graphql.tools.exceptions.TypeResolverContractsNotFoundException;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
+import io.micronaut.inject.qualifiers.Qualifiers;
 import jakarta.inject.Singleton;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -70,8 +77,19 @@ public final class GraphQLResolversRegistry {
     private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
 
+    private final BeanContext beanContext;
+    private final Set<BeanDefinition<?>> seenRootResolvers = new HashSet<>();
+    private final Set<BeanDefinition<?>> seenTypeResolvers = new HashSet<>();
+    private final Set<BeanDefinition<?>> seenSchemaCoordinates = new HashSet<>();
+    private boolean introductionBeansRegistered;
+
+    public GraphQLResolversRegistry(BeanContext beanContext) {
+        this.beanContext = beanContext;
+    }
+
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        if (method.isAbstract() || beanDefinition.isAbstract()) {
+        seenRootResolvers.add(beanDefinition);
+        if (beanDefinition.isAbstract()) {
             return;
         }
         rootResolvers.stream()
@@ -86,7 +104,8 @@ public final class GraphQLResolversRegistry {
     }
 
     public void registerTypeResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
-        if (method.isAbstract() || beanDefinition.isAbstract()) {
+        seenTypeResolvers.add(beanDefinition);
+        if (beanDefinition.isAbstract()) {
             return;
         }
         getTypeResolverValue(beanDefinition);
@@ -163,6 +182,7 @@ public final class GraphQLResolversRegistry {
      */
     public void registerSchemaCoordinateExecutableMethod(BeanDefinition<?> beanDefinition,
                                                          ExecutableMethod<Object, ?> method) {
+        seenSchemaCoordinates.add(beanDefinition);
         if (isIgnored(method)) {
             return;
         }
@@ -173,7 +193,49 @@ public final class GraphQLResolversRegistry {
                 .put(getExecutableMethodFullName(method), coordinate);
     }
 
+    /**
+     * Micronaut does not mark the bean definition of an introduction advice interface for startup method processing,
+     * so the processors never see it when no other resolver bean needs them. Registers those beans' methods.
+     */
+    private void registerIntroductionBeans() {
+        if (introductionBeansRegistered) {
+            return;
+        }
+        introductionBeansRegistered = true;
+        Collection<BeanDefinition<?>> roots = definitionsOf(GraphQLRootResolver.class);
+        Collection<BeanDefinition<?>> types = definitionsOf(GraphQLTypeResolver.class);
+        registerUnseen(GraphQLRootResolver.class, roots, seenRootResolvers, this::registerRootResolverExecutableMethod);
+        registerUnseen(GraphQLTypeResolver.class, types, seenTypeResolvers, this::registerTypeResolverExecutableMethod);
+        Set<BeanDefinition<?>> coordinateBeans = new LinkedHashSet<>(roots);
+        coordinateBeans.addAll(types);
+        coordinateBeans.addAll(definitionsOf(GraphQLSchemaCoordinate.class));
+        registerUnseen(GraphQLSchemaCoordinate.class, coordinateBeans, seenSchemaCoordinates,
+                this::registerSchemaCoordinateExecutableMethod);
+    }
+
+    private Collection<BeanDefinition<?>> definitionsOf(Class<? extends Annotation> annotation) {
+        return beanContext.getBeanDefinitions(Qualifiers.byStereotype(annotation));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void registerUnseen(Class<? extends Annotation> annotation,
+                                Collection<BeanDefinition<?>> definitions,
+                                Set<BeanDefinition<?>> seen,
+                                BiConsumer<BeanDefinition<?>, ExecutableMethod<Object, ?>> register) {
+        for (BeanDefinition<?> beanDefinition : definitions) {
+            if (seen.contains(beanDefinition)) {
+                continue;
+            }
+            for (ExecutableMethod method : beanDefinition.getExecutableMethods()) {
+                if (method.hasStereotype(annotation)) {
+                    register.accept(beanDefinition, method);
+                }
+            }
+        }
+    }
+
     List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
+        registerIntroductionBeans();
         return schemaCoordinateMethods.stream()
                 .filter(it -> !isIgnored(it.method()))
                 .sorted(Comparator.comparing(SchemaCoordinateMethod::describe))
@@ -237,6 +299,7 @@ public final class GraphQLResolversRegistry {
     }
 
     void verifyTypeResolverContracts() {
+        registerIntroductionBeans();
         resolveTypeResolverMethods();
 
         unreadableTypeResolverContracts.stream()
@@ -322,6 +385,7 @@ public final class GraphQLResolversRegistry {
     }
 
     boolean hasRootResolvers() {
+        registerIntroductionBeans();
         return !rootResolvers.isEmpty();
     }
 

@@ -9,7 +9,7 @@ graphql-java coerces every value first: scalar values, enum constants, a `Map` p
 | Declared type | Conversion
 | `String`, `Boolean`, `Integer`, `Long`, `Short`, `BigDecimal`, `BigInteger`, `Double` (also `int`, `long` and the other primitives) | None: the value is the declared type already, and an unboxed parameter takes it as it is.
 | `float`, `Float` | Narrowed from the `Double` that graphql-java coerces for a Float.
-| A Java enum | The Java constant: a constant passes as it is, and an enum name is looked up in a map that startup built.
+| A Java enum | None: the values provider of the enum makes graphql-java coerce the enum value to the Java constant.
 | `List`, `Collection`, `Iterable` | A new mutable `ArrayList`; the element converter runs on each element.
 | `Set`, `SortedSet`, `Deque` | A new `LinkedHashSet` (the order of the list is kept), `TreeSet` or `LinkedList`.
 | An input class | A new instance, built from the class's introspection.

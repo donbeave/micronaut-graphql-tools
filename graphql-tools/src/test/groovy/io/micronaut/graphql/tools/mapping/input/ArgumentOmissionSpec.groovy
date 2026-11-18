@@ -3,6 +3,7 @@ package io.micronaut.graphql.tools.mapping.input
 import graphql.ExecutionInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.ArgumentValue
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
@@ -591,6 +592,7 @@ input CreateW {
         ArgumentValue<String> email
     }
 
+    @Introspected
     static enum Color {
         RED,
         GREEN

@@ -80,7 +80,6 @@ final class InputTypeBinder {
     // the converter of each input type, by the name of the type, registered before its fields are bound so that a type
     // that refers to itself finds it
     private final Map<String, ValueConverter> inputConverters = new HashMap<>();
-    private final Map<Class<?>, ValueConverter> enumConverters = new HashMap<>();
 
     InputTypeBinder(TypeDefinitionRegistry typeDefinitionRegistry, ScalarMappings scalarMappings,
                     GraphQLToolsConfiguration configuration, BindingManifestRecorder manifestRecorder,
@@ -244,7 +243,7 @@ final class InputTypeBinder {
             return inputConverters.get(inputObjectTypeDefinition.getName());
         } else if (typeDefinition instanceof EnumTypeDefinition enumTypeDefinition) {
             callbacks.processEnum(enumTypeDefinition, returnType, true, mappingContext);
-            return enumConverters.computeIfAbsent(returnType, ValueConverters::enumeration);
+            return ValueConverters.IDENTITY;
         } else if (isGraphQlBuiltInType(typeName)) {
             manifestRecorder.scalar(typeName.getName());
             Set<Class<?>> supportedClasses = getSupportedClasses(typeName);

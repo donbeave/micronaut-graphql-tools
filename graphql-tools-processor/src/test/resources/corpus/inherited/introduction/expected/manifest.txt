@@ -1,0 +1,4 @@
+Query → object · - · - · -
+Query.goodbye: String → root · example.Query#goodbye() · java.lang.String · java.lang.String
+Query.hello: String → root · example.Query#hello() · java.lang.String · java.lang.String
+String → scalar · graphql.scalar.GraphqlStringCoercing · - · -

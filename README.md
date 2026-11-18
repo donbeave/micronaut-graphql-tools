@@ -81,7 +81,7 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLIgnore` Marks a method, a property or an enum constant that binds no field, so that strict mode does not report it, see [Escape hatches](#escape-hatches).
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
-These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums, and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
+These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums (with `@Introspected`, see [Enums](#enums)), and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
 
 ## Return types
 
@@ -532,7 +532,7 @@ Jackson on the request path:
 - a `String`, `Boolean`, `Integer` (also for an `int` parameter), `Long`, `Short`, `BigDecimal`, `BigInteger` or `Double`
   value is the declared type already and is passed on as it is; a `Float` argument for a `float` parameter or property
   is narrowed from graphql-java's `Double`;
-- an enum is the Java constant: a constant passes as it is, an enum name is looked up in a map that startup built;
+- an enum is the Java constant already, from the values provider of the enum (see [Enums](#enums));
 - a list becomes a new, mutable `ArrayList` for `List`, `Collection` and `Iterable`, a `LinkedHashSet` for `Set` (it
   keeps the order of the list), a `TreeSet` for `SortedSet`, or a `LinkedList` for `Deque`; any other declared collection
   fails the startup with `UnsupportedInputTypeException`;
@@ -572,6 +572,22 @@ Input classes are checked against their GraphQL input types at startup, in both 
   `fail` rejects them also with `strict: false`. Read-only properties, such as computed getters, are not checked.
 
 Both checks apply wherever the input type is used: an argument, a list, another input type, an `ArgumentValue`.
+
+### Enums
+
+A GraphQL enum maps to a Java enum, which needs a bean introspection (`@Introspected`; a `@Serdeable` enum has one too).
+At startup the library reads the constants from the introspection (`EnumBeanIntrospection`, generated at compile time,
+never by reflection) and registers one values provider per bound enum, so graphql-java itself coerces an enum argument,
+an enum input field or a schema default value to the Java constant and serializes a returned constant by its schema
+name. The resolver receives the constant with no conversion call. A Java enum without an introspection fails the startup
+with `ClassNotIntrospectedException`, which names the class and `io.micronaut.core.annotation.Introspected`. A schema
+value without a constant fails it with `MissingEnumValuesException`; a constant without a schema value is reported in
+[strict mode](#strict-mode) (`@GraphQLIgnore` suppresses it, see [Escape hatches](#escape-hatches)). A value that the
+schema does not define is a request error from graphql-java and never reaches the resolver. The schema name is the Java
+constant name; the library has no rename annotation for enum values.
+
+A `RuntimeWiringCustomizer` cannot register its own `enumValues` provider for a bound enum: that replaces the library's
+wiring and fails the startup with `RuntimeWiringOverrideException`.
 
 ### Omitted values and `null`
 

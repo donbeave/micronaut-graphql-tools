@@ -2,6 +2,7 @@ package example.tck
 
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.graphql.tools.ArgumentValue
 import io.micronaut.graphql.tools.annotation.GraphQLInput
@@ -11,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 // The fixtures of the TCK scenario `arguments`.
 
+@Introspected
 enum Color {
     RED, GREEN, BLUE
 }

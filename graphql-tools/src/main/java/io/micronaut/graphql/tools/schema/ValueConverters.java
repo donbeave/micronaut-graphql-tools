@@ -22,7 +22,6 @@ import io.micronaut.core.type.Argument;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,7 +41,8 @@ public final class ValueConverters {
 
     /**
      * The value is already the declared type: a {@code String}, a {@code Boolean}, an {@code Integer} (an {@code int}
-     * parameter takes it unboxed) and the other values graphql-java coerces to exactly the declared class.
+     * parameter takes it unboxed), an enum constant (the values provider of the enum makes graphql-java coerce to it) and
+     * the other values graphql-java coerces to exactly the declared class.
      */
     public static final ValueConverter IDENTITY = value -> value;
 
@@ -84,27 +84,6 @@ public final class ValueConverters {
         }
         Argument<?> target = Argument.of(boxed);
         return value -> value == null || boxed.isInstance(value) ? value : convertOrFail(conversionService, value, target);
-    }
-
-    /**
-     * @param enumClass the Java enum
-     * @return the converter: an enum constant passes as is, a name is looked up in a map built now
-     */
-    public static ValueConverter enumeration(Class<?> enumClass) {
-        Map<String, Object> constants = new HashMap<>();
-        for (Object constant : enumClass.getEnumConstants()) {
-            constants.put(((Enum<?>) constant).name(), constant);
-        }
-        return value -> {
-            if (value == null || enumClass.isInstance(value)) {
-                return value;
-            }
-            Object constant = constants.get(String.valueOf(value));
-            if (constant == null) {
-                throw new IllegalArgumentException("`" + value + "` is not a constant of " + enumClass.getName());
-            }
-            return constant;
-        };
     }
 
     /**

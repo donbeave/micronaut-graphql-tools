@@ -1,6 +1,7 @@
 package example.tck;
 
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.ArgumentValue;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
@@ -19,6 +20,7 @@ public final class ArgumentsScenario {
     private ArgumentsScenario() {
     }
 
+    @Introspected
     public enum Color {
         RED, GREEN, BLUE
     }
