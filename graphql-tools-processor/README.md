@@ -39,7 +39,7 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
 `class-not-introspected` is the one finding that a check of one class cannot prove, so the visitor reports it as a compile-time
 **warning** and the startup decides (D-39 DD-4: a compile error must also be a startup failure, and a class that another
 class introspects passes at startup). The other findings are errors. The walk stops at that finding, as the startup does
-at its failure, so the findings of the same class that come after it are the startup's. The walk down a chain of input types
+at its failure, so the findings of the same class that come after it are the startup's. A build that turns compiler warnings into errors (`-Werror`) fails on it as well, so there the hatch is `@Introspected` on the class itself. The walk down a chain of input types
 runs from a work stack (a chain of 5,000 types is checked on the default stack), as the startup binds with one.
 
 The JSR-269 processor (`processing/`, until #144):

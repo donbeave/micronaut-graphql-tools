@@ -94,7 +94,7 @@ case under `exception/` that shows it:
 
 The ceiling must equal the number of entries, so a new exception shows as a raised ceiling in the review. An entry is stale and
 fails when the compile side no longer reports the error or the startup reports it now, an unknown reason fails, and an exception
-excuses one finding of one case and language, never another finding of the case (`ParitySpec`). Every reason has an entry. A
+excuses one finding of one case and language, never another finding of the case (`ParitySpec`). Every reason has an entry, on the case `exception/<reason>`. A
 false compile error that fits none of the reasons is a bug in the visitor.
 
 The `@Introspected(classes)` or `(packages)` that another class declares is not on this list: it would be a compile error where

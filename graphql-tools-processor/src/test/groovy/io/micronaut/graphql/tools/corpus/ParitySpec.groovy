@@ -82,5 +82,7 @@ class ParitySpec extends Specification {
         corpus.exceptions.problems == []
         corpus.exceptions.verify(corpus) == []
         corpus.exceptions.entries*.reason.toSet() == SoundnessExceptions.REASONS.keySet()
+        and: 'each entry sits on the case that shows its reason, so a reason cannot excuse a finding of an unrelated case'
+        corpus.exceptions.entries.every { it.caseName == 'exception/' + it.reason }
     }
 }
