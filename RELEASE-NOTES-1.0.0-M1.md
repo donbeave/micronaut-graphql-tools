@@ -1,6 +1,6 @@
 # micronaut-graphql-tools 1.0.0-M1 release notes
 
-Tag: `1.0.0-M1` (not created yet). This tag is not a published release. There is no released version before it, so none of the changes below breaks a published API. They matter for applications that run `1.0.0-SNAPSHOT`.
+Tag: `1.0.0-M1`. Tagged and published to GitHub Packages as 1.0.0-M1. There is no released version before it, so none of the changes below breaks a published API. They matter for applications that run `1.0.0-SNAPSHOT`.
 
 ## What this release changes
 
@@ -62,7 +62,7 @@ The annotation processor reads the same settings as build options, with camelCas
   - kapt is documented in the README but is not exercised by the library's tests.
 - **Review findings.** Blocking review findings are fixed on top of this stack in separate changes tracked in issue #172. The stack PRs themselves are not changed.
 - **Decisions.** Issue #79 is closed. Its decisions are recorded in D-33: BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 are approved with no opt-out. The other statuses in the table are not part of that decision.
-- **Snapshot publishing (BC-03).** Nothing is published. The README "Snapshots and Releases" section and CONTRIBUTING state that no snapshot or release is available and no workflow publishes one (only `.github/workflows/gradle.yml` builds and tests). To use this stack, build it yourself and publish it to a local or private repository.
+- **Snapshot publishing (BC-03).** No snapshot is published. The README "Snapshots and Releases" section and CONTRIBUTING state that no snapshot or release is available and no workflow publishes one (only `.github/workflows/gradle.yml` builds and tests). To use this stack, build it yourself and publish it to a local or private repository.
 
 ## Stack PRs on master
 

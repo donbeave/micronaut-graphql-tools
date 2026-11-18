@@ -96,6 +96,15 @@ public final class LibraryBeanSelection {
         return definition.hasStereotype(Primary.class) ? suffix + " (@Primary)" : suffix;
     }
 
+    private static boolean noCompetitor(ConditionContext<?> context, Class<?> type) {
+        BeanDefinition<?> competitor = competitor(context.getBeanContext(), type);
+        if (competitor == null) {
+            return true;
+        }
+        context.fail("the application provides " + describe(competitor));
+        return false;
+    }
+
     /** Matches when no application bean of {@code GraphQLSchema} competes with the library's schema. */
     public static final class NoCompetingSchema implements Condition {
         @Override
@@ -110,15 +119,6 @@ public final class LibraryBeanSelection {
         public boolean matches(ConditionContext context) {
             return noCompetitor(context, graphql.GraphQL.class);
         }
-    }
-
-    private static boolean noCompetitor(ConditionContext<?> context, Class<?> type) {
-        BeanDefinition<?> competitor = competitor(context.getBeanContext(), type);
-        if (competitor == null) {
-            return true;
-        }
-        context.fail("the application provides " + describe(competitor));
-        return false;
     }
 
 }
