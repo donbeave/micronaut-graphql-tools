@@ -1,5 +1,6 @@
 package io.micronaut.graphql.tools.processing
 
+import io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -19,7 +20,7 @@ class ProcessorOptionsDocsSpec extends Specification {
 
     def "every processor option is documented"() {
         given:
-        def options = new GraphQLSchemaBindingProcessor().supportedOptions.sort()
+        def options = allOptions().sort()
         def missing = options.findAll { !allowlist.contains(it) && !isDocumented(it) }
 
         expect:
@@ -31,12 +32,17 @@ class ProcessorOptionsDocsSpec extends Specification {
 
     def "the allowlist has only live entries"() {
         given:
-        def options = new GraphQLSchemaBindingProcessor().supportedOptions
+        def options = allOptions()
         def stale = allowlist.findAll { !options.contains(it) || isDocumented(it) }
 
         expect:
         assert stale.empty : "Stale entries in docs-coverage-allowlist.txt (no such option, or documented now; delete them): " +
                 stale.sort().join(', ')
+    }
+
+    // the options of the JSR-269 processor, and the two of the visitor that replaces it (#291)
+    private static Set<String> allOptions() {
+        new GraphQLSchemaBindingProcessor().supportedOptions + new GraphQLToolsVisitor().supportedOptions
     }
 
     private boolean isDocumented(String option) {

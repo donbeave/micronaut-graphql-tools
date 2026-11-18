@@ -16,14 +16,18 @@ import java.nio.file.Path
 
 /**
  * In-process javac (javax.tools) over the test classpath, with the annotation processors of the test classpath except
- * the JSR-269 processor of this module: the runner never runs it (DD-13). Micronaut's processors copy the
- * {@code -Amicronaut.*} options into the system properties, so every {@code micronaut.graphql.tools.processor.*}
- * property is cleared, and the properties are restored, around each compilation.
+ * the JSR-269 processor of this module: the runner never runs it (DD-13). The visitor of this module, which the test resources
+ * register, is switched off here ({@link #CHECKS_OFF}): the classes are built to be started, and checked by the compile-time
+ * binder. Micronaut's processors copy the {@code -Amicronaut.*} options into the system properties, so every
+ * {@code micronaut.graphql.tools.processor.*} property is cleared, and the properties are restored, around each compilation.
  */
 @CompileStatic
 final class JavaCaseCompiler implements CaseCompiler {
 
     static final String LEGACY_PROCESSOR_PACKAGE = 'io.micronaut.graphql.tools.processing'
+
+    /** The visitor of this module is on the test classpath: this compilation only builds the case, a binder checks it. */
+    static final String CHECKS_OFF = 'micronaut.graphql.tools.processor.checks=false'
 
     @Override
     Language getLanguage() {
@@ -47,7 +51,8 @@ final class JavaCaseCompiler implements CaseCompiler {
                     processors.add(it)
                 }
             }
-            JavaCompiler.CompilationTask task = compiler.getTask(null, files, diagnostics, ['-proc:full', '-parameters'],
+            JavaCompiler.CompilationTask task = compiler.getTask(null, files, diagnostics,
+                    ['-proc:full', '-parameters', '-A' + CHECKS_OFF],
                     null, files.getJavaFileObjectsFromPaths(corpusCase.sources(Language.JAVA)))
             task.setProcessors(processors)
             clearSystemProperties()
