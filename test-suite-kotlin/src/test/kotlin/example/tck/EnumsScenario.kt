@@ -1,11 +1,13 @@
 package example.tck
 
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
 // The fixtures of the TCK scenario `enums`.
 
+@Introspected
 enum class Level { LOW, MEDIUM, HIGH }
 
 @GraphQLInput

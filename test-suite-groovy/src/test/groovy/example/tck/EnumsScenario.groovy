@@ -2,12 +2,14 @@ package example.tck
 
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
 // The fixtures of the TCK scenario `enums`.
 
+@Introspected
 enum Level {
     LOW, MEDIUM, HIGH
 }
