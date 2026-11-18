@@ -33,6 +33,8 @@ type Query {
   pick(color: Color!): String
   next(color: Color): Color
   filtered(filter: Filter!): String
+  many(colors: [Color!]!): String
+  fallback(color: Color = GREEN): String
 }
 
 enum Color {
@@ -103,6 +105,25 @@ enum Shade {
         viaInput.errors.isEmpty()
         RECEIVED.size() == 2
         RECEIVED[0].is(Color.RED)
+        RECEIVED[1].is(Color.GREEN)
+    }
+
+    void "a list of enums and a schema default value arrive as the Java constants"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME)
+
+        when:
+        def many = executeQuery('{ many(colors: [GREEN, RED]) }')
+        def fallback = executeQuery('{ fallback }')
+
+        then:
+        many.errors.isEmpty()
+        fallback.errors.isEmpty()
+        many.data == [many: 'GREEN,RED']
+        fallback.data == [fallback: 'GREEN']
+        RECEIVED.size() == 2
+        RECEIVED[0] == [Color.GREEN, Color.RED]
+        RECEIVED[0].every { it instanceof Color }
         RECEIVED[1].is(Color.GREEN)
     }
 
@@ -192,6 +213,16 @@ enum Shade {
             RECEIVED << filter.color
             return filter.color.name()
         }
+
+        String many(List<Color> colors) {
+            RECEIVED << colors
+            return colors*.name().join(',')
+        }
+
+        String fallback(Color color) {
+            RECEIVED << color
+            return color.name()
+        }
     }
 
     @Requires(property = 'spec.name', value = SPEC_REPLACED)
@@ -207,6 +238,14 @@ enum Shade {
 
         String filtered(Filter filter) {
             return filter.color.name()
+        }
+
+        String many(List<Color> colors) {
+            return colors*.name().join(',')
+        }
+
+        String fallback(Color color) {
+            return color?.name()
         }
     }
 
