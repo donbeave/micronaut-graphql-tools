@@ -20,9 +20,9 @@ These changes are planned for the milestones of the tracker. Each one is _pendin
 
 * #33 (BC-21): a bound Java enum needs a bean introspection (`@Introspected`); the startup fails without one. See the migration page, entries for 1.0.0-M3.
 * #237 (BC-22): one code system for checks and errors. Messages start with `[code]`, and the `!` lines of the binding manifest are named by the code. See the migration page, entries for 1.0.0-M3.
+* #37 (BC-23): arguments and input objects are converted from `BeanIntrospection`; Jackson annotations and an `ObjectMapper` stop being the input contract. See the migration page, entries for 1.0.0-M3.
 * #90 (BC-25): the binding manifest format is specified and versioned, and moves to version 2: ASCII separators, scalar lines that name the scalar, and a schema hash that does not depend on the order of the files. See the migration page, entries for 1.0.0-M3.
 * #36: Jackson leaves the `api` scope (_pending_).
-* #37: input conversion from `BeanIntrospection` (_pending_).
 * #86: per-check severity; the old keys are removed (_pending_).
 * #105: the default precedence becomes `fail` (_pending_).
 * #109: the exception subclasses become internal behind the public `SchemaBindingException` (_pending_; the base class and its `code()` are on `master` with BC-22).

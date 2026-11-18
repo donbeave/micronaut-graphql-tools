@@ -1,0 +1,7 @@
+{
+  "data": {
+    "given": "sku=a quantity=2 weight=2.5 tags=[x, y] colors=[RED, BLUE] comment=present:hi",
+    "omitted": "sku=b quantity=1 weight=null tags=null colors=null comment=omitted",
+    "explicitNull": "sku=c quantity=1 weight=null tags=null colors=null comment=null"
+  }
+}

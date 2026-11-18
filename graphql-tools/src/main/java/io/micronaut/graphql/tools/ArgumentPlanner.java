@@ -27,6 +27,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules.Sche
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.exceptions.IncorrectArgumentNameException;
 import io.micronaut.graphql.tools.exceptions.InvalidSourceArgumentException;
+import io.micronaut.graphql.tools.schema.ValueConverter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -72,9 +73,9 @@ final class ArgumentPlanner {
                         .filter(it -> it.getName().equals(slot.argument()))
                         .findFirst()
                         .get();
-                inputTypeBinder.processInputType(input.getType(), argument,
+                ValueConverter converter = inputTypeBinder.processInputType(input.getType(), argument,
                         TypeMappingContext.forArgument(mappingContext, slot.argument()));
-                result.add(ArgumentDefinition.ofInputValueArgument(slot.argument(), argument));
+                result.add(ArgumentDefinition.ofInputValueArgument(slot.argument(), argument, converter));
             }
         }
 
