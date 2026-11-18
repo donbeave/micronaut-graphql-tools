@@ -19,6 +19,7 @@ import graphql.language.EnumTypeDefinition;
 import graphql.language.EnumValueDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.rules.EnumTypeRules;
 import io.micronaut.graphql.tools.binding.internal.rules.EnumVerdict;
 import io.micronaut.inject.ExecutableMethod;
@@ -47,6 +48,7 @@ final class StrictModeChecks {
             "wait(long,int)");
 
     private final BindingManifestRecorder manifestRecorder;
+    private final List<BindingCode> codes = new ArrayList<>();
     private final List<String> problems = new ArrayList<>();
 
     StrictModeChecks(BindingManifestRecorder manifestRecorder) {
@@ -55,6 +57,15 @@ final class StrictModeChecks {
 
     List<String> getProblems() {
         return problems;
+    }
+
+    List<BindingCode> getCodes() {
+        return codes;
+    }
+
+    private void problem(BindingCode code, String text) {
+        codes.add(code);
+        problems.add(text);
     }
 
     void unboundResolverMethods(List<BeanDefinitionAndMethod> methods, Set<String> boundMethods) {
@@ -71,8 +82,8 @@ final class StrictModeChecks {
             }
         }
         findings.forEach((member, description) -> {
-            manifestRecorder.diagnostic("unbound", member);
-            problems.add("The resolver method " + member + " binds no schema field. Remove it, make it non-public, "
+            manifestRecorder.diagnostic(BindingCode.UNBOUND_RESOLVER_METHOD, member);
+            problem(BindingCode.UNBOUND_RESOLVER_METHOD, "The resolver method " + member + " binds no schema field. Remove it, make it non-public, "
                     + "or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.");
         });
     }
@@ -91,7 +102,7 @@ final class StrictModeChecks {
                 findings.put(BindingManifestRecorder.methodMember(method, method.getDeclaringType()), coordinates);
             }
         });
-        findings.forEach((member, coordinates) -> problems.add("The root resolver method " + member
+        findings.forEach((member, coordinates) -> problem(BindingCode.ROOT_METHOD_SEVERAL_OPERATIONS, "The root resolver method " + member
                 + " binds fields of several operation types: " + String.join(", ", coordinates)
                 + ". Give each operation type its own method with @GraphQLSchemaCoordinate(\"Type.field\")."));
     }
@@ -124,8 +135,8 @@ final class StrictModeChecks {
             verdict.ignoredConstants().forEach(it -> manifestRecorder.ignored(enumClass.getTypeName() + "#" + it));
             verdict.unboundConstants().forEach(constant -> {
                 String member = enumClass.getTypeName() + "#" + constant;
-                manifestRecorder.diagnostic("unbound", member);
-                problems.add("The enum constant " + member + " has no value in the schema enum " + name
+                manifestRecorder.diagnostic(BindingCode.UNBOUND_ENUM_CONSTANT, member);
+                problem(BindingCode.UNBOUND_ENUM_CONSTANT, "The enum constant " + member + " has no value in the schema enum " + name
                         + ". Add the value to the schema or remove the constant.");
             });
         });
@@ -135,15 +146,15 @@ final class StrictModeChecks {
                                  Set<String> allowedTypes) {
         new TreeMap<>(dictionary).forEach((name, clazz) -> {
             if (!boundTypes.contains(name) && !allowedTypes.contains(name)) {
-                manifestRecorder.diagnostic("unusedDictionary", name + " = " + clazz.getTypeName());
-                problems.add("The SchemaMappingDictionary maps " + name + " to " + clazz.getTypeName()
+                manifestRecorder.diagnostic(BindingCode.UNUSED_DICTIONARY_ENTRY, name + " = " + clazz.getTypeName());
+                problem(BindingCode.UNUSED_DICTIONARY_ENTRY, "The SchemaMappingDictionary maps " + name + " to " + clazz.getTypeName()
                         + ", but the schema binds no type " + name + ". Remove the entry or correct its name.");
             }
         });
     }
 
     void interfacesReadThroughImplementations(Map<String, List<Class<?>>> interfaces) {
-        interfaces.forEach((name, classes) -> problems.add("The type " + name + " is mapped to the interface "
+        interfaces.forEach((name, classes) -> problem(BindingCode.INTERFACE_READ_THROUGH_IMPLEMENTATION, "The type " + name + " is mapped to the interface "
                 + classes.get(0).getName() + ", which has no bean introspection of its own, so its properties are "
                 + "read from the implementation " + classes.get(1).getName() + ". Annotate the interface with "
                 + "@GraphQLType or @Introspected."));

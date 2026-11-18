@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public final class ResolverRequiredException extends AbstractMappingException {
      */
     public ResolverRequiredException(MappingContext mappingContext, String directive,
                                      Map<Class<?>, List<String>> members) {
-        super("The GraphQL field carries @" + directive + ", so a type resolver method must bind it, but none does.",
+        super(BindingCode.RESOLVER_REQUIRED, "The GraphQL field carries @" + directive + ", so a type resolver method must bind it, but none does.",
                 mappingContext);
 
         this.directive = directive;

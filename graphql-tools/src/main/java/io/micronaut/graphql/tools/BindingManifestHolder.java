@@ -18,7 +18,6 @@ package io.micronaut.graphql.tools;
 import graphql.schema.GraphQLSchema;
 import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.inject.BeanDefinition;
 import jakarta.inject.Singleton;
 
 import java.util.NoSuchElementException;
@@ -39,7 +38,7 @@ public final class BindingManifestHolder {
 
     BindingManifest get() {
         if (bindingManifest == null) {
-            BeanDefinition<?> competitor = LibraryBeanSelection.competitor(beanContext, GraphQLSchema.class);
+            LibraryBeanSelection.Provided competitor = LibraryBeanSelection.competitor(beanContext, GraphQLSchema.class);
             if (competitor != null) {
                 throw new NoSuchElementException("There is no binding manifest: the library did not bind a schema, because the "
                         + "application provides " + LibraryBeanSelection.describe(competitor) + ", which the library does not "

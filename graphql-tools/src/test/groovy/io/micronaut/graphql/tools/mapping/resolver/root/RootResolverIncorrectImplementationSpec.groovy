@@ -38,7 +38,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectImplementationException
-        e.cause.message == """The annotated implementation class is not implementing the ${User.name} interface.
+        e.cause.message == """[incorrect-implementation] The annotated implementation class is not implementing the ${User.name} interface.
   GraphQL coordinate: Query.user (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: user

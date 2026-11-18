@@ -90,9 +90,9 @@ input PointInput {
         result.errors.isEmpty()
         result.data.basket == 'jane: a x 2 (legacyCode=none, giftWrap=false)'
         applicationContext.getBean(BindingManifest).diagnostics == [
-                "!unbound ${InputPropertiesSpec.ExtraBasket.name}#giftWrap".toString(),
-                "!unbound ${InputPropertiesSpec.ExtraItem.name}#discount".toString(),
-                "!unbound ${InputPropertiesSpec.ExtraItem.name}#legacyCode".toString()
+                "!unmapped-input-property ${InputPropertiesSpec.ExtraBasket.name}#giftWrap".toString(),
+                "!unmapped-input-property ${InputPropertiesSpec.ExtraItem.name}#discount".toString(),
+                "!unmapped-input-property ${InputPropertiesSpec.ExtraItem.name}#legacyCode".toString()
         ]
     }
 
@@ -119,7 +119,7 @@ input PointInput {
         then:
         result.errors.isEmpty()
         applicationContext.getBean(BindingManifest).diagnostics.contains(
-                "!unbound ${InputPropertiesSpec.ExtraItem.name}#discount".toString())
+                "!unmapped-input-property ${InputPropertiesSpec.ExtraItem.name}#discount".toString())
     }
 
     void "strict mode: a primitive parameter for a nullable built-in scalar argument fails"() {
@@ -132,7 +132,7 @@ input PointInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. Strict mode rejects this for built-in scalars too; with micronaut.graphql.tools.strict=false a null reaches the primitive as its default value or fails the request.
+        e.cause.message == """[incorrect-class-mapping] The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. Strict mode rejects this for built-in scalars too; with micronaut.graphql.tools.strict=false a null reaches the primitive as its default value or fails the request.
   GraphQL coordinate: Query.repeat(times:) (line 7, column 25)
   GraphQL object type: Query
   GraphQL field: repeat
@@ -154,7 +154,7 @@ input PointInput {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
         e.cause.mappingContext.graphQlInputObjectType == 'LineInput'
-        e.cause.message.startsWith("The argument is mapped to the primitive int, but the GraphQL type Int is nullable")
+        e.cause.message.startsWith("[incorrect-class-mapping] The argument is mapped to the primitive int, but the GraphQL type Int is nullable")
     }
 
     void "strict false: a primitive for a nullable built-in scalar is accepted, as before"() {

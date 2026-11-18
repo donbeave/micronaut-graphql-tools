@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 
 /**
@@ -22,12 +23,12 @@ import java.util.List;
  * {@link io.micronaut.graphql.tools.SchemaDirective} bean wraps. The library does not apply such a bean on its own:
  * graphql-java would call it for every schema element, merely because it is a bean.
  */
-public final class UnwrappedDirectiveWiringException extends RuntimeException {
+public final class UnwrappedDirectiveWiringException extends SchemaBindingException {
 
     private final List<String> beans;
 
     public UnwrappedDirectiveWiringException(List<String> beans) {
-        super("SchemaDirectiveWiring beans that no SchemaDirective bean wraps: " + String.join(", ", beans)
+        super(BindingCode.UNWRAPPED_DIRECTIVE_WIRING, "SchemaDirectiveWiring beans that no SchemaDirective bean wraps: " + String.join(", ", beans)
                 + ".\n  The library applies a wiring only through a SchemaDirective: wrap each one in "
                 + "SchemaDirective.named(name, wiring) (called where the directive is applied) or "
                 + "SchemaDirective.everyElement(names, wiring) (called for every schema element), injecting the bean "

@@ -38,7 +38,7 @@ input HelloInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `lastName` not found in ${HelloInput.name}'s input.
+        e.cause.message == """[field-not-bound] The property or method `lastName` not found in ${HelloInput.name}'s input.
   GraphQL coordinate: HelloInput.lastName (line 12, column 3)
   GraphQL input object type: HelloInput
   GraphQL input value: lastName

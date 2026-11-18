@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 import java.util.List;
@@ -27,7 +28,7 @@ import java.util.List;
 public final class IncorrectArgumentNameException extends AbstractMappingException {
 
     private IncorrectArgumentNameException(String message, MappingContext mappingContext) {
-        super(message, mappingContext);
+        super(BindingCode.ARGUMENT_MISMATCH, message, mappingContext);
     }
 
     public static IncorrectArgumentNameException parameterWithoutArgument(MappingContext mappingContext,

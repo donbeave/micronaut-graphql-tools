@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.InputMappingContext;
 
 /**
@@ -24,7 +25,7 @@ import io.micronaut.graphql.tools.InputMappingContext;
 public final class InputFieldNotSettableException extends AbstractMappingException {
 
     public InputFieldNotSettableException(InputMappingContext mappingContext) {
-        super(
+        super(BindingCode.INPUT_FIELD_NOT_SETTABLE,
                 String.format(
                         "The input field %s.%s cannot be set: the property `%s` of %s has no setter and is not a "
                                 + "constructor parameter.",

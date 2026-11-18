@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.docs
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.graphql.tools.annotation.GraphQLField
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException
 import spock.lang.Shared
 import spock.lang.Specification
@@ -44,6 +45,26 @@ class DocsCoverageSpec extends Specification {
         expect:
         names.contains(BindingFailuresException.simpleName)
         failures('exception', names, 'the error reference: src/main/docs/guide/exceptions.adoc (or README.md)').empty
+    }
+
+    def "the error reference lists every code of the registry, with the same compile-time flag, and no other"() {
+        given:
+        def reference = Files.readAllLines(root.resolve(GUIDE + '/exceptions.adoc'))
+        def rows = reference.findAll { it.startsWith('|`') }.collectEntries {
+            def cells = it.split(' \\|')
+            [(cells[0].substring(2, cells[0].length() - 1)): cells[2].trim() == 'yes']
+        }
+
+        expect:
+        rows == BindingCode.values().collectEntries { [(it.code()): it.compileTime()] }
+    }
+
+    def "the configuration reference lists every check code"() {
+        given:
+        def page = Files.readString(root.resolve(GUIDE + '/configuration.adoc'))
+
+        expect:
+        BindingCode.values().findAll { it.check() }.every { page.contains('`' + it.code() + '`') }
     }
 
     def "every public annotation is documented"() {

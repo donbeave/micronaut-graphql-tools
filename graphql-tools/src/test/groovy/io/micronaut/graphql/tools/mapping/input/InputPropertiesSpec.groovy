@@ -98,7 +98,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
+        e.cause.message == """[field-not-bound] The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
   GraphQL input object type: ItemInput
   GraphQL input value: quantity
@@ -151,7 +151,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnmappedInputPropertiesException
-        e.cause.message == """Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):
+        e.cause.message == """[unmapped-input-property] Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):
   GraphQL input object type: BasketInput, mapped class: ${ExtraBasket.name}, properties: giftWrap
   GraphQL input object type: ItemInput, mapped class: ${ExtraItem.name}, properties: discount, legacyCode"""
     }
@@ -189,7 +189,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InputFieldNotSettableException
-        e.cause.message == """The input field ItemInput.quantity cannot be set: the property `quantity` of ${ReadOnlyItem.name} has no setter and is not a constructor parameter.
+        e.cause.message == """[input-field-not-settable] The input field ItemInput.quantity cannot be set: the property `quantity` of ${ReadOnlyItem.name} has no setter and is not a constructor parameter.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
   GraphQL input object type: ItemInput
   GraphQL input value: quantity

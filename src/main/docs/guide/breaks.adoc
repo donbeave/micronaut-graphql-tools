@@ -19,14 +19,14 @@ These changes are planned for the milestones of the tracker. Each one is _pendin
 === 1.0.0-M3
 
 * #33 (BC-21): a bound Java enum needs a bean introspection (`@Introspected`); the startup fails without one. See the migration page, entries for 1.0.0-M3.
-* #37 (BC-22): arguments and input objects are converted from `BeanIntrospection`; Jackson annotations and an `ObjectMapper` stop being the input contract. See the migration page, entries for 1.0.0-M3.
+* #237 (BC-22): one code system for checks and errors. Messages start with `[code]`, and the `!` lines of the binding manifest are named by the code. See the migration page, entries for 1.0.0-M3.
+* #37 (BC-23): arguments and input objects are converted from `BeanIntrospection`; Jackson annotations and an `ObjectMapper` stop being the input contract. See the migration page, entries for 1.0.0-M3.
 * #36: Jackson leaves the `api` scope (_pending_).
 * #86: per-check severity; the old keys are removed (_pending_).
 * #105: the default precedence becomes `fail` (_pending_).
-* #109: one public `SchemaBindingException` with error codes (_pending_).
+* #109: the exception subclasses become internal behind the public `SchemaBindingException` (_pending_; the base class and its `code()` are on `master` with BC-22).
 * #144: the JSR-269 code is removed from `graphql-tools-processor` (_pending_).
 * #236: `AmbiguousBindingException` becomes internal (_pending_).
-* #237: one code system for checks and errors (_pending_).
 * #291: the visitor replaces the JSR-269 processor, and the processor options are renamed (_pending_).
 
 Issue #15 (BC-19, resolver parameters bound by name) is open. Its runtime half is on `master` and is listed for 1.0.0-M1; its compile-time half is _pending_ with #150.

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import graphql.schema.GraphQLScalarType;
 import io.micronaut.graphql.tools.GraphQLScalarMapping;
 import io.micronaut.graphql.tools.MappingContext;
@@ -29,7 +30,7 @@ public final class ScalarMappingNotProvidedException extends AbstractMappingExce
 
     public ScalarMappingNotProvidedException(MappingContext mappingContext, String scalarName,
                                              boolean bareScalarTypeExists) {
-        super(message(scalarName, bareScalarTypeExists), mappingContext);
+        super(BindingCode.SCALAR_MAPPING_NOT_PROVIDED, message(scalarName, bareScalarTypeExists), mappingContext);
         this.scalarName = scalarName;
     }
 

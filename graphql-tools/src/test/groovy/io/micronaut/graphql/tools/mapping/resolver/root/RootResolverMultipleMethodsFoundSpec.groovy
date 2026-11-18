@@ -33,7 +33,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
-        e.cause.message == """Found multiple methods for one GraphQL field.
+        e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.hello (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: hello

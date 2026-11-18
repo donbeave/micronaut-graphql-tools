@@ -31,7 +31,7 @@ The rules:
 * Every input field needs a property of the same name. The startup fails with `MethodNotFoundException` for a missing one, and with `InputFieldNotSettableException` for a read-only property that no constructor parameter of the same name takes.
 * In strict mode, a settable property that the input type does not define fails the startup (`UnmappedInputPropertiesException`).
 
-Jackson does not shape the input. `@JsonIgnore`, `@JsonProperty`, `@JsonCreator`, `@JsonDeserialize`, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean have no effect on an input class (BC-22).
+Jackson does not shape the input. `@JsonIgnore`, `@JsonProperty`, `@JsonCreator`, `@JsonDeserialize`, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean have no effect on an input class (BC-23).
 
 == Customization
 

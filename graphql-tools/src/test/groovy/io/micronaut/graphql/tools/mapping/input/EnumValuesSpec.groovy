@@ -166,7 +166,7 @@ enum Shade {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ClassNotIntrospectedException
-        e.cause.message.startsWith("The class ${Shade.name} is not introspected. " +
+        e.cause.message.startsWith("[class-not-introspected] The class ${Shade.name} is not introspected. " +
                 "Ensure the class is annotated with ${Introspected.name}.")
     }
 

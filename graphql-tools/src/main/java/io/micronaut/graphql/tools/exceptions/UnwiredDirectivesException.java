@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ import java.util.stream.Collectors;
  * undeclared directive. A directive applied on the schema definition or on a directive argument counts as wired only
  * through one of those two lists, because graphql-java calls no wiring there.
  */
-public final class UnwiredDirectivesException extends RuntimeException {
+public final class UnwiredDirectivesException extends SchemaBindingException {
 
     private static final int MAX_COORDINATES = 5;
 
@@ -54,11 +55,21 @@ public final class UnwiredDirectivesException extends RuntimeException {
     public UnwiredDirectivesException(Map<String, List<String>> unwiredDirectives,
                                       Map<String, String> invalidInertDirectives,
                                       Map<String, String> invalidSchemaCustomizerDirectives) {
-        super(message(unwiredDirectives, invalidInertDirectives, invalidSchemaCustomizerDirectives));
+        super(codeOf(unwiredDirectives, invalidInertDirectives),
+                message(unwiredDirectives, invalidInertDirectives, invalidSchemaCustomizerDirectives));
 
         this.unwiredDirectives = List.copyOf(unwiredDirectives.keySet());
         this.invalidInertDirectives = List.copyOf(invalidInertDirectives.keySet());
         this.invalidSchemaCustomizerDirectives = List.copyOf(invalidSchemaCustomizerDirectives.keySet());
+    }
+
+    private static BindingCode codeOf(Map<String, List<String>> unwiredDirectives,
+                                      Map<String, String> invalidInertDirectives) {
+        if (!unwiredDirectives.isEmpty()) {
+            return BindingCode.UNWIRED_DIRECTIVE;
+        }
+        return invalidInertDirectives.isEmpty()
+                ? BindingCode.INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES : BindingCode.INVALID_INERT_DIRECTIVES;
     }
 
     private static String message(Map<String, List<String>> unwiredDirectives,
@@ -69,22 +80,29 @@ public final class UnwiredDirectivesException extends RuntimeException {
             paragraphs.add(describeUnwired(unwiredDirectives));
         }
         if (!invalidInertDirectives.isEmpty()) {
-            paragraphs.add("micronaut.graphql.tools.inert-directives lists directives that are built in, not declared "
+            paragraphs.add(tagAfterFirst(paragraphs, BindingCode.INVALID_INERT_DIRECTIVES,
+                    "micronaut.graphql.tools.inert-directives lists directives that are built in, not declared "
                     + "in the schema, or that have a wiring: "
                     + invalidInertDirectives.entrySet().stream()
                     .map(it -> "@" + it.getKey() + " (" + it.getValue() + ")")
                     .collect(Collectors.joining(", "))
-                    + ".\n  Remove them from the list.");
+                    + ".\n  Remove them from the list."));
         }
         if (!invalidSchemaCustomizerDirectives.isEmpty()) {
-            paragraphs.add("micronaut.graphql.tools.schema-customizer-directives lists directives that are built in "
+            paragraphs.add(tagAfterFirst(paragraphs, BindingCode.INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES,
+                    "micronaut.graphql.tools.schema-customizer-directives lists directives that are built in "
                     + "or not declared in the schema: "
                     + invalidSchemaCustomizerDirectives.entrySet().stream()
                     .map(it -> "@" + it.getKey() + " (" + it.getValue() + ")")
                     .collect(Collectors.joining(", "))
-                    + ".\n  Remove them from the list.");
+                    + ".\n  Remove them from the list."));
         }
         return String.join("\n", paragraphs);
+    }
+
+    // the first paragraph is tagged by the base class with the code of the exception
+    private static String tagAfterFirst(List<String> paragraphs, BindingCode code, String paragraph) {
+        return paragraphs.isEmpty() ? paragraph : code.tag(paragraph);
     }
 
     /**

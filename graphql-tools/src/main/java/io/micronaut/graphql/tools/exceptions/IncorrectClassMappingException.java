@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.MappingContext;
 import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable;
@@ -32,7 +33,7 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
 
     IncorrectClassMappingException(String message, MappingContext mappingContext, Class<?> providedClass,
                                    @Nullable Set<Class<?>> supportedClasses) {
-        super(message, mappingContext);
+        super(BindingCode.INCORRECT_CLASS_MAPPING, message, mappingContext);
 
         this.providedClass = providedClass;
         this.supportedClasses = supportedClasses;

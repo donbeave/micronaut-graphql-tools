@@ -226,7 +226,7 @@ type LongEssay {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof AmbiguousTypeMappingException
-        e.cause.message == """The SchemaMappingDictionary maps GraphQL object types ambiguously:
+        e.cause.message == """[ambiguous-type-mapping] The SchemaMappingDictionary maps GraphQL object types ambiguously:
   `Book` is mapped to the interface ${BookGraph.name} and `Novel` to ${BookModel.name}, which implements it
 An object of the implementing class would match both GraphQL types. Map each GraphQL object type to its own class, or map only one of them to the interface."""
         e.cause.graphQlTypes == ['Book', 'Novel']
@@ -242,7 +242,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof AmbiguousTypeMappingException
-        e.cause.message == """The SchemaMappingDictionary maps GraphQL object types ambiguously:
+        e.cause.message == """[ambiguous-type-mapping] The SchemaMappingDictionary maps GraphQL object types ambiguously:
   `Book` is mapped to the interface ${BookGraph.name} and `Novel` to ${NovelModel.name}, which implements it
 An object of the implementing class would match both GraphQL types. Map each GraphQL object type to its own class, or map only one of them to the interface."""
         e.cause.graphQlTypes == ['Book', 'Novel']

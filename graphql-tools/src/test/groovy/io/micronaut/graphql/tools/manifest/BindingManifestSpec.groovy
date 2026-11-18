@@ -18,6 +18,7 @@ import io.micronaut.graphql.tools.BindingManifest
 import io.micronaut.graphql.tools.BindingManifestRecorder
 import io.micronaut.graphql.tools.BindingManifestWriter
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -264,7 +265,7 @@ type Legacy {
         then:
         manifest.lines.contains(("Item.price: Long! → resolver · ${ItemResolver.name}#price(${Item.name}) · " +
                 "java.util.concurrent.CompletionStage<java.lang.Long> · java.lang.Long").toString())
-        manifest.diagnostics == ['!unreachable Legacy']
+        manifest.diagnostics == ['!unreachable-type Legacy']
     }
 
     void "with precedence property-first the line says property and an ambiguous line names both members"() {
@@ -281,8 +282,8 @@ type Legacy {
         then:
         manifest.lines.contains("Item.price: Long! → property · ${Item.name}#getPrice() · java.lang.Long · java.lang.Long".toString())
         manifest.diagnostics == [
-                "!ambiguous Item.price · ${Item.name}#getPrice() | ${ItemResolver.name}#price(${Item.name})".toString(),
-                '!unreachable Legacy'
+                "!precedence-ambiguity Item.price · ${Item.name}#getPrice() | ${ItemResolver.name}#price(${Item.name})".toString(),
+                '!unreachable-type Legacy'
         ]
     }
 
@@ -416,7 +417,7 @@ type Book {
 
     void "a part that contains a separator cannot be written"() {
         when:
-        new BindingManifestRecorder(true).diagnostic('unreachable', 'a · b')
+        new BindingManifestRecorder(true).diagnostic(BindingCode.UNREACHABLE_TYPE, 'a · b')
 
         then:
         def e = thrown(IllegalStateException)
@@ -463,7 +464,7 @@ type Query {
 
         then:
         executeQuery('{ label }').data == [label: 'label']
-        manifest.diagnostics == ['!unreachable Unused']
+        manifest.diagnostics == ['!unreachable-value-type Unused']
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".directives")
