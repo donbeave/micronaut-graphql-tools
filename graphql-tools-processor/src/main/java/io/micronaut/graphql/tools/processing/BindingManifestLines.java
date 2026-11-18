@@ -39,7 +39,6 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
@@ -56,10 +55,10 @@ final class BindingManifestLines {
 
     static final String OMITTED_FORMAT = "# graphql-binding-manifest-omitted 1";
 
-    static final String FORMAT = "# graphql-binding-manifest 1";
+    static final String FORMAT = "# graphql-binding-manifest 2";
 
-    private static final String ARROW = " → ";
-    private static final String DOT = " · ";
+    private static final String ARROW = " -> ";
+    private static final String DOT = " ; ";
     private static final String NONE = "-";
 
     private final Map<String, String> lines = new HashMap<>();
@@ -132,10 +131,18 @@ final class BindingManifestLines {
     }
 
     private String requirePart(String part) {
-        if (part.contains(ARROW) || part.contains(DOT) || part.contains("\n") || part.contains("\r")) {
+        if (part.contains(ARROW) || part.contains(DOT)) {
             invalidParts.add(part);
         }
-        return part;
+        StringBuilder builder = new StringBuilder(part.length());
+        for (char c : part.toCharArray()) {
+            if (c >= 0x20 && c <= 0x7e && c != '\\') {
+                builder.append(c);
+            } else {
+                builder.append("\\u").append(String.format("%04x", (int) c));
+            }
+        }
+        return builder.toString();
     }
 
     private static String version(String version) {
@@ -160,28 +167,29 @@ final class BindingManifestLines {
         return "unknown";
     }
 
+    // the same rules as io.micronaut.graphql.tools.binding.internal.manifest.SchemaHash, which this JSR-269 code (removed
+    // by #144) cannot call
     static String schemaSha256(TypeDefinitionRegistry registry) {
-        List<Definition<?>> definitions = new ArrayList<>();
-        registry.schemaDefinition().ifPresent(definitions::add);
-        definitions.addAll(registry.getSchemaExtensionDefinitions());
-
-        Map<String, List<Definition<?>>> named = new TreeMap<>();
-        registry.types().values().forEach(it -> add(named, it.getName(), it));
+        List<String[]> parts = new ArrayList<>();
+        registry.schemaDefinition().ifPresent(it -> parts.add(part("", 0, it)));
+        registry.getSchemaExtensionDefinitions().forEach(it -> parts.add(part("", 1, it)));
+        registry.types().values().forEach(it -> parts.add(part(it.getName(), 0, it)));
         registry.scalars().values().stream()
                 .filter(it -> !ScalarInfo.isGraphqlSpecifiedScalar(it.getName()))
-                .forEach(it -> add(named, it.getName(), it));
+                .forEach(it -> parts.add(part(it.getName(), 0, it)));
         registry.getDirectiveDefinitions().values().stream()
                 .filter(it -> !GraphQLSpecifiedDirectives.isProvided(it.getName()))
-                .forEach(it -> add(named, it.getName(), it));
-        addExtensions(named, registry.objectTypeExtensions());
-        addExtensions(named, registry.interfaceTypeExtensions());
-        addExtensions(named, registry.unionTypeExtensions());
-        addExtensions(named, registry.enumTypeExtensions());
-        addExtensions(named, registry.scalarTypeExtensions());
-        addExtensions(named, registry.inputObjectTypeExtensions());
-        named.values().forEach(definitions::addAll);
+                .forEach(it -> parts.add(part(it.getName(), 0, it)));
+        addExtensions(parts, registry.objectTypeExtensions());
+        addExtensions(parts, registry.interfaceTypeExtensions());
+        addExtensions(parts, registry.unionTypeExtensions());
+        addExtensions(parts, registry.enumTypeExtensions());
+        addExtensions(parts, registry.scalarTypeExtensions());
+        addExtensions(parts, registry.inputObjectTypeExtensions());
 
-        String printed = definitions.stream().map(AstPrinter::printAst).collect(Collectors.joining("\n"));
+        parts.sort(Comparator.<String[], String>comparing(it -> it[0]).thenComparing(it -> it[1])
+                .thenComparing(it -> it[2]));
+        String printed = parts.stream().map(it -> it[2]).collect(Collectors.joining("\n"));
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(printed.getBytes(StandardCharsets.UTF_8)));
@@ -190,13 +198,13 @@ final class BindingManifestLines {
         }
     }
 
-    private static void addExtensions(Map<String, List<Definition<?>>> named,
+    private static void addExtensions(List<String[]> parts,
                                       Map<String, ? extends List<? extends Definition<?>>> extensions) {
-        extensions.forEach((name, list) -> list.forEach(it -> add(named, name, it)));
+        extensions.forEach((name, list) -> list.forEach(it -> parts.add(part(name, 1, it))));
     }
 
-    private static void add(Map<String, List<Definition<?>>> named, String name, Definition<?> node) {
-        named.computeIfAbsent(name, it -> new ArrayList<>()).add(node);
+    private static String[] part(String name, int rank, Definition<?> node) {
+        return new String[]{name, Integer.toString(rank), AstPrinter.printAst(node)};
     }
 
 }

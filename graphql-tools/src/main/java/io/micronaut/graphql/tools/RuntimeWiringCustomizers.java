@@ -62,7 +62,7 @@ final class RuntimeWiringCustomizers {
                 String coordinate = claim.getTypeName() + "." + claim.getFieldName();
                 String problem = claimProblem(claim, registry);
                 if (problem == null) {
-                    claims.putIfAbsent(coordinate, customizer.getClass().getName());
+                    claims.putIfAbsent(coordinate, BindingManifestRecorder.nameOf(customizer.getClass()));
                 } else {
                     problems.add(coordinate + ": " + problem + " (" + customizer.getClass().getName() + ")");
                 }
