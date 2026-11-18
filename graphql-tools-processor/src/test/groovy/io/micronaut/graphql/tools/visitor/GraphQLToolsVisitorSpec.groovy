@@ -339,9 +339,9 @@ public class Plain {
     }
 
     def "a chain of #length input types is walked on the default stack, as the startup binds it with a work stack (#361)"() {
-        given: 'one Java class backs every type of the chain, and the last type leaves a property unmapped so the walk must reach it'
+        given: 'one Java class backs every type of the chain, and only the last type has the field of a primitive property, so the walk must reach it to fail'
         def types = (0..<length).collect { int i ->
-            "input In${i} { text: String size: Int" + (i < length - 1 ? " next: In${i + 1}" : "") + " }"
+            "input In${i} { text: String size: Int" + (i < length - 1 ? " next: In${i + 1}" : " count: Int") + " }"
         }.join('\n')
 
         when:
@@ -353,6 +353,9 @@ public class Link {
     private String text;
     private Integer size;
     private Link next;
+    private int count;
+    public int getCount() { return count; }
+    public void setCount(int count) { this.count = count; }
     public String getText() { return text; }
     public void setText(String text) { this.text = text; }
     public Integer getSize() { return size; }
@@ -367,7 +370,7 @@ public class QueryResolver {
 }''').compile()
 
         then:
-        result.findings == ["[unmapped-input-property] In${length - 1}.next".toString()]
+        result.findings == ["[nullable-primitive] In${length - 1}.count".toString()]
 
         where:
         length << [1000, 5000]
