@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Converts the argument values graphql-java coerced (scalar values, enum names, a {@code Map} per input object and a
+ * Converts the argument values graphql-java coerced (scalar values, enum constants, a {@code Map} per input object and a
  * {@code List} per list) into the declared Java types of resolver parameters, with their type arguments.
  *
  * @since 1.0.0

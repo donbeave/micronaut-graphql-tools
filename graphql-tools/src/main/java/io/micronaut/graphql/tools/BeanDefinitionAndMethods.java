@@ -21,9 +21,11 @@ import io.micronaut.graphql.tools.binding.internal.model.JMethod;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
 
@@ -34,16 +36,34 @@ final class BeanDefinitionAndMethods {
     // each method with the view that the rules read, built once at registration
     private final Map<ExecutableMethod<Object, ?>, JMethod> executableMethods = new HashMap<>();
 
+    private final Function<ExecutableMethod<?, ?>, JMethod> views;
+
     BeanDefinitionAndMethods(@NonNull BeanDefinition<?> beanDefinition) {
+        this(beanDefinition, new RuntimeTypeModel()::method);
+    }
+
+    BeanDefinitionAndMethods(@NonNull BeanDefinition<?> beanDefinition,
+                             Function<ExecutableMethod<?, ?>, JMethod> views) {
         requireNonNull("beanDefinition", beanDefinition);
 
         this.beanDefinition = beanDefinition;
+        this.views = views;
     }
 
-    void addExecutableMethod(@NonNull ExecutableMethod<Object, ?> executableMethod, JMethod view) {
+    void addExecutableMethod(@NonNull ExecutableMethod<Object, ?> executableMethod) {
         requireNonNull("executableMethod", executableMethod);
 
-        executableMethods.putIfAbsent(executableMethod, view);
+        for (ExecutableMethod<Object, ?> existing : executableMethods.keySet()) {
+            if (existing.getMethodName().equals(executableMethod.getMethodName())
+                    && Arrays.equals(existing.getArgumentTypes(), executableMethod.getArgumentTypes())
+                    && (!existing.isAbstract() || executableMethod.isAbstract())) {
+                return;
+            }
+        }
+        executableMethods.keySet().removeIf(it -> it.isAbstract()
+                && it.getMethodName().equals(executableMethod.getMethodName())
+                && Arrays.equals(it.getArgumentTypes(), executableMethod.getArgumentTypes()));
+        executableMethods.put(executableMethod, views.apply(executableMethod));
     }
 
     BeanDefinition<?> getBeanDefinition() {
