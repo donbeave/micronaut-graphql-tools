@@ -26,6 +26,7 @@ dependencies {
     testImplementation(platform(libs.micronaut.platform))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // JsonDiffTest reads the scenario JSON through the JsonMapper bean; test-only, the module is not published.
     testRuntimeOnly(mn.micronaut.jackson.databind)
 }
 

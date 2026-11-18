@@ -34,6 +34,8 @@ dependencies {
 }
 ```
 
+The library does not bring a JSON codec (BC-26). Add the one your application uses, for example `micronaut-jackson-databind` or `micronaut-serde-jackson`.
+
 Maven (the repository goes in the POM, the credentials in `~/.m2/settings.xml`, see [Consuming milestone previews](#consuming-milestone-previews)):
 
 ```xml
@@ -564,8 +566,8 @@ names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<a
 graphql-java hands a data fetcher the coerced argument values: scalar values, enum constants, a `Map` per input object
 and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
 including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`). Every converter is built
-once at startup, from the declared type and the GraphQL type, and a request only runs it. There is no reflection and no
-Jackson on the request path:
+once at startup, from the declared type and the GraphQL type, and a request only runs it. There is no reflection on the
+request path:
 
 - a `String`, `Boolean`, `Integer` (also for an `int` parameter), `Long`, `Short`, `BigDecimal`, `BigInteger` or `Double`
   value is the declared type already and is passed on as it is; a `Float` argument for a `float` parameter or property
@@ -588,11 +590,6 @@ mapper. A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInpu
 introspection, because the startup checks below read it, and the bean owns the whole instance, including its
 `ArgumentValue` properties: the library does not touch the result); a `TypeConverter` for another pair converts the values of a
 custom scalar that its scalar parsed to another class.
-
-**Migration (breaking, BC-23):** Jackson no longer shapes the input. `@JsonIgnore`, `@JsonProperty`, `@JsonCreator`,
-`@JsonDeserialize`, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean of any name have no effect
-on an input class. Name the input class's properties and constructor parameters like the input fields, and use a
-`TypeConverter` bean where an input class needs a conversion of its own.
 
 An input field that the input class cannot take fails the startup (see [Input classes and input types](#input-classes-and-input-types)).
 

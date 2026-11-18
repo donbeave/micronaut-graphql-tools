@@ -61,8 +61,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 - **Native.** Each runtime feature has a native test in `test-suite-java` and `test-suite-kotlin`; the Groovy example has the native smoke test.
 - **No Jackson in the public API.** Use Micronaut Serialization (`micronaut-serde`). Build input conversion on
   compile-time metadata (`BeanIntrospection`, Serde), not on an `ObjectMapper`. Input conversion is built from the bean
-  introspection at startup (#37) and uses no Jackson; add none. Until #36 lands, `micronaut-jackson-databind` is still in
-  the `api` scope.
+  introspection at startup (#37) and uses no Jackson; add none. The library declares no Jackson dependency (#36).
 - **Dependencies.** Dependencies come from the Micronaut version catalog (`mn.*`) first; `gradle/libs.versions.toml` only holds what Micronaut does not manage; overrides need a recorded reason.
 - **Micronaut 4 practice.** Follow the current Micronaut 4 line and its conventions. Do not design for Micronaut 5.
 - **Publishing.** Nothing goes to Maven Central or GitHub Releases, and there are no snapshots; milestone versions are
