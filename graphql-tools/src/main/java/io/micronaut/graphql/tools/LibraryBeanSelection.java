@@ -46,12 +46,16 @@ public final class LibraryBeanSelection {
      */
     @Nullable
     static BeanDefinition<?> competitor(BeanContext context, Class<?> type) {
+        BeanDefinition<?> competitor = null;
         for (BeanDefinition<?> definition : applicationBeans(context, type)) {
-            if (definition.getDeclaredQualifier() == null || definition.hasStereotype(Primary.class)) {
+            if (definition.hasStereotype(Primary.class)) {
                 return definition;
             }
+            if (competitor == null && definition.getDeclaredQualifier() == null) {
+                competitor = definition;
+            }
         }
-        return null;
+        return competitor;
     }
 
     /**
@@ -67,7 +71,8 @@ public final class LibraryBeanSelection {
         for (BeanDefinitionReference<?> reference : context.getBeanDefinitionReferences()) {
             if (type.isAssignableFrom(reference.getBeanType()) && reference.isPresent()) {
                 BeanDefinition<?> definition = reference.load();
-                if (!isLibrary(definition) && reference.isEnabled(context)) {
+                // the library's own references are skipped before isEnabled, which would evaluate this condition again
+                if (definition != null && !isLibrary(definition) && reference.isEnabled(context)) {
                     beans.add(definition);
                 }
             }
