@@ -7,10 +7,12 @@ import io.micronaut.graphql.tools.binding.BindingCode
  * The parity rules between the compile-time and the startup verdict of one case (DD-4), at the default severities (D-30).
  *
  * <ul>
- *   <li><b>Soundness.</b> Every compile finding is also a startup finding with the same code and coordinate. It
- *   fails outright; no list excuses it (a false compile error is a bug).</li>
+ *   <li><b>Soundness.</b> Every compile error is also a startup finding with the same code and coordinate. It fails outright:
+ *   a false compile error is a bug. Only the documented exceptions of DD-4 excuse an error ({@link SoundnessExceptions}: one line
+ *   per case and finding, with one of five reasons, the startup failing or binding differently on purpose). A compile-time
+ *   warning is not an error and is outside the rule.</li>
  *   <li><b>Completeness.</b> A startup finding of a per-class code ({@link #PER_CLASS_CODES}) that the compile side
- *   does not report is a gap, and fails unless {@code corpus-divergences.txt} lists it. A startup finding of any other
+ *   does not report, as an error or as a warning, is a gap, and fails unless {@code corpus-divergences.txt} lists it. A startup finding of any other
  *   code (whole-program: field not bound, reachability, ambiguity, the dictionary) is not a gap: the compile side
  *   cannot see it.</li>
  * </ul>
@@ -36,16 +38,18 @@ final class Parity {
      * @param compile    the compile-time verdict; {@code null} if none is recorded (read as: reports nothing)
      * @param divergences the known gaps
      * @param relaxed    the codes that the case relaxes at startup, which the compile-time check cannot (see {@link #relaxedCodes})
+     * @param exceptions the documented exceptions to soundness
      * @return the violations, empty if the two verdicts are in parity
      */
     static List<String> check(String name, Language language, Verdict runtime, Verdict compile, Divergences divergences,
-                              Set<String> relaxed = [] as Set<String>) {
+                              Set<String> relaxed = [] as Set<String>, SoundnessExceptions exceptions = SoundnessExceptions.NONE) {
         List<String> violations = []
         Set<String> runtimeKeys = runtime.keys()
         Set<String> compileKeys = compile == null ? [] as Set<String> : compile.keys()
         // a code that the case relaxes at startup is outside the rule: the compile error cannot be relaxed (D-30, point 6)
-        (compile == null ? [] : compile.findings).findAll { !(it.code in relaxed) && !runtimeKeys.contains(it.key()) }
-                .collect { it.key() }.sort().each {
+        (compile == null ? [] : compile.errors).findAll {
+            !(it.code in relaxed) && !runtimeKeys.contains(it.key()) && !exceptions.covers(name, language, it)
+        }.collect { it.key() }.sort().each {
             violations.add("soundness: the compile side reports '${it}' but the startup does not (a false compile error)".toString())
         }
         runtime.findings.findAll { it.code in PER_CLASS_CODES && !compileKeys.contains(it.key()) }.each { Finding f ->
@@ -89,7 +93,7 @@ final class Parity {
                 if (runtime == null) {
                     return
                 }
-                check(c.name, language, runtime, compile, corpus.divergences, relaxedCodes(c.config))
+                check(c.name, language, runtime, compile, corpus.divergences, relaxedCodes(c.config), corpus.exceptions)
                         .each { result.add("${c.name} [${language.dir}]: ${it}".toString()) }
             }
         }

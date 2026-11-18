@@ -42,7 +42,9 @@ import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaTypes;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,6 +66,10 @@ import java.util.stream.Collectors;
  * <p>The findings are two lists, because the startup reports them in two phases: {@link #failures()} are binding
  * failures, thrown while the types are bound ({@code nullable-primitive} among them), and {@link #checks()} are the strict
  * checks that run after a binding that failed nowhere ({@code unmapped-input-property}, {@code unbound-enum-constant}).</p>
+ *
+ * <p>The walk down a chain of input types runs from a work stack of frames, one per input type that is being bound, so the
+ * depth of the Java stack does not grow with the length of the chain (the startup binds with a work stack too). The calls
+ * that stay recursive are bounded by the nesting of one declared type, lists and wrappers, not by the chain.</p>
  */
 @Internal
 public final class InputBindingFindings {
@@ -128,7 +134,7 @@ public final class InputBindingFindings {
      * @return whether the startup binds the argument without a failure and goes on to the next one
      */
     public boolean argument(String member, TypeRef declared, InputValueDefinition argument, String coordinate) {
-        return finish(walk(new Site(member, coordinate, argument.getSourceLocation()), declared, argument.getType(), true));
+        return finish(drive(walk(new Site(member, coordinate, argument.getSourceLocation()), declared, argument.getType(), true)));
     }
 
     /**
@@ -259,15 +265,18 @@ public final class InputBindingFindings {
             return before == null ? null : new Halt(before.finding, true);
         }
         boundClass.put(name, declared.rawName());
-        Halt halt = bindInput(site, definition, declared);
-        if (halt != null) {
+        Halt halt = open(site, definition, declared);
+        if (halt != null && halt.frame == null) {
             inputHalts.put(name, halt);
         }
         return halt;
     }
 
+    /**
+     * Starts the binding of an input type: a stop, or the frame that binds its fields.
+     */
     @Nullable
-    private Halt bindInput(Site site, InputObjectTypeDefinition definition, TypeRef declared) {
+    private Halt open(Site site, InputObjectTypeDefinition definition, TypeRef declared) {
         if (declared.array() || declared.primitive()) {
             return Halt.SILENT;
         }
@@ -279,7 +288,6 @@ public final class InputBindingFindings {
         if (problem == ClassProblem.NOT_INTROSPECTED) {
             return notIntrospected(site, definition, inputClass, "annotate it with @GraphQLInput or @Introspected");
         }
-        InputFields fields = InputTypeRules.fields(inputClass);
         Map<String, JProperty> properties = new HashMap<>();
         for (JProperty property : inputClass.readableProperties()) {
             properties.put(property.name(), property);
@@ -287,33 +295,84 @@ public final class InputBindingFindings {
         for (JProperty property : inputClass.writableProperties()) {
             properties.putIfAbsent(property.name(), property);
         }
-        for (InputValueDefinition field : definition.getInputValueDefinitions()) {
-            FieldBinding binding = fields.binding(field.getName());
+        return Halt.enter(new InputFrame(site, definition, inputClass, InputTypeRules.fields(inputClass), properties));
+    }
+
+    /**
+     * Binds the input types that a type needs, depth first and in the order of the fields, from a stack of frames: the
+     * stop of a frame is the stop of the field that reached it, and ends that frame and the frames below it in turn.
+     */
+    @Nullable
+    private Halt drive(@Nullable Halt first) {
+        Deque<InputFrame> stack = new ArrayDeque<>();
+        Halt outcome = first;
+        while (true) {
+            if (outcome != null && outcome.frame != null) {
+                stack.push(outcome.frame);
+                outcome = advance(outcome.frame, null);
+                continue;
+            }
+            if (stack.isEmpty()) {
+                return outcome;
+            }
+            InputFrame done = stack.pop();
+            if (outcome != null) {
+                inputHalts.put(done.definition.getName(), outcome);
+            }
+            if (stack.isEmpty()) {
+                return outcome;
+            }
+            outcome = advance(stack.peek(), outcome);
+        }
+    }
+
+    /**
+     * Goes on with the fields of an input type from where the frame stopped.
+     *
+     * @param frame  the frame
+     * @param result how the field that the frame waited for was bound: {@code null} for bound
+     * @return the next input type to bind (a pending stop), where the frame waits for it, or how the frame ends
+     */
+    @Nullable
+    private Halt advance(InputFrame frame, @Nullable Halt result) {
+        InputValueDefinition waiting = frame.waiting;
+        if (waiting != null) {
+            frame.waiting = null;
+            if (result != null) {
+                return result;
+            }
+            Halt after = afterField(frame, waiting, frame.waitingSite, frame.waitingBinding);
+            if (after != null) {
+                return after;
+            }
+        }
+        List<InputValueDefinition> definitions = frame.definition.getInputValueDefinitions();
+        while (frame.next < definitions.size()) {
+            InputValueDefinition field = definitions.get(frame.next++);
+            FieldBinding binding = frame.fields.binding(field.getName());
             if (binding == FieldBinding.MISSING) {
                 return Halt.SILENT;
             }
-            Site fieldSite = new Site(site.member, definition.getName() + "." + field.getName(), field.getSourceLocation());
-            Halt halt = walk(fieldSite, properties.get(field.getName()).type(), field.getType(), true);
+            Site fieldSite = new Site(frame.site.member, frame.definition.getName() + "." + field.getName(),
+                    field.getSourceLocation());
+            Halt halt = walk(fieldSite, frame.properties.get(field.getName()).type(), field.getType(), true);
+            if (halt != null && halt.frame != null) {
+                frame.waiting = field;
+                frame.waitingSite = fieldSite;
+                frame.waitingBinding = binding;
+                return halt;
+            }
             if (halt != null) {
                 return halt;
             }
-            if (binding == FieldBinding.NOT_SETTABLE
-                    && InputTypeRules.ARGUMENT_VALUE.equals(properties.get(field.getName()).type().rawName())) {
-                return failed(fieldSite, BindingCode.UNSUPPORTED_INPUT_TYPE,
-                        "the Java type is not supported for this argument or input field: " + InputTypeRules.ARGUMENT_VALUE
-                                + " needs a writable property: it is set to omitted() when the client leaves it out.",
-                        null);
-            }
-            if (binding == FieldBinding.NOT_SETTABLE) {
-                return failed(fieldSite, BindingCode.INPUT_FIELD_NOT_SETTABLE,
-                        "the input field " + field.getName() + " maps to a property of " + inputClass.name()
-                                + " that cannot be set: it has no setter and no constructor parameter",
-                        "add a setter or a constructor parameter for it, or remove the field from the input type");
+            Halt after = afterField(frame, field, fieldSite, binding);
+            if (after != null) {
+                return after;
             }
         }
-        coverage.add(definition.getName(), definition.getInputValueDefinitions().stream()
-                .map(InputValueDefinition::getName).toList(), inputClass);
-        coverageMembers.putIfAbsent(inputClass.name(), site.member);
+        coverage.add(frame.definition.getName(), definitions.stream().map(InputValueDefinition::getName).toList(),
+                frame.inputClass);
+        coverageMembers.putIfAbsent(frame.inputClass.name(), frame.site.member);
         return null;
     }
 
@@ -347,6 +406,24 @@ public final class InputBindingFindings {
             }
         }
         return result;
+    }
+
+    @Nullable
+    private Halt afterField(InputFrame frame, InputValueDefinition field, Site fieldSite, FieldBinding binding) {
+        if (binding == FieldBinding.NOT_SETTABLE
+                && InputTypeRules.ARGUMENT_VALUE.equals(frame.properties.get(field.getName()).type().rawName())) {
+            return failed(fieldSite, BindingCode.UNSUPPORTED_INPUT_TYPE,
+                    "the Java type is not supported for this argument or input field: " + InputTypeRules.ARGUMENT_VALUE
+                            + " needs a writable property: it is set to omitted() when the client leaves it out.",
+                    null);
+        }
+        if (binding == FieldBinding.NOT_SETTABLE) {
+            return failed(fieldSite, BindingCode.INPUT_FIELD_NOT_SETTABLE,
+                    "the input field " + field.getName() + " maps to a property of " + frame.inputClass.name()
+                            + " that cannot be set: it has no setter and no constructor parameter",
+                    "add a setter or a constructor parameter for it, or remove the field from the input type");
+        }
+        return null;
     }
 
     @Nullable
@@ -460,9 +537,53 @@ public final class InputBindingFindings {
      *
      * @param finding  the finding, or {@code null} for a silent stop
      * @param repeated whether the finding was reported before
+     * @param frame    not a stop: the input type that the walk reached and that the work stack binds next, or {@code null}
      */
-    private record Halt(@Nullable Finding finding, boolean repeated) {
+    private record Halt(@Nullable Finding finding, boolean repeated, @Nullable InputFrame frame) {
 
-        static final Halt SILENT = new Halt(null, false);
+        static final Halt SILENT = new Halt(null, false, null);
+
+        Halt(@Nullable Finding finding, boolean repeated) {
+            this(finding, repeated, null);
+        }
+
+        /**
+         * Not a stop: the walk reached an input type that has to be bound, which the work stack does.
+         *
+         * @param frame the input type to bind
+         * @return the pending step
+         */
+        static Halt enter(InputFrame frame) {
+            return new Halt(null, false, frame);
+        }
+    }
+
+    /**
+     * An input type that is being bound: its fields are walked one at a time, and the frame waits while the input type
+     * that one field reaches is bound.
+     */
+    private static final class InputFrame {
+
+        final Site site;
+        final InputObjectTypeDefinition definition;
+        final JClass inputClass;
+        final InputFields fields;
+        final Map<String, JProperty> properties;
+        int next;
+        @Nullable
+        InputValueDefinition waiting;
+        @Nullable
+        Site waitingSite;
+        @Nullable
+        FieldBinding waitingBinding;
+
+        InputFrame(Site site, InputObjectTypeDefinition definition, JClass inputClass, InputFields fields,
+                   Map<String, JProperty> properties) {
+            this.site = site;
+            this.definition = definition;
+            this.inputClass = inputClass;
+            this.fields = fields;
+            this.properties = properties;
+        }
     }
 }

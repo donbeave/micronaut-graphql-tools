@@ -23,7 +23,7 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
 
 - `GraphQLToolsVisitor`: an isolating `TypeElementVisitor` that checks the concrete resolver classes (and an `@Introduction`
   interface that is a resolver) with the per-class rules of `graphql-tools-binding` (`ResolverClassFindings`), and reports each
-  finding as a compile error. The findings are those of one stage, as at startup: invalid coordinates, then the binding
+  finding as a compile error (one finding is a warning, see below). The findings are those of one stage, as at startup: invalid coordinates, then the binding
   failures (the arguments, the input classes and enums they reach, the return type), then the strict checks, which the
   startup runs only after a binding that failed nowhere. It keeps its state per `start()`, looks up no class by name, asks for no project directory and
   writes no file (`VisitorArchitectureSpec`).
@@ -33,7 +33,14 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
 - `CheckedSchema`: reads the schema once per compilation, on the first class that is checked.
 - `ElementTypeModel`: the adapter of the type model over `ClassElement` and `MethodElement`; the properties of an input class
   are read with the query that Micronaut's introspection visitor uses, and a class is introspected when it carries
-  `@Introspected` (a class that only another class lists in `@Introspected(classes)` is not seen as introspected).
+  `@Introspected` (a class that only another class lists in `@Introspected(classes)` or `(packages)`, or that a dependency
+  introspects, is not seen as introspected).
+
+`class-not-introspected` is the one finding that a check of one class cannot prove, so the visitor reports it as a compile-time
+**warning** and the startup decides (D-39 DD-4: a compile error must also be a startup failure, and a class that another
+class introspects passes at startup). The other findings are errors. The walk stops at that finding, as the startup does
+at its failure, so the findings of the same class that come after it are the startup's. A build that turns compiler warnings into errors (`-Werror`) fails on it as well, so there the hatch is `@Introspected` on the class itself. The walk down a chain of input types
+runs from a work stack (a chain of 5,000 types is checked on the default stack), as the startup binds with one.
 
 The JSR-269 processor (`processing/`, until #144):
 
@@ -75,12 +82,15 @@ The module compiles for Java 21 (`micronautBuild.javaVersion = 21`), so it does 
 
 `check` runs the unit tests (the visitor under javac in process: `GraphQLToolsVisitorSpec`, `ProcessorOptionsSpec`,
 `ContractsGateSpec`), `compileVisitorRelease17` (the visitor package compiled alone at release 17), the binding corpus (`BindingCorpusSpec`, about 70 seconds on the default graphql-java
-leg), `ProcessorOptionsDocsSpec` (it fails when a processor option is not named in the options page) and
+leg), `ParitySpec` (the soundness and completeness rules and the exception list), `ProcessorOptionsDocsSpec` (it fails when a processor option is not named in the options page) and
 `checkNoRuntimeDependency`. The floor and ceiling legs skip the corpus.
 
-- The corpus is data in `src/test/resources/corpus`; its README says how to add a case. For Java the runner compiles each
-  case a second time with the visitor on (`VisitorCompileTimeBinder`) and asserts its findings against `expected/compile.txt`
-  and against the startup (soundness); Groovy and Kotlin have no compile-time backend in the runner yet (#143).
+- The corpus is data in `src/test/resources/corpus`; its README says how to add a case. For Java and Groovy the runner compiles
+  each case twice: with `checks=false`, which must succeed for every case (the escape hatch), and with the visitor on
+  (`VisitorCompileTimeBinder`), whose errors and warnings must equal `expected/compile.txt`. It asserts them against the startup:
+  soundness (a compile error is a startup finding; the five documented exceptions of DD-4 are in
+  `corpus-soundness-exceptions.txt`, each with a reason and a case under `exception/`) and completeness (the divergence list,
+  empty). Kotlin has no compile-time backend in the runner yet (#143). `-Pcorpus.only='<regex>'` runs the cases that match.
 - `./gradlew :micronaut-graphql-tools-processor:corpusUpdate` rewrites the expected files of the corpus from what the
   binders say. Review the diff.
 - `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` compiles the Kotlin cases in one TestKit build. It needs the

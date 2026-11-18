@@ -36,4 +36,53 @@ class ParitySpec extends Specification {
         Parity.relaxedCodes(perCheck) == ['unbound-resolver-method'] as Set
         Parity.relaxedCodes(strictOn).empty
     }
+
+    void "a warning is not a compile error: no soundness violation, and the startup finding counts as seen"() {
+        given:
+        def warning = new Finding('class-not-introspected', 'Filter', '-', true)
+
+        expect:
+        Parity.check('case', Language.JAVA, Verdict.bound(), Verdict.failed([warning]), new Divergences(0, [])) == []
+        Parity.check('case', Language.JAVA, Verdict.failed([new Finding('class-not-introspected', 'Filter')]), Verdict.failed([warning]),
+                new Divergences(0, [])) == []
+        Parity.check('case', Language.JAVA, Verdict.failed([new Finding('class-not-introspected', 'Filter')]), Verdict.bound(),
+                new Divergences(0, [])).size() == 1
+    }
+
+    void "a warning line is parsed and written back, and sorts with the other lines"() {
+        expect:
+        Finding.parse('warning class-not-introspected Filter schema.graphqls:9:1').warning
+        Finding.parse('warning class-not-introspected Filter schema.graphqls:9:1').line() == 'warning class-not-introspected Filter schema.graphqls:9:1'
+        !Finding.parse('class-not-introspected Filter schema.graphqls:9:1').warning
+        Verdict.failed([new Finding('class-not-introspected', 'Filter', '-', true)]).bound
+        !Verdict.failed([new Finding('class-not-introspected', 'Filter', '-', true), UNBOUND]).bound
+    }
+
+    void "the documented exceptions of DD-4 excuse exactly the listed error, in the listed case and language"() {
+        given:
+        def exceptions = new SoundnessExceptions(1, [new SoundnessExceptions.Entry('case', 'java', UNBOUND.code, UNBOUND.coordinate,
+                'customizer-claimed-field')])
+        def other = new Finding('argument-mismatch', 'Query.a')
+
+        expect:
+        Parity.check('case', Language.JAVA, Verdict.bound(), Verdict.failed([UNBOUND]), new Divergences(0, []), [] as Set, exceptions) == []
+        Parity.check('case', Language.JAVA, Verdict.bound(), Verdict.failed([UNBOUND, other]), new Divergences(0, []), [] as Set,
+                exceptions).size() == 1
+        Parity.check('case', Language.GROOVY, Verdict.bound(), Verdict.failed([UNBOUND]), new Divergences(0, []), [] as Set,
+                exceptions).size() == 1
+        Parity.check('other', Language.JAVA, Verdict.bound(), Verdict.failed([UNBOUND]), new Divergences(0, []), [] as Set,
+                exceptions).size() == 1
+    }
+
+    void "the corpus lists each documented reason at least once, and every entry of the list has a reason and a live case"() {
+        given:
+        def corpus = new Corpus(CorpusFixtures.root())
+
+        expect:
+        corpus.exceptions.problems == []
+        corpus.exceptions.verify(corpus) == []
+        corpus.exceptions.entries*.reason.toSet() == SoundnessExceptions.REASONS.keySet()
+        and: 'each entry sits on the case that shows its reason, so a reason cannot excuse a finding of an unrelated case'
+        corpus.exceptions.entries.every { it.caseName == 'exception/' + it.reason }
+    }
 }

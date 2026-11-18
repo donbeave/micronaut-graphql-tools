@@ -1,0 +1,7 @@
+schema {
+  query: Query
+}
+
+type Query {
+  username(prefix: String): String
+}

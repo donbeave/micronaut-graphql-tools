@@ -55,7 +55,8 @@ final class CorpusStartup {
                 result.put('manifest', manifest.readLines().findAll { !it.startsWith('#') }.join('\n') + '\n')
             }
         } catch (RuntimeException e) {
-            Throwable known = causes(e).find { it.getClass().name.startsWith('io.micronaut.graphql.tools.exceptions.') }
+            // an internal subclass (the unexpected-binding failure) is a binding failure too
+            Throwable known = causes(e).find { it instanceof SchemaBindingException }
             if (known == null) {
                 result.put('failure', causes(e).last().toString())
             } else {

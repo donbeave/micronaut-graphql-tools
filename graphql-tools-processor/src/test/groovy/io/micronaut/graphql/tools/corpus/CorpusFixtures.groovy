@@ -22,6 +22,11 @@ final class CorpusFixtures {
         return Boolean.getBoolean('corpus.update')
     }
 
+    /** a regular expression for the names of the cases to run, or {@code null} for all of them (a local aid) */
+    static String only() {
+        return System.getProperty('corpus.only')
+    }
+
     /** the per-case timings of the last run, D-02 */
     static Path reportFile() {
         return Path.of(System.getProperty('corpus.report', 'build/corpus/timings.txt')).toAbsolutePath()

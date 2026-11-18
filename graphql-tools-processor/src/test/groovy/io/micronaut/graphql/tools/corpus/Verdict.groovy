@@ -35,8 +35,14 @@ final class Verdict {
         return new Verdict(false, [], null)
     }
 
+    /** @return whether nothing failed: no finding, or only warnings (a compile-time verdict that lets the build pass) */
     boolean isBound() {
-        return available && findings.empty
+        return available && findings.every { it.warning }
+    }
+
+    /** @return the findings that are errors */
+    List<Finding> getErrors() {
+        return findings.findAll { !it.warning }
     }
 
     /** @return the lines of an expected file: {@code ok} for a bound verdict */
@@ -44,8 +50,14 @@ final class Verdict {
         return findings.empty ? ['ok'] : findings*.line()
     }
 
+    /** @return code and coordinate of every finding, warnings included */
     Set<String> keys() {
         return findings*.key() as Set<String>
+    }
+
+    /** @return code and coordinate of the findings that are errors */
+    Set<String> errorKeys() {
+        return errors*.key() as Set<String>
     }
 
     @Override
