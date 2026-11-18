@@ -1,0 +1,28 @@
+package example;
+
+import graphql.schema.idl.SchemaDirectiveWiring;
+import io.micronaut.context.annotation.Bean;
+import io.micronaut.context.annotation.Factory;
+import io.micronaut.graphql.tools.SchemaDirective;
+import jakarta.inject.Singleton;
+import java.util.List;
+
+@Factory
+public class Directives {
+
+    public static class NoOp implements SchemaDirectiveWiring {
+    }
+
+    @Bean
+    @Singleton
+    public SchemaDirective audit() {
+        return SchemaDirective.named("doc", new NoOp());
+    }
+
+    @Bean
+    @Singleton
+    public SchemaDirective metaWiring() {
+        return SchemaDirective.named("meta", new NoOp());
+    }
+
+}
