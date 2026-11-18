@@ -327,7 +327,7 @@ scalar Sc @onScalar
 
     void "a type named schema is wired like any other type, and does not stand for the schema definition"() {
         given: 'a named wiring for @typeDir, which is applied to the type schema, and none for @audit on the schema definition'
-        startContext(TYPE_NAMED_SCHEMA_SCHEMA, SPEC_NAME_TYPE_SCHEMA, ['micronaut.graphql.tools.unreachable-types': 'ignore'])
+        startContext(TYPE_NAMED_SCHEMA_SCHEMA, SPEC_NAME_TYPE_SCHEMA, ['micronaut.graphql.tools.checks.unreachable-type': 'warn', 'micronaut.graphql.tools.checks.unreachable-value-type': 'warn'])
 
         when:
         getGraphQLBean()
@@ -343,7 +343,8 @@ scalar Sc @onScalar
     void "a type named schema passes when the schema definition's directive is listed in schema-customizer-directives"() {
         given:
         startContext(TYPE_NAMED_SCHEMA_SCHEMA, SPEC_NAME_TYPE_SCHEMA, [
-                'micronaut.graphql.tools.unreachable-types'            : 'ignore',
+                'micronaut.graphql.tools.checks.unreachable-type'      : 'warn',
+                'micronaut.graphql.tools.checks.unreachable-value-type': 'warn',
                 'micronaut.graphql.tools.allow.schema-customizer-directives': ['audit']])
 
         when:

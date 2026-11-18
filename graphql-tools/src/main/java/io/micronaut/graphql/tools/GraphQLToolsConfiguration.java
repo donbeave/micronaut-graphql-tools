@@ -99,7 +99,7 @@ public class GraphQLToolsConfiguration {
     /**
      * Sets the shorthand for the severity of every check that has no entry in {@link #getChecks()}: {@code true}
      * (the default) is every check at its default severity, {@code fail}; {@code false} is every check {@code warn}.
-     * An explicit {@code checks.<code>} entry wins. Default: {@code true}.
+     * An explicit entry in {@link #getChecks()} wins. Default: {@code true}.
      *
      * @param strict whether the checks fail by default
      */
