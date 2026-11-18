@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 import java.util.List;
@@ -29,7 +30,7 @@ public final class MultipleMethodsFoundException extends AbstractMappingExceptio
     private final Map<Class<?>, List<String>> methods;
 
     public MultipleMethodsFoundException(MappingContext mappingContext, Map<Class<?>, List<String>> methods) {
-        super("Found multiple methods for one GraphQL field.", mappingContext);
+        super(BindingCode.MULTIPLE_METHODS_FOUND, "Found multiple methods for one GraphQL field.", mappingContext);
 
         this.methods = methods;
     }

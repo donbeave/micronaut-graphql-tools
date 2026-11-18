@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -37,7 +38,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof IncorrectClassMappingException
-        e.cause.message == """The field is mapped to an enum, when required a custom class.
+        e.cause.message == """[incorrect-class-mapping] The field is mapped to an enum, when required a custom class.
   GraphQL coordinate: User.username (line 11, column 3)
   GraphQL object type: User
   GraphQL field: username
@@ -56,6 +57,7 @@ type User {
     }
 
     @GraphQLType
+    @Introspected
     static enum User {
         TEST
     }

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 import java.util.Comparator;
@@ -30,7 +31,7 @@ public final class MultipleImplementationsFoundException extends AbstractMapping
 
     public MultipleImplementationsFoundException(MappingContext mappingContext, Class<?> interfaceClass,
                                                  List<Class<?>> implementationClasses) {
-        super(
+        super(BindingCode.MULTIPLE_IMPLEMENTATIONS_FOUND,
                 String.format(
                         "Found multiple implementations for the interface %s. Annotate the interface with "
                                 + "@GraphQLType, so that its own bean introspection reads every implementation.",

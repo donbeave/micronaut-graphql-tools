@@ -393,7 +393,7 @@ public class GraphQLToolsConfiguration {
         /**
          * Sets what happens to properties of input classes (settable through a setter or the constructor) that the
          * GraphQL input type does not define, so no request can ever set them. Either way each of them is an
-         * {@code !unbound} line of the binding manifest. Default: not set, which means {@link UnmappedProperties#FAIL}
+         * {@code !unmapped-input-property} line of the binding manifest. Default: not set, which means {@link UnmappedProperties#FAIL}
          * in strict mode ({@link GraphQLToolsConfiguration#isStrict()}) and {@link UnmappedProperties#IGNORE} without
          * it.
          *

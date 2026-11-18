@@ -41,7 +41,7 @@ input ConversionInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ClassNotIntrospectedException
-        e.cause.message == """The class ${ConversionInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
+        e.cause.message == """[class-not-introspected] The class ${ConversionInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
   GraphQL coordinate: PriceInput.conversion (line 11, column 3)
   GraphQL input object type: PriceInput
   GraphQL input value: conversion

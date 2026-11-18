@@ -3,6 +3,7 @@ package io.micronaut.graphql.tools.mapping.input
 import graphql.ExecutionInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.ArgumentValue
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
@@ -83,7 +84,7 @@ input AddressInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedInputTypeException
-        e.cause.message.startsWith("The Java type is not supported for this argument or input field: " +
+        e.cause.message.startsWith("[unsupported-input-type] The Java type is not supported for this argument or input field: " +
                 "${ArgumentValue.name} needs micronaut.graphql.tools.input.detect-omission=true.\n" +
                 "  GraphQL coordinate: Query.update(name:) (line 7, column 10)\n" +
                 "  GraphQL object type: Query\n  GraphQL field: update\n  GraphQL argument: name")
@@ -99,7 +100,7 @@ input AddressInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedInputTypeException
-        e.cause.message == """The Java type is not supported for this argument or input field: ${ArgumentValue.name} needs micronaut.graphql.tools.input.detect-omission=true.
+        e.cause.message == """[unsupported-input-type] The Java type is not supported for this argument or input field: ${ArgumentValue.name} needs micronaut.graphql.tools.input.detect-omission=true.
   GraphQL coordinate: ProfileInput.nickname (line 16, column 3)
   GraphQL input object type: ProfileInput
   GraphQL input value: nickname
@@ -211,7 +212,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedInputTypeException
-        e.cause.message == """The Java type is not supported for this argument or input field: ${ArgumentValue.name} needs a writable property: it is set to omitted() when the client leaves it out.
+        e.cause.message == """[unsupported-input-type] The Java type is not supported for this argument or input field: ${ArgumentValue.name} needs a writable property: it is set to omitted() when the client leaves it out.
   GraphQL coordinate: ProfileInput.nickname (line 16, column 3)
   GraphQL input object type: ProfileInput
   GraphQL input value: nickname
@@ -580,6 +581,7 @@ input CreateW {
         ArgumentValue<String> email
     }
 
+    @Introspected
     static enum Color {
         RED,
         GREEN

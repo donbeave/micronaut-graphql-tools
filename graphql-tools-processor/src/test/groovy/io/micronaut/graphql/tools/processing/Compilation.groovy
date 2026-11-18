@@ -222,11 +222,27 @@ public final class Startup {
                 Map<String, Object> configuration = new LinkedHashMap<>(properties)
                 configuration.putIfAbsent('micronaut.graphql.tools.manifest.record', true)
                 configuration.put('startup.sdl-dir', schemaDir.absolutePath)
-                return (String) loader.loadClass('startup.Startup').getMethod('manifest', Map).invoke(null, configuration)
+                return legacyKinds((String) loader.loadClass('startup.Startup').getMethod('manifest', Map).invoke(null, configuration))
             } finally {
                 thread.contextClassLoader = previous
                 loader.close()
             }
+        }
+
+        // the JSR-269 processor (deleted by #144) still writes the kinds of the `!` lines that the startup wrote before #237
+        private static String legacyKinds(String manifest) {
+            Map<String, String> kinds = [
+                    'unbound-resolver-method': 'unbound', 'unbound-enum-constant': 'unbound', 'unmapped-input-property': 'unbound',
+                    'unused-dictionary-entry': 'unusedDictionary', 'precedence-ambiguity': 'ambiguous',
+                    'unreachable-type': 'unreachable', 'unreachable-value-type': 'unreachable', 'unwired-directive': 'unwiredDirective']
+            List<String> lines = manifest.readLines()
+            List<String> findings = lines.findAll { it.startsWith('!') }.collect { String line ->
+                String kind = line.substring(1, line.indexOf(' '))
+                '!' + kinds.getOrDefault(kind, kind) + line.substring(line.indexOf(' '))
+            }.sort()
+            List<String> header = lines.findAll { it.startsWith('#') }
+            List<String> rest = lines.findAll { !it.startsWith('#') && !it.startsWith('!') }
+            return (header + findings + rest).join('\n') + (manifest.endsWith('\n') ? '\n' : '')
         }
 
         List<String> getErrors() {

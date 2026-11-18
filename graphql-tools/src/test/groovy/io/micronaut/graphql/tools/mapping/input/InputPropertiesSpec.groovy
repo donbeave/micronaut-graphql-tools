@@ -121,7 +121,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
+        e.cause.message == """[field-not-bound] The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
   GraphQL input object type: ItemInput
   GraphQL input value: quantity
@@ -174,7 +174,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnmappedInputPropertiesException
-        e.cause.message == """Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):
+        e.cause.message == """[unmapped-input-property] Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.input.unmapped-properties=ignore to accept them):
   GraphQL input object type: BasketInput, mapped class: ${ExtraBasket.name}, properties: giftWrap
   GraphQL input object type: ItemInput, mapped class: ${ExtraItem.name}, properties: discount, legacyCode"""
     }
@@ -212,7 +212,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InputFieldNotSettableException
-        e.cause.message == """The input field ItemInput.quantity cannot be set: the input ObjectMapper has no settable property `quantity` in ${ReadOnlyItem.name} (it is read-only, ignored or renamed for Jackson).
+        e.cause.message == """[input-field-not-settable] The input field ItemInput.quantity cannot be set: the input ObjectMapper has no settable property `quantity` in ${ReadOnlyItem.name} (it is read-only, ignored or renamed for Jackson).
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
   GraphQL input object type: ItemInput
   GraphQL input value: quantity
@@ -228,7 +228,7 @@ type Query {
         then: 'with SNAKE_CASE, Jackson knows the property as unit_price'
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InputFieldNotSettableException
-        e.cause.message.startsWith("The input field ItemInput.unitPrice cannot be set: the input ObjectMapper has no " +
+        e.cause.message.startsWith("[input-field-not-settable] The input field ItemInput.unitPrice cannot be set: the input ObjectMapper has no " +
                 "settable property `unitPrice` in ${PricedItem.name}")
     }
 
@@ -240,7 +240,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InputFieldNotSettableException
-        e.cause.message.startsWith("The input field ItemInput.quantity cannot be set: the input ObjectMapper has no " +
+        e.cause.message.startsWith("[input-field-not-settable] The input field ItemInput.quantity cannot be set: the input ObjectMapper has no " +
                 "settable property `quantity` in ${IgnoredItem.name}")
     }
 

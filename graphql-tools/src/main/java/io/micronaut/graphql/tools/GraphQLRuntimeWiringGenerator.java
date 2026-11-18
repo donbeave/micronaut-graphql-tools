@@ -30,6 +30,7 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
+import graphql.schema.idl.MapEnumValuesProvider;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.TypeRuntimeWiring;
@@ -37,7 +38,9 @@ import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.beans.BeanIntrospection;
+import io.micronaut.core.beans.EnumBeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.core.beans.BeanMethod;
 import io.micronaut.core.annotation.AnnotationMetadataProvider;
@@ -49,6 +52,7 @@ import io.micronaut.core.type.ReturnType;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
 import io.micronaut.graphql.tools.binding.internal.rules.EnumTypeRules;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
+import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
 import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException;
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
@@ -354,7 +358,7 @@ final class GraphQLRuntimeWiringGenerator {
         checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
 
         return configuration.isStrict() && !checks.getProblems().isEmpty()
-                ? Optional.of(new StrictModeException(checks.getProblems()))
+                ? Optional.of(new StrictModeException(checks.getCodes(), checks.getProblems()))
                 : Optional.empty();
     }
 
@@ -573,12 +577,21 @@ final class GraphQLRuntimeWiringGenerator {
                     .sorted()
                     .toList();
 
+            EnumBeanIntrospection<?> introspection = EnumIntrospections.find(targetClass).orElseThrow(
+                    () -> new ClassNotIntrospectedException(mappingContext, targetClass, Introspected.class));
+            Map<String, Object> constants = EnumIntrospections.constantsByName(introspection);
+
             List<String> missingValues = EnumTypeRules.check(expectedValues, typeModel.of(targetClass))
                     .missingSchemaValues();
 
             if (!missingValues.isEmpty()) {
                 throw new MissingEnumValuesException(mappingContext, targetClass, missingValues);
             }
+
+            Map<String, Object> values = new HashMap<>();
+            expectedValues.forEach(it -> values.put(it, constants.get(it)));
+            rootRuntimeWiringBuilder.type(enumTypeDefinition.getName(),
+                    typeRuntimeWiringBuilder -> typeRuntimeWiringBuilder.enumValues(new MapEnumValuesProvider(values)));
 
             manifestRecorder.type(enumTypeDefinition.getName(), "enum", targetClass);
             expectedValues.forEach(it -> manifestRecorder.enumValue(enumTypeDefinition.getName(), it, targetClass));

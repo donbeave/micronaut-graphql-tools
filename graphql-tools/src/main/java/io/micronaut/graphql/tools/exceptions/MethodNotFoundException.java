@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.MappingContext;
 
@@ -30,7 +31,7 @@ public final class MethodNotFoundException extends AbstractMappingException {
     private final String reason;
 
     private MethodNotFoundException(String message, MappingContext mappingContext, String methodName) {
-        super(message, mappingContext);
+        super(BindingCode.FIELD_NOT_BOUND, message, mappingContext);
         this.methodName = methodName;
         this.reason = message;
     }
@@ -114,7 +115,7 @@ public final class MethodNotFoundException extends AbstractMappingException {
     @Internal
     public MethodNotFoundException forExtensionField() {
         return new MethodNotFoundException(
-                getMessage() + " If a RuntimeWiringCustomizer serves the field with a data fetcher of its own, return "
+                reason + " If a RuntimeWiringCustomizer serves the field with a data fetcher of its own, return "
                         + "its coordinate from RuntimeWiringCustomizer#claimedFields().",
                 getMappingContext(),
                 methodName

@@ -2,6 +2,7 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.exceptions.MappingConflictException
@@ -39,7 +40,7 @@ enum Month {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MappingConflictException
-        e.cause.message == """Unable to map GraphQL enum `Month` to ${AnotherMonth.name}, as it is already mapped to ${Month.name}.
+        e.cause.message == """[mapping-conflict] Unable to map GraphQL enum `Month` to ${AnotherMonth.name}, as it is already mapped to ${Month.name}.
   GraphQL coordinate: Query.nextMonth (line 8, column 3)
   GraphQL object type: Query
   GraphQL field: nextMonth
@@ -63,12 +64,14 @@ enum Month {
         }
     }
 
+    @Introspected
     static enum Month {
         JANUARY,
         FEBRUARY,
         MARCH
     }
 
+    @Introspected
     static enum AnotherMonth {
         JANUARY,
         FEBRUARY,

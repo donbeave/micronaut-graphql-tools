@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.GraphQLScalarMapping;
 
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ import java.util.Map;
  * than once, or a mapping replaces a scalar that is built in (GraphQL's own scalars and the extended scalars the library
  * registers itself: Long, Short, BigDecimal, BigInteger).
  */
-public final class InvalidScalarMappingException extends RuntimeException {
+public final class InvalidScalarMappingException extends SchemaBindingException {
 
     private final Map<String, Integer> duplicates;
     private final List<String> builtIn;
@@ -36,7 +37,7 @@ public final class InvalidScalarMappingException extends RuntimeException {
      * @param builtIn    the names of built-in scalars that are mapped
      */
     public InvalidScalarMappingException(Map<String, Integer> duplicates, List<String> builtIn) {
-        super(message(duplicates, builtIn));
+        super(BindingCode.INVALID_SCALAR_MAPPING, message(duplicates, builtIn));
         this.duplicates = Map.copyOf(duplicates);
         this.builtIn = List.copyOf(builtIn);
     }
