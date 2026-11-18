@@ -1,6 +1,6 @@
 package io.micronaut.graphql.tools.docs
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import groovy.json.JsonSlurper
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException
@@ -155,7 +155,7 @@ class DocsCoverageSpec extends Specification {
     private static List<String> configurationKeys() {
         def urls = Thread.currentThread().contextClassLoader.getResources('META-INF/spring-configuration-metadata.json').toList()
         def keys = urls.collectMany { url ->
-            new ObjectMapper().readTree(url).get('properties').collect { it.get('name').asText() }
+            new JsonSlurper().parse(url).properties.collect { it.name }
         }.findAll { it.startsWith(KEY_PREFIX) }
         assert !keys.empty: 'No generated configuration metadata found for ' + KEY_PREFIX
         keys.unique().sort()
