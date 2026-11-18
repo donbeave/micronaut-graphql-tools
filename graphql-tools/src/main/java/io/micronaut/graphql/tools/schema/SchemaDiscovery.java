@@ -179,6 +179,10 @@ public final class SchemaDiscovery {
             }
             for (String name : names) {
                 List<URL> urls = Collections.list(loader.getResources(name));
+                if (urls.isEmpty()) {
+                    throw new SchemaDiscoveryException(BindingCode.SCHEMA_NOT_FOUND, "The schema index " + index + " lists " + name
+                            + ", which is not on the classpath. Regenerate the index from the files that are packaged.");
+                }
                 for (URL url : location.scheme() == Scheme.CLASSPATH ? urls.subList(0, Math.min(1, urls.size())) : urls) {
                     add(name, url, found, seen);
                 }
@@ -204,7 +208,8 @@ public final class SchemaDiscovery {
             inRoot.sort(Comparator.comparing(Source::name));
             found.addAll(inRoot);
         }
-        if (found.isEmpty() && loader.getResource(SchemaIndex.RESOURCE) != null) {
+        if ((found.isEmpty() || location.scheme() == Scheme.CLASSPATH_ALL) && loader.getResource(SchemaIndex.RESOURCE) != null) {
+            // an entry that cannot be listed (a jar without directory entries) is found through its index; seen drops the files that were listed
             findInIndex(location, loader, found, seen);
         }
     }
@@ -224,7 +229,7 @@ public final class SchemaDiscovery {
         }
         for (Path file : files) {
             String name = prefix + directory.relativize(file).toString().replace('\\', '/');
-            if (location.matches(name) && seen.add(file.toUri().toString())) {
+            if (location.matches(name) && seen.add(file.toUri().toURL().toExternalForm())) {
                 found.add(new Source(name, Files.readString(file, StandardCharsets.UTF_8)));
             }
         }
@@ -239,10 +244,12 @@ public final class SchemaDiscovery {
         jarConnection.setUseCaches(false);
         try (JarFile jar = jarConnection.getJarFile()) {
             String jarName = new File(jar.getName()).getName();
+            String base = root.toExternalForm();
+            String jarBase = base.substring(0, base.indexOf("!/") + 2);
             List<JarEntry> entries = Collections.list(jar.entries());
             for (JarEntry entry : entries) {
                 if (!entry.isDirectory() && location.matches(entry.getName())
-                        && seen.add(root + "!" + entry.getName())) {
+                        && seen.add(jarBase + entry.getName())) {
                     try (InputStream in = jar.getInputStream(entry)) {
                         found.add(new Source(jarName + "!/" + entry.getName(),
                                 new String(in.readAllBytes(), StandardCharsets.UTF_8)));

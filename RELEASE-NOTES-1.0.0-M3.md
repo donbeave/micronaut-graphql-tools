@@ -19,7 +19,7 @@ Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven 
 ## Other behaviour changes
 
 - An application with no `TypeDefinitionRegistry` bean now reads the default schema location instead of failing with a missing bean. When no file is found the startup fails with `SchemaDiscoveryException` (code `schema-not-found`).
-- A schema without a `schema { }` block binds. Before, `SchemaDefinitionNotProvidedException` failed it; it now fails only a schema that has none of the root types.
+- A schema without a `schema { }` block binds. Before, `SchemaDefinitionNotProvidedException` failed it; it now fails only a schema that has no `Query` type.
 
 ## Known limitations
 

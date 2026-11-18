@@ -22,8 +22,8 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 public final class SchemaDefinitionNotProvidedException extends SchemaBindingException {
 
     public SchemaDefinitionNotProvidedException() {
-        super(BindingCode.SCHEMA_DEFINITION_NOT_PROVIDED, "Schema definition is not set, and the schema has no object type named Query, Mutation or Subscription. " +
-                "Define one of them, or make sure your GraphQL schema contains such definition:\n" +
+        super(BindingCode.SCHEMA_DEFINITION_NOT_PROVIDED, "Schema definition is not set, and the schema has no object type named Query. " +
+                "Define one, or make sure your GraphQL schema contains such definition:\n" +
                 "  schema {\n" +
                 "    query: Query\n" +
                 "    mutation: Mutation\n" +

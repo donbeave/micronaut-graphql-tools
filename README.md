@@ -99,7 +99,7 @@ startup, merges them, and binds the result. The default is `classpath:graphql/**
 A location is a scheme and an Ant-style path (`*`, `**`, `?`). A path without wildcards names one file and fails when it is
 missing. A wildcard needs a directory before it. Several locations are read in order and merged.
 
-- **Implicit roots.** A schema without a `schema { }` block uses the object types `Query`, `Mutation` and `Subscription`
+- **Implicit roots.** A schema without a `schema { }` block, and with a `Query` type, uses the object types `Query`, `Mutation` and `Subscription`
   that it defines as the root operation types.
 - **Operation files.** The default reads `*.graphqls` only. A file that holds only executable definitions (queries,
   mutations, fragments) or nothing is skipped and logged at INFO, so client operation files in the same directory do not
@@ -778,7 +778,7 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 
 Checked from the schema files and the options alone:
 
-- the schema has a schema definition (`schema { query: ... }`) or defines the implicit root types `Query`, `Mutation` or `Subscription`;
+- the schema has a schema definition (`schema { query: ... }`) or defines the implicit root type `Query`;
 - every applied directive is declared (graphql-java would fail to build the schema);
 - every `resolverDirectives` entry is declared;
 - unreachable types, with `allowUnreachable` and `unreachableTypes` as at startup (in strict mode also enum, input

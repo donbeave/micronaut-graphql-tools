@@ -82,6 +82,36 @@ class SchemaDiscoverySpec extends Specification {
         indexed.registry().getType('Query').isPresent()
     }
 
+    void "a jar without directory entries is read through its index next to a listed root, and no file is read twice"() {
+        given:
+        Path jar = jar('flat.jar', ['discovery/lib.graphqls'                 : 'type Lib { name: String }',
+                                    (SchemaIndex.RESOURCE): SchemaIndex.render(['discovery/lib.graphqls'])], false)
+        Path appIndex = dir.resolve(SchemaIndex.RESOURCE)
+        Files.createDirectories(appIndex.parent)
+        Files.writeString(appIndex, SchemaIndex.render(['discovery/app.graphqls']))
+        ClassLoader loader = new URLClassLoader([dir.toUri().toURL(), jar.toUri().toURL()] as URL[], getClass().classLoader)
+
+        expect:
+        SchemaDiscovery.discover(['classpath*:discovery/**/*.graphqls'], loader, false).registry().getType('Lib').isPresent()
+        SchemaDiscovery.discover(['classpath*:discovery/**/*.graphqls'], loader, false).read().size() == 2
+    }
+
+    void "an index entry that is not on the classpath fails and names it"() {
+        given:
+        Path appIndex = dir.resolve(SchemaIndex.RESOURCE)
+        Files.createDirectories(appIndex.parent)
+        Files.writeString(appIndex, SchemaIndex.render(['discovery/app.graphqls', 'discovery/gone.graphqls']))
+        ClassLoader loader = new URLClassLoader([dir.toUri().toURL()] as URL[], getClass().classLoader)
+
+        when:
+        SchemaDiscovery.discover(['classpath*:discovery/**/*.graphqls'], loader, true)
+
+        then:
+        def e = thrown(SchemaDiscoveryException)
+        e.code() == BindingCode.SCHEMA_NOT_FOUND
+        e.message.contains('discovery/gone.graphqls')
+    }
+
     void "a wildcard classpath location in a native image needs the index and says so"() {
         when:
         SchemaDiscovery.discover(['classpath:nothing-here/**/*.graphqls'], getClass().classLoader, true)
@@ -170,14 +200,14 @@ class SchemaDiscoverySpec extends Specification {
         result.getData()
     }
 
-    private Path jar(String name, Map<String, String> entries) {
+    private Path jar(String name, Map<String, String> entries, boolean directoryEntries = true) {
         Path jar = dir.resolve(name)
         Set<String> directories = [] as Set
         new JarOutputStream(Files.newOutputStream(jar)).withCloseable { out ->
             entries.each { path, text ->
                 for (int slash = path.indexOf('/'); slash >= 0; slash = path.indexOf('/', slash + 1)) {
                     String directory = path.substring(0, slash + 1)
-                    if (directories.add(directory)) {
+                    if (directoryEntries && directories.add(directory)) {
                         out.putNextEntry(new JarEntry(directory))
                         out.closeEntry()
                     }

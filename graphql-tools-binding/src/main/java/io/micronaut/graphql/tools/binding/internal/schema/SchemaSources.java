@@ -78,7 +78,7 @@ public final class SchemaSources {
         List<String> read = new ArrayList<>();
         List<String> skipped = new ArrayList<>();
         for (Source source : sources) {
-            if (source.text().isBlank()) {
+            if (noContent(source.text())) {
                 skipped.add(source.name());
                 continue;
             }
@@ -143,18 +143,19 @@ public final class SchemaSources {
 
     /**
      * The root operation types of a schema that has no {@code schema} block: the object types named {@code Query},
-     * {@code Mutation} and {@code Subscription}.
+     * {@code Mutation} and {@code Subscription}, when the schema defines {@code Query}. A schema must have a query root,
+     * so {@code Mutation} or {@code Subscription} alone are not roots.
      *
      * @param registry the schema
-     * @return the root type names keyed by operation, empty when the schema has a {@code schema} block
+     * @return the root type names keyed by operation, empty when the schema has a {@code schema} block or no {@code Query} type
      */
     public static Map<String, String> implicitRoots(TypeDefinitionRegistry registry) {
         Map<String, String> roots = new LinkedHashMap<>();
-        if (registry.schemaDefinition().isPresent()) {
+        if (registry.schemaDefinition().isPresent() || !isObject(registry, "Query")) {
             return roots;
         }
         IMPLICIT_ROOTS.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
-            if (registry.getType(entry.getValue()).filter(ObjectTypeDefinition.class::isInstance).isPresent()) {
+            if (isObject(registry, entry.getValue())) {
                 roots.put(entry.getKey(), entry.getValue());
             }
         });
@@ -182,6 +183,10 @@ public final class SchemaSources {
         registry.add(schema.build());
     }
 
+    private static boolean isObject(TypeDefinitionRegistry registry, String name) {
+        return registry.getType(name).filter(ObjectTypeDefinition.class::isInstance).isPresent();
+    }
+
     private static Document parse(Source source) {
         try {
             return new Parser().parseDocument(MultiSourceReader.newMultiSourceReader().string(source.text(), source.name()).build());
@@ -190,9 +195,13 @@ public final class SchemaSources {
         }
     }
 
+    private static boolean noContent(String text) {
+        return text.lines().map(String::strip).allMatch(line -> line.isEmpty() || line.startsWith("#"));
+    }
+
     private static boolean executableOnly(Document document) {
         List<Definition> definitions = document.getDefinitions();
-        return !definitions.isEmpty() && definitions.stream()
+        return definitions.stream()
                 .allMatch(it -> it instanceof OperationDefinition || it instanceof FragmentDefinition);
     }
 

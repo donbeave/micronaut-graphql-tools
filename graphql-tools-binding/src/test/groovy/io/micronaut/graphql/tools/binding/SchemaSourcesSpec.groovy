@@ -110,6 +110,24 @@ class SchemaSourcesSpec extends Specification {
         none.schemaDefinition().isEmpty()
     }
 
+    void "a Mutation or Subscription type without a Query type is not a root"() {
+        given:
+        def registry = new SchemaParser().parse('type Mutation { b: Int } type Subscription { c: Int }')
+
+        expect:
+        SchemaSources.implicitRoots(registry).isEmpty()
+    }
+
+    void "a file that holds only comments is skipped or named when it fails"() {
+        when:
+        def loaded = SchemaSources.load([new SchemaSources.Source('comment.graphqls', '# nothing here\n'),
+                                         new SchemaSources.Source('a.graphqls', 'type Query { a: Int }')])
+
+        then:
+        loaded.read() == ['a.graphqls']
+        loaded.skipped() == ['comment.graphqls']
+    }
+
     void "directories are read recursively in sorted order, only the graphqls files"() {
         given:
         Files.createDirectories(dir.resolve('sub'))

@@ -131,15 +131,14 @@ public class Clock {
         result.graphqlErrors[0].startsWith('[graphql] the schema file schema.graphqls is not valid: ')
     }
 
-    void "a schema without a schema definition and without a root type fails the compilation"() {
+    void "a schema without a schema definition and without a Query type fails the compilation"() {
         when:
-        def result = compilation('type Other {\n  hello: String\n}\n').compile()
+        def result = compilation('type Mutation {\n  hello: String\n}\n').compile()
 
         then:
         !result.success
-        result.graphqlErrors == ['[graphql] the schema has no schema definition (schema { query: ... }) and no Query, '
-                                         + 'Mutation or Subscription type; the library needs one to find the root '
-                                         + 'operation types.']
+        result.graphqlErrors == ['[graphql] the schema has no schema definition (schema { query: ... }) and no Query '
+                                         + 'type; the library needs one to find the root operation types.']
     }
 
     void "a schema without a schema definition uses the implicit root types"() {

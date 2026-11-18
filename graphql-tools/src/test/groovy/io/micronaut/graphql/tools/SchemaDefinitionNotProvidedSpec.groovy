@@ -23,7 +23,7 @@ type Hello {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaDefinitionNotProvidedException
-        e.cause.message == """[schema-definition-not-provided] Schema definition is not set, and the schema has no object type named Query, Mutation or Subscription. Define one of them, or make sure your GraphQL schema contains such definition:
+        e.cause.message == """[schema-definition-not-provided] Schema definition is not set, and the schema has no object type named Query. Define one, or make sure your GraphQL schema contains such definition:
   schema {
     query: Query
     mutation: Mutation

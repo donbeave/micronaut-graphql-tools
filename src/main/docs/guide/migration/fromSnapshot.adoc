@@ -547,7 +547,7 @@ The default `micronaut.graphql.tools.precedence` value `strict` becomes `fail`, 
 
 The runtime finds the schema files itself (`micronaut.graphql.tools.schema.locations`, default `classpath:graphql/**/*.graphqls`), and the compile-time processor reads the same files with the same code. Both read `*.graphqls` only, so a client operation file (`*.graphql`) in the schema directory is not a schema file and cannot break the build. Before, the processor read every `*.graphql` file as schema.
 
-Rename the schema files that end in `.graphql` to `.graphqls`. A `TypeDefinitionRegistry` bean of your own still replaces the discovery, and a schema without a `schema { }` block now binds with `Query`, `Mutation` and `Subscription` as roots.
+Rename the schema files that end in `.graphql` to `.graphqls`. A `TypeDefinitionRegistry` bean of your own still replaces the discovery, and a schema without a `schema { }` block and with a `Query` type now binds with `Query`, `Mutation` and `Subscription` as roots.
 
 === #109: the public exceptions
 

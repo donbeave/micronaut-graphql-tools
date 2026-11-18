@@ -15,7 +15,7 @@ class InitializationSpec extends AbstractTest {
         applicationContext.getBean(GraphQL.class)
 
         then:
-def e = thrown(BeanInstantiationException)
+        def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaDiscoveryException
         e.cause.code() == BindingCode.SCHEMA_NOT_FOUND
         e.cause.message.startsWith("[schema-not-found] No GraphQL schema files found for micronaut.graphql.tools.schema.locations=[classpath:graphql/**/*.graphqls]")
