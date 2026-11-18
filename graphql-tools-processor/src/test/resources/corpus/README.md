@@ -29,8 +29,9 @@ exception for the other failures (`field-not-bound`, `argument-mismatch`, ...). 
 one, and the Java member (`example.Query#stray(java.lang.String)`) or the schema type name where it has not. Parity is
 defined at the default severities (D-30). The cases under `severity/` run each of the ten checks at `fail` (with
 `strict=false`, so an explicit entry is seen to win), `warn` and `ignore` (`config.micronaut.graphql.tools.checks.<code>`); a `warn`
-case lists the `!` line in `manifest.txt`, an `ignore` case has none. They record no `compile.txt`: the compile-time check
-does not read the severity settings (D-39).
+case lists the `!` line in `manifest.txt`, an `ignore` case has none. Their `compile.txt` is the one of the default severity: the
+compile-time check does not read the severity settings (D-39), so a `warn` or `ignore` case of a compile-time code still has the
+compile finding, and the soundness check is made on the `fail` case.
 
 Case names are the relative paths. `tags` are free `key:value` words; `lang:all` means the case has a Java, a Groovy and
 a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.graphql.tools.strict=false`).
