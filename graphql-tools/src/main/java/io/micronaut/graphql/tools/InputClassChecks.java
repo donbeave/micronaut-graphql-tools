@@ -23,6 +23,7 @@ import io.micronaut.graphql.tools.binding.internal.model.JClass;
 import io.micronaut.graphql.tools.binding.internal.rules.InputClassCoverage;
 import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -47,15 +48,36 @@ record InputClassChecks(Map<String, Map.Entry<Class<?>, List<String>>> unmappedI
         ignoredInputProperties = Collections.unmodifiableSortedSet(new TreeSet<>(ignoredInputProperties));
     }
 
-    void checkCollected(boolean failOnUnmappedProperties, BindingManifestRecorder manifestRecorder) {
+    void checkCollected(CheckPolicy policy, BindingManifestRecorder manifestRecorder) {
         ignoredInputProperties.forEach(manifestRecorder::ignored);
 
-        unmappedInputProperties.values().forEach(entry -> entry.getValue().forEach(property ->
-                manifestRecorder.diagnostic(BindingCode.UNMAPPED_INPUT_PROPERTY, entry.getKey().getTypeName() + "#" + property)));
-
-        if (failOnUnmappedProperties && !unmappedInputProperties.isEmpty()) {
-            throw new UnmappedInputPropertiesException(unmappedInputProperties);
+        if (!policy.enabled(BindingCode.UNMAPPED_INPUT_PROPERTY)) {
+            return;
         }
+        Map<String, Map.Entry<Class<?>, List<String>>> remaining = new TreeMap<>();
+        unmappedInputProperties.forEach((type, entry) -> {
+            List<String> properties = new ArrayList<>();
+            for (String property : entry.getValue()) {
+                String member = entry.getKey().getTypeName() + "#" + property;
+                if (!policy.allowed(BindingManifestRecorder.diagnosticLine(BindingCode.UNMAPPED_INPUT_PROPERTY, member))) {
+                    manifestRecorder.diagnostic(BindingCode.UNMAPPED_INPUT_PROPERTY, member);
+                    properties.add(property);
+                }
+            }
+            if (!properties.isEmpty()) {
+                remaining.put(type, Map.entry(entry.getKey(), properties));
+            }
+        });
+        if (remaining.isEmpty()) {
+            return;
+        }
+        if (policy.failing(BindingCode.UNMAPPED_INPUT_PROPERTY)) {
+            throw new UnmappedInputPropertiesException(remaining);
+        }
+        policy.warn(BindingCode.UNMAPPED_INPUT_PROPERTY, remaining.entrySet().stream()
+                .map(it -> "GraphQL input object type: " + it.getKey() + ", mapped class: "
+                        + it.getValue().getKey().getName() + ", properties: " + String.join(", ", it.getValue().getValue()))
+                .toList());
     }
 
     /**

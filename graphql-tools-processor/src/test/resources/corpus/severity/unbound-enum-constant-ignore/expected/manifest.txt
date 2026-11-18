@@ -1,0 +1,6 @@
+Color -> enum ; example.Color ; - ; -
+Color.GREEN -> enumValue ; example.Color#GREEN ; - ; -
+Color.RED -> enumValue ; example.Color#RED ; - ; -
+Query -> object ; - ; - ; -
+Query.paint(color: Color!): String -> root ; example.Query#paint(example.Color) ; java.lang.String ; java.lang.String
+String -> scalar ; String ; - ; -

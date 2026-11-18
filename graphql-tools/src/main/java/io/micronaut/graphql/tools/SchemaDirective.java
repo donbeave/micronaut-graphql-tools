@@ -45,7 +45,7 @@ import java.util.Set;
  * the factory method of its {@code SchemaDirective}.</p>
  *
  * <p>Every directive the schema applies needs a {@code SchemaDirective} that names it, or must be listed in
- * {@code micronaut.graphql.tools.inert-directives}.</p>
+ * {@code micronaut.graphql.tools.allow.inert-directives}.</p>
  *
  * <p>For example, a factory method {@code SchemaDirective upper()} annotated {@code @Singleton} that returns
  * {@code SchemaDirective.named("upper", new UpperCaseWiring())}.</p>

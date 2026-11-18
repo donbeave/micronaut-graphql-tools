@@ -159,7 +159,7 @@ scalar Long
     void "a code registry data fetcher for a field the library does not wire is allowed"() {
         given: 'Orphan is an allowed unreachable type: the library wires none of its fields'
         startContext(SCHEMA + '\ntype Orphan {\n  id: ID\n}\n', SPEC_NAME_CODE_REGISTRY_UNWIRED,
-                ['micronaut.graphql.tools.allow-unreachable': ['Orphan']])
+                ['micronaut.graphql.tools.allow.unreachable': ['Orphan']])
 
         when:
         def schema = getGraphQLBean().graphQLSchema
@@ -204,7 +204,7 @@ scalar Long
     void "data fetchers for a claimed field and for a field the library does not bind are allowed"() {
         given: 'Orphan is an allowed unreachable type with no library binding; Item.label is claimed'
         startContext(SCHEMA.replace('name: String\n}', 'name: String\n  label: String\n}') + '\ntype Orphan {\n  id: ID\n}\n',
-                SPEC_NAME_SHADOW_ALLOWED, ['micronaut.graphql.tools.allow-unreachable': ['Orphan']])
+                SPEC_NAME_SHADOW_ALLOWED, ['micronaut.graphql.tools.allow.unreachable': ['Orphan']])
 
         expect:
         executeQuery('{ item { name label } }').data == [item: [name: 'item', label: 'claimed']]
@@ -214,7 +214,7 @@ scalar Long
     void "a customizer registering a field the library does not bind twice is not reported as a replacement of library wiring"() {
         given:
         startContext(SCHEMA + '\ntype Orphan {\n  id: ID\n}\n',
-                SPEC_NAME_SHADOW_UNBOUND_TWICE, ['micronaut.graphql.tools.allow-unreachable': ['Orphan']])
+                SPEC_NAME_SHADOW_UNBOUND_TWICE, ['micronaut.graphql.tools.allow.unreachable': ['Orphan']])
 
         when:
         Throwable failure = null

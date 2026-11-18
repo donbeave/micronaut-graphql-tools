@@ -18,13 +18,14 @@ package io.micronaut.graphql.tools;
 import graphql.language.SchemaDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.binding.internal.finding.Severity;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.GraphQLResolversRegistry.SchemaCoordinateMethod;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates.ResolverKind;
-import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
 import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException;
 import io.micronaut.inject.BeanDefinition;
@@ -56,16 +57,16 @@ final class SchemaCoordinateValidator {
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final GraphQLResolversRegistry graphQLResolversRegistry;
     private final GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry;
-    private final GraphQLToolsConfiguration configuration;
+    private final CheckPolicy checkPolicy;
 
     SchemaCoordinateValidator(TypeDefinitionRegistry typeDefinitionRegistry,
                               GraphQLResolversRegistry graphQLResolversRegistry,
                               GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry,
-                              GraphQLToolsConfiguration configuration) {
+                              CheckPolicy checkPolicy) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.graphQLResolversRegistry = graphQLResolversRegistry;
         this.graphQLBeanIntrospectionRegistry = graphQLBeanIntrospectionRegistry;
-        this.configuration = configuration;
+        this.checkPolicy = checkPolicy;
     }
 
     void validateSchemaCoordinates(SchemaDefinition schemaDefinition) {
@@ -138,7 +139,11 @@ final class SchemaCoordinateValidator {
             }
 
             if (bound.isEmpty() && unboundTypes.contains(typeName)) {
-                unboundMethods.add(describe(coordinateMethod));
+                if (!checkPolicy.allowed(BindingManifestRecorder.diagnosticLine(BindingCode.UNBOUND_RESOLVER_METHOD,
+                        BindingManifestRecorder.methodMember(coordinateMethod.method(),
+                                coordinateMethod.method().getDeclaringType())))) {
+                    unboundMethods.add(describe(coordinateMethod));
+                }
                 continue;
             }
 
@@ -159,7 +164,7 @@ final class SchemaCoordinateValidator {
             return Optional.of(new InvalidSchemaCoordinateException(problems));
         }
 
-        if (!unboundMethods.isEmpty() && !configuration.isStrict()) {
+        if (!unboundMethods.isEmpty() && checkPolicy.severity(BindingCode.UNBOUND_RESOLVER_METHOD) == Severity.WARN) {
             LOG.warn("Methods whose @GraphQLSchemaCoordinate names an unreachable type are not bound: {}",
                     String.join("; ", unboundMethods));
         }

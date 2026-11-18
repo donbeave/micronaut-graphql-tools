@@ -33,6 +33,8 @@ micronautBuild {
 val corpusDir = layout.projectDirectory.dir("src/test/resources/corpus")
 tasks.withType<Test>().configureEach {
     inputs.files(corpusDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("corpus")
+    // the corpus compiles about 90 units in process and starts the application for each; the default 512 MB heap runs out
+    maxHeapSize = "1g"
     // the Kotlin batch is its own task (corpusKotlin): it needs the network and has its own budget
     systemProperty("corpus.dir", corpusDir.asFile.absolutePath)
     systemProperty("corpus.report", layout.buildDirectory.file("corpus/timings.txt").get().asFile.absolutePath)

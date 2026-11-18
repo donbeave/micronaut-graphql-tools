@@ -37,6 +37,7 @@ import io.micronaut.core.convert.TypeConverter;
 import io.micronaut.core.type.Argument;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.model.JClass;
 import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
@@ -51,6 +52,7 @@ import io.micronaut.graphql.tools.schema.ValueConverter;
 import io.micronaut.graphql.tools.schema.ValueConverters;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -80,6 +82,8 @@ final class InputTypeBinder {
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final ScalarMappings scalarMappings;
     private final GraphQLToolsConfiguration configuration;
+    private final CheckPolicy policy;
+    private final List<String> nullablePrimitiveWarnings = new ArrayList<>();
     private final BindingManifestRecorder manifestRecorder;
     private final InputClassChecks.Builder inputClassChecks = new InputClassChecks.Builder();
     private final RuntimeTypeModel typeModel;
@@ -97,12 +101,14 @@ final class InputTypeBinder {
     private TypeFrame current;
 
     InputTypeBinder(TypeDefinitionRegistry typeDefinitionRegistry, ScalarMappings scalarMappings,
-                    GraphQLToolsConfiguration configuration, BindingManifestRecorder manifestRecorder,
+                    GraphQLToolsConfiguration configuration, CheckPolicy policy,
+                    BindingManifestRecorder manifestRecorder,
                     RuntimeTypeModel typeModel,
                     ApplicationContext applicationContext, Callbacks callbacks) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.scalarMappings = scalarMappings;
         this.configuration = configuration;
+        this.policy = policy;
         this.manifestRecorder = manifestRecorder;
         this.typeModel = typeModel;
         this.applicationContext = applicationContext;
@@ -333,9 +339,9 @@ final class InputTypeBinder {
             if (!supportedClasses.contains(returnType)) {
                 throw IncorrectClassMappingException.forArgument(mappingContext, returnType, supportedClasses);
             }
-            if (configuration.isStrict() && ResolverClassRules.nullablePrimitive(typeModel.ref(argument), nonNull)) {
-                throw IncorrectClassMappingException.forNullablePrimitiveInStrictMode(mappingContext, returnType,
-                        typeName.getName(), supportedClasses);
+            if (ResolverClassRules.nullablePrimitive(typeModel.ref(argument), nonNull)
+                    && policy.enabled(BindingCode.NULLABLE_PRIMITIVE)) {
+                checkNullablePrimitive(mappingContext, returnType, typeName.getName(), supportedClasses);
             }
             ValueConverter builtIn = ValueConverters.builtIn(returnType);
             return () -> builtIn;
@@ -393,6 +399,26 @@ final class InputTypeBinder {
             }
         }
         return null;
+    }
+
+    private void checkNullablePrimitive(MappingContext mappingContext, Class<?> primitive, String scalarName,
+                                        Set<Class<?>> supportedClasses) {
+        String coordinate = mappingContext.getCoordinate();
+        if (policy.allowed(BindingManifestRecorder.diagnosticLine(BindingCode.NULLABLE_PRIMITIVE, coordinate))) {
+            return;
+        }
+        manifestRecorder.diagnostic(BindingCode.NULLABLE_PRIMITIVE, coordinate);
+        IncorrectClassMappingException finding = IncorrectClassMappingException.forNullablePrimitiveInStrictMode(
+                mappingContext, primitive, scalarName, supportedClasses);
+        if (policy.failing(BindingCode.NULLABLE_PRIMITIVE)) {
+            throw finding;
+        }
+        nullablePrimitiveWarnings.add(mappingContext.getMessage(IncorrectClassMappingException.nullablePrimitiveText(
+                primitive, scalarName, supportedClasses)));
+    }
+
+    void logNullablePrimitiveWarnings() {
+        policy.warn(BindingCode.NULLABLE_PRIMITIVE, nullablePrimitiveWarnings);
     }
 
     private Argument<?> unwrapArgumentValue(Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
