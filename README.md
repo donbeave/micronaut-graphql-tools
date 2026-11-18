@@ -502,9 +502,10 @@ names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<a
 
 graphql-java hands a data fetcher the coerced argument values: scalar values, enum names, a `Map` per input object
 and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
-including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`). Input classes are read
-through their bean introspection (`BeanIntrospection`) by an internal mapper. That conversion is internal and not
-configurable through a documented API, and it may change before 1.0 (#37).
+including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`). The current conversion runs on
+an internal Jackson mapper that reads the input classes through their bean introspection (`BeanIntrospection`), unless a
+class has a deserializer of its own. It is not part of the API and is not configurable through a documented one. #37
+replaces it with introspection-based conversion, so the Jackson-based behaviour is not a promise and may change before 1.0.
 
 An input field that the input class cannot take fails the startup (see [Input classes and input types](#input-classes-and-input-types)).
 
