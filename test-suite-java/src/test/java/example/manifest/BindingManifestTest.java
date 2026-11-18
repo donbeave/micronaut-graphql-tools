@@ -28,7 +28,7 @@ class BindingManifestTest {
 
     @Test
     void aResolverOverridingObjectMethodsHasNoUnboundFinding() {
-        assertTrue(bindingManifest.getLines().stream().noneMatch(it -> it.startsWith("!unbound ")
+        assertTrue(bindingManifest.getLines().stream().noneMatch(it -> it.startsWith("!unbound-resolver-method ")
                 && (it.contains("toString") || it.contains("equals") || it.contains("hashCode"))),
                 String.valueOf(bindingManifest.getLines()));
     }

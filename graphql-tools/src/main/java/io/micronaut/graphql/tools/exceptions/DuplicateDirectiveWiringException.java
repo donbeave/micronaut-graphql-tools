@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,12 +26,12 @@ import java.util.stream.Collectors;
  * thrown when one directive is wired by both a named bean and an every-element bean, because the directive would
  * take effect twice. Several every-element beans for one directive are allowed.
  */
-public final class DuplicateDirectiveWiringException extends RuntimeException {
+public final class DuplicateDirectiveWiringException extends SchemaBindingException {
 
     private final List<String> directiveNames;
 
     public DuplicateDirectiveWiringException(Map<String, List<String>> wirings) {
-        super(wirings.entrySet().stream()
+        super(BindingCode.DUPLICATE_DIRECTIVE_WIRING, wirings.entrySet().stream()
                 .map(it -> "More than one SchemaDirective bean wires directive @" + it.getKey() + ": "
                         + String.join(", ", it.getValue()) + ".")
                 .collect(Collectors.joining("\n"))
@@ -44,7 +45,7 @@ public final class DuplicateDirectiveWiringException extends RuntimeException {
      * @param namedAndEveryElement {@code true}: each directive is wired by a named bean and an every-element bean
      */
     public DuplicateDirectiveWiringException(Map<String, List<String>> wirings, boolean namedAndEveryElement) {
-        super(wirings.entrySet().stream()
+        super(BindingCode.DUPLICATE_DIRECTIVE_WIRING, wirings.entrySet().stream()
                 .map(it -> "Directive @" + it.getKey() + " is wired by both a named and an every-element "
                         + "SchemaDirective bean, so it would take effect twice: "
                         + String.join(", ", it.getValue()) + ".")

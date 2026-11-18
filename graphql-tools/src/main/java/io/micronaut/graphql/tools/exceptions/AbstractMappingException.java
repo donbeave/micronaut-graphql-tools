@@ -16,19 +16,21 @@
 package io.micronaut.graphql.tools.exceptions;
 
 import io.micronaut.graphql.tools.MappingContext;
+import io.micronaut.graphql.tools.binding.BindingCode;
 
 /**
  * @author Alexey Zhokhov
  */
-public abstract class AbstractMappingException extends RuntimeException {
+public abstract class AbstractMappingException extends SchemaBindingException {
 
     private final transient MappingContext mappingContext;
 
     protected AbstractMappingException(
+            BindingCode code,
             String message,
             MappingContext mappingContext
     ) {
-        super(message);
+        super(code, message);
         this.mappingContext = mappingContext;
     }
 
@@ -40,8 +42,8 @@ public abstract class AbstractMappingException extends RuntimeException {
     }
 
     @Override
-    public String getMessage() {
-        return mappingContext.getMessage(super.getMessage());
+    protected String describe(String message) {
+        return mappingContext.getMessage(message);
     }
 
 }

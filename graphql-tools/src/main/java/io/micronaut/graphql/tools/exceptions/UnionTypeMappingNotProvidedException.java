@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 import io.micronaut.graphql.tools.SchemaMappingDictionary;
 
@@ -24,7 +25,7 @@ import io.micronaut.graphql.tools.SchemaMappingDictionary;
 public final class UnionTypeMappingNotProvidedException extends AbstractMappingException {
 
     public UnionTypeMappingNotProvidedException(MappingContext mappingContext, String objectType, String unionType) {
-        super(
+        super(BindingCode.UNION_TYPE_MAPPING_NOT_PROVIDED,
                 String.format(
                         "Can not detect representation class for type %s, member of %s union. " +
                                 "Ensure the representation class is registered via %s.",

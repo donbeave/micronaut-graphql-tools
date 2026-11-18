@@ -94,7 +94,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message.startsWith("The return type of the method is not supported for this field: " +
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method is not supported for this field: " +
                 "${Publisher.name} is only allowed on fields of the subscription type. Fix: return a CompletionStage " +
                 "instead (for example Mono#toFuture()).")
         e.cause.mappingContext.graphQlObjectType == objectType
@@ -152,7 +152,7 @@ type Subscription {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message == """The return type of the method is not supported for this field: a field of the subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found ${Integer.name}. Fix: change the return type to Publisher<T> (for example Flux<T>).
+        e.cause.message == """[unsupported-return-type] The return type of the method is not supported for this field: a field of the subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found ${Integer.name}. Fix: change the return type to Publisher<T> (for example Flux<T>).
   GraphQL coordinate: Subscription.ticks (line 12, column 3)
   GraphQL object type: Subscription
   GraphQL field: ticks
@@ -185,7 +185,7 @@ type Subscription {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message == """The return type of the method is not supported for this field: a field of the subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found ${List.name}. Fix: change the return type to Publisher<T> (for example Flux<T>).
+        e.cause.message == """[unsupported-return-type] The return type of the method is not supported for this field: a field of the subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found ${List.name}. Fix: change the return type to Publisher<T> (for example Flux<T>).
   GraphQL coordinate: Subscription.ticks (line 12, column 3)
   GraphQL object type: Subscription
   GraphQL field: ticks
@@ -213,7 +213,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message == """The return type of the method is not supported for this field: ${Publisher.name} is only allowed on fields of the subscription type. Fix: return a CompletionStage instead (for example Mono#toFuture()).
+        e.cause.message == """[unsupported-return-type] The return type of the method is not supported for this field: ${Publisher.name} is only allowed on fields of the subscription type. Fix: return a CompletionStage instead (for example Mono#toFuture()).
   GraphQL coordinate: Query.numbers (line 7, column 3)
   GraphQL object type: Query
   GraphQL field: numbers
@@ -246,7 +246,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message.startsWith("The return type of the method is not supported for this field: " +
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method is not supported for this field: " +
                 "${Publisher.name} is only allowed on fields of the subscription type.")
         e.cause.mappingContext.graphQlObjectType == 'Item'
         e.cause.mappingContext.graphQlField == 'ticks'
@@ -278,7 +278,7 @@ type Subscription {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message.startsWith("The return type of the method is not supported for this field: a field of the " +
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method is not supported for this field: a field of the " +
                 "subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found " +
                 "${DataFetcherResult.name}.")
     }

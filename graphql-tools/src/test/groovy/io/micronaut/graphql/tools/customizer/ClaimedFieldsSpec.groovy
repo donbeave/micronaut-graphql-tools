@@ -123,6 +123,8 @@ interface Node {
         e.cause.message.contains('GraphQL coordinate: Book.isbn')
         e.cause.message.contains('GraphQL coordinate: Query.version')
         e.cause.message.contains('RuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.count('[field-not-bound]') == 2
+        !e.cause.message.contains('[field-not-bound] [field-not-bound]')
 
         when: 'a customizer claims them'
         applicationContext.close()

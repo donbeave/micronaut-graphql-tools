@@ -37,7 +37,7 @@ type User {
         then:
         def e = thrown(BeanContextException)
         e.cause instanceof IncorrectAnnotationException
-        e.cause.message == "Empty value member for @GraphQLTypeResolver annotation in ${UserResolver.class.name} class."
+        e.cause.message == "[incorrect-annotation] Empty value member for @GraphQLTypeResolver annotation in ${UserResolver.class.name} class."
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

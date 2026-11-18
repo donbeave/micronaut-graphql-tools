@@ -1,2 +1,2 @@
-InvalidClaimedFieldsException Book.price -
-InvalidClaimedFieldsException Missing.field -
+invalid-claimed-fields Book.price -
+invalid-claimed-fields Missing.field -

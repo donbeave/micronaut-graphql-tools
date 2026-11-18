@@ -89,7 +89,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof AmbiguousBindingException
-        e.cause.message == """Both a member of the Java type and a type resolver method can bind one GraphQL field.
+        e.cause.message == """[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: Item.price (line 16, column 3)
   GraphQL object type: Item
   GraphQL field: price
@@ -201,7 +201,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof ResolverRequiredException
-        e.cause.message == """The GraphQL field carries @computed, so a type resolver method must bind it, but none does.
+        e.cause.message == """[resolver-required] The GraphQL field carries @computed, so a type resolver method must bind it, but none does.
   GraphQL coordinate: Item.price (line 16, column 3)
   GraphQL object type: Item
   GraphQL field: price

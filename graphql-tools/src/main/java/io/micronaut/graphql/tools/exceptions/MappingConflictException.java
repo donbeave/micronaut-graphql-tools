@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 
 /**
@@ -25,7 +26,7 @@ public final class MappingConflictException extends AbstractMappingException {
     public MappingConflictException(MappingContext mappingContext, String graphQlType,
                                     String conflictedGraphQlTypeName, Class<?> providedClass,
                                     Class<?> registeredClass) {
-        super(
+        super(BindingCode.MAPPING_CONFLICT,
                 String.format(
                         "Unable to map GraphQL %s `%s` to %s, as it is already mapped to %s.",
                         graphQlType,

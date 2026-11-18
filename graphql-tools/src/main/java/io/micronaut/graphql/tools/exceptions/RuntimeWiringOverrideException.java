@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 
 /**
@@ -23,12 +24,12 @@ import java.util.List;
  * {@link io.micronaut.graphql.tools.SchemaDirective} bean, or the wiring factory, or put a data fetcher or type
  * resolver for something the library wired into a code registry: the replacement would silently undo the binding.
  */
-public final class RuntimeWiringOverrideException extends RuntimeException {
+public final class RuntimeWiringOverrideException extends SchemaBindingException {
 
     private final List<String> replacements;
 
     public RuntimeWiringOverrideException(List<String> replacements) {
-        super("RuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library "
+        super(BindingCode.RUNTIME_WIRING_OVERRIDE, "RuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library "
                 + "wired:\n  "
                 + String.join("\n  ", replacements)
                 + "\n  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field "

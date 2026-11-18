@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.MappingContext;
 import io.micronaut.graphql.tools.SchemaMappingDictionary;
 
@@ -31,7 +32,7 @@ public final class InterfaceTypeMappingNotProvidedException extends AbstractMapp
      */
     public InterfaceTypeMappingNotProvidedException(MappingContext mappingContext, String objectType,
                                                     String interfaceType) {
-        super(
+        super(BindingCode.INTERFACE_TYPE_MAPPING_NOT_PROVIDED,
                 String.format(
                         "Can not detect representation class for type %s, implementation of %s interface. " +
                                 "Ensure the representation class is registered via %s.",
