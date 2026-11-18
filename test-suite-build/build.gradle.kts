@@ -153,7 +153,7 @@ tasks.test {
 }
 
 apply(from = rootProject.file("config/spotless.license.gradle"))
-// The sample sources carry the header too (D-44); the standard targets cover src/ only.
+// The sample sources carry the header too; the standard targets cover src/ only.
 extensions.configure<com.diffplug.gradle.spotless.SpotlessExtension>("spotless") {
     format("samples") {
         target("samples/**/src/*/java/**/*.java", "samples/**/src/*/groovy/**/*.groovy", "samples/**/src/*/kotlin/**/*.kt")
