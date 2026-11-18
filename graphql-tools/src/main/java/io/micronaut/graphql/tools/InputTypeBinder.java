@@ -45,6 +45,7 @@ import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
 import io.micronaut.graphql.tools.exceptions.InputFieldNotSettableException;
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
 import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException;
+import io.micronaut.graphql.tools.schema.InputConversionException;
 import io.micronaut.graphql.tools.schema.InputObjectConverter;
 import io.micronaut.graphql.tools.schema.ValueConverter;
 import io.micronaut.graphql.tools.schema.ValueConverters;
@@ -293,7 +294,7 @@ final class InputTypeBinder {
                 throw IncorrectClassMappingException.forNullablePrimitive(mappingContext, returnType,
                         scalarMapping.getName(), scalarMapping.getInputClasses());
             }
-            return ValueConverters.scalar(returnType, conversionService());
+            return ValueConverters.scalar(typeName.getName(), returnType, conversionService());
         } else {
             throw unsupportedTypeDefinition(typeDefinition);
         }
@@ -321,8 +322,10 @@ final class InputTypeBinder {
                     }
                     Optional<?> converted = converter.convert(value, target, ConversionContext.DEFAULT);
                     if (converted.isEmpty()) {
-                        throw new IllegalArgumentException("The TypeConverter bean " + converter.getClass().getName()
-                                + " cannot convert the input object `" + value + "` to " + target.getName());
+                        throw new InputConversionException("the input object is not accepted",
+                                "The TypeConverter bean " + converter.getClass().getName()
+                                        + " cannot convert the input object `" + value + "` to " + target.getName(),
+                                null);
                     }
                     return converted.get();
                 };

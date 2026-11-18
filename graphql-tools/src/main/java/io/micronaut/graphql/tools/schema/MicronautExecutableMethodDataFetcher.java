@@ -15,8 +15,12 @@
  */
 package io.micronaut.graphql.tools.schema;
 
+import graphql.GraphQLError;
+import graphql.GraphqlErrorBuilder;
+import graphql.execution.DataFetcherResult;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import graphql.schema.GraphQLNamedType;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
@@ -24,13 +28,24 @@ import io.micronaut.core.type.Executable;
 import io.micronaut.graphql.tools.ArgumentDefinition;
 import io.micronaut.graphql.tools.ArgumentValue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Alexey Zhokhov
  */
 @Internal
 public final class MicronautExecutableMethodDataFetcher implements DataFetcher<Object> {
+
+    /**
+     * The {@code extensions.code} of the error that a value which does not convert becomes.
+     */
+    public static final String INPUT_CONVERSION_FAILED = "INPUT_CONVERSION_FAILED";
+
+    private static final Logger LOG = LoggerFactory.getLogger(MicronautExecutableMethodDataFetcher.class);
 
     private static final Object[] NO_ARGUMENTS = new Object[0];
 
@@ -80,8 +95,13 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         int size = kinds.length;
         Object[] arguments = size == 0 ? NO_ARGUMENTS : new Object[size];
 
-        for (int i = 0; i < size; i++) {
-            arguments[i] = argument(environment, i);
+        int i = 0;
+        try {
+            for (; i < size; i++) {
+                arguments[i] = argument(environment, i);
+            }
+        } catch (RuntimeException e) {
+            return inputConversionFailure(environment, names[i], e);
         }
 
         Object target = instance;
@@ -110,6 +130,40 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     private Object convert(int index, Object value) {
         ValueConverter converter = converters[index];
         return converter == null ? value : converter.convert(value);
+    }
+
+    /**
+     * A value that does not convert becomes an error of the field, not an exception: the client gets the argument and
+     * the problem in GraphQL terms, the log gets the cause.
+     */
+    private static DataFetcherResult<Object> inputConversionFailure(DataFetchingEnvironment environment, String argument,
+                                                                    RuntimeException failure) {
+        InputConversionException conversion = failure instanceof InputConversionException known ? known
+                : new InputConversionException("the value could not be converted", String.valueOf(failure.getMessage()),
+                failure);
+        String coordinate = ((GraphQLNamedType) environment.getParentType()).getName() + "."
+                + environment.getFieldDefinition().getName() + "(" + argument + ")";
+        List<Object> inputPath = conversion.getPath();
+        StringBuilder message = new StringBuilder("Invalid value for argument ").append(coordinate);
+        if (!inputPath.isEmpty()) {
+            message.append(" at ");
+            for (Object place : inputPath) {
+                if (place instanceof Integer) {
+                    message.append('[').append(place).append(']');
+                } else {
+                    message.append(message.charAt(message.length() - 1) == ' ' ? "" : ".").append(place);
+                }
+            }
+        }
+        message.append(": ").append(conversion.getDetail()).append('.');
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("{}: {}", message, conversion.getMessage(), failure);
+        }
+        GraphQLError error = GraphqlErrorBuilder.newError(environment)
+                .message(message.toString())
+                .extensions(Map.of("code", INPUT_CONVERSION_FAILED, "coordinate", coordinate, "inputPath", inputPath))
+                .build();
+        return DataFetcherResult.newResult().error(error).build();
     }
 
 }

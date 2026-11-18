@@ -1,0 +1,5 @@
+{
+  before: fine
+  ticket(id: "nope")
+  after: fine
+}
