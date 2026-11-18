@@ -44,6 +44,9 @@ public final class TypeExtensions {
     }
 
     public static TypeDefinitionRegistry merge(TypeDefinitionRegistry registry) {
+        if (!hasExtensions(registry)) {
+            return registry;
+        }
         TypeDefinitionRegistry result = new TypeDefinitionRegistry();
         registry.schemaDefinition().ifPresent(schema -> add(result, mergeSchema(schema, registry)));
         registry.getDirectiveDefinitions().values().forEach(it -> add(result, it));
@@ -54,6 +57,16 @@ public final class TypeExtensions {
             add(result, mergeType(type, registry));
         }
         return result;
+    }
+
+    private static boolean hasExtensions(TypeDefinitionRegistry registry) {
+        return !registry.getSchemaExtensionDefinitions().isEmpty()
+                || !registry.objectTypeExtensions().isEmpty()
+                || !registry.interfaceTypeExtensions().isEmpty()
+                || !registry.unionTypeExtensions().isEmpty()
+                || !registry.enumTypeExtensions().isEmpty()
+                || !registry.inputObjectTypeExtensions().isEmpty()
+                || !registry.scalarTypeExtensions().isEmpty();
     }
 
     public static Set<String> objectExtensionFields(TypeDefinitionRegistry registry) {

@@ -1,0 +1,7 @@
+# Extends the Query (and Mutation) of the example schema that every suite serves; the types below must not clash with its names.
+extend type Query {
+  singletonCount: Int!
+  requestScopedCount: Int!
+  injectedPrototypeId: Int!
+  freshPrototypeId: Int!
+}

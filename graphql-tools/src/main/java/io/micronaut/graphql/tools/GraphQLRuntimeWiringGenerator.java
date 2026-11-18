@@ -158,6 +158,7 @@ final class GraphQLRuntimeWiringGenerator {
     private final SchemaCoordinateValidator coordinateValidator;
 
     private final DictionaryValidator dictionaryValidator;
+    private final DeclaringInterfaces interfaceIndex;
 
     private final UnreachableTypeChecks unreachableTypeChecks;
 
@@ -207,6 +208,7 @@ final class GraphQLRuntimeWiringGenerator {
         this.coordinateValidator = new SchemaCoordinateValidator(typeDefinitionRegistry, graphQLResolversRegistry,
                 graphQLBeanIntrospectionRegistry, configuration);
         this.dictionaryValidator = new DictionaryValidator(typeDefinitionRegistry, schemaMappingDictionary);
+        this.interfaceIndex = new DeclaringInterfaces(typeDefinitionRegistry);
         this.unreachableTypeChecks = new UnreachableTypeChecks(typeDefinitionRegistry, configuration, manifestRecorder);
 
         this.scalarMappings = new ScalarMappings(applicationContext.getBeansOfType(GraphQLScalarMapping.class),
@@ -726,8 +728,7 @@ final class GraphQLRuntimeWiringGenerator {
         }
 
         List<InterfaceTypeDefinition> declaringInterfaces =
-                InterfaceFieldBinder.getDeclaringInterfaces(typeDefinitionRegistry, objectTypeDefinition,
-                        fieldDefinition.getName());
+                interfaceIndex.of(objectTypeDefinition, fieldDefinition.getName());
 
         Class<?> sourceClass = graphQLBeanIntrospectionRegistry.getInterfaceClass(beanIntrospection.getBeanType());
 
@@ -933,7 +934,7 @@ final class GraphQLRuntimeWiringGenerator {
     }
 
     private void bindInterfaceFields() {
-        InterfaceFieldBinder.InterfaceBindings bindings = new InterfaceFieldBinder(typeDefinitionRegistry,
+        InterfaceFieldBinder.InterfaceBindings bindings = new InterfaceFieldBinder(interfaceIndex,
                 graphQLResolversRegistry, Collections.unmodifiableMap(processedTypes), configuration.getPrecedence(),
                 manifestRecorder, new InterfaceCallbacks()).bind();
         fieldBindings.putAll(bindings.fieldBindings());

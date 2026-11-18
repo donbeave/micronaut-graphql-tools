@@ -21,8 +21,10 @@ import io.micronaut.graphql.tools.binding.internal.model.JMethod;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -35,6 +37,9 @@ final class BeanDefinitionAndMethods {
     private final BeanDefinition<?> beanDefinition;
     // each method with the view that the rules read, built once at registration
     private final Map<ExecutableMethod<Object, ?>, JMethod> executableMethods = new HashMap<>();
+    // the registered method of each name and parameter types, and the methods by name in the order of the map above
+    private final Map<List<Object>, ExecutableMethod<Object, ?>> bySignature = new HashMap<>();
+    private Map<String, List<Map.Entry<ExecutableMethod<Object, ?>, JMethod>>> byName;
 
     private final Function<ExecutableMethod<?, ?>, JMethod> views;
 
@@ -53,17 +58,21 @@ final class BeanDefinitionAndMethods {
     void addExecutableMethod(@NonNull ExecutableMethod<Object, ?> executableMethod) {
         requireNonNull("executableMethod", executableMethod);
 
-        for (ExecutableMethod<Object, ?> existing : executableMethods.keySet()) {
-            if (existing.getMethodName().equals(executableMethod.getMethodName())
-                    && Arrays.equals(existing.getArgumentTypes(), executableMethod.getArgumentTypes())
-                    && (!existing.isAbstract() || executableMethod.isAbstract())) {
+        List<Object> signature = signature(executableMethod);
+        ExecutableMethod<Object, ?> existing = bySignature.get(signature);
+        if (existing != null) {
+            if (!existing.isAbstract() || executableMethod.isAbstract()) {
                 return;
             }
+            executableMethods.remove(existing);
         }
-        executableMethods.keySet().removeIf(it -> it.isAbstract()
-                && it.getMethodName().equals(executableMethod.getMethodName())
-                && Arrays.equals(it.getArgumentTypes(), executableMethod.getArgumentTypes()));
+        bySignature.put(signature, executableMethod);
+        byName = null;
         executableMethods.put(executableMethod, views.apply(executableMethod));
+    }
+
+    private static List<Object> signature(ExecutableMethod<Object, ?> method) {
+        return List.of(method.getMethodName(), Arrays.asList(method.getArgumentTypes()));
     }
 
     BeanDefinition<?> getBeanDefinition() {
@@ -76,6 +85,21 @@ final class BeanDefinitionAndMethods {
 
     Map<ExecutableMethod<Object, ?>, JMethod> getMethodViews() {
         return executableMethods;
+    }
+
+    /**
+     * @param name the method name
+     * @return the methods of the name with their views, in the iteration order of {@link #getMethodViews()}
+     */
+    List<Map.Entry<ExecutableMethod<Object, ?>, JMethod>> methodsNamed(String name) {
+        if (byName == null) {
+            Map<String, List<Map.Entry<ExecutableMethod<Object, ?>, JMethod>>> index = new HashMap<>();
+            for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> entry : executableMethods.entrySet()) {
+                index.computeIfAbsent(entry.getValue().name(), it -> new ArrayList<>()).add(entry);
+            }
+            byName = index;
+        }
+        return byName.getOrDefault(name, List.of());
     }
 
 }
