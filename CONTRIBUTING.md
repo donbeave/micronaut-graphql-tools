@@ -46,8 +46,6 @@ The binding corpus (#142) is a directory of data cases under `graphql-tools-proc
 
 A class that must still reflect goes in `REFLECTION_ALLOWLIST` of the spec, with the exact accesses it may make, the reason and the issue that removes it; any other reflective access in that class still fails. The list may only shrink: the spec fails when an allowed access no longer happens, so delete the entry in the change that removes the reflection. `GraphQLResolversRegistry` is the one entry today (#34). To check a rule, add a violating class to `graphql-tools/src/main/java` and run `./gradlew :micronaut-graphql-tools:test --tests '*ArchitectureRulesSpec'`; remove it afterwards.
 
-The binding corpus (#142) is a directory of data cases under `graphql-tools-processor/src/test/resources/corpus/`; its README says how to add and update a case (`./gradlew :micronaut-graphql-tools-processor:corpusUpdate`, and read the diff). It runs as part of `test` on the default graphql-java leg, on JDK 21 and 25 (about 70 s); the floor and ceiling legs skip it with a message, because its verdicts do not depend on the leg. It never runs on JDK 17 (the processor module needs JDK 21). The Kotlin cases are a separate task, `./gradlew :micronaut-graphql-tools-processor:corpusKotlin`, not part of `check` or CI: it runs one Gradle TestKit build (Kotlin 2.1.21, KSP2 2.1.21-2.0.2) that downloads the Kotlin and KSP Gradle plugins from the Gradle plugin portal and the processor from Maven Central, so it needs the network (about 2 to 3 minutes with a warm Gradle home).
-
 The example applications are three separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
 
 | Suite | Language | Run the JVM tests | Run the native tests (Oracle GraalVM 25) |
