@@ -16,6 +16,7 @@ problems = []
 
 
 def on_block(lines):
+    lines = [re.sub(r"^(\s*)[\"'](\w+)[\"']:", r"\1\2:", l) for l in lines]
     start = next((i for i, l in enumerate(lines) if re.match(r"^on:\s*$", l)), None)
     if start is None:
         return []
@@ -103,16 +104,16 @@ block = on_block(gradle)
 for event in ("push", "pull_request", "merge_group"):
     if not any(re.match(rf"^  {event}:", l) for l in block):
         problems.append(f"gradle.yml does not run on `{event}`")
-for event in ("push", "pull_request"):
+for event in ("push", "pull_request", "merge_group"):
     for i, l in enumerate(block):
-        if re.match(rf"^  {event}:\s*[^\s#]", l):
+        if re.match(rf"^  {event}:\s*[^\s#]", l) and event != "merge_group":
             problems.append(f"gradle.yml: write `{event}:` as a block (its keys on the next lines), not inline, so this script can read its filters")
         if re.match(rf"^  {event}:", l):
             for m in block[i + 1:]:
                 if re.match(r"^  \S", m):
                     break
-                if re.match(r"^    (paths|paths-ignore|branches-ignore):", m):
-                    problems.append(f"gradle.yml: `{event}` has `{m.strip()}`: only `branches` may filter it, so that both events run for the same changes")
+                if re.match(r"^    (paths|paths-ignore|branches-ignore):", m) or (event == "merge_group" and re.match(r"^    branches:", m)):
+                    problems.append(f"gradle.yml: `{event}` has `{m.strip()}`: `push` and `pull_request` may filter only by the same `branches`, and `merge_group` not at all, so that every event runs for the same changes")
 push, pr = branches(block, "push"), branches(block, "pull_request")
 if push != pr:
     problems.append(f"gradle.yml: `push` branches {push} differ from `pull_request` branches {pr}")
