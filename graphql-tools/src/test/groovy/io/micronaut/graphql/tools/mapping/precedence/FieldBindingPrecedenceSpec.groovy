@@ -15,20 +15,25 @@
  */
 package io.micronaut.graphql.tools.mapping.precedence
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.context.exceptions.ConfigurationException
 import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.GraphQLRuntimeWiringGenerator
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.ResolverRequiredException
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import org.intellij.lang.annotations.Language
+import org.slf4j.LoggerFactory
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -106,16 +111,14 @@ type Item {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousBindingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message == """[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: Item.price (line 16, column 3)
   Members:
   1) ${Item.name} getPrice()
   2) ${ItemResolver.name} price(${Item.name} item)
   Fix it for this field: put a directive listed in micronaut.graphql.tools.resolver-directives on the field, declare @GraphQLSchemaCoordinate on the type resolver method (the coordinate of the type, or of the interface that declares the field), or annotate the Java member with @GraphQLIgnore. Fix it for every field: set micronaut.graphql.tools.precedence to resolver-first or property-first. micronaut.graphql.tools.strict does not change this."""
-        e.cause.mappingContext.graphQlObjectType == 'Item'
-        e.cause.mappingContext.graphQlField == 'price'
-        e.cause.members.keySet() == [Item, ItemResolver] as Set
     }
 
     void "precedence fail can be set explicitly"() {
@@ -127,7 +130,11 @@ type Item {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousBindingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.message.contains('GraphQL coordinate: Item.price ')
+        e.cause.message.contains("${Item.name} getPrice()")
+        e.cause.message.contains("${ItemResolver.name} price(${Item.name} item)")
     }
 
     void "the old precedence value strict is rejected and the message names fail"() {
@@ -153,7 +160,11 @@ type Item {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousBindingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.message.contains('GraphQL coordinate: Item.price ')
+        e.cause.message.contains("${Item.name} getPrice()")
+        e.cause.message.contains("${ItemResolver.name} price(${Item.name} item)")
     }
 
     void "strict false does not change precedence resolver-first or property-first"() {
@@ -259,6 +270,32 @@ type Item {
         result.data.items == [[price: 3L], [price: 3L]]
     }
 
+    void "resolver-first and property-first log the ambiguity at WARN with the field and both members (#precedence)"() {
+        given:
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        def logger = (Logger) LoggerFactory.getLogger(GraphQLRuntimeWiringGenerator)
+        logger.addAppender(appender)
+
+        when:
+        startContext(UNMARKED_SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.precedence': precedence])
+        getGraphQLBean()
+
+        then:
+        def warnings = appender.list.findAll { it.level == Level.WARN }*.formattedMessage
+        warnings.size() == 1
+        warnings[0].contains("micronaut.graphql.tools.precedence is ${precedence}")
+        warnings[0].contains('Item.price')
+        warnings[0].contains("${Item.name} getPrice()")
+        warnings[0].contains("${ItemResolver.name} price(${Item.name} item)")
+
+        cleanup:
+        logger.detachAppender(appender)
+
+        where:
+        precedence << ['resolver-first', 'property-first']
+    }
+
     void "a directive that is not listed has no effect"() {
         given:
         startContext(MARKED_SCHEMA, SPEC_NAME)
@@ -268,7 +305,11 @@ type Item {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousBindingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.message.contains('GraphQL coordinate: Item.price ')
+        e.cause.message.contains("${Item.name} getPrice()")
+        e.cause.message.contains("${ItemResolver.name} price(${Item.name} item)")
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
@@ -353,11 +394,11 @@ type Label {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousBindingException
-        e.cause.members == [
-                (Label)        : ["text(java.lang.Boolean upper)"],
-                (LabelResolver): ["text(${Label.name} label, java.lang.Boolean upper)".toString()]
-        ]
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.message.contains('GraphQL coordinate: Label.text ')
+        e.cause.message.contains("1) ${Label.name} text(java.lang.Boolean upper)")
+        e.cause.message.contains("2) ${LabelResolver.name} text(${Label.name} label, java.lang.Boolean upper)")
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".method")

@@ -29,7 +29,7 @@ These changes are planned for the 1.0.0 milestones. Each one is _pending_ until 
 * #105 (BC-29): the precedence value `strict` is named `fail` and `strict` is rejected; a type resolver method that declares its coordinate wins over a getter. See the migration page, entries for 1.0.0-M3.
 * #109: the exception subclasses become internal behind the public `SchemaBindingException` (_pending_; the base class and its `code()` are on `master` with BC-22).
 * #144: the JSR-269 code is removed from `graphql-tools-processor` (_pending_).
-* #236: `AmbiguousBindingException` becomes internal (_pending_).
+* #236: match the precedence ambiguity on the code `precedence-ambiguity`, not on `AmbiguousBindingException`; the class becomes internal with #109 (_pending_).
 * #291: the visitor replaces the JSR-269 processor, and the processor options are renamed (_pending_).
 
 Issue #15 (BC-19, resolver parameters bound by name) is open. Its runtime half is on `master` and is listed for 1.0.0-M1; the visitor applies the same rule at compile time, and its registration in a build is _pending_ with #291.

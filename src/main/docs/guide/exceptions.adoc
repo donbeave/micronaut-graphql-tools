@@ -28,7 +28,7 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 [cols="3,1,1,6", options="header"]
 |===
 |Code |Kind |Compile time |Meaning
-|`precedence-ambiguity` |failure |no |A property and a resolver method can both bind one field, and the precedence is fail.
+|`precedence-ambiguity` |failure |no |A property and a resolver method can both bind one field, and the precedence is fail. The message names the field coordinate, both members, and the resolver directive, `@GraphQLSchemaCoordinate`, `@GraphQLIgnore` and `precedence` ways out.
 |`unknown-schema-coordinate` |failure |yes |A @GraphQLSchemaCoordinate value does not match the schema or the method.
 |`coordinate-on-non-resolver` |failure |yes |A @GraphQLSchemaCoordinate is declared on a class that is not a resolver.
 |`argument-mismatch` |failure |yes |A resolver parameter and a field argument cannot be matched by name or count.

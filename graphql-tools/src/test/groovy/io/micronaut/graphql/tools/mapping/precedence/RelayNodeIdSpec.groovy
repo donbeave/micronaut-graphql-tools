@@ -26,7 +26,8 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
@@ -81,9 +82,9 @@ type User implements Node {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousBindingException
-        e.cause.mappingContext.graphQlObjectType == 'User'
-        e.cause.mappingContext.graphQlField == 'id'
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.message.contains('GraphQL coordinate: User.id ')
     }
 
     void "without the coordinate, precedence resolver-first binds the resolver"() {
