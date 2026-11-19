@@ -456,6 +456,12 @@ class CorpusRunnerSpec extends Specification {
         new Corpus(root).problems.any { it.contains('is stale: there is no expected/kotlin/runtime.txt') }
     }
 
+    void "the application of a case starts without the websocket keep-alive, which fails on a background thread and stops the context, unless the case asks for it"() {
+        expect:
+        CorpusStartup.properties([:], ['file:x/*.graphqls'])['graphql.graphql-ws.enabled'] == false
+        CorpusStartup.properties(['graphql.graphql-ws.enabled': 'true'], ['file:x/*.graphqls'])['graphql.graphql-ws.enabled'] == 'true'
+    }
+
     void "a duplicated divergence entry is a problem"() {
         given:
         Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 2\na all field-not-bound Query.x\na all field-not-bound Query.x\n')
