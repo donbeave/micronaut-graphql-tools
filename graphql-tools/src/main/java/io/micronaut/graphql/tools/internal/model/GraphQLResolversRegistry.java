@@ -39,10 +39,12 @@ import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.qualifiers.Qualifiers;
 import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -133,8 +135,10 @@ public final class GraphQLResolversRegistry {
 
             Map<String, Class<?>> contracts = typeResolverContractReader.apply(beanDefinition);
             if (contracts.isEmpty()) {
-                // the visitor wrote no contracts: only a class that carries the annotation itself is still a resolver
-                if (!beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class)) {
+                // the visitor wrote no contracts: only a class that carries the annotation itself, and inherits no other
+                // one, is still a resolver; with an inherited contract the fallback would drop that contract
+                if (!beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class)
+                        || inheritsTypeResolver(getUserBeanType(beanDefinition))) {
                     unreadableTypeResolverContracts.add(beanDefinition);
                     continue;
                 }
@@ -312,15 +316,40 @@ public final class GraphQLResolversRegistry {
         return contracts;
     }
 
+    // Runs only when the build recorded no contracts, never on a bound bean.
+    private static boolean inheritsTypeResolver(Class<?> beanType) {
+        Deque<Class<?>> types = new ArrayDeque<>();
+        addSupertypes(beanType, types);
+        Set<Class<?>> visited = new HashSet<>();
+        while (!types.isEmpty()) {
+            Class<?> type = types.poll();
+            if (!visited.add(type)) {
+                continue;
+            }
+            if (type.isAnnotationPresent(GraphQLTypeResolver.class)) {
+                return true;
+            }
+            addSupertypes(type, types);
+        }
+        return false;
+    }
+
+    private static void addSupertypes(Class<?> type, Deque<Class<?>> types) {
+        if (type.getSuperclass() != null && type.getSuperclass() != Object.class) {
+            types.add(type.getSuperclass());
+        }
+        types.addAll(List.of(type.getInterfaces()));
+    }
+
     public void verifyTypeResolverContracts() {
         registerIntroductionBeans();
         resolveTypeResolverMethods();
 
         unreadableTypeResolverContracts.stream()
-                .map(GraphQLResolversRegistry::getUserBeanType)
-                .min(Comparator.comparing(Class::getName))
-                .ifPresent(beanType -> {
-                    throw new TypeResolverContractsNotFoundException(beanType);
+                .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))
+                .ifPresent(beanDefinition -> {
+                    throw new TypeResolverContractsNotFoundException(getUserBeanType(beanDefinition),
+                            beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class));
                 });
 
         unassignedTypeResolverMethods.entrySet().stream()

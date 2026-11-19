@@ -23,7 +23,8 @@ import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 /**
  * Thrown when a bean is a {@link GraphQLTypeResolver} only through an inherited annotation, and the build did not record
  * its contracts: the visitor of {@code micronaut-graphql-tools-processor} writes them into the annotation metadata of the
- * bean class, so the processor is not on the path of the compiler.
+ * bean class, so the processor is not on the path of the compiler. The same holds for a bean that carries the annotation
+ * and inherits another contract.
  */
 @Internal
 public final class TypeResolverContractsNotFoundException extends SchemaBindingException {
@@ -31,13 +32,23 @@ public final class TypeResolverContractsNotFoundException extends SchemaBindingE
     private final Class<?> beanType;
 
     public TypeResolverContractsNotFoundException(Class<?> beanType) {
+        this(beanType, false);
+    }
+
+    /**
+     * @param annotatedDirectly whether the bean carries the annotation itself and inherits another contract as well,
+     *                          so annotating the class directly does not help
+     */
+    public TypeResolverContractsNotFoundException(Class<?> beanType, boolean annotatedDirectly) {
         super(BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND, "The bean " + beanType.getName() + " is a @"
-                + GraphQLTypeResolver.class.getSimpleName() + " only through an inherited annotation, but the build did "
-                + "not record its contracts. Add micronaut-graphql-tools-processor to the path that your compiler reads "
+                + GraphQLTypeResolver.class.getSimpleName() + (annotatedDirectly
+                ? " that also inherits another contract, but the build did not record its contracts. "
+                : " only through an inherited annotation, but the build did not record its contracts. ")
+                + "Add micronaut-graphql-tools-processor to the path that your compiler reads "
                 + "Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for "
                 + "Groovy; the compile-time checks section of the README shows the setting of each tool, and "
                 + "micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the "
-                + "contracts), or annotate the bean class directly.");
+                + "contracts)" + (annotatedDirectly ? "." : ", or annotate the bean class directly."));
 
         this.beanType = beanType;
     }
