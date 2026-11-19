@@ -48,6 +48,13 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   schema directory: the compiler plugin of a Java project calls the classes up to date after a schema edit, so the
   documented rule is `mvn clean verify` after a schema edit. The spec shows it, and records what each sample does without
   `clean`; the startup still runs every check.
+  `IncrementalCompilationContract` (one subclass per Gradle sample: Java, kapt, KSP, Groovy) is the incrementality proof (#13): it builds a copy of
+  the sample with 22 classes twice, with the processor and as a control without it, applies the same edits to both (the body of a
+  bean, the body of the resolver, the binary interface of `Book`, a new class with a stereotype the visitor does not claim, a
+  deleted class) and asserts that the set of class files an incremental build rewrote (modification time, size or presence) is
+  the same in both. Each state is also built from scratch in a copy, and must pass: an incremental build never fails where a clean
+  build passes. A schema edit that drifts the resolver fails the incremental build with the code and the coordinate, and the repair
+  passes. The specs record the clean and incremental times, with the JDK and the machine load, in `outcomes.txt`; they assert no time.
   `MultiModuleGradleSampleTest` adds, on top of the contract: every module compiles and `app` starts and answers a query through
   the resolvers of both feature modules; a schema edit reruns `books` and `authors` and leaves `model` and `app` up to date; a
   wrong argument type, a wrong argument name, or a model enum that drifts from the schema fails the compile task of the module
