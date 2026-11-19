@@ -284,6 +284,10 @@ plugins {
         // leftover value of another compilation can win over the argument
         Map<String, String> values = checked ? CompileOptions.of(c, project) : [(CompileOptions.SCHEMA_DIRS): CompileOptions.of(c, project).get(CompileOptions.SCHEMA_DIRS)]
         values.putIfAbsent(CompileOptions.CHECKS, String.valueOf(checked))
+        String prefixes = c.config[JavaCaseCompiler.ACCESSOR_PREFIXES_CONFIG]
+        if (checked && prefixes != null) {
+            values.put(JavaCaseCompiler.ACCESSOR_PREFIXES, prefixes)
+        }
         List<String> arguments = values.findAll { it.value != null }.collect { String key, String value ->
             "arg(\"${key}\", \"${value.replace('\\', '/')}\")".toString()
         }
