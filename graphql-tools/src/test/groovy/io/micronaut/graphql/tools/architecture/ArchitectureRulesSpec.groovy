@@ -47,11 +47,15 @@ class ArchitectureRulesSpec extends Specification {
     static final String INTERNAL = 'io.micronaut.core.annotation.Internal'
 
     /**
-     * A class that still reads reflectively needs an entry here, with the reason and the issue that removes it. The list
-     * may only shrink: an entry whose class no longer reflects fails the spec, so delete it with the fix.
+     * A class that still reads reflectively needs an entry here: the exact accesses it may make (owner.member), the reason and
+     * the issue that removes it. Any other reflective access in that class fails the rule, and the list may only shrink: an
+     * access that no longer happens fails the spec, so delete it with the fix.
      */
-    static final Map<String, String> REFLECTION_ALLOWLIST = [
-            'io.micronaut.graphql.tools.GraphQLResolversRegistry': 'reads @GraphQLTypeResolver from the user class with getDeclaredAnnotation, removed by #34',
+    static final Map<String, Map<String, Object>> REFLECTION_ALLOWLIST = [
+            'io.micronaut.graphql.tools.GraphQLResolversRegistry': [
+                    accesses: ['java.lang.Class.getDeclaredAnnotation'],
+                    reason  : 'reads @GraphQLTypeResolver from the user class, removed by #34',
+            ],
     ]
 
     /** The members of java.lang.Class that look up user classes, members or annotations at run time. */
@@ -60,7 +64,7 @@ class ArchitectureRulesSpec extends Specification {
             'getField', 'getFields', 'getDeclaredField', 'getDeclaredFields', 'getConstructor', 'getConstructors',
             'getDeclaredConstructor', 'getDeclaredConstructors', 'getAnnotation', 'getAnnotations', 'isAnnotationPresent', 'getDeclaredAnnotation',
             'getDeclaredAnnotations', 'getAnnotationsByType', 'getDeclaredAnnotationsByType', 'getEnumConstants',
-            'getRecordComponents', 'getClasses', 'getDeclaredClasses', 'getPermittedSubclasses', 'getEnclosingMethod',
+            'getRecordComponents', 'getClasses', 'getDeclaredClasses', 'getNestMembers', 'getNestHost', 'getPermittedSubclasses', 'getEnclosingMethod',
             'getEnclosingConstructor', 'getGenericSuperclass', 'getTypeParameters', 'getGenericInterfaces',
     ] as Set
 
@@ -77,29 +81,30 @@ class ArchitectureRulesSpec extends Specification {
 
     void "no class reflects outside the allowlist"() {
         expect:
-        noClasses().that(notAllowlisted()).should(reflects())
+        noClasses().should(reflects(true))
                 .because('reflection needs native-image metadata and is slower than the introspection the library is built on')
                 .check(classes)
     }
 
     void "the reflection rule fails on a class that reflects and names it"() {
         given:
-        def result = noClasses().should(reflects()).evaluate(classes)
+        def result = noClasses().should(reflects(false)).evaluate(classes)
 
         expect:
         result.hasViolation()
         result.failureReport.details.any { it.contains('GraphQLResolversRegistry') && it.contains('getDeclaredAnnotation') }
     }
 
-    void "every allowlist entry names a class that still reflects, a reason and an issue"() {
+    void "every allowlisted access still happens, with a reason and an issue"() {
         given:
-        def stale = REFLECTION_ALLOWLIST.keySet().findAll { name ->
-            !noClasses().that().haveFullyQualifiedName(name).should(reflects()).evaluate(classes).hasViolation()
+        def stale = REFLECTION_ALLOWLIST.collectMany { name, entry ->
+            def seen = reflectiveAccesses(classes.get(name)).keySet()
+            entry.accesses.findAll { !(it in seen) }.collect { "$name $it" }
         }
 
         expect:
         assert stale.empty: "No longer reflects, remove it from REFLECTION_ALLOWLIST: ${stale.toSorted()}"
-        REFLECTION_ALLOWLIST.every { name, reason -> classes.contain(name) && reason =~ /#\d+/ }
+        REFLECTION_ALLOWLIST.every { name, entry -> classes.contain(name) && !entry.accesses.empty && entry.reason =~ /#\d+/ }
     }
 
     void "no class depends on Jackson"() {
@@ -116,29 +121,37 @@ class ArchitectureRulesSpec extends Specification {
                 .check(classes)
     }
 
-    private static DescribedPredicate<JavaClass> notAllowlisted() {
-        DescribedPredicate.describe('not on the reflection allowlist', { JavaClass c -> !REFLECTION_ALLOWLIST.containsKey(c.name) })
+    /** The reflective accesses of a class: the key (owner.member or the type used) with a message for each. */
+    private static Map<String, List<String>> reflectiveAccesses(JavaClass item) {
+        Map<String, List<String>> found = [:].withDefault { [] }
+        (item.methodCallsFromSelf + item.methodReferencesFromSelf).each { JavaCodeUnitAccess call ->
+            String owner = call.target.owner.name
+            boolean lookup = owner == 'java.lang.Class' && REFLECTIVE_CLASS_METHODS.contains(call.target.name)
+            boolean accessible = call.target.owner.isAssignableTo('java.lang.reflect.AccessibleObject') &&
+                    (call.target.name == 'setAccessible' || call.target.name == 'trySetAccessible')
+            if (lookup || accessible) {
+                found["${owner}.${call.target.name}".toString()] << "${item.name} calls ${owner}.${call.target.name} (${call.sourceCodeLocation})".toString()
+            }
+        }
+        item.directDependenciesFromSelf.each { dependency ->
+            String target = dependency.targetClass.name
+            boolean reflect = dependency.targetClass.packageName == 'java.lang.reflect' && target != 'java.lang.reflect.Modifier'
+            boolean invoke = dependency.targetClass.packageName == 'java.lang.invoke'
+            if (reflect || invoke) {
+                found[target] << "${item.name} uses ${target} (${dependency.description})".toString()
+            }
+        }
+        found
     }
 
-    private static ArchCondition<JavaClass> reflects() {
+    private static ArchCondition<JavaClass> reflects(boolean applyAllowlist = false) {
         new ArchCondition<JavaClass>('reflect (java.lang.Class lookups, java.lang.reflect other than Modifier, java.lang.invoke)') {
             @Override
             void check(JavaClass item, ConditionEvents events) {
-                (item.methodCallsFromSelf + item.methodReferencesFromSelf).each { JavaCodeUnitAccess call ->
-                    String owner = call.target.owner.name
-                    boolean lookup = owner == 'java.lang.Class' && REFLECTIVE_CLASS_METHODS.contains(call.target.name)
-                    boolean accessible = call.target.owner.isAssignableTo('java.lang.reflect.AccessibleObject') &&
-                            (call.target.name == 'setAccessible' || call.target.name == 'trySetAccessible')
-                    if (lookup || accessible) {
-                        events.add(SimpleConditionEvent.satisfied(item, "${item.name} calls ${owner}.${call.target.name} (${call.sourceCodeLocation})"))
-                    }
-                }
-                item.directDependenciesFromSelf.each { dependency ->
-                    String target = dependency.targetClass.name
-                    boolean reflect = dependency.targetClass.packageName == 'java.lang.reflect' && target != 'java.lang.reflect.Modifier'
-                    boolean invoke = dependency.targetClass.packageName == 'java.lang.invoke'
-                    if (reflect || invoke) {
-                        events.add(SimpleConditionEvent.satisfied(item, "${item.name} uses ${target} (${dependency.description})"))
+                Collection<String> approved = applyAllowlist ? (REFLECTION_ALLOWLIST[item.name]?.accesses ?: []) : []
+                reflectiveAccesses(item).each { key, messages ->
+                    if (!(key in approved)) {
+                        messages.each { events.add(SimpleConditionEvent.satisfied(item, it)) }
                     }
                 }
             }
@@ -186,14 +199,15 @@ class ArchitectureRulesSpec extends Specification {
         new ArchCondition<JavaClass>('expose no internal type in a public or protected signature') {
             @Override
             void check(JavaClass item, ConditionEvents events) {
-                (item.superclass.map { [it] }.orElse([]) + item.interfaces + item.typeParameters).collectMany { it.allInvolvedRawTypes }.findAll { isInternal(it) }.each { JavaClass t ->
+                (item.superclass.map { [it] }.orElse([]) + item.interfaces + item.typeParameters).collectMany { it.allInvolvedRawTypes }
+                        .plus((Collection<JavaClass>) item.permittedSubclasses.orElse([])).findAll { isInternal(it) }.each { JavaClass t ->
                     events.add(SimpleConditionEvent.violated(item, "${item.name} declares the internal type ${t.name}"))
                 }
                 List<JavaMember> members = []
                 members.addAll(item.fields)
                 members.addAll(item.methods)
                 members.addAll(item.constructors)
-                members.findAll { m -> m.modifiers.any { it.name() in ['PUBLIC', 'PROTECTED'] } }.each { JavaMember m ->
+                members.findAll { m -> m.modifiers.any { it.name() in ['PUBLIC', 'PROTECTED'] } && !m.isAnnotatedWith(INTERNAL) }.each { JavaMember m ->
                     Set<JavaClass> types = m instanceof JavaField ? m.type.allInvolvedRawTypes : (((JavaCodeUnit) m).allInvolvedRawTypes + ((JavaCodeUnit) m).throwsClause.types.collectMany { it.allInvolvedRawTypes })
                     if (m instanceof JavaMethod) {
                         m.defaultValue.ifPresent { types.addAll(classLiterals(it)) }
