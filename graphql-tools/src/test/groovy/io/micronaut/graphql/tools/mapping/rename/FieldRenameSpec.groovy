@@ -24,9 +24,8 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
-import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
+import io.micronaut.graphql.tools.binding.BindingCode
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import org.intellij.lang.annotations.Language
 
 class FieldRenameSpec extends AbstractTest {
@@ -204,8 +203,8 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
-        e.cause.code().code() == 'multiple-methods-found'
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Slip.title (line 11, column 3)")
         e.cause.message.contains("${ClashSlip.name} getTitle()")
         e.cause.message.contains("${ClashSlip.name} heading()")
@@ -220,7 +219,7 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Slip.title (line 11, column 3)")
         e.cause.message.contains("${TwoRenamedSlip.name} first()")
         e.cause.message.contains("${TwoRenamedSlip.name} second()")
@@ -235,7 +234,7 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message.contains("GraphQL coordinate: Slip.title")
     }
 
@@ -248,7 +247,7 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message.contains("GraphQL coordinate: Slip.title")
     }
 
@@ -341,7 +340,7 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Parcel.class")
         e.cause.message.contains("${DuplicateCoordinateResolver.name} kind(${CoordinateParcel.name} parcel)")
         e.cause.message.contains("${DuplicateCoordinateResolver.name} type(${CoordinateParcel.name} parcel)")
@@ -430,7 +429,7 @@ type Parcel {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
+        e.cause instanceof SchemaBindingException
         e.cause.message.contains("[field-not-bound] The method `ping` not found in any root resolvers")
         e.cause.message.contains("GraphQL coordinate: Parcel.author")
     }
@@ -444,7 +443,7 @@ type Parcel {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Parcel.author")
     }
 }

@@ -19,8 +19,8 @@ import graphql.language.ScalarTypeDefinition;
 import graphql.schema.GraphQLScalarType;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.exceptions.InvalidScalarMappingException;
-import io.micronaut.graphql.tools.exceptions.ScalarMappingNotProvidedException;
+import io.micronaut.graphql.tools.internal.exceptions.InvalidScalarMappingException;
+import io.micronaut.graphql.tools.internal.exceptions.ScalarMappingNotProvidedException;
 
 import java.util.Collection;
 import java.util.List;

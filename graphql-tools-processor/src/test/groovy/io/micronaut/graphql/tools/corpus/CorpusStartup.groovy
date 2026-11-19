@@ -21,14 +21,14 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.ApplicationContext
 import io.micronaut.graphql.tools.BindingManifest
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.exceptions.AbstractMappingException
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
-import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
+import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException
+import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException
+import io.micronaut.graphql.tools.internal.exceptions.InvalidSchemaCoordinateException
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.exceptions.StrictModeException
-import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
-import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
-import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException
+import io.micronaut.graphql.tools.internal.exceptions.StrictModeException
+import io.micronaut.graphql.tools.internal.exceptions.UnmappedInputPropertiesException
+import io.micronaut.graphql.tools.internal.exceptions.UnreachableTypesException
+import io.micronaut.graphql.tools.internal.exceptions.UnwiredDirectivesException
 
 import java.util.regex.Matcher
 
@@ -49,11 +49,22 @@ final class CorpusStartup {
     private CorpusStartup() {
     }
 
-    static Map<String, Object> start(Map<String, String> config, List<String> environments, List<String> schemaLocations) {
+    /**
+     * The properties of the application of a case. The websocket keep-alive of micronaut-graphql is {@code @Scheduled} and runs on a
+     * background thread at startup; when it fails there, Micronaut stops the context and the case reports a binding that was not
+     * made. The cases have no transport, so it is off (as in the library's test properties and the benchmarks); a case can turn it on.
+     */
+    static Map<String, Object> properties(Map<String, String> config, List<String> schemaLocations) {
         Map<String, Object> properties = new LinkedHashMap<>(config)
         properties.put('micronaut.graphql.tools.schema.locations', schemaLocations)
         properties.putIfAbsent('micronaut.graphql.tools.manifest.record', true)
         properties.putIfAbsent('micronaut.graphql.tools.eager-init', false)
+        properties.putIfAbsent('graphql.graphql-ws.enabled', false)
+        return properties
+    }
+
+    static Map<String, Object> start(Map<String, String> config, List<String> environments, List<String> schemaLocations) {
+        Map<String, Object> properties = properties(config, schemaLocations)
         Map<String, Object> result = new LinkedHashMap<>()
         List<List<String>> findings = []
         result.put('findings', findings)

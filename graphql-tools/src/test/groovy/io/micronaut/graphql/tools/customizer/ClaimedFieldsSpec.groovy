@@ -29,10 +29,10 @@ import io.micronaut.graphql.tools.RuntimeWiringCustomizer
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.InvalidClaimedFieldsException
-import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class ClaimedFieldsSpec extends AbstractTest {
 
@@ -160,7 +160,8 @@ interface Node {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof RuntimeWiringOverrideException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == [
                 "data fetcher of Query.hello, through the code registry (${ReplacesBoundAndClaims.name})".toString()
         ]
@@ -176,7 +177,8 @@ interface Node {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InvalidClaimedFieldsException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INVALID_CLAIMED_FIELDS
         e.cause.problems == [
                 "Book.price: Book defines no field price (${StaleClaims.name})".toString(),
                 "Missing.field: the schema defines no type Missing (${StaleClaims.name})".toString(),

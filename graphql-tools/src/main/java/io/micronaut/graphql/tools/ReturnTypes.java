@@ -21,7 +21,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
-import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException;
+import io.micronaut.graphql.tools.internal.exceptions.UnsupportedReturnTypeException;
 import org.reactivestreams.Publisher;
 
 import java.util.Map;

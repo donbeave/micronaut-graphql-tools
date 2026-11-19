@@ -26,11 +26,11 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class SchemaCoordinateSpec extends AbstractTest {
 
@@ -101,7 +101,8 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The method `helper` not found in any root resolvers: [${BookQuery.name}]. ${BookQuery.name}#helper() exists without @GraphQLSchemaCoordinate, but the bean declares coordinates on other methods, and only a method with its own coordinate binds a field. Fix: annotate it with @GraphQLSchemaCoordinate("Query.helper"), or remove it.
   GraphQL coordinate: Query.helper (line 8, column 3)"""
     }
@@ -130,7 +131,8 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `blurb` not found in ${Book.name}'s type or it resolvers: [${BookResolver.name}].
   GraphQL coordinate: Book.blurb (line 14, column 3)"""
     }
@@ -188,7 +190,8 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InvalidSchemaCoordinateException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNKNOWN_SCHEMA_COORDINATE
         e.cause.message == "[unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
 
         where:

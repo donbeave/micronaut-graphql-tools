@@ -22,9 +22,10 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class InvalidSchemaCoordinateSpec extends AbstractTest {
 
@@ -65,7 +66,7 @@ enum Genre {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InvalidSchemaCoordinateException
+        e.cause instanceof SchemaBindingException
         e.cause.message == "[" + code + "] Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
         e.cause.code().code() == code
         e.cause.problems == [problem]
@@ -91,7 +92,8 @@ enum Genre {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InvalidSchemaCoordinateException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNKNOWN_SCHEMA_COORDINATE
         e.cause.message == """[unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:
   1) @GraphQLSchemaCoordinate("Genre.summary") on ${SeveralResolver.name} summaryText(${Book.name} book): Genre is neither an object type nor an interface.
   2) @GraphQLSchemaCoordinate("Book.synopsis") on ${SeveralResolver.name} synopsis(${Book.name} book): the type Book has no field synopsis."""

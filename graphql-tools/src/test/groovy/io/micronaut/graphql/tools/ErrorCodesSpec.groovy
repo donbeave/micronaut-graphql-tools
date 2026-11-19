@@ -16,13 +16,13 @@
 package io.micronaut.graphql.tools
 
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.exceptions.AbstractMappingException
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
+import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException
+import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.exceptions.StrictModeException
-import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
-import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
-import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException
+import io.micronaut.graphql.tools.internal.exceptions.StrictModeException
+import io.micronaut.graphql.tools.internal.exceptions.UnmappedInputPropertiesException
+import io.micronaut.graphql.tools.internal.exceptions.UnreachableTypesException
+import io.micronaut.graphql.tools.internal.exceptions.UnwiredDirectivesException
 import spock.lang.Specification
 
 import java.nio.file.Files
@@ -33,13 +33,13 @@ class ErrorCodesSpec extends Specification {
     void "every exception of the library is a SchemaBindingException, so it has a code"() {
         given:
         def location = Paths.get(SchemaBindingException.protectionDomain.codeSource.location.toURI())
-        def dir = location.resolve('io/micronaut/graphql/tools/exceptions')
+        def dir = location.resolve('io/micronaut/graphql/tools/internal/exceptions')
 
         when:
         def classes = Files.list(dir).withCloseable { stream ->
             stream.map { it.fileName.toString() }
-                    .filter { it.endsWith('.class') && !it.contains('$') }
-                    .map { Class.forName('io.micronaut.graphql.tools.exceptions.' + it.substring(0, it.length() - 6)) }
+                    .filter { it.endsWith('.class') && !it.contains('$') && it != 'package-info.class' }
+                    .map { Class.forName('io.micronaut.graphql.tools.internal.exceptions.' + it.substring(0, it.length() - 6)) }
                     .toList()
         }
 
@@ -85,5 +85,19 @@ class ErrorCodesSpec extends Specification {
         failures.code() == BindingCode.BINDING_FAILURES
         failures.failures*.code() == [BindingCode.STRICT_FINDINGS, BindingCode.UNREACHABLE_TYPE]
         failures.message.contains('\n  2) [unreachable-type] ')
+        strict.codes == [BindingCode.UNBOUND_ENUM_CONSTANT, BindingCode.UNUSED_DICTIONARY_ENTRY]
+        failures.failures.size() == 2
+        failures.cause.is(strict)
+    }
+
+    void "a failure about no single element has no coordinate, no failures and no codes"() {
+        given:
+        SchemaBindingException failure = new UnreachableTypesException([Orphan: 'type'])
+
+        expect:
+        failure.coordinate == null
+        failure.mappingContext == null
+        failure.failures == []
+        failure.codes == []
     }
 }

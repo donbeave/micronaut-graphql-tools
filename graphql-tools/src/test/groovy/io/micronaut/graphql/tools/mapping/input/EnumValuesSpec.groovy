@@ -25,10 +25,10 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.RuntimeWiringCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException
-import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class EnumValuesSpec extends AbstractTest {
 
@@ -180,7 +180,8 @@ enum Shade {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ClassNotIntrospectedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
         e.cause.message.startsWith("[class-not-introspected] The class ${Shade.name} is not introspected. " +
                 "Ensure the class is annotated with ${Introspected.name}.")
     }
@@ -194,7 +195,8 @@ enum Shade {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof RuntimeWiringOverrideException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == ["enum values provider of Color (${ReplaceValues.name})".toString()]
     }
 

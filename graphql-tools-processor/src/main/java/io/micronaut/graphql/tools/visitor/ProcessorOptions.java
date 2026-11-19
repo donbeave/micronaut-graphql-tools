@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.visitor;
 
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 
@@ -30,17 +31,20 @@ import java.util.TreeSet;
 
 /**
  * The options of the visitor, read from the options of the compilation: {@code -A} under javac and kapt, {@code arg}
- * under KSP, system properties under the Groovy compiler. There are three, all under {@code micronaut.graphql.tools.processor.},
+ * under KSP, system properties under the Groovy compiler. There are four, all under {@code micronaut.graphql.tools.processor.},
  * a segment that no runtime key uses, so that the visitor rejects an unknown key there without failing on a runtime key that
  * happens to be a system property.
  *
- * @param schemaDirs       the directories to read the schema from, empty when the option is absent
- * @param checks           whether the checks run
+ * @param schemaDirs the directories to read the schema from, empty when the option is absent
+ * @param moduleDir  the directory of the module that sets {@code schema.dirs}, null when the option is absent; the output of
+ *                   the compilation must lie inside it, or the options are those of an earlier compilation of the same JVM
+ * @param checks     whether the checks run
  * @param accessorPrefixes whether a resolver method {@code getX} or {@code isX} also binds the field {@code x}, as
- *                         {@code micronaut.graphql.tools.resolver-accessor-prefixes} says at startup
- * @param errors           the options that are wrong; the checks do not run when there are any
+ *                   {@code micronaut.graphql.tools.resolver-accessor-prefixes} says at startup
+ * @param errors     the options that are wrong; the checks do not run when there are any
  */
-record ProcessorOptions(List<Path> schemaDirs, boolean checks, boolean accessorPrefixes, List<Finding> errors) {
+record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean checks,
+                        boolean accessorPrefixes, List<Finding> errors) {
 
     static final String PREFIX = "micronaut.graphql.tools.processor.";
 
@@ -48,9 +52,11 @@ record ProcessorOptions(List<Path> schemaDirs, boolean checks, boolean accessorP
 
     static final String CHECKS = PREFIX + "checks";
 
+    static final String MODULE_DIR = PREFIX + "module.dir";
+
     static final String ACCESSOR_PREFIXES = PREFIX + "resolverAccessorPrefixes";
 
-    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, CHECKS, ACCESSOR_PREFIXES);
+    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES);
 
     ProcessorOptions {
         schemaDirs = List.copyOf(schemaDirs);
@@ -83,7 +89,17 @@ record ProcessorOptions(List<Path> schemaDirs, boolean checks, boolean accessorP
                 }
             }
         }
-        return new ProcessorOptions(directories, checks, accessorPrefixes, errors);
+        Path moduleDir = null;
+        String moduleValue = options.get(MODULE_DIR);
+        if (moduleValue != null) {
+            try {
+                moduleDir = Path.of(moduleValue.trim()).toAbsolutePath().normalize();
+            } catch (InvalidPathException e) {
+                errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, MODULE_DIR + " is not a path that this system can use: '"
+                        + moduleValue.trim() + "' (" + e.getReason() + ")"));
+            }
+        }
+        return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes, errors);
     }
 
     private static boolean flag(Map<String, String> options, String name, boolean absent, List<Finding> errors) {

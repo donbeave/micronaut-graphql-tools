@@ -55,7 +55,7 @@ class ProcessorOptionsDocsSpec extends Specification {
                 stale.sort().join(', ')
     }
 
-    // the options of the JSR-269 processor, and the two of the visitor that replaces it (#291)
+    // the options of the JSR-269 processor, and the three of the visitor that replaces it (#291)
     private static Set<String> allOptions() {
         new GraphQLSchemaBindingProcessor().supportedOptions + new GraphQLToolsVisitor().supportedOptions
     }

@@ -23,10 +23,11 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.IncorrectMemberMappingException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class AbstractTypeAssignabilitySpec extends AbstractTest {
 
@@ -397,7 +398,8 @@ type Stray implements Coded {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectMemberMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_MEMBER_MAPPING
         e.cause.message == """[incorrect-member-mapping] The union Payload is returned as ${PayloadGraph.name}, but its object type Stray is mapped to ${StrayModel.name}, and no object can be an instance of both ${PayloadGraph.name} and ${StrayModel.name}, so no object the field returns can resolve to Stray. Map Stray to a Java type that ${PayloadGraph.name} can implement or extend.
   GraphQL coordinate: Query.payload (line 7, column 3)
   Mapped class: ${StrayQuery.name}
@@ -413,7 +415,8 @@ type Stray implements Coded {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectMemberMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_MEMBER_MAPPING
         e.cause.message.startsWith("[incorrect-member-mapping] The interface Coded is returned as ${PayloadGraph.name}, but its object type Stray " +
                 "is mapped to ${StrayModel.name}, and no object can be an instance of both ${PayloadGraph.name} and " +
                 "${StrayModel.name}, so no object the field returns can resolve to Stray.")

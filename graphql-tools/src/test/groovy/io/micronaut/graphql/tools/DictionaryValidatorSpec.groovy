@@ -17,8 +17,9 @@ package io.micronaut.graphql.tools
 
 import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
-import io.micronaut.graphql.tools.exceptions.AmbiguousTypeMappingException
 import spock.lang.Specification
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 /**
  * The dictionary check reports what it always reported: the pairs of an entry mapped to an interface and an entry mapped
@@ -45,10 +46,11 @@ class DictionaryValidatorSpec extends Specification {
         entries.each { name, clazz -> dictionary.registerType(name, clazz) }
 
         when:
-        AmbiguousTypeMappingException thrown = null
+        SchemaBindingException thrown = null
         try {
             new DictionaryValidator(registry, dictionary).validate()
-        } catch (AmbiguousTypeMappingException e) {
+        } catch (SchemaBindingException e) {
+            assert e.code() == BindingCode.AMBIGUOUS_TYPE_MAPPING
             thrown = e
         }
         Map<String, Object> expected = everyPair(entries)

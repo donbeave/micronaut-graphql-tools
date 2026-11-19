@@ -22,9 +22,10 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class TypeContractInterfaceSpec extends AbstractTest {
 
@@ -188,7 +189,8 @@ type Chapter {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `draftNote` not found in ${ArticleGraph.name}'s type. Properties are read from the interface ${ArticleGraph.name}, which has an introspection of its own, so a getter that only an implementation class declares is not a property. `draftNote` is declared by ${ArticleModel.name}. Fix: declare the getter on ${ArticleGraph.name}, or remove the interface's own introspection (the @GraphQLType or @Introspected annotation on it).
   GraphQL coordinate: Article.draftNote (line 12, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'Article'
@@ -204,7 +206,8 @@ type Chapter {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `subtitle` not found in ${MemoGraph.name}'s type. Properties are read from the interface ${MemoGraph.name}, which has an introspection of its own, so a getter that only an implementation class declares is not a property. Fix: declare the getter on ${MemoGraph.name}, or remove the interface's own introspection (the @GraphQLType or @Introspected annotation on it).
   GraphQL coordinate: Memo.subtitle (line 17, column 3)"""
     }

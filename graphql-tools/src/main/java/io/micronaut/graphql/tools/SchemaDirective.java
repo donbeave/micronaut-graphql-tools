@@ -39,8 +39,9 @@ import java.util.Set;
  * </ul>
  *
  * <p>A {@link SchemaDirectiveWiring} bean is not applied on its own: if no {@code SchemaDirective} bean wraps it (the
- * same instance), the startup fails with
- * {@link io.micronaut.graphql.tools.exceptions.UnwrappedDirectiveWiringException}, which names it. A wiring thus never
+ * same instance), the startup fails with a
+ * {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException} of code {@code unwrapped-directive-wiring}, which
+ * names it. A wiring thus never
  * runs on every schema element merely because it is a bean; a wiring that is a bean is wrapped by injecting it into
  * the factory method of its {@code SchemaDirective}.</p>
  *

@@ -21,8 +21,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.ImplementationNotFoundException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverImplementationNotFoundSpec extends AbstractTest {
 
@@ -52,7 +53,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ImplementationNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.IMPLEMENTATION_NOT_FOUND
         e.cause.message == """[implementation-not-found] Can not find implementation class for the interface ${User.name}. Annotate the interface with @GraphQLType, or one implementation class with @GraphQLType(${User.simpleName}.class).
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}

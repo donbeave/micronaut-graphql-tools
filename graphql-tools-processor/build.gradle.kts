@@ -71,17 +71,25 @@ tasks.named<Test>("test") {
         }
     }
 }
-// The Kotlin corpus: one batched Gradle TestKit build with the production toolchain, budget 3 minutes on JDK 25.
-// Not part of `check` until the CI job for it exists (#143).
+// The Kotlin corpus (#143): one batched Gradle TestKit build with the production toolchain, run on the checked and the unchecked
+// variant of every case. Not part of `check` or `build`: it needs the network and builds real projects, so the CI job `build tools`
+// runs it (-Pcorpus.kotlin.processor=kapt runs the same cases under kapt, in the canary workflow).
+fun pluginPin(id: String): String =
+    Regex("""id\("${Regex.escape(id)}"\) version "([^"]+)"""")
+        .find(rootProject.file("build.gradle.kts").readText())?.groupValues?.get(1)
+        ?: throw GradleException("The root build.gradle.kts has no version for the plugin $id")
 tasks.register<Test>("corpusKotlin") {
-    description = "Compiles the Kotlin cases of the binding corpus in one TestKit build (Kotlin, KSP2) and judges them."
+    description = "Compiles the Kotlin cases of the binding corpus in one TestKit build (Kotlin, KSP2 or kapt) and judges them."
     group = "verification"
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
     filter.includeTestsMatching("*KotlinCorpusSpec")
     systemProperty("corpus.gradle-user-home", gradle.gradleUserHomeDir.absolutePath)
     systemProperty("corpus.micronaut.platform", libs.versions.micronaut.platform.get())
+    systemProperty("corpus.kotlin.version", pluginPin("org.jetbrains.kotlin.jvm"))
+    systemProperty("corpus.ksp.version", pluginPin("com.google.devtools.ksp"))
     systemProperty("corpus.kotlin.dir", layout.buildDirectory.dir("corpus-kotlin").get().asFile.absolutePath)
+    providers.gradleProperty("corpus.kotlin.processor").orNull?.let { systemProperty("corpus.kotlin.processor", it) }
     outputs.upToDateWhen { false }
 }
 

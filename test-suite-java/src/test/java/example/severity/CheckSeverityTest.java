@@ -17,13 +17,16 @@ package example.severity;
 
 import graphql.schema.GraphQLSchema;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,18 +42,24 @@ class CheckSeverityTest {
         }
     }
 
-    private static void assertFails(Map<String, Object> properties, String code) {
+    private static SchemaBindingException assertFails(Map<String, Object> properties, String code) {
         Throwable e = assertThrows(Exception.class, () -> start(properties));
         while (!(e instanceof SchemaBindingException) && e.getCause() != null && e.getCause() != e) {
             e = e.getCause();
         }
         assertTrue(e instanceof SchemaBindingException, e.toString());
         assertTrue(e.getMessage().startsWith("[" + code + "]"), e.getMessage());
+        return (SchemaBindingException) e;
     }
 
     @Test
     void anUnreachableTypeFailsTheStartupByDefault() {
-        assertFails(Map.of(), "unreachable-type");
+        SchemaBindingException e = assertFails(Map.of(), "unreachable-type");
+        // the failure is about a type, not one field: no coordinate, and it is no aggregate
+        assertEquals(BindingCode.UNREACHABLE_TYPE, e.code());
+        assertNull(e.getCoordinate());
+        assertTrue(e.getFailures().isEmpty());
+        assertTrue(e.getCodes().isEmpty());
     }
 
     @Test

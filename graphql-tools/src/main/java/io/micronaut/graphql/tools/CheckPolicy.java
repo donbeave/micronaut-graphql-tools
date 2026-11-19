@@ -21,7 +21,7 @@ import io.micronaut.core.value.PropertyResolver;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.DefaultSeverities;
 import io.micronaut.graphql.tools.binding.internal.finding.Severity;
-import io.micronaut.graphql.tools.exceptions.InvalidConfigurationException;
+import io.micronaut.graphql.tools.internal.exceptions.InvalidConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

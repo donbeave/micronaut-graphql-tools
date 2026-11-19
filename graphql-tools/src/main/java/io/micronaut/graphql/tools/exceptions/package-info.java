@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 /**
- * The failures of the binding at startup. Every failure is a {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException};
- * the subclasses name one failure each, and each carries a stable error code. The guide page "Exceptions" is the
- * error reference.
+ * The failure of the binding at startup: {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException}, the one
+ * exception to catch. It carries a stable error code ({@link io.micronaut.graphql.tools.binding.BindingCode}); the guide
+ * page "Exceptions" is the error reference.
  *
- * <p><b>Audience.</b> Public API, but only {@code SchemaBindingException} is meant to be caught: match on its code,
- * not on a subclass. The subclasses are being made internal and the package is being reduced to the one exception
- * (see the guide page "API Map").</p>
+ * <p><b>Audience.</b> Public API. Match on {@code SchemaBindingException#code()}. The classes that build each failure are
+ * internal.</p>
  */
 package io.micronaut.graphql.tools.exceptions;

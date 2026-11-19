@@ -52,20 +52,21 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.rules.EnumTypeRules;
 import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
-import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
-import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
-import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException;
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException;
-import io.micronaut.graphql.tools.exceptions.InterfaceTypeMappingNotProvidedException;
-import io.micronaut.graphql.tools.exceptions.MappingConflictException;
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
-import io.micronaut.graphql.tools.exceptions.MissingEnumValuesException;
-import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException;
-import io.micronaut.graphql.tools.exceptions.ResolverRequiredException;
-import io.micronaut.graphql.tools.exceptions.RootResolverNotFoundException;
-import io.micronaut.graphql.tools.exceptions.SchemaDefinitionNotProvidedException;
-import io.micronaut.graphql.tools.exceptions.StrictModeException;
+import io.micronaut.graphql.tools.internal.exceptions.ClassNotIntrospectedException;
+import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException;
+import io.micronaut.graphql.tools.internal.exceptions.AmbiguousBindingException;
+import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException;
+import io.micronaut.graphql.tools.internal.exceptions.IncorrectClassMappingException;
+import io.micronaut.graphql.tools.internal.exceptions.InterfaceTypeMappingNotProvidedException;
+import io.micronaut.graphql.tools.internal.exceptions.MappingConflictException;
+import io.micronaut.graphql.tools.internal.exceptions.MethodNotFoundException;
+import io.micronaut.graphql.tools.internal.exceptions.MissingEnumValuesException;
+import io.micronaut.graphql.tools.internal.exceptions.MultipleMethodsFoundException;
+import io.micronaut.graphql.tools.internal.exceptions.ResolverRequiredException;
+import io.micronaut.graphql.tools.internal.exceptions.RootResolverNotFoundException;
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
+import io.micronaut.graphql.tools.internal.exceptions.SchemaDefinitionNotProvidedException;
+import io.micronaut.graphql.tools.internal.exceptions.StrictModeException;
 import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
 import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
@@ -105,6 +106,7 @@ import static io.micronaut.graphql.tools.MicronautUtils.toMap;
 import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.getSupportedClasses;
 import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isGraphQlBuiltInType;
 import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isJavaBuiltInClass;
+import io.micronaut.graphql.tools.internal.exceptions.UnexpectedBindingException;
 
 @Internal
 final class GraphQLRuntimeWiringGenerator {
@@ -294,10 +296,10 @@ final class GraphQLRuntimeWiringGenerator {
                     schemaDefinition, implementedInterfaces, snapshot(processedTypes), rootRuntimeWiringBuilder);
             Set<String> unboundTypes = reachability.unbound();
 
-            Optional<RuntimeException> coordinateFinding = coordinateValidator.verifySchemaCoordinateBindings(
+            Optional<SchemaBindingException> coordinateFinding = coordinateValidator.verifySchemaCoordinateBindings(
                     unboundTypes, snapshot(processedTypes), snapshot(fieldBindings), immutable(resolverBindings));
 
-            Optional<RuntimeException> strictFinding = checkStrictMode(unboundTypes);
+            Optional<SchemaBindingException> strictFinding = checkStrictMode(unboundTypes);
 
             throwFindings(Stream.of(Optional.ofNullable(reachability.finding()), coordinateFinding, strictFinding)
                     .flatMap(Optional::stream)
@@ -326,7 +328,7 @@ final class GraphQLRuntimeWiringGenerator {
         return Collections.unmodifiableMap(copy);
     }
 
-    private Optional<RuntimeException> checkStrictMode(Set<String> unboundTypes) {
+    private Optional<SchemaBindingException> checkStrictMode(Set<String> unboundTypes) {
         StrictModeChecks checks = new StrictModeChecks(manifestRecorder, checkPolicy);
         boolean recording = manifestRecorder.isRecording();
         Set<String> allowedTypes = new HashSet<>(configuration.getAllow().getUnreachable());
@@ -362,7 +364,7 @@ final class GraphQLRuntimeWiringGenerator {
                 : Optional.empty();
     }
 
-    private static void throwFindings(List<RuntimeException> findings) {
+    private static void throwFindings(List<SchemaBindingException> findings) {
         if (findings.size() == 1) {
             throw findings.get(0);
         }

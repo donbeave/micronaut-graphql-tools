@@ -23,9 +23,9 @@ import io.micronaut.graphql.tools.annotation.GraphQLArgument
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException
-import io.micronaut.graphql.tools.exceptions.IncorrectArgumentNameException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class ArgumentBindingSpec extends AbstractTest {
 
@@ -129,7 +129,8 @@ type User { name(prefix: String!, suffix: String!): String! }
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectArgumentNameException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message.contains("The method parameter 'count' has no GraphQL argument with that name " +
                 "(arguments: [first, offset])")
         e.cause.message.contains('@GraphQLArgument("<argument name>")')
@@ -146,7 +147,8 @@ type User { name(prefix: String!, suffix: String!): String! }
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectArgumentNameException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message.contains("More than one method parameter is bound to the GraphQL argument 'first'")
         e.cause.message.contains('GraphQL coordinate: Query.page')
     }
@@ -160,7 +162,8 @@ type User { name(prefix: String!, suffix: String!): String! }
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectArgumentCountException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message.contains('too many arguments')
         e.cause.message.contains('page(Int first, Int offset)')
     }
@@ -174,7 +177,8 @@ type User { name(prefix: String!, suffix: String!): String! }
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectArgumentCountException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message.contains('too few arguments')
         e.cause.message.contains('GraphQL coordinate: Query.page')
     }
@@ -188,7 +192,8 @@ type User { name(prefix: String!, suffix: String!): String! }
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectArgumentNameException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message.contains("The method parameter 'first' is bound by @GraphQLArgument(\"frist\")")
         e.cause.message.contains('(arguments: [first, offset])')
         e.cause.message.contains('GraphQL coordinate: Query.page')

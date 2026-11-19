@@ -75,6 +75,7 @@ compare "jmh" "$(catalog jmh)" "$(newest $CENTRAL org.openjdk.jmh jmh-core '^[0-
 compare "jmh plugin" "$(plugin_pin me.champeau.jmh)" "$(newest $PORTAL me.champeau.jmh me.champeau.jmh.gradle.plugin '^[0-9.]+$')" "newest"
 compare "jetbrains-annotations" "$(catalog jetbrains-annotations)" "$(newest $CENTRAL org.jetbrains annotations '^[0-9.]+$')" "newest"
 compare "graphql-java-datetime" "$(catalog graphql-java-datetime)" "$(newest $CENTRAL com.tailrocks.graphql graphql-java-datetime '^[0-9.]+$')" "newest"
+compare "archunit" "$(catalog archunit)" "$(newest $CENTRAL com.tngtech.archunit archunit '^[0-9.]+$')" "newest"
 
 # graphql-java legs: each pin is the newest release of its line (floor 21.x, default 22.x, ceiling 25.x until GJ26).
 line_major() { printf '^%s\\.[0-9.]+$' "${1%%.*}"; }

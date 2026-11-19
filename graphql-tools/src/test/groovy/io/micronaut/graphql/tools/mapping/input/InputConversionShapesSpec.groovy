@@ -28,10 +28,10 @@ import io.micronaut.graphql.tools.GraphQLScalarMapping
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
-import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class InputConversionShapesSpec extends AbstractTest {
 
@@ -264,7 +264,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.BINDING_FAILURES
         e.cause.message.contains('2 errors')
         e.cause.message.count('[class-not-introspected]') == 2
     }
@@ -276,7 +277,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.BINDING_FAILURES
         e.cause.message.contains('2 errors')
     }
 
@@ -299,7 +301,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedInputTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_INPUT_TYPE
         e.cause.reason.contains(ArrayDeque.name)
     }
 

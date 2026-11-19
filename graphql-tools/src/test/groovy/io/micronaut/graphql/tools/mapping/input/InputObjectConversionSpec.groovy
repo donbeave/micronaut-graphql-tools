@@ -24,13 +24,14 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.GraphQLScalarMapping
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.InputFieldNotSettableException
 import io.micronaut.context.exceptions.BeanInstantiationException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class InputObjectConversionSpec extends AbstractTest {
 
@@ -98,7 +99,8 @@ input RegistrationInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InputFieldNotSettableException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INPUT_FIELD_NOT_SETTABLE
         e.cause.message.startsWith('[input-field-not-settable] The input field RegistrationInput.displayName cannot be set')
     }
 

@@ -21,8 +21,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class TypeTooManyArgumentsSpec extends AbstractTest {
 
@@ -52,7 +53,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectArgumentCountException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message == """[argument-mismatch] The method has too many arguments, provided: 1, required 0 arg(s).
   GraphQL coordinate: User.username (line 11, column 3)
   Mapped class: ${User.name}

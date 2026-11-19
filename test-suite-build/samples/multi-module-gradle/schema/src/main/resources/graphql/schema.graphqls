@@ -1,9 +1,26 @@
 type Query {
   book(id: ID!): Book
   books(limit: Int): [Book!]!
+  authors(genre: Genre, filter: AuthorFilter): [Author!]!
 }
 
 type Book {
   id: ID!
   title: String!
+  author: Author
+}
+
+type Author {
+  id: ID!
+  name: String!
+  genre: Genre
+}
+
+enum Genre {
+  FICTION
+  POETRY
+}
+
+input AuthorFilter {
+  name: String
 }

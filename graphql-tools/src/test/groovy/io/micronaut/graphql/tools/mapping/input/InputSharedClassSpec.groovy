@@ -22,8 +22,9 @@ import io.micronaut.graphql.tools.BindingManifest
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class InputSharedClassSpec extends AbstractTest {
 
@@ -85,7 +86,8 @@ input CreateInput { name: String! }
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnmappedInputPropertiesException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNMAPPED_INPUT_PROPERTY
         e.cause.unmappedProperties.values()*.value.flatten() == ['id']
         e.cause.unmappedProperties.values()*.key == [SharedDto]
         e.cause.message.contains("mapped class: ${SharedDto.name}, properties: id")

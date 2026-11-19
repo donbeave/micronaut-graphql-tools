@@ -45,6 +45,7 @@ class CorpusRunnerSpec extends Specification {
                 'a/java/example/A.java'      : 'package example; class A { }\n',
                 'corpus-divergences.txt'     : divergences,
                 'corpus-soundness-exceptions.txt': exceptions,
+                'corpus-language-differences.txt': 'max-entries: 0\n',
         ]
         expected.each { name, text -> files.put('a/expected/' + name, text) }
         files.putAll(more)
@@ -126,6 +127,41 @@ class CorpusRunnerSpec extends Specification {
         corpus.problems == []
         corpus.cases*.name == ['a', 'b/c']
         corpus.units().collect { [it[0].toString(), ((Language) it[1]).dir] } == [['a', 'java'], ['b/c', 'groovy']]
+    }
+
+    void "a language directory of module directories is one compilation per module, in name order"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 0\n', [
+                'a/java/module-b-feature/example/B.java': 'package example; class B { }\n',
+                'a/java/module-a-model/example/A.java'  : 'package example; class A { }\n',
+        ])
+        Files.delete(dir.resolve('a/java/example/A.java'))
+        Files.delete(dir.resolve('a/java/example'))
+
+        when:
+        CorpusCase c = new Corpus(root).byName('a')
+
+        then:
+        c.problems == []
+        c.units(Language.JAVA)*.name == ['module-a-model', 'module-b-feature']
+        c.units(Language.JAVA).collect { it.sources*.fileName*.toString() } == [['A.java'], ['B.java']]
+        c.sources(Language.JAVA)*.fileName*.toString() == ['A.java', 'B.java']
+    }
+
+    void "a language directory that mixes packages and module directories, or has an empty module, is a problem"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 0\n', [
+                'a/java/module-a/example/B.java': 'package example; class B { }\n',
+                'a/java/module-empty/readme.txt': 'nothing\n',
+        ])
+
+        when:
+        CorpusCase c = new Corpus(root).byName('a')
+
+        then:
+        c.problems.any { it.contains('java/example sits next to the module-* directories') }
+        c.problems.any { it.contains('java/module-empty/ has no .java source') }
+        c.units(Language.JAVA)*.name == ['module-a', 'module-empty']
     }
 
     void "the properties of a case: tags, environments and the runtime configuration"() {
@@ -437,7 +473,43 @@ class CorpusRunnerSpec extends Specification {
         then:
         Files.readString(dir.resolve('a/expected/runtime.txt')) == "field-not-bound Query.missing schema.graphqls:3:3\n"
         Files.readString(dir.resolve('a/expected/kotlin/runtime.txt')) == 'ok\n'
+
+        and: 'the language that differs has to be documented, or corrected by the run of its own backend'
+        new Corpus(root).problems.any { it.contains('expected/kotlin/runtime.txt makes kotlin differ') }
+    }
+
+    void "a language that differs from the others is allowed only with an entry that gives its reason, and the list may only shrink"() {
+        given:
+        Map<String, String> kotlin = ['a/kotlin/example/A.kt': 'package example\n', 'a/expected/kotlin/runtime.txt': 'ok\n']
+        Path root = corpus(['runtime.txt': 'field-not-bound Query.missing schema.graphqls:3:3\n'], 'max-entries: 0\n', kotlin)
+
+        expect: 'an override without an entry'
+        new Corpus(root).problems.any { it.contains('makes kotlin differ from the other languages') }
+
+        when: 'with an entry, a reason and the matching ceiling'
+        Files.writeString(dir.resolve('corpus-language-differences.txt'), 'max-entries: 1\na kotlin runtime.txt the schema field is not bound in Kotlin\n')
+
+        then:
         new Corpus(root).problems == []
+
+        when: 'the ceiling is not lowered with the entry, or raised without one'
+        Files.writeString(dir.resolve('corpus-language-differences.txt'), 'max-entries: 2\na kotlin runtime.txt a reason\n')
+
+        then:
+        new Corpus(root).problems.any { it.contains('below the ceiling') }
+
+        when: 'the override is gone: the entry is stale'
+        Files.delete(dir.resolve('a/expected/kotlin/runtime.txt'))
+        Files.writeString(dir.resolve('corpus-language-differences.txt'), 'max-entries: 1\na kotlin runtime.txt a reason\n')
+
+        then:
+        new Corpus(root).problems.any { it.contains('is stale: there is no expected/kotlin/runtime.txt') }
+    }
+
+    void "the application of a case starts without the websocket keep-alive, which fails on a background thread and stops the context, unless the case asks for it"() {
+        expect:
+        CorpusStartup.properties([:], ['file:x/*.graphqls'])['graphql.graphql-ws.enabled'] == false
+        CorpusStartup.properties(['graphql.graphql-ws.enabled': 'true'], ['file:x/*.graphqls'])['graphql.graphql-ws.enabled'] == 'true'
     }
 
     void "a duplicated divergence entry is a problem"() {

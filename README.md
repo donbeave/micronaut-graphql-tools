@@ -131,7 +131,7 @@ missing. A wildcard needs a directory before it. Several locations are read in o
 - **Override.** Any `TypeDefinitionRegistry` bean of the application is used instead and nothing is read. A
   `TypeDefinitionRegistryCustomizer` still runs on top of the schema, with either source.
 - **Failures.** A file that does not parse or conflicts with another, a location that names a missing file, and locations
-  that match no file at all fail the startup with `SchemaDiscoveryException`: code `schema-invalid` for a file that does not parse or conflicts, `schema-not-found` for the rest. The message names the file or the locations.
+  that match no file at all fail the startup: code `schema-invalid` for a file that does not parse or conflicts, `schema-not-found` for the rest. The message names the file or the locations.
 - **Compile time.** The processor reads the same `*.graphqls` files with the same code from its schema directory
   (`micronaut.graphql.tools.sdlDir`, see [Compile-time checks](#compile-time-checks)): several directories may be listed
   with the platform path separator. It cannot read classpath locations, so schema that comes from a dependency jar is
@@ -177,7 +177,7 @@ containers graphql-java resolves at runtime, outermost first and each at most on
   `Optional` becomes `null`);
 - `OptionalInt`, `OptionalLong` or `OptionalDouble`, under the same rules, mapped to `Int`, `Long` or `Float`.
 
-The mapping then checks `T`. Anything else fails at startup with `UnsupportedReturnTypeException`. In particular:
+The mapping then checks `T`. Anything else fails at startup with `[unsupported-return-type]`. In particular:
 
 - `List<CompletionStage<T>>` is rejected: graphql-java does not wait for futures inside a list, and the client would
   receive the future's `toString()`. Return `CompletionStage<List<T>>` instead.
@@ -220,7 +220,7 @@ Methods of beans without coordinates are matched by name. The coordinate is also
 
 - On a bean where at least one method carries a coordinate, only those methods bind. Other public methods (helpers)
   are not candidates.
-- The startup fails with `InvalidSchemaCoordinateException`, listing every problem, when a coordinate is not of the
+- The startup fails with `[unknown-schema-coordinate]` (or `[coordinate-on-non-resolver]`), listing every problem, when a coordinate is not of the
   form `Type.field`, names a type or field the schema does not have or a type that is neither an object type nor an
   interface, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
   `@GraphQLTypeResolver`, or sits on a bean that is neither. The method may have any name: the coordinate decides, see
@@ -254,12 +254,12 @@ always did; give it a coordinate to scope it to one. When that makes one method 
 `ping()` for `Query.ping` and `Mutation.ping`), [strict mode](#strict-mode), on by default, fails the startup
 (`root-method-several-operations`); setting that check to `warn` or `ignore` allows it. When more than one method can bind one root field (two beans with
 a method of that name, two methods with one coordinate, or a coordinate method and a method of a bean without
-coordinates), the startup fails with `MultipleMethodsFoundException` naming the field and every method. Before, the
+coordinates), the startup fails with `[multiple-methods-found]` naming the field and every method. Before, the
 first bean found won, which depended on the order Micronaut returned the beans in. There is no option to restore that.
 
 **Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
 class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both
-then bind the same field, the startup fails with `MultipleMethodsFoundException` naming both classes. Annotate only the
+then bind the same field, the startup fails with `[multiple-methods-found]` naming both classes. Annotate only the
 class that should be the resolver, or annotate the subclass with `@Replaces(<original>.class)`: the original is then
 dropped and only the subclass binds. `@Requires(env = "test")` alone does not help, because both beans are active in the
 test environment. The same applies to two beans of different packages that bind one root field: the message names the
@@ -269,7 +269,7 @@ operation types).
 **Several contracts on one bean.** A bean may implement type resolver contracts for different classes. The
 annotation metadata keeps only one of the inherited values, so the class hierarchy is read to find every contract, and
 each method binds for the class of its first parameter (the source object). A public method whose first parameter is
-none of those classes fails the startup with `AmbiguousTypeResolverException`, naming the bean and every contract (on a
+none of those classes fails the startup with `[ambiguous-type-resolver]`, naming the bean and every contract (on a
 bean that uses `@GraphQLSchemaCoordinate`, only methods with a coordinate count).
 
 This is the one place where the library reads class annotations by reflection
@@ -277,7 +277,7 @@ This is the one place where the library reads class annotations by reflection
 annotations are retained at runtime, so this works on the JVM. Where class annotations are not available at runtime,
 for example in a native image without reflection configuration for the contract types, a bean annotated directly
 keeps its annotation value, and a bean that is a type resolver only through an inherited annotation fails the startup
-with `TypeResolverContractsNotFoundException`. Annotate such a bean directly or make the annotations of its contract
+with `[type-resolver-contracts-not-found]`. Annotate such a bean directly or make the annotations of its contract
 types available to reflection.
 
 ## Property or type resolver
@@ -287,8 +287,8 @@ type resolver method (of a `@GraphQLTypeResolver` for that type, or for the Java
 declares the field). One rule covers object and interface fields. When both exist for one field,
 `micronaut.graphql.tools.precedence` decides:
 
-- `fail` (default): the startup fails with `[precedence-ambiguity]` (`AmbiguousBindingException`), naming the field and
-  both members. `strict` does not relax it. The value `strict`, the former name of this default, is rejected with
+- `fail` (default): the startup fails with `[precedence-ambiguity]` (match on `SchemaBindingException#code()`), naming the field
+  and both members. `strict` does not relax it. The value `strict`, the former name of this default, is rejected with
   `[removed-configuration-key]` (BC-29).
 - `property-first`: the member of the Java type binds, and the type resolver method is never called. This was the
   only behaviour before the option existed.
@@ -309,7 +309,7 @@ A field may say which one it wants, and then the setting is not consulted and no
 
 The error message of an ambiguity names every one of these and says that `strict` does not change it.
 
-A field with a resolver directive fails the startup with `ResolverRequiredException` when only a member of the Java
+A field with a resolver directive fails the startup with `[resolver-required]` when only a member of the Java
 type could bind it. Every listed directive must be
 declared in the schema. The directive is read from the field of the object type: graphql-java does not carry
 directives of an SDL interface field over to the implementations, so a directive written only on the interface's
@@ -413,16 +413,15 @@ The schema is bound when the application context starts, whether the library or 
 `GraphQL` bean: a field that cannot be bound fails the startup (of the `ApplicationContext` and of the embedded server),
 and the first request does no binding work. `micronaut.graphql.tools.eager-init: false` binds it when the first bean
 that needs the `GraphQLSchema` is created instead, for tests that expect the failure on a bean lookup. Every field that
-cannot be bound is reported; the binding does not stop at the first one. A single failure is thrown as its own exception (`MethodNotFoundException`,
-`MultipleMethodsFoundException`, `IncorrectClassMappingException`, ...). Several are thrown together as
-`BindingFailuresException`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
+cannot be bound is reported; the binding does not stop at the first one. A single failure is thrown as a `SchemaBindingException` with its own code (`[field-not-bound]`,
+`[multiple-methods-found]`, `[incorrect-class-mapping]`, ...). Several are thrown together as one `SchemaBindingException`
+with the code `[binding-failures]`, sorted by schema coordinate: `getFailures()` lists them, the first is the cause and the
 others are suppressed exceptions. An unexpected exception of one field (for example an unsupported type definition) is
 reported like the others, named by the field's coordinate, so it does not hide them. The checks that need a complete
 binding (unreachable types, schema coordinates, strict mode) run only when no field failed, and then they report
-together: when more than one finds a problem, the startup fails once with a `BindingFailuresException` that lists each
+together: when more than one finds a problem, the startup fails once with `[binding-failures]` that lists each
 finding under the code of its check (`[unreachable-type]`, `[unknown-schema-coordinate]`, `[strict-findings]`), in that order;
-a single finding is thrown as its own exception (`UnreachableTypesException`, `InvalidSchemaCoordinateException`,
-`StrictModeException`).
+a single finding is thrown as it is, with its own code.
 
 ```
 [binding-failures] The schema cannot be bound: 3 errors.
@@ -540,7 +539,7 @@ compile time (`unbound-resolver-method`, `root-method-several-operations`, `unbo
   `@Introspected`.
 - **`unmapped-input-property`** (`!unmapped-input-property InputClass#property`): a property the class can set
   (through a setter or the constructor) that no request can ever set. They are reported in one
-  `UnmappedInputPropertiesException` (see [Input classes and input types](#input-classes-and-input-types)).
+  `[unmapped-input-property]` (see [Input classes and input types](#input-classes-and-input-types)).
 - **`nullable-primitive`** (`!nullable-primitive Query.field(argument:)`): an argument or input class property declared
   as a primitive (`int`, `boolean`, `double`, ...) for a nullable built-in scalar (`Int`, `Boolean`, `Float`,
   `Long`, ...): a `null` (omitted or explicit) cannot reach it, so it arrives as the primitive's default value or fails
@@ -550,12 +549,12 @@ compile time (`unbound-resolver-method`, `root-method-several-operations`, `unbo
   `SchemaDirective` bean, `RuntimeWiringCustomizer` or `resolver-directives` entry implements and that
   `allow.inert-directives` does not list (see [Schema directives](#schema-directives)); a directive applied only on
   `schema { }` or on a directive argument is reported even when a wiring names it, unless `allow.inert-directives` or
-  `allow.schema-customizer-directives` lists it. They are reported in one `UnwiredDirectivesException`, which lists
+  `allow.schema-customizer-directives` lists it. They are reported in one `[unwired-directive]` failure, which lists
   where each is applied.
 
 The findings of `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`,
-`unused-dictionary-entry` and `interface-read-through-implementation` are reported in one `StrictModeException`.
-Every schema field must be bound in every mode (`MethodNotFoundException`).
+`unused-dictionary-entry` and `interface-read-through-implementation` are reported in one `[strict-findings]` failure.
+Every schema field must be bound in every mode (`[field-not-bound]`).
 
 ### Allow lists
 
@@ -656,11 +655,11 @@ other libraries provide many. A mapping only takes effect for scalars the schema
 
 The startup fails:
 
-- with `ScalarMappingNotProvidedException` when a field, argument or input field uses a scalar that has no mapping;
+- with `[scalar-mapping-not-provided]` when a field, argument or input field uses a scalar that has no mapping;
   the message names the coordinate;
-- with `IncorrectClassMappingException` when the Java type is not one of the mapping's classes, when the mapping
+- with `[incorrect-class-mapping]` when the Java type is not one of the mapping's classes, when the mapping
   declares no classes for that side, or when a primitive stands for a nullable input;
-- with `InvalidScalarMappingException` when two mappings have the same scalar name, or a mapping names a built-in
+- with `[invalid-scalar-mapping]` when two mappings have the same scalar name, or a mapping names a built-in
   scalar.
 
 Values of custom scalars inside input objects reach the input class as the instances the scalar parsed. When the
@@ -695,8 +694,7 @@ String size(@GraphQLArgument("long") Integer length, @GraphQLArgument("short") I
 The annotation on a parameter of an interface or superclass method also applies to the overriding method.
 
 The startup fails with the schema coordinate and the parameter when a parameter has no argument of that name
-(`IncorrectArgumentNameException`), when two parameters bind to one argument, and (`IncorrectArgumentCountException`)
-when the numbers of parameters and arguments differ. The compile-time check (the visitor of `graphql-tools-processor`)
+(`[argument-mismatch]`), when two parameters bind to one argument, and when the numbers of parameters and arguments differ. The compile-time check (the visitor of `graphql-tools-processor`)
 applies the same rule and reports the same code, `argument-mismatch`, and coordinate. There is no positional opt-out.
 
 **Migration (breaking):** positional matching has ended. A resolver whose parameter names differ from the SDL argument
@@ -716,7 +714,7 @@ request path:
 - an enum is the Java constant already, from the values provider of the enum (see [Enums](#enums));
 - a list becomes a new, mutable `ArrayList` for `List`, `Collection` and `Iterable`, a `LinkedHashSet` for `Set` (it
   keeps the order of the list), a `TreeSet` for `SortedSet`, or a `LinkedList` for `Deque` and `Queue`; any other declared collection
-  fails the startup with `UnsupportedInputTypeException`;
+  fails the startup with `[unsupported-input-type]`;
 - an input object becomes an instance of its input class, built from the class's bean introspection
   (`BeanIntrospection`, generated at compile time because `@GraphQLInput` is `@Introspected`): the introspected
   constructor takes the fields that match its parameters (a record, a Kotlin data class or an immutable class), then
@@ -746,12 +744,12 @@ field is `null` and the other fields still run.
 Input classes are checked against their GraphQL input types at startup, in both directions:
 
 - Every field of an input type needs a settable property of the same name: a setter, a field or a constructor
-  parameter. A missing property fails the startup with `MethodNotFoundException`; a read-only property that no
-  constructor parameter of the same name takes fails with `InputFieldNotSettableException`, which names the field as
+  parameter. A missing property fails the startup with `[field-not-bound]`; a read-only property that no
+  constructor parameter of the same name takes fails with `[input-field-not-settable]`, which names the field as
   `InputType.field`. Such a field would otherwise fail every request that sends it, or be dropped silently.
 - A property the class can set (through a setter or the constructor) that the input type does not define fails the
   startup (the check `unmapped-input-property`, see [strict mode](#strict-mode)), all of them in one
-  `UnmappedInputPropertiesException`, because no request can set it. Each one is also an
+  `[unmapped-input-property]`, because no request can set it. Each one is also an
   `!unmapped-input-property InputClass#property` line of the binding manifest.
   `micronaut.graphql.tools.checks.unmapped-input-property` set to `warn` or `ignore` accepts such properties. Read-only
   properties, such as computed getters, are not checked.
@@ -767,14 +765,14 @@ At startup the library reads the constants from the introspection (`EnumBeanIntr
 never by reflection) and registers one values provider per bound enum, so graphql-java itself coerces an enum argument,
 an enum input field or a schema default value to the Java constant and serializes a returned constant by its schema
 name. The resolver receives the constant with no conversion call. A Java enum without an introspection fails the startup
-with `ClassNotIntrospectedException`, which names the class and `io.micronaut.core.annotation.Introspected`. A schema
-value without a constant fails it with `MissingEnumValuesException`; a constant without a schema value is reported in
+with `[class-not-introspected]`, which names the class and `io.micronaut.core.annotation.Introspected`. A schema
+value without a constant fails it with `[missing-enum-values]`; a constant without a schema value is reported in
 [strict mode](#strict-mode) (`@GraphQLIgnore` suppresses it, see [Escape hatches](#escape-hatches)). A value that the
 schema does not define is a request error from graphql-java and never reaches the resolver. The schema name is the Java
 constant name; the library has no rename annotation for enum values.
 
 A `RuntimeWiringCustomizer` cannot register its own `enumValues` provider for a bound enum: that replaces the library's
-wiring and fails the startup with `RuntimeWiringOverrideException`.
+wiring and fails the startup with `[runtime-wiring-override]`.
 
 ### Omitted values and `null`
 
@@ -799,7 +797,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 - `ArgumentValue` is allowed only for a nullable GraphQL type, not inside a list, and an input class property of that
   type needs a setter or a constructor parameter (the library sets it to `ArgumentValue.omitted()` when the client
   leaves it out, and also when the input type does not define it, for example when another input type backed by the
-  same class does). Otherwise, and without the option, the startup fails with `UnsupportedInputTypeException`.
+  same class does). Otherwise, and without the option, the startup fails with `[unsupported-input-type]`.
 - A record component, a Kotlin data class `val` (a default argument is not used for it) or a constructor parameter of
   the type is filled at construction: `ArgumentValue.omitted()` when the client leaves the field out and the schema
   declares no default, otherwise `ArgumentValue.ofNullable(value)` (the schema default counts as the value). It works the same in nested input classes and in lists of them. A Groovy class
@@ -1056,7 +1054,8 @@ union or interface resolves are errors of the request, reported by graphql-java.
 
 GraphQL interfaces and union types often have multiple concrete implementations.
 
-Define a `SchemaMappingDictionaryCustomizer` bean to register custom types if any.
+Define a `SchemaMappingDictionaryCustomizer` bean to register custom types if any. You may define several, for example one
+per module: all of them run, in `@Order`, on one dictionary. A GraphQL type that two of them map fails the startup.
 
 In the example below, the `SchemaMappingDictionaryCustomizer` bean is used to register the Java classes of the members of the `Error` union type. This associates the GraphQL types `SecurityError` and `ValidationError` with their respective Java implementations (`SecurityError.class` and `ValidationError.class`).
 
@@ -1078,11 +1077,11 @@ either the interface or such a class for the same GraphQL type. The rules, each 
 - A GraphQL type is mapped once, and a Java type to one GraphQL type. Both errors name the GraphQL types and the Java
   types involved.
 - Mapping one GraphQL object type to an interface and another one to a class (or interface) implementing it fails
-  with `AmbiguousTypeMappingException`, which names both GraphQL types and both Java types: an object of that class
+  with `[ambiguous-type-mapping]`, which names both GraphQL types and both Java types: an object of that class
   would match both.
 - A class and its subclass may be mapped to two GraphQL types. A union or interface resolves an object of either class by
   its exact class; an object of a further subclass (such as a proxy) resolves to the most specific of them, as described below.
-- Two fields that declare different Java types for one GraphQL type fail with `MappingConflictException`, unless the
+- Two fields that declare different Java types for one GraphQL type fail with `[mapping-conflict]`, unless the
   two types are an interface and a class annotated with `@GraphQLType(TheInterface.class)` that is read through the
   same bean introspection.
 
@@ -1091,11 +1090,11 @@ either the interface or such a class for the same GraphQL type. The rules, each 
 - A field that returns a GraphQL union or interface declares a Java interface (for example `List<Section>` for
   `[Section!]!`); a class fails the startup.
 - Every member of the union and every object type that implements the interface needs its class registered as above,
-  otherwise the startup fails (`UnionTypeMappingNotProvidedException`, `InterfaceTypeMappingNotProvidedException`).
+  otherwise the startup fails (`[union-type-mapping-not-provided]`, `[interface-type-mapping-not-provided]`).
   Each of these object types is bound like any other, so every field of the interface must be bound on every
   implementation. That an object type declares all fields of its interfaces is checked by graphql-java.
 - Each of these object types must be mapped to a Java type that an object the field returns could be an instance of.
-  The startup fails with `IncorrectMemberMappingException` only for a provably disjoint mapping: a `final` class that
+  The startup fails with `[incorrect-member-mapping]` only for a provably disjoint mapping: a `final` class that
   does not implement the declared Java interface, or two classes with no subtype relation. A mapped Java interface
   that does not extend the declared one is accepted, because one class can implement both.
 - At runtime the object type of a returned object is chosen in two steps, and the result is cached per class:
@@ -1127,7 +1126,7 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   object types), the member types against the declared Java interface (provably disjoint mappings only) and, for every
   concrete class with a bean introspection, the ambiguity of the members. Such a class that is not mapped by its exact
   class, and is an instance of the Java types of several members of a returned union or interface of which none is more
-  specific, fails the startup with `AmbiguousAbstractTypeException`, naming the class and the members. A class and its
+  specific, fails the startup with `[ambiguous-abstract-type]`, naming the class and the members. A class and its
   sub-member (`B` mapped to `LongNote extends Note` mapped to `A`) is not ambiguous. The check runs once, from the
   introspection metadata, which a native image has, and adds nothing per request:
 
@@ -1146,7 +1145,7 @@ either the interface or such a class for the same GraphQL type. The rules, each 
   on every implementing object type that does not bind them itself (the first parameter is the Java interface). Its
   coordinate, if any, is the interface field (`Section.summary`). When an implementation binds such a field itself as
   well (a property, a `@GraphQLField` method or its own type resolver), or two interfaces of it have a resolver for the
-  field, the startup fails with `MultipleMethodsFoundException` naming the object type, the field and both members.
+  field, the startup fails with `[multiple-methods-found]` naming the object type, the field and both members.
   Only interfaces that a field returns have a Java type, so a resolver for an interface that is only implemented is
   not applied.
 
@@ -1162,13 +1161,13 @@ interface has a bean introspection of its own:
   interface as well. A `@GraphQLTypeResolver(TheInterface.class)` resolver receives the object as `TheInterface`.
 - **The interface has no introspection of its own.** Exactly one class annotated with `@GraphQLType(TheInterface.class)`
   is read, with all of its getters, including getters that the interface does not declare (the library cannot read
-  the interface's methods without an introspection). No such class fails with `ImplementationNotFoundException` and
-  several with `MultipleImplementationsFoundException`; annotate the interface with `@GraphQLType` to read all of them
+  the interface's methods without an introspection). No such class fails with `[implementation-not-found]` and
+  several with `[multiple-implementations-found]`; annotate the interface with `@GraphQLType` to read all of them
   and to make implementation-only getters non-candidates. [Strict mode](#strict-mode), on by default, rejects this
   case; it binds only with `strict: false`.
 
 A getter that only an implementation class declares is not a property of an interface that has its own
-introspection. A GraphQL field that only such a getter could back fails at startup with `MethodNotFoundException`,
+introspection. A GraphQL field that only such a getter could back fails at startup with `[field-not-bound]`,
 which names the GraphQL type, the field and the interface:
 
 ```
@@ -1195,13 +1194,13 @@ first, by `@Order` on the bean class or factory method, or by `Ordered#getOrder(
 A `RuntimeWiringCustomizer` may only **add** (scalars, directive wirings, field visibility, ...). If it replaces a data
 fetcher, default data fetcher, type resolver or scalar that the library registered, or the wiring factory, or puts a
 data fetcher or type resolver for a field or type the library wired into a code registry (`builder.codeRegistry(...)`,
-which graphql-java lets win), the startup fails with `RuntimeWiringOverrideException`, which names every replacement
+which graphql-java lets win), the startup fails with `[runtime-wiring-override]`, which names every replacement
 and the customizer that made it. The check runs only when the application has a `RuntimeWiringCustomizer` bean; the
 library's own directive wirings are not checked, and without a customizer the startup does no check work. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
 (On graphql-java 25.2 the builder itself already rejects the first replaced default data fetcher, type
 resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them silently. A second data fetcher for a
-field the library wired is reported as `RuntimeWiringOverrideException` on every line. On some graphql-java lines `RuntimeWiring.Builder#type` for a
+field the library wired is reported as `[runtime-wiring-override]` on every line. On some graphql-java lines `RuntimeWiring.Builder#type` for a
 type the library wired clears that type's default data fetcher; the library puts it back, so calling `type` to add a
 field fetcher is not a replacement.) To wrap data fetchers, use a
 `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
@@ -1227,7 +1226,7 @@ public RuntimeWiringCustomizer hideInternalFields() {
 ### Fields a customizer serves
 
 A field that only a hand-written `DataFetcher` serves has no Java member, so the library would fail the startup with
-`MethodNotFoundException`. The customizer declares such a field by **claiming** it in `claimedFields()` and registers the
+`[field-not-bound]`. The customizer declares such a field by **claiming** it in `claimedFields()` and registers the
 data fetcher in `customize`:
 
 ```java
@@ -1249,11 +1248,11 @@ class ServerVersionCustomizer implements RuntimeWiringCustomizer {
 
 - The library does not bind or check a claimed field, even when the Java type has a member of that name, and a data
   fetcher the customizer registers for it is not a replacement. Fields it does not claim stay protected: replacing one
-  still fails with `RuntimeWiringOverrideException`.
+  still fails with `[runtime-wiring-override]`.
 - A claim must name a field of an **object** type of the schema (the fields of `extend type` included). A claim for a type
-  or field the schema does not define, or for an interface, fails the startup with `InvalidClaimedFieldsException`, which
+  or field the schema does not define, or for an interface, fails the startup with `[invalid-claimed-fields]`, which
   names every such coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
-- `RuntimeWiringOverrideException`, and the `MethodNotFoundException` of a field added by `extend type`, name
+- `[runtime-wiring-override]`, and the `[field-not-bound]` of a field added by `extend type`, name
   `claimedFields()` as the way out.
 - `claimedFields()` is read once, at startup, before any field is bound. Claimed fields have a line in the
   [binding manifest](#binding-manifest) of kind `claimed`, naming the customizer.
@@ -1269,8 +1268,8 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
 
 - `SchemaDirective.named(name, wiring)` binds the wiring to **one** directive name; graphql-java calls it only for the
   elements that apply that directive (`RuntimeWiring.Builder#directive`). Two such beans for one name fail the
-  startup with `DuplicateDirectiveWiringException`, and a `RuntimeWiringCustomizer` that replaces such a wiring fails
-  it with `RuntimeWiringOverrideException`.
+  startup with `[duplicate-directive-wiring]`, and a `RuntimeWiringCustomizer` that replaces such a wiring fails
+  it with `[runtime-wiring-override]`.
 - `SchemaDirective.everyElement(names, wiring)` registers a wiring that graphql-java calls for **every** schema element
   and that decides itself what to do (`RuntimeWiring.Builder#directiveWiring`); the names say which directives it
   implements. It must return the element unchanged unless the element carries one of those directives, because a
@@ -1279,7 +1278,7 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
   the `SchemaDirective` bean), so the first one wraps a data fetcher innermost.
 - One directive may have either a `named` bean or any number of `everyElement` beans, not both: a `named` bean and an
   `everyElement` bean that lists the same name would apply the directive twice (two auth checks, a value transformed
-  twice), so the startup fails with `DuplicateDirectiveWiringException`, which names the directive and both wirings.
+  twice), so the startup fails with `[duplicate-directive-wiring]`, which names the directive and both wirings.
   Keep one of them: remove the `named` bean, or make the `everyElement` wiring stop handling that directive and then drop its name.
 - All `named` wirings run before every `everyElement` wiring, so they are always innermost. `@Order` on a `named` bean
   has no effect: the library does not sort them, and they run in the order the SDL applies the directives to the
@@ -1287,13 +1286,13 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
 
 A `SchemaDirectiveWiring` bean is **not** applied on its own: if neither a `SchemaDirective` bean wraps it nor a
 `RuntimeWiringCustomizer` registers it (`RuntimeWiring.Builder#directive` or `#directiveWiring`), the startup fails with
-`UnwrappedDirectiveWiringException`, which names the bean. The check runs after every customizer. A wiring therefore
+`[unwrapped-directive-wiring]`, which names the bean. The check runs after every customizer. A wiring therefore
 never runs on every element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of
 its `SchemaDirective`. A singleton is matched by instance; a `@Prototype` bean (a new instance per injection point) by
 its class, so it may be wrapped too. Because of that, an unwrapped `@Prototype` bean goes undetected when some wired
 instance (of any bean) has the same class; the check then cannot tell the two instances apart.
 
-**Every directive the schema applies must have a wiring**, or the startup fails with `UnwiredDirectivesException`,
+**Every directive the schema applies must have a wiring**, or the startup fails with `[unwired-directive]`,
 which lists every such directive and where the schema applies it. With the check `unwired-directive` at `warn` (or `strict: false`, see [Strict mode](#strict-mode)) the
 same list is a warning instead; either way each such directive is an `!unwired-directive` line of the binding
 manifest. A directive counts as wired if a `SchemaDirective` bean names it, if a `RuntimeWiringCustomizer` registers a

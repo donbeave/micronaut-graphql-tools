@@ -22,7 +22,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaIndex
-import io.micronaut.graphql.tools.exceptions.SchemaDiscoveryException
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.schema.SchemaDiscovery
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -125,7 +125,7 @@ class SchemaDiscoverySpec extends Specification {
         SchemaDiscovery.discover(['classpath*:discovery/**/*.graphqls'], loader, true)
 
         then:
-        def e = thrown(SchemaDiscoveryException)
+        def e = thrown(SchemaBindingException)
         e.code() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains('discovery/gone.graphqls')
     }
@@ -135,7 +135,8 @@ class SchemaDiscoverySpec extends Specification {
         SchemaDiscovery.discover(['classpath:nothing-here/**/*.graphqls'], getClass().classLoader, true)
 
         then:
-        def e = thrown(SchemaDiscoveryException)
+        def e = thrown(SchemaBindingException)
+        e.code() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains(SchemaIndex.RESOURCE)
     }
 
@@ -144,7 +145,8 @@ class SchemaDiscoverySpec extends Specification {
         SchemaDiscovery.discover(['classpath:nothing-here/**/*.graphqls'], getClass().classLoader, false)
 
         then:
-        def e = thrown(SchemaDiscoveryException)
+        def e = thrown(SchemaBindingException)
+        e.code() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains('classpath:nothing-here/**/*.graphqls')
         e.message.contains('TypeDefinitionRegistry bean')
     }
@@ -158,7 +160,7 @@ class SchemaDiscoverySpec extends Specification {
         SchemaDiscovery.discover(["file:${dir}/*.graphqls".toString()], getClass().classLoader)
 
         then:
-        def e = thrown(SchemaDiscoveryException)
+        def e = thrown(SchemaBindingException)
         e.code() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains('client.graphqls')
         e.message.contains('empty.graphqls')
@@ -169,7 +171,8 @@ class SchemaDiscoverySpec extends Specification {
         SchemaDiscovery.discover([location], getClass().classLoader, false)
 
         then:
-        def e = thrown(SchemaDiscoveryException)
+        def e = thrown(SchemaBindingException)
+        e.code() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains(part)
 
         where:
@@ -187,7 +190,7 @@ class SchemaDiscoverySpec extends Specification {
         SchemaDiscovery.discover(["file:${dir}/*.graphqls".toString()], getClass().classLoader, false)
 
         then:
-        def e = thrown(SchemaDiscoveryException)
+        def e = thrown(SchemaBindingException)
         e.code() == BindingCode.SCHEMA_INVALID
         e.message.contains('broken.graphqls')
     }
@@ -239,7 +242,7 @@ class SchemaDiscoverySpec extends Specification {
         SchemaDiscovery.discover(['classpath:discovery/**/*.graphqls'], loader, false)
 
         then:
-        thrown(SchemaDiscoveryException)
+        thrown(SchemaBindingException)
     }
 
     void "without a registry bean and without files the startup fails with the locations"() {
@@ -251,7 +254,7 @@ class SchemaDiscoverySpec extends Specification {
         then:
         def e = thrown(BeanInstantiationException)
         e.message.contains('classpath:nothing/**/*.graphqls') || e.cause?.message?.contains('classpath:nothing/**/*.graphqls') ||
-                causes(e).any { it instanceof SchemaDiscoveryException }
+                causes(e).any { it instanceof SchemaBindingException }
     }
 
     private static List<Throwable> causes(Throwable t) {

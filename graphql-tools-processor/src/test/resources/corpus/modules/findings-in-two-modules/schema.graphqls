@@ -1,0 +1,30 @@
+schema {
+  query: Query
+}
+
+type Query {
+  book(id: ID!): Book
+  authors(genre: Genre): [Author!]!
+  search(filter: BookFilter!): [Book!]!
+  books(limit: Int): [Book!]!
+}
+
+type Book {
+  id: ID!
+  title: String!
+  author: Author
+}
+
+type Author {
+  id: ID!
+  name: String!
+}
+
+enum Genre {
+  FICTION
+  POETRY
+}
+
+input BookFilter {
+  title: String!
+}

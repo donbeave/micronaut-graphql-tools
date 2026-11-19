@@ -19,8 +19,9 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectArgumentCountException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverTooFewArgumentsSpec extends AbstractTest {
 
@@ -46,7 +47,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectArgumentCountException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message == """[argument-mismatch] The method has too few arguments, provided: 0, required 1 arg(s): username(ID uid)
   GraphQL coordinate: Query.username (line 7, column 3)
   Mapped class: ${Query1.name}

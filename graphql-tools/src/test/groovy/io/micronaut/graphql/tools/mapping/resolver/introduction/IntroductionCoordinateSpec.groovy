@@ -17,7 +17,8 @@ package io.micronaut.graphql.tools.mapping.resolver.introduction
 
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class IntroductionCoordinateSpec extends AbstractTest {
 
@@ -28,8 +29,9 @@ class IntroductionCoordinateSpec extends AbstractTest {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InvalidSchemaCoordinateException
-        e.cause.problems.any { it.endsWith('the type Query has no field nowhere.') }
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNKNOWN_SCHEMA_COORDINATE
+        e.cause.message.contains('the type Query has no field nowhere.')
     }
 
 }

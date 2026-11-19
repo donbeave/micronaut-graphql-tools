@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.docs
 import groovy.json.JsonSlurper
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -58,20 +58,8 @@ class DocsCoverageSpec extends Specification {
         def names = publicClasses('exceptions', Throwable)
 
         expect:
-        names.contains(BindingFailuresException.simpleName)
+        names == [SchemaBindingException.simpleName]
         failures('exception', names, 'the error reference: src/main/docs/guide/exceptions.adoc (or README.md)').empty
-    }
-
-    def "the error reference lists every code of the registry, with the same compile-time flag, and no other"() {
-        given:
-        def reference = Files.readAllLines(root.resolve(GUIDE + '/exceptions.adoc'))
-        def rows = reference.findAll { it.startsWith('|`') }.collectEntries {
-            def cells = it.split(' \\|')
-            [(cells[0].substring(2, cells[0].length() - 1)): cells[2].trim() == 'yes']
-        }
-
-        expect:
-        rows == BindingCode.values().collectEntries { [(it.code()): it.compileTime()] }
     }
 
     def "the configuration reference lists every check code"() {

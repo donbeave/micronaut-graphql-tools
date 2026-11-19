@@ -45,4 +45,4 @@ Each strict check has a code, from the code registry (`BindingCode` in `graphql-
 * `interface-read-through-implementation`
 * `unwired-directive`
 
-A precedence ambiguity under `precedence: fail` is a binding failure with the code `precedence-ambiguity`, not a check. The error reference lists every code of the registry.
+A precedence ambiguity under `precedence: fail` is a binding failure with the code `precedence-ambiguity`, not a check. Its message names the field coordinate, both members and the ways out. Match on `SchemaBindingException#code()`; <<exceptions,the error reference>> lists every code of the registry.
