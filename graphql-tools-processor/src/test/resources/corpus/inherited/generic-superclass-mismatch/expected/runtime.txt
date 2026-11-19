@@ -1,0 +1,1 @@
+incorrect-class-mapping Query.book(id:) schema.graphqls:6:8

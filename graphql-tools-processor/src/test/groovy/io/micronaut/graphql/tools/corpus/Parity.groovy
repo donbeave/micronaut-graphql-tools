@@ -25,7 +25,7 @@ import io.micronaut.graphql.tools.binding.BindingCode
  *   <li><b>Soundness.</b> Every compile error is also a startup finding with the same code and coordinate. It fails outright:
  *   a false compile error is a bug. Only the documented soundness exceptions excuse an error ({@link SoundnessExceptions}: one line
  *   per case and finding, with one of five reasons, the startup failing or binding differently on purpose). A compile-time
- *   warning is not an error and is outside the rule.</li>
+ *   warning is not an error and is outside the rule, and so is an error of the options ({@link #COMPILE_ONLY_CODES}).</li>
  *   <li><b>Completeness.</b> A startup finding of a per-class code ({@link #PER_CLASS_CODES}) that the compile side
  *   does not report, as an error or as a warning, is a gap, and fails unless {@code corpus-divergences.txt} lists it. A startup finding of any other
  *   code (whole-program: field not bound, reachability, ambiguity, the dictionary) is not a gap: the compile side
@@ -43,6 +43,12 @@ final class Parity {
             .findAll { it.compileTime() && !it.code().startsWith('processor-') && it != BindingCode.SCHEMA_INVALID }
             *.code() as Set<String>
 
+    /**
+     * The codes of the options of the visitor and of its environment (no schema directory, an unknown option): the startup has no
+     * such option, so these errors are outside the soundness rule (an internal error of the visitor is not: it stays a violation), and a case that shows one records {@code ok} at startup.
+     */
+    static final Set<String> COMPILE_ONLY_CODES = BindingCode.values().findAll { it.code().startsWith('processor-') && it != BindingCode.PROCESSOR_INTERNAL_ERROR }*.code() as Set<String>
+
     private Parity() {
     }
 
@@ -54,20 +60,23 @@ final class Parity {
      * @param divergences the known gaps
      * @param relaxed    the codes that the case relaxes at startup, which the compile-time check cannot (see {@link #relaxedCodes})
      * @param exceptions the documented exceptions to soundness
+     * @param checksOff  whether the case compiles with {@code checks=false}, which excuses every completeness gap
      * @return the violations, empty if the two verdicts are in parity
      */
     static List<String> check(String name, Language language, Verdict runtime, Verdict compile, Divergences divergences,
-                              Set<String> relaxed = [] as Set<String>, SoundnessExceptions exceptions = SoundnessExceptions.NONE) {
+                              Set<String> relaxed = [] as Set<String>, SoundnessExceptions exceptions = SoundnessExceptions.NONE,
+                              boolean checksOff = false) {
         List<String> violations = []
         Set<String> runtimeKeys = runtime.keys()
         Set<String> compileKeys = compile == null ? [] as Set<String> : compile.keys()
         // a code that the case relaxes at startup is outside the rule: the compile error cannot be relaxed
         (compile == null ? [] : compile.errors).findAll {
-            !(it.code in relaxed) && !runtimeKeys.contains(it.key()) && !exceptions.covers(name, language, it)
+            !(it.code in relaxed) && !(it.code in COMPILE_ONLY_CODES) && !runtimeKeys.contains(it.key()) && !exceptions.covers(name, language, it)
         }.collect { it.key() }.sort().each {
             violations.add("soundness: the compile side reports '${it}' but the startup does not (a false compile error)".toString())
         }
-        runtime.findings.findAll { it.code in PER_CLASS_CODES && !compileKeys.contains(it.key()) }.each { Finding f ->
+        // checks=false asks for no checks: what the startup finds then is not a gap of the compile side
+        runtime.findings.findAll { !checksOff && it.code in PER_CLASS_CODES && !compileKeys.contains(it.key()) }.each { Finding f ->
             if (!divergences.covers(name, language, f)) {
                 violations.add("completeness: the startup reports '${f.key()}' but the compile side does not, and it is not in ${Corpus.DIVERGENCES}".toString())
             }
@@ -108,7 +117,7 @@ final class Parity {
                 if (runtime == null) {
                     return
                 }
-                check(c.name, language, runtime, compile, corpus.divergences, relaxedCodes(c.config), corpus.exceptions)
+                check(c.name, language, runtime, compile, corpus.divergences, relaxedCodes(c.config), corpus.exceptions, c.checksOff())
                         .each { result.add("${c.name} [${language.dir}]: ${it}".toString()) }
             }
         }

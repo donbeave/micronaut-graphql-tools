@@ -1,0 +1,116 @@
+# The cases of the JSR-269 processor specs (src/test/groovy/.../processing) and where each went: one line per test method,
+# <spec> TAB <method> TAB <corpus cases, comma separated, or -> TAB <note>. A case is a directory of this corpus; a line without a case
+# starts its note with "deleted:" and gives the reason. PortedCasesSpec checks that every method has a line, that no line is stale, and
+# that every case exists. #144 deletes the specs and this file together.
+BindingManifestSpec	a compilation that passes the checks writes the manifest to the class output, UTF-8 with LF, body sorted	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
+BindingManifestSpec	a compilation that fails the checks writes no manifest	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
+BindingManifestSpec	a compilation without resolvers fails and writes no manifest: there is nothing bound to describe	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
+BindingManifestSpec	manifest=false writes no manifest; an invalid value fails	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
+BindingManifestSpec	next to the manifest, the processor records what it left out, so that a comparison does not need a list of its own	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
+BindingManifestSpec	the schema hash of the header ignores the order of the schema files and of the definitions	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
+FailureClassesSpec	a resolver contract without a bean class fails, and the fields it declares are unbound	contract/no-bean-class	
+FailureClassesSpec	an introduction advice interface is its own bean and binds its fields	inherited/introduction	
+FailureClassesSpec	a schema field deleted while its resolver method stays fails in strict mode	strict/unbound-resolver-method	
+FailureClassesSpec	arguments in another order than the schema's fail on each parameter	argument/by-name-reordered	arguments are bound by name now, so another order binds
+FailureClassesSpec	a field of an object type returning a scalar class fails	failure/object-field-returns-scalar	
+FailureClassesSpec	a list field returning a single object fails	failure/list-field-single-object	
+FailureClassesSpec	a getter and a @GraphQLField method of one class for the same field fail	failure/two-members-one-field	
+FailureClassesSpec	two methods for one field fail: root resolvers and type resolvers	exception/two-classes-one-root-field,failure/two-type-resolver-methods	
+FailureClassesSpec	wrapper misuse fails with the coordinate and the Java element	wrapper/completion-stage-in-list,wrapper/optional-non-null,wrapper/nested-data-fetcher-result,wrapper/publisher-off-subscription	the raw CompletionStage row is deleted: the visitor says unsupported-return-type where the startup, which cannot see a type argument of a raw type, says incorrect-class-mapping
+GraphQLSpecifiedDirectivesSpec	the names equal the runtime module's	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
+GraphQLSpecifiedDirectivesSpec	defer is built in but not specified	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
+GraphQLSpecifiedDirectivesSpec	other names, a different case, an empty name and null are not specified	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
+ManifestParitySpec	the processor's manifest equals the startup manifest: roots, wrappers, wildcards, inherited getters, records, nested classes, contracts, enums, inputs and an interface that is only implemented	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
+ManifestParitySpec	the diagnostic lines are the same: ambiguous, unbound methods, enum constants and input properties, unreachable types	strict/unbound-resolver-method,strict/unbound-enum-constant,strict/unreachable-type,strict/several-problems	diagnostic parity is the corpus parity assertion
+ManifestParitySpec	the startup has more lines only where runtime beans decide: scalars, the dictionary's union and interface members and what they reach	startup/union-member-without-class,startup/scalar-without-mapping	what only runtime beans decide is a startup failure and the compile side records ok
+ManifestParitySpec	inherited generic members: the bean names a resolver method, the declaring class a getter, the types as the bean sees them	inherited/generic-superclass-members,inherited/generic-superclass-getter	
+ManifestParitySpec	an applied directive without a wiring: the startup fails in strict mode, and its !unwiredDirective line is left to the startup	directive/unwired-ignored,severity/unwired-directive-fail,directive/schema-level	
+ModelChecksSpec	matching models, enums, input classes and abstract types compile	bound/root-and-type-fields,bound/enum-and-input	
+ModelChecksSpec	a Java enum without a constant for a schema value fails	enum/missing-constant	
+ModelChecksSpec	strict mode: a Java enum constant without a schema value fails; without strict mode it is accepted	strict/unbound-enum-constant,input/enum-unbound-constant-returned	
+ModelChecksSpec	an enum field mapped to a class that is not an enum fails	failure/enum-field-not-enum	
+ModelChecksSpec	an input field without a property of the input class fails	input/missing-property	
+ModelChecksSpec	an input class property without an input field fails in strict mode; strict false, ignore and fail decide as at startup	input/unmapped-input-property,severity/unmapped-input-property-fail,severity/unmapped-input-property-warn,severity/unmapped-input-property-ignore	
+ModelChecksSpec	a property settable through the constructor counts; a read-only computed getter does not	input/constructor-settable-and-computed-getter,input/static-creator-settable	
+ModelChecksSpec	an input field of a type its property cannot take fails	input/field-type-mismatch	
+ModelChecksSpec	an input type mapped to an interface fails	input/mapped-to-interface	
+ModelChecksSpec	a union mapped to a class instead of a Java interface fails	failure/union-mapped-to-class	
+ModelChecksSpec	one object type reached through two Java classes fails	failure/one-type-two-classes	
+ModelChecksSpec	a model class without a bean introspection fails	failure/model-not-introspected,input/class-not-introspected	
+ModelChecksSpec	an incremental compilation checks an unchanged class of the module as the full compilation does; a class of a dependency is skipped	-	deleted: incremental behaviour of the JSR-269 processor reading a class output; the visitor is isolating and sees the source elements of the compilation only, and a schema edit rerunning the task is proven by the sample builds of test-suite-build
+ModelChecksSpec	a contract interface with its own introspection binds its getters only; an implementation must implement it	inherited/contract-interface-getters,failure/contract-getter-only-in-implementation,failure/contract-not-implemented	
+ModelChecksSpec	a Java interface without its own introspection is read through its single implementation: a strict-mode error; two implementations fail	strict/interface-read-through-implementation,failure/interface-two-implementations	
+ModelChecksSpec	an object type mapped to a JDK interface or an interface of the compilation without implementation fails, as at startup	failure/object-type-mapped-to-jdk-interface,failure/object-type-mapped-to-interface-without-implementation	
+ModelChecksSpec	a getter a generic superclass declares is checked with the type argument the model gives it	inherited/generic-superclass-getter,inherited/generic-superclass-getter-mismatch	
+ModelChecksSpec	@Introspected includes and excludes decide the properties, as in the introspection	failure/introspected-excludes,failure/introspected-includes	
+ModelChecksSpec	a model introspected with accessKind = FIELD is left to the startup, with a note, not rejected	bound/introspected-field-access	deleted in part: the compiler note that says why the model is left to the startup is not recorded by the corpus (the binders return findings, not notes); the verdict is the case
+ModelChecksSpec	a record model binds its components	bound/record-model	
+ModelChecksSpec	an enum argument and a list of input objects are checked through	bound/enum-argument-and-input-list,argument/wrong-enum-argument	
+ModelChecksSpec	the removed option input.detectOmission is an unknown option	options/unknown-option	the JSR-269 option was removed with ArgumentValue; a key under the processor segment is an unknown option
+ModelChecksSpec	ArgumentValue needs a nullable type and the field level; a property needs a getter and a setter	bound/argument-value,argument/argument-value-non-null,input/argument-value-read-only-property	
+ProcessorOptionsDocsSpec	every processor option is documented	-	deleted: a docs-coverage check of the option list, not a compile case; #144 keeps it for the visitor options when it deletes the processor
+ProcessorOptionsDocsSpec	the allowlist has only live entries	-	deleted: a docs-coverage check of the option list, not a compile case; #144 keeps it for the visitor options when it deletes the processor
+RenameChecksSpec	a @GraphQLField method binds the field of the name it declares	rename/member-method,rename/member-property-field,rename/member-property-getter	
+RenameChecksSpec	a member renamed to the name of another member fails with the coordinate and both members	rename/member-clash	
+RenameChecksSpec	a renamed property binds the field of its new name only	rename/member-renamed-away	
+RenameChecksSpec	a coordinate binds a method with another name	rename/coordinate-root-and-type,rename/coordinate-argument-mismatch	
+RenameChecksSpec	a getX resolver method binds the field x only with the accessor prefixes option	rename/accessor-prefixes-on,rename/accessor-prefixes-off	
+ResolverChecksSpec	matching resolvers, a model and a type resolver compile	bound/root-and-type-fields	
+ResolverChecksSpec	a root field without a resolver method fails, naming the field, the schema line and the root resolvers	failure/method-not-found-root	
+ResolverChecksSpec	an object type field without a property or type resolver method fails	failure/property-not-found	
+ResolverChecksSpec	a resolver contract that no bean implements fails	contract/no-bean-class	
+ResolverChecksSpec	a contract implemented by a bean binds; one implemented by two beans fails	bound/schema-coordinate-contracts,contract/two-bean-classes	
+ResolverChecksSpec	strict mode: a public method of a resolver bean that binds no field fails; Object methods, static and non-public methods do not count	strict/unbound-resolver-method,bound/static-and-object-methods,strict/package-private-method	a package-private method is a startup finding that the visitor misses: it is on the divergence list
+ResolverChecksSpec	wrong number of parameters fails with the expected signature	argument/too-many-parameters,argument/too-few-arguments	
+ResolverChecksSpec	a parameter of the wrong type fails on the parameter, naming the argument	argument/wrong-parameter-type	
+ResolverChecksSpec	a type resolver method whose first parameter is not the source object fails	failure/type-resolver-source-parameter	
+ResolverChecksSpec	a scalar field returning a class of another scalar family fails	failure/scalar-wrong-class	
+ResolverChecksSpec	wrapper rules: a raw CompletionStage, a CompletionStage in a list, Optional on a non-null field, a nested DataFetcherResult and a Publisher off the subscription type fail	wrapper/completion-stage-in-list,wrapper/optional-non-null,wrapper/optional-list-element,wrapper/nested-data-fetcher-result,wrapper/publisher-off-subscription	the raw CompletionStage row is deleted: the visitor says unsupported-return-type where the startup, which cannot see a type argument of a raw type, says incorrect-class-mapping
+ResolverChecksSpec	wrappers the runtime unwraps are accepted: CompletionStage, DataFetcherResult per list element, Optional, Publisher on the subscription type	bound/supported-wrappers	
+ResolverChecksSpec	a field of the subscription type that does not return a Publisher fails	wrapper/subscription-without-publisher	
+ResolverChecksSpec	a primitive for a nullable built-in scalar argument fails in strict mode only; for a non-null one it is accepted	input/nullable-primitive-argument,strict/nullable-primitive,bound/primitive-for-non-null-argument	
+ResolverChecksSpec	precedence fail: a property and a type resolver method for one field fail	precedence/property-and-type-resolver-method	
+ResolverChecksSpec	a resolver method that declares its coordinate wins over the property, whatever the precedence is	precedence/coordinate-wins,precedence/object-explicit-coordinate-property-first	
+ResolverChecksSpec	the old precedence value strict is rejected and names fail	-	deleted: a value of the precedence option of the JSR-269 processor; the visitor reads no precedence and the startup reads the runtime key
+ResolverChecksSpec	a resolver directive binds the type resolver; property-first and resolver-first decide; a marked field without resolver fails	precedence/resolver-directive,precedence/property-first,precedence/resolver-first,precedence/directive-without-resolver	a resolver directive that the schema does not declare is a configuration error of the startup outside the binding verdicts (FieldBindingPrecedenceSpec)
+ResolverChecksSpec	two root resolver methods for one field fail once, naming both	exception/two-classes-one-root-field	
+ResolverChecksSpec	a schema coordinate is validated: unknown field, root resolver on another type, bean that is no resolver	coordinate/unknown-type,coordinate/unknown-field,coordinate/not-a-coordinate	the method name row is gone: a coordinate may name a method of another name (rename/coordinate-root-and-type)
+ResolverChecksSpec	a schema coordinate on a bean that is neither resolver fails	coordinate/on-non-resolver	
+ResolverChecksSpec	a type resolver method with a coordinate for a type mapped to another class is not bound and fails	coordinate/type-resolver-method-for-other-class	
+ResolverChecksSpec	a coordinate scopes a root method to its operation type; an un-annotated method on two operation types fails in strict mode	strict/root-method-several-operations,bound/coordinate-scopes-root-method	
+ResolverChecksSpec	a model method annotated @GraphQLField binds a field with arguments	bound/graphql-field-method-with-arguments	
+ResolverChecksSpec	a method a generic superclass declares is checked with the type arguments the bean gives it, as Micronaut binds it	inherited/generic-superclass-members,inherited/generic-superclass-mismatch	
+ResolverChecksSpec	a resolver bean is checked whatever its scope, also when its scope is its only annotation: @#scope	bound/resolver-scopes,argument/resolver-scopes-mismatch	
+ResolverChecksSpec	classes another processor generates in this compilation under a \$ name, such as AOP proxies of resolver beans, are not resolver beans	inherited/introduction	deleted as a case: it tested that the JSR-269 processor skips a class that another JSR-269 processor generates under a $ name; the visitor is given source elements only, and an introduction advice is bound as a bean (inherited/introduction)
+ResolverChecksSpec	a class of the application annotated @Generated, such as generated code, is checked like any other	argument/generated-class-is-checked	
+ResolverChecksSpec	a custom scalar does not switch off the check of type resolvers whose type the schema no longer has	scalar/custom-scalar-keeps-type-resolver-check	
+ResolverChecksSpec	a field an SDL interface declares is skipped only when a type resolver of a Java interface can bind it, and the skip is a note	bound/interface-field-bound-by-interface-type-resolver,bound/interface-with-dictionary	deleted in part: the compiler note that reports the skip is not recorded by the corpus; the verdicts are the cases
+ResolverChecksSpec	fields of type extensions are checked like any other field	schema/type-extension-fields	
+ResolverChecksSpec	with sdlDir set, a compilation without any resolver fails instead of checking nothing	options/no-class-with-schema	the visitor does nothing for a compilation without a resolver class; the JSR-269 processor failed
+SchemaChecksSpec	a schema that matches compiles	bound/root-and-type-fields	
+SchemaChecksSpec	without sdl-dir a compilation with GraphQL resolvers fails and says how to set it	options/schema-dirs-not-configured	
+SchemaChecksSpec	without sdl-dir a compilation with nothing to check compiles	options/no-class-to-check	
+SchemaChecksSpec	an sdl-dir that is not a directory fails the compilation	options/schema-dir-missing	
+SchemaChecksSpec	a schema file that does not parse fails the compilation and names the file	options/schema-invalid	
+SchemaChecksSpec	a schema without a schema definition and without a Query type fails the compilation	-	deleted: the two sides name this failure with different codes (the visitor schema-invalid, the startup schema-definition-not-provided), so it cannot be a corpus case
+SchemaChecksSpec	a schema without a schema definition uses the implicit root types	schema/implicit-roots	
+SchemaChecksSpec	a client operation file next to the schema is not read	schema/implicit-roots	
+SchemaChecksSpec	a schema directory whose files are all empty or operation-only fails and names the skipped files	options/schema-dir-without-schema-files	
+SchemaChecksSpec	an unreachable object type fails the compilation with its coordinate, file and line	strict/unreachable-type	
+SchemaChecksSpec	allow-unreachable allows an unreachable type	strict/unreachable-type-allowed	
+SchemaChecksSpec	unreachable-types=ignore ignores unreachable types	severity/unreachable-type-ignore,severity/unreachable-value-type-ignore	
+SchemaChecksSpec	an allow-unreachable entry that is reachable or undefined fails the compilation	strict/allow-unreachable-invalid	
+SchemaChecksSpec	strict mode: an unused enum, input type and scalar fail; a type a directive definition uses is reached	strict/unreachable-value-type	
+SchemaChecksSpec	with strict false unused enum, input and scalar types are accepted, as at startup	strict/strict-off-accepts-unused-value-types	
+SchemaChecksSpec	a type reached through an interface, a union, an argument and an input field is not unreachable	bound/reachable-through-abstract-and-input-types	
+SchemaChecksSpec	an applied directive that the schema does not declare fails the compilation; built-in directives are declared	-	deleted: graphql-java rejects an applied directive that is not declared with a SchemaProblem at startup, which is not a binding verdict; the visitor does not run graphql-java schema validation
+SchemaChecksSpec	a resolver directive that the schema does not declare fails the compilation	-	deleted: a resolver directive that the schema does not declare is a configuration error of the startup outside the binding verdicts (FieldBindingPrecedenceSpec)
+SchemaChecksSpec	a boolean option reads as Micronaut reads it (#value), and a value Micronaut would read as false fails	-	deleted: how a boolean option of the JSR-269 processor is read; the startup reads strict through Micronaut configuration, and the boolean option of the visitor is options/invalid-checks-value
+SchemaChecksSpec	an unknown option under the prefix fails, so that a typo is not silent	options/unknown-option	
+SchemaChecksSpec	an invalid option value fails the compilation	options/invalid-checks-value	the invalid precedence value was an option of the JSR-269 processor; the visitor has the checks value
+SchemaChecksSpec	schema files in subdirectories are read and merged	-	deleted: the corpus case holds its schema files in one directory; the recursive read of schema directories is SchemaSourcesSpec in graphql-tools-binding
+SchemaChecksSpec	the processor claims the library and bean annotations, never *	-	deleted: it asserted the annotations that the JSR-269 processor claims
+StartupBackstopSpec	the fixture compiles and starts when the runtime beans match the schema	startup/matching-runtime-beans	
+StartupBackstopSpec	a union member without a Java class compiles and fails the startup	startup/union-member-without-class	
+StartupBackstopSpec	a union member mapped to a final class that does not implement the union's Java interface compiles and fails the startup	startup/union-member-final-class	
+StartupBackstopSpec	a custom scalar without a mapping compiles and fails the startup	startup/scalar-without-mapping	

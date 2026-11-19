@@ -50,6 +50,7 @@ final class CorpusCase {
     static final List<String> EXPECTED_FILES = ['runtime.txt', 'compile.txt', 'manifest.txt']
     static final Set<String> PROPERTY_KEYS = ['description', 'tags', 'environments'] as Set<String>
     static final String CONFIG_PREFIX = 'config.'
+    static final String COMPILE_PREFIX = 'compile.'
 
     final String name
     final Path dir
@@ -57,6 +58,8 @@ final class CorpusCase {
     final List<String> tags
     final List<String> environments
     final Map<String, String> config
+    /** the options of the checked compilation, see {@link CompileOptions}, keys without the {@code compile.} prefix */
+    final Map<String, String> compile
     final List<String> problems = []
 
     private final Map<Language, Map<String, String>> expectedFiles = [:]
@@ -69,14 +72,24 @@ final class CorpusCase {
         this.tags = split(properties.getProperty('tags', ''))
         this.environments = split(properties.getProperty('environments', ''))
         Map<String, String> config = new TreeMap<>()
+        Map<String, String> compile = new TreeMap<>()
         properties.stringPropertyNames().sort().each { String key ->
             if (key.startsWith(CONFIG_PREFIX)) {
                 config.put(key.substring(CONFIG_PREFIX.length()), properties.getProperty(key))
+            } else if (key.startsWith(COMPILE_PREFIX)) {
+                String setting = key.substring(COMPILE_PREFIX.length())
+                String value = properties.getProperty(key)
+                if (setting == 'schema-dirs' ? !CompileOptions.DIRS.contains(value) : !setting.startsWith('option.')) {
+                    problems.add("${PROPERTIES}: unknown compile setting '${key}' (known: compile.schema-dirs=${CompileOptions.DIRS.join('|')}, compile.option.<key>)".toString())
+                } else {
+                    compile.put(setting, value)
+                }
             } else if (!PROPERTY_KEYS.contains(key)) {
                 problems.add("${PROPERTIES}: unknown key '${key}' (known: ${PROPERTY_KEYS.join(', ')}, config.<key>)".toString())
             }
         }
         this.config = Collections.unmodifiableMap(config)
+        this.compile = Collections.unmodifiableMap(compile)
     }
 
     static CorpusCase load(Path root, Path dir) {
@@ -164,6 +177,11 @@ final class CorpusCase {
             return Verdict.bound()
         }
         return Verdict.failed(lines.collect { Finding.parse(it) })
+    }
+
+    /** @return whether the checked compilation of the case has the checks switched off ({@code compile.option.<processor>.checks=false}) */
+    boolean checksOff() {
+        return compile.get('option.' + CompileOptions.CHECKS)?.trim()?.toLowerCase() in ['false', 'no', 'off']
     }
 
     boolean hasTag(String tag) {

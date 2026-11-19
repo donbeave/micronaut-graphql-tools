@@ -72,9 +72,16 @@ final class CorpusRunner {
     /** @return each case with each language this runner compiles: the units to run */
     List<List<Object>> units() {
         String only = CorpusFixtures.only()
-        return corpus.units().findAll {
+        List<List<Object>> units = corpus.units().findAll {
             compilers.containsKey((Language) it[1]) && (only == null || ((CorpusCase) it[0]).name ==~ only)
         }
+        String shard = CorpusFixtures.shard()
+        if (shard == null) {
+            return units
+        }
+        int index = Integer.parseInt(shard.split('/')[0])
+        int count = Integer.parseInt(shard.split('/')[1])
+        return units.indexed().findAll { int position, List<Object> unit -> position % count == index }.values().toList()
     }
 
     /**
@@ -151,7 +158,7 @@ final class CorpusRunner {
             } else if (expectedCompile.lines() != compile.lines()) {
                 failures.add("${compileTimeBinder.name} verdict differs from expected/compile.txt:\n${diff(expectedCompile.lines(), compile.lines())}".toString())
             }
-            failures.addAll(Parity.check(corpusCase.name, language, runtime, compile, corpus.divergences, Parity.relaxedCodes(corpusCase.config), corpus.exceptions))
+            failures.addAll(Parity.check(corpusCase.name, language, runtime, compile, corpus.divergences, Parity.relaxedCodes(corpusCase.config), corpus.exceptions, corpusCase.checksOff()))
         }
         return failures
     }

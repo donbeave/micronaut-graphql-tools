@@ -37,9 +37,13 @@ micronautBuild {
 val corpusDir = layout.projectDirectory.dir("src/test/resources/corpus")
 tasks.withType<Test>().configureEach {
     inputs.files(corpusDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("corpus")
-    // the corpus compiles about 300 units in process and starts the application for each; 1 GB ran out on JDK 21 once
-    // the rename cases came, so the heap has headroom for the next ones
-    maxHeapSize = "2g"
+    // the corpus compiles about 300 units in process and starts the application for each, and every case leaves its class loader
+    // behind (about 6 MB of heap and 14 MB of metaspace per case, measured with jcmd: a full GC frees none of it). The live heap
+    // reached 2 GB at about 300 cases, and the JVM then collected without end until the CI job timed out at 30 minutes
+    maxHeapSize = "4g"
+    // every in-process compilation and application context loads classes that stay until the JVM ends; the default 1 GB of compressed
+    // class space ran out at about 230 cases
+    jvmArgs("-XX:CompressedClassSpaceSize=3g", "-XX:MaxMetaspaceSize=6g")
     // the Kotlin batch is its own task (corpusKotlin): it needs the network and has its own budget
     systemProperty("corpus.dir", corpusDir.asFile.absolutePath)
     systemProperty("corpus.report", layout.buildDirectory.file("corpus/timings.txt").get().asFile.absolutePath)
@@ -63,6 +67,11 @@ tasks.register<Test>("corpusUpdate") {
 // (the floor and ceiling runs record the same verdicts as the default leg), so it runs on the default leg only, on JDK 21 and 25;
 // the floor and ceiling legs run every other test of this module unchanged. CorpusRunnerSpec (the runner's own tests, 3 s) runs on every leg.
 val corpusOnThisLeg = providers.gradleProperty("graphqlJavaLeg").orElse("default").get() == "default"
+// Every unit of the corpus leaves its class loader behind (a heap dump and jcmd show it: the loaders stay reachable after a full GC,
+// about 14 MB of metaspace and 6 MB of heap per unit, and 300 units ran a 2 GB heap into a collection that never ended and the job
+// into its timeout). So the corpus runs in several JVMs: `test` runs the first shard, and the tasks corpusShard1 to
+// corpusShard<N-1> run the others; `check` needs them all. `corpusUpdate` rewrites every golden in one JVM and needs the large heap.
+val corpusShards = 3
 tasks.named<Test>("test") {
     exclude("**/KotlinCorpusSpec*")
     if (!corpusOnThisLeg && !project.hasProperty("corpus.update")) {
@@ -71,6 +80,23 @@ tasks.named<Test>("test") {
             logger.lifecycle("BindingCorpusSpec skipped: the binding corpus runs on the default graphql-java leg only (-PgraphqlJavaLeg=default).")
         }
     }
+    if (!project.hasProperty("corpus.update")) {
+        systemProperty("corpus.shard", "0/$corpusShards")
+    }
+}
+if (corpusOnThisLeg && !project.hasProperty("corpus.update")) {
+    val shardTasks = (1 until corpusShards).map { shard ->
+        tasks.register<Test>("corpusShard$shard") {
+            description = "Runs shard $shard of $corpusShards of the binding corpus (see corpusShards)."
+            group = "verification"
+            testClassesDirs = sourceSets["test"].output.classesDirs
+            classpath = sourceSets["test"].runtimeClasspath
+            filter.includeTestsMatching("*BindingCorpusSpec")
+            systemProperty("corpus.shard", "$shard/$corpusShards")
+            systemProperty("corpus.report", layout.buildDirectory.file("corpus/timings-$shard.txt").get().asFile.absolutePath)
+        }
+    }
+    tasks.named("check") { dependsOn(shardTasks) }
 }
 // The Kotlin corpus (#143): one batched Gradle TestKit build with the production toolchain, run on the checked and the unchecked
 // variant of every case. Not part of `check` or `build`: it needs the network and builds real projects, so the CI job `build tools`
@@ -101,6 +127,13 @@ tasks.named<Test>("test") {
     inputs.files(repositoryRoot.asFileTree.matching { include("src/main/docs/guide/compileTime/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsOptionsPage")
+}
+
+// PortedCasesSpec reads the specs of the JSR-269 processor behind Gradle's back (until #144 deletes them).
+tasks.named<Test>("test") {
+    val legacySpecs = layout.projectDirectory.dir("src/test/groovy/io/micronaut/graphql/tools/processing")
+    systemProperty("processing.specs", legacySpecs.asFile.absolutePath)
+    inputs.files(legacySpecs.asFileTree).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("legacySpecs")
 }
 
 // VisitorArchitectureSpec reads the sources of the visitor behind Gradle's back.

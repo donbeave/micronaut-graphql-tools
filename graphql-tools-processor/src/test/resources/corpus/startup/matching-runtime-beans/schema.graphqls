@@ -1,0 +1,20 @@
+schema {
+  query: Query
+}
+
+type Query {
+  search: [SearchResult!]!
+  today: Date
+}
+
+scalar Date
+
+union SearchResult = Book | Magazine
+
+type Book {
+  title: String!
+}
+
+type Magazine {
+  issue: Int!
+}

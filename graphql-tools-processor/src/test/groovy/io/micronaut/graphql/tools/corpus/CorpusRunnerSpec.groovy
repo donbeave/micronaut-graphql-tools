@@ -512,6 +512,40 @@ class CorpusRunnerSpec extends Specification {
         CorpusStartup.properties(['graphql.graphql-ws.enabled': 'true'], ['file:x/*.graphqls'])['graphql.graphql-ws.enabled'] == 'true'
     }
 
+    void "the compile settings of a case: the schema directories and further options; an unknown setting is a problem"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n'])
+        Files.writeString(dir.resolve('a/case.properties'), 'description=a\ncompile.schema-dirs=split\ncompile.option.micronaut.graphql.tools.processor.checks=false\n')
+
+        expect:
+        new Corpus(root).problems == []
+        new Corpus(root).byName('a').compile == ['schema-dirs': 'split', 'option.micronaut.graphql.tools.processor.checks': 'false']
+        new Corpus(root).byName('a').checksOff()
+
+        when:
+        Files.writeString(dir.resolve('a/case.properties'), 'description=a\ncompile.schema-dirs=somewhere\ncompile.other=1\n')
+
+        then:
+        new Corpus(root).problems.count { it.contains('unknown compile setting') } == 2
+    }
+
+    void "the schema directories of the checked compilation follow the case: its files, none, a missing directory, an empty one, or two"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 0\n', ['a/b-extension.graphqls': 'extend type Query { b: String }\n'])
+        def dirsOf = { String mode ->
+            Files.writeString(dir.resolve('a/case.properties'), "description=a\ncompile.schema-dirs=${mode}\n".toString())
+            Path work = Files.createTempDirectory(dir, 'work')
+            return CompileOptions.of(new Corpus(root).byName('a'), work)[CompileOptions.SCHEMA_DIRS]
+        }
+
+        expect:
+        dirsOf('none') == null
+        !Files.exists(Path.of(dirsOf('missing')))
+        Files.list(Path.of(dirsOf('empty'))).map { it.fileName.toString() }.toList() == ['readme.txt']
+        Files.list(Path.of(dirsOf('case'))).count() == 2
+        dirsOf('split').split(File.pathSeparator).collect { Files.list(Path.of(it)).count() } == [1L, 1L]
+    }
+
     void "a duplicated divergence entry is a problem"() {
         given:
         Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 2\na all field-not-bound Query.x\na all field-not-bound Query.x\n')

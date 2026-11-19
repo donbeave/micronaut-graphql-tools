@@ -1,0 +1,35 @@
+schema {
+  query: Query
+}
+
+type Query {
+  hello: String
+  search(filter: Filter): [Result]
+  node: Node
+}
+
+input Filter {
+  range: Range
+}
+
+input Range {
+  from: Int
+}
+
+union Result = Book | Author
+
+type Book {
+  title: String
+}
+
+type Author {
+  name: String
+}
+
+interface Node {
+  id: ID
+}
+
+type Shelf implements Node {
+  id: ID
+}

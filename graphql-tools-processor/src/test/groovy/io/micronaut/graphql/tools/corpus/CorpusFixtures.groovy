@@ -42,6 +42,15 @@ final class CorpusFixtures {
         return System.getProperty('corpus.only')
     }
 
+    /**
+     * The shard of this JVM, as {@code index/count} (for example {@code 1/3}), or {@code null} for all the units. Each unit leaves its class
+     * loader and about 20 MB behind until the JVM ends (see build.gradle.kts), so the build runs the corpus in several JVMs, each with
+     * the units whose position in the list is its index modulo the count.
+     */
+    static String shard() {
+        return System.getProperty('corpus.shard')
+    }
+
     /** the per-case timings of the last run */
     static Path reportFile() {
         return Path.of(System.getProperty('corpus.report', 'build/corpus/timings.txt')).toAbsolutePath()

@@ -1,0 +1,11 @@
+schema {
+  query: Query
+}
+
+type Query {
+  fieldPrototype: String
+  fieldRequestScope: String
+  fieldBean: String
+  fieldContext: String
+  fieldSingleton: String
+}

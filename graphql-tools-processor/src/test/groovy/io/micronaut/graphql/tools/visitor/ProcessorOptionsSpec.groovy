@@ -67,6 +67,19 @@ public class QueryResolver {
         result.findings == ['[unbound-resolver-method] example.QueryResolver#stray()']
     }
 
+    def "the key of the removed JSR-269 processor is an error that names the new key"() {
+        when:
+        def result = compilation().option('micronaut.graphql.tools.sdlDir', '/x').compile()
+
+        then:
+        !result.success
+        result.findings == ['[processor-option-removed] -']
+        result.errors[0].contains(ProcessorOptions.SCHEMA_DIRS)
+
+        and: 'with the checks off nothing reads a schema directory, so a leftover key is harmless'
+        compilation().option('micronaut.graphql.tools.sdlDir', '/x').option(ProcessorOptions.CHECKS, 'false').compile().success
+    }
+
     def "a value that is not a boolean is an error"() {
         when:
         def result = compilation().option(ProcessorOptions.CHECKS, 'maybe').compile()

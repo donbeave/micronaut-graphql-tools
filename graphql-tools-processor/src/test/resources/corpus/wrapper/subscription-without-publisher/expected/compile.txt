@@ -1,0 +1,1 @@
+unsupported-return-type Subscription.published schema.graphqls:17:3
