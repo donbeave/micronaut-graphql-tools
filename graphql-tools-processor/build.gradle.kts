@@ -67,6 +67,11 @@ tasks.register<Test>("corpusUpdate") {
 // (the floor and ceiling runs record the same verdicts as the default leg), so it runs on the default leg only, on JDK 21 and 25;
 // the floor and ceiling legs run every other test of this module unchanged. CorpusRunnerSpec (the runner's own tests, 3 s) runs on every leg.
 val corpusOnThisLeg = providers.gradleProperty("graphqlJavaLeg").orElse("default").get() == "default"
+// Every unit of the corpus leaves its class loader behind (a heap dump and jcmd show it: the loaders stay reachable after a full GC,
+// about 14 MB of metaspace and 6 MB of heap per unit, and 300 units ran a 2 GB heap into a collection that never ended and the job
+// into its timeout). So the corpus runs in several JVMs: `test` runs the first shard, and the tasks corpusShard1 to
+// corpusShard<N-1> run the others; `check` needs them all. `corpusUpdate` rewrites every golden in one JVM and needs the large heap.
+val corpusShards = 3
 tasks.named<Test>("test") {
     exclude("**/KotlinCorpusSpec*")
     if (!corpusOnThisLeg && !project.hasProperty("corpus.update")) {
@@ -75,6 +80,23 @@ tasks.named<Test>("test") {
             logger.lifecycle("BindingCorpusSpec skipped: the binding corpus runs on the default graphql-java leg only (-PgraphqlJavaLeg=default).")
         }
     }
+    if (!project.hasProperty("corpus.update")) {
+        systemProperty("corpus.shard", "0/$corpusShards")
+    }
+}
+if (corpusOnThisLeg && !project.hasProperty("corpus.update")) {
+    val shardTasks = (1 until corpusShards).map { shard ->
+        tasks.register<Test>("corpusShard$shard") {
+            description = "Runs shard $shard of $corpusShards of the binding corpus (see corpusShards)."
+            group = "verification"
+            testClassesDirs = sourceSets["test"].output.classesDirs
+            classpath = sourceSets["test"].runtimeClasspath
+            filter.includeTestsMatching("*BindingCorpusSpec")
+            systemProperty("corpus.shard", "$shard/$corpusShards")
+            systemProperty("corpus.report", layout.buildDirectory.file("corpus/timings-$shard.txt").get().asFile.absolutePath)
+        }
+    }
+    tasks.named("check") { dependsOn(shardTasks) }
 }
 // The Kotlin corpus (#143): one batched Gradle TestKit build with the production toolchain, run on the checked and the unchecked
 // variant of every case. Not part of `check` or `build`: it needs the network and builds real projects, so the CI job `build tools`
