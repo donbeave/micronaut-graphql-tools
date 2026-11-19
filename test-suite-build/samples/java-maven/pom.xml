@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.micronaut.platform</groupId>
+    <artifactId>micronaut-parent</artifactId>
+    <!-- the test replaces the token with the Micronaut platform version of the build -->
+    <version>@micronaut.platform@</version>
+  </parent>
+
+  <groupId>example</groupId>
+  <artifactId>java-maven</artifactId>
+  <version>0.1</version>
+
+  <properties>
+    <jdk.version>21</jdk.version>
+    <release.version>21</release.version>
+    <micronaut.graphql.tools.version>1.0.0-SNAPSHOT</micronaut.graphql.tools.version>
+    <!-- mvn verify -Dgraphql.checks=false compiles without the checks -->
+    <graphql.checks>true</graphql.checks>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </repository>
+    <repository>
+      <!-- the library under test: the test passes its location -->
+      <id>graphql-tools</id>
+      <url>${graphql.tools.repository}</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <!-- tag::bom[] -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.micronaut.graphql.tools</groupId>
+        <artifactId>micronaut-graphql-tools-bom</artifactId>
+        <version>${micronaut.graphql.tools.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <!-- end::bom[] -->
+
+  <dependencies>
+    <dependency>
+      <groupId>io.micronaut.graphql.tools</groupId>
+      <artifactId>micronaut-graphql-tools</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- tag::processor[] -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths combine.children="append">
+            <path>
+              <groupId>io.micronaut.graphql.tools</groupId>
+              <artifactId>micronaut-graphql-tools-processor</artifactId>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs combine.children="append">
+            <!-- tag::schema-dirs[] -->
+            <arg>-Amicronaut.graphql.tools.processor.schema.dirs=${project.basedir}/src/main/resources/graphql</arg>
+            <!-- end::schema-dirs[] -->
+            <!-- tag::checks[] -->
+            <arg>-Amicronaut.graphql.tools.processor.checks=${graphql.checks}</arg>
+            <!-- end::checks[] -->
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <!-- end::processor[] -->
+    </plugins>
+  </build>
+</project>
