@@ -21,7 +21,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language

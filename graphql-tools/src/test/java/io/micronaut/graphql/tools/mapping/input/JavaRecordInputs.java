@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input;
 
-import io.micronaut.graphql.tools.ArgumentValue;
+import io.micronaut.graphql.tools.input.ArgumentValue;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 
 import java.util.List;

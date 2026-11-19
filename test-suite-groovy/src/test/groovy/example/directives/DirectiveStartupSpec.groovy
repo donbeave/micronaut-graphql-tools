@@ -18,7 +18,7 @@ package example.directives
 import graphql.schema.GraphQLSchema
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.BindingManifest
+import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.runtime.server.EmbeddedServer
 import spock.lang.Specification
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException

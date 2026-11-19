@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 
 /**
- * Thrown when more than one {@link io.micronaut.graphql.tools.SchemaDirective} bean binds a wiring to the same
+ * Thrown when more than one {@link io.micronaut.graphql.tools.directive.SchemaDirective} bean binds a wiring to the same
  * directive name: graphql-java keeps only one wiring per name, so the others would be dropped silently. It is also
  * thrown when one directive is wired by both a named bean and an every-element bean, because the directive would
  * take effect twice. Several every-element beans for one directive are allowed.

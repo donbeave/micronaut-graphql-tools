@@ -21,7 +21,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
-import io.micronaut.graphql.tools.TypeMappingContext;
+import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules.SchemaArgument;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;

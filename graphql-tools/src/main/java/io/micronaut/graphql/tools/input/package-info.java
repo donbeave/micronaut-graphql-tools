@@ -13,16 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools;
-
 /**
- * Registers type mappings in the {@link SchemaMappingDictionary}. An application may define any number of these beans;
- * all of them run, in {@code @Order}, on one dictionary, and a type that two of them map fails the startup.
+ * The input types an application sees in a resolver argument: the wrapper that tells an omitted argument from an explicit {@code null}. Key types: {@link io.micronaut.graphql.tools.input.ArgumentValue}.
  *
- * @author Alexey Zhokhov
+ * <p><b>Audience.</b> Public API. An application uses it as a resolver argument type.</p>
  */
-public interface SchemaMappingDictionaryCustomizer {
-
-    void customize(SchemaMappingDictionary schemaMappingDictionary);
-
-}
+package io.micronaut.graphql.tools.input;

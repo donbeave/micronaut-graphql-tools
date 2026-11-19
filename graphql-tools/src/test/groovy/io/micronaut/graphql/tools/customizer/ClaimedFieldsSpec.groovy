@@ -24,9 +24,9 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.BindingManifest
-import io.micronaut.graphql.tools.RuntimeWiringCustomizer
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.manifest.BindingManifest
+import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton

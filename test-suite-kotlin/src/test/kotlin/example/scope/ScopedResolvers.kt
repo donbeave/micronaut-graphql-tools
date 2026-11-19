@@ -19,7 +19,7 @@ import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.annotation.Prototype
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.runtime.http.scope.RequestScope
 import jakarta.inject.Singleton

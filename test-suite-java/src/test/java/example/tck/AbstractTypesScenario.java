@@ -16,7 +16,7 @@
 package example.tck;
 
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.SchemaMappingDictionary;
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 

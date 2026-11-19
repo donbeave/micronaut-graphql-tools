@@ -599,9 +599,9 @@ public record Book(String title, Genre genre) implements SearchResult {
         def query = { String parameter ->
             BOOK_QUERY.replace('book(String id)', "book(String id, ${parameter} title)")
         }
-        def argumentValue = 'io.micronaut.graphql.tools.ArgumentValue<String>'
-        def readOnlyFilter = BOOK_FILTER.replace('private String title;', 'private io.micronaut.graphql.tools.ArgumentValue<String> title;')
-                .replace('public String getTitle()', 'public io.micronaut.graphql.tools.ArgumentValue<String> getTitle()')
+        def argumentValue = 'io.micronaut.graphql.tools.input.ArgumentValue<String>'
+        def readOnlyFilter = BOOK_FILTER.replace('private String title;', 'private io.micronaut.graphql.tools.input.ArgumentValue<String> title;')
+                .replace('public String getTitle()', 'public io.micronaut.graphql.tools.input.ArgumentValue<String> getTitle()')
                 .replace('''    public void setTitle(String title) {
         this.title = title;
     }
@@ -615,10 +615,10 @@ public record Book(String title, Genre genre) implements SearchResult {
         then:
         plain.success
         !nonNull.success
-        nonNull.graphqlErrors[0].contains('io.micronaut.graphql.tools.ArgumentValue is only allowed for a nullable GraphQL '
+        nonNull.graphqlErrors[0].contains('io.micronaut.graphql.tools.input.ArgumentValue is only allowed for a nullable GraphQL '
                 + 'type, the type is String!.')
         !readOnly.success
-        readOnly.graphqlErrors == ['BookFilter.java:11: [graphql] BookFilter.title: io.micronaut.graphql.tools.ArgumentValue '
+        readOnly.graphqlErrors == ['BookFilter.java:11: [graphql] BookFilter.title: io.micronaut.graphql.tools.input.ArgumentValue '
                                            + 'needs a writable property: it is set to omitted() when the client leaves it out. '
                                            + '(schema.graphqls:22)']
     }

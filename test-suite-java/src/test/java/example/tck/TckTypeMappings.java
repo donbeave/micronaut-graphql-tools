@@ -15,7 +15,7 @@
  */
 package example.tck;
 
-import io.micronaut.graphql.tools.SchemaMappingDictionary;
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 
 /**
  * The mappings of a TCK scenario between the types of its schema and their classes, for the classes the binding cannot find

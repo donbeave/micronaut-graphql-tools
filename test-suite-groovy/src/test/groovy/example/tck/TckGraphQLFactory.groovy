@@ -28,7 +28,7 @@ import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.io.ResourceResolver
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.tck.Scenarios
 import io.micronaut.graphql.tools.tck.Tck
 import jakarta.inject.Singleton

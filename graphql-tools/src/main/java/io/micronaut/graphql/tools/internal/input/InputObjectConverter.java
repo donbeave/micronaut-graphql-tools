@@ -20,7 +20,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
-import io.micronaut.graphql.tools.ArgumentValue;
+import io.micronaut.graphql.tools.input.ArgumentValue;
 
 import java.util.ArrayList;
 import java.util.List;

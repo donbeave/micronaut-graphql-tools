@@ -27,8 +27,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import io.micronaut.graphql.tools.BindingManifest;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.manifest.BindingManifest;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 
 /**
  * Writes the {@link BindingManifest} at startup when {@code micronaut.graphql.tools.manifest.enabled} is

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer
 import graphql.GraphQL
 import graphql.schema.GraphQLSchema
 import io.micronaut.context.annotation.Bean

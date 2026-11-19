@@ -26,7 +26,7 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 
 /**
  * Reads the schema files of {@code micronaut.graphql.tools.schema.locations} into the {@link TypeDefinitionRegistry} that the

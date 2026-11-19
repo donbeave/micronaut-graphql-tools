@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-30` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-31` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -41,6 +41,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-28 `ArgumentValue` needs no option (#159) | The option `input.detect-omission` is removed, and so is the compile-time option `input.detectOmission`. A declared `ArgumentValue` is detected on its own, including an `ArgumentValue` property that the input type does not define: it is set to `omitted()`, where it kept its initial value without the option. | Delete the key. An application that set it to `true` behaves as before. New in 1.0.0-M3, no opt-out.
 | BC-29 one precedence rule (#105) | The value `strict` of `micronaut.graphql.tools.precedence` is named `fail` and `strict` is rejected with `[removed-configuration-key]`. A type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate` wins over a getter or a `@GraphQLField` method, for object and interface fields, whatever the setting is. | Write `precedence: fail`, or delete the line (it is the default). To let a resolver win for one field, declare its coordinate or put a resolver directive on the field.
 | BC-30 smaller public API (#109) | `SchemaBindingException` is the only public exception class. The 43 classes that stood for single failures (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnwiredDirectivesException`, `StrictModeException`, `BindingFailuresException`, `AmbiguousBindingException` and the others) moved to `io.micronaut.graphql.tools.internal.exceptions` and are internal. The getters that belonged to one of them (`getProblems()`, `getTypeNames()`, `getMembers()`, `getMissingValues()` and so on) are not public API any more; `SchemaBindingException` keeps `code()`, `getCoordinate()`, `getMappingContext()`, `getFailures()` and `getCodes()`. The implementation types of `io.micronaut.graphql.tools` (`GraphQLFactory`, `GraphQLResolversRegistry`, `BindingManifestHolder`, `JavaTypeNames` and the others annotated `@Internal`) moved to `io.micronaut.graphql.tools.internal`, and the runtime package `io.micronaut.graphql.tools.processor` is `io.micronaut.graphql.tools.internal.registry`. | Catch `SchemaBindingException` and match on `code()`. Read the schema element from `getCoordinate()` and the rest from the message. Do not import from an `internal` package; a logger configuration that names a moved class by its full name uses the new name.
+| BC-31 role packages for the public API (#354) | The 15 public types of `io.micronaut.graphql.tools` moved to role packages: `GraphQLToolsConfiguration` to `config`; the five `*Customizer` interfaces to `customizer`; `SchemaMappingDictionary`, `GraphQLScalarMapping`, `MappingContext`, `TypeMappingContext` and `InputMappingContext` to `mapping`; `SchemaDirective` and `CustomWiring` to `directive`; `ArgumentValue` to `input`; `BindingManifest` to `manifest`. The root package holds no types. The names, members and behaviour are unchanged. | Change the imports (`io.micronaut.graphql.tools.X` becomes `io.micronaut.graphql.tools.<package>.X`), and any full class name in a configuration file or a logger setting. `@ConfigurationProperties` prefixes (`micronaut.graphql.tools.*`) are unchanged.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
 | #291 processor options | _Pending._ The JSR-269 options are replaced by `micronaut.graphql.tools.processor.schema.dirs` and `micronaut.graphql.tools.processor.checks`. | Rename the options; the old `sdlDir` option will name its replacement.
 |===
@@ -678,6 +679,43 @@ try {
         log.error("{} binds twice", failure.getCoordinate());
     }
 }
+----
+
+=== BC-31: role packages for the public API (#354)
+
+The public types that shared the root package `io.micronaut.graphql.tools` moved into packages named by their role. Only the package changed: the class names, members, bean names and the configuration keys (`micronaut.graphql.tools.*`) are the same.
+
+[cols="2,3", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.config` |`GraphQLToolsConfiguration`
+|`io.micronaut.graphql.tools.customizer` |`GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer`, `RuntimeWiringCustomizer`, `TypeDefinitionRegistryCustomizer`, `SchemaMappingDictionaryCustomizer`
+|`io.micronaut.graphql.tools.mapping` |`SchemaMappingDictionary`, `GraphQLScalarMapping`, `MappingContext`, `TypeMappingContext`, `InputMappingContext`
+|`io.micronaut.graphql.tools.directive` |`SchemaDirective`, `CustomWiring`
+|`io.micronaut.graphql.tools.input` |`ArgumentValue`
+|`io.micronaut.graphql.tools.manifest` |`BindingManifest`
+|===
+
+What breaks: every import of a moved type, and any full class name in a text file (a logger setting, a reflection configuration).
+
+Fix: change the import.
+
+Before:
+
+[source,java]
+----
+import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.SchemaMappingDictionary;
+----
+
+After:
+
+[source,java]
+----
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 ----
 
 == Pending changes

@@ -22,7 +22,7 @@ import graphql.schema.GraphQLSchema
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
-import io.micronaut.graphql.tools.BindingManifest
+import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.MethodOrderer

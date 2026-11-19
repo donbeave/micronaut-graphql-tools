@@ -24,7 +24,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
-import io.micronaut.graphql.tools.BindingManifest;
+import io.micronaut.graphql.tools.manifest.BindingManifest;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
 import io.micronaut.graphql.tools.binding.internal.manifest.SchemaHash;

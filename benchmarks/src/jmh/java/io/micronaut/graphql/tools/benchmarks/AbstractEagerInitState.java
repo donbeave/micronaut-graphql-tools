@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.benchmarks;
 
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
-import io.micronaut.graphql.tools.GraphQLSchemaCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;

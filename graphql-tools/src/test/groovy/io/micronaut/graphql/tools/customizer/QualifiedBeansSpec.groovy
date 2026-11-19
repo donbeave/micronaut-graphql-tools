@@ -31,7 +31,7 @@ import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.BindingManifest
+import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.inject.qualifiers.Qualifiers
 import jakarta.inject.Named

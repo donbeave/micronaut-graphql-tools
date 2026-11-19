@@ -72,7 +72,7 @@ public class SchemaFactory {
 package startup;
 
 import io.micronaut.context.ApplicationContext;
-import io.micronaut.graphql.tools.BindingManifest;
+import io.micronaut.graphql.tools.manifest.BindingManifest;
 import java.util.Map;
 
 public final class Startup {

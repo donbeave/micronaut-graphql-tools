@@ -33,7 +33,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.GraphQLBuilderCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language

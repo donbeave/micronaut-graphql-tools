@@ -32,7 +32,7 @@ import graphql.schema.idl.TypeRuntimeWiring;
 import graphql.schema.idl.WiringFactory;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
 import io.micronaut.graphql.tools.internal.exceptions.InvalidClaimedFieldsException;
 import io.micronaut.graphql.tools.internal.exceptions.RuntimeWiringOverrideException;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder;

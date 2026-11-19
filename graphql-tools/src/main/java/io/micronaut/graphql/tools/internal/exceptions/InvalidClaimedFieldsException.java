@@ -21,7 +21,7 @@ import java.util.List;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 
 /**
- * Thrown when {@link io.micronaut.graphql.tools.RuntimeWiringCustomizer#claimedFields()} names a coordinate that is not
+ * Thrown when {@link io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer#claimedFields()} names a coordinate that is not
  * a field of an object type of the schema: the claim is stale or misspelled. All of them are reported in one error.
  */
 @Internal

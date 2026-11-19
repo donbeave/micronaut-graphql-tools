@@ -22,7 +22,7 @@ import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 
 /**
  * Thrown when the context holds {@link graphql.schema.idl.SchemaDirectiveWiring} beans that no
- * {@link io.micronaut.graphql.tools.SchemaDirective} bean wraps. The library does not apply such a bean on its own:
+ * {@link io.micronaut.graphql.tools.directive.SchemaDirective} bean wraps. The library does not apply such a bean on its own:
  * graphql-java would call it for every schema element, merely because it is a bean.
  */
 @Internal

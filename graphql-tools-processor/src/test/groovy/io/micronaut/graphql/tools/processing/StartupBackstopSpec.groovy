@@ -95,8 +95,8 @@ package example;
 import graphql.schema.GraphQLScalarType;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.graphql.tools.GraphQLScalarMapping;
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
 import jakarta.inject.Singleton;
 import java.time.LocalDate;
 
@@ -143,7 +143,7 @@ ${scalar ? '''
         result.success
         startupFails(result, 'union-type-mapping-not-provided', 'Can not detect representation class for type Magazine, member of SearchResult union. '
                 + 'Ensure the representation class is registered via '
-                + 'io.micronaut.graphql.tools.SchemaMappingDictionary.', 'Query.search (line 6, column 3)')
+                + 'io.micronaut.graphql.tools.mapping.SchemaMappingDictionary.', 'Query.search (line 6, column 3)')
     }
 
     void "a union member mapped to a final class that does not implement the union's Java interface compiles and fails the startup"() {
@@ -168,7 +168,7 @@ ${scalar ? '''
 
         then:
         result.success
-        startupFails(result, 'scalar-mapping-not-provided', 'The GraphQL scalar Date has no mapping. Register a io.micronaut.graphql.tools.GraphQLScalarMapping '
+        startupFails(result, 'scalar-mapping-not-provided', 'The GraphQL scalar Date has no mapping. Register a io.micronaut.graphql.tools.mapping.GraphQLScalarMapping '
                 + 'bean with its graphql.schema.GraphQLScalarType and Java classes.', 'Query.today (line 7, column 3)')
     }
 

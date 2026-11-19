@@ -22,7 +22,7 @@ import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 
 /** Binds the schema at startup, so a binding failure stops the application before the first request. */
 @Internal

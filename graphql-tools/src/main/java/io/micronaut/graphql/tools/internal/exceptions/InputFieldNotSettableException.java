@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.internal.exceptions;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.BindingCode;
-import io.micronaut.graphql.tools.InputMappingContext;
+import io.micronaut.graphql.tools.mapping.InputMappingContext;
 
 /**
  * Thrown when a field of a GraphQL input type maps to a Java property that the input class cannot set: the property is

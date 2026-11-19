@@ -19,7 +19,7 @@ import graphql.GraphQL;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
-import io.micronaut.graphql.tools.BindingManifest;
+import io.micronaut.graphql.tools.manifest.BindingManifest;
 
 import java.io.IOException;
 import java.io.InputStream;
