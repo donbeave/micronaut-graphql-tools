@@ -20,11 +20,6 @@ FailureClassesSpec	wrapper misuse fails with the coordinate and the Java element
 GraphQLSpecifiedDirectivesSpec	the names equal the runtime module's	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
 GraphQLSpecifiedDirectivesSpec	defer is built in but not specified	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
 GraphQLSpecifiedDirectivesSpec	other names, a different case, an empty name and null are not specified	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
-ManifestParitySpec	the processor's manifest equals the startup manifest: roots, wrappers, wildcards, inherited getters, records, nested classes, contracts, enums, inputs and an interface that is only implemented	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
-ManifestParitySpec	the diagnostic lines are the same: ambiguous, unbound methods, enum constants and input properties, unreachable types	strict/unbound-resolver-method,strict/unbound-enum-constant,strict/unreachable-type,strict/several-problems	diagnostic parity is the corpus parity assertion
-ManifestParitySpec	the startup has more lines only where runtime beans decide: scalars, the dictionary's union and interface members and what they reach	startup/union-member-without-class,startup/scalar-without-mapping	what only runtime beans decide is a startup failure and the compile side records ok
-ManifestParitySpec	inherited generic members: the bean names a resolver method, the declaring class a getter, the types as the bean sees them	inherited/generic-superclass-members,inherited/generic-superclass-getter	
-ManifestParitySpec	an applied directive without a wiring: the startup fails in strict mode, and its !unwiredDirective line is left to the startup	directive/unwired-ignored,severity/unwired-directive-fail,directive/schema-level	
 ModelChecksSpec	matching models, enums, input classes and abstract types compile	bound/root-and-type-fields,bound/enum-and-input	
 ModelChecksSpec	a Java enum without a constant for a schema value fails	enum/missing-constant	
 ModelChecksSpec	strict mode: a Java enum constant without a schema value fails; without strict mode it is accepted	strict/unbound-enum-constant,input/enum-unbound-constant-returned	
@@ -109,7 +104,6 @@ SchemaChecksSpec	a boolean option reads as Micronaut reads it (#value), and a va
 SchemaChecksSpec	an unknown option under the prefix fails, so that a typo is not silent	options/unknown-option	
 SchemaChecksSpec	an invalid option value fails the compilation	options/invalid-checks-value	the invalid precedence value was an option of the JSR-269 processor; the visitor has the checks value
 SchemaChecksSpec	schema files in subdirectories are read and merged	-	deleted: the corpus case holds its schema files in one directory; the recursive read of schema directories is SchemaSourcesSpec in graphql-tools-binding
-SchemaChecksSpec	the processor claims the library and bean annotations, never *	-	deleted: it asserted the annotations that the JSR-269 processor claims
 StartupBackstopSpec	the fixture compiles and starts when the runtime beans match the schema	startup/matching-runtime-beans	
 StartupBackstopSpec	a union member without a Java class compiles and fails the startup	startup/union-member-without-class	
 StartupBackstopSpec	a union member mapped to a final class that does not implement the union's Java interface compiles and fails the startup	startup/union-member-final-class	

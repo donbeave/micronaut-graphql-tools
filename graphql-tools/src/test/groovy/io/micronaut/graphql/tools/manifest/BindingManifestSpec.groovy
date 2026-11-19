@@ -330,9 +330,9 @@ type Legacy {
         BindingManifest manifest = applicationContext.getBean(BindingManifest)
 
         then:
-        manifest.lines.contains("Item.price: Long! -> property ; ${Item.name}#getPrice() ; java.lang.Long ; java.lang.Long".toString())
+        manifest.lines.contains("Item.price: Long! -> property ; ${Item.name}#price ; java.lang.Long ; java.lang.Long".toString())
         manifest.diagnostics == [
-                "!precedence-ambiguity Item.price ; ${Item.name}#getPrice() | ${ItemResolver.name}#price(${Item.name})".toString(),
+                "!precedence-ambiguity Item.price ; ${Item.name}#price | ${ItemResolver.name}#price(${Item.name})".toString(),
                 '!unreachable-type Legacy'
         ]
     }
@@ -553,7 +553,7 @@ type Query {
         }
     }
 
-    void "a property the compile-time record does not know is named by its introspected class and its name"() {
+    void "a property is named by its introspected class and its name"() {
         given:
         startContext("""
 schema {
@@ -620,7 +620,7 @@ type Unlisted {
         String title
     }
 
-    void "declared types come from the compile-time metadata: no wildcards, and the accessor of the compile-time record"() {
+    void "declared types come from the compile-time metadata: no wildcards, and an inherited member is written with the bean type"() {
         given:
         startContext("""
 schema {
@@ -642,7 +642,7 @@ type Book {
 
         then:
         manifest.lines.findAll { it.startsWith('Query.books') || it.startsWith('Book.label') } == [
-                "Book.label(upper: Boolean): String -> property ; ${LabelledBase.name}#label(java.lang.Boolean) ; java.lang.String ; java.lang.String".toString(),
+                "Book.label(upper: Boolean): String -> property ; ${LabelledBook.name}#label(java.lang.Boolean) ; java.lang.String ; java.lang.String".toString(),
                 "Query.books: [Book!]! -> root ; ${WildcardQuery.name}#books() ; java.util.concurrent.CompletionStage<java.util.List<${LabelledBook.name}>> ; java.util.List<${LabelledBook.name}>".toString()
         ]
     }

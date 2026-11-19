@@ -43,7 +43,9 @@ Nothing here is a library API. Do not import from `example.*` in application cod
 
 - Depends on `micronaut-graphql-tools` (`implementation`) and `graphql-tools-tck` (`testImplementation`).
 - Puts `micronaut-graphql-tools-processor` on its `annotationProcessor` path, so the compile-time checks run on this
-  application.
+  application. `src/driftFixture` holds a resolver that drifts from the schema on purpose, and `driftFixtureTest` (part of
+  `check`) asserts that compiling it fails with `[argument-mismatch] Query.searchProfile`; it runs that compilation in a build
+  of its own (`config/drift-fixture.gradle.kts`).
 - The Kotlin and Groovy suites are compared with this one by `checkSuiteSchemaParity`; they do not depend on it.
 
 ## Build and test

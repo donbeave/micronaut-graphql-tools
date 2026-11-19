@@ -10,6 +10,8 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    // the compile-time checks (#291): the Groovy compiler loads the visitor from its compile classpath
+    compileOnly(projects.micronautGraphqlToolsProcessor)
     // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.
     runtimeOnly(mn.micronaut.jackson.databind)
     // The Groovy runtime of the application classes. Nothing else puts it on the runtime classpath: the tests got it from
@@ -52,6 +54,34 @@ configurations.configureEach {
         }
     }
 }
+
+// The directory that the checks read the schema from. The Groovy compiler reads its options from system properties, so it runs in
+// its own JVM (the default). Gradle does not track the schema files by itself: they are an input of the task, so that a schema edit
+// recompiles. `module.dir` is the project directory: a compilation that forgot the options in the same JVM fails instead of reading these.
+val graphqlSchemaDirs = files("src/main/resources")
+fun GroovyCompile.checkSchema() {
+    options.forkOptions.jvmArgs!!.add("-Dmicronaut.graphql.tools.processor.schema.dirs=" +
+        graphqlSchemaDirs.files.joinToString(File.pathSeparator) { it.absolutePath })
+    options.forkOptions.jvmArgs!!.add("-Dmicronaut.graphql.tools.processor.module.dir=" + layout.projectDirectory.asFile.absolutePath)
+    inputs.files(graphqlSchemaDirs).withPropertyName("graphqlSchemaDirs").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+tasks.named<GroovyCompile>("compileGroovy") { checkSchema() }
+
+// A class that drifts from the schema on purpose, compiled with the processor and the options of `main`: driftFixtureTest asserts
+// that the compilation fails with the expected `[code] coordinate` line.
+val driftFixture: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(driftFixture.implementationConfigurationName) { extendsFrom(implementation.get()) }
+    named(driftFixture.compileOnlyConfigurationName) { extendsFrom(compileOnly.get()) }
+}
+tasks.named<GroovyCompile>(driftFixture.getCompileTaskName("groovy")) { checkSchema() }
+extra["driftCompileTask"] = driftFixture.getCompileTaskName("groovy")
+extra["driftFailingTask"] = driftFixture.getCompileTaskName("groovy")
+extra["driftInputs"] = files(fileTree("src/driftFixture"), driftFixture.compileClasspath, graphqlSchemaDirs)
+apply(from = rootProject.file("config/drift-fixture.gradle.kts"))
 
 // invokedynamic call sites (Groovy's default) fail to bootstrap in a native image (IndyInterface.make throws a NullPointerException).
 tasks.named<GroovyCompile>("compileGroovy") {

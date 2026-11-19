@@ -413,17 +413,4 @@ type Query {
                                          + 'micronaut.graphql.tools.allowUnreachable. (query/report.graphqls:4)']
     }
 
-    void "the processor claims the library and bean annotations, never *"() {
-        expect:
-        !new GraphQLSchemaBindingProcessor().supportedAnnotationTypes.contains('*')
-        new GraphQLSchemaBindingProcessor().supportedAnnotationTypes.containsAll([
-                'io.micronaut.graphql.tools.annotation.GraphQLRootResolver',
-                'io.micronaut.graphql.tools.annotation.GraphQLTypeResolver',
-                'io.micronaut.graphql.tools.annotation.GraphQLType',
-                'jakarta.inject.Singleton'
-        ])
-        getClass().classLoader.getResource('META-INF/gradle/incremental.annotation.processors').text.trim() ==
-                'io.micronaut.graphql.tools.processing.GraphQLSchemaBindingProcessor,aggregating'
-    }
-
 }

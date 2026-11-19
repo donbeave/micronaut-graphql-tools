@@ -3,11 +3,11 @@ Boolean -> scalar ; Boolean ; - ; -
 ID -> scalar ; ID ; - ; -
 Int -> scalar ; Int ; - ; -
 Item -> object ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item ; - ; -
-Item.id: ID! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item#getId() ; java.lang.String ; java.lang.String
+Item.id: ID! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item#id ; java.lang.String ; java.lang.String
 Item.label(upper: Boolean): String -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item#label(java.lang.Boolean) ; java.lang.String ; java.lang.String
-Item.name: String! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item#getName() ; java.lang.String ; java.lang.String
+Item.name: String! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item#name ; java.lang.String ; java.lang.String
 Item.price: Long! -> resolver ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemResolver#price(io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item) ; java.util.concurrent.CompletionStage<java.lang.Long> ; java.lang.Long
-Item.state: ItemState! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item#getState() ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState
+Item.state: ItemState! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item#state ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState
 ItemState -> enum ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState ; - ; -
 ItemState.NEW -> enumValue ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState#NEW ; - ; -
 ItemState.SOLD -> enumValue ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState#SOLD ; - ; -
@@ -17,7 +17,7 @@ Mutation.rename(id: ID!, name: String!): Item -> root ; io.micronaut.graphql.too
 Node -> interface ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Node ; - ; -
 Node/Item -> resolves ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item ; - ; -
 Person -> object ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Person ; - ; -
-Person.name: String! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Person#getName() ; java.lang.String ; java.lang.String
+Person.name: String! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Person#name ; java.lang.String ; java.lang.String
 Query -> object ; - ; - ; -
 Query.item(id: ID!): Item -> root ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Query#item(java.lang.String) ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item
 Query.search(text: String!): [SearchHit!]! -> root ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Query#search(java.lang.String, graphql.schema.DataFetchingEnvironment) ; java.util.List<io.micronaut.graphql.tools.manifest.BindingManifestSpec$SearchHit> ; java.util.List<io.micronaut.graphql.tools.manifest.BindingManifestSpec$SearchHit>
@@ -26,8 +26,8 @@ SearchHit -> union ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Sea
 SearchHit/Item -> resolves ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Item ; - ; -
 SearchHit/Person -> resolves ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Person ; - ; -
 Shelf -> object ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Shelf ; - ; -
-Shelf.items: [Node!]! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Shelf#getItems() ; java.util.List<graphql.execution.DataFetcherResult<io.micronaut.graphql.tools.manifest.BindingManifestSpec$Node>> ; java.util.List<io.micronaut.graphql.tools.manifest.BindingManifestSpec$Node>
-Shelf.note: String -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Shelf#getNote() ; java.lang.String ; java.lang.String
+Shelf.items: [Node!]! -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Shelf#items ; java.util.List<graphql.execution.DataFetcherResult<io.micronaut.graphql.tools.manifest.BindingManifestSpec$Node>> ; java.util.List<io.micronaut.graphql.tools.manifest.BindingManifestSpec$Node>
+Shelf.note: String -> property ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$Shelf#note ; java.lang.String ; java.lang.String
 ShelfFilter -> input ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ShelfFilter ; - ; -
 ShelfFilter.minPrice: Long -> inputField ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ShelfFilter#minPrice ; java.lang.Long ; java.lang.Long
 ShelfFilter.state: ItemState -> inputField ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ShelfFilter#state ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState ; io.micronaut.graphql.tools.manifest.BindingManifestSpec$ItemState

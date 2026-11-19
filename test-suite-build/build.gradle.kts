@@ -1,9 +1,3 @@
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
-
 plugins {
     java
 }
@@ -39,75 +33,8 @@ val publishLibrary by tasks.registering {
     libraryModules.forEach { dependsOn("$it:publishAllPublicationsToBuildRepository") }
 }
 
-// Until the switch (#291) the published processor jar registers the JSR-269 processor and not the visitor. The samples
-// need the visitor and only the visitor, as the jar will have it after the switch, so this task copies the repository and
-// rewrites the registration in the copy. It changes nothing once the jar already registers the visitor, and #291 deletes it.
-abstract class StageSampleRepository : DefaultTask() {
-
-    @get:InputDirectory
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val source: DirectoryProperty
-
-    @get:OutputDirectory
-    abstract val target: DirectoryProperty
-
-    @TaskAction
-    fun stage() {
-        val from = source.get().asFile.toPath()
-        val to = target.get().asFile.toPath()
-        to.toFile().deleteRecursively()
-        Files.walk(from).use { files ->
-            files.filter { Files.isRegularFile(it) }.forEach { file ->
-                val name = file.fileName.toString()
-                if (listOf(".md5", ".sha1", ".sha256", ".sha512").any { name.endsWith(it) }) {
-                    return@forEach
-                }
-                val copy = to.resolve(from.relativize(file).toString())
-                Files.createDirectories(copy.parent)
-                if (name.startsWith("micronaut-graphql-tools-processor-") && name.endsWith(".jar") &&
-                    !name.endsWith("-sources.jar") && !name.endsWith("-javadoc.jar")) {
-                    registerVisitor(file, copy)
-                } else {
-                    Files.copy(file, copy)
-                }
-            }
-        }
-    }
-
-    private fun registerVisitor(jar: Path, copy: Path) {
-        val jsr269 = setOf("META-INF/services/javax.annotation.processing.Processor", "META-INF/gradle/incremental.annotation.processors")
-        val visitorService = "META-INF/services/io.micronaut.inject.visitor.TypeElementVisitor"
-        ZipFile(jar.toFile()).use { zip ->
-            if (zip.getEntry(visitorService) != null) {
-                Files.copy(jar, copy)
-                return
-            }
-            if (jsr269.none { zip.getEntry(it) != null }) {
-                throw GradleException("$jar registers neither the visitor nor the JSR-269 processor: the registration format changed, so update stageSampleRepository (or delete it, if #291 landed)")
-            }
-            ZipOutputStream(Files.newOutputStream(copy)).use { out ->
-                zip.entries().asSequence().filter { it.name !in jsr269 }.forEach { entry ->
-                    out.putNextEntry(ZipEntry(entry.name))
-                    if (!entry.isDirectory) {
-                        zip.getInputStream(entry).use { it.copyTo(out) }
-                    }
-                    out.closeEntry()
-                }
-                out.putNextEntry(ZipEntry(visitorService))
-                out.write("io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor\n".toByteArray())
-                out.closeEntry()
-            }
-        }
-    }
-}
-
-val sampleRepository = layout.buildDirectory.dir("sample-repo")
-val stageSampleRepository by tasks.registering(StageSampleRepository::class) {
-    description = "Copies build/repo for the samples, with the visitor registered in the processor jar."
-    dependsOn(publishLibrary)
-    source.set(rootProject.layout.buildDirectory.dir("repo"))
-    target.set(sampleRepository)
-}
+// The samples resolve the library from this repository, with the registration that the published processor jar has: the visitor and only the visitor.
+val sampleRepository = rootProject.layout.buildDirectory.dir("repo")
 
 // The plugin versions of the samples are the ones of the root build, so that a bump (or the Kotlin canary's rewrite) moves them.
 fun pluginPin(id: String): String =
@@ -128,7 +55,7 @@ val buildToolsTest by tasks.registering(Test::class) {
         showStandardStreams = true
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
-    dependsOn(stageSampleRepository)
+    dependsOn(publishLibrary)
     doFirst {
         delete(layout.buildDirectory.dir("reports/build-tools"))
     }

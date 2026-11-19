@@ -195,16 +195,8 @@ public final class BindingManifestRecorder {
                 + JavaTypeNames.parameters(executable);
     }
 
-    public static String introspectedMethodMember(Executable<?, ?> executable, Class<?> beanType) {
-        String member = CompileTimeAccessors.get().get(beanType.getTypeName() + "#"
-                + MicronautUtils.getMethodName(executable) + "/" + executable.getArguments().length);
-        return member != null ? member : methodMember(executable, beanType);
-    }
-
     public static String propertyMember(BeanProperty<?, ?> beanProperty) {
-        String beanType = beanProperty.getDeclaringBean().getBeanType().getTypeName();
-        String member = CompileTimeAccessors.get().get(beanType + "#" + beanProperty.getName());
-        return member != null ? member : beanType + "#" + beanProperty.getName();
+        return beanProperty.getDeclaringBean().getBeanType().getTypeName() + "#" + beanProperty.getName();
     }
 
     public static String nameOf(Class<?> type) {
