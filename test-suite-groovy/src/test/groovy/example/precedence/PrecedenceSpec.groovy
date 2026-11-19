@@ -18,6 +18,7 @@ package example.precedence
 import graphql.GraphQL
 import graphql.schema.GraphQLSchema
 import io.micronaut.context.ApplicationContext
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import spock.lang.Specification
 
@@ -61,6 +62,12 @@ class PrecedenceSpec extends Specification {
         expect:
         failure(properties, PrecedenceFixtures.AMBIGUOUS) instanceof SchemaBindingException
         failure(properties, PrecedenceFixtures.AMBIGUOUS).message.startsWith('[precedence-ambiguity]')
+        // a failure about one field names its schema coordinate and is no aggregate
+        failure(properties, PrecedenceFixtures.AMBIGUOUS).code() == BindingCode.PRECEDENCE_AMBIGUITY
+        failure(properties, PrecedenceFixtures.AMBIGUOUS).coordinate == 'Gadget.label'
+        failure(properties, PrecedenceFixtures.AMBIGUOUS).mappingContext.coordinate == 'Gadget.label'
+        failure(properties, PrecedenceFixtures.AMBIGUOUS).failures.empty
+        failure(properties, PrecedenceFixtures.AMBIGUOUS).codes.empty
 
         where:
         properties << [[:], ['micronaut.graphql.tools.strict': false]]

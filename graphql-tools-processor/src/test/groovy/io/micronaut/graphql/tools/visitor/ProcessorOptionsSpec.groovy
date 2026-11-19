@@ -129,4 +129,33 @@ public class QueryResolver {
         then:
         result.success
     }
+
+    def "module.dir is read as an absolute path, and a path that cannot be used is an option error"() {
+        expect:
+        ProcessorOptions.read([:]).moduleDir() == null
+        ProcessorOptions.read([(ProcessorOptions.MODULE_DIR): '/work/books'])
+                .moduleDir() == java.nio.file.Path.of('/work/books')
+        ProcessorOptions.read([(ProcessorOptions.MODULE_DIR): "bad\u0000path".toString()]).errors()*.code() == ['processor-option-invalid']
+    }
+
+    def "options that an earlier module of the same JVM left behind are rejected, naming the module"() {
+        when:
+        def stale = compilation().option(ProcessorOptions.MODULE_DIR, '/work/authors').compile()
+
+        then:
+        stale.findings == ['[processor-schema-not-configured] -']
+        stale.errors[0].contains('/work/authors')
+        stale.errors[0].contains('this compilation writes to')
+        stale.errors[0].contains(ProcessorOptions.CHECKS + '=false')
+        stale.errors[0].contains('outside the project directory')
+
+        expect:
+        compilation().option(ProcessorOptions.MODULE_DIR, '/work/authors').option(ProcessorOptions.CHECKS, 'false').compile().success
+    }
+
+    def "module.dir that contains the output of the compilation is the module's own, and without it nothing changes"() {
+        expect:
+        compilation().ownModuleDirOption().compile().findings == ['[unbound-resolver-method] example.QueryResolver#stray()']
+        compilation().compile().findings == ['[unbound-resolver-method] example.QueryResolver#stray()']
+    }
 }

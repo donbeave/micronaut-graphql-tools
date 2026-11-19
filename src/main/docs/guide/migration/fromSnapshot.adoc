@@ -694,7 +694,8 @@ Rename the schema files that end in `.graphql` to `.graphqls`. A `TypeDefinition
 The visitor replaces the JSR-269 processor of `graphql-tools-processor`. #291 registers the visitor, removes the JSR-269 service files, and renames the options:
 
 * `micronaut.graphql.tools.sdlDir` is replaced by `micronaut.graphql.tools.processor.schema.dirs`;
-* `micronaut.graphql.tools.processor.checks` (`true` by default) switches the compile-time checks off when it is `false`.
+* `micronaut.graphql.tools.processor.checks` (`true` by default) switches the compile-time checks off when it is `false`;
+* `micronaut.graphql.tools.processor.module.dir` (optional) is the project directory of the module that sets `schema.dirs`; it makes a `schema.dirs` left behind by an earlier module of the same JVM fail the build instead of being used.
 
 Until #291 lands, the JSR-269 processor reads the options it has today, `sdlDir` among them. #144 then deletes the JSR-269 code. Builds that pass the old options fail once their names are removed.
 

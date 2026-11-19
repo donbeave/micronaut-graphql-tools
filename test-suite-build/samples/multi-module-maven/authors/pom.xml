@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>example</groupId>
+    <artifactId>multi-module-maven</artifactId>
+    <version>0.1</version>
+  </parent>
+
+  <artifactId>authors</artifactId>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.micronaut.graphql.tools</groupId>
+      <artifactId>micronaut-graphql-tools</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths combine.children="append">
+            <path>
+              <groupId>io.micronaut.graphql.tools</groupId>
+              <artifactId>micronaut-graphql-tools-processor</artifactId>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs combine.children="append">
+            <!-- tag::schema-dirs[] -->
+            <!-- the module directory says whose schema directory this is: Micronaut copies the options of a compilation into
+                 system properties, and a module that forgot them would otherwise be checked against the module built before it -->
+            <arg>-Amicronaut.graphql.tools.processor.schema.dirs=${project.basedir}/../schema/src/main/resources/graphql</arg>
+            <arg>-Amicronaut.graphql.tools.processor.module.dir=${project.basedir}</arg>
+            <!-- end::schema-dirs[] -->
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

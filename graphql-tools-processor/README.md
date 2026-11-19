@@ -25,10 +25,11 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
   interface that is a resolver) with the per-class rules of `graphql-tools-binding` (`ResolverClassFindings`), and reports each
   finding as a compile error (one finding is a warning, see below). The findings are those of one stage, as at startup: invalid coordinates, then the binding
   failures (the arguments, the input classes and enums they reach, the return type), then the strict checks, which the
-  startup runs only after a binding that failed nowhere. It keeps its state per `start()`, looks up no class by name, asks for no project directory and
+  startup runs only after a binding that failed nowhere. It keeps its state per `start()`, looks up no class by name, asks for no project directory (it reads the class output only to compare it with `module.dir`) and
   writes no file (`VisitorArchitectureSpec`).
-- `ProcessorOptions`: the two options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
-  separator) and `micronaut.graphql.tools.processor.checks` (`true` or `false`). An unknown key under
+- `ProcessorOptions`: the three options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
+  separator), `micronaut.graphql.tools.processor.module.dir` (the directory of the module that sets `schema.dirs`, see
+  "Resolvers in several modules") and `micronaut.graphql.tools.processor.checks` (`true` or `false`). An unknown key under
   `micronaut.graphql.tools.processor.` is an error; a runtime key that is present as a system property is not.
 - `CheckedSchema`: reads the schema once per compilation, on the first class that is checked.
 - `ElementTypeModel`: the adapter of the type model over `ClassElement` and `MethodElement`; the properties of an input class
@@ -71,12 +72,28 @@ its own sources and its classpath, so the checks split in two:
   schema module. A schema that only exists inside a jar on the classpath (`classpath*:` at startup) cannot be read by a compiler
   plug-in, so a module with resolvers and no directory fails with `processor-schema-not-configured`; the explicit way out is
   `micronaut.graphql.tools.processor.checks=false`, and the startup still checks everything. The schema directory is an input of
-  every module that sets the option, so a schema edit reruns exactly those modules. Set the option in every module that applies
-  the processor: Micronaut copies the options of a compilation into system properties, and a later compilation of the same process
-  reads them when it sets none, so a module that forgot the option can be checked against the schema directory of the module that
-  compiled before it instead of failing (the startup still checks every class).
+  every module that sets the option, so a schema edit reruns exactly those modules.
+- **A module that forgot the option.** Micronaut copies the options of a compilation into system properties, and a later
+  compilation of the same JVM (the Gradle daemon and its compile workers, the Maven reactor) reads them when it sets none. A module
+  that forgot `schema.dirs` would be checked against the schema directory of the module compiled before it. So each module also sets
+  `micronaut.graphql.tools.processor.module.dir` to its own project directory, next to `schema.dirs` (both are in the documented
+  snippet). The visitor compares it with the output directory of the compilation: a value whose directory does not contain
+  the output belongs to another module, and the build fails with `processor-schema-not-configured`, naming that directory and the
+  output of this compilation. The rule has these limits, and each keeps or fails safe:
+  - A module that sets `schema.dirs` without `module.dir` is trusted when no earlier module of the JVM set `module.dir`. Micronaut
+    cannot say which options a compilation passed itself, so once one module sets `module.dir`, a later module that sets only
+    `schema.dirs` sees the earlier marker and fails with `processor-schema-not-configured`; set both options in every module.
+  - A compiler that gives no output directory (kapt and KSP) cannot be compared and keeps the old behaviour.
+  - `checks=false` is honoured as before, also when an earlier module left it behind: a module that forgot every option is then
+    compiled without checks, and the startup still checks every class.
+  - The marker is a directory that contains the output, so a module whose output lies inside the project directory of an earlier
+    module (a root project that applies the processor, compiled before a subproject that forgot the options) is not told apart
+    from it, which is one more reason to set the options in every module.
+  - A build that moves the output of a module outside its project directory sets `module.dir` to a directory that contains it.
 
-The sample is `multi-module-gradle` in `test-suite-build`; the corpus cases that split their sources into compilation units are
+  `multi-module-gradle` and `multi-module-maven` in `test-suite-build` prove the failure: the module that forgot the snippet is built after one that set it.
+
+The samples are `multi-module-gradle` and `multi-module-maven` in `test-suite-build`; the corpus cases that split their sources into compilation units are
 under `modules/` (see the corpus README).
 
 ## Packages

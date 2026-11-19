@@ -33,6 +33,7 @@ import io.micronaut.inject.visitor.VisitorContext;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -47,7 +48,8 @@ import java.util.Set;
  *
  * <p>The state lives in one {@link Compilation} per {@link #start}: the visitor is instantiated more than once under javac
  * and the Kotlin and Gradle daemons keep classes loaded, so nothing is static and nothing is shared. The visitor does not
- * look up a class by name, does not ask for the project directory or the class output, and writes no file.</p>
+ * look up a class by name, does not ask for the project directory, reads the class output only to compare it with
+ * {@code module.dir} (see {@link ModuleOwnership}), and writes no file.</p>
  */
 public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Object> {
 
@@ -85,6 +87,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     public void start(VisitorContext context) {
         Compilation started = new Compilation(ProcessorOptions.read(context.getOptions()));
         compilation = started;
+        started.foreignOutput = ModuleOwnership.foreignOutput(started.options.moduleDir(), context);
         started.options.errors().forEach(it -> report(context, it, null));
         if (started.options.checks() && started.options.errors().isEmpty()) {
             started.schema.missingDirectories().forEach(it -> {
@@ -141,6 +144,19 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     }
 
     private void check(Compilation current, ClassElement element, VisitorContext context) {
+        if (current.foreignOutput != null) {
+            current.failed = true;
+            report(context, new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_CONFIGURED.code(), null,
+                    "the schema directory is not configured for this module: " + ProcessorOptions.SCHEMA_DIRS + " and "
+                    + ProcessorOptions.MODULE_DIR + " belong to the module in " + current.options.moduleDir()
+                    + ", an earlier compilation of the same JVM, and this compilation writes to " + current.foreignOutput,
+                    null, null, null, "set " + ProcessorOptions.SCHEMA_DIRS + " and " + ProcessorOptions.MODULE_DIR
+                    + " in this module (see the compile-time checks of the guide for the setting of each build tool); if they are set and "
+                    + "this build writes the output outside the project directory of the module, set " + ProcessorOptions.MODULE_DIR
+                    + " to a directory that contains the output; or compile without checks with " + ProcessorOptions.CHECKS + "=false"),
+                    element);
+            return;
+        }
         if (current.options.schemaDirs().isEmpty()) {
             current.failed = true;
             report(context, new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_CONFIGURED.code(), null,
@@ -209,6 +225,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         final ProcessorOptions options;
         final CheckedSchema schema;
         final ElementTypeModel model = new ElementTypeModel();
+        @Nullable Path foreignOutput;
         boolean failed;
         boolean noted;
         int checked;
