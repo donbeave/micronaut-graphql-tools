@@ -70,7 +70,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
 
     @Override
     public @NonNull Set<String> getSupportedOptions() {
-        return ProcessorOptions.NAMES;
+        return ProcessorOptions.ADVERTISED;
     }
 
     @Override

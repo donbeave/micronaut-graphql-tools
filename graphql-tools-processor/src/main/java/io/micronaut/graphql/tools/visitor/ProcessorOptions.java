@@ -61,6 +61,13 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
     /** The key of the JSR-269 processor that the visitor replaces. */
     static final String REMOVED_SDL_DIR = "micronaut.graphql.tools.sdlDir";
 
+    /**
+     * The keys the visitor tells the compiler it knows: the four options and the retired key. A build that keeps the retired key
+     * with {@code checks=false} must not get javac's "no processor claimed the option" warning, which {@code -Werror} turns into an error.
+     * The retired key is not an option: {@link #NAMES} stays the options.
+     */
+    static final Set<String> ADVERTISED = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, REMOVED_SDL_DIR);
+
     ProcessorOptions {
         schemaDirs = List.copyOf(schemaDirs);
         errors = List.copyOf(errors);
