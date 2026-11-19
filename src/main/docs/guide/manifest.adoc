@@ -90,7 +90,7 @@ An entry has five parts. `-` stands for a part that has no value. Every entry th
 
 The subject of a field is its coordinate with its arguments and its type, printed by graphql-java (`Query.book(id: ID!): Book`). Interface fields have no line of their own: every object type that implements the interface has its line.
 
-Java types are written from Micronaut's compile-time type information, which keeps no wildcards, raw types or type arguments of array components: `List<? extends Book>` reads `java.util.List<Book>`, a raw `List` reads `java.util.List<java.lang.Object>` and `List<String>[]` reads `java.util.List[]`. A type variable of a generic superclass stays a type variable (`T`). The member of a property is the getter that the compile-time checks (the annotation processor) recorded in `META-INF/micronaut-graphql-tools/accessors.txt`; without the processor, or for a class it did not see, it reads `Class#property`.
+Java types are written from Micronaut's compile-time type information, which keeps no wildcards, raw types or type arguments of array components: `List<? extends Book>` reads `java.util.List<Book>`, a raw `List` reads `java.util.List<java.lang.Object>` and `List<String>[]` reads `java.util.List[]`. A type variable of a generic superclass stays a type variable (`T`). The member of a property reads `Class#property`.
 
 === Findings
 
@@ -171,7 +171,7 @@ The examples of this page are tested: the build parses each block and checks the
 
 == Compile-time manifest
 
-The compile-time checks (#150) write the same format, so that the manifest of a build and the manifest of a start can be compared line by line. A compile-time manifest cannot know what the runtime serves: the `scalar` lines, `resolves` lines of interfaces that are only implemented, `claimed` lines, and findings that need the beans at start are left out, and the checks name each omission in a companion file, `binding-manifest-omitted.txt`. Its first line is `# graphql-binding-manifest-omitted 1`. Each following line is `kind <entry kind or finding word>`, `type <Type>` (every line about the type), `field <coordinate>` or `unbound <member>`. A reader subtracts what the record names from the start manifest and compares the rest.
+The compile-time checks write no manifest: the visitor checks one class at a time and writes no file. The binding manifest is the one that the startup builds (`micronaut.graphql.tools.manifest.enabled`).
 
 == Versioning
 

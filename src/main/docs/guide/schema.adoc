@@ -23,7 +23,7 @@ A location is a scheme and an Ant-style path (`*`, `**`, `?`). A path without wi
 
 == Compile time
 
-The processor reads the same `*.graphqls` files with the same code from its schema directory (`micronaut.graphql.tools.sdlDir`, see the Compile-Time Verification page). Several directories may be listed with the platform path separator. It cannot read classpath locations, so schema that comes from a dependency jar is not checked at compile time: point the directory option at a copy of it, or accept that the startup checks it.
+The processor reads the same `*.graphqls` files with the same code from its schema directory (`micronaut.graphql.tools.processor.schema.dirs`, see the Compile-Time Verification page). Several directories may be listed with the platform path separator. It cannot read classpath locations, so schema that comes from a dependency jar is not checked at compile time: point the directory option at a copy of it, or accept that the startup checks it.
 
 == Native image
 

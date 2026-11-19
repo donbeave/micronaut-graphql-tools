@@ -9,13 +9,11 @@ The compile-time checks. The annotation processor reads the schema files while `
 fails the build on drift that the startup would otherwise report, for example an object type that nothing reachable
 returns. Each error names the schema coordinate and the schema file line. The guide page is `src/main/docs/guide/compileTime.adoc`.
 
-Today the processor is a JSR-269 annotation processor (`GraphQLSchemaBindingProcessor`, registered in
-`META-INF/services/javax.annotation.processing.Processor`). It is being replaced by a `TypeElementVisitor` in the package
-`io.micronaut.graphql.tools.visitor` (#150, #291). The JSR-269 code is deleted by #144 after the visitor reaches parity.
-
-The visitor (`GraphQLToolsVisitor`) is in the tree and is registered for the tests of this module only
-(`src/test/resources/META-INF/services/io.micronaut.inject.visitor.TypeElementVisitor`). The switch (#291) registers it in
-`main` and removes the JSR-269 registration; until then the published jar still carries the JSR-269 processor alone.
+The processor is a `TypeElementVisitor` (`GraphQLToolsVisitor`, package `io.micronaut.graphql.tools.visitor`), registered in
+`META-INF/services/io.micronaut.inject.visitor.TypeElementVisitor` of the jar. The jar holds that service file and no other
+(`RegistrationSpec`): the JSR-269 service files (`javax.annotation.processing.Processor` and
+`META-INF/gradle/incremental.annotation.processors`) are gone (#291), so one compile-time engine runs in a build. The JSR-269
+classes (`GraphQLSchemaBindingProcessor` and its package) stay until #144 deletes them; nothing registers them.
 
 ## Responsibility
 
@@ -109,12 +107,12 @@ Each package has a `package-info.java`. See the [API map](../src/main/docs/guide
 
 ## Who uses it
 
-Application developers, who add it to the annotation processor path next to Micronaut's processor (`annotationProcessor`,
-or `kapt` for Kotlin). `test-suite-java` does this in its build. Maintainers use the binding corpus in its tests.
+Application developers, who add it to the path that their compiler reads Micronaut's processors from (`annotationProcessor`,
+`ksp` or `kapt` for Kotlin, `compileOnly` for Groovy). The three example suites do this in their builds. Maintainers use the binding corpus in its tests.
 
 ## Public and internal
 
-Application code does not import anything from this module. Its classes are used by `javac` only, through the processor's
+Application code does not import anything from this module. Its classes are used by the compiler only, through the visitor's
 service registration. The `processing` package is annotated `@Internal` in its `package-info.java`; it is implementation and is removed by #144.
 
 ## Relation to other modules
@@ -123,8 +121,8 @@ service registration. The `processing` package is annotated `@Internal` in its `
 - Depends on `graphql-java` (`implementation`).
 - Tests depend on `graphql-tools` (`testImplementation`): the binding corpus runs each case through the runtime binder and
   the compile-time binder and compares their verdicts.
-- Used by `test-suite-java`, which puts the processor on its `annotationProcessor` path. `test-suite-kotlin` and
-  `test-suite-groovy` do not use it. `test-suite-build` applies the visitor in sample projects (the options, the schema
+- Used by `test-suite-java` (`annotationProcessor`), `test-suite-kotlin` (`ksp`) and `test-suite-groovy` (`compileOnly`); each has
+  a `src/driftFixture` source set whose compilation must fail (`driftFixtureTest`). `test-suite-build` applies the visitor in sample projects (the options, the schema
   directory as a task input, the build cache) and builds them with Gradle TestKit.
 - `graphql-tools-bom` manages its version.
 

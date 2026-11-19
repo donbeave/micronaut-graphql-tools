@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-31` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-32` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -43,7 +43,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-30 smaller public API (#109) | `SchemaBindingException` is the only public exception class. The 43 classes that stood for single failures (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnwiredDirectivesException`, `StrictModeException`, `BindingFailuresException`, `AmbiguousBindingException` and the others) moved to `io.micronaut.graphql.tools.internal.exceptions` and are internal. The getters that belonged to one of them (`getProblems()`, `getTypeNames()`, `getMembers()`, `getMissingValues()` and so on) are not public API any more; `SchemaBindingException` keeps `code()`, `getCoordinate()`, `getMappingContext()`, `getFailures()` and `getCodes()`. The implementation types of `io.micronaut.graphql.tools` (`GraphQLFactory`, `GraphQLResolversRegistry`, `BindingManifestHolder`, `JavaTypeNames` and the others annotated `@Internal`) moved to `io.micronaut.graphql.tools.internal`, and the runtime package `io.micronaut.graphql.tools.processor` is `io.micronaut.graphql.tools.internal.registry`. | Catch `SchemaBindingException` and match on `code()`. Read the schema element from `getCoordinate()` and the rest from the message. Do not import from an `internal` package; a logger configuration that names a moved class by its full name uses the new name.
 | BC-31 role packages for the public API (#354) | The 15 public types of `io.micronaut.graphql.tools` moved to role packages: `GraphQLToolsConfiguration` to `config`; the five `*Customizer` interfaces to `customizer`; `SchemaMappingDictionary`, `GraphQLScalarMapping`, `MappingContext`, `TypeMappingContext` and `InputMappingContext` to `mapping`; `SchemaDirective` and `CustomWiring` to `directive`; `ArgumentValue` to `input`; `BindingManifest` to `manifest`. The root package holds no types. The names, members and behaviour are unchanged. | Change the imports (`io.micronaut.graphql.tools.X` becomes `io.micronaut.graphql.tools.<package>.X`), and any full class name in a configuration file or a logger setting. `@ConfigurationProperties` prefixes (`micronaut.graphql.tools.*`) are unchanged.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
-| #291 processor options | _Pending._ The JSR-269 options are replaced by `micronaut.graphql.tools.processor.schema.dirs` and `micronaut.graphql.tools.processor.checks`. | Rename the options; the old `sdlDir` option will name its replacement.
+| BC-32 compile-time options renamed (#291) | The build runs the visitor, not the JSR-269 processor. `micronaut.graphql.tools.sdlDir` is replaced by `micronaut.graphql.tools.processor.schema.dirs`, `micronaut.graphql.tools.processor.checks` switches the checks off, and a build that passes `sdlDir` fails with `[processor-option-removed]`. The binding manifest has no accessor file, so the member of a property is written `Class#property`. | Rename the option, and put the processor on the path of your compiler (see the Compile-Time Verification page). Regenerate a checked-in manifest.
 |===
 
 == Entries for 1.0.0-M1
@@ -453,7 +453,7 @@ Resolver parameters are bound to field arguments by name, not by position. A par
 
 Fix: rename the parameter to the argument name, or add `@GraphQLArgument("<argument name>")`.
 
-Status: breaking by design; no opt-out. The runtime half is on `master` (PR #257). The compile-time visitor of `graphql-tools-processor` applies the same rule (#15), with the same code and coordinate. The JSR-269 processor that a build registers until #291 still compares parameters by position, so a build does not yet catch a misnamed parameter.
+Status: breaking by design; no opt-out. The runtime half is on `master` (PR #257). The compile-time visitor of `graphql-tools-processor` applies the same rule (#15), with the same code and coordinate. #291 registers the visitor in a build, so a misnamed or missing parameter fails the compilation.
 
 A parameter of a method inherited from a class file that carries no parameter names (built without `-parameters`, or without `-g` for a method with a body) has the name `arg0`. The failure then says to compile the class that declares the method with `-parameters`, or to add `@GraphQLArgument`. The guide page "Inputs" lists where the names come from.
 
@@ -602,7 +602,7 @@ What breaks:
 
 New: `allow.findings` takes lines of the binding manifest, exactly as the manifest writes them (`!unbound-resolver-method example.Query#helper(java.lang.String)`), and accepts exactly that finding. An entry that is not the line of a check, whose check is `ignore`, or that matches no finding fails the startup. `allow.unreachable`, `allow.inert-directives` and `allow.schema-customizer-directives` are validated as before.
 
-Fix: rename the keys as in the table. The JSR-269 processor options keep their names until #291.
+Fix: rename the keys as in the table. The compile-time options are renamed by BC-32.
 
 [source,yaml]
 ----
@@ -729,7 +729,7 @@ The runtime finds the schema files itself (`micronaut.graphql.tools.schema.locat
 
 Rename the schema files that end in `.graphql` to `.graphqls`. A `TypeDefinitionRegistry` bean of your own still replaces the discovery, and a schema without a `schema { }` block and with a `Query` type now binds with `Query`, `Mutation` and `Subscription` as roots.
 
-=== #144 and #291: the compile-time processor
+=== BC-32: compile-time options renamed (#291)
 
 The visitor replaces the JSR-269 processor of `graphql-tools-processor`. #291 registers the visitor, removes the JSR-269 service files, and renames the options:
 
@@ -737,7 +737,13 @@ The visitor replaces the JSR-269 processor of `graphql-tools-processor`. #291 re
 * `micronaut.graphql.tools.processor.checks` (`true` by default) switches the compile-time checks off when it is `false`;
 * `micronaut.graphql.tools.processor.module.dir` (optional) is the project directory of the module that sets `schema.dirs`; it makes a `schema.dirs` left behind by an earlier module of the same JVM fail the build instead of being used.
 
-Until #291 lands, the JSR-269 processor reads the options it has today, `sdlDir` among them. #144 then deletes the JSR-269 code. Builds that pass the old options fail once their names are removed.
+A build that passes `micronaut.graphql.tools.sdlDir` fails with `[processor-option-removed]` and the name of the replacement. #144 then deletes the JSR-269 code.
+
+The build no longer writes `binding-manifest.txt`, `binding-manifest-omitted.txt` or `accessors.txt` into the class output (the startup writes the manifest, and a build guard that checks for the file must go), and the member of a property in the manifest is written `Class#property`, not `Class#getProperty()`. Regenerate a checked-in manifest.
+
+A misnamed or missing resolver parameter now fails the build with `[argument-mismatch]` (#15). `[class-not-introspected]` stays a compile-time warning, since an `@Introspected(classes = ...)` declaration in another class can make the class introspected; a build with `-Werror` fails on the warning.
+
+Status: breaking by design; no opt-out.
 
 == Renaming a binding
 
@@ -766,6 +772,6 @@ micronaut:
 
 `resolver-first` is the migration setting, but it is not the snapshot's behaviour. On object types the property used to win silently, so `resolver-first` can return a different value for a field that a property and a type resolver method both bind. Read the ambiguities in the manifest first, or use `precedence: property-first` to keep the old values while you fix them.
 
-Then read the `!` lines of the binding manifest, and fix, annotate with `@GraphQLIgnore`, or allow each one. `@GraphQLIgnore` is read at runtime; the JSR-269 processor does not read it yet, so a member that carries it can still fail the build. The visitor (#291 makes it the default) applies the same rules.
+Then read the `!` lines of the binding manifest, and fix, annotate with `@GraphQLIgnore`, or allow each one. The compile-time visitor reads `@GraphQLIgnore` and applies the same rules.
 
-When the runtime findings are fixed, add `graphql-tools-processor` to the build. It needs its own build option, `-Amicronaut.graphql.tools.sdlDir=<directory of the SDL files>` (see the Compile-Time Verification page). It does not read the runtime settings above, and it needs JDK 21 or newer to build.
+When the runtime findings are fixed, add `graphql-tools-processor` to the build. It needs its own build option, `-Amicronaut.graphql.tools.processor.schema.dirs=<directory of the SDL files>` (see the Compile-Time Verification page). It does not read the runtime settings above, and it needs JDK 21 or newer to build.

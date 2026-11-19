@@ -48,7 +48,7 @@ public record ModelMember(BeanIntrospection<Object> beanIntrospection,
     public String manifestMember() {
         return beanProperty != null
                 ? BindingManifestRecorder.propertyMember(beanProperty)
-                : BindingManifestRecorder.introspectedMethodMember(beanMethod,
+                : BindingManifestRecorder.methodMember(beanMethod,
                 beanMethod.getDeclaringBean().getBeanType());
     }
 

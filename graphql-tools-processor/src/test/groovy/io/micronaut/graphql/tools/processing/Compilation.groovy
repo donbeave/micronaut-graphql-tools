@@ -181,13 +181,16 @@ public final class Startup {
             // Micronaut's processor copies the -Amicronaut.* options into the system properties, where a later startup
             // would read them as configuration
             Properties systemProperties = (Properties) System.properties.clone()
-            if (!checks) {
-                task.setProcessors(ServiceLoader.load(Processor, getClass().classLoader).findAll {
-                    !(it instanceof GraphQLSchemaBindingProcessor)
-                })
+            // the JSR-269 processor is no longer registered (#291): add it to Micronaut's processors, unless this compilation runs without it
+            List<Processor> processors = ServiceLoader.load(Processor, getClass().classLoader).findAll {
+                !(it instanceof GraphQLSchemaBindingProcessor)
+            } as List<Processor>
+            if (checks) {
+                processors.add((Processor) new GraphQLSchemaBindingProcessor())
             }
+            task.setProcessors(processors)
             try {
-                // the visitor of this module, which the test resources register, is not under test here. It reads the option
+                // the visitor of this module, which the jar registers, is not under test here. It reads the option
                 // from the system properties too; the JSR-269 processor would reject it as a -A argument
                 System.setProperty('micronaut.graphql.tools.processor.checks', 'false')
                 success = task.call()
