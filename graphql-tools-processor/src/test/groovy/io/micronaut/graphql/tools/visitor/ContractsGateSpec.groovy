@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.visitor
 
 import org.codehaus.groovy.control.CompilationUnit
@@ -10,7 +25,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * The verification gate of the metadata channel (D-39, 2.8): what an isolating visitor writes with {@code Element#annotate} is
+ * The verification gate of the metadata channel: what an isolating visitor writes with {@code Element#annotate} is
  * on the bean definition at runtime, and is read without reflection. javac and the Groovy compiler run in process here; KSP
  * is the Kotlin corpus backend (#143), where the same visitor class runs.
  */

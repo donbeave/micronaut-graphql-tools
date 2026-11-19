@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.processing
 
 import spock.lang.Specification
@@ -215,8 +230,7 @@ type Report {
         !result.success
         result.graphqlErrors == [
                 '[graphql] micronaut.graphql.tools.allowUnreachable lists Ghost, which the schema does not define.',
-                '[graphql] micronaut.graphql.tools.allowUnreachable lists Query, which is not an unreachable object, '
-                        + 'interface, union, enum, input or scalar type.'
+                '[graphql] micronaut.graphql.tools.allowUnreachable lists Query, which is reachable.'
         ]
     }
 
@@ -378,7 +392,7 @@ type Query {
 
         then:
         !result.success
-        result.graphqlErrors == ['[graphql] micronaut.graphql.tools.precedence must be strict, property-first or '
+        result.graphqlErrors == ['[graphql] micronaut.graphql.tools.precedence must be fail, property-first or '
                                          + 'resolver-first, not first.']
     }
 

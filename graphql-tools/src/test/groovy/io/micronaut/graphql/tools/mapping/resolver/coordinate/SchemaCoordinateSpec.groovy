@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.resolver.coordinate
 
 import ch.qos.logback.classic.Level
@@ -87,10 +102,8 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """[field-not-bound] The method `helper` not found in any root resolvers: [${BookQuery.name}].
-  GraphQL coordinate: Query.helper (line 8, column 3)
-  GraphQL object type: Query
-  GraphQL field: helper"""
+        e.cause.message == """[field-not-bound] The method `helper` not found in any root resolvers: [${BookQuery.name}]. ${BookQuery.name}#helper() exists without @GraphQLSchemaCoordinate, but the bean declares coordinates on other methods, and only a method with its own coordinate binds a field. Fix: annotate it with @GraphQLSchemaCoordinate("Query.helper"), or remove it.
+  GraphQL coordinate: Query.helper (line 8, column 3)"""
     }
 
     void "a public type resolver method without a coordinate on a bean that uses coordinates does not bind"() {
@@ -119,9 +132,7 @@ type Book {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `blurb` not found in ${Book.name}'s type or it resolvers: [${BookResolver.name}].
-  GraphQL coordinate: Book.blurb (line 14, column 3)
-  GraphQL object type: Book
-  GraphQL field: blurb"""
+  GraphQL coordinate: Book.blurb (line 14, column 3)"""
     }
 
     @GraphQLRootResolver
@@ -183,7 +194,6 @@ type Book {
         where:
         name                 | schema                       | config                                                   | problem
         'typeMappedElsewhere' | AUTHOR_SCHEMA               | ['micronaut.graphql.tools.strict': false]                                               | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${AuthorResolver.name} summary(${Author.name} author): the method is not bound to Book.summary, Book.summary is bound to resolver ${PlainBookResolver.name} summary(${Book.name} book) (Book is mapped to ${Book.name}, the bean resolves ${Author.name})."
-        'propertyBinds'      | SCHEMA                       | ['micronaut.graphql.tools.precedence': 'property-first'] | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${ShadowedBookResolver.name} summary(${BookWithSummary.name} book): the method is not bound to Book.summary, Book.summary is bound to property ${BookWithSummary.name}.getSummary()."
     }
 
     @Language("GraphQL")
@@ -240,30 +250,6 @@ type Author {
     @GraphQLType
     static class Author {
         String name
-    }
-
-    @Requires(property = 'spec.name', value = SPEC_NAME + ".propertyBinds")
-    @GraphQLRootResolver
-    static class ShadowedBookQuery {
-        BookWithSummary book(String id) {
-            return new BookWithSummary(id: id, title: "Title " + id, summary: 'stored summary')
-        }
-    }
-
-    @Requires(property = 'spec.name', value = SPEC_NAME + ".propertyBinds")
-    @GraphQLTypeResolver(BookWithSummary.class)
-    static class ShadowedBookResolver {
-        @GraphQLSchemaCoordinate("Book.summary")
-        String summary(BookWithSummary book) {
-            return "Summary of " + book.title
-        }
-    }
-
-    @GraphQLType
-    static class BookWithSummary {
-        String id
-        String title
-        String summary
     }
 
     void "a coordinate of an allowed unreachable type is not bound, and that is logged"() {

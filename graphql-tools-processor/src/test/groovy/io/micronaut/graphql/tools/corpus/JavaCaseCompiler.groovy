@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.corpus
 
 import groovy.transform.CompileStatic
@@ -16,7 +31,7 @@ import java.nio.file.Path
 
 /**
  * In-process javac (javax.tools) over the test classpath, with the annotation processors of the test classpath except
- * the JSR-269 processor of this module: the runner never runs it (DD-13). The visitor of this module, which the test resources
+ * the JSR-269 processor of this module: the runner never runs it. The visitor of this module, which the test resources
  * register, is switched off here ({@link #CHECKS_OFF}): the classes are built to be started, and checked by the compile-time
  * binder. Micronaut's processors copy the {@code -Amicronaut.*} options into the system properties, so every
  * {@code micronaut.graphql.tools.processor.*} property is cleared, and the properties are restored, around each compilation.

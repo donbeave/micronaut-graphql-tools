@@ -43,7 +43,7 @@ micronaut {
     }
 }
 
-// The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x (D-34).
+// The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x.
 configurations.configureEach {
     resolutionStrategy.eachDependency {
         if (requested.group == "org.apache.groovy") {
@@ -58,7 +58,7 @@ tasks.named<GroovyCompile>("compileGroovy") {
     groovyOptions.optimizationOptions = (groovyOptions.optimizationOptions ?: mutableMapOf()).apply { put("indy", false) }
 }
 
-// Spock cannot run natively (D-38), so the native executable of the application is smoke-tested instead (#276): the script
+// Spock cannot run natively, so the native executable of the application is smoke-tested instead (#276): the script
 // starts it, posts the queries of the Java and Kotlin smoke tests and asserts the response bodies. Not part of `check`:
 // a native build takes minutes and about 5 GB.
 val nativeSmoke: Configuration by configurations.creating

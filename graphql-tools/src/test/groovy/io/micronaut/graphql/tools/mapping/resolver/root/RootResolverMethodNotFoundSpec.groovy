@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.resolver.root
 
 import io.micronaut.context.annotation.Requires
@@ -33,9 +48,7 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
-  GraphQL coordinate: Query.hello (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: hello"""
+  GraphQL coordinate: Query.hello (line 7, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'Query'
         e.cause.mappingContext.graphQlField == 'hello'
         e.cause.methodName == 'hello'
@@ -63,9 +76,7 @@ type Mutation {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
-  GraphQL coordinate: Mutation.hello (line 7, column 3)
-  GraphQL object type: Mutation
-  GraphQL field: hello"""
+  GraphQL coordinate: Mutation.hello (line 7, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'Mutation'
         e.cause.mappingContext.graphQlField == 'hello'
         e.cause.methodName == 'hello'

@@ -36,15 +36,41 @@ public final class MethodNotFoundException extends AbstractMappingException {
         this.reason = message;
     }
 
+    /**
+     * @param methodName     the name of the method that no root resolver binds
+     * @param mappingContext the mapping context of the field
+     * @param resolvers      the root resolver beans
+     * @return a new exception
+     */
     public static MethodNotFoundException forRoot(String methodName, MappingContext mappingContext,
                                                   List<Class<?>> resolvers) {
+        return forRoot(methodName, mappingContext, resolvers, null, List.of());
+    }
+
+    /**
+     * @param methodName    the name of the method that no root resolver binds
+     * @param mappingContext the mapping context of the field
+     * @param resolvers     the root resolver beans
+     * @param coordinate    the coordinate of the field, for the fix in the message
+     * @param unannotated   the methods of the root resolvers that have the name and no coordinate, while their bean
+     *                      declares coordinates on other methods; empty when there are none
+     * @return a new exception
+     */
+    public static MethodNotFoundException forRoot(String methodName, MappingContext mappingContext,
+                                                  List<Class<?>> resolvers, String coordinate,
+                                                  List<String> unannotated) {
+        String hint = unannotated.isEmpty() || coordinate == null ? "" : " " + String.join(", ", unannotated)
+                + (unannotated.size() == 1 ? " exists" : " exist") + " without @GraphQLSchemaCoordinate, but the bean "
+                + "declares coordinates on other methods, and only a method with its own coordinate binds a field. "
+                + "Fix: annotate it with @GraphQLSchemaCoordinate(\"" + coordinate + "\"), or remove it.";
         return new MethodNotFoundException(
                 String.format(
-                        "The method `%s` not found in any root resolvers: %s.",
+                        "The method `%s` not found in any root resolvers: %s.%s",
                         methodName,
                         "[" + resolvers.stream()
                                 .map(Class::getName)
-                                .collect(Collectors.joining(", ")) + "]"
+                                .collect(Collectors.joining(", ")) + "]",
+                        hint
                 ),
                 mappingContext,
                 methodName

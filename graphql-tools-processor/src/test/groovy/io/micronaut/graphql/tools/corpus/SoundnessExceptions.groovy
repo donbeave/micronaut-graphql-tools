@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.corpus
 
 import groovy.transform.CompileStatic
@@ -6,7 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * The documented exceptions to the soundness rule of DD-4: a compile error that the startup does not report with the same code
+ * The documented exceptions to the soundness rule: a compile error that the startup does not report with the same code
  * and coordinate, because the startup fails on something else first or does not bind the method at all. A line is
  * {@code <case> <java|groovy|kotlin|all> <code> <coordinate> <reason>}, and the reason is one of the {@link #REASONS}. The
  * list is per case and per finding: an exception never covers another finding of the case, and an entry that is not needed
@@ -21,7 +36,7 @@ final class SoundnessExceptions {
 
     static final String FILE = 'corpus-soundness-exceptions.txt'
 
-    /** the reasons, each the sentence of DD-4 that stops holding */
+    /** the reasons, each the sentence of the soundness rule that stops holding */
     static final Map<String, String> REASONS = [
             'two-classes-one-root-field'  : 'two resolver classes bind one root field: the startup reports the ambiguity and judges no argument of either',
             'customizer-claimed-field'    : 'a RuntimeWiringCustomizer claims the field: the startup binds no method to it and judges none of its arguments',

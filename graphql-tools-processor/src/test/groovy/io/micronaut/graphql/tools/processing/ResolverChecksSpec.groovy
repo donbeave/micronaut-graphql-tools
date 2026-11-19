@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.processing
 
 import spock.lang.Specification
@@ -283,6 +298,7 @@ public class ${name} implements BookQueryContract {
         BOOK_QUERY.replace('CompletionStage<List<Book>> books', 'CompletionStage books')                           | 'public String getTitle()'                                                | 'Query.books: java.util.concurrent.CompletionStage must declare the type it wraps (a raw java.util.concurrent.CompletionStage is not allowed).'
         BOOK_QUERY.replace('CompletionStage<List<Book>> books', 'List<CompletionStage<Book>> books').replace('CompletableFuture.completedFuture(List.of())', 'null') | 'public String getTitle()'                                 | 'Query.books: CompletionStage is not allowed inside a list'
         BOOK_QUERY                                                                                                | 'public java.util.Optional<String> getTitle()'                            | 'Book.title: java.util.Optional is only allowed for a nullable GraphQL type, the field type is String!.'
+        BOOK_QUERY.replace('CompletionStage<List<Book>> books', 'CompletionStage<List<java.util.Optional<Book>>> books') | 'public String getTitle()' | 'Query.books: java.util.Optional is only allowed for a nullable GraphQL type, the list element type is Book!.'
         BOOK_QUERY                                                                                                | 'public graphql.execution.DataFetcherResult<graphql.execution.DataFetcherResult<String>> getTitle()' | 'Book.title: graphql.execution.DataFetcherResult cannot wrap graphql.execution.DataFetcherResult.'
         BOOK_QUERY.replace('public Book book(String id)', 'public org.reactivestreams.Publisher<Book> book(String id)').replace('return new Book(id);', 'return null;') | 'public String getTitle()' | 'Query.book: org.reactivestreams.Publisher is only allowed on fields of the subscription type.'
     }
@@ -349,7 +365,7 @@ public class BookSubscription {
         nonNull.success
     }
 
-    void "precedence strict: a property and a type resolver method for one field fail"() {
+    void "precedence fail: a property and a type resolver method for one field fail"() {
         when:
         def result = compilation(['example.BookResolver': BOOK_RESOLVER.replace('public Optional<String> author(Book book) {',
                 '''public String title(Book book) {
@@ -364,8 +380,42 @@ public class BookSubscription {
                                          + 'example.Book#getTitle() and the type resolver method '
                                          + 'example.BookResolver#title(example.Book) can both bind the field. Remove one, '
                                          + 'mark the field with a directive listed in '
-                                         + 'micronaut.graphql.tools.resolverDirectives, or set '
-                                         + 'micronaut.graphql.tools.precedence. (schema.graphqls:11)']
+                                         + 'micronaut.graphql.tools.resolverDirectives, declare @GraphQLSchemaCoordinate '
+                                         + 'on the resolver method, annotate the member with @GraphQLIgnore, or set '
+                                         + 'micronaut.graphql.tools.precedence (strict does not change it). '
+                                         + '(schema.graphqls:11)']
+    }
+
+    void "a resolver method that declares its coordinate wins over the property, whatever the precedence is"() {
+        given:
+        def resolver = BOOK_RESOLVER.replace('public Optional<String> author(Book book) {', '''@io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate("Book.title")
+    public String title(Book book) {
+        return null;
+    }
+
+    @io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate("Book.author")
+    public Optional<String> author(Book book) {''')
+
+        when:
+        def byDefault = compilation(['example.BookResolver': resolver]).compile()
+        def propertyFirst = compilation(['example.BookResolver': resolver])
+                .option(ProcessorOptions.PRECEDENCE, 'property-first').compile()
+        def lenient = compilation(['example.BookResolver': resolver]).option(ProcessorOptions.STRICT, 'false').compile()
+
+        then:
+        byDefault.success
+        propertyFirst.success
+        lenient.success
+    }
+
+    void "the old precedence value strict is rejected and names fail"() {
+        when:
+        def result = compilation([:]).option(ProcessorOptions.PRECEDENCE, 'strict').compile()
+
+        then:
+        !result.success
+        result.graphqlErrors == ['[graphql] micronaut.graphql.tools.precedence must be fail, property-first or '
+                                         + 'resolver-first, not strict.']
     }
 
     void "a resolver directive binds the type resolver; property-first and resolver-first decide; a marked field without resolver fails"() {

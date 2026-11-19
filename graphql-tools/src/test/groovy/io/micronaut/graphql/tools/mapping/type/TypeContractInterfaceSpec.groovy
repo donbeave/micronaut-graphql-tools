@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.type
 
 import io.micronaut.context.annotation.Requires
@@ -175,9 +190,7 @@ type Chapter {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `draftNote` not found in ${ArticleGraph.name}'s type. Properties are read from the interface ${ArticleGraph.name}, which has an introspection of its own, so a getter that only an implementation class declares is not a property. `draftNote` is declared by ${ArticleModel.name}. Fix: declare the getter on ${ArticleGraph.name}, or remove the interface's own introspection (the @GraphQLType or @Introspected annotation on it).
-  GraphQL coordinate: Article.draftNote (line 12, column 3)
-  GraphQL object type: Article
-  GraphQL field: draftNote"""
+  GraphQL coordinate: Article.draftNote (line 12, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'Article'
         e.cause.mappingContext.graphQlField == 'draftNote'
     }
@@ -193,9 +206,7 @@ type Chapter {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `subtitle` not found in ${MemoGraph.name}'s type. Properties are read from the interface ${MemoGraph.name}, which has an introspection of its own, so a getter that only an implementation class declares is not a property. Fix: declare the getter on ${MemoGraph.name}, or remove the interface's own introspection (the @GraphQLType or @Introspected annotation on it).
-  GraphQL coordinate: Memo.subtitle (line 17, column 3)
-  GraphQL object type: Memo
-  GraphQL field: subtitle"""
+  GraphQL coordinate: Memo.subtitle (line 17, column 3)"""
     }
 
     static String cardSchema(boolean featuredFirst) {

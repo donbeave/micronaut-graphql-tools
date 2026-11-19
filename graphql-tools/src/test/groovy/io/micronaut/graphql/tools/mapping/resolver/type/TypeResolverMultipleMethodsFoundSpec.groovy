@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.resolver.type
 
 import graphql.schema.DataFetchingEnvironment
@@ -42,8 +57,6 @@ type User {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: User.roles (line 12, column 3)
-  GraphQL object type: User
-  GraphQL field: roles
   Methods: 
   1) ${UserResolver.name} roles(${User.name} user)
   2) ${UserResolver.name} roles(${User.name} user, ${DataFetchingEnvironment.name} env)

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools
 
 import ch.qos.logback.classic.Level
@@ -16,6 +31,7 @@ import org.slf4j.LoggerFactory
 class UnreachableTypesSpec extends AbstractTest {
 
     static final String SPEC_NAME = "UnreachableTypesSpec"
+    static final String SPEC_NAME_EXTENSION = "UnreachableTypesSpecExtension"
 
     static final Map NOT_STRICT = ['micronaut.graphql.tools.checks.unreachable-value-type': 'ignore']
 
@@ -205,6 +221,74 @@ type Item implements Node {
         }
     }
 
+    void "an allow-unreachable entry names why a listed type is not unreachable"() {
+        given:
+        startContext(SCHEMA + '''
+directive @sized(size: Size) on FIELD_DEFINITION
+
+enum Size {
+  LARGE
+}
+''', SPEC_NAME, [
+                'micronaut.graphql.tools.allow.unreachable': ['Query', 'Item', 'Size', 'String']
+        ] + NOT_STRICT)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof InvalidAllowUnreachableException
+        e.cause.notUnreachableTypeNames == ['Item', 'Query', 'Size', 'String']
+        e.cause.message.contains('Item (is reachable), Query (is reachable), Size (is used by a directive), String (is a built-in scalar)')
+    }
+
+    void "a type that an extension field returns is reachable, so it is not reported"() {
+        given:
+        @Language("GraphQL")
+        String schema = """
+schema {
+  query: Query
+}
+
+type Query {
+  title: String
+}
+
+extend type Query {
+  note: Note
+}
+
+type Note {
+  text: String
+}
+"""
+        startContext(schema, SPEC_NAME_EXTENSION)
+
+        when:
+        def result = executeQuery("{ title note { text } }")
+
+        then:
+        result.errors.isEmpty()
+        result.data == [title: 'title', note: [text: 'text']]
+    }
+
+    void "checks.unreachable-type=ignore logs no finding for the unreachable types"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.checks.unreachable-type': 'ignore'] + NOT_STRICT)
+
+        when:
+        def result = executeQuery("""
+{
+    item { name }
+}
+""")
+
+        then:
+        result.errors.isEmpty()
+        appender.list.findAll { it.formattedMessage.contains('unreachable') && it.level.isGreaterOrEqual(Level.WARN) }.isEmpty()
+    }
+
     void "checks.unreachable-type=warn lets the schema build and logs every unreachable type"() {
         given:
         startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.checks.unreachable-type': 'warn'] + NOT_STRICT)
@@ -243,7 +327,7 @@ type Item implements Node {
         e.cause instanceof InvalidAllowUnreachableException
         e.cause.undefinedTypeNames == ['Missing']
         e.cause.notUnreachableTypeNames == ['Item', 'String']
-        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Missing (not defined in the schema), Item (not an unreachable object, interface, union, enum, input or scalar type), String (not an unreachable object, interface, union, enum, input or scalar type).
+        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Missing (not defined in the schema), Item (is reachable), String (is a built-in scalar).
   Remove them from the list."""
 
         where:
@@ -285,6 +369,25 @@ type Item {
     static class Query {
         Item item() {
             return new Item()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_EXTENSION)
+    @GraphQLRootResolver
+    static class ExtensionQuery {
+        String title() {
+            return 'title'
+        }
+
+        Note note() {
+            return new Note()
+        }
+    }
+
+    @GraphQLType
+    static class Note {
+        String getText() {
+            return 'text'
         }
     }
 

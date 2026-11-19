@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.returntype
 
 import io.micronaut.context.annotation.Requires
@@ -75,7 +90,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message.startsWith("[unsupported-return-type] The return type of the method is not supported for this field: " +
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "java.util.OptionalInt is only allowed for a nullable GraphQL type, the field type is Int!.")
         e.cause.message.contains("GraphQL coordinate: Query.count (line 7, column 3)")
     }
@@ -100,9 +115,9 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message.startsWith("[unsupported-return-type] The return type of the method is not supported for this field: " +
-                "java.util.OptionalInt is only allowed for a nullable GraphQL type, the field type is Int!.")
-        e.cause.message.contains("GraphQL field: counts")
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
+                "java.util.OptionalInt is only allowed for a nullable GraphQL type, the list element type is Int!.")
+        e.cause.message.contains("GraphQL coordinate: Query.counts")
     }
 
     void "OptionalLong on an Int field fails at startup, as a plain long would"() {

@@ -1,0 +1,22 @@
+schema {
+  query: Query
+}
+
+type Query {
+  sections: [Section!]!
+}
+
+interface Section {
+  title: String!
+  summary: String!
+}
+
+type TextSection implements Section {
+  title: String!
+  summary: String!
+}
+
+type MediaSection implements Section {
+  title: String!
+  summary: String!
+}

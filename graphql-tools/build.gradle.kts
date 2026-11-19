@@ -2,6 +2,10 @@ plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
 
+// The quality plugin checks the headers of src/main only; this checks the test sources.
+extra["licenseSourceSets"] = "test"
+apply(from = rootProject.file("config/spotless.license.gradle"))
+
 dependencies {
     api(projects.micronautGraphqlToolsBinding)
     api(mnGraphql.micronaut.graphql)
@@ -60,4 +64,8 @@ tasks.named<Test>("test") {
     inputs.files(repositoryRoot.asFileTree.matching { include("src/main/docs/guide/**", "test-suite-*/src/main/**", "test-suite-*/src/test/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsSources")
+    // NoPlanningReferencesSpec reads every text file of the tree, so any edit to the tree re-runs it.
+    inputs.files(repositoryRoot.asFileTree.matching { exclude("**/build/**", "**/.git/**", "**/.gradle/**") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("planningReferenceScan")
 }

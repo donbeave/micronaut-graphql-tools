@@ -37,7 +37,7 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
   introspects, is not seen as introspected).
 
 `class-not-introspected` is the one finding that a check of one class cannot prove, so the visitor reports it as a compile-time
-**warning** and the startup decides (D-39 DD-4: a compile error must also be a startup failure, and a class that another
+**warning** and the startup decides (the soundness rule: a compile error must also be a startup failure, and a class that another
 class introspects passes at startup). The other findings are errors. The walk stops at that finding, as the startup does
 at its failure, so the findings of the same class that come after it are the startup's. A build that turns compiler warnings into errors (`-Werror`) fails on it as well, so there the hatch is `@Introspected` on the class itself. The walk down a chain of input types
 runs from a work stack (a chain of 5,000 types is checked on the default stack), as the startup binds with one.
@@ -97,7 +97,7 @@ leg), `ParitySpec` (the soundness and completeness rules and the exception list)
 - The corpus is data in `src/test/resources/corpus`; its README says how to add a case. For Java and Groovy the runner compiles
   each case twice: with `checks=false`, which must succeed for every case (the escape hatch), and with the visitor on
   (`VisitorCompileTimeBinder`), whose errors and warnings must equal `expected/compile.txt`. It asserts them against the startup:
-  soundness (a compile error is a startup finding; the five documented exceptions of DD-4 are in
+  soundness (a compile error is a startup finding; the five documented exceptions to the soundness rule are in
   `corpus-soundness-exceptions.txt`, each with a reason and a case under `exception/`) and completeness (the divergence list,
   empty). A language that differs from the others in an expected file needs a line with a reason in
   `corpus-language-differences.txt` (empty, and it may only shrink). `-Pcorpus.only='<regex>'` runs the cases that match.

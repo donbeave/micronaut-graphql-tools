@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compares every pin with the newest supported release (D-34) and exits 1 when one is behind. The supported limits are in the calls below.
+# Compares every pin with the newest supported release and exits 1 when one is behind. The supported limits are in the calls below.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -40,7 +40,7 @@ plugin_pin() { grep -rhoE "id\(\"$1\"\) version \"[^\"]+\"" --include=*.kts . | 
 # newest <base> <group> <artifact> <ERE for the supported stable versions>
 newest() { versions_of "$1" "$2" "$3" | newest_of "$4"; }
 
-# Micronaut 4 lines only: Micronaut 5 is not supported (D-14), so it is never looked at.
+# Micronaut 4 lines only: Micronaut 5 is not supported, so it is never looked at.
 compare "micronaut (core BOM)" "$(catalog micronaut)" "$(newest $CENTRAL io.micronaut micronaut-core-bom '^4\.[0-9.]+$')" "4.x"
 compare "micronaut-platform" "$(catalog micronaut-platform)" "$(newest $CENTRAL io.micronaut.platform micronaut-platform '^4\.[0-9.]+$')" "4.x"
 compare "micronaut-test" "$(catalog micronaut-test)" "$(newest $CENTRAL io.micronaut.test micronaut-test-bom '^4\.[0-9.]+$')" "4.x"
@@ -59,12 +59,12 @@ bom_pom=$(curl -fsSL --retry 3 "$CENTRAL/io/micronaut/micronaut-core-bom/$core_b
 compare "kotlin" "$(plugin_pin org.jetbrains.kotlin.jvm)" "$(sed -n 's:.*<kotlin2.version>\(.*\)</kotlin2.version>.*:\1:p' <<<"$bom_pom")" "core BOM $core_bom kotlin2.version"
 compare "ksp" "$(plugin_pin com.google.devtools.ksp)" "$(sed -n 's:.*<ksp2.version>\(.*\)</ksp2.version>.*:\1:p' <<<"$bom_pom")" "core BOM $core_bom ksp2.version"
 
-# Exception (D-41): the only pin of a Micronaut-managed version. The BOM manages 4.0.28, which cannot read JDK 27 class files; the pin stays until the BOM catches up.
+# Exception: the only pin of a Micronaut-managed version. The BOM manages 4.0.28, which cannot read JDK 27 class files; the pin stays until the BOM catches up.
 compare "groovy (override of the BOM)" "$(catalog groovy)" "$(newest $CENTRAL org.apache.groovy groovy '^4\.0\.[0-9]+$')" "4.0.x (the Micronaut 4 line)"
 compare "shadow" "$(plugin_pin com.gradleup.shadow)" "$(newest $PORTAL com.gradleup.shadow com.gradleup.shadow.gradle.plugin '^8\.[0-9.]+$')" "8.x (the line micronaut-gradle-plugin builds against)"
 
 # Micronaut-managed dependencies (logback, JUnit, graphql-java and its extended scalars through micronaut-graphql, Spock, ...) have no
-# pin here: they come from the Micronaut BOMs and move with micronaut-platform above (D-41).
+# pin here: they come from the Micronaut BOMs and move with micronaut-platform above.
 
 # Outside Micronaut's control: the newest stable release.
 compare "apollo" "$(catalog apollo)" "$(newest $CENTRAL com.apollographql.apollo apollo-runtime '^[0-9.]+$')" "newest"

@@ -20,6 +20,7 @@ import graphql.language.InterfaceTypeDefinition;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
+import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules;
 import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
 import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException;
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
@@ -268,15 +269,16 @@ final class InterfaceFieldBinder {
                 continue;
             }
 
-            switch (precedence) {
-                case STRICT -> {
+            boolean intent = methods.stream().anyMatch(it -> graphQLResolversRegistry.declaresCoordinate(it.method()));
+            switch (PrecedenceRules.decide(PrecedenceRules.Setting.valueOf(precedence.name()), intent)) {
+                case FAIL -> {
                     removed.add(field);
                     failures.add(new AmbiguousBindingException(field.mappingContext(),
                             AmbiguityLog.merge(field.ownMembers(), toInterfaceMethodsMap(methods))));
                 }
-                case PROPERTY_FIRST -> ambiguityLog.record(field.mappingContext(), field.modelMember(),
+                case MEMBER -> ambiguityLog.record(field.mappingContext(), field.modelMember(),
                         methods.stream().map(InterfaceResolverMethod::method).toList());
-                case RESOLVER_FIRST -> {
+                case RESOLVER -> {
                     removed.add(field);
                     collectFailure(field.mappingContext(), () -> bindResolverOverModelMember(field, methods));
                     rebound = true;
@@ -293,8 +295,10 @@ final class InterfaceFieldBinder {
         if (methods.size() > 1) {
             throw new MultipleMethodsFoundException(field.mappingContext(), toInterfaceMethodsMap(methods));
         }
-        ambiguityLog.record(field.mappingContext(), field.modelMember(),
-                methods.stream().map(InterfaceResolverMethod::method).toList());
+        if (methods.stream().noneMatch(it -> graphQLResolversRegistry.declaresCoordinate(it.method()))) {
+            ambiguityLog.record(field.mappingContext(), field.modelMember(),
+                    methods.stream().map(InterfaceResolverMethod::method).toList());
+        }
         interfaceResolverFields.add(field);
         bindInterfaceField(field, methods.get(0));
     }

@@ -1,14 +1,29 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.corpus
 
 import groovy.transform.CompileStatic
 import io.micronaut.graphql.tools.binding.BindingCode
 
 /**
- * The parity rules between the compile-time and the startup verdict of one case (DD-4), at the default severities (D-30).
+ * The parity rules between the compile-time and the startup verdict of one case, at the default severities.
  *
  * <ul>
  *   <li><b>Soundness.</b> Every compile error is also a startup finding with the same code and coordinate. It fails outright:
- *   a false compile error is a bug. Only the documented exceptions of DD-4 excuse an error ({@link SoundnessExceptions}: one line
+ *   a false compile error is a bug. Only the documented soundness exceptions excuse an error ({@link SoundnessExceptions}: one line
  *   per case and finding, with one of five reasons, the startup failing or binding differently on purpose). A compile-time
  *   warning is not an error and is outside the rule.</li>
  *   <li><b>Completeness.</b> A startup finding of a per-class code ({@link #PER_CLASS_CODES}) that the compile side
@@ -17,7 +32,7 @@ import io.micronaut.graphql.tools.binding.BindingCode
  *   cannot see it.</li>
  * </ul>
  *
- * <p>The set of per-class codes is the design of the compile-time checks: the five check codes of the parity set (DD-3) and the
+ * <p>The set of per-class codes is the design of the compile-time checks: the five check codes of the parity set and the
  * per-class failures. It is read from the code registry (#237): the codes that run at compile time, without the codes that exist
  * only there.</p>
  */
@@ -46,7 +61,7 @@ final class Parity {
         List<String> violations = []
         Set<String> runtimeKeys = runtime.keys()
         Set<String> compileKeys = compile == null ? [] as Set<String> : compile.keys()
-        // a code that the case relaxes at startup is outside the rule: the compile error cannot be relaxed (D-30, point 6)
+        // a code that the case relaxes at startup is outside the rule: the compile error cannot be relaxed
         (compile == null ? [] : compile.errors).findAll {
             !(it.code in relaxed) && !runtimeKeys.contains(it.key()) && !exceptions.covers(name, language, it)
         }.collect { it.key() }.sort().each {

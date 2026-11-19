@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.corpus
 
 import graphql.GraphQL
@@ -23,7 +38,7 @@ import java.util.regex.Matcher
  * case, and it talks to the runner in JDK types only: a map with {@code findings} (a list of
  * {@code [code, coordinate, location]}), {@code manifest} and {@code failure}.
  *
- * <p>The codes are the check names of D-30 for the strict-mode checks and the simple name of the exception for the
+ * <p>The codes are the check names for the strict-mode checks and the simple name of the exception for the
  * other failures, until the stable codes of #237 land.</p>
  */
 @CompileStatic

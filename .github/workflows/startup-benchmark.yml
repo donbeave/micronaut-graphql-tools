@@ -1,6 +1,6 @@
 name: Startup benchmark
 # Binding time and retained heap of generated schemas (#39). Report only: never on pull_request, never in the
-# `required checks` gate, and wall-clock time is not gated (D-02, D-35). Each run archives its JMH JSON as an artifact and
+# `required checks` gate, and wall-clock time is not gated. Each run archives its JMH JSON as an artifact and
 # prints the change against the last successful run. Shared runners are noisy: read the retained heap first.
 on:
   schedule:

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.interfacetype
 
 import io.micronaut.context.annotation.Bean
@@ -147,12 +162,10 @@ type MediaSection implements Section {
         e.cause instanceof AmbiguousBindingException
         e.cause.message == """[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: TextSection.summary (line 19, column 3)
-  GraphQL object type: TextSection
-  GraphQL field: summary
   Members:
   1) ${SectionResolver.name} summary(${Section.name} section)
   2) ${SummarizedTextSection.name} getSummary()
-  Put a directive listed in micronaut.graphql.tools.resolver-directives on the field to bind the type resolver method, remove one of the members, or set micronaut.graphql.tools.precedence to property-first or resolver-first."""
+  Fix it for this field: put a directive listed in micronaut.graphql.tools.resolver-directives on the field, declare @GraphQLSchemaCoordinate on the type resolver method (the coordinate of the type, or of the interface that declares the field), or annotate the Java member with @GraphQLIgnore. Fix it for every field: set micronaut.graphql.tools.precedence to resolver-first or property-first. micronaut.graphql.tools.strict does not change this."""
     }
 
     @GraphQLType
@@ -187,8 +200,6 @@ type MediaSection implements Section {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: MediaSection.summary (line 26, column 3)
-  GraphQL object type: MediaSection
-  GraphQL field: summary
   Methods:\u0020
   1) ${MediaSectionResolver.name} summary(${MediaSection.name} section)
   2) ${SectionResolver.name} summary(${Section.name} section)
@@ -238,8 +249,6 @@ type Tag implements Item & Labelled {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Tag.label (line 22, column 3)
-  GraphQL object type: Tag
-  GraphQL field: label
   Methods:\u0020
   1) ${ItemResolver.name} label(${Item.name} item)
   2) ${LabelledResolver.name} label(${Labelled.name} labelled)

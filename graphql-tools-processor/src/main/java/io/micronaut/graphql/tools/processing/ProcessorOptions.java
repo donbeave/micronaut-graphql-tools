@@ -54,7 +54,7 @@ record ProcessorOptions(String sdlDir,
 
     enum Precedence {
 
-        STRICT,
+        FAIL,
 
         PROPERTY_FIRST,
 
@@ -70,13 +70,13 @@ record ProcessorOptions(String sdlDir,
 
         boolean strict = bool(options, STRICT, true, problems);
 
-        Precedence precedence = Precedence.STRICT;
+        Precedence precedence = Precedence.FAIL;
         String precedenceValue = options.get(PRECEDENCE);
         if (precedenceValue != null) {
             try {
                 precedence = Precedence.valueOf(precedenceValue.trim().toUpperCase(Locale.ROOT).replace('-', '_'));
             } catch (IllegalArgumentException e) {
-                problems.error(PRECEDENCE + " must be strict, property-first or resolver-first, not "
+                problems.error(PRECEDENCE + " must be fail, property-first or resolver-first, not "
                         + precedenceValue + ".");
             }
         }

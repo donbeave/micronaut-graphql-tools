@@ -2,6 +2,10 @@ plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
 
+// The quality plugin checks the headers of src/main only; this checks the test sources.
+extra["licenseSourceSets"] = "test"
+apply(from = rootProject.file("config/spotless.license.gradle"))
+
 dependencies {
     // the schema rules shared with the runtime (SchemaSources): the compile-time checks read the same files
     implementation(projects.micronautGraphqlToolsBinding)
@@ -118,7 +122,7 @@ val compileVisitorRelease17 by tasks.registering(JavaCompile::class) {
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror", "-Xlint:-processing"))
 }
 
-// The processor runs inside a compiler and must never put the runtime on its path (D-39): the main classpaths hold no
+// The processor runs inside a compiler and must never put the runtime on its path: the main classpaths hold no
 // `graphql-tools` project and no `micronaut-graphql-tools` artifact. The test classpath may, for the dual-binder corpus.
 val checkNoRuntimeDependency by tasks.registering {
     description = "Fails when a main classpath of this module contains the graphql-tools runtime."

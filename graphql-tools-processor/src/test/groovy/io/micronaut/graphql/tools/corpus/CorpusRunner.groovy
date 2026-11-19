@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.corpus
 
 import groovy.transform.CompileStatic
@@ -18,8 +33,8 @@ import java.util.concurrent.ConcurrentHashMap
  *   <li>the binding manifest of a bound startup equals {@code expected/manifest.txt}, where there is one;</li>
  *   <li>where the {@link CompileTimeBinder} is available (Java and Groovy): the compilation with the checks on reports exactly the
  *   findings of {@code expected/compile.txt}, as errors that fail it and warnings that do not;</li>
- *   <li>soundness: every compile error is a startup finding with the same code and coordinate; only the documented exceptions of
- *   DD-4 ({@code corpus-soundness-exceptions.txt}) excuse one;</li>
+ *   <li>soundness: every compile error is a startup finding with the same code and coordinate; only the documented exceptions to
+ *   the soundness rule ({@code corpus-soundness-exceptions.txt}) excuse one;</li>
  *   <li>completeness: a startup finding of a per-class code that the compile side misses is listed in
  *   {@code corpus-divergences.txt}. Both rules are {@link Parity}; they are also asserted on the recorded expectations,
  *   so they hold for a language that has no compile-time backend yet (Kotlin).</li>
@@ -36,7 +51,7 @@ final class CorpusRunner {
     final Binder runtimeBinder
     final CompileTimeBinder compileTimeBinder
     final boolean update
-    /** wall time per case and language, in milliseconds (D-02) */
+    /** wall time per case and language, in milliseconds */
     final Map<String, Long> timings = new ConcurrentHashMap<>()
     private final Map<Language, CaseCompiler> compilers
 

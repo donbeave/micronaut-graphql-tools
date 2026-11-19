@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.input
 
 import io.micronaut.context.annotation.Requires
@@ -40,8 +55,6 @@ input HelloInput {
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `lastName` not found in ${HelloInput.name}'s input.
   GraphQL coordinate: HelloInput.lastName (line 12, column 3)
-  GraphQL input object type: HelloInput
-  GraphQL input value: lastName
   Mapped class: ${HelloInput.name}"""
         e.cause.mappingContext.graphQlInputObjectType == 'HelloInput'
         e.cause.mappingContext.mappedClass == HelloInput

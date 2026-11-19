@@ -107,7 +107,7 @@ A line that starts with `!` is a finding. The word after `!` is the code of the 
 |the same for an enum, input or scalar type
 
 |`!precedence-ambiguity Type.field ; member \| member`
-|a field decided by a lenient `precedence`: the coordinate, then the members that compete
+|a field decided by a lenient `precedence` (`resolver-first` or `property-first`): the coordinate, then the members that compete. A field that a resolver directive, a declared `@GraphQLSchemaCoordinate` or `@GraphQLIgnore` decides has no line
 
 |`!unbound-resolver-method member`, `!root-method-several-operations member`, `!unbound-enum-constant member`, `!unmapped-input-property member`, `!nullable-primitive Type.field(argument:)`, `!unused-dictionary-entry Type = Class`, `!interface-read-through-implementation Type`, `!unwired-directive name`
 |the findings of the strict checks. A check at `ignore` writes none; a line that `allow.findings` lists is not written

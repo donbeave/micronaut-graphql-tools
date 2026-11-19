@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.resolver.root
 
 import io.micronaut.context.annotation.Requires
@@ -34,8 +49,6 @@ type Query {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The argument is mapped to a built-in class, when required an instance of Iterable interface.
   GraphQL coordinate: Query.testString(input:) (line 7, column 14)
-  GraphQL object type: Query
-  GraphQL field: testString
   GraphQL argument: input
   Mapped class: ${Query.name}
   Mapped method: testString(${String.name} input)

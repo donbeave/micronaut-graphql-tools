@@ -75,11 +75,6 @@ public final class InputMappingContext implements MappingContext {
 
         builder.append("\n  GraphQL coordinate: ").append(MappingContext.describeCoordinate(getCoordinate(),
                 getSourceLocation()));
-        builder.append("\n  GraphQL input object type: ").append(getGraphQlInputObjectType());
-
-        if (inputValueName != null) {
-            builder.append("\n  GraphQL input value: ").append(inputValueName);
-        }
 
         if (mappedClass != null) {
             builder.append("\n  Mapped class: ").append(mappedClass.getName());

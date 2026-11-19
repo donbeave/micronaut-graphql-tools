@@ -33,7 +33,7 @@ class BindingCodeSpec extends Specification {
             'unwired-directive',
     ]
 
-    // DD-3: the five compile-time checks, the per-class failures, and the codes that exist only at compile time
+    // The five compile-time checks of the parity set, the per-class failures, and the codes that exist only at compile time
     static final List<String> COMPILE_TIME = [
             'unbound-resolver-method',
             'root-method-several-operations',
@@ -63,12 +63,12 @@ class BindingCodeSpec extends Specification {
         BindingCode.values().every { it.code() ==~ /[a-z]+(-[a-z]+)*/ }
     }
 
-    void "the ten D-30 checks are the checks of the registry, and nothing else is a check"() {
+    void "the ten checks are the checks of the registry, and nothing else is a check"() {
         expect:
         BindingCode.values().findAll { it.check() }*.code().sort() == CHECKS.sort()
     }
 
-    void "the compile-time set is exactly the parity set (DD-3) plus the per-class failures and the compile-only codes"() {
+    void "the compile-time set is exactly the parity set plus the per-class failures and the compile-only codes"() {
         expect:
         BindingCode.values().findAll { it.compileTime() }*.code().sort() == COMPILE_TIME.sort()
     }

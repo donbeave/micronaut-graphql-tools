@@ -147,8 +147,6 @@ public final class TypeMappingContext implements MappingContext {
 
         builder.append("\n  GraphQL coordinate: ").append(MappingContext.describeCoordinate(getCoordinate(),
                 getSourceLocation()));
-        builder.append("\n  GraphQL object type: ").append(getGraphQlObjectType());
-        builder.append("\n  GraphQL field: ").append(getGraphQlField());
 
         if (argumentName != null) {
             builder.append("\n  GraphQL argument: ").append(argumentName);

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.input
 
 import io.micronaut.context.annotation.Requires
@@ -100,8 +115,6 @@ type Query {
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
-  GraphQL input object type: ItemInput
-  GraphQL input value: quantity
   Mapped class: ${ItemWithoutQuantity.name}"""
     }
 
@@ -191,8 +204,6 @@ type Query {
         e.cause instanceof InputFieldNotSettableException
         e.cause.message == """[input-field-not-settable] The input field ItemInput.quantity cannot be set: the property `quantity` of ${ReadOnlyItem.name} has no setter and is not a constructor parameter.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
-  GraphQL input object type: ItemInput
-  GraphQL input value: quantity
   Mapped class: ${ReadOnlyItem.name}
   Mapped property: quantity"""
     }

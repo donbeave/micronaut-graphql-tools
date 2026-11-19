@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.precedence
 
 import io.micronaut.context.annotation.Bean
@@ -59,8 +74,6 @@ type MediaSection implements Section {
         e.cause instanceof AmbiguousBindingException
         e.cause.message.startsWith("""[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: TextSection.summary (line ${line}, column 3)
-  GraphQL object type: TextSection
-  GraphQL field: summary
   Members:
   1) ${SectionResolver.name} summary(${Section.name} section)
   2) ${TextSection.name} getSummary()
@@ -192,8 +205,6 @@ type MediaSection implements Section {
         e.cause instanceof ResolverRequiredException
         e.cause.message.startsWith("""[resolver-required] The GraphQL field carries @computed, so a type resolver method must bind it, but none does.
   GraphQL coordinate: TextSection.summary (line 20, column 3)
-  GraphQL object type: TextSection
-  GraphQL field: summary
   Not bound:
   1) ${TextSection.name} getSummary()""")
     }

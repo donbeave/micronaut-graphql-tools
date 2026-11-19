@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.micronaut.graphql.tools.mapping.interfacetype
 
 import graphql.schema.idl.errors.SchemaProblem
@@ -192,8 +207,6 @@ type MediaSection implements Section {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The field is mapped to a custom class, when required an interface.
   GraphQL coordinate: Book.sections (line 13, column 3)
-  GraphQL object type: Book
-  GraphQL field: sections
   Mapped class: ${ConcreteSectionsResolver.name}
   Mapped method: sections(${Book.name} book)
   Provided class: ${TextSection.name}"""
@@ -219,8 +232,6 @@ type MediaSection implements Section {
         e.cause instanceof InterfaceTypeMappingNotProvidedException
         e.cause.message == """[interface-type-mapping-not-provided] Can not detect representation class for type MediaSection, implementation of Section interface. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
   GraphQL coordinate: Book.sections (line 13, column 3)
-  GraphQL object type: Book
-  GraphQL field: sections
   Mapped class: ${NotRegisteredSectionsResolver.name}
   Mapped method: sections(${Book.name} book)"""
     }
@@ -255,9 +266,7 @@ type MediaSection implements Section {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `title` not found in ${UntitledSection.name}'s type.
-  GraphQL coordinate: MediaSection.title (line 29, column 3)
-  GraphQL object type: MediaSection
-  GraphQL field: title"""
+  GraphQL coordinate: MediaSection.title (line 29, column 3)"""
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".implementationMissingField")

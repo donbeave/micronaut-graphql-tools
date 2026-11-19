@@ -1,0 +1,7 @@
+!precedence-ambiguity Item.label ; example.Item#label | example.ItemResolver#label(example.Item)
+Item -> object ; example.Item ; - ; -
+Item.label: String! -> resolver ; example.ItemResolver#label(example.Item) ; java.lang.String ; java.lang.String
+Item.name: String! -> property ; example.Item#name ; java.lang.String ; java.lang.String
+Query -> object ; - ; - ; -
+Query.item: Item -> root ; example.Query#item() ; example.Item ; example.Item
+String -> scalar ; String ; - ; -

@@ -58,7 +58,6 @@ final class TypeDefinitionMappingContext implements MappingContext {
     public String getMessage(String superMessage) {
         return superMessage
                 + "\n  GraphQL coordinate: " + MappingContext.describeCoordinate(getCoordinate(), getSourceLocation())
-                + "\n  GraphQL type: " + typeDefinition.getName()
                 + "\n  Mapped class: " + mappedClass.getName()
                 + "\n  Reached from: " + MappingContext.describeCoordinate(reachedFrom.getCoordinate(),
                 reachedFrom.getSourceLocation());

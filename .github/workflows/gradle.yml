@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   # graphql-java legs by role (floor, default, ceiling, latest): the versions live in gradle/libs.versions.toml, never here.
-  # The graphql-java axis runs on JDK 25 (D-35); JDK 21 runs the default leg only. Job names are role-based, so a version
+  # The graphql-java axis runs on JDK 25; JDK 21 runs the default leg only. Job names are role-based, so a version
   # bump never renames a job. Every gated job is listed in the `needs:` of `required checks` below.
   build:
     runs-on: ubuntu-latest
@@ -134,7 +134,7 @@ jobs:
           retention-days: 7
 
   # The compile-time checks in real builds, by Gradle TestKit, with the processor and the library published to build/repo:
-  # the sample projects that apply the processor with the documented snippets (the build wiring), and the Kotlin cases of the binding
+  # the sample projects that apply the processor with the documented snippets (the build wiring; Gradle and Maven), and the Kotlin cases of the binding
   # corpus (#143), each compiled with the checks on under KSP2 and judged against the same expected files as the Java and
   # Groovy cases. The job needs the network (plugin portal, Maven Central); the graphql-java legs do not change what it proves,
   # so it runs on the default leg only.
@@ -147,7 +147,7 @@ jobs:
       - uses: ./.github/actions/setup-build
         with:
           jdk: '25'
-          tools: java
+          tools: java maven
       - name: Build the samples and the Kotlin corpus
         run: ./gradlew :test-suite-build:buildToolsTest :micronaut-graphql-tools-processor:corpusKotlin --no-daemon --continue -PgraphqlJavaLeg=default
         env:
@@ -201,7 +201,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # Groovy has no native test (D-38): this builds the native executable of test-suite-groovy, starts it and asserts the
+  # Groovy has no native test: this builds the native executable of test-suite-groovy, starts it and asserts the
   # GraphQL responses (#276).
   native-groovy-smoke:
     runs-on: ubuntu-latest
@@ -237,7 +237,7 @@ jobs:
         run: jactionlint --color
 
   # The guide build (#57). The `snippet::` macro prints a warning and still succeeds when a snippet file or tag is missing in
-  # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; it is not published (D-09).
+  # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; it is not published.
   docs:
     runs-on: ubuntu-latest
     strategy:
@@ -270,7 +270,7 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-  # D-04 guard: fails when the working tree or the PR title/body contains a forbidden consumer name. The pattern list
+  # Consumer-name guard: fails when the working tree or the PR title/body contains a forbidden consumer name. The pattern list
   # is the FORBIDDEN_NAMES secret (one fixed string per line) and is never written to the repository or to the log.
   # Fork PRs get no secrets: the job reports that it did not run and passes. Any other run without a pattern list fails.
   consumer-name-guard:
@@ -335,12 +335,12 @@ jobs:
             failed=1
           fi
           if [ "$failed" -ne 0 ]; then
-            echo "D-04 violation: forbidden consumer name found (details above, text withheld)." >&2
+            echo "Consumer-name violation: forbidden consumer name found (details above, text withheld)." >&2
             exit 1
           fi
           echo "consumer-name guard passed."
 
-  # The only required status check (D-35). It runs even when a gated job fails or is cancelled,
+  # The only required status check. It runs even when a gated job fails or is cancelled,
   # and it is green only when every gated job succeeded. Add a gated job to `needs:`, never to the ruleset.
   required:
     name: required checks
