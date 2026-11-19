@@ -45,6 +45,26 @@ def branches(block, event):
     return None
 
 
+def runs_on_branch_push(lines):
+    """True when the workflow has a push trigger that is not limited to tags, in any spelling:
+    `on: push`, `on: [push, ...]`, `push:` with no filter, or `push:` with branches, branches-ignore or paths."""
+    inline = next((m for l in lines if (m := re.match(r"^on:\s*(\S.*?)\s*(#.*)?$", l))), None)
+    if inline:
+        return re.search(r"\bpush\b", inline.group(1)) is not None
+    block = on_block(lines)
+    for i, l in enumerate(block):
+        if re.match(r"^  push:", l):
+            body = []
+            for m in block[i + 1:]:
+                if re.match(r"^  \S", m):
+                    break
+                body.append(m)
+            has_tags = any(re.match(r"^    tags:", m) for m in body)
+            has_branches = any(re.match(r"^    branches(-ignore)?:", m) for m in body)
+            return not has_tags or has_branches
+    return False
+
+
 gradle = (workflows / "gradle.yml").read_text().splitlines()
 jobs_at = next(i for i, l in enumerate(gradle) if l == "jobs:")
 jobs, current = {}, None
@@ -82,7 +102,7 @@ if push != pr:
 for path in sorted(workflows.glob("*.yml")):
     if path.name == "gradle.yml":
         continue
-    if branches(on_block(path.read_text().splitlines()), "push") is not None:
+    if runs_on_branch_push(path.read_text().splitlines()):
         problems.append(f"{path.name} runs on a push to a branch: only gradle.yml may, so that the pull request runs the same checks")
 
 if problems:
