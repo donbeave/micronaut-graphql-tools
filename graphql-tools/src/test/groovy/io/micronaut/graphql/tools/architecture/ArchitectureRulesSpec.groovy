@@ -192,7 +192,7 @@ class ArchitectureRulesSpec extends Specification {
         if (c != null && c.array) {
             return isInternal(c.baseComponentType)
         }
-        c != null && (c.isAnnotatedWith(INTERNAL) || (c.name.startsWith(ROOT + '.') && c.packageName.contains('.internal')))
+        c != null && (c.isAnnotatedWith(INTERNAL) || ('internal' in c.packageName.split('\\.').toList()))
     }
 
     private static ArchCondition<JavaClass> exposeNoInternalType() {
