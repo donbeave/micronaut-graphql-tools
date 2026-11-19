@@ -17,6 +17,7 @@ problems = []
 
 def on_block(lines):
     lines = [re.sub(r"^(\s*)[\"'](\w+)[\"']:", r"\1\2:", l) for l in lines]
+    lines = [re.sub(r"^[\"']on[\"']:", "on:", l) for l in lines]
     start = next((i for i, l in enumerate(lines) if re.match(r"^on:\s*$", l)), None)
     if start is None:
         return []
@@ -51,6 +52,7 @@ def branches(block, event):
 def runs_on_branch_push(lines):
     """True when the workflow has a push trigger that is not limited to tags, in any spelling:
     `on: push`, `on: [push, ...]`, `push:` with no filter, or `push:` with branches, branches-ignore or paths."""
+    lines = [re.sub(r"^[\"']on[\"']:", "on:", l) for l in lines]
     inline = next((m for l in lines if (m := re.match(r"^on:\s*(\S.*?)\s*(#.*)?$", l))), None)
     if inline:
         return re.search(r"\bpush\b", inline.group(1)) is not None
