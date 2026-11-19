@@ -42,6 +42,7 @@ class VisitorCompilation {
     private final Map<String, String> schemaFiles = new LinkedHashMap<>()
     private final Map<String, String> options = new LinkedHashMap<>()
     private boolean schemaOption = true
+    private boolean ownModuleDir
     private final List<File> extraDirectories = []
     private final List<File> extraClasspath = []
     private boolean parametersFlag = true
@@ -79,6 +80,12 @@ class VisitorCompilation {
         return this
     }
 
+    /** Passes the directory of this compilation as {@code module.dir}, as the documented build snippets do. */
+    VisitorCompilation ownModuleDirOption() {
+        ownModuleDir = true
+        return this
+    }
+
     VisitorCompilation withoutSchemaOption() {
         schemaOption = false
         return this
@@ -108,6 +115,9 @@ class VisitorCompilation {
         }
         if (schemaOption) {
             arguments.add("-A${ProcessorOptions.SCHEMA_DIRS}=${([schemaDir.toFile()] + extraDirectories).join(File.pathSeparator)}".toString())
+        }
+        if (ownModuleDir) {
+            arguments.add("-A${ProcessorOptions.MODULE_DIR}=${work}".toString())
         }
         options.each { name, value -> arguments.add("-A${name}=${value}".toString()) }
         List<JavaFileObject> units = sources.collect { name, content -> (JavaFileObject) new Source(name, content) }

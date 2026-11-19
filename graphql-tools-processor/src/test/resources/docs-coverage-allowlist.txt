@@ -14,4 +14,5 @@ processor-option:micronaut.graphql.tools.unreachableTypes # pending the compile-
 processor-option:micronaut.graphql.tools.input.unmappedProperties # pending the compile-time guide page (#12)
 processor-option:micronaut.graphql.tools.manifest # pending the compile-time guide page (#12)
 processor-option:micronaut.graphql.tools.processor.schema.dirs # pending the compile-time guide page (#12)
+processor-option:micronaut.graphql.tools.processor.module.dir # pending the compile-time guide page (#12)
 processor-option:micronaut.graphql.tools.processor.checks # pending the compile-time guide page (#12)

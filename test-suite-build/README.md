@@ -26,8 +26,13 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   object type, an enum, an input class), `books` and `authors` (resolver classes, one of them a type resolver for a model class
   of another module) and `app` (starts the application with `./gradlew :app:run`). Only `books` and `authors` apply the processor and
   the snippet, each with the schema directory of `schema`; `model` and `app` do not, so a schema edit leaves them up to date.
-  What a feature module cannot know, a field that no module resolves, is reported by the startup of `app`.
+  What a feature module cannot know, a field that no module resolves, is reported by the startup of `app`. The snippet also
+  passes `module.dir` (the project directory of the module), which lets the visitor reject a `schema.dirs` that an earlier module of the
+  same JVM left behind.
 
+- `samples/multi-module-maven`: a Maven reactor with `schema` (the schema file) and two modules with resolvers that read it and
+  pass `schema.dirs` and `module.dir`. `MultiModuleMavenSampleTest` builds it, and builds it again with the snippet removed from the
+  module built last: Maven compiles the reactor in one JVM, so without the check that module would pass against the schema of the one before it.
 - `samples/<name>-maven` (`java-maven`, `kotlin-kapt-maven`, `groovy-maven`): Maven projects with a Micronaut 4 parent.
   Java passes the option as a `-A` compiler argument and puts the processor on `annotationProcessorPaths`; Kotlin passes
   `annotationProcessorArgs` to the `kapt` execution of `kotlin-maven-plugin`; Groovy puts the processor on the `provided`
@@ -47,7 +52,8 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   the resolvers of both feature modules; a schema edit reruns `books` and `authors` and leaves `model` and `app` up to date; a
   wrong argument type, a wrong argument name, or a model enum that drifts from the schema fails the compile task of the module
   whose resolver is affected, with the code and the coordinate, while the module next to it still compiles (`--continue`); a field
-  with no resolver in any module compiles everywhere and fails `:app:run` with the coordinate.
+  with no resolver in any module compiles everywhere and fails `:app:run` with the coordinate; and a module that forgot the
+  snippet, built after one that set it in the same daemon, fails with `processor-schema-not-configured` and its own directory.
 - `stageSampleRepository`: copies `build/repo` for the samples and registers the visitor in the processor jar's copy. Until the
   registration switch (#291) the published jar still registers the JSR-269 processor, so the copy drops that registration
   and adds the visitor's, which is what #291 makes true of the jar itself. The task copies the jar unchanged once the jar

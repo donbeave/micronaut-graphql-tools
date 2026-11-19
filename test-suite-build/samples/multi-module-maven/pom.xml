@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.micronaut.platform</groupId>
+    <artifactId>micronaut-parent</artifactId>
+    <!-- the test replaces the token with the Micronaut platform version of the build -->
+    <version>@micronaut.platform@</version>
+  </parent>
+
+  <groupId>example</groupId>
+  <artifactId>multi-module-maven</artifactId>
+  <version>0.1</version>
+  <packaging>pom</packaging>
+
+  <!-- the schema lives in its own module; the two modules with resolvers apply the processor and read it -->
+  <modules>
+    <module>schema</module>
+    <module>authors</module>
+    <module>books</module>
+  </modules>
+
+  <properties>
+    <jdk.version>21</jdk.version>
+    <release.version>21</release.version>
+    <micronaut.graphql.tools.version>1.0.0-SNAPSHOT</micronaut.graphql.tools.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </repository>
+    <repository>
+      <!-- the library under test: the test passes its location -->
+      <id>graphql-tools</id>
+      <url>${graphql.tools.repository}</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.micronaut.graphql.tools</groupId>
+        <artifactId>micronaut-graphql-tools-bom</artifactId>
+        <version>${micronaut.graphql.tools.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>
