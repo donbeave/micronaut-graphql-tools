@@ -25,7 +25,7 @@ import io.micronaut.core.convert.ConversionContext
 import io.micronaut.core.convert.TypeConverter
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.BindingManifest
-import io.micronaut.graphql.tools.GraphQLRuntimeWiringGenerator
+import io.micronaut.graphql.tools.internal.GraphQLRuntimeWiringGenerator
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver

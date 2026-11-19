@@ -27,6 +27,7 @@ import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
+import io.micronaut.graphql.tools.internal.GraphQLRuntimeWiringGenerator
 
 class UnreachableTypesSpec extends AbstractTest {
 

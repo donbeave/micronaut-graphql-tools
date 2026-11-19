@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
 
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -39,10 +41,14 @@ public final class BindingManifest {
 
     public static final String FORMAT = ManifestRenderer.FORMAT;
 
-    private Supplier<Content> renderer;
+    private Supplier<Map.Entry<List<String>, List<String>>> renderer;
     private volatile Content content;
 
-    BindingManifest(Supplier<Content> renderer) {
+    /**
+     * @param renderer renders the header and the lines when the manifest is first read; for the library's own use
+     */
+    @Internal
+    public BindingManifest(Supplier<Map.Entry<List<String>, List<String>>> renderer) {
         this.renderer = renderer;
     }
 
@@ -56,7 +62,8 @@ public final class BindingManifest {
             synchronized (this) {
                 result = content;
                 if (result == null) {
-                    result = renderer.get();
+                    Map.Entry<List<String>, List<String>> rendered = renderer.get();
+                    result = new Content(rendered.getKey(), rendered.getValue());
                     content = result;
                     renderer = null;
                 }
