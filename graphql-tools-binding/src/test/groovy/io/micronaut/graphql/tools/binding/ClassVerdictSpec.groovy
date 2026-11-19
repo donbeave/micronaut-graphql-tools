@@ -214,7 +214,7 @@ type Book { title: String }
         ]
 
         when:
-        def methodVerdicts = ResolverClassRules.check(wrapped, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+        def methodVerdicts = ResolverClassRules.check(wrapped, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, false)
                 .methods()
 
         then:

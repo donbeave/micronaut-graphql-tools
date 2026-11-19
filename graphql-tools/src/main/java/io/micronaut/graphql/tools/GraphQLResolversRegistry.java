@@ -444,8 +444,9 @@ public final class GraphQLResolversRegistry {
             if (signatures == null) {
                 continue;
             }
-            for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> method : item.methodsNamed(methodName)) {
-                if (!ResolverClassRules.isIgnored(method.getValue())
+            for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> method : item.getMethodViews().entrySet()) {
+                if (method.getValue().name().equals(methodName)
+                        && !ResolverClassRules.isIgnored(method.getValue())
                         && !ResolverClassRules.isLifecycle(method.getValue())
                         && !signatures.containsKey(method.getValue().signature())) {
                     result.add(getUserBeanType(item.getBeanDefinition()).getName() + "#"
