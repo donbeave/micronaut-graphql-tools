@@ -8,7 +8,19 @@ This is not an official Micronaut module yet. This file describes how this repos
 - Every change is a pull request. Only **squash merge** is enabled (merge commits and rebase merges are off).
 - The only required status check is `required checks`, the gate job in `.github/workflows/gradle.yml`. It is green only when every job it lists under `needs:` succeeded. A new gated job goes into that `needs:` list, never into the ruleset: renaming a job or adding a graphql-java leg needs no ruleset edit.
 - There is no admin bypass. A red, cancelled, pending or missing check blocks the merge. Review conversations must be resolved.
-- The native image jobs (`native (GraalVM 25, graphql-java default|ceiling)`) are in `.github/workflows/gradle.yml` and run on every pull request, but they are not part of the gate yet (#152).
+- The native image jobs (`native (GraalVM 25, graphql-java default|ceiling)`) and `native Groovy smoke` are in the gate like every other job of `gradle.yml`.
+
+## One gate: the pull request check is the master check
+
+A merge must never turn `master` red. Three rules make that structural; the workflow is the source of truth, and `.github/scripts/check-gate.py` (run by the `actionlint` job) fails the pull request that breaks one of them.
+
+1. **Every job of `gradle.yml` is in the `needs:` of `required checks` and runs on every event.** A job with an `if:` or a push-only job is rejected. `gradle.yml` is the only workflow that runs on a push to a branch, and its `push`, `pull_request` and `merge_group` events cover the same branches. Anything that is not a verdict on a commit (the canary, the start-up benchmark, the release) runs from a `schedule`, `workflow_dispatch` or a tag and never from a push to `master`, so a red run there is never mistaken for a broken `master`.
+2. **The branch must be up to date with `master` before it merges.** The ruleset `protect-main` has `strict_required_status_checks_policy: true` ("Require branches to be up to date before merging"), so `required checks` is always a run on top of the current `master`. Without it, two pull requests that are each green on a stale base can merge into a red `master` (a semantic merge conflict: #399 added a benchmark that imported a class that #401 had moved, and `master` went red at `dd0258ff`). The cost is one "Update branch" click and one re-run when another pull request merged first. `gradle.yml` also has a `merge_group` trigger, so a merge queue can be switched on without a workflow change (GitHub offers the queue for organization repositories only, so it is not enabled here).
+3. **The canary reports, it does not gate.** It runs nightly and on demand against versions Micronaut 4 does not support yet. A failure there is triaged into an issue; it blocks nothing.
+
+One gap remains by design: a fork pull request gets no secrets, so its `consumer-name guard` does not scan (it exits green) while the `push` run on `master` does. Before squash-merging a fork pull request, run the same scan against its tree with the forbidden names yourself; a green `required checks` is not enough for it.
+
+The ruleset is managed in the GitHub settings. The one change made for rule 2, through `gh api -X PUT repos/donbeave/micronaut-graphql-tools/rulesets/27449469`, set `rules[type=required_status_checks].parameters.strict_required_status_checks_policy` from `false` to `true`; nothing else in the ruleset changed. To revert it, send the same call with `false`. If any other tool manages this ruleset, set the same field there too, or its next apply undoes the change.
 
 ## Module layout and the binding rules
 

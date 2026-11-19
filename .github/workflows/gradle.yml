@@ -10,6 +10,9 @@ on:
     branches:
       - master
       - '[1-9]+.[0-9]+.x'
+  # Ready for a merge queue: the queue tests the pull request on top of the current master and needs the same `required checks`.
+  merge_group:
+    types: [checks_requested]
 permissions:
   contents: read
 concurrency:
@@ -18,7 +21,7 @@ concurrency:
 jobs:
   # graphql-java legs by role (floor, default, ceiling, latest): the versions live in gradle/libs.versions.toml, never here.
   # The graphql-java axis runs on JDK 25; JDK 21 runs the default leg only. Job names are role-based, so a version
-  # bump never renames a job. Every gated job is listed in the `needs:` of `required checks` below.
+  # bump never renames a job. Every job of this file is listed in the `needs:` of `required checks` below and runs on every event: `check-gate.py` (the actionlint job) fails otherwise.
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -183,7 +186,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # Native image tests on Oracle GraalVM from mise.toml (it provides native-image). Not in the gate's `needs:` until #152.
+  # Native image tests on Oracle GraalVM from mise.toml (it provides native-image).
   native:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -251,6 +254,8 @@ jobs:
           gradle: 'false'
       - name: Lint the workflows and composite actions
         run: jactionlint --color
+      - name: Check that every job is gated and every event runs the same jobs
+        run: python3 .github/scripts/check-gate.py
 
   # The guide build (#57). The `snippet::` macro prints a warning and still succeeds when a snippet file or tag is missing in
   # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; it is not published.
@@ -357,11 +362,12 @@ jobs:
           echo "consumer-name guard passed."
 
   # The only required status check. It runs even when a gated job fails or is cancelled,
-  # and it is green only when every gated job succeeded. Add a gated job to `needs:`, never to the ruleset.
+  # and it is green only when every job of this file succeeded. Add a job to `needs:`, never to the ruleset.
+  # The ruleset also requires the branch to be up to date with master, so a green run is a run on top of the current master.
   required:
     name: required checks
     if: always()
-    needs: [actionlint, build, check-library, binary-compatibility, build-tools, native-groovy-smoke, docs, consumer-name-guard]
+    needs: [actionlint, build, check-library, binary-compatibility, build-tools, native, native-groovy-smoke, docs, consumer-name-guard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
