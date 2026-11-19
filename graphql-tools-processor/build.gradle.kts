@@ -40,6 +40,9 @@ tasks.withType<Test>().configureEach {
     // the corpus compiles about 300 units in process and starts the application for each; 1 GB ran out on JDK 21 once
     // the rename cases came, so the heap has headroom for the next ones
     maxHeapSize = "2g"
+    // every in-process compilation and application context loads classes that stay until the JVM ends; the default 1 GB of compressed
+    // class space ran out at about 230 cases
+    jvmArgs("-XX:CompressedClassSpaceSize=3g", "-XX:MaxMetaspaceSize=3g")
     // the Kotlin batch is its own task (corpusKotlin): it needs the network and has its own budget
     systemProperty("corpus.dir", corpusDir.asFile.absolutePath)
     systemProperty("corpus.report", layout.buildDirectory.file("corpus/timings.txt").get().asFile.absolutePath)

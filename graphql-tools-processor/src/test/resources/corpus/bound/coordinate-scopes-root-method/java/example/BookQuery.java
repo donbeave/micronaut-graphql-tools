@@ -18,6 +18,7 @@ public class BookQuery {
         return new Book(id);
     }
 
+    @GraphQLSchemaCoordinate("Query.books")
     public List<Book> books(Integer limit) {
         return List.of();
     }
