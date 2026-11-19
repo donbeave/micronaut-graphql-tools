@@ -57,8 +57,6 @@ type User {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: User.roles (line 12, column 3)
-  GraphQL object type: User
-  GraphQL field: roles
   Methods: 
   1) ${UserResolver.name} roles(${User.name} user)
   2) ${UserResolver.name} roles(${User.name} user, ${DataFetchingEnvironment.name} env)

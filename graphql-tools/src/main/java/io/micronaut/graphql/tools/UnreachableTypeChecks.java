@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,10 +102,12 @@ final class UnreachableTypeChecks {
         List<String> undefined = allowed.stream()
                 .filter(it -> !isDefined(it))
                 .toList();
-        List<String> notUnreachable = allowed.stream()
-                .filter(it -> isDefined(it) && !unreachableTypes.containsKey(it)
-                        && !unreachableValueTypes.containsKey(it))
-                .toList();
+        Map<String, String> notUnreachable = new LinkedHashMap<>();
+        for (String name : allowed) {
+            if (isDefined(name) && !unreachableTypes.containsKey(name) && !unreachableValueTypes.containsKey(name)) {
+                notUnreachable.put(name, whyNotUnreachable(name, reachedTypeNames));
+            }
+        }
         if (!undefined.isEmpty() || !notUnreachable.isEmpty()) {
             throw new InvalidAllowUnreachableException(undefined, notUnreachable,
                     "object, interface, union, enum, input or scalar");
@@ -222,6 +225,18 @@ final class UnreachableTypeChecks {
             }
         });
         return result;
+    }
+
+    // the reason that a listed type is not unreachable, for the message of the allow.unreachable entry: the types that
+    // are left after the unreachable ones are the reached ones, the built-in scalars and the directive argument types
+    private String whyNotUnreachable(String name, Set<String> reachedTypeNames) {
+        if (ScalarInfo.isGraphqlSpecifiedScalar(name)) {
+            return "is a built-in scalar";
+        }
+        if (reachedTypeNames.contains(name) || manifestRecorder.isScalarReached(name)) {
+            return "is reachable";
+        }
+        return "is used by a directive";
     }
 
     private boolean isDefined(String typeName) {

@@ -58,7 +58,6 @@ input ConversionInput {
         e.cause instanceof ClassNotIntrospectedException
         e.cause.message == """[class-not-introspected] The class ${ConversionInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}.
   GraphQL coordinate: ConversionInput (line 14, column 1)
-  GraphQL type: ConversionInput
   Mapped class: ${ConversionInput.name}
   Reached from: PriceInput.conversion (line 11, column 3)"""
         e.cause.mappingContext.coordinate == 'ConversionInput'

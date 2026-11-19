@@ -148,9 +148,7 @@ type Mutation {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The method `status` not found in any root resolvers: [${QueryOnlyStatus.name}].
-  GraphQL coordinate: Mutation.status (line 12, column 3)
-  GraphQL object type: Mutation
-  GraphQL field: status"""
+  GraphQL coordinate: Mutation.status (line 12, column 3)"""
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".queryOnly")
@@ -182,8 +180,6 @@ type Query {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.status (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: status
   Methods:\u0020
   1) ${FirstStatusQuery.name} status(java.lang.String id)
   2) ${SecondStatusQuery.name} status(java.lang.String id)
@@ -218,8 +214,6 @@ type Query {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.status (line 9, column 3)
-  GraphQL object type: Query
-  GraphQL field: status
   Methods:\u0020
   1) ${DuplicateStatusQuery.name} status(java.lang.String id)
   2) ${StatusQuery.name} status(java.lang.String id)
@@ -255,8 +249,6 @@ type Query {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.status (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: status
   Methods:\u0020
   1) ${FirstStatusQuery.name} status(java.lang.String id)
   2) ${StatusQuery.name} status(java.lang.String id)

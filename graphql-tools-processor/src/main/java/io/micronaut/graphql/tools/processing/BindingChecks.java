@@ -878,8 +878,8 @@ final class BindingChecks {
 
         if (javaTypes.is(result, OPTIONAL)) {
             if (graphQlType instanceof NonNullType) {
-                problems.error(coordinate, OPTIONAL + " is only allowed for a nullable GraphQL type, the field type is "
-                        + printType(graphQlType) + ".", node, element);
+                problems.error(coordinate, OPTIONAL + " is only allowed for a nullable GraphQL type, the "
+                        + typeOf(fieldLevel) + " is " + printType(graphQlType) + ".", node, element);
                 return null;
             }
             outer = OPTIONAL;
@@ -893,7 +893,7 @@ final class BindingChecks {
         if (primitiveOptional != null) {
             if (graphQlType instanceof NonNullType) {
                 problems.error(coordinate, javaTypes.erasedName(result) + " is only allowed for a nullable GraphQL "
-                        + "type, the field type is " + printType(graphQlType) + ".", node, element);
+                        + "type, the " + typeOf(fieldLevel) + " is " + printType(graphQlType) + ".", node, element);
                 return null;
             }
             if (OPTIONAL.equals(outer)) {
@@ -915,6 +915,10 @@ final class BindingChecks {
             }
         }
         return result;
+    }
+
+    private static String typeOf(boolean fieldLevel) {
+        return fieldLevel ? "field type" : "list element type";
     }
 
     private TypeMirror typeArgument(TypeMirror type, String wrapper, String coordinate, Node<?> node, Element element) {

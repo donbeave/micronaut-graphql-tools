@@ -22,6 +22,8 @@ import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.Type;
+import graphql.language.TypeName;
+import graphql.schema.idl.ScalarInfo;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
@@ -292,7 +294,7 @@ public final class ResolverClassRules {
                 return ReturnVerdict.failed(WrapperRules.completionStageInList());
             }
             outer = COMPLETION_STAGE;
-            if (result.typeArguments().isEmpty()) {
+            if (untyped(result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(COMPLETION_STAGE));
             }
             result = result.typeArguments().get(0);
@@ -306,7 +308,7 @@ public final class ResolverClassRules {
                 return ReturnVerdict.failed(WrapperRules.subscriptionNeedsPublisher(className(result)));
             }
             outer = PUBLISHER;
-            if (result.typeArguments().isEmpty()) {
+            if (untyped(result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
             }
             result = result.typeArguments().get(0);
@@ -317,7 +319,7 @@ public final class ResolverClassRules {
 
         if (isAssignableTo(model, result, DATA_FETCHER_RESULT)) {
             outer = DATA_FETCHER_RESULT;
-            if (result.typeArguments().isEmpty()) {
+            if (untyped(result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(DATA_FETCHER_RESULT));
             }
             result = result.typeArguments().get(0);
@@ -326,10 +328,10 @@ public final class ResolverClassRules {
 
         if (isType(result, OPTIONAL)) {
             if (fieldType instanceof NonNullType) {
-                return ReturnVerdict.failed(WrapperRules.optionalAtNonNull(SchemaTypes.print(fieldType)));
+                return ReturnVerdict.failed(WrapperRules.optionalAtNonNull(SchemaTypes.print(fieldType), fieldLevel));
             }
             outer = OPTIONAL;
-            if (result.typeArguments().isEmpty()) {
+            if (untyped(result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(OPTIONAL));
             }
             result = result.typeArguments().get(0);
@@ -340,7 +342,8 @@ public final class ResolverClassRules {
         if (primitiveOptional) {
             if (fieldType instanceof NonNullType) {
                 return ReturnVerdict.failed(
-                        WrapperRules.primitiveOptionalAtNonNull(result.rawName(), SchemaTypes.print(fieldType)));
+                        WrapperRules.primitiveOptionalAtNonNull(result.rawName(), SchemaTypes.print(fieldType),
+                                fieldLevel));
             }
             if (OPTIONAL.equals(outer)) {
                 return ReturnVerdict.failed(WrapperRules.optionalCannotWrapPrimitiveOptional(result.rawName()));
@@ -356,6 +359,23 @@ public final class ResolverClassRules {
         }
 
         return new ReturnVerdict(depth, primitiveOptional, null, null);
+    }
+
+    // a wrapper without a type argument: the raw type, whose argument the type model reports as Object. An explicit
+    // Object argument is a raw wrapper only where no scalar can take an Object (a built-in scalar): a custom scalar may
+    // declare Object as an output class, and Optional<Object> then binds
+    private static boolean untyped(TypeRef wrapper, Type<?> fieldType) {
+        if (wrapper.typeArguments().isEmpty()) {
+            return true;
+        }
+        if (!"java.lang.Object".equals(wrapper.typeArguments().get(0).rawName())) {
+            return false;
+        }
+        Type<?> named = fieldType;
+        while (named instanceof NonNullType || named instanceof ListType) {
+            named = named instanceof NonNullType nonNull ? nonNull.getType() : ((ListType) named).getType();
+        }
+        return named instanceof TypeName typeName && ScalarInfo.isGraphqlSpecifiedScalar(typeName.getName());
     }
 
     /**

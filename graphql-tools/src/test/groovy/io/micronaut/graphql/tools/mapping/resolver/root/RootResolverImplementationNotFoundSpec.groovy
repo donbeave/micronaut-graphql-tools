@@ -55,8 +55,6 @@ type User {
         e.cause instanceof ImplementationNotFoundException
         e.cause.message == """[implementation-not-found] Can not find implementation class for the interface ${User.name}. Annotate the interface with @GraphQLType, or one implementation class with @GraphQLType(${User.simpleName}.class).
   GraphQL coordinate: Query.user (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()"""
         e.cause.mappingContext.graphQlObjectType == 'Query'

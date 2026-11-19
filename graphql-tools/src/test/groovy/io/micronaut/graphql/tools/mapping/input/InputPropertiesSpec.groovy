@@ -115,8 +115,6 @@ type Query {
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
-  GraphQL input object type: ItemInput
-  GraphQL input value: quantity
   Mapped class: ${ItemWithoutQuantity.name}"""
     }
 
@@ -206,8 +204,6 @@ type Query {
         e.cause instanceof InputFieldNotSettableException
         e.cause.message == """[input-field-not-settable] The input field ItemInput.quantity cannot be set: the property `quantity` of ${ReadOnlyItem.name} has no setter and is not a constructor parameter.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
-  GraphQL input object type: ItemInput
-  GraphQL input value: quantity
   Mapped class: ${ReadOnlyItem.name}
   Mapped property: quantity"""
     }

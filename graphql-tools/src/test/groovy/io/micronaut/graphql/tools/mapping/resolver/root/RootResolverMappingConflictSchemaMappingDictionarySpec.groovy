@@ -56,8 +56,6 @@ type User {
         e.cause instanceof MappingConflictException
         e.cause.message == """[mapping-conflict] Unable to map GraphQL type `User` to ${User.name}, as it is already mapped to ${AnotherUser.name}.
   GraphQL coordinate: Query.user (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()"""
         e.cause.mappingContext.graphQlObjectType == 'Query'
