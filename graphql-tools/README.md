@@ -31,10 +31,12 @@ Each package has a `package-info.java`. The [API map](../src/main/docs/guide/api
 
 | Package | Audience | Holds |
 | --- | --- | --- |
-| `io.micronaut.graphql.tools` | Mixed | The configuration, the customizers, the mapping and directive interfaces (public) and the binding implementation (`@Internal`) |
+| `io.micronaut.graphql.tools` | Public API | The configuration, the customizers, the mapping and directive interfaces, `ArgumentValue` and `BindingManifest` |
 | `io.micronaut.graphql.tools.annotation` | Public API | The annotations of resolvers and input classes |
-| `io.micronaut.graphql.tools.exceptions` | Public API | The startup failures (`SchemaBindingException` and subclasses) |
-| `io.micronaut.graphql.tools.processor` | Internal | The runtime method processors that register the resolvers |
+| `io.micronaut.graphql.tools.exceptions` | Public API | The startup failure, `SchemaBindingException` |
+| `io.micronaut.graphql.tools.internal` | Internal | The binding implementation: the factories, the wiring, the binders, the checks, the manifest recording |
+| `io.micronaut.graphql.tools.internal.exceptions` | Internal | The classes that build each startup failure |
+| `io.micronaut.graphql.tools.internal.registry` | Internal | The runtime method processors that register the resolvers |
 | `io.micronaut.graphql.tools.schema` | Internal | Schema discovery, the data fetchers, the type resolvers, the value conversion |
 
 ## Who uses it
@@ -44,22 +46,20 @@ run it in their tests.
 
 ## Public and internal
 
-The public API is what applications import. It is not fixed for 1.0 yet: the package layout is reviewed in #354, and the
-public surface is reduced in #109.
+The public API is what applications import. The package layout is reviewed in #354.
 
 - `io.micronaut.graphql.tools.annotation`: the public annotations (`@GraphQLType`, `@GraphQLRootResolver`,
   `@GraphQLTypeResolver`, `@GraphQLInput`, `@GraphQLField`, `@GraphQLArgument`, `@GraphQLIgnore`,
   `@GraphQLSchemaCoordinate`).
-- `io.micronaut.graphql.tools` (top level): mixed. The extension points and the types around them, for example `RuntimeWiringCustomizer`,
+- `io.micronaut.graphql.tools` (top level): the extension points and the types around them, for example `RuntimeWiringCustomizer`,
   `SchemaMappingDictionaryCustomizer`, `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer`,
   `TypeDefinitionRegistryCustomizer`, `SchemaDirective`, `GraphQLScalarMapping`, `ArgumentValue`, `BindingManifest`
-  and `GraphQLToolsConfiguration`, are not annotated `@Internal`. This list is not complete. Most other types in the package are annotated `@Internal`. Check the annotation on the class
-  before you use it.
-- `io.micronaut.graphql.tools.exceptions`: the startup failures. Not annotated `@Internal` today.
-- `io.micronaut.graphql.tools.processor` and `io.micronaut.graphql.tools.schema`: internal. Every class is annotated
-  `@Internal`.
+  and `GraphQLToolsConfiguration`. Every type of the package is public API.
+- `io.micronaut.graphql.tools.exceptions`: the startup failure, `SchemaBindingException`. Match on its code.
+- `io.micronaut.graphql.tools.internal` (and its sub-packages) and `io.micronaut.graphql.tools.schema`: internal. Every
+  class is annotated `@Internal`.
 
-Application code should not import an internal class. The package layout will be documented in `package-info.java` (#354).
+Application code should not import an internal class.
 
 ## Relation to other modules
 

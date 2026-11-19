@@ -20,6 +20,7 @@ import graphql.schema.idl.TypeDefinitionRegistry
 import spock.lang.Specification
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
+import io.micronaut.graphql.tools.internal.DictionaryValidator
 
 /**
  * The dictionary check reports what it always reported: the pairs of an entry mapped to an interface and an entry mapped
