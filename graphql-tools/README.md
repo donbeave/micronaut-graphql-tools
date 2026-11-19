@@ -82,7 +82,8 @@ processor and the test suites need JDK 21 or newer:
 ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check
 ```
 
-`check` runs the unit tests, `DocsCoverageSpec` (a configuration key, public exception or public annotation that the guide
+`check` runs the unit tests, `ArchitectureRulesSpec` (no reflection outside a short allowlist, no Jackson, no internal type in the
+public API; see CONTRIBUTING.md), `DocsCoverageSpec` (a configuration key, public exception or public annotation that the guide
 or `README.md` does not name fails it) and `ModuleReadmesSpec` (the module map matches `settings.gradle.kts`). Warnings in
 the main code are errors (`-Werror`).
 

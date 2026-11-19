@@ -36,6 +36,18 @@ The tests do not need Docker. These are the commands CI runs (all in `.github/wo
 
 The binding corpus (#142) is a directory of data cases under `graphql-tools-processor/src/test/resources/corpus/`; its README says how to add and update a case (`./gradlew :micronaut-graphql-tools-processor:corpusUpdate`, and read the diff). It runs as part of `test` on the default graphql-java leg, on JDK 21 and 25 (about 70 s); the floor and ceiling legs skip it with a message, because its verdicts do not depend on the leg. It never runs on JDK 17 (the processor module needs JDK 21). The Kotlin cases are a separate task, `./gradlew :micronaut-graphql-tools-processor:corpusKotlin`, not part of `check` or `build`: it runs one Gradle TestKit build (the Kotlin and KSP2 versions of the root build) that compiles every Kotlin case with the visitor on and off, and downloads the Kotlin and KSP Gradle plugins from the Gradle plugin portal and the processor from Maven Central, so it needs the network (about 1 minute with a warm Gradle home). The CI job `build tools` runs it on every pull request; the canary workflow runs it under kapt every night (`-Pcorpus.kotlin.processor=kapt`).
 
+### Architecture rules
+
+`ArchitectureRulesSpec` (in `graphql-tools`, part of `check`, so it also runs on JDK 17) reads the bytecode of the library and of `graphql-tools-binding` with ArchUnit and fails the build, naming the class and the rule, when:
+
+- a class reflects: a `Class` lookup of a user class, member or annotation (`forName`, `getMethod`, `getDeclaredMethod`, `getDeclaredAnnotation`, `getEnumConstants`, `newInstance` and the like), `setAccessible`, any `java.lang.reflect` type except `Modifier`, or anything of `java.lang.invoke`. Read user classes through the bean introspection or the compile-time metadata instead; reflection needs native-image configuration and is slower.
+- a class depends on `com.fasterxml.jackson..` (#36). Use Micronaut Serialization.
+- a public or protected member of a public class that is not `@Internal` names an `@Internal` type or a type of an `internal` package.
+
+A class that must still reflect goes in `REFLECTION_ALLOWLIST` of the spec, with the exact accesses it may make, the reason and the issue that removes it; any other reflective access in that class still fails. The list may only shrink: the spec fails when an allowed access no longer happens, so delete the entry in the change that removes the reflection. `GraphQLResolversRegistry` is the one entry today (#34). To check a rule, add a violating class to `graphql-tools/src/main/java` and run `./gradlew :micronaut-graphql-tools:test --tests '*ArchitectureRulesSpec'`; remove it afterwards.
+
+The binding corpus (#142) is a directory of data cases under `graphql-tools-processor/src/test/resources/corpus/`; its README says how to add and update a case (`./gradlew :micronaut-graphql-tools-processor:corpusUpdate`, and read the diff). It runs as part of `test` on the default graphql-java leg, on JDK 21 and 25 (about 70 s); the floor and ceiling legs skip it with a message, because its verdicts do not depend on the leg. It never runs on JDK 17 (the processor module needs JDK 21). The Kotlin cases are a separate task, `./gradlew :micronaut-graphql-tools-processor:corpusKotlin`, not part of `check` or CI: it runs one Gradle TestKit build (Kotlin 2.1.21, KSP2 2.1.21-2.0.2) that downloads the Kotlin and KSP Gradle plugins from the Gradle plugin portal and the processor from Maven Central, so it needs the network (about 2 to 3 minutes with a warm Gradle home).
+
 The example applications are three separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
 
 | Suite | Language | Run the JVM tests | Run the native tests (Oracle GraalVM 25) |
