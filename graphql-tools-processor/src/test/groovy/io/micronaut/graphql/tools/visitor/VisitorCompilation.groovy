@@ -32,7 +32,7 @@ import java.nio.file.Path
 
 /**
  * Compiles Java sources in process with javac and the Micronaut processors of the test classpath, with the visitor that the
- * test resources register. The JSR-269 processor of this module is left out, and the options that Micronaut copies into the
+ * test resources register. The options that Micronaut copies into the
  * system properties are cleared before the compilation and restored after it.
  */
 @CompileStatic
@@ -122,9 +122,7 @@ class VisitorCompilation {
         options.each { name, value -> arguments.add("-A${name}=${value}".toString()) }
         List<JavaFileObject> units = sources.collect { name, content -> (JavaFileObject) new Source(name, content) }
         JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, diagnostics, arguments, null, units)
-        task.setProcessors(ServiceLoader.load(Processor, getClass().classLoader).findAll {
-            !it.getClass().name.startsWith('io.micronaut.graphql.tools.processing')
-        } as List<Processor>)
+        task.setProcessors(ServiceLoader.load(Processor, getClass().classLoader).toList() as List<Processor>)
         Properties saved = (Properties) System.properties.clone()
         boolean success
         try {

@@ -58,7 +58,7 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
     static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES);
 
-    /** The key of the JSR-269 processor that the visitor replaces. */
+    /** The key that an earlier version of the processor read; it is an error now and names {@link #SCHEMA_DIRS}. */
     static final String REMOVED_SDL_DIR = "micronaut.graphql.tools.sdlDir";
 
     /**
@@ -84,7 +84,7 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
         boolean checks = flag(options, CHECKS, true, errors);
         boolean accessorPrefixes = flag(options, ACCESSOR_PREFIXES, false, errors);
-        // with the checks off nothing reads a schema directory, so a leftover key of the JSR-269 processor does no harm
+        // with the checks off nothing reads a schema directory, so a leftover retired key does no harm
         if (checks && options.containsKey(REMOVED_SDL_DIR)) {
             errors.add(error(BindingCode.PROCESSOR_OPTION_REMOVED, REMOVED_SDL_DIR + " was renamed to " + SCHEMA_DIRS
                     + ": pass the schema directories there (several are joined with the path separator)"));
