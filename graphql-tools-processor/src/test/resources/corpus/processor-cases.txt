@@ -17,6 +17,9 @@ FailureClassesSpec	a list field returning a single object fails	failure/list-fie
 FailureClassesSpec	a getter and a @GraphQLField method of one class for the same field fail	failure/two-members-one-field	
 FailureClassesSpec	two methods for one field fail: root resolvers and type resolvers	exception/two-classes-one-root-field,failure/two-type-resolver-methods	
 FailureClassesSpec	wrapper misuse fails with the coordinate and the Java element	wrapper/completion-stage-in-list,wrapper/optional-non-null,wrapper/nested-data-fetcher-result,wrapper/publisher-off-subscription	the raw CompletionStage row is deleted: the visitor says unsupported-return-type where the startup, which cannot see a type argument of a raw type, says incorrect-class-mapping
+GraphQLSpecifiedDirectivesSpec	the names equal the runtime module's	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
+GraphQLSpecifiedDirectivesSpec	defer is built in but not specified	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
+GraphQLSpecifiedDirectivesSpec	other names, a different case, an empty name and null are not specified	-	deleted: the processor keeps its own copy of the built-in directive names; the copy goes with the JSR-269 processor, and the runtime spec compares the runtime set with graphql-java on every leg
 ManifestParitySpec	the processor's manifest equals the startup manifest: roots, wrappers, wildcards, inherited getters, records, nested classes, contracts, enums, inputs and an interface that is only implemented	-	deleted: the visitor writes no manifest; the runtime renders it (BindingManifest) and its format is specified there
 ManifestParitySpec	the diagnostic lines are the same: ambiguous, unbound methods, enum constants and input properties, unreachable types	strict/unbound-resolver-method,strict/unbound-enum-constant,strict/unreachable-type,strict/several-problems	diagnostic parity is the corpus parity assertion
 ManifestParitySpec	the startup has more lines only where runtime beans decide: scalars, the dictionary's union and interface members and what they reach	startup/union-member-without-class,startup/scalar-without-mapping	what only runtime beans decide is a startup failure and the compile side records ok
@@ -45,6 +48,8 @@ ModelChecksSpec	a record model binds its components	bound/record-model
 ModelChecksSpec	an enum argument and a list of input objects are checked through	bound/enum-argument-and-input-list,argument/wrong-enum-argument	
 ModelChecksSpec	the removed option input.detectOmission is an unknown option	options/unknown-option	the JSR-269 option was removed with ArgumentValue; a key under the processor segment is an unknown option
 ModelChecksSpec	ArgumentValue needs a nullable type and the field level; a property needs a getter and a setter	bound/argument-value,argument/argument-value-non-null,input/argument-value-read-only-property	
+ProcessorOptionsDocsSpec	every processor option is documented	-	deleted: a docs-coverage check of the option list, not a compile case; #144 keeps it for the visitor options when it deletes the processor
+ProcessorOptionsDocsSpec	the allowlist has only live entries	-	deleted: a docs-coverage check of the option list, not a compile case; #144 keeps it for the visitor options when it deletes the processor
 RenameChecksSpec	a @GraphQLField method binds the field of the name it declares	rename/member-method,rename/member-property-field,rename/member-property-getter	
 RenameChecksSpec	a member renamed to the name of another member fails with the coordinate and both members	rename/member-clash	
 RenameChecksSpec	a renamed property binds the field of its new name only	rename/member-renamed-away	
@@ -81,7 +86,7 @@ ResolverChecksSpec	a class of the application annotated @Generated, such as gene
 ResolverChecksSpec	a custom scalar does not switch off the check of type resolvers whose type the schema no longer has	scalar/custom-scalar-keeps-type-resolver-check	
 ResolverChecksSpec	a field an SDL interface declares is skipped only when a type resolver of a Java interface can bind it, and the skip is a note	bound/interface-field-bound-by-interface-type-resolver,bound/interface-with-dictionary	
 ResolverChecksSpec	fields of type extensions are checked like any other field	schema/type-extension-fields	
-ResolverChecksSpec	with sdlDir set, a compilation without any resolver fails instead of checking nothing	options/no-class-to-check	the visitor does nothing for a compilation without a resolver class; the JSR-269 processor failed
+ResolverChecksSpec	with sdlDir set, a compilation without any resolver fails instead of checking nothing	options/no-class-with-schema	the visitor does nothing for a compilation without a resolver class; the JSR-269 processor failed
 SchemaChecksSpec	a schema that matches compiles	bound/root-and-type-fields	
 SchemaChecksSpec	without sdl-dir a compilation with GraphQL resolvers fails and says how to set it	options/schema-dirs-not-configured	
 SchemaChecksSpec	without sdl-dir a compilation with nothing to check compiles	options/no-class-to-check	

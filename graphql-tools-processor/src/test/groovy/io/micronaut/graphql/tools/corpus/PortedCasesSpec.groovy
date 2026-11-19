@@ -38,7 +38,7 @@ class PortedCasesSpec extends Specification {
         Files.list(specs()).sorted().withCloseable { files ->
             files.filter { it.fileName.toString().endsWith('Spec.groovy') }.each { Path file ->
                 String spec = file.fileName.toString() - '.groovy'
-                Matcher matcher = (Files.readString(file) =~ /(?m)^\s+void "(.*)"\(\) \{/)
+                Matcher matcher = (Files.readString(file) =~ /(?m)^\s+(?:void|def) "(.*)"\(\) \{/)
                 while (matcher.find()) {
                     result.add(spec + '\t' + matcher.group(1))
                 }

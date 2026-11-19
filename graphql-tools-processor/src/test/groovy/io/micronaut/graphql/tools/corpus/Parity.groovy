@@ -45,9 +45,9 @@ final class Parity {
 
     /**
      * The codes of the options of the visitor and of its environment (no schema directory, an unknown option): the startup has no
-     * such option, so these errors are outside the soundness rule, and a case that shows one records {@code ok} at startup.
+     * such option, so these errors are outside the soundness rule (an internal error of the visitor is not: it stays a violation), and a case that shows one records {@code ok} at startup.
      */
-    static final Set<String> COMPILE_ONLY_CODES = BindingCode.values().findAll { it.code().startsWith('processor-') }*.code() as Set<String>
+    static final Set<String> COMPILE_ONLY_CODES = BindingCode.values().findAll { it.code().startsWith('processor-') && it != BindingCode.PROCESSOR_INTERNAL_ERROR }*.code() as Set<String>
 
     private Parity() {
     }
