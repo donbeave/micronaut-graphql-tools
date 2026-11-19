@@ -110,4 +110,5 @@ val graphqlSchemaIndex = tasks.register("graphqlSchemaIndex") {
 }
 sourceSets.test { resources.srcDir(graphqlSchemaIndex) }
 
+apply(from = rootProject.file("config/compile-time-report.gradle.kts"))
 apply(from = rootProject.file("config/spotless.license.gradle"))

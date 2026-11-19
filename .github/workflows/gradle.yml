@@ -52,6 +52,17 @@ jobs:
           GRADLE_ENTERPRISE_CACHE_USERNAME: ${{ secrets.GRADLE_ENTERPRISE_CACHE_USERNAME }}
           GRADLE_ENTERPRISE_CACHE_PASSWORD: ${{ secrets.GRADLE_ENTERPRISE_CACHE_PASSWORD }}
           PREDICTIVE_TEST_SELECTION: 'false'
+      # The compile time of each example suite with the compile-time checks on (config/compile-time-report.gradle.kts): javac,
+      # KSP and the Groovy compiler, one line per compile task that ran.
+      - name: Report the compile time of the suites
+        if: always()
+        run: |
+          {
+            echo "### Compile time of the example suites (checks on, milliseconds)"
+            for suite in test-suite-java test-suite-kotlin test-suite-groovy; do
+              echo "- ${suite}: $(tr '\n' ';' < "${suite}/build/reports/compile-times.txt" 2>/dev/null || echo 'not recorded')"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
