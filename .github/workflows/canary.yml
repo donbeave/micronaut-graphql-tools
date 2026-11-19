@@ -1,6 +1,6 @@
 name: Canary
 # Runs what Micronaut 4 does not support yet (JDK 27, the newest graphql-java and Kotlin) and audits the pinned versions.
-# Never on pull_request and never in the `required checks` gate of gradle.yml: a red canary blocks no merge (D-35).
+# Never on pull_request and never in the `required checks` gate of gradle.yml: a red canary blocks no merge.
 on:
   push:
     branches:

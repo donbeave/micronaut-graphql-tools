@@ -31,7 +31,7 @@ import java.nio.file.Path
 
 /**
  * In-process javac (javax.tools) over the test classpath, with the annotation processors of the test classpath except
- * the JSR-269 processor of this module: the runner never runs it (DD-13). The visitor of this module, which the test resources
+ * the JSR-269 processor of this module: the runner never runs it. The visitor of this module, which the test resources
  * register, is switched off here ({@link #CHECKS_OFF}): the classes are built to be started, and checked by the compile-time
  * binder. Micronaut's processors copy the {@code -Amicronaut.*} options into the system properties, so every
  * {@code micronaut.graphql.tools.processor.*} property is cleared, and the properties are restored, around each compilation.

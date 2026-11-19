@@ -19,7 +19,7 @@ import spock.lang.Specification
 
 /**
  * The options of the compile-time check live under {@code micronaut.graphql.tools.processor.}, a segment that no runtime key
- * uses (D-39, DD-5): Micronaut copies the options of a compilation into the system properties, and the visitor rejects an
+ * uses: Micronaut copies the options of a compilation into the system properties, and the visitor rejects an
  * unknown key under that segment only because a runtime key can never be one.
  */
 class ProcessorOptionNamespaceSpec extends Specification {

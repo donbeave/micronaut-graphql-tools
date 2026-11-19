@@ -98,7 +98,7 @@ val checkBindingManifest by tasks.registering {
 }
 tasks.named("check") { dependsOn(checkBindingManifest) }
 
-// The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x (D-34).
+// The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x.
 configurations.configureEach {
     resolutionStrategy.eachDependency {
         if (requested.group == "org.apache.groovy") {
@@ -127,7 +127,7 @@ val checkSuiteSchemaParity by tasks.registering {
 }
 tasks.named("check") { dependsOn(checkSuiteSchemaParity) }
 
-// The Micronaut Serialization stack (D-03) has its own test source set and task: micronaut-serde-jackson makes its JsonMapper
+// The Micronaut Serialization stack has its own test source set and task: micronaut-serde-jackson makes its JsonMapper
 // win over Jackson databind, so the two stacks cannot share one test classpath. `check` runs it; its tests are raw-HTTP
 // checks that a response keeps its null fields (#45). `nativeSerdeTest` runs the same classes as a native binary.
 val serdeTest: SourceSet by sourceSets.creating {

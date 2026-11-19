@@ -1,4 +1,4 @@
-# The documented exceptions to the soundness rule of DD-4: a compile error that the startup does not report with the same code
+# The documented exceptions to the soundness rule: a compile error that the startup does not report with the same code
 # and coordinate. One line per case, language and finding, with one of the five reasons (see SoundnessExceptions); an entry
 # that is not needed any more is stale and fails, and the ceiling may only go down.
 max-entries: 5

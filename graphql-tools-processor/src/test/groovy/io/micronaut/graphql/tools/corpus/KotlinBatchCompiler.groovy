@@ -26,7 +26,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 /**
- * The Kotlin backend (DD-13): one generated Gradle build with one subproject per Kotlin case, compiled by Gradle TestKit
+ * The Kotlin backend: one generated Gradle build with one subproject per Kotlin case, compiled by Gradle TestKit
  * with the production toolchain (the Kotlin Gradle plugin and KSP2 of the versions the test suites use, Micronaut's
  * {@code micronaut-inject-kotlin} as the KSP processor), in one {@code --continue --parallel} run. {@code KotlinCompiler}
  * of micronaut-test is not used: it pins Kotlin 1.9 and KSP1, fails on JDK 25 and cannot pass KSP arguments.
@@ -131,7 +131,7 @@ repositories {
     mavenCentral()
 }
 
-// D-23, D-32: Java and Kotlin target 21, whatever JDK runs the build (as test-suite-kotlin does)
+// Java and Kotlin target 21, whatever JDK runs the build (as test-suite-kotlin does)
 java {
     sourceCompatibility = JavaVersion.toVersion("21")
     targetCompatibility = JavaVersion.toVersion("21")
