@@ -1,7 +1,7 @@
 package example;
 
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
 import jakarta.inject.Singleton;
 
 @Factory

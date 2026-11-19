@@ -7,7 +7,7 @@ import java.util.List;
 @GraphQLRootResolver
 public class BookQuery {
 
-    public Book book(String id, io.micronaut.graphql.tools.ArgumentValue<String> title) {
+    public Book book(String id, io.micronaut.graphql.tools.input.ArgumentValue<String> title) {
         return null;
     }
 

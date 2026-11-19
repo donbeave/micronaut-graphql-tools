@@ -7,10 +7,10 @@ import java.util.List;
 @GraphQLInput
 public class BookFilter {
 
-    private io.micronaut.graphql.tools.ArgumentValue<String> title;
+    private io.micronaut.graphql.tools.input.ArgumentValue<String> title;
     private List<Genre> genres;
 
-    public io.micronaut.graphql.tools.ArgumentValue<String> getTitle() {
+    public io.micronaut.graphql.tools.input.ArgumentValue<String> getTitle() {
         return title;
     }
 
