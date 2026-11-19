@@ -1,0 +1,63 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.micronaut.graphql.tools.visitor;
+
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.inject.visitor.VisitorContext;
+
+import java.io.IOException;
+import java.nio.file.Path;
+
+/**
+ * Tells whether the options of a compilation are its own. Micronaut copies the options of a compilation into system properties
+ * and a later compilation in the same JVM (the Gradle daemon, a compile worker, a Maven reactor) reads them when it sets none,
+ * so a module that forgot {@code schema.dirs} sees the value of the module before it. The build also passes the directory of the
+ * module as {@code module.dir}, which is stale in the same way; the output of this compilation is not, so a value whose
+ * directory does not contain the output belongs to another module.
+ */
+final class ModuleOwnership {
+
+    private ModuleOwnership() {
+    }
+
+    /**
+     * @param moduleDir the value of {@code module.dir}, null when the option is absent
+     * @param context   the context of this compilation
+     * @return the output directory of this compilation when it lies outside {@code moduleDir}, null when it lies inside or when
+     *         the compiler gives no output directory (kapt and KSP do not), so that the check does not apply
+     */
+    static @Nullable Path foreignOutput(@Nullable Path moduleDir, VisitorContext context) {
+        if (moduleDir == null) {
+            return null;
+        }
+        Path output;
+        try {
+            output = context.getClassesOutputPath().map(it -> it.toAbsolutePath().normalize()).orElse(null);
+        } catch (RuntimeException e) {
+            return null;
+        }
+        return output == null || real(output).startsWith(real(moduleDir)) ? null : output;
+    }
+
+    // a symbolic link in one of the two paths (a temporary directory under /var on macOS) must not make them differ
+    private static Path real(Path path) {
+        try {
+            return path.toRealPath();
+        } catch (IOException | RuntimeException e) {
+            return path;
+        }
+    }
+}
