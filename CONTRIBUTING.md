@@ -216,6 +216,12 @@ reported, not gated. Hosted runners are shared, so read the retained heap first 
 the spread of the forks as noise. To compare a change with master, run the command on each checkout with `--json` and
 pass the master JSON to `--previous`.
 
+To compare two builds on a machine that is not idle, build one jar per checkout and case, and run
+`python3 benchmarks/scripts/startup-ab.py --fields <fields> --shape <shape> --forks 25 base=<jar> branch=<jar>`. It starts the
+builds in turn, one cold JVM each, in a rotating order, and prints the medians, the quartiles, the range, the retained heap
+and a 95 percent bootstrap interval of the median difference. A difference whose interval holds zero is inside the noise and
+is not reported as a gain. The measured results of the binding changes are in `benchmarks/README.md`.
+
 When an allocation changes on purpose, record the new baselines of the three legs (`floor`, `default`, `ceiling`) and commit the file; the diff is the
 review of the change:
 
