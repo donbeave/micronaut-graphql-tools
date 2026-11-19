@@ -16,6 +16,8 @@ dependencies {
     testAnnotationProcessor(mn.micronaut.inject.java)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(libs.jetbrains.annotations)
+    // ArchitectureRulesSpec: the reflection, Jackson and public-API rules read the bytecode of the library and the binding module.
+    testImplementation(libs.archunit)
     // InputPropertiesSpec: a Jackson annotation on an input class has no effect (BC-23). Annotations only, no databind.
     testImplementation("com.fasterxml.jackson.core:jackson-annotations")
     // DocsCoverageSpec reads spring-configuration-metadata.json with groovy.json.JsonSlurper

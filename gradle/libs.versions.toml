@@ -17,6 +17,8 @@ apollo = "5.2.0"
 apollo-java = "1.0.0"
 jmh = "1.37"
 jetbrains-annotations = "26.1.0"
+# architecture rules (ArchitectureRulesSpec); the Micronaut catalogs do not manage it
+archunit = "1.5.1"
 # test oracle for the scalar SPI: the date/time scalars many graphql-java applications use
 graphql-java-datetime = "6.0.0"
 
@@ -53,5 +55,6 @@ graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-ext
 apollo-java-client = { module = "com.apollographql.java:client", version.ref = "apollo-java" }
 apollo-java-rx3 = { module = "com.apollographql.java:rx3", version.ref = "apollo-java" }
 apollo-api = { module = "com.apollographql.apollo:apollo-api", version.ref = "apollo" }
+archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 graphql-java-datetime = { module = "com.tailrocks.graphql:graphql-java-datetime", version.ref = "graphql-java-datetime" }
