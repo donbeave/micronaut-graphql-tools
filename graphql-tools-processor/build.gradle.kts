@@ -37,9 +37,10 @@ micronautBuild {
 val corpusDir = layout.projectDirectory.dir("src/test/resources/corpus")
 tasks.withType<Test>().configureEach {
     inputs.files(corpusDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("corpus")
-    // the corpus compiles about 300 units in process and starts the application for each; 1 GB ran out on JDK 21 once
-    // the rename cases came, so the heap has headroom for the next ones
-    maxHeapSize = "2g"
+    // the corpus compiles about 300 units in process and starts the application for each, and every case leaves its class loader
+    // behind (about 6 MB of heap and 14 MB of metaspace per case, measured with jcmd: a full GC frees none of it). The live heap
+    // reached 2 GB at about 300 cases, and the JVM then collected without end until the CI job timed out at 30 minutes
+    maxHeapSize = "4g"
     // every in-process compilation and application context loads classes that stay until the JVM ends; the default 1 GB of compressed
     // class space ran out at about 230 cases
     jvmArgs("-XX:CompressedClassSpaceSize=3g", "-XX:MaxMetaspaceSize=6g")
