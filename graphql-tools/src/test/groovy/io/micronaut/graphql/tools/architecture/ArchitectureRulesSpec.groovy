@@ -22,7 +22,7 @@ import com.tngtech.archunit.core.domain.JavaCodeUnit
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaMember
 import com.tngtech.archunit.core.domain.JavaModifier
-import com.tngtech.archunit.core.domain.JavaMethodCall
+import com.tngtech.archunit.core.domain.JavaCodeUnitAccess
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.ArchCondition
@@ -123,10 +123,11 @@ class ArchitectureRulesSpec extends Specification {
         new ArchCondition<JavaClass>('reflect (java.lang.Class lookups, java.lang.reflect other than Modifier, java.lang.invoke)') {
             @Override
             void check(JavaClass item, ConditionEvents events) {
-                item.methodCallsFromSelf.each { JavaMethodCall call ->
+                (item.methodCallsFromSelf + item.methodReferencesFromSelf).each { JavaCodeUnitAccess call ->
                     String owner = call.target.owner.name
                     boolean lookup = owner == 'java.lang.Class' && REFLECTIVE_CLASS_METHODS.contains(call.target.name)
-                    boolean accessible = call.target.name == 'setAccessible' || call.target.name == 'trySetAccessible'
+                    boolean accessible = call.target.owner.isAssignableTo('java.lang.reflect.AccessibleObject') &&
+                            (call.target.name == 'setAccessible' || call.target.name == 'trySetAccessible')
                     if (lookup || accessible) {
                         events.add(SimpleConditionEvent.satisfied(item, "${item.name} calls ${owner}.${call.target.name} (${call.sourceCodeLocation})"))
                     }
@@ -145,18 +146,28 @@ class ArchitectureRulesSpec extends Specification {
 
     private static DescribedPredicate<JavaClass> publicApi() {
         DescribedPredicate.describe('public API classes: public, not @Internal, not generated, not in an internal package', { JavaClass c ->
-            c.modifiers.contains(JavaModifier.PUBLIC) && !c.simpleName.startsWith('$') && !isInternal(c) && !isInternal(c.enclosingClass.orElse(null))
+            c.modifiers.contains(JavaModifier.PUBLIC) && !generated(c) && !isInternal(c) && !isInternal(c.enclosingClass.orElse(null))
         })
     }
 
+    private static boolean generated(JavaClass c) {
+        c.name.substring(c.packageName.length() + (c.packageName.empty ? 0 : 1)).startsWith('$')
+    }
+
     private static boolean isInternal(JavaClass c) {
-        c != null && c.name.startsWith(ROOT + '.') && (c.packageName.contains('.internal') || c.isAnnotatedWith(INTERNAL))
+        if (c != null && c.array) {
+            return isInternal(c.baseComponentType)
+        }
+        c != null && (c.isAnnotatedWith(INTERNAL) || (c.name.startsWith(ROOT + '.') && c.packageName.contains('.internal')))
     }
 
     private static ArchCondition<JavaClass> exposeNoInternalType() {
         new ArchCondition<JavaClass>('expose no internal type in a public or protected signature') {
             @Override
             void check(JavaClass item, ConditionEvents events) {
+                (item.superclass.map { [it] }.orElse([]) + item.interfaces).collectMany { it.allInvolvedRawTypes }.findAll { isInternal(it) }.each { JavaClass t ->
+                    events.add(SimpleConditionEvent.violated(item, "${item.name} extends or implements the internal type ${t.name}"))
+                }
                 List<JavaMember> members = []
                 members.addAll(item.fields)
                 members.addAll(item.methods)
