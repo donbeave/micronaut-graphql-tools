@@ -1,0 +1,252 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.micronaut.graphql.tools.internal.exceptions;
+
+import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.graphql.tools.MappingContext;
+import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable;
+
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * @author Alexey Zhokhov
+ */
+@Internal
+public final class IncorrectClassMappingException extends AbstractMappingException {
+
+    private final Class<?> providedClass;
+    private final Set<Class<?>> supportedClasses;
+
+    IncorrectClassMappingException(String message, MappingContext mappingContext, Class<?> providedClass,
+                                   @Nullable Set<Class<?>> supportedClasses) {
+        this(BindingCode.INCORRECT_CLASS_MAPPING, message, mappingContext, providedClass, supportedClasses);
+    }
+
+    IncorrectClassMappingException(BindingCode code, String message, MappingContext mappingContext,
+                                   Class<?> providedClass, @Nullable Set<Class<?>> supportedClasses) {
+        super(code, message, mappingContext);
+
+        this.providedClass = providedClass;
+        this.supportedClasses = supportedClasses;
+    }
+
+    public static IncorrectClassMappingException forField(MappingContext mappingContext, Class<?> providedClass,
+                                                          @Nullable Set<Class<?>> supportedClasses) {
+        return new IncorrectClassMappingException(
+                "The field is mapped to the incorrect class.",
+                mappingContext,
+                providedClass,
+                supportedClasses
+        );
+    }
+
+    public static IncorrectClassMappingException forField(MappingType providedType, MappingType requiredType,
+                                                          MappingContext mappingContext, Class<?> providedClass,
+                                                          @Nullable Set<Class<?>> supportedClasses) {
+        return new IncorrectClassMappingException(
+                String.format(
+                        "The field is mapped to %s, when required %s.",
+                        toString(providedType, providedClass),
+                        toString(requiredType, null)
+                ),
+                mappingContext,
+                providedClass,
+                supportedClasses
+        );
+    }
+
+    public static IncorrectClassMappingException forArgument(MappingContext mappingContext, Class<?> providedClass,
+                                                             @Nullable Set<Class<?>> supportedClasses) {
+        return new IncorrectClassMappingException(
+                "The argument is mapped to the incorrect class.",
+                mappingContext,
+                providedClass,
+                supportedClasses
+        );
+    }
+
+    public static IncorrectClassMappingException forArgument(MappingType providedType, MappingType requiredType,
+                                                             MappingContext mappingContext, Class<?> providedClass,
+                                                             @Nullable Set<Class<?>> supportedClasses) {
+        return new IncorrectClassMappingException(
+                String.format(
+                        "The argument is mapped to %s, when required %s.",
+                        toString(providedType, providedClass),
+                        toString(requiredType, null)
+                ),
+                mappingContext,
+                providedClass,
+                supportedClasses
+        );
+    }
+
+    /**
+     * @param mappingContext   the coordinate
+     * @param providedClass    the declared Java type
+     * @param scalarName       the name of the custom scalar
+     * @param input            {@code true} for an argument or an input field, {@code false} for a field
+     * @return the exception for a custom scalar whose mapping declares no classes for this side
+     */
+    public static IncorrectClassMappingException forScalarWithoutClasses(MappingContext mappingContext,
+                                                                         Class<?> providedClass, String scalarName,
+                                                                         boolean input) {
+        return new IncorrectClassMappingException(
+                input
+                        ? String.format("The mapping of the GraphQL scalar %s declares no input classes, so the "
+                        + "scalar cannot be used for an argument or an input field.", scalarName)
+                        : String.format("The mapping of the GraphQL scalar %s declares no output classes, so the "
+                        + "scalar cannot be used for a field.", scalarName),
+                mappingContext,
+                providedClass,
+                Set.of()
+        );
+    }
+
+    /**
+     * @param mappingContext   the coordinate
+     * @param primitiveClass   the declared primitive Java type
+     * @param scalarName       the name of the nullable custom scalar type
+     * @param supportedClasses the input classes of the scalar's mapping
+     * @return the exception for a primitive Java type bound to a nullable GraphQL type, which can be {@code null}
+     */
+    public static IncorrectClassMappingException forNullablePrimitive(MappingContext mappingContext,
+                                                                      Class<?> primitiveClass, String scalarName,
+                                                                      Set<Class<?>> supportedClasses) {
+        return new IncorrectClassMappingException(
+                String.format("The argument is mapped to the primitive %s, but the GraphQL type %s is nullable, so "
+                                + "null cannot be passed. Use %s or make the GraphQL type non-null.",
+                        primitiveClass.getName(), scalarName,
+                        supportedClasses.stream().map(Class::getName).sorted().collect(Collectors.joining(" or "))),
+                mappingContext,
+                primitiveClass,
+                supportedClasses
+        );
+    }
+
+    /**
+     * @param mappingContext   the coordinate
+     * @param primitiveClass   the declared primitive Java type
+     * @param scalarName       the name of the nullable built-in scalar type
+     * @param supportedClasses the Java types the scalar accepts
+     * @return the exception for a primitive Java type bound to a nullable built-in scalar, which the check
+     * {@code nullable-primitive} rejects
+     */
+    public static IncorrectClassMappingException forNullablePrimitiveInStrictMode(MappingContext mappingContext,
+                                                                                  Class<?> primitiveClass,
+                                                                                  String scalarName,
+                                                                                  Set<Class<?>> supportedClasses) {
+        Set<Class<?>> boxedClasses = supportedClasses.stream()
+                .filter(it -> !it.isPrimitive())
+                .collect(Collectors.toSet());
+        return new IncorrectClassMappingException(
+                BindingCode.NULLABLE_PRIMITIVE,
+                nullablePrimitiveText(primitiveClass, scalarName, supportedClasses),
+                mappingContext,
+                primitiveClass,
+                boxedClasses
+        );
+    }
+
+    /**
+     * @param primitiveClass   the declared primitive Java type
+     * @param scalarName       the name of the nullable built-in scalar type
+     * @param supportedClasses the Java types the scalar accepts
+     * @return the text of the finding, without the code and the coordinate
+     */
+    public static String nullablePrimitiveText(Class<?> primitiveClass, String scalarName,
+                                               Set<Class<?>> supportedClasses) {
+        return String.format("The argument is mapped to the primitive %s, but the GraphQL type %s is nullable, so "
+                        + "null cannot be passed. Use %s or make the GraphQL type non-null. The check "
+                        + "nullable-primitive rejects this for built-in scalars too; with "
+                        + "micronaut.graphql.tools.checks.nullable-primitive set to warn or ignore a null reaches "
+                        + "the primitive as its default value or fails the request.",
+                primitiveClass.getName(), scalarName,
+                supportedClasses.stream().filter(it -> !it.isPrimitive()).map(Class::getName).sorted()
+                        .collect(Collectors.joining(" or ")));
+    }
+
+    private static String toString(MappingType mappingType, Class<?> providedClass) {
+        return switch (mappingType) {
+            case BUILT_IN_JAVA_CLASS -> "a built-in class";
+            case CUSTOM_CLASS -> "a custom class";
+            case ENUM -> "an enum";
+            case INTERFACE -> "an interface";
+            case ITERABLE -> "an instance of Iterable interface";
+            case DETECT_TYPE -> toString(providedClass);
+        };
+    }
+
+    private static String toString(Class<?> clazz) {
+        if (clazz.isAnnotation()) {
+            return "an annotation";
+        }
+        if (clazz.isInterface()) {
+            return "an interface";
+        }
+        if (clazz.isPrimitive()) {
+            return "a primitive";
+        }
+        if (clazz.isEnum()) {
+            return "an enum";
+        }
+        if (ScalarTable.isJavaBuiltInClass(clazz)) {
+            return "a built-in class";
+        }
+        return "a custom class";
+    }
+
+    public Class<?> getProvidedClass() {
+        return providedClass;
+    }
+
+    @Nullable
+    public Set<Class<?>> getSupportedClasses() {
+        return supportedClasses;
+    }
+
+    @Override
+    public String getMessage() {
+        StringBuilder builder = new StringBuilder(super.getMessage());
+
+        builder.append("\n  Provided class: ").append(providedClass.getName());
+        if (supportedClasses != null) {
+            builder.append("\n  Supported classes: ").append(
+                    supportedClasses.stream()
+                            .map(Class::getName)
+                            .sorted()
+                            .collect(Collectors.joining(", "))
+            );
+        }
+
+        return builder.toString();
+    }
+
+    /**
+     * The kind of Java type a GraphQL field or argument is mapped to.
+     */
+    public enum MappingType {
+        DETECT_TYPE,
+        BUILT_IN_JAVA_CLASS,
+        CUSTOM_CLASS,
+        ENUM,
+        INTERFACE,
+        ITERABLE
+    }
+
+}

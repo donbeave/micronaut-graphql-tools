@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.docs
 import groovy.json.JsonSlurper
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -58,7 +58,7 @@ class DocsCoverageSpec extends Specification {
         def names = publicClasses('exceptions', Throwable)
 
         expect:
-        names.contains(BindingFailuresException.simpleName)
+        names == [SchemaBindingException.simpleName]
         failures('exception', names, 'the error reference: src/main/docs/guide/exceptions.adoc (or README.md)').empty
     }
 

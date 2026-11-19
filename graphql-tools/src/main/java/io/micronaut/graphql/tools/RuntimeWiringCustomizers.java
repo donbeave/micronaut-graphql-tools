@@ -32,8 +32,8 @@ import graphql.schema.idl.TypeRuntimeWiring;
 import graphql.schema.idl.WiringFactory;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.exceptions.InvalidClaimedFieldsException;
-import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException;
+import io.micronaut.graphql.tools.internal.exceptions.InvalidClaimedFieldsException;
+import io.micronaut.graphql.tools.internal.exceptions.RuntimeWiringOverrideException;
 
 import java.util.ArrayList;
 import java.util.Collections;

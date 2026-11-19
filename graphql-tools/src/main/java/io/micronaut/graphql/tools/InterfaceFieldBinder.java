@@ -21,11 +21,11 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
 import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules;
-import io.micronaut.graphql.tools.exceptions.AbstractMappingException;
-import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException;
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException;
-import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException;
-import io.micronaut.graphql.tools.exceptions.ResolverRequiredException;
+import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException;
+import io.micronaut.graphql.tools.internal.exceptions.AmbiguousBindingException;
+import io.micronaut.graphql.tools.internal.exceptions.MethodNotFoundException;
+import io.micronaut.graphql.tools.internal.exceptions.MultipleMethodsFoundException;
+import io.micronaut.graphql.tools.internal.exceptions.ResolverRequiredException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,6 +41,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import static io.micronaut.graphql.tools.MicronautUtils.toMap;
+import io.micronaut.graphql.tools.internal.exceptions.UnexpectedBindingException;
 
 /**
  * The phase that binds the fields which an object type shares with the interfaces it implements: a field that no member of
