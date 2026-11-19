@@ -126,6 +126,8 @@ A missing file or tag does not fail `./gradlew docs`: the macro prints a warning
 - Every public exception in `io.micronaut.graphql.tools.exceptions` and every public annotation in `io.micronaut.graphql.tools.annotation` is named in the guide or in `README.md`. The failure message names the item and the page to edit.
 - Every `snippet::` in the guide (except those with an explicit `project=`) has its `.java`, `.kt` and `.groovy` file in the three suites, with every tag named by the macro.
 
+`ErrorReferenceSpec` (same module) compares the two code tables of `src/main/docs/guide/exceptions.adoc` (the parts between `// begin generated` and `// end generated`) with the `BindingCode` enum: the code, its kind, the compile-time flag and `summary()`, in the order of the enum. After you add or change a code, write the tables with `UPDATE_ERROR_REFERENCE=true ./gradlew :micronaut-graphql-tools:test --tests '*ErrorReferenceSpec' --rerun`, and commit the page. Without the variable the spec fails on a difference and changes nothing. Write the text around the tables by hand.
+
 `ProcessorOptionsDocsSpec` (in the `graphql-tools-processor` module) fails when a compile-time processor option is not named in `src/main/docs/guide/compileTime/options.adoc`. Its allowlist is `graphql-tools-processor/src/test/resources/docs-coverage-allowlist.txt`, with the same rules.
 
 A deliberate gap goes into `graphql-tools/src/test/resources/docs-coverage-allowlist.txt` with a reason and a tracker issue number. The list may only shrink: the spec fails on an entry whose item is documented now or no longer exists. A new key, exception or annotation needs documentation in the same pull request.
