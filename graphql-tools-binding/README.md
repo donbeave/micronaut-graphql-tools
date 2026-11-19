@@ -8,7 +8,7 @@ Gradle project `:micronaut-graphql-tools-binding`, folder `graphql-tools-binding
 The binding rules, in one place. The rules decide whether a GraphQL schema binds to a set of Java classes, which
 findings a failed binding reports, and how the binding manifest is written. The runtime library (`graphql-tools`) uses
 them at startup. The compile-time processor (`graphql-tools-processor`) reads the schema files with the same reader and
-runs the per-class rules in its visitor (`ResolverClassFindings`, #150); the visitor replaces the JSR-269 code at #291.
+runs the per-class rules in its visitor (`ResolverClassFindings`, #150).
 
 ## Responsibility
 

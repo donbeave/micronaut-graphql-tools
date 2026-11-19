@@ -21,7 +21,7 @@ import java.util.zip.ZipFile
 
 /**
  * The registration of the jar (#291): the visitor is the one compile-time engine of a build, so the jar registers it and nothing
- * else. The JSR-269 classes stay in the jar until #144 deletes them, but no service file lists them.
+ * else.
  */
 class RegistrationSpec extends Specification {
 
@@ -47,7 +47,7 @@ class RegistrationSpec extends Specification {
         visitors == ['io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor']
     }
 
-    def "no class path entry of this module lists the JSR-269 processor"() {
+    def "no class path entry of this module registers an annotation processor"() {
         expect:
         !Collections.list(getClass().classLoader.getResources('META-INF/services/javax.annotation.processing.Processor'))
                 .any { it.toString().contains('graphql-tools-processor') }

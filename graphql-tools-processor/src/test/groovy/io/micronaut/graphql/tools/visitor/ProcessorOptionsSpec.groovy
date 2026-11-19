@@ -67,7 +67,7 @@ public class QueryResolver {
         result.findings == ['[unbound-resolver-method] example.QueryResolver#stray()']
     }
 
-    def "the key of the removed JSR-269 processor is an error that names the new key"() {
+    def "the retired key sdlDir is an error that names the new key"() {
         when:
         def result = compilation().option('micronaut.graphql.tools.sdlDir', '/x').compile()
 

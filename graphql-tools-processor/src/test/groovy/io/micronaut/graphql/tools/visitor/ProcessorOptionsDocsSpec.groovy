@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.processing
+package io.micronaut.graphql.tools.visitor
 
-import io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -39,7 +38,7 @@ class ProcessorOptionsDocsSpec extends Specification {
         def missing = options.findAll { !allowlist.contains(it) && !isDocumented(it) }
 
         expect:
-        options.size() >= 9
+        options.size() >= 5
         assert missing.empty : "The processor ${missing.size() == 1 ? 'option is' : 'options are'} not documented: " +
                 "${missing.join(', ')}. Mention ${missing.size() == 1 ? 'it' : 'each'} in ${PAGE}. " +
                 "Only a deliberate decision with a tracker issue allows a gap: add it to docs-coverage-allowlist.txt."
@@ -55,9 +54,8 @@ class ProcessorOptionsDocsSpec extends Specification {
                 stale.sort().join(', ')
     }
 
-    // the options of the JSR-269 processor, and the three of the visitor that replaces it (#291)
     private static Set<String> allOptions() {
-        new GraphQLSchemaBindingProcessor().supportedOptions + new GraphQLToolsVisitor().supportedOptions
+        new GraphQLToolsVisitor().supportedOptions
     }
 
     private boolean isDocumented(String option) {
