@@ -541,6 +541,8 @@ A member that binds no field on purpose does not need to relax a check for the w
   `@PreDestroy` on a resolver bean is not reported as unbound. It still binds a field if it has that field's name.
 - **`allow.findings`** accepts one finding by its manifest line, see [Allow lists](#allow-lists).
 
+The compile-time visitor in `micronaut-graphql-tools-processor` reads the same annotations and applies the same rules, so a build and the startup agree. The visitor is not yet the default processor (#291): the JSR-269 processor that the build still runs does not read `@GraphQLIgnore` and does not exclude lifecycle methods.
+
 `strict: false` does not change `precedence`: with the default `strict` precedence, a field that both a getter and a
 type resolver can bind still fails the startup (`AmbiguousBindingException`).
 
@@ -613,8 +615,11 @@ position plan is built once at startup, so a request does no name lookup.
 String page(Integer offset, Integer first) { ... }   // page(first: 10, offset: 200) -> first=10, offset=200
 ```
 
-Names come from Micronaut's compile-time metadata (`Argument.getName()`), not from reflection, so the Java compiler
-does not need `-parameters`. If a parameter name cannot match the argument name (for example `long` or `short`),
+Names come from Micronaut's compile-time metadata (`Argument.getName()`), not from reflection. A method declared in a
+class that Micronaut processes has the name of the source, so the compiler does not need `-parameters`. A method
+inherited from a class file has the name that the class file carries (`-parameters`, or, for a method with a body, `-g`, which Gradle and Maven pass
+by default; an abstract or interface method needs `-parameters`); a class file built with neither has `arg0`, and the failure says to compile it with `-parameters` or to use
+`@GraphQLArgument`. If a parameter name cannot match the argument name (for example `long` or `short`),
 bind it explicitly:
 
 ```java
@@ -625,7 +630,8 @@ The annotation on a parameter of an interface or superclass method also applies 
 
 The startup fails with the schema coordinate and the parameter when a parameter has no argument of that name
 (`IncorrectArgumentNameException`), when two parameters bind to one argument, and (`IncorrectArgumentCountException`)
-when the numbers of parameters and arguments differ. There is no positional opt-out.
+when the numbers of parameters and arguments differ. The compile-time check (the visitor of `graphql-tools-processor`)
+applies the same rule and reports the same code, `argument-mismatch`, and coordinate. There is no positional opt-out.
 
 **Migration (breaking):** positional matching has ended. A resolver whose parameter names differ from the SDL argument
 names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<argument name>")`.

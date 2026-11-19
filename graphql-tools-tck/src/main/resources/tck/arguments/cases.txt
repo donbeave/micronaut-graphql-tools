@@ -12,3 +12,4 @@ introspection-enum
 introspection-roots
 inputs-constructor
 inputs-constructor-nested
+by-name

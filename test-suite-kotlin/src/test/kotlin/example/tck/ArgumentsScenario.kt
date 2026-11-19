@@ -18,6 +18,7 @@ package example.tck
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.ArgumentValue
+import io.micronaut.graphql.tools.annotation.GraphQLArgument
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import java.util.concurrent.atomic.AtomicInteger
@@ -95,6 +96,11 @@ class ArgumentsQueries {
     fun crate(crate: Crate): String =
         "label=${crate.label} dimensions=${crate.dimensions.width} unit=${presence(crate.dimensions.unit)} " +
             "parts=${crate.parts.joinToString(", ", "[", "]") { "${it.name}:${presence(it.note)}" }} memo=${presence(crate.memo)}"
+
+    // tag::by-name[]
+    fun window(@GraphQLArgument("in") scope: String, offset: Int, first: Int): String =
+        "first=$first offset=$offset in=$scope"
+    // end::by-name[]
 
     fun shape(shape: Shape): String =
         "name=${shape.name} color=${shape.color} points=${shape.points.joinToString(";") { "${it.x},${it.y}" }} note=${shape.note}"

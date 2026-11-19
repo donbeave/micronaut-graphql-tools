@@ -1,0 +1,11 @@
+schema {
+  query: Query
+}
+
+type Query {
+  user: User!
+}
+
+type User {
+  name(prefix: String!, suffix: String!): String!
+}

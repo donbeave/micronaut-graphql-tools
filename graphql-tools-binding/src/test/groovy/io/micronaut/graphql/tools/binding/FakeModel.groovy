@@ -48,12 +48,12 @@ class FakeModel {
         [name: { name }, writableProperties: { properties }] as JClass
     }
 
-    static JParameter parameter(String name, String type, String argument = null) {
+    static JParameter parameter(String name, String type, String argument = null, boolean synthetic = false) {
         def view = [has: { String it -> argument != null && it == AnnotationNames.ARGUMENT },
                     stringValue: { String a, String m ->
                         argument != null && a == AnnotationNames.ARGUMENT && m == 'value' ? Optional.of(argument) : Optional.empty()
                     },
                     classValues: { String a, String m -> [] }] as AnnotationView
-        [name: { name }, nameIsSynthetic: { false }, type: { TypeRef.of(type) }, annotations: { view }] as JParameter
+        [name: { name }, nameIsSynthetic: { synthetic }, type: { TypeRef.of(type) }, annotations: { view }] as JParameter
     }
 }

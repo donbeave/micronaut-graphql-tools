@@ -1,5 +1,26 @@
 The values of arguments and input objects reach a resolver in the Java type the method declares. The library builds one converter for each argument and each input field at startup, from the declared type and the GraphQL type, and a request only runs it. The conversion uses the bean introspection that Micronaut generates at compile time. It uses no reflection and no Jackson, so it behaves the same on the JVM and in a native image.
 
+== Binding by name
+
+A resolver parameter is bound to the field argument with the same name, whatever its position. The source object of a type resolver method stays the first parameter and a trailing `DataFetchingEnvironment` the last; every other parameter is matched by name. The plan from names to positions is built once at startup, so a request does no name lookup.
+
+snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="by-name", indent="0"]
+
+`@GraphQLArgument("<name>")` binds a parameter whose name cannot be the argument's, such as the argument `in`, which no Java, Kotlin or Groovy parameter can be named. The annotation on a parameter of an interface or superclass method also applies to the method that overrides it. Reordering the arguments of the schema field does not change which parameter gets which value.
+
+The startup and the compile-time check (the visitor of `graphql-tools-processor`) apply the same rule and report the same code, `argument-mismatch`, with the same schema coordinate, for a parameter that names no argument (the message lists the arguments of the field), for two parameters that name one argument, and for a number of parameters that differs from the number of arguments. A parameter that is not the source object or the environment and has a name the field does not have is never matched by position: there is no positional opt-out.
+
+=== Where the names come from
+
+[cols="2,3", options="header"]
+|===
+| Parameter of | Name
+| A method declared in a class of the module that Micronaut processes (Java, Kotlin or Groovy) | The name in the source. The compiler needs no `-parameters`: Micronaut records the name when it processes the class.
+| A method inherited from a class file, such as a superclass or an interface of a dependency | The name that the class file carries. javac writes it with `-parameters` or, for a method that has a body, as local variable debug information with `-g`, which the Gradle and Maven compile tasks pass by default. An abstract or interface method has no body to hold that information, so its names need `-parameters`. A class file built without the needed flag has no names: the name is `arg0`.
+|===
+
+A parameter without a name fails like any other parameter with no argument of that name, and the message says what to do: compile the class that declares the method with `-parameters`, or bind the parameter with `@GraphQLArgument`. Startup and compile time see the same name for the same class file.
+
 == What the converters do
 
 graphql-java coerces every value first: scalar values, enum constants, a `Map` per input object and a `List` per list. The converter of each declared type then does the least that is needed:
