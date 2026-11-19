@@ -283,6 +283,7 @@ final class InterfaceFieldBinder {
                     collectFailure(field.mappingContext(), () -> bindResolverOverModelMember(field, methods));
                     rebound = true;
                 }
+                default -> throw new IllegalStateException("Unknown precedence " + precedence);
             }
         }
 

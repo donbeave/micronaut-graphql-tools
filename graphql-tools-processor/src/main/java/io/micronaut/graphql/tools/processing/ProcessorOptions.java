@@ -73,10 +73,6 @@ record ProcessorOptions(String sdlDir,
         Precedence precedence = Precedence.FAIL;
         String precedenceValue = options.get(PRECEDENCE);
         if (precedenceValue != null) {
-            if (precedenceValue.trim().equalsIgnoreCase("strict")) {
-                problems.error(PRECEDENCE + "=strict was renamed fail (the default); use fail, resolver-first or "
-                        + "property-first. strict does not change it.");
-            }
             try {
                 precedence = Precedence.valueOf(precedenceValue.trim().toUpperCase(Locale.ROOT).replace('-', '_'));
             } catch (IllegalArgumentException e) {

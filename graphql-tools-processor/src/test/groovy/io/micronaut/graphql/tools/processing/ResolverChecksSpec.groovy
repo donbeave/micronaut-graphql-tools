@@ -413,7 +413,8 @@ public class BookSubscription {
 
         then:
         !result.success
-        result.graphqlErrors[0].startsWith('[graphql] micronaut.graphql.tools.precedence=strict was renamed fail')
+        result.graphqlErrors == ['[graphql] micronaut.graphql.tools.precedence must be fail, property-first or '
+                                         + 'resolver-first, not strict.']
     }
 
     void "a resolver directive binds the type resolver; property-first and resolver-first decide; a marked field without resolver fails"() {

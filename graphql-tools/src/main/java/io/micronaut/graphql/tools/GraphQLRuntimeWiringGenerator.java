@@ -277,7 +277,7 @@ final class GraphQLRuntimeWiringGenerator {
 
             if (!ambiguities.bindings().isEmpty()) {
                 LOG.warn("{} is {}: fields that both a member of the Java type and a type resolver method can bind: {}",
-                        GraphQLToolsConfiguration.PREFIX + ".precedence", configuration.getPrecedence().name().toLowerCase(java.util.Locale.ROOT).replace('_', '-'),
+                        GraphQLToolsConfiguration.PREFIX + ".precedence", PrecedenceRules.Setting.valueOf(configuration.getPrecedence().name()).token(),
                         ambiguities.bindings().entrySet().stream()
                                 .map(it -> it.getKey() + " (" + it.getValue() + ")")
                                 .collect(Collectors.joining("; ")));

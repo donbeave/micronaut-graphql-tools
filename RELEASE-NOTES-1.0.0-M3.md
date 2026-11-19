@@ -1,6 +1,6 @@
 # micronaut-graphql-tools 1.0.0-M3 release notes
 
-Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven registry of this repository by the `Release` workflow (D-40). This milestone follows [1.0.0-M2](RELEASE-NOTES-1.0.0-M2.md). The numbering continues from the M2 notes: `BC-01` to `BC-19` are described in the M1 notes, `BC-20` in the M2 notes, and `BC-21` to `BC-29` are the numbered changes of this milestone so far. See the migration page for the fix of each change. This file grows as the milestone's changes land.
+Not released yet. Tag `1.0.0-M3` will be published to the GitHub Packages Maven registry of this repository by the `Release` workflow. This milestone follows [1.0.0-M2](RELEASE-NOTES-1.0.0-M2.md). The numbering continues from the M2 notes: `BC-01` to `BC-19` are described in the M1 notes, `BC-20` in the M2 notes, and `BC-21` to `BC-29` are the numbered changes of this milestone so far. See the migration page for the fix of each change. This file grows as the milestone's changes land.
 
 ## What this release changes
 
