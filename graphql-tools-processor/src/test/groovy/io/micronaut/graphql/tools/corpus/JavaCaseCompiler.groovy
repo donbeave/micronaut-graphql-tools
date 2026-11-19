@@ -53,21 +53,49 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
 
     @Override
     CompiledCase compile(CorpusCase corpusCase, Path work) {
-        return compileWith(corpusCase, work, ['-A' + CHECKS_OFF])
+        List<Path> outputs = []
+        for (SourceUnit unit : corpusCase.units(Language.JAVA)) {
+            CompiledCase compiled = compileUnit(unit, work.resolve('unit-' + outputs.size()), outputs, ['-A' + CHECKS_OFF])
+            if (!compiled.success) {
+                return new CompiledCase(false, outputs.empty ? compiled.classes : outputs.first(), compiled.errors, outputs.drop(1))
+            }
+            outputs.add(compiled.classes)
+        }
+        return new CompiledCase(true, outputs.first(), [], outputs.drop(1))
     }
 
     /**
      * Compiles the case with the compile-time checks on, the schema files of the case directory being the schema directory
-     * of the checks. The result is not started: its errors and warnings are the findings of the visitor.
+     * of the checks. The result is not started: its errors and warnings are the findings of the visitor. A case that splits its
+     * sources into modules is compiled module by module, as a build does, each module seeing the unchecked output of the modules
+     * before it, so that a module that fails its checks does not hide the findings of the next one.
      */
     @Override
     CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
         Path schemaDir = Files.createDirectories(work.resolve('schema'))
         corpusCase.schemaFiles().each { Files.copy(it, schemaDir.resolve(it.fileName.toString())) }
-        return compileWith(corpusCase, work, ["-A${SCHEMA_DIRS}=${schemaDir}".toString()])
+        List<String> checked = ["-A${SCHEMA_DIRS}=${schemaDir}".toString()]
+        List<SourceUnit> units = corpusCase.units(Language.JAVA)
+        List<Path> dependencies = []
+        List<String> errors = []
+        List<String> warnings = []
+        Path classes = null
+        boolean success = true
+        units.eachWithIndex { SourceUnit unit, int index ->
+            CompiledCase compiled = compileUnit(unit, work.resolve('checked-' + index), dependencies, checked)
+            classes = classes ?: compiled.classes
+            success = success && compiled.success
+            errors.addAll(compiled.errors)
+            warnings.addAll(compiled.warnings)
+            if (index < units.size() - 1) {
+                CompiledCase unchecked = compileUnit(unit, work.resolve('unchecked-' + index), dependencies, ['-A' + CHECKS_OFF])
+                dependencies.add(unchecked.classes)
+            }
+        }
+        return new CompiledCase(success, classes, errors, [], warnings)
     }
 
-    private CompiledCase compileWith(CorpusCase corpusCase, Path work, List<String> options) {
+    private CompiledCase compileUnit(SourceUnit unit, Path work, List<Path> dependencies, List<String> options) {
         Path classes = Files.createDirectories(work.resolve('classes'))
         JavaCompiler compiler = ToolProvider.systemJavaCompiler
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>()
@@ -75,6 +103,7 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
         Properties saved = (Properties) System.properties.clone()
         try {
             List<File> classpath = System.getProperty('java.class.path').split(File.pathSeparator).collect { new File(it) }
+            classpath.addAll(dependencies.collect { it.toFile() })
             files.setLocation(StandardLocation.CLASS_PATH, classpath)
             files.setLocation(StandardLocation.CLASS_OUTPUT, [classes.toFile()])
             List<Processor> processors = new ArrayList<>()
@@ -85,7 +114,7 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
             }
             JavaCompiler.CompilationTask task = compiler.getTask(null, files, diagnostics,
                     ['-proc:full'] + options,
-                    null, files.getJavaFileObjectsFromPaths(corpusCase.sources(Language.JAVA)))
+                    null, files.getJavaFileObjectsFromPaths(unit.sources))
             task.setProcessors(processors)
             clearSystemProperties()
             boolean success = task.call()

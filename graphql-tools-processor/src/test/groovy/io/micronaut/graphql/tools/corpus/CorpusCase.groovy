@@ -31,7 +31,8 @@ import java.util.stream.Stream
  * &lt;case&gt;/
  *   case.properties            description, tags, environments, config.&lt;key&gt; (the runtime configuration)
  *   schema.graphqls            one or more *.graphqls files
- *   java/ groovy/ kotlin/      the sources of each language the case covers, as packages
+ *   java/ groovy/ kotlin/      the sources of each language the case covers, as packages, or as module-&lt;name&gt;/ directories that
+ *                              are compiled one after the other (Java and Groovy)
  *   expected/
  *     runtime.txt              required: {@code ok}, or the sorted findings of the startup
  *     compile.txt              optional: {@code ok}, or the sorted findings of the compile-time checks
@@ -45,6 +46,7 @@ final class CorpusCase {
     static final String PROPERTIES = 'case.properties'
     static final String EXPECTED = 'expected'
     static final String JAR = 'jar'
+    static final String MODULE_PREFIX = 'module-'
     static final List<String> EXPECTED_FILES = ['runtime.txt', 'compile.txt', 'manifest.txt']
     static final Set<String> PROPERTY_KEYS = ['description', 'tags', 'environments'] as Set<String>
     static final String CONFIG_PREFIX = 'config.'
@@ -104,8 +106,29 @@ final class CorpusCase {
         return Language.values().findAll { Files.isDirectory(dir.resolve(it.dir)) }.toList()
     }
 
+    /** @return every source of a language, whether the case splits them into modules or not */
     List<Path> sources(Language language) {
+        return sourcesIn(dir.resolve(language.dir), language)
+    }
+
+    /**
+     * @return the compilations of a language: the one unit of a case that keeps its packages directly under the language directory,
+     * or one unit per {@code module-<name>} directory, in name order (each sees the output of the units before it)
+     */
+    List<SourceUnit> units(Language language) {
         Path root = dir.resolve(language.dir)
+        List<Path> modules = moduleDirs(root)
+        if (modules.empty) {
+            return [new SourceUnit('', sources(language))]
+        }
+        return modules.collect { Path module -> new SourceUnit(module.fileName.toString(), sourcesIn(module, language)) }
+    }
+
+    private static List<Path> moduleDirs(Path root) {
+        return list(root).findAll { Files.isDirectory(it) && it.fileName.toString().startsWith(MODULE_PREFIX) }
+    }
+
+    private static List<Path> sourcesIn(Path root, Language language) {
         try (Stream<Path> files = Files.walk(root)) {
             return files.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(language.extension) }
                     .sorted().collect(Collectors.toList())
@@ -187,6 +210,15 @@ final class CorpusCase {
                 problems.add("${language.dir}/ has no ${language.extension} source".toString())
             }
             Path root = dir.resolve(language.dir)
+            List<Path> modules = moduleDirs(root)
+            if (!modules.empty) {
+                list(root).findAll { !modules.contains(it) }.each {
+                    problems.add("${language.dir}/${it.fileName} sits next to the ${MODULE_PREFIX}* directories: a language directory holds either packages or modules".toString())
+                }
+                modules.findAll { sourcesIn(it, language).empty }.each {
+                    problems.add("${language.dir}/${it.fileName}/ has no ${language.extension} source".toString())
+                }
+            }
             try (Stream<Path> files = Files.walk(root)) {
                 files.filter { Files.isRegularFile(it) && !it.fileName.toString().endsWith(language.extension) }
                         .forEach { problems.add("orphan file ${dir.relativize(it)}: only ${language.extension} sources belong in ${language.dir}/".toString()) }

@@ -33,6 +33,13 @@ case lists the `!` line in `manifest.txt`, an `ignore` case has none. Their `com
 compile-time check does not read the severity settings, so a `warn` or `ignore` case of a compile-time code still has the
 compile finding, and the soundness check is made on the `fail` case.
 
+A language directory that holds `module-<name>/` directories instead of packages is a case whose sources are several compilations, as a
+build with several modules has them (Java and Groovy; the cases are under `modules/`). The modules are compiled in name order, each
+with the output of the modules before it on its classpath, and the schema directory of every compilation is the case's schema. Each
+compilation is checked on its own and the findings of all of them are the verdict of `compile.txt`: a module with a finding does
+not hide the findings of the next one, because the checked compilation of a module sees the unchecked output of the modules before
+it. The startup runs with every module on the classpath. A language directory holds either packages or modules, never both.
+
 Case names are the relative paths. `tags` are free `key:value` words; `lang:all` means the case has a Java, a Groovy and
 a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.graphql.tools.strict=false`).
 

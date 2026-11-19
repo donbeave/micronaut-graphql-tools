@@ -1,0 +1,2 @@
+argument-mismatch Query.authors schema.graphqls:7:3
+nullable-primitive Query.books(limit:) schema.graphqls:9:9

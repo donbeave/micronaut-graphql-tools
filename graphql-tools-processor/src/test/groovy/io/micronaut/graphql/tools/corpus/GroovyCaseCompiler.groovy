@@ -51,22 +51,49 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
 
     @Override
     CompiledCase compile(CorpusCase corpusCase, Path work) {
-        return compileWith(corpusCase, work, [(PREFIX + 'checks'): 'false'])
+        List<Path> outputs = []
+        for (SourceUnit unit : corpusCase.units(Language.GROOVY)) {
+            CompiledCase compiled = compileUnit(unit, work.resolve('unit-' + outputs.size()), outputs, [(PREFIX + 'checks'): 'false'])
+            if (!compiled.success) {
+                return new CompiledCase(false, outputs.empty ? compiled.classes : outputs.first(), compiled.errors, outputs.drop(1))
+            }
+            outputs.add(compiled.classes)
+        }
+        return new CompiledCase(true, outputs.first(), [], outputs.drop(1))
     }
 
+    /** A case that splits its sources into modules is compiled module by module, each seeing the unchecked output of the modules before it. */
     @Override
     CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
         Path schemaDir = Files.createDirectories(work.resolve('schema'))
         corpusCase.schemaFiles().each { Files.copy(it, schemaDir.resolve(it.fileName.toString())) }
-        return compileWith(corpusCase, work, [(PREFIX + 'schema.dirs'): schemaDir.toString()])
+        Map<String, String> checked = [(PREFIX + 'schema.dirs'): schemaDir.toString()]
+        List<SourceUnit> units = corpusCase.units(Language.GROOVY)
+        List<Path> dependencies = []
+        List<String> errors = []
+        List<String> warnings = []
+        Path classes = null
+        boolean success = true
+        units.eachWithIndex { SourceUnit unit, int index ->
+            CompiledCase compiled = compileUnit(unit, work.resolve('checked-' + index), dependencies, checked)
+            classes = classes ?: compiled.classes
+            success = success && compiled.success
+            errors.addAll(compiled.errors)
+            warnings.addAll(compiled.warnings)
+            if (index < units.size() - 1) {
+                dependencies.add(compileUnit(unit, work.resolve('unchecked-' + index), dependencies, [(PREFIX + 'checks'): 'false']).classes)
+            }
+        }
+        return new CompiledCase(success, classes, errors, [], warnings)
     }
 
-    private CompiledCase compileWith(CorpusCase corpusCase, Path work, Map<String, String> options) {
+    private CompiledCase compileUnit(SourceUnit source, Path work, List<Path> dependencies, Map<String, String> options) {
         Path classes = Files.createDirectories(work.resolve('classes'))
         Properties saved = (Properties) System.properties.clone()
         PrintStream savedErr = System.err
         ByteArrayOutputStream captured = new ByteArrayOutputStream()
         GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
+        dependencies.each { loader.addClasspath(it.toString()) }
         forgetVisitors()
         try {
             System.properties.stringPropertyNames().findAll { it.startsWith(PREFIX) }.each { System.clearProperty(it) }
@@ -75,7 +102,7 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
             CompilerConfiguration configuration = new CompilerConfiguration()
             configuration.targetDirectory = classes.toFile()
             CompilationUnit unit = new CompilationUnit(configuration, null, loader)
-            corpusCase.sources(Language.GROOVY).each { unit.addSource(it.toFile()) }
+            source.sources.each { unit.addSource(it.toFile()) }
             try {
                 unit.compile(Phases.OUTPUT)
             } catch (CompilationFailedException e) {

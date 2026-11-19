@@ -25,6 +25,6 @@ buildCache {
 
 rootProject.name = "multi-module-gradle"
 
-// The schema lives in its own module, the resolvers in a feature module and the application depends on it. Only the feature
-// module applies the processor, so a schema edit recompiles the feature module and nothing else.
-include("schema", "feature", "app")
+// The schema lives in its own module, the model classes in another, the resolvers in two feature modules and the application
+// depends on all of them. Only the feature modules apply the processor, so a schema edit recompiles them and nothing else.
+include("schema", "model", "books", "authors", "app")
