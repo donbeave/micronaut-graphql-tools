@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-29` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-30` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -11,7 +11,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 [cols="1,3,3", options="header"]
 |===
 | Change | What breaks | How to fix
-| BC-01 `List<CompletionStage<T>>` | Startup fails with `UnsupportedReturnTypeException`. Before, the client received the future's `toString()`. | Return `CompletionStage<List<T>>`.
+| BC-01 `List<CompletionStage<T>>` | Startup fails with `[unsupported-return-type]`. Before, the client received the future's `toString()`. | Return `CompletionStage<List<T>>`.
 | BC-02 wrapper, `Optional` and `Publisher` placement | Startup fails for `Optional` on a non-null type, misplaced or repeated wrappers, `Publisher` on a field that is not a subscription field, and a subscription field that does not return `Publisher`. | Remove `Optional` from non-null types. Return `Publisher` only on subscription fields; elsewhere return a `CompletionStage`.
 | BC-03 build and publishing | The library compiles to Java 17 bytecode, and nothing is published to Maven Central. The published POM and the extended-scalars version changed. | Run the library on Java 17 or newer. Build the full project on JDK 21 or newer, because the processor module needs it. Build and publish the library yourself. If you pin extended-scalars, pin the version your build resolves.
 | BC-04 `@Inherited` resolver stereotypes | A subclass of a resolver bean is a resolver too, which can make two resolvers bind one field. | Annotate the subclass with `@Replaces(<original>.class)`.
@@ -21,28 +21,27 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-08 input class properties | Startup fails for a settable property that the input type does not define, and for an input field the class cannot set. | Add the field to the input type or remove the property. Make the field settable. The unmapped-property part can be accepted with `checks.unmapped-input-property: warn` or `ignore`.
 | BC-09 primitive for a nullable scalar | In strict mode, startup fails for `int` for a nullable `Int`. | Use the wrapper class, or make the GraphQL type non-null. Or set `strict: false`.
 | BC-10 `GraphQL` bean | The library creates its `GraphQL` bean only when the application has none. | Define your own `GraphQL` bean, or change the library's one with `GraphQLBuilderCustomizer`.
-| BC-11 bare `SchemaDirectiveWiring` bean | Startup fails with `UnwrappedDirectiveWiringException`. | Wrap the wiring in a `SchemaDirective` bean.
-| BC-12 directive without a wiring | Startup fails with `UnwiredDirectivesException`. | Add a wiring, or list the directive in `allow.inert-directives`. Or set `checks.unwired-directive` to `warn` (also what `strict: false` does).
-| BC-13 `RuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `RuntimeWiringOverrideException` (on graphql-java 25, `StrictModeWiringException` first for a replaced default data fetcher, type resolver or scalar). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
-| BC-14 property and type resolver bind one field | Startup fails with `AmbiguousBindingException`. Before, the property won silently. | Remove one member, or choose the winner with `precedence` or `resolver-directives`. Or use `@GraphQLIgnore` on the getter.
+| BC-11 bare `SchemaDirectiveWiring` bean | Startup fails with `[unwrapped-directive-wiring]`. | Wrap the wiring in a `SchemaDirective` bean.
+| BC-12 directive without a wiring | Startup fails with `[unwired-directive]`. | Add a wiring, or list the directive in `allow.inert-directives`. Or set `checks.unwired-directive` to `warn` (also what `strict: false` does).
+| BC-13 `RuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `[runtime-wiring-override]` (on graphql-java 25, `StrictModeWiringException` first for a replaced default data fetcher, type resolver or scalar). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
+| BC-14 property and type resolver bind one field | Startup fails with `[precedence-ambiguity]`. Before, the property won silently. | Remove one member, or choose the winner with `precedence` or `resolver-directives`. Or use `@GraphQLIgnore` on the getter.
 | BC-15 root resolvers per operation type | Startup fails when two root methods bind one field. Before, the first bean found won. | Remove one of two methods that bind the same field, or use `@Replaces` when one bean overrides another. Add `@GraphQLSchemaCoordinate` (for example `Query.field`) only when the methods serve different operation types.
 | BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding the startup reports, annotate it with `@GraphQLIgnore` (the compile-time processor does not read it yet), or set `strict: false`.
 | BC-17 `extend type` fields | Startup fails for an extension field that nothing binds. Before, graphql-java served it without a check. | Give the field a resolver or property, or claim it with `claimedFields()`.
 | BC-18 unreachable types | Startup fails and lists every unreachable type. An `allow.unreachable` entry that is no longer unreachable fails startup. | Bind the type, remove it, or list it in `allow.unreachable`. Remove stale entries. Or set `checks.unreachable-type` to `warn` or `ignore`.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time visitor applies the same rule (#15); it is the real build's check once #291 registers it. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
 | BC-20 `@Named("graphql-tools")` mapper seam (#173) | The `graphql-tools` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Input conversion is not configurable through a public bean. | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion; it is not supported. Its replacement is BC-23 (#37): `TypeConverter` beans and the scalar mapping.
-| BC-21 enums need a bean introspection (#33) | Startup fails with `ClassNotIntrospectedException` for a bound Java enum without a bean introspection. Enum arguments now arrive as the Java constants from the schema's enum values, not as names converted by Jackson. | Annotate the enum with `@Introspected`.
-| BC-22 one code system (#237) | Every startup message starts with `[code]`. The `!` lines of the binding manifest are named by the code (`!unbound` is `!unbound-resolver-method`, `!unbound-enum-constant` or `!unmapped-input-property`; `!unusedDictionary` is `!unused-dictionary-entry`; `!ambiguous` is `!precedence-ambiguity`; `!unreachable` is `!unreachable-type` or `!unreachable-value-type`; `!unwiredDirective` is `!unwired-directive`). The labels of `BindingFailuresException` are `[unknown-schema-coordinate]` and `[strict-findings]` (were `[invalid-schema-coordinate]` and `[strict]`). | Match on `SchemaBindingException#code()`, not on message text. Read the new kinds from the manifest. New in 1.0.0-M3, no opt-out.
-| BC-23 input conversion from `BeanIntrospection` (#37) | Arguments and input objects are converted by converters that startup builds from the bean introspection, not by Jackson. Jackson annotations, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean stop being the input contract. A list is converted into `List`, `Collection`, `Iterable`, `Set`, `SortedSet`, `Deque` or `Queue` only. `InputFieldNotSettableException` has a new message. | Name the properties and constructor parameters of an input class like the input fields. Use a `TypeConverter` bean for a conversion of your own, and the scalar mapping for custom scalars.
+| BC-21 enums need a bean introspection (#33) | Startup fails with `[class-not-introspected]` for a bound Java enum without a bean introspection. Enum arguments now arrive as the Java constants from the schema's enum values, not as names converted by Jackson. | Annotate the enum with `@Introspected`.
+| BC-22 one code system (#237) | Every startup message starts with `[code]`. The `!` lines of the binding manifest are named by the code (`!unbound` is `!unbound-resolver-method`, `!unbound-enum-constant` or `!unmapped-input-property`; `!unusedDictionary` is `!unused-dictionary-entry`; `!ambiguous` is `!precedence-ambiguity`; `!unreachable` is `!unreachable-type` or `!unreachable-value-type`; `!unwiredDirective` is `!unwired-directive`). The labels of `[binding-failures]` are `[unknown-schema-coordinate]` and `[strict-findings]` (were `[invalid-schema-coordinate]` and `[strict]`). | Match on `SchemaBindingException#code()`, not on message text. Read the new kinds from the manifest. New in 1.0.0-M3, no opt-out.
+| BC-23 input conversion from `BeanIntrospection` (#37) | Arguments and input objects are converted by converters that startup builds from the bean introspection, not by Jackson. Jackson annotations, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean stop being the input contract. A list is converted into `List`, `Collection`, `Iterable`, `Set`, `SortedSet`, `Deque` or `Queue` only. `[input-field-not-settable]` has a new message. | Name the properties and constructor parameters of an input class like the input fields. Use a `TypeConverter` bean for a conversion of your own, and the scalar mapping for custom scalars.
 | BC-24 schema files are `*.graphqls` (#17) | The compile-time processor no longer reads `*.graphql` files of its schema directory, so a schema kept in one is missing at compile time. | Rename the schema files to `.graphqls`. Client operation files may stay `.graphql`; they are never read.
 | BC-25 binding manifest format 2 (#90) | The manifest is written in format version 2: ASCII separators (` -> ` and ` ; ` replace the arrow and the middle dot), a `scalar` line names the scalar (not the `Coercing` class), characters outside ASCII are escaped, and the schema hash does not depend on the order of the files and the extensions. The first line is `# graphql-binding-manifest 2`. | Regenerate checked-in manifests. A reader checks the version on the first line. New in 1.0.0-M3, no opt-out.
 | BC-26 Jackson leaves the `api` scope (#36) | `micronaut-jackson-databind` is no longer a dependency of the library. An application that serves HTTP without another JSON codec fails at startup, with `No bean of type [io.micronaut.json.JsonConfiguration] exists`. | Add `micronaut-jackson-databind` (or `micronaut-serde-jackson`) to your own build.
 | BC-27 per-check severity (#86) | `checks.<code>` sets `fail`, `warn` or `ignore` for each of the ten checks, and `strict: false` is `warn` for every check, including unreachable object, interface and union types. Six keys are removed and fail the startup with `[removed-configuration-key]`: `unreachable-types`, `allow-unreachable`, `input.unmapped-properties`, `inert-directives`, `schema-customizer-directives` and `unwired-directives`. | Use the replacement keys: see BC-27 below. No opt-out for the removal.
 | BC-28 `ArgumentValue` needs no option (#159) | The option `input.detect-omission` is removed, and so is the compile-time option `input.detectOmission`. A declared `ArgumentValue` is detected on its own, including an `ArgumentValue` property that the input type does not define: it is set to `omitted()`, where it kept its initial value without the option. | Delete the key. An application that set it to `true` behaves as before. New in 1.0.0-M3, no opt-out.
 | BC-29 one precedence rule (#105) | The value `strict` of `micronaut.graphql.tools.precedence` is named `fail` and `strict` is rejected with `[removed-configuration-key]`. A type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate` wins over a getter or a `@GraphQLField` method, for object and interface fields, whatever the setting is. | Write `precedence: fail`, or delete the line (it is the default). To let a resolver win for one field, declare its coordinate or put a resolver directive on the field.
-| #109 public exceptions | _Pending._ The startup exception subclasses become internal behind `SchemaBindingException`, which already carries the code (BC-22). | Match on the error code, not on the exception subclass.
+| BC-30 one public exception (#109) | `SchemaBindingException` is the only public exception class. The 43 classes that stood for single failures (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnwiredDirectivesException`, `StrictModeException`, `BindingFailuresException`, `AmbiguousBindingException` and the others) moved to `io.micronaut.graphql.tools.internal.exceptions` and are internal. The getters that belonged to one of them (`getProblems()`, `getTypeNames()`, `getMembers()`, `getMissingValues()` and so on) are not public API any more; `SchemaBindingException` keeps `code()`, `getCoordinate()`, `getMappingContext()`, `getFailures()` and `getCodes()`. | Catch `SchemaBindingException` and match on `code()`. Read the schema element from `getCoordinate()` and the rest from the message.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
-| #236 ambiguity exception | _Pending._ `AmbiguousBindingException` becomes internal with #109. The code, the coordinate and both members stay in the message. | Match on `SchemaBindingException#code()` (`precedence-ambiguity`).
 | #291 processor options | _Pending._ The JSR-269 options are replaced by `micronaut.graphql.tools.processor.schema.dirs` and `micronaut.graphql.tools.processor.checks`. | Rename the options; the old `sdlDir` option will name its replacement.
 |===
 
@@ -50,7 +49,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 
 === BC-01: `List<CompletionStage<T>>` is a startup error
 
-Before, a field whose return type was a list of futures was accepted, and the client received the future's `toString()`. Now the startup fails with `UnsupportedReturnTypeException`. The message names the fix: return `CompletionStage<List<T>>`, for example by combining the element futures with `CompletableFuture.allOf`, or load the elements with a DataLoader.
+Before, a field whose return type was a list of futures was accepted, and the client received the future's `toString()`. Now the startup fails with `[unsupported-return-type]`. The message names the fix: return `CompletionStage<List<T>>`, for example by combining the element futures with `CompletableFuture.allOf`, or load the elements with a DataLoader.
 
 Status: approved, no opt-out.
 
@@ -71,7 +70,7 @@ Before this change, only `CompletionStage` was unwrapped. Most of the shapes bel
 * `DataFetcherResult<T>` on a field or on each list element;
 * `Publisher<T>` on a field of the subscription type.
 
-These shapes fail at startup with `UnsupportedReturnTypeException`:
+These shapes fail at startup with `[unsupported-return-type]`:
 
 * `Optional<T>` on a non-null GraphQL type, such as `String!` or `[String!]`;
 * wrappers in the wrong order or repeated;
@@ -135,7 +134,7 @@ public class FakeBookLabelResolver extends BookLabelResolver {
 
 === BC-05: getters that only the implementation declares
 
-An object type mapped to a Java interface that has its own introspection reads its properties through that introspection. A getter that only an implementation class declares does not bind any more. Before, it bound silently. Now the startup fails with `MethodNotFoundException`, which names the interface, the implementation that declares the getter, and the fix.
+An object type mapped to a Java interface that has its own introspection reads its properties through that introspection. A getter that only an implementation class declares does not bind any more. Before, it bound silently. Now the startup fails with `[field-not-bound]`, which names the interface, the implementation that declares the getter, and the fix.
 
 Fix: declare the getter on the interface. Removing the interface's own introspection (the `@GraphQLType` or `@Introspected` annotation on the interface) is not a complete fix in strict mode, so declare the getter.
 
@@ -154,7 +153,7 @@ public interface Book {
 
 === BC-06: member mapped outside the declared Java type
 
-A union member or an interface implementation that is mapped to a Java type which cannot be the field's declared Java interface fails the startup with `IncorrectMemberMappingException`. The check is narrowed: only provably disjoint pairs fail, that is a `final` class that does not implement the interface, or classes that are unrelated. Other mappings are accepted.
+A union member or an interface implementation that is mapped to a Java type which cannot be the field's declared Java interface fails the startup with `[incorrect-member-mapping]`. The check is narrowed: only provably disjoint pairs fail, that is a `final` class that does not implement the interface, or classes that are unrelated. Other mappings are accepted.
 
 Fix: map the member to a class that matches the field's declared Java interface.
 
@@ -165,7 +164,7 @@ public interface Coded {
 }
 
 // Before: Stray is final and does not implement Coded, so no object can be both.
-// Startup fails with IncorrectMemberMappingException.
+// Startup fails with [incorrect-member-mapping].
 public final class Stray {
     public String getCode() { return "stray"; }
 }
@@ -198,8 +197,8 @@ import io.micronaut.graphql.tools.schema.AbstractTypeResolver;
 
 Two checks are startup errors now:
 
-* A property of an input class that the GraphQL input type does not define. It can be set by a setter or the constructor, but no request can set it. Strict mode fails the startup for these, in one `UnmappedInputPropertiesException`.
-* An input field that the input class cannot set. This fails with `InputFieldNotSettableException` and has no opt-out.
+* A property of an input class that the GraphQL input type does not define. It can be set by a setter or the constructor, but no request can set it. Strict mode fails the startup for these, in one `[unmapped-input-property]`.
+* An input field that the input class cannot set. This fails with `[input-field-not-settable]` and has no opt-out.
 
 Opt-out for the first check: `micronaut.graphql.tools.checks.unmapped-input-property` set to `warn` or `ignore` accepts these properties. Setting `strict: false` also accepts them, with a warning. The second check has no opt-out.
 
@@ -224,7 +223,7 @@ public class CreateBook {
 
 === BC-09: primitive for a nullable built-in scalar
 
-In strict mode, an argument or an input class property declared as a primitive (`int`, `boolean`, `double`, ...) for a nullable built-in scalar (`Int`, `Boolean`, `Float`, `Long`, ...) fails the startup with `IncorrectClassMappingException`. A `null` cannot reach a primitive, so the value would be the primitive's default.
+In strict mode, an argument or an input class property declared as a primitive (`int`, `boolean`, `double`, ...) for a nullable built-in scalar (`Int`, `Boolean`, `Float`, `Long`, ...) fails the startup with `[nullable-primitive]`. A `null` cannot reach a primitive, so the value would be the primitive's default.
 
 Fix: use the wrapper class, or make the GraphQL type non-null.
 
@@ -262,7 +261,7 @@ public class GraphQLTuning implements GraphQLBuilderCustomizer {
 
 === BC-11: a bare `SchemaDirectiveWiring` bean
 
-A `SchemaDirectiveWiring` bean that no `SchemaDirective` bean wraps was ignored before. It is a startup error now, `UnwrappedDirectiveWiringException`. The message names the two wrappers.
+A `SchemaDirectiveWiring` bean that no `SchemaDirective` bean wraps was ignored before. It is a startup error now, `[unwrapped-directive-wiring]`. The message names the two wrappers.
 
 Fix: wrap the wiring. Use `SchemaDirective.named(name, wiring)` for one directive. Use `SchemaDirective.everyElement(names, wiring)` only for a wiring that must see every schema element: graphql-java calls it for each element, so it must check the directives itself.
 
@@ -286,7 +285,7 @@ public class AuthDirectives {
 
 === BC-12: directives without a wiring
 
-A directive that the schema applies without a wiring is a startup error, `UnwiredDirectivesException`, which lists where each one is applied. A wiring is a `SchemaDirective` bean, a `RuntimeWiringCustomizer` that registers a wiring under the directive's name, or a name in `resolver-directives`. graphql-java's built-in directives need none.
+A directive that the schema applies without a wiring is a startup error, `[unwired-directive]`, which lists where each one is applied. A wiring is a `SchemaDirective` bean, a `RuntimeWiringCustomizer` that registers a wiring under the directive's name, or a name in `resolver-directives`. graphql-java's built-in directives need none.
 
 Fix: add a wiring. If the directive has no effect at runtime, list it in `micronaut.graphql.tools.allow.inert-directives`.
 
@@ -306,7 +305,7 @@ micronaut:
 
 === BC-13: a `RuntimeWiringCustomizer` that replaces the library's wiring
 
-A `RuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `RuntimeWiringOverrideException`. On graphql-java 25 the builder rejects the first replaced default data fetcher, type resolver or scalar itself, with `StrictModeWiringException`, so the startup fails with that exception instead. A replaced data fetcher of a library-wired field is always reported as `RuntimeWiringOverrideException`.
+A `RuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `[runtime-wiring-override]`. On graphql-java 25 the builder rejects the first replaced default data fetcher, type resolver or scalar itself, with `StrictModeWiringException`, so the startup fails with that exception instead. A replaced data fetcher of a library-wired field is always reported as `[runtime-wiring-override]`.
 
 Fix: add to the library's wiring in the customizer. To serve a field with a hand-written `DataFetcher`, return its coordinate from `claimedFields()`. The library then does not bind the field. The library does not traverse the return type of a claimed field, so that type must also be reached through another bound field, or listed in `allow.unreachable`.
 
@@ -330,12 +329,12 @@ public class BookFetcherCustomizer implements RuntimeWiringCustomizer {
 
 === BC-14: a property and a type resolver bind one field
 
-When a member of the Java type (a property or a `@GraphQLField` method) and a type resolver method can both bind a field, the startup fails with `AmbiguousBindingException`, which names the field and both members. Before, the property won silently.
+When a member of the Java type (a property or a `@GraphQLField` method) and a type resolver method can both bind a field, the startup fails with `[precedence-ambiguity]`, which names the field and both members. Before, the property won silently.
 
 [source,java]
 ----
 // Schema: type Book { id: ID! }. The getter and the type resolver method both bind Book.id,
-// so startup fails with AmbiguousBindingException.
+// so startup fails with [precedence-ambiguity].
 public class Book {
     public String getId() { return "1"; }
 }
@@ -357,7 +356,7 @@ Fix: remove one of the two members. Or choose the winner: set `micronaut.graphql
 
 Opt-out: `micronaut.graphql.tools.precedence: property-first`. `strict: false` does not change this outcome.
 
-The default value of `precedence` is named `fail` (BC-29). Pending #236 (M3): the ambiguity becomes a `SchemaBindingException` with an error code. The behaviour of the options above is unchanged.
+The default value of `precedence` is named `fail` (BC-29). The behaviour of the options above is unchanged.
 
 [source,yaml]
 ----
@@ -369,7 +368,7 @@ micronaut:
 
 === BC-15: root resolvers per operation type
 
-Root resolver methods are scoped to one root operation type (`Query`, `Mutation` or `Subscription`). Before, the first bean found won when two root methods bound one field. Now two root methods for one field are a startup error, `MultipleMethodsFoundException`. A method without a coordinate binds the field of its name on every root operation type. Strict mode also fails on a method without a coordinate that binds the same field name on several operation types.
+Root resolver methods are scoped to one root operation type (`Query`, `Mutation` or `Subscription`). Before, the first bean found won when two root methods bound one field. Now two root methods for one field are a startup error, `[multiple-methods-found]`. A method without a coordinate binds the field of its name on every root operation type. Strict mode also fails on a method without a coordinate that binds the same field name on several operation types.
 
 Fix: when the methods serve different operation types, give each one its own coordinate, for example `Query.ping` and `Mutation.ping`. Two methods with the same coordinate still conflict, so remove one of them. When one bean is meant to override another, annotate the overriding bean with `@Replaces`.
 
@@ -449,7 +448,7 @@ micronaut:
 
 === BC-19: resolver parameters bind by name
 
-Resolver parameters are bound to field arguments by name, not by position. A parameter without an argument of its name, or two parameters bound to one argument, fails the startup with `IncorrectArgumentNameException`.
+Resolver parameters are bound to field arguments by name, not by position. A parameter without an argument of its name, or two parameters bound to one argument, fails the startup with `[argument-mismatch]`.
 
 Fix: rename the parameter to the argument name, or add `@GraphQLArgument("<argument name>")`.
 
@@ -482,11 +481,11 @@ Fix: remove the `graphql-tools` bean and any reference to `INPUT_OBJECT_MAPPER`.
 
 === BC-21: enums need a bean introspection (#33)
 
-The library wires one values provider per bound enum, built at startup from the enum's bean introspection (`EnumBeanIntrospection`, generated at compile time). graphql-java then coerces an enum argument, an enum input field and an enum default value to the Java constant itself, so the resolver receives it without a conversion call. The library no longer reads enum constants by reflection (`Class#getEnumConstants()`). An enum without a bean introspection fails the startup with `ClassNotIntrospectedException`, which names the class and the annotation to add.
+The library wires one values provider per bound enum, built at startup from the enum's bean introspection (`EnumBeanIntrospection`, generated at compile time). graphql-java then coerces an enum argument, an enum input field and an enum default value to the Java constant itself, so the resolver receives it without a conversion call. The library no longer reads enum constants by reflection (`Class#getEnumConstants()`). An enum without a bean introspection fails the startup with `[class-not-introspected]`, which names the class and the annotation to add.
 
 Fix: annotate each Java enum that a field, argument or input field uses with `@Introspected`. Micronaut Serialization's `@Serdeable` also introspects the enum. The compile-time processor does not check this yet.
 
-A `RuntimeWiringCustomizer` that registers its own `enumValues` provider for a bound enum now fails the startup with `RuntimeWiringOverrideException`, like any other replacement of the library's wiring.
+A `RuntimeWiringCustomizer` that registers its own `enumValues` provider for a bound enum now fails the startup with `[runtime-wiring-override]`, like any other replacement of the library's wiring.
 
 [source,java]
 ----
@@ -506,7 +505,7 @@ What breaks for code that read the old forms:
 
 * Every startup exception extends the new public `SchemaBindingException`, and its message starts with `[code] `. A test that compares a whole message, or that checks `startsWith`, needs the prefix. A test that checks `contains` is not affected.
 * The manifest `!` lines changed their first word, as the summary table lists. Code that reads `!unbound`, `!unusedDictionary`, `!ambiguous`, `!unreachable` or `!unwiredDirective` lines reads the codes now. The compile-time manifest that the JSR-269 processor writes keeps the old words until #144 removes the processor.
-* `BindingFailuresException` and `StrictModeException` tag each finding with its own code. `StrictModeException#getCodes()` returns the check code of each problem.
+* The failures that gather several (`[binding-failures]` and `[strict-findings]`) tag each finding with its own code. `SchemaBindingException#getCodes()` returns the check code of each strict finding, and `getFailures()` lists the failures of `[binding-failures]`.
 
 Fix: match on `exception.code()` (or on the `[code]` token), and read the manifest kinds from the table in the error reference.
 
@@ -530,8 +529,8 @@ What stops being the input contract:
 
 * Jackson annotations on an input class (`@JsonIgnore`, `@JsonProperty`, `@JsonCreator`, `@JsonDeserialize`) and the naming strategy of an `ObjectMapper`. An input field is bound to the property or constructor parameter of the same name.
 * `FAIL_ON_UNKNOWN_PROPERTIES` and every other `ObjectMapper` setting. An `ObjectMapper` bean, whatever its name, is not read. The `INPUT_OBJECT_MAPPER` constant is removed.
-* A list argument or input field is converted into `List`, `Collection`, `Iterable` (an `ArrayList`), `Set` (a `LinkedHashSet`), `SortedSet` (a `TreeSet`), `Deque` or `Queue` (a `LinkedList`). Any other declared collection fails the startup with `UnsupportedInputTypeException`.
-* `InputFieldNotSettableException` now says that the property has no setter and no constructor parameter. A property with an `ArgumentValue` type may be write-only, and an `ArgumentValue` property that an input type does not define is set to `omitted()`.
+* A list argument or input field is converted into `List`, `Collection`, `Iterable` (an `ArrayList`), `Set` (a `LinkedHashSet`), `SortedSet` (a `TreeSet`), `Deque` or `Queue` (a `LinkedList`). Any other declared collection fails the startup with `[unsupported-input-type]`.
+* `[input-field-not-settable]` now says that the property has no setter and no constructor parameter. A property with an `ArgumentValue` type may be write-only, and an `ArgumentValue` property that an input type does not define is set to `omitted()`.
 
 Fix: name the properties and the constructor parameters of an input class like the input fields. Put a `TypeConverter<Map, SomeInput>` bean in the application for an input class that needs a conversion of its own (the bean builds the whole instance, `ArgumentValue` properties included), and a `GraphQLScalarMapping` for a custom scalar. A scalar value that is not an instance of the declared class goes through the Micronaut `ConversionService`, which holds the application's `TypeConverter` beans.
 
@@ -656,6 +655,29 @@ public class NodeResolver {
 
 Fix: write `precedence: fail` or delete the line. The error message names the options for one field (a resolver directive, `@GraphQLSchemaCoordinate`, `@GraphQLIgnore`) and for every field (`precedence: resolver-first` or `property-first`).
 
+=== BC-30: one public exception (#109)
+
+Startup failures are one public class, `SchemaBindingException`, with a stable error code from `BindingCode`. Every code is listed in the error reference, and the code tables of that page are generated from the enum. Before, 43 subclasses in `io.micronaut.graphql.tools.exceptions` were public, one for each kind of failure. They are internal now (`io.micronaut.graphql.tools.internal.exceptions`) and can change in any release.
+
+What breaks:
+
+* Code that catches or tests a subclass (`catch (MethodNotFoundException e)`, `e.getCause() instanceof UnwiredDirectivesException`, a Spock `thrown(AmbiguousBindingException)`) no longer compiles: the classes are not in the API package any more.
+* Code that read the data of one subclass (`getProblems()`, `getTypeNames()`, `getMembers()`, `getUnwiredDirectives()`, `getMissingValues()`, `getProvidedCount()` and so on) cannot. The same text is in the message, which names the coordinate, the Java element and the way out. `AbstractMappingException#getMappingContext()` is `SchemaBindingException#getMappingContext()`, which is `null` for a failure that is about no single element, and `BindingFailuresException#getFailures()` and `StrictModeException#getCodes()` are `SchemaBindingException#getFailures()` and `getCodes()`.
+
+Fix: match on the code, and on the coordinate if the failure is about one schema element.
+
+[source,java]
+----
+try {
+    applicationContext.getBean(GraphQLSchema.class);
+} catch (BeanInstantiationException e) {
+    if (e.getCause() instanceof SchemaBindingException failure
+            && failure.code() == BindingCode.PRECEDENCE_AMBIGUITY) {
+        log.error("{} binds twice", failure.getCoordinate());
+    }
+}
+----
+
 == Pending changes
 
 The following changes are planned and are not on `master` yet. Their behaviour is not described as current. Each entry names the issue that makes the change.
@@ -666,14 +688,6 @@ The following changes are planned and are not on `master` yet. Their behaviour i
 The runtime finds the schema files itself (`micronaut.graphql.tools.schema.locations`, default `classpath:graphql/**/*.graphqls`), and the compile-time processor reads the same files with the same code. Both read `*.graphqls` only, so a client operation file (`*.graphql`) in the schema directory is not a schema file and cannot break the build. Before, the processor read every `*.graphql` file as schema.
 
 Rename the schema files that end in `.graphql` to `.graphqls`. A `TypeDefinitionRegistry` bean of your own still replaces the discovery, and a schema without a `schema { }` block and with a `Query` type now binds with `Query`, `Mutation` and `Subscription` as roots.
-
-=== #109: the public exceptions
-
-Startup failures collapse into one public `SchemaBindingException` with a stable error code. The subclasses become internal, and the error codes are listed in the guide. Match on the code, not on the exception subclass. Internal types move out of the API packages.
-
-=== #236: the ambiguity exception
-
-`AmbiguousBindingException` becomes internal with #109. Match on the code `precedence-ambiguity`, which is on `master` since BC-22; the message keeps naming the field coordinate and both members.
 
 === #144 and #291: the compile-time processor
 

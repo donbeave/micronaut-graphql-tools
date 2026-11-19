@@ -21,14 +21,14 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.ApplicationContext
 import io.micronaut.graphql.tools.BindingManifest
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.exceptions.AbstractMappingException
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
-import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
+import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException
+import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException
+import io.micronaut.graphql.tools.internal.exceptions.InvalidSchemaCoordinateException
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.exceptions.StrictModeException
-import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
-import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
-import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException
+import io.micronaut.graphql.tools.internal.exceptions.StrictModeException
+import io.micronaut.graphql.tools.internal.exceptions.UnmappedInputPropertiesException
+import io.micronaut.graphql.tools.internal.exceptions.UnreachableTypesException
+import io.micronaut.graphql.tools.internal.exceptions.UnwiredDirectivesException
 
 import java.util.regex.Matcher
 

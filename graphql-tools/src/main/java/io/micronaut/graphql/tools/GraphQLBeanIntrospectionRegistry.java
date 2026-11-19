@@ -21,10 +21,10 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
-import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException;
-import io.micronaut.graphql.tools.exceptions.ImplementationNotFoundException;
-import io.micronaut.graphql.tools.exceptions.IncorrectImplementationException;
-import io.micronaut.graphql.tools.exceptions.MultipleImplementationsFoundException;
+import io.micronaut.graphql.tools.internal.exceptions.ClassNotIntrospectedException;
+import io.micronaut.graphql.tools.internal.exceptions.ImplementationNotFoundException;
+import io.micronaut.graphql.tools.internal.exceptions.IncorrectImplementationException;
+import io.micronaut.graphql.tools.internal.exceptions.MultipleImplementationsFoundException;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;

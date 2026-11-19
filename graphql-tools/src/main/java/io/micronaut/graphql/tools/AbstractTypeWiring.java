@@ -25,9 +25,9 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.exceptions.AmbiguousAbstractTypeException;
-import io.micronaut.graphql.tools.exceptions.IncorrectMemberMappingException;
-import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException;
+import io.micronaut.graphql.tools.internal.exceptions.AmbiguousAbstractTypeException;
+import io.micronaut.graphql.tools.internal.exceptions.IncorrectMemberMappingException;
+import io.micronaut.graphql.tools.internal.exceptions.UnionTypeMappingNotProvidedException;
 import io.micronaut.graphql.tools.schema.AbstractTypeResolver;
 
 import java.lang.reflect.Modifier;

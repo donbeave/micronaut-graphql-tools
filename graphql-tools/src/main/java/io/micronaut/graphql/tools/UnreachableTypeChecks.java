@@ -31,9 +31,9 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
-import io.micronaut.graphql.tools.exceptions.InvalidAllowUnreachableException;
+import io.micronaut.graphql.tools.internal.exceptions.InvalidAllowUnreachableException;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
-import io.micronaut.graphql.tools.exceptions.UnreachableTypesException;
+import io.micronaut.graphql.tools.internal.exceptions.UnreachableTypesException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

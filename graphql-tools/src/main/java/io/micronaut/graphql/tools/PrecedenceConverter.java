@@ -20,7 +20,7 @@ import io.micronaut.core.convert.ConversionContext;
 import io.micronaut.core.convert.TypeConverter;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
 import io.micronaut.graphql.tools.binding.BindingCode;
-import io.micronaut.graphql.tools.exceptions.InvalidConfigurationException;
+import io.micronaut.graphql.tools.internal.exceptions.InvalidConfigurationException;
 import jakarta.inject.Singleton;
 
 import java.util.List;
