@@ -37,6 +37,17 @@ public final class MethodNotFoundException extends AbstractMappingException {
     }
 
     /**
+     * @param methodName     the name of the method that no root resolver binds
+     * @param mappingContext the mapping context of the field
+     * @param resolvers      the root resolver beans
+     * @return a new exception
+     */
+    public static MethodNotFoundException forRoot(String methodName, MappingContext mappingContext,
+                                                  List<Class<?>> resolvers) {
+        return forRoot(methodName, mappingContext, resolvers, null, List.of());
+    }
+
+    /**
      * @param methodName    the name of the method that no root resolver binds
      * @param mappingContext the mapping context of the field
      * @param resolvers     the root resolver beans
@@ -48,7 +59,7 @@ public final class MethodNotFoundException extends AbstractMappingException {
     public static MethodNotFoundException forRoot(String methodName, MappingContext mappingContext,
                                                   List<Class<?>> resolvers, String coordinate,
                                                   List<String> unannotated) {
-        String hint = unannotated.isEmpty() ? "" : " " + String.join(", ", unannotated)
+        String hint = unannotated.isEmpty() || coordinate == null ? "" : " " + String.join(", ", unannotated)
                 + (unannotated.size() == 1 ? " exists" : " exist") + " without @GraphQLSchemaCoordinate, but the bean "
                 + "declares coordinates on other methods, and only a method with its own coordinate binds a field. "
                 + "Fix: annotate it with @GraphQLSchemaCoordinate(\"" + coordinate + "\"), or remove it.";

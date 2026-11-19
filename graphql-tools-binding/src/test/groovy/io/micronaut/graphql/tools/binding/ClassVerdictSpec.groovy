@@ -189,7 +189,7 @@ type Book {
         given:
         def wrapped = SchemaModel.load(new SchemaParser().parse('''
 schema { query: Query }
-type Query { raw: Book objectOptional: Book rawStage: Book objectStage: Book }
+type Query { raw: String objectOptional: String rawStage: String objectStage: String }
 type Book { title: String }
 ''')).get()
         def methods = [

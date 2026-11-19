@@ -103,6 +103,13 @@ class ReturnAdaptationSpec extends Specification {
         adapt(ref(RESULT, ref(RESULT, STRING))).failure() == WrapperRules.cannotWrap(RESULT, RESULT)
     }
 
+    void "an explicit Object argument is a raw wrapper only where no custom scalar can take it"() {
+        expect:
+        adapt(ref(OPTIONAL, ref('java.lang.Object')), new TypeName('JSON')).failure() == null
+        adapt(ref(OPTIONAL, ref('java.lang.Object')), new TypeName('String')).failure() ==
+                WrapperRules.missingTypeArgument(OPTIONAL)
+    }
+
     void "a wrapper without its type argument is a violation"() {
         expect:
         adapt(ref(STAGE)).failure() == WrapperRules.missingTypeArgument(STAGE)

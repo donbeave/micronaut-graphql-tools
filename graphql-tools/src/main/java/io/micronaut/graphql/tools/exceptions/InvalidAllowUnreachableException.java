@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.exceptions;
 
 import io.micronaut.graphql.tools.binding.BindingCode;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,6 +31,26 @@ public final class InvalidAllowUnreachableException extends SchemaBindingExcepti
 
     private final List<String> undefinedTypeNames;
     private final List<String> notUnreachableTypeNames;
+
+    /**
+     * @param undefinedTypeNames      listed names that the schema does not define
+     * @param notUnreachableTypeNames listed names that the schema defines, but not as unreachable object, interface
+     *                                or union types
+     */
+    public InvalidAllowUnreachableException(List<String> undefinedTypeNames, List<String> notUnreachableTypeNames) {
+        this(undefinedTypeNames, notUnreachableTypeNames, "object, interface or union");
+    }
+
+    /**
+     * @param undefinedTypeNames      listed names that the schema does not define
+     * @param notUnreachableTypeNames listed names that the schema defines, but not as unreachable types of the kinds
+     *                                that can be allowed
+     * @param kinds                   the kinds of types that can be allowed, for the message
+     */
+    public InvalidAllowUnreachableException(List<String> undefinedTypeNames, List<String> notUnreachableTypeNames,
+                                            String kinds) {
+        this(undefinedTypeNames, reasons(notUnreachableTypeNames, "not an unreachable " + kinds + " type"), kinds);
+    }
 
     /**
      * @param undefinedTypeNames listed names that the schema does not define
@@ -49,6 +70,12 @@ public final class InvalidAllowUnreachableException extends SchemaBindingExcepti
 
         this.undefinedTypeNames = List.copyOf(undefinedTypeNames);
         this.notUnreachableTypeNames = List.copyOf(notUnreachable.keySet());
+    }
+
+    private static Map<String, String> reasons(List<String> names, String reason) {
+        Map<String, String> result = new LinkedHashMap<>();
+        names.forEach(it -> result.put(it, reason));
+        return result;
     }
 
     public List<String> getUndefinedTypeNames() {
