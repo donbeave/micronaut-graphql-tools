@@ -220,7 +220,7 @@ class CorpusRunnerSpec extends Specification {
         ] as List<List<Object>>
     }
 
-    // ------------------------------------------------------------------------------------------------ parity (DD-4)
+    // ------------------------------------------------------------------------------------------------ parity
 
     void "soundness holds on the recorded expectations: a compile finding the startup does not report is a problem"() {
         given:

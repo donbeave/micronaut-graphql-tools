@@ -3,7 +3,7 @@
 A directory of small cases. Each case says, as data, whether a schema binds to a set of resolver sources and, if it does
 not, which findings (code, coordinate, schema location) the startup reports. Features and fixes are mostly new data: the
 runner (`io.micronaut.graphql.tools.corpus`, in the test sources of this module) does not change when a case is added.
-Issue #142 (the design is D-39, DD-4 and DD-13).
+Issue #142.
 
 ## A case
 
@@ -22,15 +22,15 @@ Issue #142 (the design is D-39, DD-4 and DD-13).
 ```
 
 A finding line is `<code> <coordinate> <schema-file>:<line>:<col>` (`-` where there is no location). The code is a code of the
-registry in `graphql-tools-binding` (`BindingCode`, #237): the check name of D-30 for a strict-mode check (`unbound-resolver-method`,
+registry in `graphql-tools-binding` (`BindingCode`, #237): the check name for a strict-mode check (`unbound-resolver-method`,
 `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `unused-dictionary-entry`,
 `interface-read-through-implementation`, `unreachable-type`, `unreachable-value-type`, `unwired-directive`) and the code of the
 exception for the other failures (`field-not-bound`, `argument-mismatch`, ...). The coordinate is the schema coordinate (`Query.book`, `Book.isbn`) where the finding has
 one, and the Java member (`example.Query#stray(java.lang.String)`) or the schema type name where it has not. Parity is
-defined at the default severities (D-30). The cases under `severity/` run each of the ten checks at `fail` (with
+defined at the default severities. The cases under `severity/` run each of the ten checks at `fail` (with
 `strict=false`, so an explicit entry is seen to win), `warn` and `ignore` (`config.micronaut.graphql.tools.checks.<code>`); a `warn`
 case lists the `!` line in `manifest.txt`, an `ignore` case has none. Their `compile.txt` is the one of the default severity: the
-compile-time check does not read the severity settings (D-39), so a `warn` or `ignore` case of a compile-time code still has the
+compile-time check does not read the severity settings, so a `warn` or `ignore` case of a compile-time code still has the
 compile finding, and the soundness check is made on the `fail` case.
 
 Case names are the relative paths. `tags` are free `key:value` words; `lang:all` means the case has a Java, a Groovy and
@@ -40,7 +40,7 @@ a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.g
 
 Per case and language, Java and Groovy are compiled in process (javax.tools; the Groovy compiler with Micronaut's AST
 transformation) as part of `test` on the default graphql-java leg, on JDK 21 and 25 (the floor and ceiling legs skip `BindingCorpusSpec`; the processor module never runs on JDK 17), with Micronaut's processing only: **the runner never runs the JSR-269
-processor of this module** (DD-13). Every case is compiled **twice**, as a build would:
+processor of this module**. Every case is compiled **twice**, as a build would:
 
 - **checks off** (`micronaut.graphql.tools.processor.checks=false`, the escape hatch): the sources must compile, whatever the
   case says, because a failing case is a case whose startup or compile-time checks fail, not one whose Java is broken. The
@@ -57,7 +57,7 @@ file without parameter names, is `ParameterNamesSpec` (a class file cannot be a 
 2. The startup verdict equals `expected/runtime.txt`.
 3. The binding manifest of a bound startup equals `expected/manifest.txt`, where there is one.
 4. Where the compile-time backend exists (Java and Groovy): the findings of the checks-on compilation equal `expected/compile.txt`.
-5. Soundness (DD-4): every compile **error** is a startup finding with the same code and coordinate. A false compile error is a
+5. Soundness: every compile **error** is a startup finding with the same code and coordinate. A false compile error is a
    bug. Only the documented exceptions below excuse one.
 6. Completeness: a startup finding of a per-class code (the five parity codes and the per-class failures, see `Parity`)
    that the compile side does not report is a gap, and must be listed in `corpus-divergences.txt`. A whole-program finding
@@ -73,7 +73,7 @@ Soundness and completeness are also asserted on the recorded `compile.txt` and `
 which has no compile-time backend in the runner until #143 (its `compile.txt` holds the verdicts the compile-time design predicts).
 The codes that a case relaxes at startup (the strict checks for
 `config.micronaut.graphql.tools.strict=false`, the code of a `config.micronaut.graphql.tools.checks.<code>` that is `warn` or `ignore`)
-are outside the soundness rule: the compile error cannot be relaxed at startup (D-30). Every other finding of the case is compared.
+are outside the soundness rule: the compile error cannot be relaxed at startup. Every other finding of the case is compared.
 
 Structure is checked too (`BindingCorpusSpec`, "the corpus is well formed"): an orphan or stale file, an override equal to
 its base, an unsorted or malformed verdict, a missing `runtime.txt`, an unknown property, a directory without a case.
@@ -89,7 +89,7 @@ reports it) is stale and fails. The list may only shrink.
 
 `corpus-soundness-exceptions.txt` holds `max-entries: N` and one line `<case> <java|groovy|kotlin|all> <code> <coordinate> <reason>`
 per compile error that the startup does not report with the same code and coordinate on purpose. They are the cases where the
-premise of DD-4 (the class is an enabled bean, the startup binds what the compile time judged) does not hold, and each has a
+premise of the soundness rule (the class is an enabled bean, the startup binds what the compile time judged) does not hold, and each has a
 case under `exception/` that shows it:
 
 | reason | what the startup does instead |
@@ -115,7 +115,7 @@ compile time silent; `input/class-not-introspected` shows both sides for a class
    an empty `runtime.txt`.
 2. `./gradlew :micronaut-graphql-tools-processor:corpusUpdate` records `expected/runtime.txt` (and `manifest.txt` if the file
    exists, even empty) and, for Java and Groovy, `expected/compile.txt` from the checks-on compilation. A Kotlin case writes
-   `expected/compile.txt` by hand from the design (only per-class checks and failures, `ok` where the finding is whole-program).
+   `expected/compile.txt` by hand from the rule set (only per-class checks and failures, `ok` where the finding is whole-program).
 3. Read the diff: it is the review. Check each verdict against what the case is meant to show.
 4. `./gradlew :micronaut-graphql-tools-processor:test --tests '*BindingCorpusSpec'` must pass. `-Pcorpus.only='<regex>'` runs
    only the cases whose name matches it (for example `-Pcorpus.only='input/.*'`), for writing a case; CI runs them all.

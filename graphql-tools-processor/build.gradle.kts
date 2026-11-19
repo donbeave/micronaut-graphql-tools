@@ -71,8 +71,8 @@ tasks.named<Test>("test") {
         }
     }
 }
-// The Kotlin corpus (DD-13): one batched Gradle TestKit build with the production toolchain, budget 3 minutes on JDK 25.
-// Not part of `check` until the CI job for it exists (CT-WIRING, #143).
+// The Kotlin corpus: one batched Gradle TestKit build with the production toolchain, budget 3 minutes on JDK 25.
+// Not part of `check` until the CI job for it exists (#143).
 tasks.register<Test>("corpusKotlin") {
     description = "Compiles the Kotlin cases of the binding corpus in one TestKit build (Kotlin, KSP2) and judges them."
     group = "verification"
@@ -114,7 +114,7 @@ val compileVisitorRelease17 by tasks.registering(JavaCompile::class) {
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror", "-Xlint:-processing"))
 }
 
-// The processor runs inside a compiler and must never put the runtime on its path (D-39): the main classpaths hold no
+// The processor runs inside a compiler and must never put the runtime on its path: the main classpaths hold no
 // `graphql-tools` project and no `micronaut-graphql-tools` artifact. The test classpath may, for the dual-binder corpus.
 val checkNoRuntimeDependency by tasks.registering {
     description = "Fails when a main classpath of this module contains the graphql-tools runtime."

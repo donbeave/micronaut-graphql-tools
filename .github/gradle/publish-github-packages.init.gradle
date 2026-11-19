@@ -1,4 +1,4 @@
-// Publishes the consumer modules to the GitHub Packages Maven registry of this repository (D-40, milestone previews).
+// Publishes the consumer modules to the GitHub Packages Maven registry of this repository (milestone previews).
 //
 // The release workflow passes this file with `-I`, so the tagged source tree is built unchanged: the repository, the POM
 // metadata and the safety checks are added to the publications at publish time, and nothing in the build files has to exist
@@ -39,7 +39,7 @@ allprojects {
                 publications.withType(MavenPublication).configureEach {
                     pom {
                         // The repository is the source of truth for a milestone preview: the module is not an official
-                        // Micronaut module until the Foundation contribution (D-09, D-40).
+                        // Micronaut module until the Foundation contribution.
                         description = "${project.description ?: project.findProperty('projectDesc') ?: name.get()} " +
                                 '(milestone preview from github.com/donbeave/micronaut-graphql-tools; not an official Micronaut Foundation release)'
                         url = repositoryUrl

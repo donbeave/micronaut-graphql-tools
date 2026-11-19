@@ -42,7 +42,7 @@ final class CorpusFixtures {
         return System.getProperty('corpus.only')
     }
 
-    /** the per-case timings of the last run, D-02 */
+    /** the per-case timings of the last run */
     static Path reportFile() {
         return Path.of(System.getProperty('corpus.report', 'build/corpus/timings.txt')).toAbsolutePath()
     }

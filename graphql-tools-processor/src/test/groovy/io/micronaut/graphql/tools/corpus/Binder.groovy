@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 /**
  * A binder backend of the corpus: something that says, for one case in one language, whether the schema binds and,
  * if not, with which findings. There are two: the {@link RuntimeBinder} (the real application context, working now)
- * and the {@link CompileTimeBinder} (the visitor of #150, a stub until then). The runner compares them (DD-4).
+ * and the {@link CompileTimeBinder} (the visitor of #150, a stub until then). The runner compares them.
  */
 @CompileStatic
 interface Binder {

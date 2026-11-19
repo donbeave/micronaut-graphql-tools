@@ -17,7 +17,7 @@ dependencies {
     testRuntimeOnly("ch.qos.logback:logback-classic")
 }
 
-// The Micronaut library convention adds micronaut-inject to every module. The rules never read the inject API (D-39), so
+// The Micronaut library convention adds micronaut-inject to every module. The rules never read the inject API, so
 // the module does not publish or compile against it: a stray import fails to compile, not only BindingArchitectureSpec.
 afterEvaluate {
     configurations.matching { it.name == "api" || it.name == "implementation" }.configureEach {

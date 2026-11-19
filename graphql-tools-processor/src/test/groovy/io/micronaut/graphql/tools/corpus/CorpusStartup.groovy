@@ -38,7 +38,7 @@ import java.util.regex.Matcher
  * case, and it talks to the runner in JDK types only: a map with {@code findings} (a list of
  * {@code [code, coordinate, location]}), {@code manifest} and {@code failure}.
  *
- * <p>The codes are the check names of D-30 for the strict-mode checks and the simple name of the exception for the
+ * <p>The codes are the check names for the strict-mode checks and the simple name of the exception for the
  * other failures, until the stable codes of #237 land.</p>
  */
 @CompileStatic

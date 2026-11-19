@@ -1,10 +1,10 @@
 # micronaut-graphql-tools 1.0.0-M2 release notes
 
-Tag: `1.0.0-M2`, published to the GitHub Packages Maven registry of this repository by the `Release` workflow (D-40). It is not on Maven Central and there is no GitHub Release. This milestone follows [1.0.0-M1](RELEASE-NOTES-1.0.0-M1.md). The numbering continues from the M1 notes: `BC-01` to `BC-19` are described there, and the only numbered change of this milestone is `BC-20`. See the migration page for the fix of each change.
+Tag: `1.0.0-M2`, published to the GitHub Packages Maven registry of this repository by the `Release` workflow. It is not on Maven Central and there is no GitHub Release. This milestone follows [1.0.0-M1](RELEASE-NOTES-1.0.0-M1.md). The numbering continues from the M1 notes: `BC-01` to `BC-19` are described there, and the only numbered change of this milestone is `BC-20`. See the migration page for the fix of each change.
 
 ## What this release changes
 
-The binding stack of M1 becomes faster to start and easier to diagnose, and the build and CI move to the version policy (D-34, D-35, D-41). Issue numbers refer to this repository.
+The binding stack of M1 becomes faster to start and easier to diagnose, and the build and CI move to the version policy. Issue numbers refer to this repository.
 
 - Startup and diagnostics:
   - The schema is bound when the application context starts, so a broken binding fails the startup, not the first request (#51). `micronaut.graphql.tools.eager-init: false` restores lazy binding.
@@ -17,7 +17,7 @@ The binding stack of M1 becomes faster to start and easier to diagnose, and the 
   - The conditional `GraphQL` and `GraphQLSchema` beans step aside only for an unqualified or `@Primary` application bean, and log the decision (#165).
   - The binding manifest is recorded only when `micronaut.graphql.tools.manifest.record` or `manifest.enabled` is `true`, and rendered without reflection (#91, #64).
   - A class that backs two input types keeps `ArgumentValue` for both (#160).
-- Performance (D-02): per-field fetchers and argument plans are precomputed (#287), abstract types resolve through a `ClassValue` cache (#69), the object-method check uses a fixed signature set (#92). A JMH `benchmarks` module with allocation gates measures the request hot path, and a benchmark measures binding time and retained heap at 100, 1,600 and 10,000 fields (#43, #39 in part).
+- Performance: per-field fetchers and argument plans are precomputed (#287), abstract types resolve through a `ClassValue` cache (#69), the object-method check uses a fixed signature set (#92). A JMH `benchmarks` module with allocation gates measures the request hot path, and a benchmark measures binding time and retained heap at 100, 1,600 and 10,000 fields (#43, #39 in part).
 - graphql-java: legs are named by role: floor 21.5, default 22.4 (managed by `micronaut-graphql` 4.8.0) and ceiling 26.2 (#11, #260). The removed `DirectiveInfo` is replaced. A canary workflow tests JDK 27 and the newest graphql-java (#114).
 - Build tooling: Micronaut core 4.10.37, platform 4.10.24, micronaut-test 4.10.3 (#115); dependencies the Micronaut BOMs and catalogs manage come from them, and `gradle/libs.versions.toml` holds only the rest (#307); Apollo Kotlin 5.2.0 and floor java-dataloader 3.2.2 (#295). The library compiles with `--release 17`, and `-Werror` applies to its main compilation only (#169).
 - Test suites: the example application is split into `test-suite-java`, `test-suite-kotlin` and `test-suite-groovy` (#55). Native image tests run in CI on Oracle GraalVM 25 (#118). Tests cover null fields in responses under each JSON configuration (#45) and root methods of one name per operation type (#157).
@@ -28,7 +28,7 @@ The binding stack of M1 becomes faster to start and easier to diagnose, and the 
 
 | ID | PR | What changes | Opt-out | Migration hint | Status |
 |---|---|---|---|---|---|
-| BC-20 | #173 (PR #311) | The `graphql-tools` `ObjectMapper` bean name and the `GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. The README sections that described Jackson-defined input behaviour (`@JsonIgnore`, naming strategies, a named mapper) are removed. Input conversion is not configurable through a public bean until #37 replaces it. | none | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion. It is not supported. | New in 1.0.0-M2. Not covered by D-33 |
+| BC-20 | #173 (PR #311) | The `graphql-tools` `ObjectMapper` bean name and the `GraphQLToolsConfiguration.INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. The README sections that described Jackson-defined input behaviour (`@JsonIgnore`, naming strategies, a named mapper) are removed. Input conversion is not configurable through a public bean until #37 replaces it. | none | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion. It is not supported. | New in 1.0.0-M2. Not covered by #79 |
 
 ## Other behaviour changes since 1.0.0-M1
 

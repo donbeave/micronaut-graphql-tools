@@ -14,7 +14,7 @@ Tagged `1.0.0-M2` and published to GitHub Packages. The breaking changes are num
 
 == Planned after 1.0.0-M2
 
-These changes are planned for the milestones of the tracker. Each one is _pending_ until it lands on `master`; the migration page describes each one.
+These changes are planned for the 1.0.0 milestones. Each one is _pending_ until it lands on `master`; the migration page describes each one.
 
 === 1.0.0-M3
 
