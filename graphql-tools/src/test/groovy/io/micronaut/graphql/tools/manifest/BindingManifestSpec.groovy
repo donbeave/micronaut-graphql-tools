@@ -450,10 +450,9 @@ type Book {
         startContext(SCHEMA, SPEC_NAME, CONFIG + ['micronaut.graphql.tools.manifest.enabled': true])
 
         then:
-        def lines = applicationContext.getBean(BindingManifest).lines
         appender.list*.level == [Level.INFO]
         appender.list*.formattedMessage == [
-                "GraphQL binding manifest: ${lines.size()} lines, ${lines.count { it.startsWith('!') }} findings. "
+                'GraphQL binding manifest recorded. '
                         + 'Set micronaut.graphql.tools.manifest.path to write it to a file, or enable DEBUG for '
                         + 'io.micronaut.graphql.tools.BindingManifestWriter to log its lines.'
         ]

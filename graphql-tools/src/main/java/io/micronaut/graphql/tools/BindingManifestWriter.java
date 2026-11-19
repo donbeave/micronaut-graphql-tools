@@ -52,9 +52,9 @@ public final class BindingManifestWriter implements ApplicationEventListener<Sta
     public void onApplicationEvent(StartupEvent event) {
         BindingManifest manifest = bindingManifest.get();
         if (configuration.getPath() == null) {
-            LOG.info("GraphQL binding manifest: {} lines, {} findings. Set {}.path to write it to a file, or enable DEBUG "
-                            + "for {} to log its lines.", manifest.getLines().size(), manifest.getDiagnostics().size(),
-                    GraphQLToolsConfiguration.PREFIX + ".manifest", BindingManifestWriter.class.getName());
+            LOG.info("GraphQL binding manifest recorded. Set {}.path to write it to a file, or enable DEBUG for {} to log "
+                            + "its lines.", GraphQLToolsConfiguration.PREFIX + ".manifest",
+                    BindingManifestWriter.class.getName());
             if (LOG.isDebugEnabled()) {
                 LOG.debug("GraphQL binding manifest:\n{}", manifest.render());
             }
