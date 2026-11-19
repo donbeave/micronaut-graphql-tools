@@ -14,6 +14,11 @@ tasks.matching { it.name in compileTimeTasks }.configureEach {
     doFirst { started.set(System.nanoTime()) }
     doLast {
         val millis = (System.nanoTime() - started.get()) / 1_000_000
-        report.get().asFile.apply { parentFile.mkdirs() }.appendText("$taskName $millis\n")
+        // A report must never fail the build it measures.
+        try {
+            report.get().asFile.apply { parentFile.mkdirs() }.appendText("$taskName $millis\n")
+        } catch (e: java.io.IOException) {
+            logger.warn("compile time not recorded for $taskName: ${e.message}")
+        }
     }
 }
