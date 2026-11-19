@@ -78,6 +78,7 @@ Most of this section does not exist yet; `internal`, `internal.registry`, `inter
 |`io.micronaut.graphql.tools.internal.wiring` |Internal |The runtime wiring generator and the directive wirings
 |`io.micronaut.graphql.tools.internal.resolver` |Internal |The data fetchers and the type resolvers
 |`io.micronaut.graphql.tools.internal.input` |Internal |Input binding and the value conversion
+|`io.micronaut.graphql.tools.internal.discovery` |Internal |Schema discovery
 |`io.micronaut.graphql.tools.internal.checks` |Internal |The strict checks and the validators
 |`io.micronaut.graphql.tools.internal.manifest` |Internal |Recording and writing the binding manifest
 |===

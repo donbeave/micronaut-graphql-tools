@@ -12,8 +12,8 @@ Start with the guide: `src/main/docs/guide/quickStart.adoc` and `binding.adoc`.
 
 ## Responsibility
 
-- Schema discovery (`schema/SchemaDiscovery`) and the runtime wiring that connects fields to beans
-  (`GraphQLRuntimeWiringGenerator`, `RuntimeWiringCustomizers`, the data fetchers in `schema/`).
+- Schema discovery (`internal.discovery.SchemaDiscovery`) and the runtime wiring that connects fields to beans
+  (`GraphQLRuntimeWiringGenerator`, `RuntimeWiringCustomizers`, the data fetchers in `internal.resolver`).
 - The strict checks and the startup failures, which are reported as the exceptions of `io.micronaut.graphql.tools.exceptions`.
 - Recording the binding manifest (`BindingManifestRecorder`, `BindingManifestWriter`).
 - The Micronaut integration: `GraphQLFactory` builds the `GraphQL` bean, and the `processor/` package holds the method
