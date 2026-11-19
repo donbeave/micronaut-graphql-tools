@@ -42,7 +42,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-29 one precedence rule (#105) | The value `strict` of `micronaut.graphql.tools.precedence` is named `fail` and `strict` is rejected with `[removed-configuration-key]`. A type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate` wins over a getter or a `@GraphQLField` method, for object and interface fields, whatever the setting is. | Write `precedence: fail`, or delete the line (it is the default). To let a resolver win for one field, declare its coordinate or put a resolver directive on the field.
 | #109 public exceptions | _Pending._ The startup exception subclasses become internal behind `SchemaBindingException`, which already carries the code (BC-22). | Match on the error code, not on the exception subclass.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
-| #236 ambiguity exception | _Pending._ `AmbiguousBindingException` becomes internal. | Match on the error code.
+| #236 ambiguity exception | _Pending._ `AmbiguousBindingException` becomes internal with #109. The code, the coordinate and both members stay in the message. | Match on `SchemaBindingException#code()` (`precedence-ambiguity`).
 | #291 processor options | _Pending._ The JSR-269 options are replaced by `micronaut.graphql.tools.processor.schema.dirs` and `micronaut.graphql.tools.processor.checks`. | Rename the options; the old `sdlDir` option will name its replacement.
 |===
 
@@ -673,7 +673,7 @@ Startup failures collapse into one public `SchemaBindingException` with a stable
 
 === #236: the ambiguity exception
 
-`AmbiguousBindingException` becomes internal. Match on the code `precedence-ambiguity`, which is on `master` since BC-22.
+`AmbiguousBindingException` becomes internal with #109. Match on the code `precedence-ambiguity`, which is on `master` since BC-22; the message keeps naming the field coordinate and both members.
 
 === #144 and #291: the compile-time processor
 
