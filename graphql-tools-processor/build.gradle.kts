@@ -42,7 +42,7 @@ tasks.withType<Test>().configureEach {
     maxHeapSize = "2g"
     // every in-process compilation and application context loads classes that stay until the JVM ends; the default 1 GB of compressed
     // class space ran out at about 230 cases
-    jvmArgs("-XX:CompressedClassSpaceSize=3g", "-XX:MaxMetaspaceSize=3g")
+    jvmArgs("-XX:CompressedClassSpaceSize=3g", "-XX:MaxMetaspaceSize=6g")
     // the Kotlin batch is its own task (corpusKotlin): it needs the network and has its own budget
     systemProperty("corpus.dir", corpusDir.asFile.absolutePath)
     systemProperty("corpus.report", layout.buildDirectory.file("corpus/timings.txt").get().asFile.absolutePath)
