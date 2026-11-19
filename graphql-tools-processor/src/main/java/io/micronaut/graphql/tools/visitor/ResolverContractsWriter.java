@@ -43,11 +43,19 @@ final class ResolverContractsWriter {
     private ResolverContractsWriter() {
     }
 
-    /** @return whether the class is a bean that is a type resolver, directly or through a supertype */
+    /**
+     * @param element a class
+     * @return whether the class is a bean that is a type resolver, directly or through a supertype
+     */
     static boolean applies(ClassElement element) {
         return element.hasStereotype(AnnotationNames.TYPE_RESOLVER) && ElementTypeModel.isBeanClass(element);
     }
 
+    /**
+     * Writes the contracts of the class, when it has any.
+     *
+     * @param element a class for which {@link #applies} holds
+     */
     static void write(ClassElement element) {
         // contract binary name -> model class name
         TreeMap<String, String> contracts = new TreeMap<>();
