@@ -13,32 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.schema;
+package io.micronaut.graphql.tools.internal.resolver;
 
 import graphql.TrivialDataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanProperty;
 
 /**
+ * Reads one field from the {@link BeanProperty} that the binding resolved for it at startup: no lookup by name and no
+ * {@code Optional} per request.
+ *
  * @author Alexey Zhokhov
  */
 @Internal
-public final class MicronautIntrospectionDataFetcher implements TrivialDataFetcher<Object> {
+public final class MicronautPropertyDataFetcher implements TrivialDataFetcher<Object> {
 
-    private final BeanIntrospection<Object> beanIntrospection;
+    private final BeanProperty<Object, Object> property;
 
-    public MicronautIntrospectionDataFetcher(BeanIntrospection<Object> beanIntrospection) {
-        this.beanIntrospection = beanIntrospection;
+    public MicronautPropertyDataFetcher(BeanProperty<Object, Object> property) {
+        this.property = property;
     }
 
     @Override
     public Object get(DataFetchingEnvironment environment) {
-        String fieldName = environment.getField().getName();
-
-        BeanProperty<?, Object> property = beanIntrospection.getProperty(fieldName).get();
-
         return property.get(environment.getSource());
     }
 

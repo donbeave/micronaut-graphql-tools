@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.schema;
+package io.micronaut.graphql.tools.internal.resolver;
 
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
@@ -33,6 +33,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import io.micronaut.graphql.tools.internal.input.InputConversionException;
+import io.micronaut.graphql.tools.internal.input.ValueConverter;
+import io.micronaut.graphql.tools.internal.input.ValueConverters;
 
 /**
  * @author Alexey Zhokhov

@@ -13,14 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * The runtime machinery that turns resolver beans into graphql-java wiring: the schema discovery, the data fetchers,
- * the type resolvers and the conversion of argument and input values.
- *
- * <p><b>Audience.</b> Internal. Not part of the API; do not import it. It is being split by responsibility and moved
- * under {@code io.micronaut.graphql.tools.internal} (see the guide page "API Map").</p>
- */
-@Internal
-package io.micronaut.graphql.tools.schema;
+package io.micronaut.graphql.tools.internal.resolver;
 
-import io.micronaut.core.annotation.Internal;
+final class MostSpecificFixture {
+
+    private MostSpecificFixture() {
+    }
+
+    public static class Base {
+    }
+
+    public static class Entity extends Base {
+    }
+
+    public static class Proxy extends Entity {
+    }
+
+    public interface Left {
+    }
+
+    public interface Right {
+    }
+
+    public static class OnlyLeft implements Left {
+    }
+
+    public static class OnlyRight implements Right {
+    }
+
+    public static class Both implements Left, Right {
+    }
+
+}

@@ -17,7 +17,7 @@ package example.discovery;
 
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
-import io.micronaut.graphql.tools.schema.SchemaDiscovery;
+import io.micronaut.graphql.tools.internal.discovery.SchemaDiscovery;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

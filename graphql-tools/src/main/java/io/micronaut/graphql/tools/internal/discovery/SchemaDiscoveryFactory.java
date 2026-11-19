@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.internal;
+package io.micronaut.graphql.tools.internal.discovery;
 
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.BeanContext;
@@ -23,7 +23,6 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
-import io.micronaut.graphql.tools.schema.SchemaDiscovery;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

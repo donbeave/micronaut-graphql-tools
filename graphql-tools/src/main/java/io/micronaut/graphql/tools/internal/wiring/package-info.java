@@ -13,18 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.schema;
-
-import io.micronaut.core.annotation.Internal;
-
-import java.util.function.Supplier;
-
 /**
- * A resolver whose bean is looked up for every call because its scope is not a singleton.
+ * The graphql-java wiring factory that gives each field its data fetcher and each interface or union its type resolver.
  *
- * @param supplier the lookup
- * @author Alexey Zhokhov
+ * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: DefaultWiringFactory.</p>
  */
 @Internal
-public record PerCallResolver(Supplier<Object> supplier) {
-}
+package io.micronaut.graphql.tools.internal.wiring;
+
+import io.micronaut.core.annotation.Internal;

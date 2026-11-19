@@ -28,7 +28,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.internal.exceptions.AmbiguousAbstractTypeException;
 import io.micronaut.graphql.tools.internal.exceptions.IncorrectMemberMappingException;
 import io.micronaut.graphql.tools.internal.exceptions.UnionTypeMappingNotProvidedException;
-import io.micronaut.graphql.tools.schema.AbstractTypeResolver;
+import io.micronaut.graphql.tools.internal.resolver.AbstractTypeResolver;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
