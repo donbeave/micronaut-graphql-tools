@@ -316,8 +316,14 @@ public final class GraphQLResolversRegistry {
         return contracts;
     }
 
-    // Runs only when the build recorded no contracts, never on a bound bean.
-    private static boolean inheritsTypeResolver(Class<?> beanType) {
+    // Runs only when the build recorded no contracts, never on a bound bean. It reads no annotation by reflection: a
+    // supertype that carries the annotation has a bean definition of its own (abstract), which the processor of the
+    // type resolver methods has seen, so the walk over the plain supertype API only compares types with those.
+    private boolean inheritsTypeResolver(Class<?> beanType) {
+        Set<Class<?>> annotated = new HashSet<>();
+        for (BeanDefinition<?> seen : seenTypeResolvers) {
+            annotated.add(seen.getBeanType());
+        }
         Deque<Class<?>> types = new ArrayDeque<>();
         addSupertypes(beanType, types);
         Set<Class<?>> visited = new HashSet<>();
@@ -326,7 +332,7 @@ public final class GraphQLResolversRegistry {
             if (!visited.add(type)) {
                 continue;
             }
-            if (type.isAnnotationPresent(GraphQLTypeResolver.class)) {
+            if (annotated.contains(type)) {
                 return true;
             }
             addSupertypes(type, types);
