@@ -21,6 +21,7 @@ import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.domain.JavaCodeUnit
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaMember
+import com.tngtech.archunit.core.domain.JavaMethod
 import com.tngtech.archunit.core.domain.JavaModifier
 import com.tngtech.archunit.core.domain.JavaCodeUnitAccess
 import com.tngtech.archunit.core.importer.ClassFileImporter
@@ -60,7 +61,7 @@ class ArchitectureRulesSpec extends Specification {
             'getDeclaredConstructor', 'getDeclaredConstructors', 'getAnnotation', 'getAnnotations', 'isAnnotationPresent', 'getDeclaredAnnotation',
             'getDeclaredAnnotations', 'getAnnotationsByType', 'getDeclaredAnnotationsByType', 'getEnumConstants',
             'getRecordComponents', 'getClasses', 'getDeclaredClasses', 'getPermittedSubclasses', 'getEnclosingMethod',
-            'getEnclosingConstructor', 'getGenericSuperclass', 'getGenericInterfaces',
+            'getEnclosingConstructor', 'getGenericSuperclass', 'getTypeParameters', 'getGenericInterfaces',
     ] as Set
 
     @Shared JavaClasses classes = new ClassFileImporter()
@@ -146,12 +147,28 @@ class ArchitectureRulesSpec extends Specification {
 
     private static DescribedPredicate<JavaClass> publicApi() {
         DescribedPredicate.describe('public API classes: public, not @Internal, not generated, not in an internal package', { JavaClass c ->
-            visible(c) && !generated(c) && !isInternal(c) && !isInternal(c.enclosingClass.orElse(null))
+            visible(c) && !generated(c) && !internalChain(c)
         })
     }
 
     private static boolean visible(JavaClass c) {
-        c.modifiers.contains(JavaModifier.PUBLIC) && (!c.enclosingClass.present || visible(c.enclosingClass.get()))
+        c.enclosingClass.present
+                ? (c.modifiers.contains(JavaModifier.PUBLIC) || c.modifiers.contains(JavaModifier.PROTECTED)) && visible(c.enclosingClass.get())
+                : c.modifiers.contains(JavaModifier.PUBLIC)
+    }
+
+    private static boolean internalChain(JavaClass c) {
+        isInternal(c) || (c.enclosingClass.present && internalChain(c.enclosingClass.get()))
+    }
+
+    private static List<JavaClass> classLiterals(Object value) {
+        if (value instanceof JavaClass) {
+            return [(JavaClass) value]
+        }
+        if (value instanceof Object[]) {
+            return ((Object[]) value).toList().collectMany { classLiterals(it) }
+        }
+        []
     }
 
     private static boolean generated(JavaClass c) {
@@ -178,6 +195,9 @@ class ArchitectureRulesSpec extends Specification {
                 members.addAll(item.constructors)
                 members.findAll { m -> m.modifiers.any { it.name() in ['PUBLIC', 'PROTECTED'] } }.each { JavaMember m ->
                     Set<JavaClass> types = m instanceof JavaField ? m.type.allInvolvedRawTypes : (((JavaCodeUnit) m).allInvolvedRawTypes + ((JavaCodeUnit) m).throwsClause.types.collectMany { it.allInvolvedRawTypes })
+                    if (m instanceof JavaMethod) {
+                        m.defaultValue.ifPresent { types.addAll(classLiterals(it)) }
+                    }
                     types.findAll { isInternal(it) }.each { JavaClass t ->
                         events.add(SimpleConditionEvent.violated(m, "${m.fullName} exposes the internal type ${t.name}"))
                     }
