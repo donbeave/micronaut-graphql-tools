@@ -86,6 +86,23 @@ class MultiModuleGradleSampleTest extends GradleSampleContract {
         Expect.diagnostic(failed.getOutput(), "processor-schema-not-configured", "-");
     }
 
+    /**
+     * The module that forgot the option is built after a module that set it, in the same Gradle daemon: it must fail with its own
+     * name and not be checked against the schema directory of the module before it.
+     */
+    @Test
+    void aMissingOptionIsNotFilledInByAnEarlierModuleOfTheSameBuild() {
+        GradleSample sample = GradleSample.copyOf(sample(), "missing-option-after-module");
+        Files.removeTagged(sample.file(buildFile()), "schema-dirs");
+
+        BuildResult failed = sample.buildAndFail(AUTHORS, BOOKS);
+
+        assertEquals(TaskOutcome.SUCCESS, GradleSample.outcome(failed, AUTHORS), "the module that set the option is checked");
+        assertEquals(TaskOutcome.FAILED, GradleSample.outcome(failed, BOOKS));
+        Expect.diagnostic(failed.getOutput(), "processor-schema-not-configured", "-");
+        assertTrue(failed.getOutput().contains("books"), "the error names the module:\n" + failed.getOutput());
+    }
+
     @Test
     void everyModuleCompilesAndTheApplicationStarts() {
         GradleSample sample = GradleSample.copyOf(sample(), "start");

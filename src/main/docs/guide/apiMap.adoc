@@ -58,7 +58,7 @@ Kotlin and Groovy sources need no `package-info`; the library modules are Java.
 [[plannedLayout]]
 == Planned layout
 
-Nothing in this section exists yet. It is the target of the package structure work, which lands as small changes, one area at a time, so that it does not collide with other work. Each public type that moves gets an entry in <<breaks,Breaking Changes>> and in the migration page.
+Most of this section does not exist yet; `internal` and `internal.registry` do. It is the target of the package structure work, which lands as small changes, one area at a time, so that it does not collide with other work. Each public type that moves gets an entry in <<breaks,Breaking Changes>> and in the migration page.
 
 [cols="5,2,6", options="header"]
 |===
