@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.internal;
 
 import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.schema.PerCallResolver;
+import io.micronaut.graphql.tools.internal.resolver.PerCallResolver;
 import io.micronaut.inject.BeanDefinition;
 
 /**

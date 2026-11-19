@@ -17,7 +17,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-04 `@Inherited` resolver stereotypes | A subclass of a resolver bean is a resolver too, which can make two resolvers bind one field. | Annotate the subclass with `@Replaces(<original>.class)`.
 | BC-05 interface with its own introspection | A getter that only an implementation declares no longer binds. Startup fails. | Declare the getter on the interface.
 | BC-06 member mapped outside the declared Java type | Startup fails when a union member or implementation maps to a Java type that cannot be the field's Java interface. | Map the member to a class that fits the field's declared Java interface.
-| BC-07 `UnionTypeResolver` renamed | The class no longer exists. | Use `AbstractTypeResolver` from `io.micronaut.graphql.tools.schema`.
+| BC-07 `UnionTypeResolver` renamed | The class no longer exists. | Use `AbstractTypeResolver` from `io.micronaut.graphql.tools.internal.resolver`.
 | BC-08 input class properties | Startup fails for a settable property that the input type does not define, and for an input field the class cannot set. | Add the field to the input type or remove the property. Make the field settable. The unmapped-property part can be accepted with `checks.unmapped-input-property: warn` or `ignore`.
 | BC-09 primitive for a nullable scalar | In strict mode, startup fails for `int` for a nullable `Int`. | Use the wrapper class, or make the GraphQL type non-null. Or set `strict: false`.
 | BC-10 `GraphQL` bean | The library creates its `GraphQL` bean only when the application has none. | Define your own `GraphQL` bean, or change the library's one with `GraphQLBuilderCustomizer`.
@@ -180,7 +180,7 @@ Status: approved, no opt-out; narrowed to provably disjoint mappings.
 
 === BC-07: `UnionTypeResolver` renamed to `AbstractTypeResolver`
 
-The public class `UnionTypeResolver` is renamed to `AbstractTypeResolver`, in package `io.micronaut.graphql.tools.schema`. Dictionary error messages changed too.
+The public class `UnionTypeResolver` is renamed to `AbstractTypeResolver`, in package `io.micronaut.graphql.tools.internal.resolver`. Dictionary error messages changed too.
 
 Fix: rename the type in imports and in every reference.
 
@@ -190,7 +190,7 @@ Fix: rename the type in imports and in every reference.
 import io.micronaut.graphql.tools.schema.UnionTypeResolver;
 
 // After
-import io.micronaut.graphql.tools.schema.AbstractTypeResolver;
+import io.micronaut.graphql.tools.internal.resolver.AbstractTypeResolver;
 ----
 
 === BC-08: input class properties

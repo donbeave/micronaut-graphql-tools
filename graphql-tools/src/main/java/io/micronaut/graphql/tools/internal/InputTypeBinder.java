@@ -46,10 +46,10 @@ import io.micronaut.graphql.tools.internal.exceptions.IncorrectClassMappingExcep
 import io.micronaut.graphql.tools.internal.exceptions.InputFieldNotSettableException;
 import io.micronaut.graphql.tools.internal.exceptions.MethodNotFoundException;
 import io.micronaut.graphql.tools.internal.exceptions.UnsupportedInputTypeException;
-import io.micronaut.graphql.tools.schema.InputConversionException;
-import io.micronaut.graphql.tools.schema.InputObjectConverter;
-import io.micronaut.graphql.tools.schema.ValueConverter;
-import io.micronaut.graphql.tools.schema.ValueConverters;
+import io.micronaut.graphql.tools.internal.input.InputConversionException;
+import io.micronaut.graphql.tools.internal.input.InputObjectConverter;
+import io.micronaut.graphql.tools.internal.input.ValueConverter;
+import io.micronaut.graphql.tools.internal.input.ValueConverters;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

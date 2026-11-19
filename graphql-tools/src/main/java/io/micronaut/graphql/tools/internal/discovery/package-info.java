@@ -13,35 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.schema;
+/**
+ * Schema discovery: finds the schema files of micronaut.graphql.tools.schema.locations and merges them into the type definition registry.
+ *
+ * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: SchemaDiscovery, SchemaDiscoveryFactory.</p>
+ */
+@Internal
+package io.micronaut.graphql.tools.internal.discovery;
 
-final class MostSpecificFixture {
-
-    private MostSpecificFixture() {
-    }
-
-    public static class Base {
-    }
-
-    public static class Entity extends Base {
-    }
-
-    public static class Proxy extends Entity {
-    }
-
-    public interface Left {
-    }
-
-    public interface Right {
-    }
-
-    public static class OnlyLeft implements Left {
-    }
-
-    public static class OnlyRight implements Right {
-    }
-
-    public static class Both implements Left, Right {
-    }
-
-}
+import io.micronaut.core.annotation.Internal;

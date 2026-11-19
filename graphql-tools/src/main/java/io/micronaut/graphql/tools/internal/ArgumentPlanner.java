@@ -27,7 +27,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules.Sche
 import io.micronaut.graphql.tools.internal.exceptions.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.internal.exceptions.IncorrectArgumentNameException;
 import io.micronaut.graphql.tools.internal.exceptions.InvalidSourceArgumentException;
-import io.micronaut.graphql.tools.schema.ValueConverter;
+import io.micronaut.graphql.tools.internal.input.ValueConverter;
 
 import java.util.ArrayList;
 import java.util.List;

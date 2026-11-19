@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.schema
+package io.micronaut.graphql.tools.internal.input
 
 import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules
 import spock.lang.Specification
