@@ -16,6 +16,9 @@
 package io.micronaut.graphql.tools;
 
 /**
+ * Registers type mappings in the {@link SchemaMappingDictionary}. An application may define any number of these beans;
+ * all of them run, in {@code @Order}, on one dictionary, and a type that two of them map fails the startup.
+ *
  * @author Alexey Zhokhov
  */
 public interface SchemaMappingDictionaryCustomizer {

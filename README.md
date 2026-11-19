@@ -1002,7 +1002,8 @@ union or interface resolves are errors of the request, reported by graphql-java.
 
 GraphQL interfaces and union types often have multiple concrete implementations.
 
-Define a `SchemaMappingDictionaryCustomizer` bean to register custom types if any.
+Define a `SchemaMappingDictionaryCustomizer` bean to register custom types if any. You may define several, for example one
+per module: all of them run, in `@Order`, on one dictionary. A GraphQL type that two of them map fails the startup.
 
 In the example below, the `SchemaMappingDictionaryCustomizer` bean is used to register the Java classes of the members of the `Error` union type. This associates the GraphQL types `SecurityError` and `ValidationError` with their respective Java implementations (`SecurityError.class` and `ValidationError.class`).
 
