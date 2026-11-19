@@ -41,5 +41,5 @@ A route that declares its own `@ExecuteOn` keeps that executor. This was verifie
 * It does not change the GraphQL invocation itself. The library still relies on the upstream `GraphQLInvocation`.
 * It does not measure cost. The throughput, latency and allocation effect of moving operations to the blocking executor is not measured. No performance gain or loss is claimed.
 * Its effect on the WebSocket endpoints is not verified.
-* It does not scope DataLoaders per execution, and it does not fix the `connection_init` payload handling. These are reported in the decision brief for issue #31 and are not re-verified here.
-* It does not fix the `graphql-transport-ws` failure on Micronaut core 4.10.16 (close code 1011). That is tracked upstream as micronaut-graphql issue 718 and is also reported in the decision brief for issue #31, not re-verified here.
+* It does not scope DataLoaders per execution, and it does not fix the `connection_init` payload handling. These are reported in issue #31 and are not re-verified here.
+* It does not fix the `graphql-transport-ws` failure on Micronaut core 4.10.16 (close code 1011). The cause is upstream, in the micronaut-graphql module, and it is also reported in issue #31, not re-verified here.

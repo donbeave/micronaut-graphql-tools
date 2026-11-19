@@ -1,6 +1,6 @@
 [versions]
 # Build-tool inputs, not dependency pins: micronaut-build reads `micronaut` (core BOM) and `micronaut-test` for the `mn` and
-# `mnTest` catalogs, the Micronaut Gradle plugin reads `micronaut-platform`. D-34, D-41.
+# `mnTest` catalogs, the Micronaut Gradle plugin reads `micronaut-platform`.
 micronaut = "4.10.37"
 micronaut-platform = "4.10.24"
 micronaut-docs = "3.0.0"
@@ -24,7 +24,7 @@ graphql-java-datetime = "6.0.0"
 # the floor and ceiling legs
 graphql-java-extended-validation = "22.0"
 
-# graphql-java legs (D-35), selected with -PgraphqlJavaLeg, see build.gradle.kts. The default leg pins nothing: graphql-java
+# graphql-java legs, selected with -PgraphqlJavaLeg, see build.gradle.kts. The default leg pins nothing: graphql-java
 # is whatever micronaut-graphql manages (22.4 for 4.8.0), the libraries above go with it. `latest` resolves the newest release
 # of each library, see build.gradle.kts (the canary only).
 # floor: the oldest supported line

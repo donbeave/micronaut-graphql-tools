@@ -55,7 +55,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
 
     // The finding that a check of one class cannot prove: another class can make a class introspected with
     // @Introspected(classes) or (packages), and so can a dependency, and an isolating visitor sees neither. An error here
-    // would be a compile error where the startup passes (DD-4), so it is a warning, and the startup decides.
+    // would be a compile error where the startup passes, so it is a warning, and the startup decides.
     private static final String UNPROVEN = BindingCode.CLASS_NOT_INTROSPECTED.code();
 
     @Nullable

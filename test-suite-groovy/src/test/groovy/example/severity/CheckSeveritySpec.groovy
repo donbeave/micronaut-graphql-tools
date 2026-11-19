@@ -25,7 +25,7 @@ import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
 import spock.lang.Specification
 
-// The Groovy suite runs on the JVM (D-38): the schema has a type that no field returns, and the severity settings
+// The Groovy suite runs on the JVM: the schema has a type that no field returns, and the severity settings
 // decide whether the startup fails.
 class CheckSeveritySpec extends Specification {
 

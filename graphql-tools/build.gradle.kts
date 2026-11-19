@@ -64,4 +64,8 @@ tasks.named<Test>("test") {
     inputs.files(repositoryRoot.asFileTree.matching { include("src/main/docs/guide/**", "test-suite-*/src/main/**", "test-suite-*/src/test/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsSources")
+    // NoPlanningReferencesSpec reads every text file of the tree, so any edit to the tree re-runs it.
+    inputs.files(repositoryRoot.asFileTree.matching { exclude("**/build/**", "**/.git/**", "**/.gradle/**") })
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("planningReferenceScan")
 }

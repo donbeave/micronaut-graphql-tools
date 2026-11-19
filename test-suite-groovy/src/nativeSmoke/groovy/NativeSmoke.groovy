@@ -22,7 +22,7 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 // Starts the native executable (args[0]), posts the queries of GraphQLSmokeSpec and of the Java and Kotlin smoke tests to
-// /graphql, asserts the response bodies and stops the process. Spock cannot run natively (D-38), so this runs on the JVM.
+// /graphql, asserts the response bodies and stops the process. Spock cannot run natively, so this runs on the JVM.
 File executable = new File(args[0])
 int port
 new ServerSocket(0).withCloseable { port = it.localPort }

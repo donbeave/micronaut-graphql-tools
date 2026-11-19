@@ -19,7 +19,7 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources
 import io.micronaut.graphql.tools.schema.SchemaDiscovery
 import spock.lang.Specification
 
-// The Groovy suite runs on the JVM (D-38); the schema index is the one the graphqlSchemaIndex task writes at build time.
+// The Groovy suite runs on the JVM; the schema index is the one the graphqlSchemaIndex task writes at build time.
 class SchemaDiscoverySpec extends Specification {
 
     static final List<String> LOCATIONS = ['classpath:discovery/**/*.graphqls']

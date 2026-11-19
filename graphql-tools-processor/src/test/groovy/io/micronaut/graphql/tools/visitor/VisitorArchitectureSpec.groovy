@@ -42,7 +42,7 @@ import java.util.stream.Collectors
 import java.util.stream.Stream
 
 /**
- * What the visitor must not do (D-39, DD-9 and 2.7), as a test: the lookups and the files that break Gradle's isolating
+ * What the visitor must not do as a test: the lookups and the files that break Gradle's isolating
  * contract, static state, file writes, reflection and the runtime keys. The sources are parsed with the compiler's tree API,
  * not read as text, so that formatting, a call on a branch no test reaches or a declaration over several lines cannot hide
  * a violation; the last feature proves that each rule fails on a source that breaks it.
