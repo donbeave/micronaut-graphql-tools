@@ -759,7 +759,7 @@ public final class GraphQLRuntimeWiringGenerator {
                 .filter(it -> !isIgnored(it, BindingManifestRecorder.propertyMember(it)))
                 .toList();
         List<BeanMethod<Object, ?>> beanMethods = members.methods(fieldDefinition.getName()).stream()
-                .filter(it -> !isIgnored(it, BindingManifestRecorder.introspectedMethodMember(it,
+                .filter(it -> !isIgnored(it, BindingManifestRecorder.methodMember(it,
                         beanIntrospection.getBeanType())))
                 .collect(Collectors.toList());
 

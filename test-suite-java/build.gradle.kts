@@ -65,38 +65,56 @@ apollo {
     }
 }
 
+// The compile-time checks (#291): the processor registers the visitor, which checks the resolver classes against the schema while
+// they compile. The schema directory is a declared input of the compilation, so that a schema edit recompiles. `module.dir` is the
+// project directory: a compilation that forgot the options in the same JVM fails instead of reading these.
 dependencies {
     annotationProcessor(projects.micronautGraphqlToolsProcessor)
 }
 
-abstract class GraphQLSchemaDir : CommandLineArgumentProvider {
-    @get:InputDirectory
+abstract class GraphQLSchemaDirs : CommandLineArgumentProvider {
+    @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val dir: DirectoryProperty
+    abstract val dirs: ConfigurableFileCollection
 
-    override fun asArguments() = listOf("-Amicronaut.graphql.tools.sdlDir=${dir.get().asFile.absolutePath}")
+    @get:Internal
+    abstract val moduleDir: DirectoryProperty
+
+    override fun asArguments() = listOf(
+        "-Amicronaut.graphql.tools.processor.schema.dirs=" + dirs.files.joinToString(File.pathSeparator) { it.absolutePath },
+        "-Amicronaut.graphql.tools.processor.module.dir=" + moduleDir.get().asFile.absolutePath)
 }
 
+val graphqlSchemaDirs = files("src/main/resources")
+
 tasks.named<JavaCompile>("compileJava") {
-    options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDir>().apply {
-        dir.set(layout.projectDirectory.dir("src/main/resources"))
+    options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDirs>().apply {
+        dirs.from(graphqlSchemaDirs)
+        moduleDir.set(layout.projectDirectory)
     })
 }
 
-val checkBindingManifest by tasks.registering {
-    val manifest = tasks.named<JavaCompile>("compileJava")
-            .flatMap { it.destinationDirectory.file("META-INF/micronaut-graphql-tools/binding-manifest.txt") }
-    val marker = layout.buildDirectory.file("checks/binding-manifest.ok")
-    inputs.files(tasks.named("compileJava"))
-    outputs.file(marker)
-    doLast {
-        if (!manifest.get().asFile.isFile) {
-            throw GradleException("The GraphQL compile-time checks did not run: ${manifest.get().asFile} is missing.")
-        }
-        marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
-    }
+// A class that drifts from the schema on purpose, compiled with the processor and the options of `main`: driftFixtureTest asserts
+// that the compilation fails with the expected `[code] coordinate` line.
+val driftFixture: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
 }
-tasks.named("check") { dependsOn(checkBindingManifest) }
+configurations {
+    named(driftFixture.implementationConfigurationName) { extendsFrom(implementation.get()) }
+    named(driftFixture.annotationProcessorConfigurationName) { extendsFrom(annotationProcessor.get()) }
+}
+tasks.named<JavaCompile>(driftFixture.compileJavaTaskName) {
+    options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDirs>().apply {
+        dirs.from(graphqlSchemaDirs)
+        moduleDir.set(layout.projectDirectory)
+    })
+}
+extra["driftCompileTask"] = driftFixture.compileJavaTaskName
+extra["driftFailingTask"] = driftFixture.compileJavaTaskName
+extra["driftInputs"] = files(fileTree("src/driftFixture"), driftFixture.compileClasspath, driftFixture.annotationProcessorPath,
+    graphqlSchemaDirs)
+apply(from = rootProject.file("config/drift-fixture.gradle.kts"))
 
 // The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x.
 configurations.configureEach {

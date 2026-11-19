@@ -136,6 +136,13 @@ tasks.named<Test>("test") {
     inputs.files(legacySpecs.asFileTree).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("legacySpecs")
 }
 
+// RegistrationSpec opens the jar of this module: it holds the service file of the visitor and no other registration (#291).
+tasks.named<Test>("test") {
+    val jar = tasks.named<Jar>("jar")
+    inputs.files(jar).withPropertyName("processorJar")
+    systemProperty("processor.jar", jar.get().archiveFile.get().asFile.absolutePath)
+}
+
 // VisitorArchitectureSpec reads the sources of the visitor behind Gradle's back.
 tasks.named<Test>("test") {
     val visitorSources = layout.projectDirectory.dir("src/main/java/io/micronaut/graphql/tools/visitor")

@@ -133,7 +133,7 @@ missing. A wildcard needs a directory before it. Several locations are read in o
 - **Failures.** A file that does not parse or conflicts with another, a location that names a missing file, and locations
   that match no file at all fail the startup: code `schema-invalid` for a file that does not parse or conflicts, `schema-not-found` for the rest. The message names the file or the locations.
 - **Compile time.** The processor reads the same `*.graphqls` files with the same code from its schema directory
-  (`micronaut.graphql.tools.sdlDir`, see [Compile-time checks](#compile-time-checks)): several directories may be listed
+  (`micronaut.graphql.tools.processor.schema.dirs`, see [Compile-time checks](#compile-time-checks)): several directories may be listed
   with the platform path separator. It cannot read classpath locations, so schema that comes from a dependency jar is
   not checked at compile time; point the directory option at a copy of it, or accept that the startup checks it.
 
@@ -382,8 +382,7 @@ methods that do bind, and two methods that declare one coordinate fail with `mul
 method of a bean without coordinates named `getX` or `isX` (an upper-case letter after the prefix) also binds the field
 `x`, besides the field named like the method. That lets resolvers written for other tools (`getAuthor(Book)`) bind
 without renaming. `getAuthor` and `author` in one class both bind `author` and fail the startup. Off, `getAuthor`
-binds the field `getAuthor` only. The compile-time checks read `micronaut.graphql.tools.processor.resolverAccessorPrefixes`
-(the visitor) or `micronaut.graphql.tools.resolverAccessorPrefixes` (the JSR-269 processor): set it in the build when the
+binds the field `getAuthor` only. The compile-time checks read `micronaut.graphql.tools.processor.resolverAccessorPrefixes`: set it in the build when the
 runtime key is set, so that the checks judge the arguments and the return type of those methods. Without it they leave
 a method that only a prefix could bind unreported.
 
@@ -606,7 +605,7 @@ A member that binds no field on purpose does not need to relax a check for the w
   `@PreDestroy` on a resolver bean is not reported as unbound. It still binds a field if it has that field's name.
 - **`allow.findings`** accepts one finding by its manifest line, see [Allow lists](#allow-lists).
 
-The compile-time visitor in `micronaut-graphql-tools-processor` reads the same annotations and applies the same rules, so a build and the startup agree. The visitor is not yet the default processor (#291): the JSR-269 processor that the build still runs does not read `@GraphQLIgnore` and does not exclude lifecycle methods.
+The compile-time visitor in `micronaut-graphql-tools-processor` reads the same annotations and applies the same rules, so a build and the startup agree.
 
 `strict: false` does not change `precedence`: with the default `fail` precedence, a field that both a getter and a
 type resolver can bind still fails the startup (`[precedence-ambiguity]`).
@@ -835,15 +834,21 @@ micronaut:
 
 ## Compile-time checks
 
-The `micronaut-graphql-tools-processor` annotation processor reads the schema files at compile time and fails `javac`
-on drift that the startup would report, so that it fails the build instead. Each error starts with `[graphql]` and the
-schema coordinate, ends with the schema file and line, and is reported on the Java element where there is one:
+The `micronaut-graphql-tools-processor` module registers a Micronaut `TypeElementVisitor`
+(`io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor`) that reads the schema files while the application compiles and
+fails the build on drift that the startup would report. The visitor is isolating: it checks each resolver class on its own
+with the rules of the startup, so an incremental compilation checks the classes that changed. Each error starts with the
+code of the check and the schema coordinate, and names the schema file and line:
 
 ```
-error: [graphql] Report: the object type is unreachable: no field reachable from a root operation type returns it. Use it, remove it from the schema, or list it in micronaut.graphql.tools.allowUnreachable. (schema.graphqls:9)
+error: [argument-mismatch] Query.searchProfile: the parameter count binds no argument of Query.searchProfile (arguments: contains, limit).
+    at example.drift.DriftedSearchProfileQuery#searchProfile(java.lang.String,java.lang.Integer)
+    schema src/main/resources/schema.graphqls:11:3
+    fix: rename the parameter to an argument name, annotate it with @GraphQLArgument("<name>"), or add the argument to the schema
 ```
 
-Add it next to Micronaut's processor and pass the directory of the schema files as a declared input of the
+Put the processor on the path that your compiler reads its Micronaut processors from (`annotationProcessor` for Java,
+`ksp` or `kapt` for Kotlin, `compileOnly` for Groovy) and pass the schema directories as a declared input of the
 compilation, so that a schema change recompiles (a plain `compilerArgs` string would leave `compileJava` up to date):
 
 ```kotlin
@@ -851,177 +856,64 @@ dependencies {
     annotationProcessor("io.micronaut.graphql.tools:micronaut-graphql-tools-processor")
 }
 
-abstract class GraphQLSchemaDir : CommandLineArgumentProvider {
-    @get:InputDirectory
+abstract class GraphQLSchemaDirs : CommandLineArgumentProvider {
+    @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val dir: DirectoryProperty
+    abstract val dirs: ConfigurableFileCollection
 
-    override fun asArguments() = listOf("-Amicronaut.graphql.tools.sdlDir=${dir.get().asFile.absolutePath}")
+    override fun asArguments() = listOf("-Amicronaut.graphql.tools.processor.schema.dirs=" +
+        dirs.files.joinToString(File.pathSeparator) { it.absolutePath })
 }
 
 tasks.compileJava {
-    options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDir>().apply {
-        dir.set(layout.projectDirectory.dir("src/main/resources/graphql"))
+    options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDirs>().apply {
+        dirs.from(layout.projectDirectory.dir("src/main/resources/graphql"))
     })
 }
 ```
 
-The processor is aggregating: it checks the whole compilation once, in the last round. It claims the library's
-annotations, `@Introspected`, and the Micronaut annotations that make a class a bean (`@Singleton`, `@Prototype`,
-`@RequestScope`, ...), never `*`. On an incremental compilation Gradle hands every claimed type to the processor again
-(it reprocesses them; it does not recompile the unchanged ones), not only the changed ones, because the processor is
-aggregating. This is a known limitation, not the intended behaviour: issues #13 and #150 track it, and this paragraph
-changes with them.
-Errors about an unchanged class that javac did not recompile (it is read from the class output) have no Java file and
-line, but name the coordinate and the class. With Micronaut's processor, set
-`micronaut.processing.incremental=true` (the Micronaut Gradle plugin does), or every compilation is a full one.
-It reads every `*.graphqls` file under the directory (`*.graphql` files are client operation files, not schema).
+The library's example applications (`test-suite-java`, `test-suite-kotlin` and `test-suite-groovy`) are built this way. Each
+has a `src/driftFixture` source set with a class that drifts from the schema on purpose, and a `driftFixtureTest` task that
+asserts that compiling it fails with the expected `[code] coordinate` line. The projects in `test-suite-build` show the
+snippet for each tool (Java, Kotlin with KSP or kapt, Groovy, several modules, Maven).
 
 A processor that is not applied does not fail anything, it just does not run: under kapt, `compileJava` runs with
 `-proc:none` and a processor on `annotationProcessor` is ignored, so register it with `kapt` too (and declare the schema
-directory as an input of `kaptKotlin`). Keep a guard in the build that fails when the manifest is missing from the
-class output (under kapt, kapt's class output, `build/tmp/kapt3/classes/main`):
+directory as an input of `kaptKotlin`). A build prints one note that names the schema directory of each compilation that
+runs the checks, so a build log shows whether they ran.
 
-```kotlin
-val checkBindingManifest by tasks.registering {
-    val manifest = tasks.compileJava.flatMap {
-        it.destinationDirectory.file("META-INF/micronaut-graphql-tools/binding-manifest.txt")
-    }
-    inputs.files(tasks.compileJava)
-    doLast {
-        if (!manifest.get().asFile.isFile) {
-            throw GradleException("The GraphQL compile-time checks did not run: ${manifest.get().asFile} is missing.")
-        }
-    }
-}
-tasks.check { dependsOn(checkBindingManifest) }
-```
+Options have the values and defaults of the runtime options of the same name where one exists. Their names are written in
+camel case or with dots because `javac` accepts only dot-separated identifiers as option names (`sdl-dir` is rejected). Under
+KSP they are `arg(name, value)`, under the Groovy compiler they are system properties of the compiler JVM. Boolean
+options are read as Micronaut reads booleans (`true`, `yes`, `on`, and their opposites); any other value fails the
+compilation, and so does an unknown option under `micronaut.graphql.tools.processor.`, so that a typo cannot switch a check off:
 
-The library's example application (`test-suite-java`) is built this way, and its tests compare the manifest the
-processor wrote with the one its startup builds, without what the processor's record of omissions names.
-
-Options (`-A<name>=<value>`) have the values and defaults of the runtime options of the same name. They are written
-in camel case because `javac` accepts only dot-separated identifiers as option names (`sdl-dir` is rejected). Boolean
-options are read as Micronaut reads booleans (`true`, `yes`, `y`, `on`, and their opposites); any other value fails the
-compilation, and so does an unknown option under `micronaut.graphql.tools.`, so that a typo cannot switch a check off:
-
-| Option | Runtime option |
+| Option | Meaning |
 |---|---|
-| `micronaut.graphql.tools.sdlDir` | none: the schema directories (`*.graphqls` files, read recursively, joined with the platform path separator), required when the compilation has GraphQL resolvers or types. Read with the same rules as [Schema discovery](#schema-discovery): `*.graphql` files are not schema files |
-| `micronaut.graphql.tools.strict` | `strict` |
-| `micronaut.graphql.tools.precedence` | `precedence` |
-| `micronaut.graphql.tools.resolverDirectives` | `resolver-directives` (comma-separated) |
-| `micronaut.graphql.tools.resolverAccessorPrefixes` | `resolver-accessor-prefixes` |
-| `micronaut.graphql.tools.allowUnreachable` | `allow.unreachable` (comma-separated) |
-| `micronaut.graphql.tools.unreachableTypes` | `checks.unreachable-type` and `checks.unreachable-value-type` (`ignore` is `warn` there) |
-| `micronaut.graphql.tools.input.unmappedProperties` | `checks.unmapped-input-property` |
-| `micronaut.graphql.tools.manifest` | none: `true` (default) writes the [binding manifest](#the-manifest-as-a-build-artifact) to the class output, `false` does not |
+| `micronaut.graphql.tools.processor.schema.dirs` | The schema directories (`*.graphqls` files, read recursively, joined with the platform path separator). Required when the compilation has GraphQL resolvers or types, or the build fails with `processor-schema-not-configured`. Read with the same rules as [Schema discovery](#schema-discovery): `*.graphql` files are not schema files. It replaces `micronaut.graphql.tools.sdlDir`, which fails the build with `processor-option-removed` |
+| `micronaut.graphql.tools.processor.checks` | `true` (default) runs the checks; `false` compiles without them, with one note, and the startup still checks everything |
+| `micronaut.graphql.tools.processor.module.dir` | The project directory of the module that sets `schema.dirs`. A module of a multi-module build sets it so that a `schema.dirs` that an earlier module of the same JVM left behind fails the build |
+| `micronaut.graphql.tools.processor.resolverAccessorPrefixes` | `resolver-accessor-prefixes` of the runtime |
 
-Checked from the schema files and the options alone:
+The visitor checks what one class determines: the number of parameters besides `DataFetchingEnvironment`, the source
+object first for a type resolver, and a parameter that has no argument of its name (a parameter binds the argument of
+its name, `@GraphQLArgument` renames it, and the order does not matter), the Java type of each argument (lists,
+built-in scalars, `ArgumentValue`, a primitive for a nullable type), the input classes and enums that the arguments reach,
+the return type, `@GraphQLSchemaCoordinate`, and in strict mode public resolver methods that bind no field. A field
+that no class in the compilation binds is never reported at compile time, because the resolver may be in another module;
+the startup reports it. A resolver class that the compilation does not see (a dependency's) is checked by the module that
+compiles it.
 
-- the schema has a schema definition (`schema { query: ... }`) or defines the implicit root type `Query`;
-- every applied directive is declared (graphql-java would fail to build the schema);
-- every `resolverDirectives` entry is declared;
-- unreachable types, with `allowUnreachable` and `unreachableTypes` as at startup (in strict mode also enum, input
-  and scalar types), and `allowUnreachable` entries that are not unreachable types.
+`class-not-introspected` is a compile-time warning, not an error: another class can make a class introspected with
+`@Introspected(classes = ...)` or `(packages = ...)`, and so can a dependency, and a check of one class sees neither, so an
+error here could fail a build that the startup passes. The startup decides. A build that turns compiler warnings into
+errors (`-Werror`, or `allWarningsAsErrors` for Kotlin) fails on it as well; there, put `@Introspected` on the class itself.
 
-Checked against the Java code, walking the schema from the root operation types as the startup binds it (the Java type
-a method or property returns is the Java type of the field's GraphQL type):
-
-- every root field has exactly one root resolver method, and every field of a bound object type has a property or
-  `@GraphQLField` method of the introspected Java type or a type resolver method, decided by `precedence` and
-  `resolverDirectives` exactly as at startup (an ambiguous field fails with `precedence: fail`; a field with a
-  resolver directive needs a type resolver method);
-- the number of parameters besides `DataFetchingEnvironment`, the source object first for a type resolver, and the
-  Java type of each argument in the schema's order (lists, built-in scalars, `ArgumentValue`; a primitive for a
-  nullable type);
-- return types: the wrappers graphql-java resolves (`CompletionStage` at field level only, `Publisher` exactly on the
-  subscription type, `DataFetcherResult`, `Optional` on nullable types, each once and not raw), lists, built-in scalars;
-- resolver contracts: an annotated interface of the compilation that no bean implements, or that several beans
-  implement;
-- `@GraphQLSchemaCoordinate`: validated as at startup (form, type and field exist, field name equals method name, root
-  or type resolver) and bound to exactly the field it names;
-- model classes: one Java type per schema type wherever it is reached (two classes bind an object type alike only with
-  the same contract and introspection), a custom class with a bean introspection (with the properties its
-  `@Introspected(includes = ..., excludes = ...)` leaves), read through the contract interface
-  when it has its own introspection (getters only an implementation declares do not bind), every class annotated
-  `@GraphQLType(Contract.class)` implementing the contract; in strict mode, a Java interface without its own
-  introspection read through its implementation;
-- enums: a Java enum with a constant for every schema value, and in strict mode no constant without one;
-- input types: an introspected class with a property for every input field, of a matching type (also nested input
-  types, lists and enums), and, in strict mode or with `input.unmappedProperties=fail`, no property a request can set
-  (setter, record component or constructor parameter) that the input type does not define;
-- unions and interfaces: the field declares a Java interface;
-- in strict mode, public resolver methods that bind no field, and a root method without a coordinate that binds fields
-  of several root operation types.
-
-The processor checks the resolver beans of one compilation: apply it in the module that holds all of them (usually the
-application). Contracts and model classes may come from dependencies. A compilation that has `sdlDir` but no root or
-type resolver fails, rather than checking nothing. Classes that another processor generates in the same compilation
-under a `$` name (Micronaut's bean definitions and AOP proxies) are not application classes and are ignored; a class
-annotated `@Generated` (generated code compiled with the application) is checked like any other. Fields of type
-extensions (`extend type`, `extend interface`, ...) are checked like fields of the type itself.
-
-Not checked at compile time, because the startup decides them with runtime beans or with classes the compilation
-does not have; the strict startup and a test that starts the context check them. The processor reports each such part
-as a javac note (`[graphql] <coordinate>: not checked at compile time, the startup checks it: <reason>`), so that a
-green compilation says what it left out:
-
-- the Java classes of custom scalars (`GraphQLScalarMapping` beans) and scalars without a mapping;
-- directive wirings and type resolvers of interfaces and unions;
-- the members of unions and the implementations of interfaces, which come from the `SchemaMappingDictionary`, and
-  fields an SDL interface declares when a type resolver of a Java interface of the model has a method of their name
-  (without such a method, the field is checked like any other);
-- a Java interface of a dependency, returned by a field, whose implementation is not in the compilation (a JDK
-  interface, or one of the compilation, without an implementation fails);
-- a model or input class introspected with `@Introspected(accessKind = FIELD)`, which the processor does not model;
-- what input conversion can set (custom deserializers).
-
-### The manifest as a build artifact
-
-A compilation that passes the checks writes the [binding manifest](#binding-manifest) to its class output as
-`META-INF/micronaut-graphql-tools/binding-manifest.txt`: once, after the last round, in the format of the startup
-manifest (same header, UTF-8, `LF`, body sorted by `String#compareTo`). A compilation with an error writes none, so a
-manifest in the output always belongs to code that passed the checks. `-Amicronaut.graphql.tools.manifest=false`
-turns it off.
-
-For the same code, schema and options it has the lines of the startup manifest, byte for byte, except those that only
-the running application knows:
-
-- `scalar` lines, which name the `Coercing` of the scalar's runtime wiring;
-- `resolves` lines, and every line of an object type bound only through the `SchemaMappingDictionary` (the members of
-  unions and the implementations of interfaces that fields return), of what only those types reach, and of an
-  interface only they implement;
-- fields that a type resolver of an SDL interface binds, `!unusedDictionary` lines, and the `!unbound` lines of type
-  resolver methods whose class only those parts may reach;
-- `!unwiredDirective` lines: directive wirings are runtime beans, so whether an applied directive has one is decided
-  at startup (with `allow.inert-directives`, which has no processor option); with `unwired-directive` at `fail` such a directive fails the
-  startup, so these lines appear only when it is `warn`;
-- the lines of a type the processor leaves to the startup for another reason (reported as a note, see above).
-
-The processor writes what it left out next to the manifest, as
-`META-INF/micronaut-graphql-tools/binding-manifest-omitted.txt`, one entry per line:
-
-```
-# graphql-binding-manifest-omitted 1
-kind resolves
-kind scalar
-kind unusedDictionary
-kind unwiredDirective
-type Magazine
-field Book.name
-unbound example.MagazineResolver#issue(example.Magazine)
-```
-
-`kind K` stands for every line of kind `K` (a binding line `... → K · ...` or a finding `!K ...`); `type T` for every
-line about `T` (`T → ...`, `T.x ...`, `T/...`, `!ambiguous T.x ...`); `field T.f` for the line of the field and
-its `!ambiguous` line; `unbound M` for the line `!unbound M`. A comparison of both manifests removes from the
-startup manifest exactly what this record names, and nothing else, so the omissions come from the processor, never
-from a list in the build.
-
-The header is identical when the processor and the library come from the same release (the `# binder:` line names
-the version of the jar). The library's tests compile fixtures with the processor, start them, and compare both
-manifests under this rule.
+Not checked at compile time, because the startup decides them with runtime beans or with classes the compilation does not
+have; the strict startup and a test that starts the context check them: unreachable types, the Java classes of custom scalars
+(`GraphQLScalarMapping` beans), directive wirings, the members of unions and the implementations of interfaces (from the
+`SchemaMappingDictionary`), and what input conversion can set (custom deserializers). The visitor writes no file: the
+binding manifest is written by the startup.
 
 ### The strict schema-build test
 

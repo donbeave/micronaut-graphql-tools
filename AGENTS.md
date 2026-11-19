@@ -26,6 +26,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Binary compatibility | `./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default` | Changes to main code (JDK 25) |
 | Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check` | Changes to the library or binding module (JDK 17) |
 | Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
+| Drift fixtures of the suites | `./gradlew :test-suite-java:driftFixtureTest :test-suite-kotlin:driftFixtureTest :test-suite-groovy:driftFixtureTest` | Changes to the processor or its registration (part of `check`; each runs a build of its own, `--no-daemon`) |
 | Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
 | Build wiring of the compile-time checks | `./gradlew :test-suite-build:buildToolsTest` | Changes to the processor's options, registration or documented build snippets (JDK 25 and `mvn`, needs the network; CI job `build tools`) |
 | Kotlin cases of the binding corpus | `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` | Changes to the visitor or to a corpus case with a `kotlin/` directory (JDK 25, needs the network; CI job `build tools`; `-Pcorpus.kotlin.processor=kapt` is the nightly variant) |
@@ -57,8 +58,8 @@ Run the checks that cover what you changed, and before you push run the full bui
   names and fails on a match. Fork pull requests get no secrets, so that guard does not run for them. Do not write such names, even to explain a change. Every feature has a generic motivation, a generic
   API, generic tests and docs, and no assumption about one application.
 - **Java, Kotlin and Groovy are first class.** A runtime feature has tests in `test-suite-java`, `test-suite-kotlin` and
-  `test-suite-groovy`. A processor-only change is tested in `graphql-tools-processor` and `test-suite-java`, the only suite
-  that uses the processor. A guide example exists in all three suites with the same class name and tags, and is included
+  `test-suite-groovy`. A processor-only change is tested in `graphql-tools-processor` and the three suites
+  (`test-suite-java`, `-kotlin` and `-groovy` apply the processor and have a `src/driftFixture` source set). A guide example exists in all three suites with the same class name and tags, and is included
   with `snippet::`.
 - **Native.** Each runtime feature has a native test in `test-suite-java` and `test-suite-kotlin`; the Groovy example has the native smoke test.
 - **No Jackson in the public API.** Use Micronaut Serialization (`micronaut-serde`). Build input conversion on

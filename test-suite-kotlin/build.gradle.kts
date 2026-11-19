@@ -18,6 +18,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     ksp("io.micronaut:micronaut-inject-kotlin")
     kspTest("io.micronaut:micronaut-inject-kotlin")
+    // the compile-time checks (#291): the processor registers the visitor, which KSP loads next to Micronaut's processor
+    ksp(projects.micronautGraphqlToolsProcessor)
     runtimeOnly("ch.qos.logback:logback-classic")
     testImplementation("io.micronaut:micronaut-http-client")
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
@@ -56,6 +58,35 @@ micronaut {
 tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative") {
     jdkVersion = "25"
 }
+
+// The directory that the checks read the schema from. KSP does not track the schema files by itself: they are an input of its tasks,
+// so that a schema edit reruns them. `module.dir` is the project directory: a compilation that forgot the options in the same JVM
+// fails instead of reading these.
+val graphqlSchemaDirs = files("src/main/resources")
+ksp {
+    arg("micronaut.graphql.tools.processor.schema.dirs", graphqlSchemaDirs.files.joinToString(File.pathSeparator) { it.absolutePath })
+    arg("micronaut.graphql.tools.processor.module.dir", layout.projectDirectory.asFile.absolutePath)
+}
+tasks.matching { it.name.startsWith("ksp") && it.name.endsWith("Kotlin") }.configureEach {
+    inputs.files(graphqlSchemaDirs).withPropertyName("graphqlSchemaDirs").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+// A class that drifts from the schema on purpose, compiled with the processor and the options of `main`: driftFixtureTest asserts
+// that the compilation fails with the expected `[code] coordinate` line.
+val driftFixture: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(driftFixture.implementationConfigurationName) { extendsFrom(implementation.get()) }
+    named("kspDriftFixture") { extendsFrom(configurations.getByName("ksp")) }
+}
+extra["driftCompileTask"] = "compileDriftFixtureKotlin"
+extra["driftFailingTask"] = "kspDriftFixtureKotlin"
+// the processor classpath of the fixture is an input of its KSP task, which Gradle builds next to the source set
+extra["driftInputs"] = files(fileTree("src/driftFixture"), driftFixture.compileClasspath,
+    provider { tasks.getByName("kspDriftFixtureKotlin").inputs.files }, graphqlSchemaDirs)
+apply(from = rootProject.file("config/drift-fixture.gradle.kts"))
 
 // The schema index of the discovery test (SchemaDiscoveryTest): a native image cannot list a classpath directory, so the
 // wildcard location reads this file. The same task is in the Schema page of the guide.

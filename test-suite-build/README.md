@@ -53,11 +53,7 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   wrong argument type, a wrong argument name, or a model enum that drifts from the schema fails the compile task of the module
   whose resolver is affected, with the code and the coordinate, while the module next to it still compiles (`--continue`); a field
   with no resolver in any module compiles everywhere and fails `:app:run` with the coordinate; and a module that forgot the
-  snippet, built after one that set it in the same daemon, fails with `processor-schema-not-configured` and its own directory.
-- `stageSampleRepository`: copies `build/repo` for the samples and registers the visitor in the processor jar's copy. Until the
-  registration switch (#291) the published jar still registers the JSR-269 processor, so the copy drops that registration
-  and adds the visitor's, which is what #291 makes true of the jar itself. The task copies the jar unchanged once the jar
-  registers the visitor.
+  snippet, built after one that set it in the same daemon, fails with `processor-schema-not-configured` and its own directory.- The samples resolve the library from `build/repo`, as published, so the processor jar they use is the real one: it registers the visitor and only the visitor.
 
 Not in this module: the visitor and its options (`graphql-tools-processor`), the binding corpus, and the example applications.
 

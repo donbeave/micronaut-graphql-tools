@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * The recording of the binding manifest at startup and its writer, with the compile-time accessor lookup.
+ * The recording of the binding manifest at startup and its writer.
  *
  * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: BindingManifestRecorder, BindingManifestWriter, BindingManifestHolder.</p>
  */
