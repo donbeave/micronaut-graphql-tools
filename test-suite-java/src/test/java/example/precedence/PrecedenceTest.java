@@ -19,6 +19,7 @@ import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 import org.junit.jupiter.api.Test;
 
@@ -43,13 +44,14 @@ class PrecedenceTest {
         }
     }
 
-    private static void assertFails(Map<String, Object> properties, String environment, String code) {
+    private static SchemaBindingException assertFails(Map<String, Object> properties, String environment, String code) {
         Throwable e = assertThrows(Exception.class, () -> run(properties, environment, "{ __typename }"));
         while (!(e instanceof SchemaBindingException) && e.getCause() != null && e.getCause() != e) {
             e = e.getCause();
         }
         assertTrue(e instanceof SchemaBindingException, e.toString());
         assertTrue(e.getMessage().startsWith("[" + code + "]"), e.getMessage());
+        return (SchemaBindingException) e;
     }
 
     @Test
@@ -60,7 +62,13 @@ class PrecedenceTest {
 
     @Test
     void anAmbiguousFieldFailsTheStartupByDefaultAndStrictFalseDoesNotChangeIt() {
-        assertFails(Map.of(), PrecedenceFixtures.AMBIGUOUS, "precedence-ambiguity");
+        SchemaBindingException e = assertFails(Map.of(), PrecedenceFixtures.AMBIGUOUS, "precedence-ambiguity");
+        // a failure about one field names its schema coordinate and is no aggregate
+        assertEquals(BindingCode.PRECEDENCE_AMBIGUITY, e.code());
+        assertEquals("Gadget.label", e.getCoordinate());
+        assertEquals("Gadget.label", e.getMappingContext().getCoordinate());
+        assertTrue(e.getFailures().isEmpty());
+        assertTrue(e.getCodes().isEmpty());
         assertFails(Map.of("micronaut.graphql.tools.strict", false), PrecedenceFixtures.AMBIGUOUS,
                 "precedence-ambiguity");
     }
