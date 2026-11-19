@@ -195,8 +195,6 @@ type Query {
         e.cause instanceof UnsupportedInputTypeException
         e.cause.message == """[unsupported-input-type] The Java type is not supported for this argument or input field: ${ArgumentValue.name} needs a writable property: it is set to omitted() when the client leaves it out.
   GraphQL coordinate: ProfileInput.nickname (line 16, column 3)
-  GraphQL input object type: ProfileInput
-  GraphQL input value: nickname
   Mapped class: ${ReadOnlyProfileInput.name}
   Mapped property: nickname"""
     }

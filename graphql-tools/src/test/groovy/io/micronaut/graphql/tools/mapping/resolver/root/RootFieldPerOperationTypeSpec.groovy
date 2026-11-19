@@ -144,7 +144,6 @@ type Mutation {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message.contains('GraphQL coordinate: Subscription.ticks')
-        e.cause.message.contains('GraphQL object type: Subscription')
         e.cause.message.contains(SubscriptionTicks.name)
         e.cause.message.contains(DuplicateSubscriptionTicks.name)
     }

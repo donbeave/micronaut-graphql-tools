@@ -384,7 +384,7 @@ input Filter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidAllowUnreachableException
-        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Color (not an unreachable object, interface, union, enum, input or scalar type).
+        e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Color (is reachable).
   Remove them from the list."""
     }
 

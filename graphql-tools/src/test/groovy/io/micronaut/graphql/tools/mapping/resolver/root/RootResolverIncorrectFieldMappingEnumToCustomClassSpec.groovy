@@ -56,8 +56,6 @@ enum Month {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The field is mapped to a custom class, when required an enum.
   GraphQL coordinate: Query.month (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: month
   Mapped class: ${Query.name}
   Mapped method: month()
   Provided class: ${MyMonth.name}"""

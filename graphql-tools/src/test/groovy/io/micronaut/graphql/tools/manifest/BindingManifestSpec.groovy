@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.manifest
 
+import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
@@ -438,7 +439,7 @@ type Book {
         path.toFile().delete()
     }
 
-    void "with manifest.enabled and no path the manifest is logged"() {
+    void "with manifest.enabled and no path a summary of the manifest is logged at INFO"() {
         given:
         ListAppender<ILoggingEvent> appender = new ListAppender<>()
         appender.start()
@@ -449,10 +450,39 @@ type Book {
         startContext(SCHEMA, SPEC_NAME, CONFIG + ['micronaut.graphql.tools.manifest.enabled': true])
 
         then:
-        appender.list*.formattedMessage == ['GraphQL binding manifest:\n' + applicationContext.getBean(BindingManifest).render()]
+        def lines = applicationContext.getBean(BindingManifest).lines
+        appender.list*.level == [Level.INFO]
+        appender.list*.formattedMessage == [
+                "GraphQL binding manifest: ${lines.size()} lines, ${lines.count { it.startsWith('!') }} findings. "
+                        + 'Set micronaut.graphql.tools.manifest.path to write it to a file, or enable DEBUG for '
+                        + 'io.micronaut.graphql.tools.BindingManifestWriter to log its lines.'
+        ]
 
         cleanup:
         logger.detachAppender(appender)
+    }
+
+    void "with manifest.enabled and no path the manifest lines are logged at DEBUG, and not at INFO"() {
+        given:
+        ListAppender<ILoggingEvent> appender = new ListAppender<>()
+        appender.start()
+        Logger logger = (Logger) LoggerFactory.getLogger(BindingManifestWriter)
+        Level previous = logger.level
+        logger.level = Level.DEBUG
+        logger.addAppender(appender)
+
+        when:
+        startContext(SCHEMA, SPEC_NAME, CONFIG + ['micronaut.graphql.tools.manifest.enabled': true])
+
+        then:
+        appender.list.findAll { it.level == Level.DEBUG }*.formattedMessage == [
+                'GraphQL binding manifest:\n' + applicationContext.getBean(BindingManifest).render()
+        ]
+        appender.list.findAll { it.level == Level.INFO }*.formattedMessage.every { !it.contains('# graphql-binding-manifest') }
+
+        cleanup:
+        logger.detachAppender(appender)
+        logger.level = previous
     }
 
     void "by default nothing is written and the schema is bound only when the GraphQL bean is needed"() {

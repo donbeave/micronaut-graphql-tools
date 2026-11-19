@@ -162,8 +162,6 @@ type MediaSection implements Section {
         e.cause instanceof AmbiguousBindingException
         e.cause.message == """[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: TextSection.summary (line 19, column 3)
-  GraphQL object type: TextSection
-  GraphQL field: summary
   Members:
   1) ${SectionResolver.name} summary(${Section.name} section)
   2) ${SummarizedTextSection.name} getSummary()
@@ -202,8 +200,6 @@ type MediaSection implements Section {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: MediaSection.summary (line 26, column 3)
-  GraphQL object type: MediaSection
-  GraphQL field: summary
   Methods:\u0020
   1) ${MediaSectionResolver.name} summary(${MediaSection.name} section)
   2) ${SectionResolver.name} summary(${Section.name} section)
@@ -253,8 +249,6 @@ type Tag implements Item & Labelled {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Tag.label (line 22, column 3)
-  GraphQL object type: Tag
-  GraphQL field: label
   Methods:\u0020
   1) ${ItemResolver.name} label(${Item.name} item)
   2) ${LabelledResolver.name} label(${Labelled.name} labelled)

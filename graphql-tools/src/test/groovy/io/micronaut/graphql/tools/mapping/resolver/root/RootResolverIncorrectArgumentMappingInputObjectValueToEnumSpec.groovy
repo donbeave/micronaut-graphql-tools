@@ -56,8 +56,6 @@ input PriceInput {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The argument is mapped to an enum, when required a custom class.
   GraphQL coordinate: Query.price(input:) (line 7, column 9)
-  GraphQL object type: Query
-  GraphQL field: price
   GraphQL argument: input
   Mapped class: ${Query.name}
   Mapped method: price(${PriceInput.name} input)

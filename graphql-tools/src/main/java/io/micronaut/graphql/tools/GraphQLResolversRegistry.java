@@ -400,7 +400,27 @@ public final class GraphQLResolversRegistry {
                 .sorted(Comparator.comparing((Function<Class<?>, String>) Class::getName))
                 .collect(Collectors.toList());
 
-        throw MethodNotFoundException.forRoot(methodName, mappingContext, resolvers);
+        throw MethodNotFoundException.forRoot(methodName, mappingContext, resolvers,
+                operationTypeName + "." + methodName, unannotatedMethods(methodName));
+    }
+
+    // the methods named as the missing one that a bean with coordinates does not annotate: they bind nothing
+    private List<String> unannotatedMethods(String methodName) {
+        List<String> result = new ArrayList<>();
+        for (BeanDefinitionAndMethods item : rootResolvers.values()) {
+            Map<String, String> signatures = schemaCoordinateSignatures.get(item.getBeanDefinition());
+            if (signatures == null) {
+                continue;
+            }
+            for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> method : item.methodsNamed(methodName)) {
+                if (!ResolverClassRules.isIgnored(method.getValue())
+                        && !signatures.containsKey(method.getValue().signature())) {
+                    result.add(getUserBeanType(item.getBeanDefinition()).getName() + "#"
+                            + MicronautUtils.getExecutableMethodFullName(method.getKey()));
+                }
+            }
+        }
+        return result.stream().sorted().toList();
     }
 
     List<BeanDefinitionAndMethod> findTypeExecutableMethods(Class<?> beanType, String typeName, String methodName) {

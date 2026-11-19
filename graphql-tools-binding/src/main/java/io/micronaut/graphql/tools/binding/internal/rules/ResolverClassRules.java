@@ -260,7 +260,7 @@ public final class ResolverClassRules {
                 return ReturnVerdict.failed(WrapperRules.completionStageInList());
             }
             outer = COMPLETION_STAGE;
-            if (result.typeArguments().isEmpty()) {
+            if (untyped(result)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(COMPLETION_STAGE));
             }
             result = result.typeArguments().get(0);
@@ -274,7 +274,7 @@ public final class ResolverClassRules {
                 return ReturnVerdict.failed(WrapperRules.subscriptionNeedsPublisher(className(result)));
             }
             outer = PUBLISHER;
-            if (result.typeArguments().isEmpty()) {
+            if (untyped(result)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
             }
             result = result.typeArguments().get(0);
@@ -285,7 +285,7 @@ public final class ResolverClassRules {
 
         if (isAssignableTo(model, result, DATA_FETCHER_RESULT)) {
             outer = DATA_FETCHER_RESULT;
-            if (result.typeArguments().isEmpty()) {
+            if (untyped(result)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(DATA_FETCHER_RESULT));
             }
             result = result.typeArguments().get(0);
@@ -294,10 +294,10 @@ public final class ResolverClassRules {
 
         if (isType(result, OPTIONAL)) {
             if (fieldType instanceof NonNullType) {
-                return ReturnVerdict.failed(WrapperRules.optionalAtNonNull(SchemaTypes.print(fieldType)));
+                return ReturnVerdict.failed(WrapperRules.optionalAtNonNull(SchemaTypes.print(fieldType), fieldLevel));
             }
             outer = OPTIONAL;
-            if (result.typeArguments().isEmpty()) {
+            if (untyped(result)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(OPTIONAL));
             }
             result = result.typeArguments().get(0);
@@ -308,7 +308,8 @@ public final class ResolverClassRules {
         if (primitiveOptional) {
             if (fieldType instanceof NonNullType) {
                 return ReturnVerdict.failed(
-                        WrapperRules.primitiveOptionalAtNonNull(result.rawName(), SchemaTypes.print(fieldType)));
+                        WrapperRules.primitiveOptionalAtNonNull(result.rawName(), SchemaTypes.print(fieldType),
+                                fieldLevel));
             }
             if (OPTIONAL.equals(outer)) {
                 return ReturnVerdict.failed(WrapperRules.optionalCannotWrapPrimitiveOptional(result.rawName()));
@@ -324,6 +325,11 @@ public final class ResolverClassRules {
         }
 
         return new ReturnVerdict(depth, primitiveOptional, null, null);
+    }
+
+    // a wrapper without a type argument: the raw type, whose argument the type model reports as Object
+    private static boolean untyped(TypeRef wrapper) {
+        return wrapper.typeArguments().isEmpty() || "java.lang.Object".equals(wrapper.typeArguments().get(0).rawName());
     }
 
     /**

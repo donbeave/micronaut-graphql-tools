@@ -115,10 +115,8 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message == """[unsupported-return-type] The return type of the method is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), Publisher (subscription fields only), DataFetcherResult, Optional (nullable types only), each at most once. Fix: remove the inner ${DataFetcherResult.simpleName} or declare the wrappers in that order.
+        e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), Publisher (subscription fields only), DataFetcherResult, Optional (nullable types only), each at most once. Fix: remove the inner ${DataFetcherResult.simpleName} or declare the wrappers in that order.
   GraphQL coordinate: Query.greeting (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: greeting
   Mapped class: ${NestedQuery.name}
   Mapped method: greeting()"""
         e.cause.mappingContext.graphQlObjectType == 'Query'
@@ -145,14 +143,14 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message.startsWith("[unsupported-return-type] The return type of the method is not supported for this field: " +
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "${CompletionStage.name} is not allowed inside a list. Fix: return CompletionStage<List<T>> instead " +
                 "(for example, combine the element futures with CompletableFuture.allOf), or load the elements " +
                 "with a DataLoader.")
-        e.cause.message.contains("GraphQL field: names")
+        e.cause.message.contains("GraphQL coordinate: Query.names")
     }
 
-    void "a raw DataFetcherResult fails at startup (its data is seen as Object)"() {
+    void "a raw DataFetcherResult fails at startup with the dedicated message"() {
         given:
         @Language("GraphQL")
         String schema = """
@@ -171,8 +169,9 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
-        e.cause.providedClass == Object
+        e.cause instanceof UnsupportedReturnTypeException
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
+                "${DataFetcherResult.name} must declare the type it wraps.")
         e.cause.mappingContext.graphQlField == 'greeting'
     }
 

@@ -102,10 +102,8 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
-        e.cause.message == """[field-not-bound] The method `helper` not found in any root resolvers: [${BookQuery.name}].
-  GraphQL coordinate: Query.helper (line 8, column 3)
-  GraphQL object type: Query
-  GraphQL field: helper"""
+        e.cause.message == """[field-not-bound] The method `helper` not found in any root resolvers: [${BookQuery.name}]. ${BookQuery.name}#helper() exists without @GraphQLSchemaCoordinate, but the bean declares coordinates on other methods, and only a method with its own coordinate binds a field. Fix: annotate it with @GraphQLSchemaCoordinate("Query.helper"), or remove it.
+  GraphQL coordinate: Query.helper (line 8, column 3)"""
     }
 
     void "a public type resolver method without a coordinate on a bean that uses coordinates does not bind"() {
@@ -134,9 +132,7 @@ type Book {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `blurb` not found in ${Book.name}'s type or it resolvers: [${BookResolver.name}].
-  GraphQL coordinate: Book.blurb (line 14, column 3)
-  GraphQL object type: Book
-  GraphQL field: blurb"""
+  GraphQL coordinate: Book.blurb (line 14, column 3)"""
     }
 
     @GraphQLRootResolver

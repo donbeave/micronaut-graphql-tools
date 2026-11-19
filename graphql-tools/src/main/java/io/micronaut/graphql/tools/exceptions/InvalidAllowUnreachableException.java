@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.exceptions;
 
 import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -31,33 +32,23 @@ public final class InvalidAllowUnreachableException extends SchemaBindingExcepti
     private final List<String> notUnreachableTypeNames;
 
     /**
-     * @param undefinedTypeNames      listed names that the schema does not define
-     * @param notUnreachableTypeNames listed names that the schema defines, but not as unreachable object, interface
-     *                                or union types
+     * @param undefinedTypeNames listed names that the schema does not define
+     * @param notUnreachable     listed names that the schema defines, but not as unreachable types of the kinds that can
+     *                           be allowed, each with the reason (for example {@code is reachable} or {@code is an enum})
+     * @param kinds              the kinds of types that can be allowed, for the message
      */
-    public InvalidAllowUnreachableException(List<String> undefinedTypeNames, List<String> notUnreachableTypeNames) {
-        this(undefinedTypeNames, notUnreachableTypeNames, "object, interface or union");
-    }
-
-    /**
-     * @param undefinedTypeNames      listed names that the schema does not define
-     * @param notUnreachableTypeNames listed names that the schema defines, but not as unreachable types of the kinds
-     *                                that can be allowed
-     * @param kinds                   the kinds of types that can be allowed, for the message
-     */
-    public InvalidAllowUnreachableException(List<String> undefinedTypeNames, List<String> notUnreachableTypeNames,
+    public InvalidAllowUnreachableException(List<String> undefinedTypeNames, Map<String, String> notUnreachable,
                                             String kinds) {
         super(BindingCode.INVALID_ALLOW_UNREACHABLE, "micronaut.graphql.tools.allow.unreachable lists types that are not unreachable " + kinds
                 + " types of the schema: "
                 + Stream.concat(
                         undefinedTypeNames.stream().map(it -> it + " (not defined in the schema)"),
-                        notUnreachableTypeNames.stream()
-                                .map(it -> it + " (not an unreachable " + kinds + " type)"))
+                        notUnreachable.entrySet().stream().map(it -> it.getKey() + " (" + it.getValue() + ")"))
                 .collect(Collectors.joining(", "))
                 + ".\n  Remove them from the list.");
 
         this.undefinedTypeNames = List.copyOf(undefinedTypeNames);
-        this.notUnreachableTypeNames = List.copyOf(notUnreachableTypeNames);
+        this.notUnreachableTypeNames = List.copyOf(notUnreachable.keySet());
     }
 
     public List<String> getUndefinedTypeNames() {

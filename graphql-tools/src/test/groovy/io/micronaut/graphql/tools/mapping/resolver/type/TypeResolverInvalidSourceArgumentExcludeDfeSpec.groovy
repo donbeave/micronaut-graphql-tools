@@ -56,8 +56,6 @@ type User {
         e.cause instanceof InvalidSourceArgumentException
         e.cause.message == """[invalid-source-parameter] The source argument must be instance of ${User.name} class, provided: ${String.name}.
   GraphQL coordinate: User.username (line 11, column 3)
-  GraphQL object type: User
-  GraphQL field: username
   Mapped class: ${UserResolver.name}
   Mapped method: username(${String.name} uid, ${DataFetchingEnvironment.name} dfe)"""
         e.cause.mappingContext.graphQlObjectType == 'User'
