@@ -34,6 +34,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
+import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules
 
 class PublisherReturnTypeSpec extends AbstractTest {
 
@@ -100,7 +101,7 @@ type Item {
     }
 
     @Unroll
-    void "a Publisher on a #operation field fails at startup"() {
+    void "a Publisher of many values on a non-list #operation field fails at startup"() {
         given:
         startContext(schema, specName)
 
@@ -112,8 +113,7 @@ type Item {
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
-                "${Publisher.name} is only allowed on fields of the subscription type. Fix: return a CompletionStage " +
-                "instead (for example Mono#toFuture()).")
+                WrapperRules.multiValuePublisherNeedsList('Int'))
         e.cause.mappingContext.graphQlObjectType == objectType
         e.cause.mappingContext.graphQlField == 'events'
 
@@ -229,13 +229,13 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
-        e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${Publisher.name} is only allowed on fields of the subscription type. Fix: return a CompletionStage instead (for example Mono#toFuture()).
+        e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${WrapperRules.publisherInList()}
   GraphQL coordinate: Query.numbers (line 7, column 3)
   Mapped class: ${QueryListOfPublishers.name}
   Mapped method: numbers()"""
     }
 
-    void "a Publisher on a field of an object type fails at startup"() {
+    void "a Publisher of many values on a non-list field of an object type fails at startup"() {
         given:
         @Language("GraphQL")
         String schema = """
@@ -262,7 +262,7 @@ type Item {
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
-                "${Publisher.name} is only allowed on fields of the subscription type.")
+                WrapperRules.multiValuePublisherNeedsList('Int'))
         e.cause.mappingContext.graphQlObjectType == 'Item'
         e.cause.mappingContext.graphQlField == 'ticks'
         e.cause.mappingContext.mappedClass == ItemTicksResolver

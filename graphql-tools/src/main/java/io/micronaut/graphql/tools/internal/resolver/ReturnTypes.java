@@ -22,6 +22,7 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
+import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules;
 import io.micronaut.graphql.tools.internal.JavaTypeNames;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.UnsupportedReturnTypeException;
 import io.micronaut.graphql.tools.internal.model.RuntimeTypeModel;
@@ -45,20 +46,37 @@ public final class ReturnTypes {
     private ReturnTypes() {
     }
 
-    // Peels the wrappers of a declared return type: ResolverClassRules.returnAdaptation decides, this follows its verdict
-    // on the Argument and turns a violation into its exception.
-    public static Argument<?> unwrap(RuntimeTypeModel typeModel, Argument<?> argument, Type<?> graphQlType,
-                              boolean fieldLevel, boolean subscription, TypeMappingContext mappingContext) {
+    // ResolverClassRules.returnAdaptation decides; this turns a violation into its exception
+    public static ReturnVerdict adaptation(RuntimeTypeModel typeModel, Argument<?> argument, Type<?> graphQlType,
+                                           boolean fieldLevel, boolean subscription, TypeMappingContext mappingContext) {
         ReturnVerdict verdict = ResolverClassRules.returnAdaptation(typeModel, typeModel.ref(argument), graphQlType,
                 fieldLevel, subscription);
         if (verdict.failure() != null) {
             throw new UnsupportedReturnTypeException(mappingContext, verdict.failure());
         }
+        return verdict;
+    }
+
+    // Peels the wrappers of a declared return type, following the verdict. The values of a Publisher of many values
+    // are collected into a list, so the adapted type of such a field is a list of its element type.
+    public static Argument<?> unwrap(Argument<?> argument, ReturnVerdict verdict) {
         Argument<?> result = argument;
         for (int i = 0; i < verdict.depth(); i++) {
             result = result.getFirstTypeVariable().get();
         }
+        if (verdict.reactive() == ReturnVerdict.Reactive.MULTI) {
+            return Argument.listOf(result);
+        }
         return verdict.primitiveOptional() ? Argument.of(PRIMITIVE_OPTIONALS.get(result.getType())) : result;
+    }
+
+    private static boolean isSingleValue(Class<?> type) {
+        for (Class<?> c = type; c != null; c = c.getSuperclass()) {
+            if (WrapperRules.SINGLE_VALUE_PUBLISHER.equals(c.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static String convertedTypeName(Argument<?> declaredType, boolean subscription, boolean returnType) {
@@ -66,8 +84,12 @@ public final class ReturnTypes {
         if (CompletionStage.class.isAssignableFrom(result.getType()) || Future.class.isAssignableFrom(result.getType())) {
             result = result.getFirstTypeVariable().orElse(result);
         }
-        if (subscription && Publisher.class.isAssignableFrom(result.getType())) {
+        if (Publisher.class.isAssignableFrom(result.getType())) {
+            boolean many = !subscription && returnType && !isSingleValue(result.getType());
             result = result.getFirstTypeVariable().orElse(result);
+            if (many) {
+                result = Argument.listOf(result);
+            }
         }
         if (DataFetcherResult.class.isAssignableFrom(result.getType())) {
             result = result.getFirstTypeVariable().orElse(result);

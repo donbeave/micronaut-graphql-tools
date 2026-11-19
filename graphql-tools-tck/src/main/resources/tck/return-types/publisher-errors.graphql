@@ -1,0 +1,4 @@
+{
+  reactiveFailing { message }
+  reactiveManyFailing { message }
+}

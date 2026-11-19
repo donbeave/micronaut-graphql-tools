@@ -7,3 +7,6 @@ data-fetcher-result-with-error
 null-elements
 scalar-results
 primitive-optionals
+publisher-single-and-many
+publisher-empty
+publisher-errors

@@ -29,6 +29,7 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
+import graphql.schema.DataFetcher;
 import graphql.schema.idl.MapEnumValuesProvider;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -94,7 +95,11 @@ import io.micronaut.graphql.tools.internal.model.ModelMemberIndex;
 import io.micronaut.graphql.tools.internal.model.RuntimeTypeModel;
 import io.micronaut.graphql.tools.internal.resolver.ArgumentDefinition;
 import io.micronaut.graphql.tools.internal.resolver.ArgumentPlanner;
+import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
+import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules;
+import io.micronaut.graphql.tools.internal.exceptions.resolver.UnsupportedReturnTypeException;
 import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDataFetcher;
+import io.micronaut.graphql.tools.internal.resolver.PublisherAdaptingDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.MicronautPropertyDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.ResolverInstances;
@@ -423,24 +428,31 @@ public final class GraphQLRuntimeWiringGenerator {
         List<ArgumentDefinition> argumentDefinitions = argumentPlanner.plan(executable, sourceClass,
                 mappingContext);
 
+        ReturnVerdict.Reactive reactive = processFieldReturnType(returnType.asArgument(),
+                mappingContext.getFieldDefinition().getType(), mappingContext, true);
+
+        // decided once per field here: a field that is not reactive keeps the plain fetcher and allocates nothing more
+        DataFetcher<Object> fetcher = new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance);
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
-                new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance)
+                reactive == ReturnVerdict.Reactive.NONE ? fetcher
+                        : new PublisherAdaptingDataFetcher(fetcher, reactive == ReturnVerdict.Reactive.MULTI)
         );
-
-        processFieldReturnType(returnType.asArgument(), mappingContext.getFieldDefinition().getType(),
-                mappingContext);
     }
 
     private void processFieldReturnType(Argument<?> argument, Type<?> graphQlType, TypeMappingContext mappingContext) {
-        processFieldReturnType(argument, graphQlType, mappingContext, true);
+        // a property is read, never invoked: a Publisher can only be adapted from a method
+        if (processFieldReturnType(argument, graphQlType, mappingContext, true) != ReturnVerdict.Reactive.NONE) {
+            throw new UnsupportedReturnTypeException(mappingContext, WrapperRules.publisherOnProperty());
+        }
     }
 
-    private void processFieldReturnType(Argument<?> argument, Type<?> graphQlType, TypeMappingContext mappingContext,
-                                        boolean fieldLevel) {
+    private ReturnVerdict.Reactive processFieldReturnType(Argument<?> argument, Type<?> graphQlType,
+                                                          TypeMappingContext mappingContext, boolean fieldLevel) {
         boolean subscription = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
-        argument = ReturnTypes.unwrap(typeModel, argument, graphQlType, fieldLevel, subscription,
+        ReturnVerdict verdict = ReturnTypes.adaptation(typeModel, argument, graphQlType, fieldLevel, subscription,
                 mappingContext);
+        argument = ReturnTypes.unwrap(argument, verdict);
         graphQlType = unwrapNonNullType(graphQlType);
 
         Class<?> returnClass = argument.getType();
@@ -460,7 +472,7 @@ public final class GraphQLRuntimeWiringGenerator {
             Argument<?> listArgument = argument.getFirstTypeVariable().get();
 
             processFieldReturnType(listArgument, listFieldType, mappingContext, false);
-            return;
+            return verdict.reactive();
         }
 
         TypeName typeName = requireTypeName(graphQlType);
@@ -498,6 +510,7 @@ public final class GraphQLRuntimeWiringGenerator {
                 throw unsupportedTypeDefinition(typeDefinition);
             }
         }
+        return verdict.reactive();
     }
 
     private void processOperationTypeDefinition(OperationTypeDefinition operationTypeDefinition) {

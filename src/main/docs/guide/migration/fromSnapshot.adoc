@@ -12,7 +12,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 |===
 | Change | What breaks | How to fix
 | BC-01 `List<CompletionStage<T>>` | Startup fails with `[unsupported-return-type]`. Before, the client received the future's `toString()`. | Return `CompletionStage<List<T>>`.
-| BC-02 wrapper, `Optional` and `Publisher` placement | Startup fails for `Optional` on a non-null type, misplaced or repeated wrappers, `Publisher` on a field that is not a subscription field, and a subscription field that does not return `Publisher`. | Remove `Optional` from non-null types. Return `Publisher` only on subscription fields; elsewhere return a `CompletionStage`.
+| BC-02 wrapper, `Optional` and `Publisher` placement | Startup fails for `Optional` on a non-null type, misplaced or repeated wrappers, a `Publisher` of many values on a field that is not a list (a `Mono`, and a `Flux` on a list field, work since 1.0.0-M4), and a subscription field that does not return `Publisher`. | Remove `Optional` from non-null types. `Publisher` on other fields is adapted since 1.0.0-M4: return a `Mono` for a single value and a `Flux` on a list field; see the return types section of the Type System page.
 | BC-03 build and publishing | The library compiles to Java 17 bytecode, and nothing is published to Maven Central. The published POM and the extended-scalars version changed. | Run the library on Java 17 or newer. Build the full project on JDK 21 or newer, because the processor module needs it. Build and publish the library yourself. If you pin extended-scalars, pin the version your build resolves.
 | BC-04 `@Inherited` resolver stereotypes | A subclass of a resolver bean is a resolver too, which can make two resolvers bind one field. | Annotate the subclass with `@Replaces(<original>.class)`.
 | BC-05 interface with its own introspection | A getter that only an implementation declares no longer binds. Startup fails. | Declare the getter on the interface.
@@ -69,13 +69,14 @@ Before this change, only `CompletionStage` was unwrapped. Most of the shapes bel
 
 * `Optional<T>` on a nullable field or on each element of a nullable list (an empty `Optional` becomes `null`);
 * `DataFetcherResult<T>` on a field or on each list element;
-* `Publisher<T>` on a field of the subscription type.
+* `Publisher<T>` on a field of the subscription type;
+* `Mono<T>` on any other field, and `Flux<T>` on a list field (since 1.0.0-M4, #75: the library subscribes and adapts it to a `CompletionStage`).
 
 These shapes fail at startup with `[unsupported-return-type]`:
 
 * `Optional<T>` on a non-null GraphQL type, such as `String!` or `[String!]`;
 * wrappers in the wrong order or repeated;
-* `Publisher` on a field that is not a subscription field, or inside a list. `Publisher` on other fields stays an error until #75 (pending). Until then, return a `CompletionStage`, for example `Mono#toFuture()`;
+* a `Publisher` of many values (`Flux`) on a field that is not a list, a `Publisher` inside a list or inside a `CompletionStage`, and a `Publisher` on a bean property;
 * a subscription field that does not return a `Publisher`, optionally inside a `CompletionStage`.
 
 Status: approved, no opt-out.
@@ -89,12 +90,12 @@ public Optional<String> nickname(User user) { ... }
 // Fix: make the GraphQL field nullable (nickname: String), or return the value itself
 public String nickname(User user) { ... }
 
-// Publisher on a query field fails at startup
+// Flux on a query field that is not a list fails at startup
 public Flux<String> greeting() { ... }
 
-// Fix: return a CompletionStage
-public CompletionStage<String> greeting() {
-    return Mono.just("hello").toFuture();
+// Fix: return a Mono (or a CompletionStage), or make the field a list
+public Mono<String> greeting() {
+    return Mono.just("hello");
 }
 ----
 

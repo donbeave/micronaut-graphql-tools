@@ -65,7 +65,7 @@ An entry has five parts. `-` stands for a part that has no value. Every entry th
 |`Type.field(argument: T): T`
 |`root`, `resolver`, `property`
 |`Class#method(parameter types)` of the root resolver method, the type resolver method, or the getter or `@GraphQLField` method
-|the declared Java type, and the converted type (the declared type without `CompletionStage`, `Publisher` (subscription fields only), `DataFetcherResult` (also per list element) and `Optional` or a primitive optional, unwrapped once in that order)
+|the declared Java type, and the converted type (the declared type without `CompletionStage`, `Publisher` (a `Flux` on a list field is reported as the `java.util.List` of its element), `DataFetcherResult` (also per list element) and `Optional` or a primitive optional, unwrapped once in that order)
 
 |`Type.field(argument: T): T`
 |`claimed`

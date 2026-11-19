@@ -27,15 +27,29 @@ import io.micronaut.core.annotation.Nullable;
  * @param primitiveOptional whether the adapted type is the boxed type inside an {@code OptionalInt},
  *                          {@code OptionalLong} or {@code OptionalDouble}, which is then the type that was reached
  * @param failure           the sentence for the first violation, or {@code null} when the wrappers are valid
+ * @param reactive          how a {@code Publisher} on a field outside the subscription type is adapted to a
+ *                          {@code CompletionStage}: {@link Reactive#NONE} for every other return type
  * @param element           for a list field, the verdict for the element type, which the runtime checks one level
  *                          down with {@code fieldLevel} false; {@code null} otherwise
  */
 @Internal
-public record ReturnVerdict(int depth, boolean primitiveOptional, @Nullable String failure,
+public record ReturnVerdict(int depth, boolean primitiveOptional, @Nullable String failure, Reactive reactive,
                             @Nullable ReturnVerdict element) {
 
+    /**
+     * How a {@code Publisher} that a field outside the subscription type returns is adapted, decided once per field.
+     */
+    public enum Reactive {
+        /** The return type is not adapted. */
+        NONE,
+        /** A publisher of one value ({@code Mono}): the value, or {@code null} when it is empty. */
+        SINGLE,
+        /** A publisher of many values ({@code Flux}) on a list field: the values collected into a list. */
+        MULTI
+    }
+
     static ReturnVerdict failed(String failure) {
-        return new ReturnVerdict(0, false, failure, null);
+        return new ReturnVerdict(0, false, failure, Reactive.NONE, null);
     }
 
     /**
