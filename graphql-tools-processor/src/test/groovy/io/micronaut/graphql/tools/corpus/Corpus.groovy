@@ -32,8 +32,6 @@ import java.util.stream.Stream
 final class Corpus {
 
     static final String DIVERGENCES = 'corpus-divergences.txt'
-    /** where the cases of the JSR-269 processor specs went, see {@code PortedCasesSpec} */
-    static final String LEDGER = 'processor-cases.txt'
 
     final Path root
     final List<CorpusCase> cases
@@ -78,7 +76,7 @@ final class Corpus {
         list(directory).each { Path entry ->
             if (Files.isDirectory(entry)) {
                 any = discover(entry, found) || any
-            } else if (directory == root ? !(entry.fileName.toString() in [DIVERGENCES, SoundnessExceptions.FILE, LanguageDifferences.FILE, LEDGER, 'README.md']) : true) {
+            } else if (directory == root ? !(entry.fileName.toString() in [DIVERGENCES, SoundnessExceptions.FILE, LanguageDifferences.FILE, 'README.md']) : true) {
                 problems.add("orphan file ${root.relativize(entry)}".toString())
             }
         }

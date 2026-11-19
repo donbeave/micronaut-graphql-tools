@@ -30,16 +30,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * In-process javac (javax.tools) over the test classpath, with the annotation processors of the test classpath except
- * the JSR-269 processor of this module: the runner never runs it. The visitor of this module, which the test resources
+ * In-process javac (javax.tools) over the test classpath, with the annotation processors of the test classpath. The visitor of this module, which the test resources
  * register, is switched off here ({@link #CHECKS_OFF}): the classes are built to be started, and checked by the compile-time
  * binder. Micronaut's processors copy the {@code -Amicronaut.*} options into the system properties, so every
  * {@code micronaut.graphql.tools.processor.*} property is cleared, and the properties are restored, around each compilation.
  */
 @CompileStatic
 final class JavaCaseCompiler implements CheckedCaseCompiler {
-
-    static final String LEGACY_PROCESSOR_PACKAGE = 'io.micronaut.graphql.tools.processing'
 
     /** The visitor of this module is on the test classpath: this compilation only builds the case, a binder checks it. */
     /** The runtime key of a case that the visitor reads as an option of its own. */
@@ -112,11 +109,7 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
             files.setLocation(StandardLocation.CLASS_PATH, classpath)
             files.setLocation(StandardLocation.CLASS_OUTPUT, [classes.toFile()])
             List<Processor> processors = new ArrayList<>()
-            ServiceLoader.load(Processor, getClass().classLoader).each {
-                if (!it.getClass().name.startsWith(LEGACY_PROCESSOR_PACKAGE)) {
-                    processors.add(it)
-                }
-            }
+            ServiceLoader.load(Processor, getClass().classLoader).each { processors.add(it) }
             JavaCompiler.CompilationTask task = compiler.getTask(null, files, diagnostics,
                     ['-proc:full'] + options,
                     null, files.getJavaFileObjectsFromPaths(unit.sources))

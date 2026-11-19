@@ -47,8 +47,7 @@ a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.g
 ## What the runner asserts
 
 Per case and language, Java and Groovy are compiled in process (javax.tools; the Groovy compiler with Micronaut's AST
-transformation) as part of `test` on the default graphql-java leg, on JDK 21 and 25 (the floor and ceiling legs skip `BindingCorpusSpec`; the processor module never runs on JDK 17), with Micronaut's processing only: **the runner never runs the JSR-269
-processor of this module**. Every case is compiled **twice**, as a build would:
+transformation) as part of `test` on the default graphql-java leg, on JDK 17, 21 and 25 (the floor and ceiling legs skip `BindingCorpusSpec`), with Micronaut's processing only. Every case is compiled **twice**, as a build would:
 
 - **checks off** (`micronaut.graphql.tools.processor.checks=false`, the escape hatch): the sources must compile, whatever the
   case says, because a failing case is a case whose startup or compile-time checks fail, not one whose Java is broken. The
