@@ -22,8 +22,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.MappingConflictException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverMappingConflictSchemaMappingDictionarySpec extends AbstractTest {
 
@@ -53,7 +54,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MappingConflictException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MAPPING_CONFLICT
         e.cause.message == """[mapping-conflict] Unable to map GraphQL type `User` to ${User.name}, as it is already mapped to ${AnotherUser.name}.
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}

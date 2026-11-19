@@ -22,9 +22,10 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class ReplacesResolverSpec extends AbstractTest {
 
@@ -96,7 +97,8 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Query.book")
         e.cause.message.contains("${OriginalQuery.name} book(java.lang.String id)")
         e.cause.message.contains("${TestOnlyQuery.name} book(java.lang.String id)")

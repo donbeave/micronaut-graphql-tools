@@ -21,6 +21,7 @@ import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
 import spock.lang.Specification
@@ -58,6 +59,11 @@ class CheckSeveritySpec extends Specification {
         expect:
         failure([:]) instanceof SchemaBindingException
         failure([:]).message.startsWith('[unreachable-type]')
+        // the failure is about a type, not one field: no coordinate, and it is no aggregate
+        failure([:]).code() == BindingCode.UNREACHABLE_TYPE
+        failure([:]).coordinate == null
+        failure([:]).failures.empty
+        failure([:]).codes.empty
     }
 
     void 'warn, ignore and strict false let the startup go on'() {

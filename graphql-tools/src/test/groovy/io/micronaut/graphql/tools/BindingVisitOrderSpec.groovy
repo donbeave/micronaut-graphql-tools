@@ -21,9 +21,10 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 /**
  * The binding visits the schema depth first, in the order of the fields and of the members: the type that two fields
@@ -115,10 +116,11 @@ type OrdN3 implements OrdNode {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.BINDING_FAILURES
 
-        BindingFailuresException failures = (BindingFailuresException) e.cause
-        failures.failures*.mappingContext*.coordinate == EXPECTED_COORDINATES
+        SchemaBindingException failures = e.cause
+        failures.failures*.coordinate == EXPECTED_COORDINATES
         failures.failures*.message.findAll { it.contains('Unable to map') }*.readLines()*.first() == EXPECTED_CONFLICTS
     }
 

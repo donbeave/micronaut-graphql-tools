@@ -21,12 +21,9 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
-import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
-import io.micronaut.graphql.tools.exceptions.StrictModeException
-import io.micronaut.graphql.tools.exceptions.UnreachableTypesException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class AggregatedFindingsSpec extends AbstractTest {
 
@@ -66,10 +63,11 @@ type Draft {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.BINDING_FAILURES
 
-        BindingFailuresException failures = (BindingFailuresException) e.cause
-        failures.failures*.class == [UnreachableTypesException, InvalidSchemaCoordinateException, StrictModeException]
+        SchemaBindingException failures = e.cause
+        failures.failures*.code() == [BindingCode.UNREACHABLE_TYPE, BindingCode.UNKNOWN_SCHEMA_COORDINATE, BindingCode.STRICT_FINDINGS]
         failures.message.startsWith("[binding-failures] The schema cannot be bound: 3 errors.\n  1) [unreachable-type] ")
         failures.message.contains("\n  2) [unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:")
         failures.message.contains("\n  3) [strict-findings] The strict checks found problems in the binding of the schema:")
@@ -88,8 +86,9 @@ type Draft {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
-        e.cause.failures*.class == [UnreachableTypesException, InvalidSchemaCoordinateException]
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.BINDING_FAILURES
+        e.cause.failures*.code() == [BindingCode.UNREACHABLE_TYPE, BindingCode.UNKNOWN_SCHEMA_COORDINATE]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
@@ -160,11 +159,13 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.BINDING_FAILURES
 
-        BindingFailuresException failures = (BindingFailuresException) e.cause
-        failures.failures*.mappingContext*.coordinate == ['Query.a', 'Query.b']
-        failures.failures[0] instanceof MethodNotFoundException
+        SchemaBindingException failures = e.cause
+        failures.failures*.coordinate == ['Query.a', 'Query.b']
+        failures.failures[0] instanceof SchemaBindingException
+        failures.failures[0].code() == BindingCode.FIELD_NOT_BOUND
         failures.failures[1].message.contains('Unsupported type definition')
         failures.failures[1].message.contains('GraphQL coordinate: Query.b')
         failures.failures[1].message.count('GraphQL coordinate:') == 1

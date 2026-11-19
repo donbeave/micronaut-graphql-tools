@@ -24,8 +24,9 @@ import io.micronaut.graphql.tools.SchemaMappingDictionary
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.UnionTypeMappingNotProvidedException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverUnionTypeMappingNotProvidedSpec extends AbstractTest {
 
@@ -61,7 +62,8 @@ type ValidationError {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnionTypeMappingNotProvidedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNION_TYPE_MAPPING_NOT_PROVIDED
         e.cause.message == """[union-type-mapping-not-provided] Can not detect representation class for type ValidationError, member of PayloadError union. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
   GraphQL coordinate: Query.unionTest (line 7, column 3)
   Mapped class: ${Query.name}

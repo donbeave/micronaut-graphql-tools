@@ -23,13 +23,12 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.binding.internal.finding.DefaultSeverities
 import io.micronaut.graphql.tools.binding.internal.finding.Severity
-import io.micronaut.graphql.tools.exceptions.InvalidConfigurationException
-import io.micronaut.graphql.tools.exceptions.StrictModeException
 import org.slf4j.LoggerFactory
 
 import static io.micronaut.graphql.tools.StrictModeSpec.ItemResolver
 import static io.micronaut.graphql.tools.StrictModeSpec.Query
 import static io.micronaut.graphql.tools.StrictModeSpec.Color
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
 /**
  * Per-check severity (#86): the defaults, the strict shorthand, explicit entries, the validation of the settings and
@@ -88,7 +87,8 @@ class CheckSeveritySpec extends AbstractTest {
         def failure = startFailure([:])
 
         then:
-        failure instanceof StrictModeException
+        failure instanceof SchemaBindingException
+        failure.code() == BindingCode.STRICT_FINDINGS
         failure.codes.toSet() == [BindingCode.UNBOUND_RESOLVER_METHOD, BindingCode.UNBOUND_ENUM_CONSTANT,
                                   BindingCode.UNUSED_DICTIONARY_ENTRY] as Set
     }
@@ -109,7 +109,8 @@ class CheckSeveritySpec extends AbstractTest {
         def failure = startFailure([(PREFIX + 'strict'): false, (PREFIX + 'checks.unbound-enum-constant'): 'fail'])
 
         then: 'only that check fails; the others are warnings'
-        failure instanceof StrictModeException
+        failure instanceof SchemaBindingException
+        failure.code() == BindingCode.STRICT_FINDINGS
         failure.codes == [BindingCode.UNBOUND_ENUM_CONSTANT]
         appender.list.findAll { it.level == Level.WARN }.size() == 2
     }
@@ -121,7 +122,8 @@ class CheckSeveritySpec extends AbstractTest {
                 (PREFIX + 'checks.unused-dictionary-entry'): 'warn'])
 
         then: 'the other check still fails'
-        failure instanceof StrictModeException
+        failure instanceof SchemaBindingException
+        failure.code() == BindingCode.STRICT_FINDINGS
         failure.codes.toSet() == [BindingCode.UNBOUND_RESOLVER_METHOD] as Set
     }
 
@@ -132,7 +134,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         if (severity == 'fail') {
-            assert failure instanceof StrictModeException
+            assert failure.code() == BindingCode.STRICT_FINDINGS
             assert failure.codes.contains(BindingCode.fromCode(code))
         } else {
             assert failure == null
@@ -169,7 +171,7 @@ class CheckSeveritySpec extends AbstractTest {
                 (PREFIX + 'checks.unbound-enum-constant'): 'sometimes'])
 
         then:
-        failure instanceof InvalidConfigurationException
+        failure instanceof SchemaBindingException
         failure.code() == BindingCode.INVALID_CHECK_SETTING
         failure.problems.size() == 3
         failure.message.startsWith('[invalid-check-setting] The checks setting is invalid:')
@@ -183,7 +185,7 @@ class CheckSeveritySpec extends AbstractTest {
         def failure = startFailure([(PREFIX + key): value])
 
         then:
-        failure instanceof InvalidConfigurationException
+        failure instanceof SchemaBindingException
         failure.code() == BindingCode.REMOVED_CONFIGURATION_KEY
         failure.message.startsWith('[removed-configuration-key] ')
         failure.message.contains("${PREFIX}${key} was removed; use ${PREFIX}${replacement}")
@@ -203,7 +205,7 @@ class CheckSeveritySpec extends AbstractTest {
         def failure = startFailure([(PREFIX + 'input.detect-omission'): true])
 
         then:
-        failure instanceof InvalidConfigurationException
+        failure instanceof SchemaBindingException
         failure.code() == BindingCode.REMOVED_CONFIGURATION_KEY
         failure.message.contains("${PREFIX}input.detect-omission was removed; declare ArgumentValue")
     }
@@ -221,7 +223,8 @@ class CheckSeveritySpec extends AbstractTest {
         def failure = startFailure([(PREFIX + 'allow.findings'): [LINES['unbound-resolver-method']]])
 
         then: 'the other findings still fail, this one is neither reported nor listed'
-        failure instanceof StrictModeException
+        failure instanceof SchemaBindingException
+        failure.code() == BindingCode.STRICT_FINDINGS
         failure.codes.count(BindingCode.UNBOUND_RESOLVER_METHOD) == 1
         failure.problems.every { !it.contains('#helper(') }
         failure.problems.any { it.contains('#legacyName(') }
@@ -250,7 +253,7 @@ class CheckSeveritySpec extends AbstractTest {
         def failure = startFailure([(PREFIX + 'allow.findings'): LINES.values().toList() + [LEGACY, '!unbound-resolver-method example.Gone#method()']])
 
         then:
-        failure instanceof InvalidConfigurationException
+        failure instanceof SchemaBindingException
         failure.code() == BindingCode.INVALID_ALLOW_FINDINGS
         failure.problems == ['micronaut.graphql.tools.allow.findings: "!unbound-resolver-method example.Gone#method()" matches no finding.']
     }
@@ -261,7 +264,7 @@ class CheckSeveritySpec extends AbstractTest {
                                     (PREFIX + 'allow.findings')                 : [LINES['unbound-enum-constant']]])
 
         then:
-        failure instanceof InvalidConfigurationException
+        failure instanceof SchemaBindingException
         failure.code() == BindingCode.INVALID_ALLOW_FINDINGS
         failure.problems[0].contains('has no effect, micronaut.graphql.tools.checks.unbound-enum-constant is ignore')
         failure.message.startsWith('[invalid-allow-findings] ')
@@ -272,7 +275,7 @@ class CheckSeveritySpec extends AbstractTest {
         def failure = startFailure([(PREFIX + 'allow.findings'): [entry]])
 
         then:
-        failure instanceof InvalidConfigurationException
+        failure instanceof SchemaBindingException
         failure.code() == BindingCode.INVALID_ALLOW_FINDINGS
         failure.message.contains("\"${entry}\" is not a line of the binding manifest that a check writes")
 

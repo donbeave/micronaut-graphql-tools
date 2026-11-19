@@ -21,12 +21,13 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
-import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
 import org.intellij.lang.annotations.Language
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 
 import java.time.Duration
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootFieldPerOperationTypeSpec extends AbstractTest {
 
@@ -142,7 +143,8 @@ type Mutation {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains('GraphQL coordinate: Subscription.ticks')
         e.cause.message.contains(SubscriptionTicks.name)
         e.cause.message.contains(DuplicateSubscriptionTicks.name)

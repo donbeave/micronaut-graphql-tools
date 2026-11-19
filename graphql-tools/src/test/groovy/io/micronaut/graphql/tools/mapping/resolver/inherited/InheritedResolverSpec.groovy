@@ -26,9 +26,6 @@ import io.micronaut.graphql.tools.GraphQLResolversRegistry
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.AmbiguousTypeResolverException
-import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
-import io.micronaut.graphql.tools.exceptions.TypeResolverContractsNotFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
@@ -37,6 +34,8 @@ import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 import java.util.concurrent.atomic.AtomicInteger
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class InheritedResolverSpec extends AbstractTest {
 
@@ -177,7 +176,8 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.book (line 7, column 3)
   Methods:\u0020
@@ -195,7 +195,8 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Book.summary (line 13, column 3)
   Methods:\u0020
@@ -287,7 +288,8 @@ type Writer {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousTypeResolverException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.AMBIGUOUS_TYPE_RESOLVER
         e.cause.message == "[ambiguous-type-resolver] The bean ${UnassignableResolvers.name} is a @GraphQLTypeResolver for several classes " +
                 "through ${NovelContract.name} (${Novel.name}) and ${WriterContract.name} (${Writer.name}), and the " +
                 "first parameter of these methods is none of those classes, so they cannot be assigned to one: " +
@@ -367,7 +369,8 @@ type Writer {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof TypeResolverContractsNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.message == "[type-resolver-contracts-not-found] The bean ${BothResolvers.name} is a @GraphQLTypeResolver only through an inherited " +
                 "annotation, but no type of its class hierarchy declares the annotation at runtime, so its contracts " +
                 "cannot be read. Make the annotations of the contract types available to reflection (for example the " +
@@ -384,7 +387,8 @@ type Writer {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof TypeResolverContractsNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.beanType == BookResolver
         e.cause.message.contains(BookResolver.name)
         e.cause.message.contains('@GraphQLTypeResolver only through an inherited annotation')

@@ -15,17 +15,26 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.graphql.tools.MappingContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
 
+import java.util.List;
+
 /**
- * The base of the startup failures of the binding. {@link #code()} is the registry code of the failure, the same token
- * that the message starts with as {@code [code]}, that a binding manifest {@code !} line and the {@code checks} setting use.
- * An aggregate ({@link BindingFailuresException}, {@link StrictModeException}) has a code of its own, and each of its
- * findings carries its code in its line.
+ * The failure of the binding at startup: the one exception to catch. {@link #code()} is the registry code of the
+ * failure, the same token that the message starts with as {@code [code]}, that a binding manifest {@code !} line and
+ * the {@code checks} setting use. The guide page "Exceptions" lists every code.
+ *
+ * <p>A failure about one schema element names it: {@link #getCoordinate()} is its schema coordinate and
+ * {@link #getMappingContext()} says more. A failure that gathers several ({@link BindingCode#BINDING_FAILURES} and
+ * {@link BindingCode#STRICT_FINDINGS}) lists them in {@link #getFailures()} and {@link #getCodes()}, and each of them
+ * carries its own code. The library creates the exceptions; an application only catches them.</p>
  */
 public abstract class SchemaBindingException extends RuntimeException {
 
     private final BindingCode code;
+    private final transient MappingContext mappingContext;
 
     /**
      * @param code    the code of the failure
@@ -34,6 +43,7 @@ public abstract class SchemaBindingException extends RuntimeException {
     protected SchemaBindingException(BindingCode code, String message) {
         super(message);
         this.code = code;
+        this.mappingContext = null;
     }
 
     /**
@@ -44,6 +54,18 @@ public abstract class SchemaBindingException extends RuntimeException {
     protected SchemaBindingException(BindingCode code, String message, Throwable cause) {
         super(message, cause);
         this.code = code;
+        this.mappingContext = null;
+    }
+
+    /**
+     * @param code           the code of the failure
+     * @param message        the text, without the {@code [code]} prefix
+     * @param mappingContext the schema element and Java element the failure is about
+     */
+    protected SchemaBindingException(BindingCode code, String message, MappingContext mappingContext) {
+        super(message);
+        this.code = code;
+        this.mappingContext = mappingContext;
     }
 
     /**
@@ -51,6 +73,38 @@ public abstract class SchemaBindingException extends RuntimeException {
      */
     public final BindingCode code() {
         return code;
+    }
+
+    /**
+     * @return the schema element and Java element the failure is about, or {@code null} if it is about no single element
+     */
+    @Nullable
+    public MappingContext getMappingContext() {
+        return mappingContext;
+    }
+
+    /**
+     * @return the schema coordinate of the element the failure is about, for example {@code Query.book}, or {@code null}
+     * if it is about no single element
+     */
+    @Nullable
+    public String getCoordinate() {
+        return mappingContext == null ? null : mappingContext.getCoordinate();
+    }
+
+    /**
+     * @return the failures of several fields or types, for {@link BindingCode#BINDING_FAILURES}; empty for any other
+     * code
+     */
+    public List<SchemaBindingException> getFailures() {
+        return List.of();
+    }
+
+    /**
+     * @return the check code of each finding, for {@link BindingCode#STRICT_FINDINGS}; empty for any other code
+     */
+    public List<BindingCode> getCodes() {
+        return List.of();
     }
 
     @Override

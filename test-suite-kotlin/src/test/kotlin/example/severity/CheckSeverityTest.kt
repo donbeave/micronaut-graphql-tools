@@ -21,9 +21,12 @@ import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -48,18 +51,24 @@ class CheckSeverityTest {
     private fun start(properties: Map<String, Any>): GraphQLSchema =
         ApplicationContext.run(properties, CHECK_SEVERITY_ENVIRONMENT).use { it.getBean(GraphQLSchema::class.java) }
 
-    private fun assertFails(properties: Map<String, Any>, code: String) {
+    private fun assertFails(properties: Map<String, Any>, code: String): SchemaBindingException {
         var e: Throwable = assertThrows(Exception::class.java) { start(properties) }
         while (e !is SchemaBindingException && e.cause != null && e.cause !== e) {
             e = e.cause!!
         }
         assertTrue(e is SchemaBindingException, e.toString())
         assertTrue(e.message!!.startsWith("[$code]"), e.message)
+        return e as SchemaBindingException
     }
 
     @Test
     fun `an unreachable type fails the startup by default`() {
-        assertFails(mapOf(), "unreachable-type")
+        val e = assertFails(mapOf(), "unreachable-type")
+        // the failure is about a type, not one field: no coordinate, and it is no aggregate
+        assertEquals(BindingCode.UNREACHABLE_TYPE, e.code())
+        assertNull(e.coordinate)
+        assertTrue(e.failures.isEmpty())
+        assertTrue(e.codes.isEmpty())
     }
 
     @Test

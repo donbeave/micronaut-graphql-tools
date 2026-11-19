@@ -26,11 +26,10 @@ import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
-import io.micronaut.graphql.tools.exceptions.InterfaceTypeMappingNotProvidedException
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class InterfaceTypeSpec extends AbstractTest {
 
@@ -204,7 +203,8 @@ type MediaSection implements Section {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The field is mapped to a custom class, when required an interface.
   GraphQL coordinate: Book.sections (line 13, column 3)
   Mapped class: ${ConcreteSectionsResolver.name}
@@ -229,7 +229,8 @@ type MediaSection implements Section {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InterfaceTypeMappingNotProvidedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INTERFACE_TYPE_MAPPING_NOT_PROVIDED
         e.cause.message == """[interface-type-mapping-not-provided] Can not detect representation class for type MediaSection, implementation of Section interface. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
   GraphQL coordinate: Book.sections (line 13, column 3)
   Mapped class: ${NotRegisteredSectionsResolver.name}
@@ -264,7 +265,8 @@ type MediaSection implements Section {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `title` not found in ${UntitledSection.name}'s type.
   GraphQL coordinate: MediaSection.title (line 29, column 3)"""
     }

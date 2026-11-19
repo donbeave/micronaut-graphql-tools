@@ -21,8 +21,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectAnnotationException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class TypeResolverIncorrectAnnotationSpec extends AbstractTest {
 
@@ -51,7 +52,8 @@ type User {
 
         then:
         def e = thrown(BeanContextException)
-        e.cause instanceof IncorrectAnnotationException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_ANNOTATION
         e.cause.message == "[incorrect-annotation] Empty value member for @GraphQLTypeResolver annotation in ${UserResolver.class.name} class."
     }
 

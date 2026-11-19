@@ -19,10 +19,10 @@ import graphql.schema.GraphQLSchema
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.BindingManifest
-import io.micronaut.graphql.tools.exceptions.DuplicateDirectiveWiringException
-import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException
 import io.micronaut.runtime.server.EmbeddedServer
 import spock.lang.Specification
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class DirectiveStartupSpec extends Specification {
 
@@ -36,8 +36,8 @@ class DirectiveStartupSpec extends Specification {
         Throwable e = failure([:], DirectiveFixtures.CONFLICT)
 
         then:
-        e instanceof DuplicateDirectiveWiringException
-        ((DuplicateDirectiveWiringException) e).directiveNames == ['upper']
+        e instanceof SchemaBindingException
+        e.code() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
         e.message.startsWith('[duplicate-directive-wiring] Directive @upper is wired by both a named and an every-element SchemaDirective bean')
     }
 
@@ -46,8 +46,8 @@ class DirectiveStartupSpec extends Specification {
         Throwable e = failure([:], DirectiveFixtures.UNWIRED)
 
         then:
-        e instanceof UnwiredDirectivesException
-        ((UnwiredDirectivesException) e).unwiredDirectives == ['legacy']
+        e instanceof SchemaBindingException
+        e.code() == BindingCode.UNWIRED_DIRECTIVE
         e.message.startsWith('[unwired-directive] The schema applies directives that have no wiring: @legacy (Book)')
     }
 
@@ -77,7 +77,7 @@ class DirectiveStartupSpec extends Specification {
 
     def 'unwired-directives fail fails the startup even with strict off'() {
         expect:
-        failure([(UNWIRED_DIRECTIVES): 'fail', (STRICT): false], DirectiveFixtures.UNWIRED) instanceof UnwiredDirectivesException
+        failure([(UNWIRED_DIRECTIVES): 'fail', (STRICT): false], DirectiveFixtures.UNWIRED).code() == BindingCode.UNWIRED_DIRECTIVE
     }
 
     def 'strict off alone starts and records the directive in the manifest'() {
@@ -108,8 +108,8 @@ class DirectiveStartupSpec extends Specification {
         Throwable e = failure([(SCHEMA_CUSTOMIZER_DIRECTIVES): ['other']], DirectiveFixtures.SCHEMA_UNLISTED)
 
         then:
-        e instanceof UnwiredDirectivesException
-        ((UnwiredDirectivesException) e).unwiredDirectives == ['audit']
+        e instanceof SchemaBindingException
+        e.code() == BindingCode.UNWIRED_DIRECTIVE
         e.message.contains('@audit (schema definition)')
     }
 
@@ -129,7 +129,7 @@ class DirectiveStartupSpec extends Specification {
             start(properties, environment).close()
         } catch (BeanInstantiationException e) {
             Throwable cause = e
-            while (!(cause instanceof DuplicateDirectiveWiringException || cause instanceof UnwiredDirectivesException) && cause.cause != null) {
+            while (!(cause instanceof SchemaBindingException) && cause.cause != null) {
                 cause = cause.cause
             }
             return cause

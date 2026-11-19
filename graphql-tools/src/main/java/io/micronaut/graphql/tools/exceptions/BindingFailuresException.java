@@ -25,25 +25,26 @@ import java.util.List;
  */
 public final class BindingFailuresException extends SchemaBindingException {
 
-    private final List<RuntimeException> failures;
+    private final List<SchemaBindingException> failures;
 
-    public BindingFailuresException(List<? extends RuntimeException> failures) {
+    public BindingFailuresException(List<? extends SchemaBindingException> failures) {
         super(BindingCode.BINDING_FAILURES, buildMessage(failures), failures.get(0));
 
         this.failures = List.copyOf(failures);
         failures.stream().skip(1).forEach(this::addSuppressed);
     }
 
-    public List<RuntimeException> getFailures() {
+    @Override
+    public List<SchemaBindingException> getFailures() {
         return failures;
     }
 
-    private static String buildMessage(List<? extends RuntimeException> failures) {
+    private static String buildMessage(List<? extends SchemaBindingException> failures) {
         StringBuilder builder = new StringBuilder("The schema cannot be bound: ")
                 .append(failures.size())
                 .append(" errors.");
         int position = 0;
-        for (RuntimeException failure : failures) {
+        for (SchemaBindingException failure : failures) {
             builder.append("\n  ").append(++position).append(") ")
                     .append(failure.getMessage().replace("\n", "\n   "));
         }

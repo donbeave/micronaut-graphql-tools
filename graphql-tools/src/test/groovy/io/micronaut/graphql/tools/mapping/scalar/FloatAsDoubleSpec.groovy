@@ -21,11 +21,12 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
 import org.intellij.lang.annotations.Language
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class FloatAsDoubleSpec extends AbstractTest {
 
@@ -155,7 +156,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.providedClass == Long
         e.cause.supportedClasses == [float, Float, double, Double] as HashSet
         e.cause.message.contains("GraphQL coordinate: Query.ratio")

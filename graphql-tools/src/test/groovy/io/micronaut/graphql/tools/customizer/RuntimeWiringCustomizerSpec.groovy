@@ -35,9 +35,10 @@ import io.micronaut.graphql.tools.RuntimeWiringCustomizer
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RuntimeWiringCustomizerSpec extends AbstractTest {
 
@@ -133,10 +134,10 @@ scalar Long
         then:
         def e = thrown(BeanInstantiationException)
         if (BUILDER_REJECTS_REPLACEMENTS) {
-            assert e.cause instanceof RuntimeWiringOverrideException
+            assert e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
             assert e.cause.replacements == ["data fetcher of Query.hello (${ReplaceFetchers.name})".toString()]
         } else {
-            assert e.cause instanceof RuntimeWiringOverrideException
+            assert e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
             assert e.cause.replacements == [
                     "data fetcher of Query.hello (${ReplaceFetchers.name})".toString(),
                     "default data fetcher of Item (${ReplaceFetchers.name})".toString(),
@@ -163,7 +164,8 @@ scalar Long
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof RuntimeWiringOverrideException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == [
                 "data fetcher of Item.name, through the code registry (${ReplaceThroughCodeRegistry.name})".toString(),
                 "data fetcher of Query.hello, through the code registry (${ReplaceThroughCodeRegistry.name})".toString(),
@@ -193,7 +195,8 @@ scalar Long
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof RuntimeWiringOverrideException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == [
                 "data fetcher of Item.name (${ShadowBoundField.name})".toString()
         ]
@@ -210,7 +213,8 @@ scalar Long
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof RuntimeWiringOverrideException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == [
                 "data fetcher of Item.name (${JavaShadowingCustomizer.name})".toString()
         ]
@@ -252,7 +256,8 @@ scalar Long
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof RuntimeWiringOverrideException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == ["wiring factory (${ReplaceWiringFactory.name})".toString()]
     }
 

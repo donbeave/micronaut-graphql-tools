@@ -21,8 +21,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class TypeResolverMethodNotFoundSpec extends AbstractTest {
 
@@ -52,7 +53,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `username` not found in ${User.name}'s type or it resolvers: [${UserResolver.name}].
   GraphQL coordinate: User.username (line 11, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'User'

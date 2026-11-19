@@ -36,11 +36,10 @@ import io.micronaut.graphql.tools.RuntimeWiringCustomizer
 import io.micronaut.graphql.tools.SchemaDirective
 import io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.DuplicateDirectiveWiringException
-import io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException
-import io.micronaut.graphql.tools.exceptions.UnwrappedDirectiveWiringException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class SchemaDirectiveWiringSpec extends AbstractTest {
 
@@ -115,7 +114,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnwrappedDirectiveWiringException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNWRAPPED_DIRECTIVE_WIRING
         e.cause.beans == ["${UpperWiring.name} (Definition: ${UnwrappedFactory.name})".toString()]
         e.cause.message == "[unwrapped-directive-wiring] SchemaDirectiveWiring beans that no SchemaDirective bean wraps: ${e.cause.beans[0]}.\n" +
                 "  The library applies a wiring only through a SchemaDirective: wrap each one in " +
@@ -146,7 +146,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnwrappedDirectiveWiringException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNWRAPPED_DIRECTIVE_WIRING
         e.cause.beans.size() == 1
         e.cause.beans[0].startsWith(PrototypeUpperWiring.name)
     }
@@ -204,7 +205,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof DuplicateDirectiveWiringException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
         e.cause.message == "[duplicate-directive-wiring] More than one SchemaDirective bean wires directive @upper: ${UpperWiring.name}, ${UpperWiring.name}. Keep one.".toString()
     }
 
@@ -217,7 +219,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof DuplicateDirectiveWiringException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
         e.cause.directiveNames == ['upper']
         e.cause.message == ("[duplicate-directive-wiring] Directive @upper is wired by both a named and an every-element SchemaDirective bean, "
                 + "so it would take effect twice: named ${UpperWiring.name}, every element ${BangWiring.name}. "
@@ -233,7 +236,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof RuntimeWiringOverrideException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == ["directive wiring @upper (${ReplaceUpper.name})".toString()]
     }
 

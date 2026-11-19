@@ -26,7 +26,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.exceptions.ResolverRequiredException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
@@ -204,7 +203,8 @@ type MediaSection implements Section {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ResolverRequiredException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RESOLVER_REQUIRED
         e.cause.message.startsWith("""[resolver-required] The GraphQL field carries @computed, so a type resolver method must bind it, but none does.
   GraphQL coordinate: TextSection.summary (line 20, column 3)
   Not bound:

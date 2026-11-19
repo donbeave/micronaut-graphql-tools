@@ -19,11 +19,12 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException
 import org.intellij.lang.annotations.Language
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RawWrapperReturnTypeSpec extends AbstractTest {
 
@@ -49,7 +50,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "java.util.Optional must declare the type it wraps.")
         e.cause.message.contains("GraphQL coordinate: Query.value")
@@ -74,7 +76,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "java.util.concurrent.CompletionStage must declare the type it wraps.")
         e.cause.message.contains("GraphQL coordinate: Query.value")

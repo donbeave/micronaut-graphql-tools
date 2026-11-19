@@ -19,8 +19,8 @@ import graphql.schema.GraphQLSchema;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.exceptions.BeanInstantiationException;
 import io.micronaut.graphql.tools.BindingManifest;
-import io.micronaut.graphql.tools.exceptions.DuplicateDirectiveWiringException;
-import io.micronaut.graphql.tools.exceptions.UnwiredDirectivesException;
+import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 import io.micronaut.runtime.server.EmbeddedServer;
 import org.junit.jupiter.api.Test;
 
@@ -46,17 +46,17 @@ class DirectiveStartupTest {
     void aDirectiveWiredByANamedAndAnEveryElementSchemaDirectiveFailsTheStartup() {
         Throwable cause = rootFailure(Map.of(), DirectiveFixtures.CONFLICT);
 
-        DuplicateDirectiveWiringException e = assertInstanceOf(DuplicateDirectiveWiringException.class, cause);
-        assertEquals(List.of("upper"), e.getDirectiveNames());
+        SchemaBindingException e = assertInstanceOf(SchemaBindingException.class, cause);
+        assertEquals(BindingCode.DUPLICATE_DIRECTIVE_WIRING, e.code());
         assertTrue(e.getMessage().startsWith("[duplicate-directive-wiring] Directive @upper is wired by both a named and an every-element SchemaDirective bean"), e.getMessage());
     }
 
     @Test
     void anAppliedDirectiveWithoutAWiringFailsTheStartupByDefault() {
-        UnwiredDirectivesException e = assertInstanceOf(UnwiredDirectivesException.class,
+        SchemaBindingException e = assertInstanceOf(SchemaBindingException.class,
                 rootFailure(Map.of(), DirectiveFixtures.UNWIRED));
 
-        assertEquals(List.of("legacy"), e.getUnwiredDirectives());
+        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.code());
         assertTrue(e.getMessage().startsWith("[unwired-directive] The schema applies directives that have no wiring: @legacy (Book)"), e.getMessage());
     }
 
@@ -80,7 +80,8 @@ class DirectiveStartupTest {
     void unwiredDirectivesFailFailsTheStartupEvenWithStrictOff() {
         Map<String, Object> properties = Map.of(UNWIRED_DIRECTIVES, "fail", STRICT, false);
 
-        assertInstanceOf(UnwiredDirectivesException.class, rootFailure(properties, DirectiveFixtures.UNWIRED));
+        assertEquals(BindingCode.UNWIRED_DIRECTIVE,
+                assertInstanceOf(SchemaBindingException.class, rootFailure(properties, DirectiveFixtures.UNWIRED)).code());
     }
 
     @Test
@@ -102,10 +103,10 @@ class DirectiveStartupTest {
     void aSchemaLevelDirectiveThatNoSchemaCustomizerIsListedForFailsTheStartup() {
         Map<String, Object> properties = Map.of(SCHEMA_CUSTOMIZER_DIRECTIVES, List.of("other"));
 
-        UnwiredDirectivesException e = assertInstanceOf(UnwiredDirectivesException.class,
+        SchemaBindingException e = assertInstanceOf(SchemaBindingException.class,
                 rootFailure(properties, DirectiveFixtures.SCHEMA_UNLISTED));
 
-        assertEquals(List.of("audit"), e.getUnwiredDirectives());
+        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.code());
         assertTrue(e.getMessage().contains("@audit (schema definition)"), e.getMessage());
     }
 
@@ -123,7 +124,7 @@ class DirectiveStartupTest {
             start(properties, environment).close();
         });
         Throwable cause = e;
-        while (!(cause instanceof DuplicateDirectiveWiringException || cause instanceof UnwiredDirectivesException) && cause.getCause() != null) {
+        while (!(cause instanceof SchemaBindingException) && cause.getCause() != null) {
             cause = cause.getCause();
         }
         return cause;

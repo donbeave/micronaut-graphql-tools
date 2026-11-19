@@ -19,8 +19,9 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverMethodNotFoundSpec extends AbstractTest {
 
@@ -46,7 +47,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
   GraphQL coordinate: Query.hello (line 7, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'Query'
@@ -74,7 +76,8 @@ type Mutation {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
   GraphQL coordinate: Mutation.hello (line 7, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'Mutation'

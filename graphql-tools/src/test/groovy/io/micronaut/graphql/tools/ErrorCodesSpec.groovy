@@ -85,5 +85,19 @@ class ErrorCodesSpec extends Specification {
         failures.code() == BindingCode.BINDING_FAILURES
         failures.failures*.code() == [BindingCode.STRICT_FINDINGS, BindingCode.UNREACHABLE_TYPE]
         failures.message.contains('\n  2) [unreachable-type] ')
+        strict.codes == [BindingCode.UNBOUND_ENUM_CONSTANT, BindingCode.UNUSED_DICTIONARY_ENTRY]
+        failures.failures.size() == 2
+        failures.cause.is(strict)
+    }
+
+    void "a failure about no single element has no coordinate, no failures and no codes"() {
+        given:
+        SchemaBindingException failure = new UnreachableTypesException([Orphan: 'type'])
+
+        expect:
+        failure.coordinate == null
+        failure.mappingContext == null
+        failure.failures == []
+        failure.codes == []
     }
 }

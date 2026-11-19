@@ -412,8 +412,8 @@ public class GraphQLToolsConfiguration {
     public enum Precedence {
 
         /**
-         * Fail the startup with {@link io.micronaut.graphql.tools.exceptions.AmbiguousBindingException}, naming the
-         * field and both members. {@code strict} does not relax it.
+         * Fail the startup with a {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException} of code
+         * {@code precedence-ambiguity}, naming the field and both members. {@code strict} does not relax it.
          */
         FAIL,
 

@@ -19,8 +19,9 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverIncorrectFieldMappingObjectTypeToBuiltInClassSpec extends AbstractTest {
 
@@ -50,7 +51,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The field is mapped to a built-in class, when required a custom class.
   GraphQL coordinate: Query.currentUser (line 7, column 3)
   Mapped class: ${Query.name}
@@ -87,7 +89,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The field is mapped to a built-in class, when required a custom class.
   GraphQL coordinate: Query.currentUser (line 7, column 3)
   Mapped class: ${Query.name}

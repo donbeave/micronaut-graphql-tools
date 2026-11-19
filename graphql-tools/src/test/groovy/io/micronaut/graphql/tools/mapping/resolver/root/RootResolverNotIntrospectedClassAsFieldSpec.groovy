@@ -20,8 +20,9 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverNotIntrospectedClassAsFieldSpec extends AbstractTest {
 
@@ -50,7 +51,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ClassNotIntrospectedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
         e.cause.message == """[class-not-introspected] The class ${User.name} is not introspected. Ensure the class is annotated with ${GraphQLType.name}.
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}

@@ -21,11 +21,12 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException
 import org.intellij.lang.annotations.Language
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class OptionalReturnTypeSpec extends AbstractTest {
 
@@ -99,7 +100,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!. Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself instead of an Optional.
   GraphQL coordinate: Query.name (line 7, column 3)
   Mapped class: ${NonNullQuery.name}
@@ -132,7 +134,8 @@ type Holder {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!. Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself instead of an Optional.
   GraphQL coordinate: Holder.note (line 11, column 3)
   Mapped class: ${Holder.name}
@@ -158,7 +161,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "${Optional.name} is only allowed for a nullable GraphQL type, the list element type is String!.")
         e.cause.message.contains("GraphQL coordinate: Query.names")
@@ -183,7 +187,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "${Optional.name} cannot wrap ${DataFetcherResult.name}.")
     }

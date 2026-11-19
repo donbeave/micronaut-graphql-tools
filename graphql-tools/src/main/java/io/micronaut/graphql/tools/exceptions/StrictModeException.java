@@ -42,6 +42,7 @@ public final class StrictModeException extends SchemaBindingException {
     /**
      * @return the check code of each problem, in the order of {@link #getProblems()}
      */
+    @Override
     public List<BindingCode> getCodes() {
         return codes;
     }
