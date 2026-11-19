@@ -27,7 +27,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException
 import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import io.micronaut.graphql.tools.exceptions.StrictModeException
@@ -160,7 +160,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof BindingFailuresException || e.cause instanceof MethodNotFoundException
-        !(e.cause instanceof AmbiguousBindingException)
+        e.cause.code() != BindingCode.PRECEDENCE_AMBIGUITY
     }
 
     void "an ignored method that carries a coordinate does not switch its bean to coordinate-only binding"() {

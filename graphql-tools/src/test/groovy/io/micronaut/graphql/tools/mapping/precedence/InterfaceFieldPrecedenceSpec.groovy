@@ -24,7 +24,8 @@ import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.exceptions.ResolverRequiredException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
@@ -71,7 +72,8 @@ type MediaSection implements Section {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousBindingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message.startsWith("""[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: TextSection.summary (line ${line}, column 3)
   Members:

@@ -287,8 +287,8 @@ type resolver method (of a `@GraphQLTypeResolver` for that type, or for the Java
 declares the field). One rule covers object and interface fields. When both exist for one field,
 `micronaut.graphql.tools.precedence` decides:
 
-- `fail` (default): the startup fails with `[precedence-ambiguity]` (`AmbiguousBindingException`), naming the field and
-  both members. `strict` does not relax it. The value `strict`, the former name of this default, is rejected with
+- `fail` (default): the startup fails with `[precedence-ambiguity]` (match on `SchemaBindingException#code()`), naming the field
+  and both members. `strict` does not relax it. The value `strict`, the former name of this default, is rejected with
   `[removed-configuration-key]` (BC-29).
 - `property-first`: the member of the Java type binds, and the type resolver method is never called. This was the
   only behaviour before the option existed.
