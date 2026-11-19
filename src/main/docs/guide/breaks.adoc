@@ -26,7 +26,7 @@ These changes are planned for the 1.0.0 milestones. Each one is _pending_ until 
 * #36 (BC-26): Jackson leaves the `api` scope; an application that uses Jackson adds `micronaut-jackson-databind` itself. See the migration page, entries for 1.0.0-M3.
 * #86 (BC-27): per-check severity; six old keys are removed. See the migration page, entries for 1.0.0-M3.
 * #159 (BC-28): the option `micronaut.graphql.tools.input.detect-omission` is removed; declaring `ArgumentValue` is enough. See the migration page, entries for 1.0.0-M3.
-* #105: the default precedence becomes `fail` (_pending_).
+* #105 (BC-29): the precedence value `strict` is named `fail` and `strict` is rejected; a type resolver method that declares its coordinate wins over a getter. See the migration page, entries for 1.0.0-M3.
 * #109: the exception subclasses become internal behind the public `SchemaBindingException` (_pending_; the base class and its `code()` are on `master` with BC-22).
 * #144: the JSR-269 code is removed from `graphql-tools-processor` (_pending_).
 * #236: `AmbiguousBindingException` becomes internal (_pending_).

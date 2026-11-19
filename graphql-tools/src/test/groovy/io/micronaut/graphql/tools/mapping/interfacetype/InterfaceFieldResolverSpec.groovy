@@ -167,7 +167,7 @@ type MediaSection implements Section {
   Members:
   1) ${SectionResolver.name} summary(${Section.name} section)
   2) ${SummarizedTextSection.name} getSummary()
-  Put a directive listed in micronaut.graphql.tools.resolver-directives on the field to bind the type resolver method, remove one of the members, or set micronaut.graphql.tools.precedence to property-first or resolver-first."""
+  Fix it for this field: put a directive listed in micronaut.graphql.tools.resolver-directives on the field, declare @GraphQLSchemaCoordinate on the type resolver method (the coordinate of the type, or of the interface that declares the field), or annotate the Java member with @GraphQLIgnore. Fix it for every field: set micronaut.graphql.tools.precedence to resolver-first or property-first. micronaut.graphql.tools.strict does not change this."""
     }
 
     @GraphQLType

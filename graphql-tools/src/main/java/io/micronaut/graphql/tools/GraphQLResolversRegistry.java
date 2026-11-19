@@ -245,6 +245,23 @@ public final class GraphQLResolversRegistry {
         return sortedSchemaCoordinateMethods;
     }
 
+    /**
+     * @param method a type resolver method
+     * @return whether it declares its coordinate with {@code @GraphQLSchemaCoordinate}
+     */
+    boolean declaresCoordinate(BeanDefinitionAndMethod method) {
+        return ResolverClassRules.declaresCoordinate(typeModel.method(method.getExecutableMethod()),
+                schemaCoordinateSignatures.get(method.getBeanDefinition()));
+    }
+
+    /**
+     * @param coordinate a coordinate, {@code Type.field}
+     * @return whether some resolver method declares it
+     */
+    boolean isCoordinateDeclared(String coordinate) {
+        return getSchemaCoordinateMethods().stream().anyMatch(it -> it.coordinate().equals(coordinate));
+    }
+
     private boolean isCandidate(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
         return ResolverClassRules.isCandidate(typeModel.method(method), schemaCoordinateSignatures.get(beanDefinition));
     }

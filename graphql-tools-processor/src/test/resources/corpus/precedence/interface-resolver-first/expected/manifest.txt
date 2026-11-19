@@ -1,0 +1,13 @@
+!precedence-ambiguity TextSection.summary ; example.TextSection#summary | example.SectionResolver#summary(example.Section)
+MediaSection -> object ; example.MediaSection ; - ; -
+MediaSection.summary: String! -> resolver ; example.SectionResolver#summary(example.Section) ; java.lang.String ; java.lang.String
+MediaSection.title: String! -> property ; example.MediaSection#title ; java.lang.String ; java.lang.String
+Query -> object ; - ; - ; -
+Query.sections: [Section!]! -> root ; example.Query#sections() ; java.util.List<example.Section> ; java.util.List<example.Section>
+Section -> interface ; example.Section ; - ; -
+Section/MediaSection -> resolves ; example.MediaSection ; - ; -
+Section/TextSection -> resolves ; example.TextSection ; - ; -
+String -> scalar ; String ; - ; -
+TextSection -> object ; example.TextSection ; - ; -
+TextSection.summary: String! -> resolver ; example.SectionResolver#summary(example.Section) ; java.lang.String ; java.lang.String
+TextSection.title: String! -> property ; example.TextSection#title ; java.lang.String ; java.lang.String

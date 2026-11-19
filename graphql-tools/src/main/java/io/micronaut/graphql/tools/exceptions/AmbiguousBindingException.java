@@ -23,8 +23,9 @@ import java.util.Map;
 
 /**
  * Thrown when both a member of the Java type of an object type (a property or a {@code @GraphQLField} method) and a
- * type resolver method can bind one GraphQL field, and {@code micronaut.graphql.tools.precedence} is {@code strict}
- * (the default). The field does not carry a directive listed in {@code micronaut.graphql.tools.resolver-directives}.
+ * type resolver method can bind one GraphQL field, and {@code micronaut.graphql.tools.precedence} is {@code fail}
+ * (the default). Neither the field nor the type resolver method says which one binds it, and
+ * {@code micronaut.graphql.tools.strict} does not change that.
  */
 public final class AmbiguousBindingException extends AbstractMappingException {
 
@@ -52,9 +53,12 @@ public final class AmbiguousBindingException extends AbstractMappingException {
             }
         }
 
-        return result.append("\n  Put a directive listed in micronaut.graphql.tools.resolver-directives on the field to ")
-                .append("bind the type resolver method, remove one of the members, or set ")
-                .append("micronaut.graphql.tools.precedence to property-first or resolver-first.")
+        return result.append("\n  Fix it for this field: put a directive listed in ")
+                .append("micronaut.graphql.tools.resolver-directives on the field, declare @GraphQLSchemaCoordinate on ")
+                .append("the type resolver method (the coordinate of the type, or of the interface that declares the ")
+                .append("field), or annotate the Java member with @GraphQLIgnore. Fix it for every field: set ")
+                .append("micronaut.graphql.tools.precedence to resolver-first or property-first. ")
+                .append("micronaut.graphql.tools.strict does not change this.")
                 .toString();
     }
 
