@@ -25,7 +25,7 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 /**
- * The Kotlin side of the binding corpus (DD-13): every case with a {@code kotlin/} directory, compiled in one batched
+ * The Kotlin side of the binding corpus: every case with a {@code kotlin/} directory, compiled in one batched
  * Gradle TestKit build with Kotlin and KSP2 (kapt with {@code -Pcorpus.kotlin.processor=kapt}, for the {@code lang:all} cases),
  * twice per case like the in-process cases: with the checks off, and started; with the checks on, whose findings are compared
  * with {@code compile.txt}. It is the Gradle task {@code corpusKotlin}, not part of {@code test}: it needs the network (plugin

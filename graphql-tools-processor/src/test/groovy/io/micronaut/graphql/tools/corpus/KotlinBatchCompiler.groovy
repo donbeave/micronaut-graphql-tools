@@ -27,7 +27,7 @@ import java.nio.file.StandardCopyOption
 import java.util.regex.Matcher
 
 /**
- * The Kotlin backend (DD-13): one generated Gradle build with two subprojects per Kotlin case, compiled by Gradle TestKit
+ * The Kotlin backend: one generated Gradle build with two subprojects per Kotlin case, compiled by Gradle TestKit
  * with the production toolchain (the Kotlin Gradle plugin and KSP2 of the versions the test suites use, Micronaut's
  * {@code micronaut-inject-kotlin} as the KSP processor), in one {@code --continue --parallel} run. {@code KotlinCompiler}
  * of micronaut-test is not used: it pins Kotlin 1.9 and KSP1, fails on JDK 25 and cannot pass KSP arguments.
@@ -284,7 +284,7 @@ plugins {
         }
         String micronaut = System.getProperty('corpus.micronaut.platform', '4.10.24')
         // both options in every compile: under kapt, javac copies an option into the system properties of the compiler JVM and
-        // a leftover value of another compilation wins over the argument (D-39, 3.1)
+        // a leftover value of another compilation wins over the argument
         List<String> arguments = ["arg(\"${CHECKS}\", \"${checked}\")".toString(),
                                   "arg(\"${SCHEMA_DIRS}\", \"${schemas.toString().replace('\\', '/')}\")".toString()]
         String options = processor == Processor.KSP ? "ksp {\n    ${arguments.join('\n    ')}\n}" : "kapt {\n    arguments {\n        ${arguments.join('\n        ')}\n    }\n}"

@@ -57,7 +57,7 @@ file without parameter names, is `ParameterNamesSpec` (a class file cannot be a 
 2. The startup verdict equals `expected/runtime.txt`.
 3. The binding manifest of a bound startup equals `expected/manifest.txt`, where there is one.
 4. Where the compile-time backend exists (Java, Groovy and Kotlin under KSP2): the findings of the checks-on compilation equal `expected/compile.txt`.
-5. Soundness (DD-4): every compile **error** is a startup finding with the same code and coordinate. A false compile error is a
+5. Soundness: every compile **error** is a startup finding with the same code and coordinate. A false compile error is a
    bug. Only the documented exceptions below excuse one.
 6. Completeness: a startup finding of a per-class code (the five parity codes and the per-class failures, see `Parity`)
    that the compile side does not report is a gap, and must be listed in `corpus-divergences.txt`. A whole-program finding
