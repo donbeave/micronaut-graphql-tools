@@ -43,11 +43,14 @@ public class BindingBenchmark {
     @Param({"false", "true"})
     public boolean record;
 
+    @Param({LargeSchema.RINGS, LargeSchema.INTERFACES})
+    public String shape;
+
     private TypeDefinitionRegistry registry;
 
     @Setup
     public void parse() {
-        registry = LargeSchema.registry(fields);
+        registry = LargeSchema.registry(shape, fields);
     }
 
     @Benchmark
@@ -56,7 +59,7 @@ public class BindingBenchmark {
             Object schema = context.getBean(GraphQL.class).getGraphQLSchema();
             // The checks run inside the invocation, after the binding. A context started in @Setup would make the
             // measured start the second start in the JVM, with the classes and the static state of the first.
-            LargeSchema.checkBound(context);
+            LargeSchema.checkBound(context, shape);
             if (LargeSchema.manifestAvailable(context) != record) {
                 throw new IllegalStateException("The manifest is " + (record ? "not " : "") + "recorded, but record is "
                         + record);
@@ -68,12 +71,8 @@ public class BindingBenchmark {
     // -Dbenchmarks.checks=ignore (a JMH -jvmArgs value) starts every context with all ten checks at ignore, to measure
     // what the checks cost: the default is every check at fail
     private ApplicationContext start() {
-        Map<String, Object> properties = new HashMap<>(Map.of(
-                "graphql.graphql-ws.enabled", false,
-                "graphql.graphiql.enabled", false,
-                "benchmarks.large", true,
-                LargeSchema.FIELDS, fields,
-                "micronaut.graphql.tools.manifest.record", record));
+        Map<String, Object> properties = new HashMap<>(LargeSchema.properties(shape, fields));
+        properties.put("micronaut.graphql.tools.manifest.record", record);
         if ("ignore".equals(System.getProperty("benchmarks.checks"))) {
             for (BindingCode code : BindingCode.values()) {
                 if (code.check()) {
