@@ -36,6 +36,7 @@ public final class TypeResolverContractsNotFoundException extends SchemaBindingE
     }
 
     /**
+     * @param beanType          the bean class whose contracts are missing
      * @param annotatedDirectly whether the bean carries the annotation itself and inherits another contract as well,
      *                          so annotating the class directly does not help
      */
