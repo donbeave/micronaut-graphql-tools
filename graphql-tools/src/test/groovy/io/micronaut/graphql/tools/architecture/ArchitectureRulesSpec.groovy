@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.architecture
 import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClasses
+import com.tngtech.archunit.core.domain.JavaCodeUnit
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaMember
 import com.tngtech.archunit.core.domain.JavaModifier
@@ -161,14 +162,7 @@ class ArchitectureRulesSpec extends Specification {
                 members.addAll(item.methods)
                 members.addAll(item.constructors)
                 members.findAll { m -> m.modifiers.any { it.name() in ['PUBLIC', 'PROTECTED'] } }.each { JavaMember m ->
-                    List<JavaClass> types = []
-                    if (m instanceof JavaField) {
-                        types << m.rawType
-                    } else {
-                        types << m.rawReturnType
-                        types.addAll(m.rawParameterTypes)
-                        types.addAll(m.throwsClause.types.collect { it.toErasure() })
-                    }
+                    Set<JavaClass> types = m instanceof JavaField ? m.type.allInvolvedRawTypes : ((JavaCodeUnit) m).allInvolvedRawTypes
                     types.findAll { isInternal(it) }.each { JavaClass t ->
                         events.add(SimpleConditionEvent.violated(m, "${m.fullName} exposes the internal type ${t.name}"))
                     }
