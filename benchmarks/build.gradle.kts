@@ -264,7 +264,7 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
                 |import io.micronaut.context.annotation.Bean;
                 |import io.micronaut.context.annotation.Factory;
                 |import io.micronaut.context.annotation.Requires;
-                |import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer;
+                |import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
                 |import jakarta.inject.Singleton;
                 |
                 |$requires
