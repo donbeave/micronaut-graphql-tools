@@ -30,7 +30,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.exceptions.ResolverRequiredException
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
@@ -344,7 +343,8 @@ type Item {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ResolverRequiredException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.RESOLVER_REQUIRED
         e.cause.message == """[resolver-required] The GraphQL field carries @computed, so a type resolver method must bind it, but none does.
   GraphQL coordinate: Item.price (line 16, column 3)
   Not bound:

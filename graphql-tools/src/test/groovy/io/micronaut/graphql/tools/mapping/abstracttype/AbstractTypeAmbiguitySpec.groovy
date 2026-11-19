@@ -22,7 +22,6 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.AmbiguousAbstractTypeException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
@@ -35,6 +34,8 @@ import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembe
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.OnlyBoxed
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Stamped
 import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembers.Wrapped
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class AbstractTypeAmbiguitySpec extends AbstractTest {
 
@@ -118,7 +119,8 @@ type Long {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof AmbiguousAbstractTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.AMBIGUOUS_ABSTRACT_TYPE
         e.cause.message == """[ambiguous-abstract-type] Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type is the most specific one:
   ${BoxedAndBagged.name} is an instance of Bagged (${Bagged.name}), Boxed (${Boxed.name}) of ${kind == 'union' ? 'union Holder' : 'interface Container'}
 Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement only one of their Java types."""

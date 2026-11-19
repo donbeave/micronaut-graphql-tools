@@ -30,9 +30,9 @@ import java.util.Set;
  * class or factory method, or by {@link io.micronaut.core.order.Ordered#getOrder()} if the bean implements
  * {@code Ordered}.</p>
  *
- * <p>A customizer may only add. The startup fails with
- * {@link io.micronaut.graphql.tools.exceptions.RuntimeWiringOverrideException}, which names every replacement and the
- * customizer that made it, if a customizer replaces a data fetcher, default data fetcher, type resolver or scalar that
+ * <p>A customizer may only add. The startup fails with a
+ * {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException} of code {@code runtime-wiring-override}, which names
+ * every replacement and the customizer that made it, if a customizer replaces a data fetcher, default data fetcher, type resolver or scalar that
  * the library registered, the wiring of a {@link SchemaDirective} bean, or the wiring factory, or puts a data fetcher
  * or type resolver for a field or type the library wired into a code registry ({@code RuntimeWiring.Builder#codeRegistry}; graphql-java's schema generator lets
  * the code registry win). Such a replacement would silently undo the binding. To wrap data fetchers use a
@@ -46,7 +46,7 @@ import java.util.Set;
  *
  * <p>graphql-java 25.1's builder already rejects the first replaced default data fetcher, type resolver or scalar
  * itself ({@code StrictModeWiringException}); graphql-java 21.3 accepts them silently. A replaced data fetcher of a
- * field the library wired is always reported as {@code RuntimeWiringOverrideException}. The library's check
+ * field the library wired is always reported as {@code runtime-wiring-override}. The library's check
  * covers both lines, the wiring factory included, and lists every replacement at once where the builder lets the
  * customizers finish.</p>
  *
@@ -70,8 +70,9 @@ public interface RuntimeWiringCustomizer {
      * replacement. This method is called once, at startup, before any field is bound; the customizer still has to
      * register the data fetcher in {@link #customize}.
      *
-     * <p>The startup fails with
-     * {@link io.micronaut.graphql.tools.exceptions.InvalidClaimedFieldsException}, which names the coordinate, if a
+     * <p>The startup fails with a
+     * {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException} of code {@code invalid-claimed-fields}, which names
+     * the coordinate, if a
      * claim names a type the schema does not define, a type that is not an object type, or a field the type does not
      * define. A claim on an interface field is not possible: claim the field of each implementing object type.</p>
      *

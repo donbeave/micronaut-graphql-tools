@@ -25,13 +25,12 @@ import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.ClassNotIntrospectedException
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
-import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException
 import org.intellij.lang.annotations.Language
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class DataFetcherResultReturnTypeSpec extends AbstractTest {
 
@@ -114,7 +113,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), Publisher (subscription fields only), DataFetcherResult, Optional (nullable types only), each at most once. Fix: remove the inner ${DataFetcherResult.simpleName} or declare the wrappers in that order.
   GraphQL coordinate: Query.greeting (line 7, column 3)
   Mapped class: ${NestedQuery.name}
@@ -142,7 +142,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "${CompletionStage.name} is not allowed inside a list. Fix: return CompletionStage<List<T>> instead " +
                 "(for example, combine the element futures with CompletableFuture.allOf), or load the elements " +
@@ -169,7 +170,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "${DataFetcherResult.name} must declare the type it wraps.")
         e.cause.mappingContext.graphQlField == 'greeting'
@@ -198,7 +200,8 @@ input FilterInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ClassNotIntrospectedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
         e.cause.message.startsWith("[class-not-introspected] The class ${DataFetcherResult.name} is not introspected.")
         e.cause.message.contains("Reached from: Query.search(filter:)")
     }

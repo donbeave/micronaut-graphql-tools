@@ -20,8 +20,9 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.MissingEnumValuesException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverMissingEnumValuesSpec extends AbstractTest {
 
@@ -53,7 +54,8 @@ enum Month {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MissingEnumValuesException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MISSING_ENUM_VALUES
         e.cause.message == """[missing-enum-values] Some enum values are missing in class ${Month.name}.
   GraphQL coordinate: Query.month (line 7, column 3)
   Mapped class: ${Query.name}

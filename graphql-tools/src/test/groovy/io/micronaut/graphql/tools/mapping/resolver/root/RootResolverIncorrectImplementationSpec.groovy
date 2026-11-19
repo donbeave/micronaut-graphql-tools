@@ -21,8 +21,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectImplementationException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverIncorrectImplementationSpec extends AbstractTest {
 
@@ -52,7 +53,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectImplementationException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_IMPLEMENTATION
         e.cause.message == """[incorrect-implementation] The annotated implementation class is not implementing the ${User.name} interface.
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}

@@ -28,13 +28,11 @@ import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
-import io.micronaut.graphql.tools.exceptions.StrictModeException
 import io.micronaut.runtime.event.annotation.EventListener
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.annotation.PreDestroy
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
 class GraphQLIgnoreSpec extends AbstractTest {
 
@@ -114,7 +112,8 @@ input Filter {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof StrictModeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.STRICT_FINDINGS
         e.cause.problems == ["The resolver method ${UnboundQuery.name}#stray(java.lang.String) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.".toString()]
     }
 
@@ -135,7 +134,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
     }
 
     void "an ignored getter does not bind the field of its name, and the precedence fails only on a real ambiguity"() {
@@ -159,7 +159,8 @@ type Item {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException || e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() in [BindingCode.BINDING_FAILURES, BindingCode.FIELD_NOT_BOUND]
         e.cause.code() != BindingCode.PRECEDENCE_AMBIGUITY
     }
 

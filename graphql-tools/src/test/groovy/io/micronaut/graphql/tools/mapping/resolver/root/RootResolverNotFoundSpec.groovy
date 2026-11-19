@@ -18,8 +18,9 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.RootResolverNotFoundException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverNotFoundSpec extends AbstractTest {
 
@@ -43,7 +44,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof RootResolverNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.ROOT_RESOLVER_NOT_FOUND
         e.cause.message == "[root-resolver-not-found] No any root resolvers found. Create one or ensure the class is annotated with ${GraphQLRootResolver.name}."
     }
 

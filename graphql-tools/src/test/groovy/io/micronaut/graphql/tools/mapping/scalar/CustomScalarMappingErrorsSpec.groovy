@@ -26,14 +26,13 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.GraphQLScalarMapping
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
-import io.micronaut.graphql.tools.exceptions.InvalidScalarMappingException
-import io.micronaut.graphql.tools.exceptions.ScalarMappingNotProvidedException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
 import java.time.LocalDate
 import java.time.temporal.Temporal
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class CustomScalarMappingErrorsSpec extends AbstractTest {
 
@@ -69,7 +68,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ScalarMappingNotProvidedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.SCALAR_MAPPING_NOT_PROVIDED
         e.cause.message == """[scalar-mapping-not-provided] The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
   GraphQL coordinate: Query.today (line 9, column 3)
   Mapped class: ${UnmappedQuery.name}
@@ -98,7 +98,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ScalarMappingNotProvidedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.SCALAR_MAPPING_NOT_PROVIDED
         e.cause.message == """[scalar-mapping-not-provided] The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes. Found a GraphQLScalarType bean 'LocalDate'; wrap it with GraphQLScalarMapping.of(type, JavaClass.class).
   GraphQL coordinate: Query.today (line 9, column 3)
   Mapped class: ${UnmappedQuery.name}
@@ -126,7 +127,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ScalarMappingNotProvidedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.SCALAR_MAPPING_NOT_PROVIDED
         e.cause.scalarName == 'LocalDate'
         !e.cause.message.contains('Found a GraphQLScalarType bean')
     }
@@ -152,7 +154,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ScalarMappingNotProvidedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.SCALAR_MAPPING_NOT_PROVIDED
         e.cause.message == """[scalar-mapping-not-provided] The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
   GraphQL coordinate: Query.daysUntil(date:) (line 9, column 13)
   GraphQL argument: date
@@ -185,7 +188,8 @@ input BookingInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof ScalarMappingNotProvidedException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.SCALAR_MAPPING_NOT_PROVIDED
         e.cause.message == """[scalar-mapping-not-provided] The GraphQL scalar LocalDate has no mapping. Register a ${GraphQLScalarMapping.name} bean with its graphql.schema.GraphQLScalarType and Java classes.
   GraphQL coordinate: BookingInput.day (line 13, column 3)
   Mapped class: ${BookingInput.name}
@@ -213,7 +217,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The field is mapped to the incorrect class.
   GraphQL coordinate: Query.todayAsString (line 9, column 3)
   Mapped class: ${MappedQuery.name}
@@ -243,7 +248,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The argument is mapped to the incorrect class.
   GraphQL coordinate: Query.anything(date:) (line 9, column 12)
   GraphQL argument: date
@@ -296,7 +302,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InvalidScalarMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INVALID_SCALAR_MAPPING
         e.cause.message == "[invalid-scalar-mapping] Invalid ${GraphQLScalarMapping.name} beans: the scalar LocalDate is mapped 2 times."
     }
 
@@ -319,7 +326,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InvalidScalarMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INVALID_SCALAR_MAPPING
         e.cause.message == "[invalid-scalar-mapping] Invalid ${GraphQLScalarMapping.name} beans: the scalars Long, String are built in."
     }
 
@@ -344,7 +352,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The mapping of the GraphQL scalar LocalDate declares no input classes, so the scalar cannot be used for an argument or an input field.
   GraphQL coordinate: Query.echo(date:) (line 9, column 8)
   GraphQL argument: date
@@ -376,7 +385,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The argument is mapped to the primitive long, but the GraphQL type Count is nullable, so null cannot be passed. Use ${Long.name} or make the GraphQL type non-null.
   GraphQL coordinate: Query.repeat(times:) (line 9, column 10)
   GraphQL argument: times
@@ -411,7 +421,8 @@ input RepeatInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message.startsWith("[incorrect-class-mapping] The argument is mapped to the primitive long, but the GraphQL type Count is nullable")
         e.cause.message.contains("GraphQL coordinate: RepeatInput.times")
     }

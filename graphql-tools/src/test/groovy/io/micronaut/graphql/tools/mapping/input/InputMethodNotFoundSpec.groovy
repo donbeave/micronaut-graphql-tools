@@ -20,8 +20,9 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class InputMethodNotFoundSpec extends AbstractTest {
 
@@ -52,7 +53,8 @@ input HelloInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `lastName` not found in ${HelloInput.name}'s input.
   GraphQL coordinate: HelloInput.lastName (line 12, column 3)
   Mapped class: ${HelloInput.name}"""

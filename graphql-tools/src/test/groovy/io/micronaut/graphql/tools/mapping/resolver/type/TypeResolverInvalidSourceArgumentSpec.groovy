@@ -21,8 +21,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.InvalidSourceArgumentException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class TypeResolverInvalidSourceArgumentSpec extends AbstractTest {
 
@@ -52,7 +53,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof InvalidSourceArgumentException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INVALID_SOURCE_PARAMETER
         e.cause.message == """[invalid-source-parameter] The source argument must be instance of ${User.name} class, provided: ${String.name}.
   GraphQL coordinate: User.username (line 11, column 3)
   Mapped class: ${User1Resolver.name}

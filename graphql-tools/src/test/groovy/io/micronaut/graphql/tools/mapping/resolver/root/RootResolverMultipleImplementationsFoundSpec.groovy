@@ -21,8 +21,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.exceptions.MultipleImplementationsFoundException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverMultipleImplementationsFoundSpec extends AbstractTest {
 
@@ -52,7 +53,8 @@ type User {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleImplementationsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_IMPLEMENTATIONS_FOUND
         e.cause.message == """[multiple-implementations-found] Found multiple implementations for the interface ${User.name}. Annotate the interface with @GraphQLType, so that its own bean introspection reads every implementation.
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}

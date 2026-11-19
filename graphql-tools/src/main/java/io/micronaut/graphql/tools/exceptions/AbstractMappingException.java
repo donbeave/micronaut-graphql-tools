@@ -23,27 +23,17 @@ import io.micronaut.graphql.tools.binding.BindingCode;
  */
 public abstract class AbstractMappingException extends SchemaBindingException {
 
-    private final transient MappingContext mappingContext;
-
     protected AbstractMappingException(
             BindingCode code,
             String message,
             MappingContext mappingContext
     ) {
-        super(code, message);
-        this.mappingContext = mappingContext;
-    }
-
-    /**
-     * @return the schema coordinate and Java element the failure is about
-     */
-    public MappingContext getMappingContext() {
-        return mappingContext;
+        super(code, message, mappingContext);
     }
 
     @Override
     protected String describe(String message) {
-        return mappingContext.getMessage(message);
+        return getMappingContext().getMessage(message);
     }
 
 }

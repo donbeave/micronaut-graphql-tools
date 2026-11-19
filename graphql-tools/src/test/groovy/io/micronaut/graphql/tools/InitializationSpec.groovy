@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools
 import graphql.GraphQL
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.exceptions.SchemaDiscoveryException
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
 class InitializationSpec extends AbstractTest {
 
@@ -31,7 +31,7 @@ class InitializationSpec extends AbstractTest {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof SchemaDiscoveryException
+        e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.SCHEMA_NOT_FOUND
         e.cause.message.startsWith("[schema-not-found] No GraphQL schema files found for micronaut.graphql.tools.schema.locations=[classpath:graphql/**/*.graphqls]")
     }

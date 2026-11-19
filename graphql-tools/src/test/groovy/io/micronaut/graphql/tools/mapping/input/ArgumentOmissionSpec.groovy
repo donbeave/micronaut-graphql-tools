@@ -24,8 +24,9 @@ import io.micronaut.graphql.tools.ArgumentValue
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.UnsupportedInputTypeException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class ArgumentOmissionSpec extends AbstractTest {
 
@@ -156,7 +157,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedInputTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_INPUT_TYPE
         e.cause.reason == "${ArgumentValue.name} is only allowed for a nullable GraphQL type, the type is String!."
     }
 
@@ -179,7 +181,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedInputTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_INPUT_TYPE
         e.cause.reason == "${ArgumentValue.name} is not allowed inside a list: a list element cannot be omitted."
     }
 
@@ -192,7 +195,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedInputTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_INPUT_TYPE
         e.cause.message == """[unsupported-input-type] The Java type is not supported for this argument or input field: ${ArgumentValue.name} needs a writable property: it is set to omitted() when the client leaves it out.
   GraphQL coordinate: ProfileInput.nickname (line 16, column 3)
   Mapped class: ${ReadOnlyProfileInput.name}

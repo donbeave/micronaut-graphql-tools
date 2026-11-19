@@ -20,8 +20,9 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootResolverIncorrectArgumentMappingInputObjectValueToInterfaceSpec extends AbstractTest {
 
@@ -52,7 +53,8 @@ input PriceInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The argument is mapped to an interface, when required a custom class.
   GraphQL coordinate: Query.price(input:) (line 7, column 9)
   GraphQL argument: input

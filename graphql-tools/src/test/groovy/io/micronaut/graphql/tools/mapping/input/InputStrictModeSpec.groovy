@@ -29,11 +29,11 @@ import io.micronaut.graphql.tools.GraphQLRuntimeWiringGenerator
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
-import io.micronaut.graphql.tools.exceptions.UnmappedInputPropertiesException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class InputStrictModeSpec extends AbstractTest {
 
@@ -142,7 +142,8 @@ input PointInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnmappedInputPropertiesException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNMAPPED_INPUT_PROPERTY
         e.cause.unmappedProperties.keySet() == ['BasketInput', 'ItemInput'] as Set
     }
 
@@ -185,7 +186,8 @@ input PointInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.NULLABLE_PRIMITIVE
         e.cause.message == """[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. The check nullable-primitive rejects this for built-in scalars too; with micronaut.graphql.tools.checks.nullable-primitive set to warn or ignore a null reaches the primitive as its default value or fails the request.
   GraphQL coordinate: Query.repeat(times:) (line 7, column 25)
   GraphQL argument: times
@@ -204,7 +206,8 @@ input PointInput {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof IncorrectClassMappingException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.NULLABLE_PRIMITIVE
         e.cause.mappingContext.graphQlInputObjectType == 'LineInput'
         e.cause.message.startsWith("[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable")
     }

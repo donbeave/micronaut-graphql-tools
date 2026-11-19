@@ -28,6 +28,7 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates.ResolverKind;
 import io.micronaut.graphql.tools.exceptions.BindingFailuresException;
 import io.micronaut.graphql.tools.exceptions.InvalidSchemaCoordinateException;
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 import io.micronaut.inject.BeanDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,7 +87,7 @@ final class SchemaCoordinateValidator {
         }
 
         // each kind has its own code, which the compile-time check reports for the same situation
-        List<RuntimeException> failures = new ArrayList<>();
+        List<SchemaBindingException> failures = new ArrayList<>();
         if (!onNonResolvers.isEmpty()) {
             failures.add(new InvalidSchemaCoordinateException(BindingCode.COORDINATE_ON_NON_RESOLVER, onNonResolvers));
         }
@@ -122,7 +123,7 @@ final class SchemaCoordinateValidator {
                 coordinateMethod.method().getMethodName(), kinds).orElse(null);
     }
 
-    Optional<RuntimeException> verifySchemaCoordinateBindings(Set<String> unboundTypes,
+    Optional<SchemaBindingException> verifySchemaCoordinateBindings(Set<String> unboundTypes,
                                                               Map<String, Class<?>> processedTypes,
                                                               Map<String, String> fieldBindings,
                                                               Map<String, Set<String>> resolverBindings) {

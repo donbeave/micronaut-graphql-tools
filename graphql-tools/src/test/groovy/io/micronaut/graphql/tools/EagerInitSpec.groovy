@@ -22,11 +22,12 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
 import java.util.concurrent.atomic.AtomicInteger
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class EagerInitSpec extends AbstractTest {
 
@@ -73,7 +74,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        rootCause(e) instanceof MethodNotFoundException
+        rootCause(e) instanceof SchemaBindingException
+        rootCause(e).code() == BindingCode.FIELD_NOT_BOUND
         rootCause(e).message.contains("Query.missing")
         applicationContext == null
     }
@@ -84,7 +86,8 @@ type Query {
 
         then: 'the library has no GraphQL bean here, but the schema is still bound'
         def e = thrown(BeanInstantiationException)
-        rootCause(e) instanceof MethodNotFoundException
+        rootCause(e) instanceof SchemaBindingException
+        rootCause(e).code() == BindingCode.FIELD_NOT_BOUND
         rootCause(e).message.contains("Query.missing")
     }
 
@@ -126,7 +129,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        rootCause(e) instanceof MethodNotFoundException
+        rootCause(e) instanceof SchemaBindingException
+        rootCause(e).code() == BindingCode.FIELD_NOT_BOUND
     }
 
     void "with eager-init false a valid schema is bound on first use"() {

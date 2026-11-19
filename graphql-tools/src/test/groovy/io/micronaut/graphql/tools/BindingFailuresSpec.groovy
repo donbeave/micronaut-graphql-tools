@@ -26,11 +26,9 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.exceptions.BindingFailuresException
-import io.micronaut.graphql.tools.exceptions.IncorrectClassMappingException
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
 class BindingFailuresSpec extends AbstractTest {
 
@@ -63,11 +61,11 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.BINDING_FAILURES
 
-        BindingFailuresException failures = (BindingFailuresException) e.cause
-        failures.failures*.class == [MethodNotFoundException, IncorrectClassMappingException, MethodNotFoundException]
-        failures.failures*.mappingContext*.coordinate == ['Book.isbn', 'Query.count', 'Query.missing']
+        SchemaBindingException failures = e.cause
+        failures.failures*.coordinate == ['Book.isbn', 'Query.count', 'Query.missing']
         failures.cause.is(failures.failures[0])
         failures.code() == BindingCode.BINDING_FAILURES
         failures.failures*.code() == [BindingCode.FIELD_NOT_BOUND, BindingCode.INCORRECT_CLASS_MAPPING, BindingCode.FIELD_NOT_BOUND]
@@ -94,7 +92,8 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.mappingContext.coordinate == 'Book.isbn'
         e.cause.mappingContext.sourceLocation.line == 12
         e.cause.mappingContext.sourceLocation.column == 3
@@ -166,8 +165,9 @@ type MediaSection implements Section {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof BindingFailuresException
-        ((BindingFailuresException) e.cause).failures*.mappingContext*.coordinate ==
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.BINDING_FAILURES
+        e.cause.failures*.coordinate ==
                 ['MediaSection.summary', 'TextSection.summary']
     }
 

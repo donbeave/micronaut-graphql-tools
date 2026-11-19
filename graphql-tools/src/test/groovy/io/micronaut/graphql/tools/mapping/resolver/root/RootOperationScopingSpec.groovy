@@ -21,13 +21,13 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
-import io.micronaut.graphql.tools.exceptions.MethodNotFoundException
-import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
 import org.intellij.lang.annotations.Language
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 
 import java.time.Duration
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class RootOperationScopingSpec extends AbstractTest {
 
@@ -146,7 +146,8 @@ type Mutation {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MethodNotFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The method `status` not found in any root resolvers: [${QueryOnlyStatus.name}].
   GraphQL coordinate: Mutation.status (line 12, column 3)"""
     }
@@ -177,7 +178,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.status (line 7, column 3)
   Methods:\u0020
@@ -211,7 +213,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.status (line 9, column 3)
   Methods:\u0020
@@ -246,7 +249,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.status (line 7, column 3)
   Methods:\u0020

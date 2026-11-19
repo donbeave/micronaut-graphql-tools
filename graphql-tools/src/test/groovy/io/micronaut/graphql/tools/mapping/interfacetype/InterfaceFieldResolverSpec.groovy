@@ -27,7 +27,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.exceptions.MultipleMethodsFoundException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
@@ -199,7 +198,8 @@ type MediaSection implements Section {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: MediaSection.summary (line 26, column 3)
   Methods:\u0020
@@ -248,7 +248,8 @@ type Tag implements Item & Labelled {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof MultipleMethodsFoundException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Tag.label (line 22, column 3)
   Methods:\u0020

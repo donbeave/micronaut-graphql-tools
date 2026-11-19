@@ -2,7 +2,22 @@ This page is the error reference. Every startup failure, every strict check and 
 
 == The exception
 
-Every startup failure is a `SchemaBindingException` (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnreachableTypesException`, `StrictModeException`, `BindingFailuresException`, `InvalidConfigurationException`, and the others in the `exceptions` package). `code()` returns its code. An aggregate has a code of its own and carries its findings: `BindingFailuresException` (`binding-failures`) lists the failures of several fields, and each of them has its own code; `StrictModeException` (`strict-findings`) lists the strict findings, `getCodes()` returns the check code of each one, and each line of the message starts with it. Issue #109 collapses the subclasses into internal classes behind one public exception; the codes stay.
+Every startup failure is a `SchemaBindingException`. Catch it and match on `code()`, which returns the `BindingCode` of the failure. Do not catch the other classes of the `exceptions` package: each one stands for one code, and #109 makes them internal. They are `AbstractMappingException`, `AmbiguousAbstractTypeException`, `AmbiguousBindingException`, `AmbiguousTypeMappingException`, `AmbiguousTypeResolverException`, `BindingFailuresException`, `ClassNotIntrospectedException`, `DuplicateDirectiveWiringException`, `ImplementationNotFoundException`, `IncorrectAnnotationException`, `IncorrectArgumentCountException`, `IncorrectArgumentNameException`, `IncorrectClassMappingException`, `IncorrectImplementationException`, `IncorrectMemberMappingException`, `InputFieldNotSettableException`, `InterfaceTypeMappingNotProvidedException`, `InvalidAllowUnreachableException`, `InvalidClaimedFieldsException`, `InvalidConfigurationException`, `InvalidScalarMappingException`, `InvalidSchemaCoordinateException`, `InvalidSourceArgumentException`, `MappingConflictException`, `MethodNotFoundException`, `MissingEnumValuesException`, `MultipleImplementationsFoundException`, `MultipleMethodsFoundException`, `ResolverRequiredException`, `RootResolverNotFoundException`, `RuntimeWiringOverrideException`, `ScalarMappingNotProvidedException`, `SchemaDefinitionNotProvidedException`, `SchemaDiscoveryException`, `StrictModeException`, `TypeResolverContractsNotFoundException`, `UnionTypeMappingNotProvidedException`, `UnmappedInputPropertiesException`, `UnreachableTypesException`, `UnsupportedInputTypeException`, `UnsupportedReturnTypeException`, `UnwiredDirectivesException`, `UnwrappedDirectiveWiringException`.
+
+* `getCoordinate()` is the schema coordinate of the element that the failure is about (`Query.book`, `Book.isbn`, `Filter.name`), or `null` for a failure that is about no single element. `getMappingContext()` says more about it: the Java class and method, the argument, the source location.
+* `getMessage()` starts with `[code]` and names the coordinate, the Java element and the way out.
+* An aggregate has a code of its own and carries its findings. `binding-failures` lists the failures of several fields in `getFailures()`, sorted by coordinate, and each of them has its own code and coordinate; the first one is the cause and the others are suppressed exceptions. `strict-findings` lists the strict findings: `getCodes()` returns the check code of each one, and each line of the message starts with it.
+
+[source,java]
+----
+try {
+    applicationContext.getBean(GraphQLSchema.class);
+} catch (BeanInstantiationException e) {
+    if (e.getCause() instanceof SchemaBindingException failure && failure.code() == BindingCode.FIELD_NOT_BOUND) {
+        log.error("{} is not bound", failure.getCoordinate());
+    }
+}
+----
 
 == Checks
 
@@ -11,6 +26,7 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 [cols="3,1,1,6", options="header"]
 |===
 |Code |Kind |Compile time |Meaning
+// begin generated: checks
 |`unbound-resolver-method` |check |yes |A resolver method binds no schema field.
 |`root-method-several-operations` |check |yes |A root resolver method binds fields of several operation types.
 |`unbound-enum-constant` |check |yes |A Java enum constant has no value in the schema enum.
@@ -21,6 +37,7 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 |`unused-dictionary-entry` |check |no |A SchemaMappingDictionary entry names a type that the schema does not bind.
 |`interface-read-through-implementation` |check |no |An interface type is read through one of its implementations.
 |`unwired-directive` |check |no |The schema applies a directive that has no wiring.
+// end generated: checks
 |===
 
 == Failures
@@ -28,7 +45,8 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 [cols="3,1,1,6", options="header"]
 |===
 |Code |Kind |Compile time |Meaning
-|`precedence-ambiguity` |failure |no |A property and a resolver method can both bind one field, and the precedence is fail. The message names the field coordinate, both members, and the resolver directive, `@GraphQLSchemaCoordinate`, `@GraphQLIgnore` and `precedence` ways out.
+// begin generated: failures
+|`precedence-ambiguity` |failure |no |A property and a resolver method can both bind one field, and the precedence is fail.
 |`unknown-schema-coordinate` |failure |yes |A @GraphQLSchemaCoordinate value does not match the schema or the method.
 |`coordinate-on-non-resolver` |failure |yes |A @GraphQLSchemaCoordinate is declared on a class that is not a resolver.
 |`argument-mismatch` |failure |yes |A resolver parameter and a field argument cannot be matched by name or count.
@@ -79,13 +97,16 @@ A check is a strict-mode finding. In the compile-time column, `yes` means the co
 |`processor-schema-not-configured` |failure |yes |The processor has no schema directory option.
 |`processor-schema-not-found` |failure |yes |The configured schema directory has no schema file.
 |`processor-internal-error` |failure |yes |The processor failed with an internal error.
+// end generated: failures
 |===
 
-The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup emits it as `SchemaDiscoveryException` for a schema file that the discovery cannot parse or merge; a schema that graphql-java rejects later still fails with graphql-java's own `SchemaProblem`. `schema-not-found` is a startup code: no file at `micronaut.graphql.tools.schema.locations`, a missing literal file, or an invalid location.
+The message of `precedence-ambiguity` names the field coordinate, both members, and the ways out: a resolver directive, `@GraphQLSchemaCoordinate`, `@GraphQLIgnore` or the `precedence` setting.
 
-`nullable-primitive` and `coordinate-on-non-resolver` are emitted at startup and at compile time with the same code. A primitive Java type for an argument or input field of a nullable built-in scalar fails the startup with `nullable-primitive` (not `incorrect-class-mapping`); a primitive for a nullable custom scalar keeps `incorrect-class-mapping`, because the compile-time check cannot see the scalar mapping. A `@GraphQLSchemaCoordinate` on a bean that is neither a `@GraphQLRootResolver` nor a `@GraphQLTypeResolver` fails the startup with `coordinate-on-non-resolver` (not `unknown-schema-coordinate`); the other invalid coordinates keep `unknown-schema-coordinate`, and a startup with both kinds reports both in a `BindingFailuresException`.
+The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup emits it for a schema file that the discovery cannot parse or merge; a schema that graphql-java rejects later still fails with graphql-java's own `SchemaProblem`. `schema-not-found` is a startup code: no file at `micronaut.graphql.tools.schema.locations`, a missing literal file, or an invalid location.
 
-`checks.<code>` and the `[code]` of a configuration failure use the same codes: `invalid-check-setting` (an unknown check or severity), `removed-configuration-key` (a key that was removed in 1.0.0-M3, BC-27, with its replacement) and `invalid-allow-findings` (an `allow.findings` entry that is not a manifest line of a check, or that matches no finding). They are raised as `InvalidConfigurationException`.
+`nullable-primitive` and `coordinate-on-non-resolver` are emitted at startup and at compile time with the same code. A primitive Java type for an argument or input field of a nullable built-in scalar fails the startup with `nullable-primitive` (not `incorrect-class-mapping`); a primitive for a nullable custom scalar keeps `incorrect-class-mapping`, because the compile-time check cannot see the scalar mapping. A `@GraphQLSchemaCoordinate` on a bean that is neither a `@GraphQLRootResolver` nor a `@GraphQLTypeResolver` fails the startup with `coordinate-on-non-resolver` (not `unknown-schema-coordinate`); the other invalid coordinates keep `unknown-schema-coordinate`, and a startup with both kinds reports both under `binding-failures`.
+
+`checks.<code>` and the `[code]` of a configuration failure use the same codes: `invalid-check-setting` (an unknown check or severity), `removed-configuration-key` (a key that was removed in 1.0.0-M3, BC-27, with its replacement) and `invalid-allow-findings` (an `allow.findings` entry that is not a manifest line of a check, or that matches no finding). They fail the startup like any other code.
 
 `class-not-introspected` for the Java class of an input type or an enum has the schema type as its coordinate (`Filter`, `Color`), not the argument or field that reaches it, so that it is the same whichever use the startup binds the type from.
 

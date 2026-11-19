@@ -19,8 +19,9 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.exceptions.UnsupportedReturnTypeException
 import org.intellij.lang.annotations.Language
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 
 class OptionalPrimitiveReturnTypeSpec extends AbstractTest {
 
@@ -89,7 +90,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "java.util.OptionalInt is only allowed for a nullable GraphQL type, the field type is Int!.")
         e.cause.message.contains("GraphQL coordinate: Query.count (line 7, column 3)")
@@ -114,7 +116,8 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause instanceof UnsupportedReturnTypeException
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "java.util.OptionalInt is only allowed for a nullable GraphQL type, the list element type is Int!.")
         e.cause.message.contains("GraphQL coordinate: Query.counts")
