@@ -66,7 +66,7 @@ val graphqlSchemaDirs = files("src/main/resources")
 // The checks cover `main` only: the test fixtures (for example the precedence classes) have no schema file in the schema directories.
 // KSP gives `kspTest` the processors of `ksp`, so the processor is excluded from it.
 configurations.matching { it.name == "kspTest" }.configureEach {
-    val processor = project(":graphql-tools-processor")
+    val processor = project(projects.micronautGraphqlToolsProcessor.path)
     exclude(group = processor.group.toString(), module = processor.name)
 }
 ksp {
