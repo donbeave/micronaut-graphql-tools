@@ -21,10 +21,9 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 
 /**
- * Thrown when a bean is a {@link GraphQLTypeResolver} only through an inherited annotation, and no type of its class
- * hierarchy shows the annotation to reflection: its contracts, and so the class each of its methods resolves, cannot
- * be read. This happens when class annotations are not available at runtime, for example in a native image without
- * reflection configuration for the contract types.
+ * Thrown when a bean is a {@link GraphQLTypeResolver} only through an inherited annotation, and the build did not record
+ * its contracts: the visitor of {@code micronaut-graphql-tools-processor} writes them into the annotation metadata of the
+ * bean class, so the processor is not on the path of the compiler.
  */
 @Internal
 public final class TypeResolverContractsNotFoundException extends SchemaBindingException {
@@ -32,11 +31,13 @@ public final class TypeResolverContractsNotFoundException extends SchemaBindingE
     private final Class<?> beanType;
 
     public TypeResolverContractsNotFoundException(Class<?> beanType) {
-        super(BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND, "The bean " + beanType.getName() + " is a @" + GraphQLTypeResolver.class.getSimpleName()
-                + " only through an inherited annotation, but no type of its class hierarchy declares the annotation "
-                + "at runtime, so its contracts cannot be read. Make the annotations of the contract types available "
-                + "to reflection (for example the reflection configuration of a native image), or annotate the bean "
-                + "class directly.");
+        super(BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND, "The bean " + beanType.getName() + " is a @"
+                + GraphQLTypeResolver.class.getSimpleName() + " only through an inherited annotation, but the build did "
+                + "not record its contracts. Add micronaut-graphql-tools-processor to the path that your compiler reads "
+                + "Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for "
+                + "Groovy; the compile-time checks section of the README shows the setting of each tool, and "
+                + "micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the "
+                + "contracts), or annotate the bean class directly.");
 
         this.beanType = beanType;
     }

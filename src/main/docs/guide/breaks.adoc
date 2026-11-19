@@ -31,5 +31,6 @@ These changes are planned for the 1.0.0 milestones. Each one is _pending_ until 
 * #354 (BC-31): the 15 public types of the root package `io.micronaut.graphql.tools` moved into the role packages `config`, `customizer`, `mapping`, `directive`, `input` and `manifest`; the root holds no types. See the migration page, entries for 1.0.0-M3.
 * #144: the JSR-269 code is removed from `graphql-tools-processor` (_pending_).
 * #291 (BC-32): the build runs the visitor instead of the JSR-269 processor, and the compile-time options are renamed: `micronaut.graphql.tools.processor.schema.dirs` and `micronaut.graphql.tools.processor.checks` replace `micronaut.graphql.tools.sdlDir`. See the migration page, entries for 1.0.0-M3.
+* #34 (BC-33): a bean that is a type resolver only through an inherited `@GraphQLTypeResolver` needs `micronaut-graphql-tools-processor` on the compiler path, because the startup no longer reads class annotations by reflection. See the migration page, entries for 1.0.0-M3.
 
 Issue #15 (BC-19, resolver parameters bound by name): its runtime half is listed for 1.0.0-M1; the visitor applies the same rule at compile time, and #291 registers it, so a misnamed or missing resolver parameter fails the build.

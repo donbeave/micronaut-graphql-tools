@@ -14,6 +14,8 @@ dependencies {
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)
     testAnnotationProcessor(mn.micronaut.inject.java)
+    // the visitor records the contracts that a type resolver bean inherits (#34), see below
+    testAnnotationProcessor(projects.micronautGraphqlToolsProcessor)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(libs.jetbrains.annotations)
     // ArchitectureRulesSpec: the reflection, Jackson and public-API rules read the bytecode of the library and the binding module.
@@ -37,6 +39,28 @@ micronautBuild {
     binaryCompatibility {
         enabled.set(false)
     }
+}
+
+// The inherited-resolver specs need the contracts that the visitor of the processor writes into the annotation metadata of a bean
+// class (the registry reads no class annotation by reflection, #34). The tests compile with the checks off: the specs bind resolvers
+// that drift from every schema on purpose, and the visitor records the contracts either way. The processor is not a test
+// dependency: ArchitectureRulesSpec reads the classes of the test runtime classpath, which must hold no compiler plug-in.
+val visitor by configurations.creating {
+    isCanBeConsumed = false
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+    }
+}
+dependencies {
+    visitor(projects.micronautGraphqlToolsProcessor)
+}
+tasks.named<JavaCompile>("compileTestJava") {
+    options.compilerArgs.add("-Amicronaut.graphql.tools.processor.checks=false")
+}
+// The Groovy compiler reads its options from system properties, so it runs in its own JVM (the default).
+tasks.named<GroovyCompile>("compileTestGroovy") {
+    classpath = classpath + visitor
+    options.forkOptions.jvmArgs!!.add("-Dmicronaut.graphql.tools.processor.checks=false")
 }
 
 // Warnings in the library's main code fail the build. Tests, the test-suite modules and the processor do not.

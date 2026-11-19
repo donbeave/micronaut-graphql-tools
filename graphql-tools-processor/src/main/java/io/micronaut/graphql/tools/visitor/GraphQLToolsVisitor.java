@@ -102,6 +102,10 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
 
     @Override
     public void visitClass(ClassElement element, VisitorContext context) {
+        // the metadata is written whatever the checks are: the startup reads it, and it is not a check
+        if (ResolverContractsWriter.applies(element)) {
+            ResolverContractsWriter.write(element);
+        }
         Compilation current = compilation;
         if (current == null || current.failed || !current.options.checks()
                 || !isResolver(element) && !hasCoordinateMethod(element) || !ElementTypeModel.isBeanClass(element)) {
