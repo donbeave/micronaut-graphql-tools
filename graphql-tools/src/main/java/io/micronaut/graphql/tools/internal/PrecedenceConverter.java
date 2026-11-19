@@ -34,7 +34,7 @@ import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
  */
 @Internal
 @Singleton
-final class PrecedenceConverter implements TypeConverter<CharSequence, Precedence> {
+public final class PrecedenceConverter implements TypeConverter<CharSequence, Precedence> {
 
     @Override
     public Optional<Precedence> convert(CharSequence object, Class<Precedence> targetType, ConversionContext context) {

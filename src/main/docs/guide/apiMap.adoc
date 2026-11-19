@@ -37,13 +37,16 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes
 |`io.micronaut.graphql.tools.exceptions` |graphql-tools |Public API |The startup failure: `SchemaBindingException`, the one exception to catch
 |`io.micronaut.graphql.tools.internal.exceptions` |graphql-tools |Internal |The classes that build each failure, one for each kind
-|`io.micronaut.graphql.tools.internal` |graphql-tools |Internal |The binding implementation: the factories, the runtime wiring generator, the binders, the registries, the checks and the manifest recording
+|`io.micronaut.graphql.tools.internal` |graphql-tools |Internal |The entry points of the binding: the factories, the eager binding, the bean selection and the shared helpers
 |`io.micronaut.graphql.tools.internal.registry` |graphql-tools |Internal |The runtime method processors that register the resolvers (not the compile-time processor module)
 |`io.micronaut.graphql.tools.internal.discovery` |graphql-tools |Internal |Schema discovery: reads the schema files into the type registry
-|`io.micronaut.graphql.tools.internal.input` |graphql-tools |Internal |The conversion of argument and input values
-|`io.micronaut.graphql.tools.internal.resolver` |graphql-tools |Internal |The data fetchers and the type resolvers
-|`io.micronaut.graphql.tools.internal.wiring` |graphql-tools |Internal |The wiring factory that picks the data fetcher and the type resolver of each field and type
+|`io.micronaut.graphql.tools.internal.resolver` |graphql-tools |Internal |The data fetchers and the type resolvers, and the planning of resolver arguments
+|`io.micronaut.graphql.tools.internal.wiring` |graphql-tools |Internal |The runtime wiring generator, the wiring factory that picks the data fetcher and the type resolver of each field and type, the interface field binder and the directive wirings
 |`io.micronaut.graphql.tools.binding` |graphql-tools-binding |Public API |`BindingCode`, the registry of the error codes
+|`io.micronaut.graphql.tools.internal.input` |graphql-tools |Internal |The conversion of argument and input values, and the input type binder
+|`io.micronaut.graphql.tools.internal.checks` |graphql-tools |Internal |The startup checks and validators: strict mode, unreachable types, schema coordinates, the directive wiring check and the mapping dictionary
+|`io.micronaut.graphql.tools.internal.manifest` |graphql-tools |Internal |Recording and writing the binding manifest at startup
+|`io.micronaut.graphql.tools.internal.model` |graphql-tools |Internal |The runtime model the binding reads: the resolver registry, the introspection registry, the type and bean models
 |`io.micronaut.graphql.tools.binding.internal.finding` |graphql-tools-binding |Internal |Findings and their rendering
 |`io.micronaut.graphql.tools.binding.internal.manifest` |graphql-tools-binding |Internal |The binding manifest renderer and the schema hash
 |`io.micronaut.graphql.tools.binding.internal.meta` |graphql-tools-binding |Internal |The resolver contracts annotation
@@ -61,7 +64,7 @@ Kotlin and Groovy sources need no `package-info`; the library modules are Java.
 [[plannedLayout]]
 == Planned layout
 
-Most of this section does not exist yet; `internal`, `internal.registry`, `internal.discovery`, `internal.input`, `internal.resolver` and `internal.wiring` do, and the last three take more types in the split of `internal`. It is the target of the package structure work, which lands as small changes, one area at a time, so that it does not collide with other work. Each public type that moves gets an entry in <<breaks,Breaking Changes>> and in the migration page.
+Most of this section does not exist yet; `internal` and all of its sub-packages (`checks`, `discovery`, `input`, `manifest`, `model`, `registry`, `resolver` and `wiring`) do, and `internal` no longer holds the whole implementation. It is the target of the package structure work, which lands as small changes, one area at a time, so that it does not collide with other work. Each public type that moves gets an entry in <<breaks,Breaking Changes>> and in the migration page.
 
 [cols="5,2,6", options="header"]
 |===
@@ -73,7 +76,7 @@ Most of this section does not exist yet; `internal`, `internal.registry`, `inter
 |`io.micronaut.graphql.tools.directive` |Public API |`SchemaDirective` and `CustomWiring`
 |`io.micronaut.graphql.tools.input` |Public API |`ArgumentValue`
 |`io.micronaut.graphql.tools.manifest` |Public API |`BindingManifest`
-|`io.micronaut.graphql.tools.internal` |Internal |The factories that create the beans (today it holds the whole implementation of the binding)
+|`io.micronaut.graphql.tools.internal` |Internal |The factories that create the beans, the eager binding and the bean selection
 |`io.micronaut.graphql.tools.internal.registry` |Internal |The resolver registry, the bean selection and the method processors (the method processors are here already)
 |`io.micronaut.graphql.tools.internal.wiring` |Internal |The runtime wiring generator and the directive wirings
 |`io.micronaut.graphql.tools.internal.resolver` |Internal |The data fetchers and the type resolvers
@@ -81,6 +84,7 @@ Most of this section does not exist yet; `internal`, `internal.registry`, `inter
 |`io.micronaut.graphql.tools.internal.discovery` |Internal |Schema discovery
 |`io.micronaut.graphql.tools.internal.checks` |Internal |The strict checks and the validators
 |`io.micronaut.graphql.tools.internal.manifest` |Internal |Recording and writing the binding manifest
+|`io.micronaut.graphql.tools.internal.model` |Internal |The runtime registries and models of the beans and types
 |===
 
 `io.micronaut.graphql.tools` itself will hold no types. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, `processing` is deleted when the visitor replaces the JSR-269 processor, and `visitor` stays.

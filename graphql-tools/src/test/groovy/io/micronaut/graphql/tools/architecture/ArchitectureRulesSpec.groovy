@@ -52,7 +52,7 @@ class ArchitectureRulesSpec extends Specification {
      * access that no longer happens fails the spec, so delete it with the fix.
      */
     static final Map<String, Map<String, Object>> REFLECTION_ALLOWLIST = [
-            'io.micronaut.graphql.tools.internal.GraphQLResolversRegistry': [
+            'io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry': [
                     accesses: ['java.lang.Class.getDeclaredAnnotation'],
                     reason  : 'reads @GraphQLTypeResolver from the user class, removed by #34',
             ],

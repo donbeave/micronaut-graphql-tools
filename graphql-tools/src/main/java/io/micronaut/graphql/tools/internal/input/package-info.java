@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 /**
- * The conversion of argument and input values from the GraphQL request into the Java values that a resolver method takes.
+ * The conversion of argument and input values from the GraphQL request into the Java values that a resolver method takes, and the binder that builds the converters of the input types from the schema and the bean introspections.
  *
- * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: InputObjectConverter, ValueConverters, InputConversionException.</p>
+ * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: InputTypeBinder, InputObjectConverter, ValueConverters, InputConversionException.</p>
  */
 @Internal
 package io.micronaut.graphql.tools.internal.input;

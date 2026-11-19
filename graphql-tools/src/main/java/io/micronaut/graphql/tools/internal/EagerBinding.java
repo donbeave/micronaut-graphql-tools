@@ -24,10 +24,11 @@ import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
 
+/** Binds the schema at startup, so a binding failure stops the application before the first request. */
 @Internal
 @Singleton
 @Requires(property = GraphQLToolsConfiguration.PREFIX + ".eager-init", notEquals = "false")
-final class EagerBinding implements ApplicationEventListener<StartupEvent> {
+public final class EagerBinding implements ApplicationEventListener<StartupEvent> {
 
     private final BeanProvider<GraphQLSchema> schema;
 

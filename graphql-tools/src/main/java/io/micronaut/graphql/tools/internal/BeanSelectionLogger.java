@@ -34,7 +34,7 @@ import java.util.List;
  */
 @Internal
 @Singleton
-final class BeanSelectionLogger implements ApplicationEventListener<StartupEvent> {
+public final class BeanSelectionLogger implements ApplicationEventListener<StartupEvent> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BeanSelectionLogger.class);
 

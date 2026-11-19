@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 /**
- * The data fetchers that read a field value from a resolver method or a bean property, and the type resolver.
+ * The data fetchers that read a field value from a resolver method or a bean property, and the type resolver, with the planning of the arguments of a resolver method and the resolver instances.
  *
- * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: AbstractTypeResolver, MicronautExecutableMethodDataFetcher, MicronautPropertyDataFetcher.</p>
+ * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: ArgumentPlanner, AbstractTypeResolver, MicronautExecutableMethodDataFetcher, MicronautPropertyDataFetcher.</p>
  */
 @Internal
 package io.micronaut.graphql.tools.internal.resolver;

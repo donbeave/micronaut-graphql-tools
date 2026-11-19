@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.internal.registry;
 import io.micronaut.context.annotation.Infrastructure;
 import io.micronaut.context.processor.ExecutableMethodProcessor;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.internal.GraphQLResolversRegistry;
+import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;

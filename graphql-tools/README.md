@@ -34,13 +34,16 @@ Each package has a `package-info.java`. The [API map](../src/main/docs/guide/api
 | `io.micronaut.graphql.tools` | Public API | The configuration, the customizers, the mapping and directive interfaces, `ArgumentValue` and `BindingManifest` |
 | `io.micronaut.graphql.tools.annotation` | Public API | The annotations of resolvers and input classes |
 | `io.micronaut.graphql.tools.exceptions` | Public API | The startup failure, `SchemaBindingException` |
-| `io.micronaut.graphql.tools.internal` | Internal | The binding implementation: the factories, the wiring, the binders, the checks, the manifest recording |
+| `io.micronaut.graphql.tools.internal` | Internal | The entry points of the binding: the factories, the eager binding, the bean selection and the shared helpers |
 | `io.micronaut.graphql.tools.internal.exceptions` | Internal | The classes that build each startup failure |
 | `io.micronaut.graphql.tools.internal.registry` | Internal | The runtime method processors that register the resolvers |
 | `io.micronaut.graphql.tools.internal.discovery` | Internal | Schema discovery: reads the schema files into the type registry |
-| `io.micronaut.graphql.tools.internal.input` | Internal | The conversion of argument and input values |
-| `io.micronaut.graphql.tools.internal.resolver` | Internal | The data fetchers and the type resolvers |
-| `io.micronaut.graphql.tools.internal.wiring` | Internal | The wiring factory that picks the data fetcher and the type resolver of each field and type |
+| `io.micronaut.graphql.tools.internal.input` | Internal | The conversion of argument and input values, and the input type binder |
+| `io.micronaut.graphql.tools.internal.resolver` | Internal | The data fetchers and the type resolvers, and the planning of resolver arguments |
+| `io.micronaut.graphql.tools.internal.wiring` | Internal | The runtime wiring generator, the wiring factory, the interface field binder and the directive wirings |
+| `io.micronaut.graphql.tools.internal.checks` | Internal | The startup checks and validators |
+| `io.micronaut.graphql.tools.internal.manifest` | Internal | Recording and writing the binding manifest |
+| `io.micronaut.graphql.tools.internal.model` | Internal | The runtime registries and models of the beans and types |
 
 ## Who uses it
 

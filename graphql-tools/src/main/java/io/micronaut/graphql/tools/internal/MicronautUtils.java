@@ -21,8 +21,8 @@ import io.micronaut.core.beans.BeanMethod;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
+import io.micronaut.graphql.tools.internal.model.BeanDefinitionAndMethod;
 import io.micronaut.inject.ExecutableMethod;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -31,15 +31,16 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+/** Helpers over Micronaut types that the binding classes share. */
 @Internal
-final class MicronautUtils {
+public final class MicronautUtils {
 
-    static String getPropertyMethodName(BeanProperty<?, ?> beanProperty) {
+    public static String getPropertyMethodName(BeanProperty<?, ?> beanProperty) {
         return "get" + beanProperty.getName().substring(0, 1).toUpperCase()
                 + beanProperty.getName().substring(1) + "()";
     }
 
-    static Argument<?> unwrapArgument(Argument<?> argument) {
+    public static Argument<?> unwrapArgument(Argument<?> argument) {
         if (argument.isAsync()) {
             return argument.getFirstTypeVariable().get();
         }
@@ -47,7 +48,7 @@ final class MicronautUtils {
         return argument;
     }
 
-    static String getMethodName(Executable<?, ?> executable) {
+    public static String getMethodName(Executable<?, ?> executable) {
         if (executable instanceof ExecutableMethod) {
             ExecutableMethod<?, ?> executableMethod = (ExecutableMethod<?, ?>) executable;
             return executableMethod.getName();
@@ -59,7 +60,7 @@ final class MicronautUtils {
         }
     }
 
-    static String getExecutableMethodFullName(Executable<?, ?> executable) {
+    public static String getExecutableMethodFullName(Executable<?, ?> executable) {
         String args = Arrays.stream(executable.getArguments())
                 .map(arg -> arg.getType().getName() + " " + arg.getName())
                 .collect(Collectors.joining(", "));
@@ -75,7 +76,7 @@ final class MicronautUtils {
         }
     }
 
-    static Map<Class<?>, List<String>> toMap(List<BeanDefinitionAndMethod> beanDefinitionAndMethods) {
+    public static Map<Class<?>, List<String>> toMap(List<BeanDefinitionAndMethod> beanDefinitionAndMethods) {
         Map<Class<?>, List<String>> methods = new TreeMap<>(Comparator.comparing(Class::getName));
 
         for (BeanDefinitionAndMethod it : beanDefinitionAndMethods) {
@@ -87,12 +88,12 @@ final class MicronautUtils {
         return methods;
     }
 
-    static Map<Class<?>, List<String>> toMap(List<BeanMethod<Object, ?>> beanMethods,
+    public static Map<Class<?>, List<String>> toMap(List<BeanMethod<Object, ?>> beanMethods,
                                              @Nullable BeanProperty<Object, Object> beanProperty) {
         return toMap(beanMethods, beanProperty == null ? List.of() : List.of(beanProperty));
     }
 
-    static Map<Class<?>, List<String>> toMap(List<BeanMethod<Object, ?>> beanMethods,
+    public static Map<Class<?>, List<String>> toMap(List<BeanMethod<Object, ?>> beanMethods,
                                              List<BeanProperty<Object, Object>> beanProperties) {
         Map<Class<?>, List<String>> methods = new TreeMap<>(Comparator.comparing(Class::getName));
 

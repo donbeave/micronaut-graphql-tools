@@ -489,11 +489,11 @@ scalar Sc @onScalar
     }
 
     private static Logger policyLogger() {
-        return (Logger) LoggerFactory.getLogger('io.micronaut.graphql.tools.internal.GraphQLRuntimeWiringGenerator')
+        return (Logger) LoggerFactory.getLogger('io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator')
     }
 
     private static Logger checkLogger() {
-        return (Logger) LoggerFactory.getLogger('io.micronaut.graphql.tools.internal.DirectiveWiringCheck')
+        return (Logger) LoggerFactory.getLogger('io.micronaut.graphql.tools.internal.checks.DirectiveWiringCheck')
     }
 
     static class NoOpWiring implements SchemaDirectiveWiring {

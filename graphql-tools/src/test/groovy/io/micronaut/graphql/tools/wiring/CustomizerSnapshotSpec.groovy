@@ -25,8 +25,8 @@ import java.lang.reflect.Method
 
 class CustomizerSnapshotSpec extends Specification {
 
-    private static final Class<?> CUSTOMIZERS = Class.forName('io.micronaut.graphql.tools.internal.RuntimeWiringCustomizers')
-    private static final Class<?> DIRECTIVE_WIRINGS = Class.forName('io.micronaut.graphql.tools.internal.SchemaDirectiveWirings')
+    private static final Class<?> CUSTOMIZERS = Class.forName('io.micronaut.graphql.tools.internal.wiring.RuntimeWiringCustomizers')
+    private static final Class<?> DIRECTIVE_WIRINGS = Class.forName('io.micronaut.graphql.tools.internal.wiring.SchemaDirectiveWirings')
 
     private static void apply(RuntimeWiring.Builder builder, List<RuntimeWiringCustomizer> customizers) {
         Method apply = CUSTOMIZERS.getDeclaredMethod('apply', RuntimeWiring.Builder, List, Class.forName('graphql.schema.idl.TypeDefinitionRegistry'), Map)
