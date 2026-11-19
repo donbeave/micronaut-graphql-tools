@@ -3,9 +3,3 @@
 # Format: processor-option:<name> # <reason> (#<tracker issue>)
 # The spec fails when an entry names an option that is documented now or no longer exists.
 #
-# compileTime/options.adoc is written by #12; the entries below leave this list with it.
-processor-option:micronaut.graphql.tools.sdlDir # pending the compile-time guide page (#12)
-processor-option:micronaut.graphql.tools.processor.schema.dirs # pending the compile-time guide page (#12)
-processor-option:micronaut.graphql.tools.processor.module.dir # pending the compile-time guide page (#12)
-processor-option:micronaut.graphql.tools.processor.checks # pending the compile-time guide page (#12)
-processor-option:micronaut.graphql.tools.processor.resolverAccessorPrefixes # pending the compile-time guide page (#12)

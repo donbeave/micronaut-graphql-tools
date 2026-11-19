@@ -21,6 +21,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import java.util.List;
 
+// tag::drifted[]
 /**
  * A resolver that drifts from the schema on purpose: the argument of {@code Query.searchProfile} is named {@code limit}, and the
  * parameter is named {@code count}. The compilation of this source set must fail with {@code [argument-mismatch] Query.searchProfile}
@@ -34,3 +35,4 @@ public class DriftedSearchProfileQuery {
     }
 
 }
+// end::drifted[]

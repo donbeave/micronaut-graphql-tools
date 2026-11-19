@@ -19,7 +19,9 @@ threadSelection:
 customization: Customization
 safety: Safety
 manifest: Binding Manifest
-compileTime: Compile-Time Verification
+compileTime:
+  title: Compile-Time Verification
+  options: Options
 codegen: Code Generation
 nativeImage: Native Image
 testing: Testing

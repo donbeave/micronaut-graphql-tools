@@ -836,89 +836,13 @@ micronaut:
 
 ## Compile-time checks
 
-The `micronaut-graphql-tools-processor` module registers a Micronaut `TypeElementVisitor`
-(`io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor`) that reads the schema files while the application compiles and
-fails the build on drift that the startup would report. The visitor is isolating: it checks each resolver class on its own
-with the rules of the startup, so an incremental compilation checks the classes that changed. The build tests of this
-repository back that statement: for each edit kind (a body, a binary interface, a new class, a deleted class), the class
-files that an incremental build rewrites with the processor equal those that a control build without it rewrites, in Java,
-Kotlin (kapt and KSP) and Groovy, and an incremental build never fails where a clean build of the same sources passes. Each error starts with the
-code of the check and the schema coordinate, and names the schema file and line:
-
-```
-error: [argument-mismatch] Query.searchProfile: the parameter count binds no argument of Query.searchProfile (arguments: contains, limit).
-    at example.drift.DriftedSearchProfileQuery#searchProfile(java.lang.String,java.lang.Integer)
-    schema src/main/resources/schema.graphqls:11:3
-    fix: rename the parameter to an argument name, annotate it with @GraphQLArgument("<name>"), or add the argument to the schema
-```
-
-Put the processor on the path that your compiler reads its Micronaut processors from (`annotationProcessor` for Java,
-`ksp` or `kapt` for Kotlin, `compileOnly` for Groovy) and pass the schema directories as a declared input of the
-compilation, so that a schema change recompiles (a plain `compilerArgs` string would leave `compileJava` up to date):
-
-```kotlin
-dependencies {
-    annotationProcessor("io.micronaut.graphql.tools:micronaut-graphql-tools-processor")
-}
-
-abstract class GraphQLSchemaDirs : CommandLineArgumentProvider {
-    @get:InputFiles
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val dirs: ConfigurableFileCollection
-
-    override fun asArguments() = listOf("-Amicronaut.graphql.tools.processor.schema.dirs=" +
-        dirs.files.joinToString(File.pathSeparator) { it.absolutePath })
-}
-
-tasks.compileJava {
-    options.compilerArgumentProviders.add(objects.newInstance<GraphQLSchemaDirs>().apply {
-        dirs.from(layout.projectDirectory.dir("src/main/resources/graphql"))
-    })
-}
-```
-
-The library's example applications (`test-suite-java`, `test-suite-kotlin` and `test-suite-groovy`) are built this way. Each
-has a `src/driftFixture` source set with a class that drifts from the schema on purpose, and a `driftFixtureTest` task that
-asserts that compiling it fails with the expected `[code] coordinate` line. The projects in `test-suite-build` show the
-snippet for each tool (Java, Kotlin with KSP or kapt, Groovy, several modules, Maven).
-
-A processor that is not applied does not fail anything, it just does not run: under kapt, `compileJava` runs with
-`-proc:none` and a processor on `annotationProcessor` is ignored, so register it with `kapt` too (and declare the schema
-directory as an input of `kaptKotlin`). A build prints one note that names the schema directory of each compilation that
-runs the checks, so a build log shows whether they ran.
-
-Options have the values and defaults of the runtime options of the same name where one exists. Their names are written in
-camel case or with dots because `javac` accepts only dot-separated identifiers as option names (`sdl-dir` is rejected). Under
-KSP they are `arg(name, value)`, under the Groovy compiler they are system properties of the compiler JVM. Boolean
-options are read as Micronaut reads booleans (`true`, `yes`, `on`, and their opposites); any other value fails the
-compilation, and so does an unknown option under `micronaut.graphql.tools.processor.`, so that a typo cannot switch a check off:
-
-| Option | Meaning |
-|---|---|
-| `micronaut.graphql.tools.processor.schema.dirs` | The schema directories (`*.graphqls` files, read recursively, joined with the platform path separator). Required when the compilation has GraphQL resolvers or types, or the build fails with `processor-schema-not-configured`. Read with the same rules as [Schema discovery](#schema-discovery): `*.graphql` files are not schema files. It replaces `micronaut.graphql.tools.sdlDir`, which fails the build with `processor-option-removed` |
-| `micronaut.graphql.tools.processor.checks` | `true` (default) runs the checks; `false` compiles without them, with one note, and the startup still checks everything |
-| `micronaut.graphql.tools.processor.module.dir` | The project directory of the module that sets `schema.dirs`. A module of a multi-module build sets it so that a `schema.dirs` that an earlier module of the same JVM left behind fails the build |
-| `micronaut.graphql.tools.processor.resolverAccessorPrefixes` | `resolver-accessor-prefixes` of the runtime |
-
-The visitor checks what one class determines: the number of parameters besides `DataFetchingEnvironment`, the source
-object first for a type resolver, and a parameter that has no argument of its name (a parameter binds the argument of
-its name, `@GraphQLArgument` renames it, and the order does not matter), the Java type of each argument (lists,
-built-in scalars, `ArgumentValue`, a primitive for a nullable type), the input classes and enums that the arguments reach,
-the return type, `@GraphQLSchemaCoordinate`, and in strict mode public resolver methods that bind no field. A field
-that no class in the compilation binds is never reported at compile time, because the resolver may be in another module;
-the startup reports it. A resolver class that the compilation does not see (a dependency's) is checked by the module that
-compiles it.
-
-`class-not-introspected` is a compile-time warning, not an error: another class can make a class introspected with
-`@Introspected(classes = ...)` or `(packages = ...)`, and so can a dependency, and a check of one class sees neither, so an
-error here could fail a build that the startup passes. The startup decides. A build that turns compiler warnings into
-errors (`-Werror`, or `allWarningsAsErrors` for Kotlin) fails on it as well; there, put `@Introspected` on the class itself.
-
-Not checked at compile time, because the startup decides them with runtime beans or with classes the compilation does not
-have; the strict startup and a test that starts the context check them: unreachable types, the Java classes of custom scalars
-(`GraphQLScalarMapping` beans), directive wirings, the members of unions and the implementations of interfaces (from the
-`SchemaMappingDictionary`), and what input conversion can set (custom deserializers). The visitor writes no file: the
-binding manifest is written by the startup.
+The `micronaut-graphql-tools-processor` module registers a Micronaut `TypeElementVisitor` that reads the schema files while the
+application compiles and fails the build on drift that the startup would report, with the same code and the same schema
+coordinate. The build setup for Gradle and Maven (Java, Kotlin with KSP or kapt, Groovy), the options, what is checked at compile
+time and what only at startup, the support matrix and the incrementality guarantee are on the guide page
+[Compile-Time Verification](src/main/docs/guide/compileTime.adoc); its options are on
+[Options](src/main/docs/guide/compileTime/options.adoc). The error codes are in the
+[error reference](src/main/docs/guide/exceptions.adoc).
 
 ### The strict schema-build test
 
