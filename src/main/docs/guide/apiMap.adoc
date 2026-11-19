@@ -42,7 +42,14 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.manifest` |graphql-tools |Public API |`BindingManifest`
 |`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes
 |`io.micronaut.graphql.tools.exceptions` |graphql-tools |Public API |The startup failure: `SchemaBindingException`, the one exception to catch
-|`io.micronaut.graphql.tools.internal.exceptions` |graphql-tools |Internal |The classes that build each failure, one for each kind
+|`io.micronaut.graphql.tools.internal.exceptions` |graphql-tools |Internal |The base classes of the failures and the aggregate of one binding run; the classes of each kind are in the sub-packages
+|`io.micronaut.graphql.tools.internal.exceptions.mapping` |graphql-tools |Internal |The failures of the mapping dictionary and of class and scalar mappings
+|`io.micronaut.graphql.tools.internal.exceptions.resolver` |graphql-tools |Internal |The failures of binding a field to a resolver method, its arguments and its return type
+|`io.micronaut.graphql.tools.internal.exceptions.implementation` |graphql-tools |Internal |The failures of finding the implementation and the type resolver of an interface, union or abstract type
+|`io.micronaut.graphql.tools.internal.exceptions.input` |graphql-tools |Internal |The failures of input types, their properties and enum values
+|`io.micronaut.graphql.tools.internal.exceptions.wiring` |graphql-tools |Internal |The failures of directive wiring and runtime wiring
+|`io.micronaut.graphql.tools.internal.exceptions.checks` |graphql-tools |Internal |The failures that the startup checks report: strict mode, unreachable types, schema coordinates
+|`io.micronaut.graphql.tools.internal.exceptions.configuration` |graphql-tools |Internal |The failures of the setup: configuration, the schema definition and schema discovery
 |`io.micronaut.graphql.tools.internal` |graphql-tools |Internal |The entry points of the binding: the factories, the eager binding, the bean selection and the shared helpers
 |`io.micronaut.graphql.tools.internal.registry` |graphql-tools |Internal |The runtime method processors that register the resolvers (not the compile-time processor module)
 |`io.micronaut.graphql.tools.internal.discovery` |graphql-tools |Internal |Schema discovery: reads the schema files into the type registry
@@ -70,7 +77,7 @@ Kotlin and Groovy sources need no `package-info`; the library modules are Java.
 [[plannedLayout]]
 == Planned layout
 
-The public API is split into its role packages (`config`, `customizer`, `mapping`, `directive`, `input` and `manifest`), and the root package `io.micronaut.graphql.tools` holds no types. What is still to do is on the implementation side: the `internal` package still holds the factories, the eager binding and the shared helpers, and `internal.exceptions` holds the failure classes, one for each kind. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, `processing` is deleted when the visitor replaces the JSR-269 processor, and `visitor` stays. Each change that moves a public type gets an entry in <<breaks,Breaking Changes>> and in the migration page.
+The public API is split into its role packages (`config`, `customizer`, `mapping`, `directive`, `input` and `manifest`), and the root package `io.micronaut.graphql.tools` holds no types. The implementation side is split by responsibility too: `internal` holds the factories, the eager binding and the shared helpers, and `internal.exceptions` holds the base failure classes with one sub-package for each kind of failure. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, `processing` is deleted when the visitor replaces the JSR-269 processor, and `visitor` stays. Each change that moves a public type gets an entry in <<breaks,Breaking Changes>> and in the migration page.
 
 == How the build keeps this true
 

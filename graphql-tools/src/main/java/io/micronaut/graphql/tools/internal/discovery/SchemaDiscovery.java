@@ -23,7 +23,7 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaLocation.Scheme;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSourceException;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources.Source;
-import io.micronaut.graphql.tools.internal.exceptions.SchemaDiscoveryException;
+import io.micronaut.graphql.tools.internal.exceptions.configuration.SchemaDiscoveryException;
 
 import java.io.File;
 import java.io.IOException;

@@ -23,7 +23,7 @@ import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
 import io.micronaut.graphql.tools.internal.JavaTypeNames;
-import io.micronaut.graphql.tools.internal.exceptions.UnsupportedReturnTypeException;
+import io.micronaut.graphql.tools.internal.exceptions.resolver.UnsupportedReturnTypeException;
 import io.micronaut.graphql.tools.internal.model.RuntimeTypeModel;
 import java.util.Map;
 import java.util.Optional;

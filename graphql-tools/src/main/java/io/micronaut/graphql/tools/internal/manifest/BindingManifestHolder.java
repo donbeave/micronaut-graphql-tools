@@ -25,7 +25,7 @@ import jakarta.inject.Singleton;
 import java.util.NoSuchElementException;
 
 /**
- * Keeps the {@link BindingManifest} that {@link GraphQLFactory} records while it binds the schema.
+ * Keeps the {@link io.micronaut.graphql.tools.manifest.BindingManifest} that {@link io.micronaut.graphql.tools.internal.GraphQLFactory} records while it binds the schema.
  */
 @Internal
 @Singleton

@@ -36,9 +36,7 @@ class PackageDocumentationSpec extends Specification {
     static final int MAX_TYPES = 15
 
     /** A package over the limit needs an entry here, with the reason and the issue that removes it. */
-    static final Map<String, String> OVER_THE_LIMIT = [
-            'io.micronaut.graphql.tools.internal.exceptions': 'one small class for each kind of failure, so the package is a flat list; the classes are internal',
-    ]
+    static final Map<String, String> OVER_THE_LIMIT = [:]
 
     @Shared Path root = Paths.get(System.getProperty('docs.root'))
     @Shared Map<String, Map> packages = readPackages()

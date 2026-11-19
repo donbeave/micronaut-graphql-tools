@@ -266,7 +266,7 @@ public class GraphQLToolsConfiguration {
         }
 
         /**
-         * @return whether the binding manifest is recorded explicitly, so that the {@link BindingManifest} bean can be
+         * @return whether the binding manifest is recorded explicitly, so that the {@link io.micronaut.graphql.tools.manifest.BindingManifest} bean can be
          * read
          */
         public boolean isRecord() {
@@ -275,7 +275,7 @@ public class GraphQLToolsConfiguration {
 
         /**
          * Sets whether the binding manifest is recorded while the schema is bound, so that the
-         * {@link BindingManifest} bean can be read. Default: {@code false}: nothing is recorded, the bean cannot be
+         * {@link io.micronaut.graphql.tools.manifest.BindingManifest} bean can be read. Default: {@code false}: nothing is recorded, the bean cannot be
          * created. The checks run the same either way: the manifest only lists what they find. {@link #isEnabled()}
          * implies it.
          *
@@ -377,7 +377,7 @@ public class GraphQLToolsConfiguration {
         }
 
         /**
-         * @return the directives that a {@link GraphQLSchemaCustomizer} handles where graphql-java calls no wiring
+         * @return the directives that a {@link io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer} handles where graphql-java calls no wiring
          */
         @NonNull
         public List<String> getSchemaCustomizerDirectives() {
@@ -385,7 +385,7 @@ public class GraphQLToolsConfiguration {
         }
 
         /**
-         * Sets the directives (names without {@code @}) that a {@link GraphQLSchemaCustomizer} handles on the schema
+         * Sets the directives (names without {@code @}) that a {@link io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer} handles on the schema
          * definition and on the arguments of directive definitions. graphql-java calls no
          * {@link graphql.schema.idl.SchemaDirectiveWiring} there, so a wiring does not count for those places: a
          * directive applied there needs an entry in this list or in {@link #getInertDirectives()}. Every name must be
