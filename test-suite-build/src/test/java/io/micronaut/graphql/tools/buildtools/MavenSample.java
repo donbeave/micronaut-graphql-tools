@@ -68,13 +68,15 @@ final class MavenSample {
                 "-Dmicronaut.graphql.tools.version=" + Environment.GRAPHQL_TOOLS_VERSION));
         command.addAll(List.of(arguments));
         try {
-            Process process = new ProcessBuilder(command).directory(dir.toFile()).redirectErrorStream(true).start();
-            byte[] output = process.getInputStream().readAllBytes();
+            // the output goes to a file, so the timed wait is not blocked behind a read of a stalled stream
+            Path log = dir.resolveSibling("mvn-" + System.nanoTime() + ".log");
+            Process process = new ProcessBuilder(command).directory(dir.toFile()).redirectErrorStream(true)
+                    .redirectOutput(log.toFile()).start();
             if (!process.waitFor(10, TimeUnit.MINUTES)) {
                 process.destroyForcibly();
                 throw new IllegalStateException("mvn did not finish in 10 minutes in " + dir);
             }
-            return new Result(process.exitValue(), new String(output, StandardCharsets.UTF_8));
+            return new Result(process.exitValue(), java.nio.file.Files.readString(log, StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException("mvn cannot be started (it must be on the PATH: mise install maven): " + e.getMessage(), e);
         } catch (InterruptedException e) {
