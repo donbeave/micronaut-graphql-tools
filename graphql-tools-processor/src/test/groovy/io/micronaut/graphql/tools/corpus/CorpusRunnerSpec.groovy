@@ -45,6 +45,7 @@ class CorpusRunnerSpec extends Specification {
                 'a/java/example/A.java'      : 'package example; class A { }\n',
                 'corpus-divergences.txt'     : divergences,
                 'corpus-soundness-exceptions.txt': exceptions,
+                'corpus-language-differences.txt': 'max-entries: 0\n',
         ]
         expected.each { name, text -> files.put('a/expected/' + name, text) }
         files.putAll(more)
@@ -437,7 +438,43 @@ class CorpusRunnerSpec extends Specification {
         then:
         Files.readString(dir.resolve('a/expected/runtime.txt')) == "field-not-bound Query.missing schema.graphqls:3:3\n"
         Files.readString(dir.resolve('a/expected/kotlin/runtime.txt')) == 'ok\n'
+
+        and: 'the language that differs has to be documented, or corrected by the run of its own backend'
+        new Corpus(root).problems.any { it.contains('expected/kotlin/runtime.txt makes kotlin differ') }
+    }
+
+    void "a language that differs from the others is allowed only with an entry that gives its reason, and the list may only shrink"() {
+        given:
+        Map<String, String> kotlin = ['a/kotlin/example/A.kt': 'package example\n', 'a/expected/kotlin/runtime.txt': 'ok\n']
+        Path root = corpus(['runtime.txt': 'field-not-bound Query.missing schema.graphqls:3:3\n'], 'max-entries: 0\n', kotlin)
+
+        expect: 'an override without an entry'
+        new Corpus(root).problems.any { it.contains('makes kotlin differ from the other languages') }
+
+        when: 'with an entry, a reason and the matching ceiling'
+        Files.writeString(dir.resolve('corpus-language-differences.txt'), 'max-entries: 1\na kotlin runtime.txt the schema field is not bound in Kotlin\n')
+
+        then:
         new Corpus(root).problems == []
+
+        when: 'the ceiling is not lowered with the entry, or raised without one'
+        Files.writeString(dir.resolve('corpus-language-differences.txt'), 'max-entries: 2\na kotlin runtime.txt a reason\n')
+
+        then:
+        new Corpus(root).problems.any { it.contains('below the ceiling') }
+
+        when: 'the override is gone: the entry is stale'
+        Files.delete(dir.resolve('a/expected/kotlin/runtime.txt'))
+        Files.writeString(dir.resolve('corpus-language-differences.txt'), 'max-entries: 1\na kotlin runtime.txt a reason\n')
+
+        then:
+        new Corpus(root).problems.any { it.contains('is stale: there is no expected/kotlin/runtime.txt') }
+    }
+
+    void "the application of a case starts without the websocket keep-alive, which fails on a background thread and stops the context, unless the case asks for it"() {
+        expect:
+        CorpusStartup.properties([:], ['file:x/*.graphqls'])['graphql.graphql-ws.enabled'] == false
+        CorpusStartup.properties(['graphql.graphql-ws.enabled': 'true'], ['file:x/*.graphqls'])['graphql.graphql-ws.enabled'] == 'true'
     }
 
     void "a duplicated divergence entry is a problem"() {

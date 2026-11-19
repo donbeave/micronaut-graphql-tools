@@ -133,9 +133,11 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # The build wiring of the compile-time checks: sample projects that apply the processor with the documented
-  # snippets, built by Gradle TestKit (and Maven) against the library published to build/repo. The job needs the network (plugin portal,
-  # Maven Central); the graphql-java legs do not change what it proves, so it runs on the default leg only.
+  # The compile-time checks in real builds, by Gradle TestKit, with the processor and the library published to build/repo:
+  # the sample projects that apply the processor with the documented snippets (the build wiring; Gradle and Maven), and the Kotlin cases of the binding
+  # corpus (#143), each compiled with the checks on under KSP2 and judged against the same expected files as the Java and
+  # Groovy cases. The job needs the network (plugin portal, Maven Central); the graphql-java legs do not change what it proves,
+  # so it runs on the default leg only.
   build-tools:
     runs-on: ubuntu-latest
     name: build tools (Java 25, graphql-java default)
@@ -146,8 +148,8 @@ jobs:
         with:
           jdk: '25'
           tools: java maven
-      - name: Build the samples
-        run: ./gradlew :test-suite-build:buildToolsTest --no-daemon -PgraphqlJavaLeg=default
+      - name: Build the samples and the Kotlin corpus
+        run: ./gradlew :test-suite-build:buildToolsTest :micronaut-graphql-tools-processor:corpusKotlin --no-daemon --continue -PgraphqlJavaLeg=default
         env:
           PREDICTIVE_TEST_SELECTION: 'false'
       - name: Upload test reports
@@ -159,6 +161,9 @@ jobs:
             test-suite-build/build/test-results/buildToolsTest/TEST-*.xml
             test-suite-build/build/reports/tests/buildToolsTest/
             test-suite-build/build/reports/build-tools/
+            graphql-tools-processor/build/test-results/corpusKotlin/TEST-*.xml
+            graphql-tools-processor/build/reports/tests/corpusKotlin/
+            graphql-tools-processor/build/corpus/kotlin-timings.txt
           if-no-files-found: ignore
           retention-days: 7
 

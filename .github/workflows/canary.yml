@@ -97,6 +97,35 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The Kotlin cases of the binding corpus under kapt (#143): the same TestKit build as the KSP2 run of `build tools`, for the
+  # cases tagged lang:all. kapt runs Micronaut's processors in a process of its own per compilation (see KotlinBatchCompiler).
+  kapt-corpus:
+    name: canary (Kotlin corpus under kapt)
+    if: github.event.schedule != '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Run the Kotlin corpus under kapt
+        run: ./gradlew :micronaut-graphql-tools-processor:corpusKotlin -Pcorpus.kotlin.processor=kapt --no-daemon --continue -PgraphqlJavaLeg=default
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-canary-kapt-corpus
+          path: |
+            graphql-tools-processor/build/test-results/corpusKotlin/TEST-*.xml
+            graphql-tools-processor/build/reports/tests/corpusKotlin/
+            graphql-tools-processor/build/corpus/kotlin-timings.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
   native-latest:
     name: canary (GraalVM 25, graphql-java latest)
     if: github.event.schedule != '47 4 * * 1'
