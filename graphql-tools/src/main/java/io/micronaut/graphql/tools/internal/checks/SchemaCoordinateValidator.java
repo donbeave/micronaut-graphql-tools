@@ -27,7 +27,7 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates.Reso
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException;
-import io.micronaut.graphql.tools.internal.exceptions.InvalidSchemaCoordinateException;
+import io.micronaut.graphql.tools.internal.exceptions.checks.InvalidSchemaCoordinateException;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder;
 import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry;
 import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry.SchemaCoordinateMethod;

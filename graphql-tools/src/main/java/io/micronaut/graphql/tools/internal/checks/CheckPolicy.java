@@ -22,7 +22,7 @@ import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.DefaultSeverities;
 import io.micronaut.graphql.tools.binding.internal.finding.Severity;
-import io.micronaut.graphql.tools.internal.exceptions.InvalidConfigurationException;
+import io.micronaut.graphql.tools.internal.exceptions.configuration.InvalidConfigurationException;
 import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator;
 import java.util.ArrayList;
 import java.util.EnumMap;

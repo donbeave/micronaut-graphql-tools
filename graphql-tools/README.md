@@ -41,7 +41,14 @@ Each package has a `package-info.java`. The [API map](../src/main/docs/guide/api
 | `io.micronaut.graphql.tools.annotation` | Public API | The annotations of resolvers and input classes |
 | `io.micronaut.graphql.tools.exceptions` | Public API | The startup failure, `SchemaBindingException` |
 | `io.micronaut.graphql.tools.internal` | Internal | The entry points of the binding: the factories, the eager binding, the bean selection and the shared helpers |
-| `io.micronaut.graphql.tools.internal.exceptions` | Internal | The classes that build each startup failure |
+| `io.micronaut.graphql.tools.internal.exceptions` | Internal | The base classes of the failures and the aggregate of one binding run; the classes of each kind are in the sub-packages |
+| `io.micronaut.graphql.tools.internal.exceptions.mapping` | Internal | The failures of the mapping dictionary and of class and scalar mappings |
+| `io.micronaut.graphql.tools.internal.exceptions.resolver` | Internal | The failures of binding a field to a resolver method, its arguments and its return type |
+| `io.micronaut.graphql.tools.internal.exceptions.implementation` | Internal | The failures of finding the implementation and the type resolver of an interface, union or abstract type |
+| `io.micronaut.graphql.tools.internal.exceptions.input` | Internal | The failures of input types, their properties and enum values |
+| `io.micronaut.graphql.tools.internal.exceptions.wiring` | Internal | The failures of directive wiring and runtime wiring |
+| `io.micronaut.graphql.tools.internal.exceptions.checks` | Internal | The failures that the startup checks report: strict mode, unreachable types, schema coordinates |
+| `io.micronaut.graphql.tools.internal.exceptions.configuration` | Internal | The failures of the setup: configuration, the schema definition and schema discovery |
 | `io.micronaut.graphql.tools.internal.registry` | Internal | The runtime method processors that register the resolvers |
 | `io.micronaut.graphql.tools.internal.discovery` | Internal | Schema discovery: reads the schema files into the type registry |
 | `io.micronaut.graphql.tools.internal.input` | Internal | The conversion of argument and input values, and the input type binder |

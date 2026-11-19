@@ -19,10 +19,10 @@ import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException
 import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.internal.exceptions.StrictModeException
-import io.micronaut.graphql.tools.internal.exceptions.UnmappedInputPropertiesException
-import io.micronaut.graphql.tools.internal.exceptions.UnreachableTypesException
-import io.micronaut.graphql.tools.internal.exceptions.UnwiredDirectivesException
+import io.micronaut.graphql.tools.internal.exceptions.checks.StrictModeException
+import io.micronaut.graphql.tools.internal.exceptions.input.UnmappedInputPropertiesException
+import io.micronaut.graphql.tools.internal.exceptions.checks.UnreachableTypesException
+import io.micronaut.graphql.tools.internal.exceptions.wiring.UnwiredDirectivesException
 import spock.lang.Specification
 
 import java.nio.file.Files
@@ -36,10 +36,11 @@ class ErrorCodesSpec extends Specification {
         def dir = location.resolve('io/micronaut/graphql/tools/internal/exceptions')
 
         when:
-        def classes = Files.list(dir).withCloseable { stream ->
-            stream.map { it.fileName.toString() }
-                    .filter { it.endsWith('.class') && !it.contains('$') && it != 'package-info.class' }
-                    .map { Class.forName('io.micronaut.graphql.tools.internal.exceptions.' + it.substring(0, it.length() - 6)) }
+        def classes = Files.walk(dir).withCloseable { stream ->
+            stream.map { dir.relativize(it) }
+                    .filter { it.toString().endsWith('.class') && !it.toString().contains('$') && !it.endsWith('package-info.class') }
+                    // the name comes from the path elements, so a Windows separator never reaches Class.forName
+                    .map { Class.forName('io.micronaut.graphql.tools.internal.exceptions.' + (it.collect { part -> part.toString() }.join('.') - '.class')) }
                     .toList()
         }
 

@@ -22,7 +22,7 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.model.JClass;
 import io.micronaut.graphql.tools.binding.internal.rules.InputClassCoverage;
 import io.micronaut.graphql.tools.internal.checks.CheckPolicy;
-import io.micronaut.graphql.tools.internal.exceptions.UnmappedInputPropertiesException;
+import io.micronaut.graphql.tools.internal.exceptions.input.UnmappedInputPropertiesException;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder;
 import java.util.ArrayList;
 import java.util.Collections;

@@ -19,8 +19,8 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaDirectiveWiring;
 import io.micronaut.context.BeanRegistration;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.internal.exceptions.DuplicateDirectiveWiringException;
-import io.micronaut.graphql.tools.internal.exceptions.UnwrappedDirectiveWiringException;
+import io.micronaut.graphql.tools.internal.exceptions.wiring.DuplicateDirectiveWiringException;
+import io.micronaut.graphql.tools.internal.exceptions.wiring.UnwrappedDirectiveWiringException;
 
 import java.util.ArrayList;
 import java.util.Collection;

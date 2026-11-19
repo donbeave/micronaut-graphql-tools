@@ -33,10 +33,10 @@ import java.util.Set;
  * <p>A customizer may only add. The startup fails with a
  * {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException} of code {@code runtime-wiring-override}, which names
  * every replacement and the customizer that made it, if a customizer replaces a data fetcher, default data fetcher, type resolver or scalar that
- * the library registered, the wiring of a {@link SchemaDirective} bean, or the wiring factory, or puts a data fetcher
+ * the library registered, the wiring of a {@link io.micronaut.graphql.tools.directive.SchemaDirective} bean, or the wiring factory, or puts a data fetcher
  * or type resolver for a field or type the library wired into a code registry ({@code RuntimeWiring.Builder#codeRegistry}; graphql-java's schema generator lets
  * the code registry win). Such a replacement would silently undo the binding. To wrap data fetchers use a
- * {@link SchemaDirective} bean ({@code named} or {@code everyElement}); to change the generated schema use a
+ * {@link io.micronaut.graphql.tools.directive.SchemaDirective} bean ({@code named} or {@code everyElement}); to change the generated schema use a
  * {@link GraphQLSchemaCustomizer} (graphql-java 25 removed {@code RuntimeWiring.Builder#transformer}).</p>
  *
  * <p>Allowed: code registry entries for fields and types the library does not wire (such as those of an allowed
