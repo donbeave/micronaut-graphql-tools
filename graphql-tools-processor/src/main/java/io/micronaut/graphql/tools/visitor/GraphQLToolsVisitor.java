@@ -151,8 +151,9 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
                     + ProcessorOptions.MODULE_DIR + " belong to the module in " + current.options.moduleDir()
                     + ", an earlier compilation of the same JVM, and this compilation writes to " + current.foreignOutput,
                     null, null, null, "set " + ProcessorOptions.SCHEMA_DIRS + " and " + ProcessorOptions.MODULE_DIR
-                    + " in this module (see the compile-time checks of the guide for the setting of each build tool), or "
-                    + "compile without checks with " + ProcessorOptions.CHECKS + "=false"),
+                    + " in this module (see the compile-time checks of the guide for the setting of each build tool); if they are set and "
+                    + "this build writes the output outside the project directory of the module, set " + ProcessorOptions.MODULE_DIR
+                    + " to a directory that contains the output; or compile without checks with " + ProcessorOptions.CHECKS + "=false"),
                     element);
             return;
         }

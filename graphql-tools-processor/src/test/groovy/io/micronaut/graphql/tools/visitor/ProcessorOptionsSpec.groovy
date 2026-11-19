@@ -147,6 +147,7 @@ public class QueryResolver {
         stale.errors[0].contains('/work/authors')
         stale.errors[0].contains('this compilation writes to')
         stale.errors[0].contains(ProcessorOptions.CHECKS + '=false')
+        stale.errors[0].contains('outside the project directory')
 
         expect:
         compilation().option(ProcessorOptions.MODULE_DIR, '/work/authors').option(ProcessorOptions.CHECKS, 'false').compile().success
