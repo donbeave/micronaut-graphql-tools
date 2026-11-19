@@ -57,7 +57,7 @@ class ArchitectureRulesSpec extends Specification {
     static final Set<String> REFLECTIVE_CLASS_METHODS = [
             'forName', 'newInstance', 'getMethod', 'getMethods', 'getDeclaredMethod', 'getDeclaredMethods',
             'getField', 'getFields', 'getDeclaredField', 'getDeclaredFields', 'getConstructor', 'getConstructors',
-            'getDeclaredConstructor', 'getDeclaredConstructors', 'getAnnotation', 'getAnnotations', 'getDeclaredAnnotation',
+            'getDeclaredConstructor', 'getDeclaredConstructors', 'getAnnotation', 'getAnnotations', 'isAnnotationPresent', 'getDeclaredAnnotation',
             'getDeclaredAnnotations', 'getAnnotationsByType', 'getDeclaredAnnotationsByType', 'getEnumConstants',
             'getRecordComponents', 'getClasses', 'getDeclaredClasses', 'getPermittedSubclasses', 'getEnclosingMethod',
             'getEnclosingConstructor', 'getGenericSuperclass', 'getGenericInterfaces',
@@ -146,8 +146,12 @@ class ArchitectureRulesSpec extends Specification {
 
     private static DescribedPredicate<JavaClass> publicApi() {
         DescribedPredicate.describe('public API classes: public, not @Internal, not generated, not in an internal package', { JavaClass c ->
-            c.modifiers.contains(JavaModifier.PUBLIC) && !generated(c) && !isInternal(c) && !isInternal(c.enclosingClass.orElse(null))
+            visible(c) && !generated(c) && !isInternal(c) && !isInternal(c.enclosingClass.orElse(null))
         })
+    }
+
+    private static boolean visible(JavaClass c) {
+        c.modifiers.contains(JavaModifier.PUBLIC) && (!c.enclosingClass.present || visible(c.enclosingClass.get()))
     }
 
     private static boolean generated(JavaClass c) {
@@ -165,15 +169,15 @@ class ArchitectureRulesSpec extends Specification {
         new ArchCondition<JavaClass>('expose no internal type in a public or protected signature') {
             @Override
             void check(JavaClass item, ConditionEvents events) {
-                (item.superclass.map { [it] }.orElse([]) + item.interfaces).collectMany { it.allInvolvedRawTypes }.findAll { isInternal(it) }.each { JavaClass t ->
-                    events.add(SimpleConditionEvent.violated(item, "${item.name} extends or implements the internal type ${t.name}"))
+                (item.superclass.map { [it] }.orElse([]) + item.interfaces + item.typeParameters).collectMany { it.allInvolvedRawTypes }.findAll { isInternal(it) }.each { JavaClass t ->
+                    events.add(SimpleConditionEvent.violated(item, "${item.name} declares the internal type ${t.name}"))
                 }
                 List<JavaMember> members = []
                 members.addAll(item.fields)
                 members.addAll(item.methods)
                 members.addAll(item.constructors)
                 members.findAll { m -> m.modifiers.any { it.name() in ['PUBLIC', 'PROTECTED'] } }.each { JavaMember m ->
-                    Set<JavaClass> types = m instanceof JavaField ? m.type.allInvolvedRawTypes : ((JavaCodeUnit) m).allInvolvedRawTypes
+                    Set<JavaClass> types = m instanceof JavaField ? m.type.allInvolvedRawTypes : (((JavaCodeUnit) m).allInvolvedRawTypes + ((JavaCodeUnit) m).throwsClause.types.collectMany { it.allInvolvedRawTypes })
                     types.findAll { isInternal(it) }.each { JavaClass t ->
                         events.add(SimpleConditionEvent.violated(m, "${m.fullName} exposes the internal type ${t.name}"))
                     }
