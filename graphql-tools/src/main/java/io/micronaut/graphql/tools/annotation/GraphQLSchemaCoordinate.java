@@ -44,9 +44,13 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  *     <li>(on a {@link GraphQLTypeResolver} for the Java type of an interface, the coordinate names the interface
  *     field, {@code Interface.field}, which the method binds on the implementing object types)</li>
  *     <li>the method does not end up bound to exactly that field, for example because the type is mapped to a class
- *     that the {@link GraphQLTypeResolver} does not resolve, a property of the mapped class binds the field, or the
- *     same method name also binds a field of another root operation type.</li>
+ *     that the {@link GraphQLTypeResolver} does not resolve, or the same method name also binds a field of another
+ *     root operation type.</li>
  * </ul>
+ *
+ * <p>The annotation also settles a precedence ambiguity: a type resolver method that declares its coordinate binds
+ * the field even when a property or a {@code @GraphQLField} method of the Java type could bind it, whatever
+ * {@code micronaut.graphql.tools.precedence} says.</p>
  *
  * <p>On a bean where at least one method carries the annotation, only the annotated methods bind; other public
  * methods, such as helpers, are not candidates. Fields are still matched by method name.</p>

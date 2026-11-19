@@ -32,6 +32,7 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules;
 import io.micronaut.graphql.tools.processing.ModelMembers.Property;
 import io.micronaut.graphql.tools.processing.ResolverBeans.Bean;
 import io.micronaut.graphql.tools.processing.ResolverBeans.Method;
@@ -604,23 +605,28 @@ final class BindingChecks {
         if (member) {
             Element memberElement = property.<Element>map(Property::accessor).orElseGet(() -> fieldMethods.get(0));
             if (!resolvers.isEmpty()) {
-                if (directive == null && options.precedence() == ProcessorOptions.Precedence.STRICT) {
+                boolean intent = directive != null || resolvers.stream().anyMatch(it -> it.coordinate() != null);
+                PrecedenceRules.Outcome outcome = PrecedenceRules.decide(
+                        PrecedenceRules.Setting.valueOf(options.precedence().name()), intent);
+                if (outcome == PrecedenceRules.Outcome.FAIL) {
                     problems.error(coordinate, "ambiguous binding: " + describeMember(property, fieldMethods)
                             + " and the type resolver method " + describeMethods(resolvers) + " can both bind the "
                             + "field. Remove one, mark the field with a directive listed in "
-                            + ProcessorOptions.RESOLVER_DIRECTIVES + ", or set " + ProcessorOptions.PRECEDENCE + ".",
+                            + ProcessorOptions.RESOLVER_DIRECTIVES + ", declare @GraphQLSchemaCoordinate on the "
+                            + "resolver method, annotate the member with @GraphQLIgnore, or set "
+                            + ProcessorOptions.PRECEDENCE + " (strict does not change it).",
                             field, resolvers.get(0).element());
                     resolvers.forEach(it -> shadowedMethods.put(it, true));
                     return;
                 }
-                if (directive == null) {
+                if (!intent) {
                     manifest.diagnostic("ambiguous", coordinate, Stream.concat(
                             Stream.of(property.map(it -> propertyMember(it, introspected))
                                     .orElseGet(() -> methodMember(fieldMethods.get(0), introspected))),
                             resolvers.stream().map(this::beanMethodMember).sorted())
                             .collect(Collectors.joining(" | ")));
                 }
-                if (directive == null && options.precedence() == ProcessorOptions.Precedence.PROPERTY_FIRST) {
+                if (outcome == PrecedenceRules.Outcome.MEMBER) {
                     resolvers.forEach(it -> shadowedMethods.put(it, true));
                     bindMember(type, field, introspected, property, fieldMethods);
                     return;
@@ -629,8 +635,9 @@ final class BindingChecks {
                 return;
             }
             if (declaredByInterface && (directive != null
-                    || options.precedence() == ProcessorOptions.Precedence.RESOLVER_FIRST)
-                    && hasInterfaceResolver(introspected, field.getName())) {
+                    || options.precedence() == ProcessorOptions.Precedence.RESOLVER_FIRST
+                    || hasInterfaceResolver(introspected, field.getName(), true))
+                    && hasInterfaceResolver(introspected, field.getName(), false)) {
                 skip(coordinate, "a type resolver of a Java interface of " + javaTypes.name(introspected)
                         + " has a method " + field.getName() + " and may bind it", true);
                 omitField(type, field);
@@ -647,7 +654,7 @@ final class BindingChecks {
         }
 
         if (resolvers.isEmpty()) {
-            if (declaredByInterface && hasInterfaceResolver(introspected, field.getName())) {
+            if (declaredByInterface && hasInterfaceResolver(introspected, field.getName(), false)) {
                 skip(coordinate, "a type resolver of a Java interface of " + javaTypes.name(introspected)
                         + " has a method " + field.getName() + " and may bind it", true);
                 omitField(type, field);
@@ -707,13 +714,14 @@ final class BindingChecks {
         return result;
     }
 
-    private boolean hasInterfaceResolver(TypeElement introspected, String fieldName) {
+    private boolean hasInterfaceResolver(TypeElement introspected, String fieldName, boolean declaredCoordinate) {
         for (Bean bean : beans.beans()) {
             for (TypeElement modelClass : bean.contracts().values()) {
                 if (modelClass.getKind() == ElementKind.INTERFACE && !modelClass.equals(introspected)
                         && javaTypes.isA(introspected.asType(), modelClass.getQualifiedName().toString())
                         && bean.methodsByModelClass().getOrDefault(javaTypes.name(modelClass), List.of()).stream()
-                        .anyMatch(it -> it.element().getSimpleName().contentEquals(fieldName))) {
+                        .anyMatch(it -> it.element().getSimpleName().contentEquals(fieldName)
+                                && (!declaredCoordinate || it.coordinate() != null))) {
                     return true;
                 }
             }

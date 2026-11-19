@@ -21,10 +21,13 @@ import io.micronaut.context.exceptions.ConfigurationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import io.micronaut.graphql.tools.exceptions.AmbiguousBindingException
+import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.ResolverRequiredException
+import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import org.intellij.lang.annotations.Language
 
 import java.util.concurrent.CompletableFuture
@@ -111,15 +114,15 @@ type Item {
   Members:
   1) ${Item.name} getPrice()
   2) ${ItemResolver.name} price(${Item.name} item)
-  Put a directive listed in micronaut.graphql.tools.resolver-directives on the field to bind the type resolver method, remove one of the members, or set micronaut.graphql.tools.precedence to property-first or resolver-first."""
+  Fix it for this field: put a directive listed in micronaut.graphql.tools.resolver-directives on the field, declare @GraphQLSchemaCoordinate on the type resolver method (the coordinate of the type, or of the interface that declares the field), or annotate the Java member with @GraphQLIgnore. Fix it for every field: set micronaut.graphql.tools.precedence to resolver-first or property-first. micronaut.graphql.tools.strict does not change this."""
         e.cause.mappingContext.graphQlObjectType == 'Item'
         e.cause.mappingContext.graphQlField == 'price'
         e.cause.members.keySet() == [Item, ItemResolver] as Set
     }
 
-    void "precedence strict can be set explicitly"() {
+    void "precedence fail can be set explicitly"() {
         given:
-        startContext(UNMARKED_SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.precedence': 'strict'])
+        startContext(UNMARKED_SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.precedence': 'fail'])
 
         when:
         getGraphQLBean()
@@ -127,6 +130,93 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof AmbiguousBindingException
+    }
+
+    void "the old precedence value strict is rejected and the message names fail"() {
+        when:
+        startContext(UNMARKED_SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.precedence': 'strict'])
+        getGraphQLBean()
+
+        then:
+        def e = thrown(Exception)
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.REMOVED_CONFIGURATION_KEY
+        generateMessage(e).contains('micronaut.graphql.tools.precedence')
+        generateMessage(e).contains('strict')
+        generateMessage(e).contains('fail')
+    }
+
+    void "strict false does not relax the ambiguity"() {
+        given:
+        startContext(UNMARKED_SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.strict': false])
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof AmbiguousBindingException
+    }
+
+    void "strict false does not change precedence resolver-first or property-first"() {
+        given:
+        startContext(UNMARKED_SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.strict': false,
+                                                  'micronaut.graphql.tools.precedence': precedence])
+
+        when:
+        def result = executeQuery('{ items { name price } }')
+
+        then:
+        (result.errors.isEmpty()) == (precedence == 'resolver-first')
+        RESOLVER_CALLS.get() == (precedence == 'resolver-first' ? 2 : 0)
+
+        where:
+        precedence << ['resolver-first', 'property-first']
+    }
+
+    void "a type resolver method with an explicit coordinate wins, whatever the precedence is (#precedence)"() {
+        given:
+        startContext(UNMARKED_SCHEMA, SPEC_NAME + '.coordinate', precedence == null ? [:] :
+                ['micronaut.graphql.tools.precedence': precedence])
+
+        when:
+        def result = executeQuery('{ items { name price } }')
+        def manifest = applicationContext.getBean(io.micronaut.graphql.tools.BindingManifest)
+
+        then:
+        result.errors.isEmpty()
+        result.data.items == [[name: 'pen', price: 3L], [name: 'ink', price: 3L]]
+        RESOLVER_CALLS.get() == 2
+        manifest.diagnostics.findAll { it.startsWith('!precedence-ambiguity') }.isEmpty()
+
+        where:
+        precedence << [null, 'fail', 'resolver-first', 'property-first']
+    }
+
+    private static String generateMessage(Throwable e) {
+        def messages = []
+        for (Throwable t = e; t != null; t = t.cause) {
+            messages << t.message
+        }
+        return messages.join('\n')
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.coordinate')
+    @GraphQLRootResolver
+    static class CoordinateQuery {
+        List<Item> items() {
+            return [new Item(name: 'pen'), new Item(name: 'ink')]
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.coordinate')
+    @GraphQLTypeResolver(Item.class)
+    static class CoordinateItemResolver {
+        @GraphQLSchemaCoordinate("Item.price")
+        CompletionStage<Long> price(Item item) {
+            RESOLVER_CALLS.incrementAndGet()
+            return CompletableFuture.completedFuture(3L)
+        }
     }
 
     void "precedence property-first binds the getter and never calls the type resolver method, as before the option"() {

@@ -1,0 +1,9 @@
+ID -> scalar ; ID ; - ; -
+Node -> interface ; example.Node ; - ; -
+Node/User -> resolves ; example.User ; - ; -
+Query -> object ; - ; - ; -
+Query.node: Node -> root ; example.Query#node() ; example.Node ; example.Node
+String -> scalar ; String ; - ; -
+User -> object ; example.User ; - ; -
+User.id: ID! -> resolver ; example.NodeResolver#id(example.Node) ; java.lang.String ; java.lang.String
+User.name: String! -> property ; example.User#name ; java.lang.String ; java.lang.String
