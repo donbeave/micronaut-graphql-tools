@@ -1,0 +1,5 @@
+argument-mismatch Query.fieldBean schema.graphqls:8:3
+argument-mismatch Query.fieldContext schema.graphqls:9:3
+argument-mismatch Query.fieldPrototype schema.graphqls:6:3
+argument-mismatch Query.fieldRequestScope schema.graphqls:7:3
+argument-mismatch Query.fieldSingleton schema.graphqls:10:3

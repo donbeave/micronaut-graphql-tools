@@ -1,0 +1,1 @@
+incorrect-class-mapping BookFilter.title schema.graphqls:21:3

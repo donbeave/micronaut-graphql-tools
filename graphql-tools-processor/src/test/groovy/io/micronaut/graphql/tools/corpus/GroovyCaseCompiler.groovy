@@ -65,9 +65,7 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
     /** A case that splits its sources into modules is compiled module by module, each seeing the unchecked output of the modules before it. */
     @Override
     CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
-        Path schemaDir = Files.createDirectories(work.resolve('schema'))
-        corpusCase.schemaFiles().each { Files.copy(it, schemaDir.resolve(it.fileName.toString())) }
-        Map<String, String> checked = [(PREFIX + 'schema.dirs'): schemaDir.toString()]
+        Map<String, String> checked = CompileOptions.of(corpusCase, work)
         List<SourceUnit> units = corpusCase.units(Language.GROOVY)
         List<Path> dependencies = []
         List<String> errors = []

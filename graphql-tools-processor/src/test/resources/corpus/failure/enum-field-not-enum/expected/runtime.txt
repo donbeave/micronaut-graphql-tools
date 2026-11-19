@@ -1,0 +1,2 @@
+incorrect-class-mapping Book.genre schema.graphqls:12:3
+mapping-conflict BookFilter.genres schema.graphqls:22:3

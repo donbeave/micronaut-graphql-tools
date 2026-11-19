@@ -42,8 +42,6 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
     static final String LEGACY_PROCESSOR_PACKAGE = 'io.micronaut.graphql.tools.processing'
 
     /** The visitor of this module is on the test classpath: this compilation only builds the case, a binder checks it. */
-    static final String SCHEMA_DIRS = 'micronaut.graphql.tools.processor.schema.dirs'
-
     static final String CHECKS_OFF = 'micronaut.graphql.tools.processor.checks=false'
 
     @Override
@@ -72,9 +70,7 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
      */
     @Override
     CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
-        Path schemaDir = Files.createDirectories(work.resolve('schema'))
-        corpusCase.schemaFiles().each { Files.copy(it, schemaDir.resolve(it.fileName.toString())) }
-        List<String> checked = ["-A${SCHEMA_DIRS}=${schemaDir}".toString()]
+        List<String> checked = CompileOptions.of(corpusCase, work).collect { String key, String value -> "-A${key}=${value}".toString() }
         List<SourceUnit> units = corpusCase.units(Language.JAVA)
         List<Path> dependencies = []
         List<String> errors = []

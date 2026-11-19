@@ -1,0 +1,1 @@
+unsupported-input-type Query.book(title:) schema.graphqls:6:17

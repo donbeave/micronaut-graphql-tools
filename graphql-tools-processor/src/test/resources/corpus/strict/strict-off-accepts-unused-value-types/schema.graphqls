@@ -1,0 +1,15 @@
+schema {
+  query: Query
+}
+
+type Query {
+  hello: String
+}
+
+enum Color {
+  RED
+}
+
+input Filter {
+  name: String
+}

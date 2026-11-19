@@ -1,0 +1,2 @@
+incorrect-class-mapping Query.book schema.graphqls:6:3
+mapping-conflict Query.books schema.graphqls:7:3

@@ -50,8 +50,6 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
     /** versions of the production toolchain: the test suites' Kotlin and KSP2, see {@code test-suite-kotlin} */
     static final String KOTLIN = System.getProperty('corpus.kotlin.version', '2.1.21')
     static final String KSP = System.getProperty('corpus.ksp.version', '2.1.21-2.0.2')
-    static final String SCHEMA_DIRS = 'micronaut.graphql.tools.processor.schema.dirs'
-    static final String CHECKS = 'micronaut.graphql.tools.processor.checks'
     static final String VISITOR_SERVICE = 'META-INF/services/io.micronaut.inject.visitor.TypeElementVisitor'
 
     /** The annotation processing the build applies: what the case is judged under. */
@@ -217,10 +215,8 @@ plugins {
         String classpath = libraries().collect { "        \"${it.replace('\\', '/')}\"," }.join('\n')
         String path = visitorPath.collect { "        \"${it}\"," }.join('\n')
         cases.each { CorpusCase c ->
-            Path schemas = Files.createDirectories(buildDir.resolve(checkedName(c)).resolve('schema'))
-            c.schemaFiles().each { Files.copy(it, schemas.resolve(it.fileName.toString()), StandardCopyOption.REPLACE_EXISTING) }
-            writeProject(c, projectName(c), false, classpath, path, schemas)
-            writeProject(c, checkedName(c), true, classpath, path, schemas)
+            writeProject(c, projectName(c), false, classpath, path)
+            writeProject(c, checkedName(c), true, classpath, path)
         }
         long start = System.nanoTime()
         List<String> tasks = cases.collectMany { [":${projectName(it)}:compileKotlin".toString(), ":${checkedName(it)}:${processor.task}".toString()] }
@@ -274,7 +270,7 @@ plugins {
         return byProject
     }
 
-    private void writeProject(CorpusCase c, String name, boolean checked, String classpath, String path, Path schemas) {
+    private void writeProject(CorpusCase c, String name, boolean checked, String classpath, String path) {
         Path project = Files.createDirectories(buildDir.resolve(name))
         Path sources = Files.createDirectories(project.resolve('src/main/kotlin'))
         c.sources(Language.KOTLIN).each { Path file ->
@@ -283,10 +279,14 @@ plugins {
             Files.copy(file, target, StandardCopyOption.REPLACE_EXISTING)
         }
         String micronaut = System.getProperty('corpus.micronaut.platform', '4.10.24')
-        // both options in every compile: under kapt, javac copies an option into the system properties of the compiler JVM and
-        // a leftover value of another compilation wins over the argument
-        List<String> arguments = ["arg(\"${CHECKS}\", \"${checked}\")".toString(),
-                                  "arg(\"${SCHEMA_DIRS}\", \"${schemas.toString().replace('\\', '/')}\")".toString()]
+        // the unchecked build has the checks off and the schema of the case; the checked build has what the case asks for (CompileOptions).
+        // Both options in every compile: under kapt, javac copies an option into the system properties of the compiler JVM and a
+        // leftover value of another compilation can win over the argument
+        Map<String, String> values = checked ? CompileOptions.of(c, project) : [(CompileOptions.SCHEMA_DIRS): CompileOptions.of(c, project).get(CompileOptions.SCHEMA_DIRS)]
+        values.putIfAbsent(CompileOptions.CHECKS, String.valueOf(checked))
+        List<String> arguments = values.findAll { it.value != null }.collect { String key, String value ->
+            "arg(\"${key}\", \"${value.replace('\\', '/')}\")".toString()
+        }
         String options = processor == Processor.KSP ? "ksp {\n    ${arguments.join('\n    ')}\n}" : "kapt {\n    arguments {\n        ${arguments.join('\n        ')}\n    }\n}"
         Files.writeString(project.resolve('build.gradle.kts'), """\
 plugins {

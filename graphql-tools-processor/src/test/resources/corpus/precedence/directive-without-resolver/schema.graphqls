@@ -1,0 +1,15 @@
+schema {
+  query: Query
+}
+
+type Query {
+  book(id: ID!): Book
+  books(limit: Int): [Book!]!
+}
+
+type Book {
+  title: String! @computed
+  author: String
+}
+
+directive @computed on FIELD_DEFINITION

@@ -151,7 +151,7 @@ final class CorpusRunner {
             } else if (expectedCompile.lines() != compile.lines()) {
                 failures.add("${compileTimeBinder.name} verdict differs from expected/compile.txt:\n${diff(expectedCompile.lines(), compile.lines())}".toString())
             }
-            failures.addAll(Parity.check(corpusCase.name, language, runtime, compile, corpus.divergences, Parity.relaxedCodes(corpusCase.config), corpus.exceptions))
+            failures.addAll(Parity.check(corpusCase.name, language, runtime, compile, corpus.divergences, Parity.relaxedCodes(corpusCase.config), corpus.exceptions, corpusCase.checksOff()))
         }
         return failures
     }

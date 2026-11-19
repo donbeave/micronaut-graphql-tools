@@ -102,6 +102,13 @@ tasks.named<Test>("test") {
         .withPropertyName("docsOptionsPage")
 }
 
+// PortedCasesSpec reads the specs of the JSR-269 processor behind Gradle's back (until #144 deletes them).
+tasks.named<Test>("test") {
+    val legacySpecs = layout.projectDirectory.dir("src/test/groovy/io/micronaut/graphql/tools/processing")
+    systemProperty("processing.specs", legacySpecs.asFile.absolutePath)
+    inputs.files(legacySpecs.asFileTree).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("legacySpecs")
+}
+
 // VisitorArchitectureSpec reads the sources of the visitor behind Gradle's back.
 tasks.named<Test>("test") {
     val visitorSources = layout.projectDirectory.dir("src/main/java/io/micronaut/graphql/tools/visitor")

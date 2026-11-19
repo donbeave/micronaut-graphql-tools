@@ -1,0 +1,1 @@
+unbound-resolver-method example.MagazineResolver#issue(example.Magazine) -

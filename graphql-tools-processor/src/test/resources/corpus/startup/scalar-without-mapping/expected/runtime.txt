@@ -1,0 +1,1 @@
+scalar-mapping-not-provided Query.today schema.graphqls:7:3

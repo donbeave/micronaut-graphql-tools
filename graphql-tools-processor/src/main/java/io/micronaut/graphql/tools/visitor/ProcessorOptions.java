@@ -53,6 +53,9 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
     static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS);
 
+    /** The key of the JSR-269 processor that the visitor replaces. */
+    static final String REMOVED_SDL_DIR = "micronaut.graphql.tools.sdlDir";
+
     ProcessorOptions {
         schemaDirs = List.copyOf(schemaDirs);
         errors = List.copyOf(errors);
@@ -66,6 +69,11 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
                         + new TreeSet<>(NAMES)));
             }
         });
+
+        if (options.containsKey(REMOVED_SDL_DIR)) {
+            errors.add(error(BindingCode.PROCESSOR_OPTION_REMOVED, REMOVED_SDL_DIR + " was renamed to " + SCHEMA_DIRS
+                    + ": pass the schema directories there (several are joined with the path separator)"));
+        }
 
         boolean checks = true;
         String checksValue = options.get(CHECKS);
