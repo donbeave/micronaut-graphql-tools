@@ -19,6 +19,7 @@ import graphql.language.FieldDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.SourceLocation;
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 
@@ -48,7 +49,13 @@ public final class TypeMappingContext implements MappingContext {
         this.mappedMethod = mappedMethod;
     }
 
-    static TypeMappingContext forField(@NonNull ObjectTypeDefinition objectTypeDefinition, @NonNull String fieldName) {
+    /**
+     * @param objectTypeDefinition the object type
+     * @param fieldName            the field
+     * @return the context of the field; for the library's own use
+     */
+    @Internal
+    public static TypeMappingContext forField(@NonNull ObjectTypeDefinition objectTypeDefinition, @NonNull String fieldName) {
         requireNonNull("objectTypeDefinition", objectTypeDefinition);
         requireNonNull("fieldName", fieldName);
 
@@ -56,8 +63,15 @@ public final class TypeMappingContext implements MappingContext {
                 null);
     }
 
-    static TypeMappingContext forField(@NonNull TypeMappingContext mappingContext, @NonNull Class<?> mappedClass,
-                                       @Nullable String mappedMethod) {
+    /**
+     * @param mappingContext the context of the field
+     * @param mappedClass    the Java class that serves it
+     * @param mappedMethod   the Java method, or {@code null}
+     * @return the context with the Java element; for the library's own use
+     */
+    @Internal
+    public static TypeMappingContext forField(@NonNull TypeMappingContext mappingContext, @NonNull Class<?> mappedClass,
+                                              @Nullable String mappedMethod) {
         requireNonNull("mappingContext", mappingContext);
         requireNonNull("mappedClass", mappedClass);
 
@@ -65,7 +79,13 @@ public final class TypeMappingContext implements MappingContext {
                 null, mappedClass, mappedMethod);
     }
 
-    static TypeMappingContext forArgument(@NonNull TypeMappingContext mappingContext, @NonNull String argumentName) {
+    /**
+     * @param mappingContext the context of the field
+     * @param argumentName   the argument
+     * @return the context of the argument; for the library's own use
+     */
+    @Internal
+    public static TypeMappingContext forArgument(@NonNull TypeMappingContext mappingContext, @NonNull String argumentName) {
         requireNonNull("mappingContext", mappingContext);
         requireNonNull("mappingContext.objectTypeDefinition", mappingContext.objectTypeDefinition);
         requireNonNull("mappingContext.fieldName", mappingContext.fieldName);

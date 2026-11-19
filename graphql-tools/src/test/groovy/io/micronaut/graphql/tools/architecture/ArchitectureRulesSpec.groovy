@@ -52,7 +52,7 @@ class ArchitectureRulesSpec extends Specification {
      * access that no longer happens fails the spec, so delete it with the fix.
      */
     static final Map<String, Map<String, Object>> REFLECTION_ALLOWLIST = [
-            'io.micronaut.graphql.tools.GraphQLResolversRegistry': [
+            'io.micronaut.graphql.tools.internal.GraphQLResolversRegistry': [
                     accesses: ['java.lang.Class.getDeclaredAnnotation'],
                     reason  : 'reads @GraphQLTypeResolver from the user class, removed by #34',
             ],
@@ -74,7 +74,7 @@ class ArchitectureRulesSpec extends Specification {
 
     void "the classes of the library and the binding module are found"() {
         expect:
-        classes.contain('io.micronaut.graphql.tools.GraphQLFactory')
+        classes.contain('io.micronaut.graphql.tools.internal.GraphQLFactory')
         classes.contain('io.micronaut.graphql.tools.binding.BindingCode')
         classes.size() > 200
     }

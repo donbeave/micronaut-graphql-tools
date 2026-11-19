@@ -176,7 +176,7 @@ type AdminQuery {
     }
 
     static Logger logger() {
-        (Logger) LoggerFactory.getLogger('io.micronaut.graphql.tools.BeanSelectionLogger')
+        (Logger) LoggerFactory.getLogger('io.micronaut.graphql.tools.internal.BeanSelectionLogger')
     }
 
     static GraphQLSchema otherSchema(String value) {

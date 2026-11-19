@@ -25,7 +25,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
-import io.micronaut.graphql.tools.ArgumentDefinition;
+import io.micronaut.graphql.tools.internal.ArgumentDefinition;
 import io.micronaut.graphql.tools.ArgumentValue;
 
 import org.slf4j.Logger;
