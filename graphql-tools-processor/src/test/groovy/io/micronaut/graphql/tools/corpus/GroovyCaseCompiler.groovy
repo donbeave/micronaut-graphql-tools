@@ -68,6 +68,10 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
         Path schemaDir = Files.createDirectories(work.resolve('schema'))
         corpusCase.schemaFiles().each { Files.copy(it, schemaDir.resolve(it.fileName.toString())) }
         Map<String, String> checked = [(PREFIX + 'schema.dirs'): schemaDir.toString()]
+        String prefixes = corpusCase.config[JavaCaseCompiler.ACCESSOR_PREFIXES_CONFIG]
+        if (prefixes != null) {
+            checked.put(JavaCaseCompiler.ACCESSOR_PREFIXES, prefixes)
+        }
         List<SourceUnit> units = corpusCase.units(Language.GROOVY)
         List<Path> dependencies = []
         List<String> errors = []

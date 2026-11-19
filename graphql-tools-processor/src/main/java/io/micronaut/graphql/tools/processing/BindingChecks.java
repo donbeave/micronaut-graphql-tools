@@ -32,7 +32,7 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules;
+import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules; import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
 import io.micronaut.graphql.tools.processing.ModelMembers.Property;
 import io.micronaut.graphql.tools.processing.ResolverBeans.Bean;
 import io.micronaut.graphql.tools.processing.ResolverBeans.Method;
@@ -122,7 +122,7 @@ final class BindingChecks {
         this.problems = problems;
         this.javaTypes = javaTypes;
         this.types = types;
-        this.beans = new ResolverBeans(javaTypes, types);
+        this.beans = new ResolverBeans(javaTypes, types, options.resolverAccessorPrefixes());
         this.models = new ModelMembers(javaTypes, types);
         this.manifest = manifest;
         this.typeNames = new TypeNames(javaTypes);
@@ -247,10 +247,6 @@ final class BindingChecks {
         }
         if (fields.stream().noneMatch(it -> it.getName().equals(fieldName))) {
             return "the type " + typeName + " has no field " + fieldName + ".";
-        }
-        String methodName = method.element().getSimpleName().toString();
-        if (!fieldName.equals(methodName)) {
-            return "the field name " + fieldName + " differs from the method name " + methodName + ".";
         }
         boolean operationType = operationTypes.contains(typeName);
         if (bean.root() && !operationType) {
@@ -585,17 +581,19 @@ final class BindingChecks {
     private void bindField(ObjectTypeDefinition type, FieldDefinition field, TypeElement introspected,
                            TypeElement sourceClass) {
         String coordinate = type.getName() + "." + field.getName();
-        Optional<Property> property = models.property(introspected, field.getName());
+        List<Property> properties = models.properties(introspected, field.getName());
         List<ExecutableElement> fieldMethods = models.fieldMethods(introspected, field.getName());
 
-        if (property.isPresent() && !fieldMethods.isEmpty() || fieldMethods.size() > 1) {
+        if (properties.size() + fieldMethods.size() > 1) {
             List<String> members = new ArrayList<>();
-            property.ifPresent(it -> members.add(javaTypes.describe(it.accessor())));
+            properties.forEach(it -> members.add(javaTypes.describe(it.accessor())));
             fieldMethods.forEach(it -> members.add(javaTypes.describe(it)));
             problems.error(coordinate, "several members of " + javaTypes.name(introspected) + " can bind the field: "
-                    + String.join(", ", members) + ".", field, fieldMethods.get(0));
+                    + String.join(", ", members) + ".", field,
+                    fieldMethods.isEmpty() ? properties.get(0).accessor() : fieldMethods.get(0));
             return;
         }
+        Optional<Property> property = properties.stream().findFirst();
 
         boolean declaredByInterface = isDeclaredByInterface(type, field.getName());
         List<Method> resolvers = typeResolverMethods(sourceClass, coordinate, field.getName());
@@ -720,8 +718,7 @@ final class BindingChecks {
                 if (modelClass.getKind() == ElementKind.INTERFACE && !modelClass.equals(introspected)
                         && javaTypes.isA(introspected.asType(), modelClass.getQualifiedName().toString())
                         && bean.methodsByModelClass().getOrDefault(javaTypes.name(modelClass), List.of()).stream()
-                        .anyMatch(it -> it.element().getSimpleName().contentEquals(fieldName)
-                                && (!declaredCoordinate || it.coordinate() != null))) {
+                        .anyMatch(it -> bean.mayBind(it, fieldName, declaredCoordinate))) {
                     return true;
                 }
             }
@@ -1032,7 +1029,8 @@ final class BindingChecks {
             return;
         }
         boundMethods.forEach((method, coordinates) -> {
-            if (method.bean().root() && method.coordinate() == null && coordinates.size() > 1) {
+            if (method.bean().root() && method.coordinate() == null
+                    && coordinates.stream().map(SchemaCoordinates::typeName).distinct().count() > 1) {
                 problems.error(javaTypes.describe(method.element()), "the root resolver method binds fields of several "
                         + "root operation types (" + String.join(", ", coordinates) + ") (strict mode). Give each "
                         + "operation type its own method with @GraphQLSchemaCoordinate.", null, method.element());

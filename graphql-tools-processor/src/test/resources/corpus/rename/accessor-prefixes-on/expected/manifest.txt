@@ -1,0 +1,10 @@
+Boolean -> scalar ; Boolean ; - ; -
+ID -> scalar ; ID ; - ; -
+Parcel -> object ; example.Parcel ; - ; -
+Parcel.active: Boolean! -> resolver ; example.ParcelResolver#isActive(example.Parcel) ; boolean ; boolean
+Parcel.author: String! -> resolver ; example.ParcelResolver#getAuthor(example.Parcel) ; java.lang.String ; java.lang.String
+Parcel.id: ID! -> property ; example.Parcel#id ; java.lang.String ; java.lang.String
+Query -> object ; - ; - ; -
+Query.parcel: Parcel -> root ; example.Query#parcel() ; example.Parcel ; example.Parcel
+Query.version: String! -> root ; example.Query#getVersion() ; java.lang.String ; java.lang.String
+String -> scalar ; String ; - ; -

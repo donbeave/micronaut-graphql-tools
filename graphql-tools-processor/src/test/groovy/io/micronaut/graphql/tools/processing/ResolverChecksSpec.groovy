@@ -469,7 +469,7 @@ public class OtherQuery {
                                          + '(schema.graphqls:6)']
     }
 
-    void "a schema coordinate is validated: unknown field, method name, root resolver on another type, bean that is no resolver"() {
+    void "a schema coordinate is validated: unknown field, root resolver on another type, bean that is no resolver"() {
         when:
         def result = compilation(['example.BookQuery': BOOK_QUERY
                 .replace('public Book book(String id)', '@io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate("' + coordinate + '") public Book book(String id)')
@@ -483,7 +483,6 @@ public class OtherQuery {
         where:
         coordinate   | message
         'Query.shelf' | 'the type Query has no field shelf.'
-        'Query.books' | 'the field name books differs from the method name book.'
         'Mutation.book' | 'the schema has no type Mutation.'
         'Query'       | 'the value is not a schema coordinate of the form Type.field.'
     }

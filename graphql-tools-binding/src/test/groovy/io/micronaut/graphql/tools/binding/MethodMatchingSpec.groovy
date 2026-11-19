@@ -27,13 +27,36 @@ class MethodMatchingSpec extends Specification {
 
     void "a method binds the field of its name"() {
         expect:
-        ResolverClassRules.bindsField(method('book'), 'book', ['Query.book'] as Set, null)
-        !ResolverClassRules.bindsField(method('books'), 'book', ['Query.book'] as Set, null)
+        ResolverClassRules.bindsField(method('book'), 'book', ['Query.book'] as Set, null, false)
+        !ResolverClassRules.bindsField(method('books'), 'book', ['Query.book'] as Set, null, false)
+    }
+
+    void "with accessor prefixes a method binds the field its get or is prefix leaves, besides its own"() {
+        expect:
+        ResolverClassRules.bindsField(method('getAuthor'), 'author', ['Book.author'] as Set, null, true)
+        ResolverClassRules.bindsField(method('getAuthor'), 'getAuthor', ['Book.getAuthor'] as Set, null, true)
+        ResolverClassRules.bindsField(method('isActive'), 'active', ['Book.active'] as Set, null, true)
+        !ResolverClassRules.bindsField(method('getAuthor'), 'author', ['Book.author'] as Set, null, false)
+        !ResolverClassRules.bindsField(method('author'), 'getAuthor', ['Book.getAuthor'] as Set, null, true)
+    }
+
+    void "a declared coordinate names the field whatever the name of the method is"() {
+        given:
+        def declared = ['a.R#klass()': 'Book.class']
+        def klass = method('klass', coordinate('Book.class'), [], null, 'a.R#klass()')
+
+        expect:
+        ResolverClassRules.bindsField(klass, 'class', ['Book.class'] as Set, declared, false)
+        !ResolverClassRules.bindsField(klass, 'klass', ['Book.klass'] as Set, declared, false)
+        ResolverClassRules.boundNames(klass, declared, true) == ['class']
+        ResolverClassRules.boundNames(method('getA'), null, true) == ['getA', 'a']
+        ResolverClassRules.boundNames(method('getA'), null, false) == ['getA']
+        ResolverClassRules.boundNames(method('getA', IGNORED), null, true) == []
     }
 
     void "an ignored method binds nothing"() {
         expect:
-        !ResolverClassRules.bindsField(method('book', IGNORED), 'book', ['Query.book'] as Set, null)
+        !ResolverClassRules.bindsField(method('book', IGNORED), 'book', ['Query.book'] as Set, null, false)
         !ResolverClassRules.isCandidate(method('book', IGNORED), null)
     }
 
@@ -42,10 +65,10 @@ class MethodMatchingSpec extends Specification {
         def declared = ['a.R#book()': 'Query.book', 'a.R#other()': 'Book.other']
 
         expect:
-        ResolverClassRules.bindsField(method('book', coordinate('Query.book')), 'book', ['Query.book'] as Set, declared)
-        ResolverClassRules.bindsField(method('book', coordinate('Query.book')), 'book', ['Query.book', 'Node.book'] as Set, declared)
+        ResolverClassRules.bindsField(method('book', coordinate('Query.book')), 'book', ['Query.book'] as Set, declared, false)
+        ResolverClassRules.bindsField(method('book', coordinate('Query.book')), 'book', ['Query.book', 'Node.book'] as Set, declared, false)
         !ResolverClassRules.bindsField(method('book', coordinate('Book.other')), 'book', ['Query.book'] as Set,
-                ['a.R#book()': 'Book.other'])
+                ['a.R#book()': 'Book.other'], false)
     }
 
     void "in such a class a method without a coordinate is no candidate and binds nothing"() {
@@ -54,7 +77,7 @@ class MethodMatchingSpec extends Specification {
 
         expect:
         !ResolverClassRules.isCandidate(method('other', [:], [], null, 'a.R#other()'), declared)
-        !ResolverClassRules.bindsField(method('other', [:], [], null, 'a.R#other()'), 'other', ['Query.other'] as Set, declared)
+        !ResolverClassRules.bindsField(method('other', [:], [], null, 'a.R#other()'), 'other', ['Query.other'] as Set, declared, false)
         ResolverClassRules.isCandidate(method('book'), declared)
         ResolverClassRules.isCandidate(method('other'), null)
     }

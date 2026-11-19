@@ -1,0 +1,9 @@
+ID -> scalar ; ID ; - ; -
+Int -> scalar ; Int ; - ; -
+Parcel -> object ; example.Parcel ; - ; -
+Parcel.class: String! -> property ; example.Parcel#kind() ; java.lang.String ; java.lang.String
+Parcel.hashCode: Int! -> property ; example.Parcel#digest() ; int ; int
+Parcel.id: ID! -> property ; example.Parcel#id ; java.lang.String ; java.lang.String
+Query -> object ; - ; - ; -
+Query.parcel: Parcel -> root ; example.Query#parcel() ; example.Parcel ; example.Parcel
+String -> scalar ; String ; - ; -

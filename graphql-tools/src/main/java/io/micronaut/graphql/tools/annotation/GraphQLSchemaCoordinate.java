@@ -38,7 +38,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  *     <li>the bean is neither a {@link GraphQLRootResolver} nor a {@link GraphQLTypeResolver};</li>
  *     <li>the value is not of the form {@code Type.field}, the schema has no such object type or interface, or the
  *     type has no such field;</li>
- *     <li>the field name differs from the method name;</li>
  *     <li>the type is not a root operation type on a {@link GraphQLRootResolver}, or is one on a
  *     {@link GraphQLTypeResolver};</li>
  *     <li>(on a {@link GraphQLTypeResolver} for the Java type of an interface, the coordinate names the interface
@@ -53,7 +52,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * {@code micronaut.graphql.tools.precedence} says.</p>
  *
  * <p>On a bean where at least one method carries the annotation, only the annotated methods bind; other public
- * methods, such as helpers, are not candidates. Fields are still matched by method name.</p>
+ * methods, such as helpers, are not candidates. The method may have any name: it binds the field its coordinate
+ * names, which is how a field named like a Java keyword ({@code Book.class}) is bound.</p>
  */
 @Documented
 @Inherited

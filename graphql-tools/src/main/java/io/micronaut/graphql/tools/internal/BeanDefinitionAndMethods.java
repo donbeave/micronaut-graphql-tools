@@ -42,6 +42,7 @@ final class BeanDefinitionAndMethods {
     private Map<String, List<Map.Entry<ExecutableMethod<Object, ?>, JMethod>>> byName;
 
     private final Function<ExecutableMethod<?, ?>, JMethod> views;
+    private Function<JMethod, List<String>> bindingNames = it -> List.of(it.name());
 
     BeanDefinitionAndMethods(@NonNull BeanDefinition<?> beanDefinition) {
         this(beanDefinition, new RuntimeTypeModel()::method);
@@ -53,6 +54,18 @@ final class BeanDefinitionAndMethods {
 
         this.beanDefinition = beanDefinition;
         this.views = views;
+    }
+
+    /**
+     * @param bindingNames the names of the fields a method can bind; the index by name is rebuilt on the next lookup
+     */
+    void bindingNames(Function<JMethod, List<String>> bindingNames) {
+        this.bindingNames = bindingNames;
+        byName = null;
+    }
+
+    void resetIndex() {
+        byName = null;
     }
 
     void addExecutableMethod(@NonNull ExecutableMethod<Object, ?> executableMethod) {
@@ -88,14 +101,17 @@ final class BeanDefinitionAndMethods {
     }
 
     /**
-     * @param name the method name
-     * @return the methods of the name with their views, in the iteration order of {@link #getMethodViews()}
+     * @param name the name of a field
+     * @return the methods that can bind a field of the name, with their views, in the iteration order of
+     * {@link #getMethodViews()}
      */
     List<Map.Entry<ExecutableMethod<Object, ?>, JMethod>> methodsNamed(String name) {
         if (byName == null) {
             Map<String, List<Map.Entry<ExecutableMethod<Object, ?>, JMethod>>> index = new HashMap<>();
             for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> entry : executableMethods.entrySet()) {
-                index.computeIfAbsent(entry.getValue().name(), it -> new ArrayList<>()).add(entry);
+                for (String bound : bindingNames.apply(entry.getValue())) {
+                    index.computeIfAbsent(bound, it -> new ArrayList<>()).add(entry);
+                }
             }
             byName = index;
         }

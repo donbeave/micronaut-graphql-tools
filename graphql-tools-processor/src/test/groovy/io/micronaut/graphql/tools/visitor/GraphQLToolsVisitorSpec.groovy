@@ -183,17 +183,61 @@ public class Operations {
         settled.success
     }
 
+    def "a coordinate binds a method with another name, and its arguments are checked against the field it names"() {
+        when:
+        def result = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    @GraphQLSchemaCoordinate("Query.books") public String fetch(int limit) { return ""; }
+    @GraphQLSchemaCoordinate("Query.version") public String release() { return "1"; }
+}''').compile()
+
+        then:
+        result.findings == ['[argument-mismatch] Query.books']
+    }
+
+    def "with the accessor prefixes option a getX method binds the field x and is checked; without it nothing is reported for it"() {
+        given:
+        def body = '''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String getBooks(int limit) { return ""; }
+    public String getVersion() { return "1"; }
+}'''
+
+        when:
+        def on = compilation(body).option(ProcessorOptions.ACCESSOR_PREFIXES, 'true').compile()
+        def off = compilation(body).compile()
+
+        then:
+        on.findings == ['[argument-mismatch] Query.books']
+        off.success
+        off.findings == []
+    }
+
+    def "a method that no prefix could bind is unbound whether or not the prefixes are on"() {
+        when:
+        def result = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String getStray() { return ""; }
+}''').option(ProcessorOptions.ACCESSOR_PREFIXES, 'true').compile()
+
+        then:
+        result.findings == ['[unbound-resolver-method] example.QueryResolver#getStray()']
+    }
+
     def "a coordinate that does not fit the schema is reported with the coordinate it declares"() {
         when:
         def result = compilation('''
 @GraphQLRootResolver
 public class QueryResolver {
     @GraphQLSchemaCoordinate("Missing.field") public String field() { return ""; }
-    @GraphQLSchemaCoordinate("Query.version") public String other() { return ""; }
+    @GraphQLSchemaCoordinate("Query.nowhere") public String other() { return ""; }
 }''').compile()
 
         then:
-        result.findings == ['[unknown-schema-coordinate] Missing.field', '[unknown-schema-coordinate] Query.version']
+        result.findings == ['[unknown-schema-coordinate] Missing.field', '[unknown-schema-coordinate] Query.nowhere']
     }
 
     def "a type resolver is checked through its contract: the source parameter and the arguments"() {

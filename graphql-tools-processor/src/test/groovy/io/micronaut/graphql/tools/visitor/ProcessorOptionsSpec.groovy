@@ -75,6 +75,30 @@ public class QueryResolver {
         result.findings == ['[processor-option-invalid] -']
     }
 
+    def "the accessor prefixes option is off by default, reads a boolean and rejects anything else"() {
+        expect:
+        !ProcessorOptions.read([:]).accessorPrefixes()
+        ProcessorOptions.read([(ProcessorOptions.ACCESSOR_PREFIXES): value]).accessorPrefixes() == expected
+        ProcessorOptions.read([(ProcessorOptions.ACCESSOR_PREFIXES): value]).errors().empty
+
+        where:
+        value   | expected
+        'true'  | true
+        'YES'   | true
+        'on'    | true
+        'false' | false
+        'off'   | false
+    }
+
+    def "an accessor prefixes value that is not a boolean is an error"() {
+        when:
+        def options = ProcessorOptions.read([(ProcessorOptions.ACCESSOR_PREFIXES): 'maybe'])
+
+        then:
+        options.errors()*.code() == ['processor-option-invalid']
+        options.errors()[0].sentence().contains(ProcessorOptions.ACCESSOR_PREFIXES)
+    }
+
     def "a directory that this system cannot use as a path is an option error, not a crash of the compiler"() {
         when:
         def options = ProcessorOptions.read([(ProcessorOptions.SCHEMA_DIRS): "ok${File.pathSeparator}bad\u0000path".toString()])

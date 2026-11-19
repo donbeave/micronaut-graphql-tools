@@ -196,27 +196,49 @@ public final class ResolverClassRules {
     }
 
     /**
-     * Method-to-field matching: a method binds a field when it has the field's name, is not ignored and, in a class
-     * where methods declare coordinates, declares one of the coordinates that the field can have.
+     * Method-to-field matching: in a class where methods declare coordinates, a method binds the fields that its
+     * coordinate names, whatever its own name is, and no other; in any other class it binds the field of its own name
+     * and, with {@code accessorPrefixes}, the field its {@code get} or {@code is} prefix leaves.
      *
-     * @param method      a method of a resolver class
-     * @param fieldName   the name of the field
-     * @param coordinates the coordinates the field answers to ({@code Type.field}, and the same field of an interface
-     *                    that the type implements)
-     * @param declared    the declared coordinate by method signature for the class, or {@code null} when no method of
-     *                    the class declares one
+     * @param method           a method of a resolver class
+     * @param fieldName        the name of the field
+     * @param coordinates      the coordinates the field answers to ({@code Type.field}, and the same field of an
+     *                         interface that the type implements)
+     * @param declared         the declared coordinate by method signature for the class, or {@code null} when no method
+     *                         of the class declares one
+     * @param accessorPrefixes whether {@code getX} and {@code isX} also bind the field {@code x}
      * @return whether the method binds the field
      */
     public static boolean bindsField(JMethod method, String fieldName, Set<String> coordinates,
-                                     @Nullable Map<String, String> declared) {
-        if (!method.name().equals(fieldName) || isIgnored(method)) {
+                                     @Nullable Map<String, String> declared, boolean accessorPrefixes) {
+        if (isIgnored(method)) {
             return false;
         }
         if (declared == null) {
-            return true;
+            return FieldNames.ofResolverMethod(method.name(), accessorPrefixes).contains(fieldName);
         }
         String coordinate = declared.get(method.signature());
         return coordinate != null && coordinates.contains(coordinate);
+    }
+
+    /**
+     * @param method           a method of a resolver class
+     * @param declared         the declared coordinate by method signature for the class, or {@code null} when no method
+     *                         of the class declares one
+     * @param accessorPrefixes whether {@code getX} and {@code isX} also bind the field {@code x}
+     * @return the names of the fields the method can bind, in any type
+     */
+    public static List<String> boundNames(JMethod method, @Nullable Map<String, String> declared,
+                                          boolean accessorPrefixes) {
+        if (isIgnored(method)) {
+            return List.of();
+        }
+        if (declared == null) {
+            return FieldNames.ofResolverMethod(method.name(), accessorPrefixes);
+        }
+        String coordinate = declared.get(method.signature());
+        return coordinate == null || coordinate.indexOf('.') < 0 ? List.of()
+                : List.of(coordinate.substring(coordinate.indexOf('.') + 1));
     }
 
     /**
@@ -379,10 +401,11 @@ public final class ResolverClassRules {
      * @param model      the type model
      * @param resolver   the resolver class
      * @param sourceType the binary name of the source type of a type resolver, or {@code null}
+     * @param accessorPrefixes whether {@code getX} and {@code isX} also bind the field {@code x}
      * @return the verdict
      */
     public static ClassVerdict check(SchemaModel schema, TypeModel model, JClass resolver,
-                                     @Nullable String sourceType) {
+                                     @Nullable String sourceType, boolean accessorPrefixes) {
         List<JMethod> bindable = resolver.bindableMethods();
         Map<String, String> declared = declaredCoordinates(bindable);
         boolean root = resolver.annotations().has(AnnotationNames.ROOT_RESOLVER);
@@ -396,15 +419,16 @@ public final class ResolverClassRules {
             List<String> coordinates = new ArrayList<>();
             if (declared != null) {
                 String coordinate = declared.get(method.signature());
-                if (bindsFieldNamed(coordinate, method.name())) {
+                if (coordinate.indexOf('.') > 0) {
                     coordinates.add(coordinate);
                 }
             } else if (root) {
-                new TreeSet<>(rootTypes).forEach(type -> {
-                    if (field(schema, type, method.name()) != null) {
-                        coordinates.add(type + "." + method.name());
+                List<String> names = FieldNames.ofResolverMethod(method.name(), accessorPrefixes);
+                new TreeSet<>(rootTypes).forEach(type -> names.forEach(name -> {
+                    if (field(schema, type, name) != null) {
+                        coordinates.add(type + "." + name);
                     }
-                });
+                }));
             }
 
             List<FieldVerdict> fields = new ArrayList<>();
@@ -430,11 +454,6 @@ public final class ResolverClassRules {
             methods.add(new MethodVerdict(method.signature(), coordinates, fields));
         }
         return new ClassVerdict(resolver.name(), methods);
-    }
-
-    private static boolean bindsFieldNamed(String coordinate, String methodName) {
-        int dot = coordinate.indexOf('.');
-        return dot > 0 && coordinate.substring(dot + 1).equals(methodName);
     }
 
     /**

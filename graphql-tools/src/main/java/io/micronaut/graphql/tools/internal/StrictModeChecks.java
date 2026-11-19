@@ -21,7 +21,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.rules.EnumTypeRules;
-import io.micronaut.graphql.tools.binding.internal.rules.EnumVerdict;
+import io.micronaut.graphql.tools.binding.internal.rules.EnumVerdict; import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
 import io.micronaut.inject.ExecutableMethod;
 
 import java.util.ArrayList;
@@ -118,7 +118,7 @@ final class StrictModeChecks {
     void rootMethodsOfSeveralOperationTypes(Map<ExecutableMethod<?, ?>, Set<String>> rootMethodBindings) {
         Map<String, Set<String>> findings = new TreeMap<>();
         rootMethodBindings.forEach((method, coordinates) -> {
-            if (coordinates.size() > 1) {
+            if (coordinates.stream().map(SchemaCoordinates::typeName).distinct().count() > 1) {
                 findings.put(BindingManifestRecorder.methodMember(method, method.getDeclaringType()), coordinates);
             }
         });

@@ -21,6 +21,7 @@ import io.micronaut.context.annotation.Infrastructure;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
@@ -82,14 +83,23 @@ public final class GraphQLResolversRegistry {
     private final RuntimeTypeModel typeModel = new RuntimeTypeModel();
 
     private final BeanContext beanContext;
+    private final boolean accessorPrefixes;
     private final Set<BeanDefinition<?>> seenRootResolvers = new HashSet<>();
     private final Set<BeanDefinition<?>> seenTypeResolvers = new HashSet<>();
     private final Set<BeanDefinition<?>> seenSchemaCoordinates = new HashSet<>();
     private boolean introductionBeansRegistered;
     private List<SchemaCoordinateMethod> sortedSchemaCoordinateMethods;
 
-    public GraphQLResolversRegistry(BeanContext beanContext) {
+    public GraphQLResolversRegistry(BeanContext beanContext, GraphQLToolsConfiguration configuration) {
         this.beanContext = beanContext;
+        this.accessorPrefixes = configuration.isResolverAccessorPrefixes();
+    }
+
+    private BeanDefinitionAndMethods newItem(BeanDefinition<?> beanDefinition) {
+        BeanDefinitionAndMethods item = new BeanDefinitionAndMethods(beanDefinition, typeModel::method);
+        item.bindingNames(it -> ResolverClassRules.boundNames(it, schemaCoordinateSignatures.get(beanDefinition),
+                accessorPrefixes));
+        return item;
     }
 
     public void registerRootResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
@@ -97,8 +107,7 @@ public final class GraphQLResolversRegistry {
         if (beanDefinition.isAbstract()) {
             return;
         }
-        rootResolvers.computeIfAbsent(beanDefinition, it -> new BeanDefinitionAndMethods(it, typeModel::method))
-                .addExecutableMethod(method);
+        rootResolvers.computeIfAbsent(beanDefinition, this::newItem).addExecutableMethod(method);
     }
 
     public void registerTypeResolverExecutableMethod(BeanDefinition<?> beanDefinition, ExecutableMethod<Object, ?> method) {
@@ -161,7 +170,7 @@ public final class GraphQLResolversRegistry {
                 .filter(it -> it.getBeanDefinition().equals(beanDefinition))
                 .findFirst()
                 .orElseGet(() -> {
-                    BeanDefinitionAndMethods item = new BeanDefinitionAndMethods(beanDefinition, typeModel::method);
+                    BeanDefinitionAndMethods item = newItem(beanDefinition);
                     typeResolvers.get(modelClass).add(item);
                     return item;
                 })
@@ -192,6 +201,13 @@ public final class GraphQLResolversRegistry {
         sortedSchemaCoordinateMethods = null;
         schemaCoordinateSignatures.computeIfAbsent(beanDefinition, it -> new HashMap<>())
                 .put(view.signature(), coordinate);
+        BeanDefinitionAndMethods root = rootResolvers.get(beanDefinition);
+        if (root != null) {
+            root.resetIndex();
+        }
+        typeResolvers.values().forEach(items -> items.stream()
+                .filter(it -> it.getBeanDefinition().equals(beanDefinition))
+                .forEach(BeanDefinitionAndMethods::resetIndex));
     }
 
     /**
@@ -275,12 +291,12 @@ public final class GraphQLResolversRegistry {
         return ResolverClassRules.isLifecycle(typeModel.method(method));
     }
 
-    private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String methodName,
+    private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String fieldName,
                                                       Set<String> coordinates) {
         Map<String, String> signatures = schemaCoordinateSignatures.get(item.getBeanDefinition());
         List<BeanDefinitionAndMethod> result = new ArrayList<>();
-        for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> method : item.methodsNamed(methodName)) {
-            if (ResolverClassRules.bindsField(method.getValue(), methodName, coordinates, signatures)) {
+        for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> method : item.methodsNamed(fieldName)) {
+            if (ResolverClassRules.bindsField(method.getValue(), fieldName, coordinates, signatures, accessorPrefixes)) {
                 result.add(new BeanDefinitionAndMethod(item.getBeanDefinition(), method.getKey()));
             }
         }
@@ -430,8 +446,9 @@ public final class GraphQLResolversRegistry {
             if (signatures == null) {
                 continue;
             }
-            for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> method : item.methodsNamed(methodName)) {
-                if (!ResolverClassRules.isIgnored(method.getValue())
+            for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> method : item.getMethodViews().entrySet()) {
+                if (method.getValue().name().equals(methodName)
+                        && !ResolverClassRules.isIgnored(method.getValue())
                         && !ResolverClassRules.isLifecycle(method.getValue())
                         && !signatures.containsKey(method.getValue().signature())) {
                     result.add(getUserBeanType(item.getBeanDefinition()).getName() + "#"
