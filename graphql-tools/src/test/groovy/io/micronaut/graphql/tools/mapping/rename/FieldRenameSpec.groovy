@@ -251,6 +251,54 @@ type Slip {
         e.cause.message.contains("GraphQL coordinate: Slip.title")
     }
 
+    @Requires(property = 'spec.name', value = SPEC_NAME + ".precedence")
+    @GraphQLRootResolver
+    static class PrecedenceQuery {
+        PrecedenceSlip slip() {
+            return new PrecedenceSlip()
+        }
+    }
+
+    @GraphQLType
+    static class PrecedenceSlip {
+        @GraphQLField("title")
+        String heading() {
+            return 'member'
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + ".precedence")
+    @GraphQLTypeResolver(PrecedenceSlip.class)
+    static class PrecedenceSlipResolver {
+        String title(PrecedenceSlip slip) {
+            return 'resolver'
+        }
+    }
+
+    void "a renamed member and a type resolver method for one field are ambiguous like any member: the precedence setting decides"() {
+        when:
+        startContext(SMALL_SCHEMA, SPEC_NAME + ".precedence")
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.message.contains("GraphQL coordinate: Slip.title")
+    }
+
+    void "property-first binds the renamed member, resolver-first the type resolver method"() {
+        given:
+        startContext(SMALL_SCHEMA, SPEC_NAME + ".precedence", ['micronaut.graphql.tools.precedence': precedence])
+
+        expect:
+        executeQuery('{ slip { title } }').data.slip.title == bound
+
+        where:
+        precedence       | bound
+        'property-first' | 'member'
+        'resolver-first' | 'resolver'
+    }
+
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(coordinates|duplicateCoordinate)')
     @GraphQLRootResolver
     static class CoordinateQuery {
