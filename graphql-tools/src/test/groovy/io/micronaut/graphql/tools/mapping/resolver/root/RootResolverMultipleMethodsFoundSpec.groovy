@@ -50,8 +50,6 @@ type Query {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.hello (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: hello
   Methods: 
   1) ${Query.name} hello()
   2) ${Query.name} hello(${DataFetchingEnvironment.name} env)

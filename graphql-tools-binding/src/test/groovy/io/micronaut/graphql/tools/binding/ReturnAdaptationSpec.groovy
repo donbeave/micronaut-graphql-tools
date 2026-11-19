@@ -80,9 +80,9 @@ class ReturnAdaptationSpec extends Specification {
 
     void "an Optional needs a nullable GraphQL type"() {
         expect:
-        adapt(ref(OPTIONAL, STRING), nonNull).failure() == WrapperRules.optionalAtNonNull('Book!')
+        adapt(ref(OPTIONAL, STRING), nonNull).failure() == WrapperRules.optionalAtNonNull('Book!', true)
         adapt(ref(OPTIONAL, STRING), new NonNullType(new ListType(nonNull))).failure() ==
-                WrapperRules.optionalAtNonNull('[Book!]!')
+                WrapperRules.optionalAtNonNull('[Book!]!', true)
         adapt(ref(OPTIONAL, STRING), new ListType(nonNull)).failure() == null
     }
 
@@ -92,7 +92,7 @@ class ReturnAdaptationSpec extends Specification {
         adapt(ref('java.util.OptionalInt')).failure() == null
         adapt(ref(STAGE, ref('java.util.OptionalLong'))).depth() == 1
         adapt(ref('java.util.OptionalDouble'), nonNull).failure() ==
-                WrapperRules.primitiveOptionalAtNonNull('java.util.OptionalDouble', 'Book!')
+                WrapperRules.primitiveOptionalAtNonNull('java.util.OptionalDouble', 'Book!', true)
         adapt(ref(OPTIONAL, ref('java.util.OptionalInt'))).failure() ==
                 WrapperRules.optionalCannotWrapPrimitiveOptional('java.util.OptionalInt')
     }
@@ -101,6 +101,13 @@ class ReturnAdaptationSpec extends Specification {
         expect:
         adapt(ref(OPTIONAL, ref(STAGE, STRING))).failure() == WrapperRules.cannotWrap(OPTIONAL, STAGE)
         adapt(ref(RESULT, ref(RESULT, STRING))).failure() == WrapperRules.cannotWrap(RESULT, RESULT)
+    }
+
+    void "an explicit Object argument is a raw wrapper only where no custom scalar can take it"() {
+        expect:
+        adapt(ref(OPTIONAL, ref('java.lang.Object')), new TypeName('JSON')).failure() == null
+        adapt(ref(OPTIONAL, ref('java.lang.Object')), new TypeName('String')).failure() ==
+                WrapperRules.missingTypeArgument(OPTIONAL)
     }
 
     void "a wrapper without its type argument is a violation"() {

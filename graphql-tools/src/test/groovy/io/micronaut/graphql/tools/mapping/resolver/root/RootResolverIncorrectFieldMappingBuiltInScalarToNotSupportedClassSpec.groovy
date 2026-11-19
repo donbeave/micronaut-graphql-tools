@@ -62,8 +62,6 @@ type Query {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The field is mapped to the incorrect class.
   GraphQL coordinate: Query.hello (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: hello
   Mapped class: ${Query.name}
   Mapped method: hello()
   Provided class: ${Integer.name}

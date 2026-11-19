@@ -54,8 +54,6 @@ type User {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The field is mapped to the incorrect class.
   GraphQL coordinate: User.username (line 11, column 3)
-  GraphQL object type: User
-  GraphQL field: username
   Mapped class: ${User.name}
   Mapped method: getUsername()
   Provided class: ${Integer.name}
@@ -95,8 +93,6 @@ type User {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The field is mapped to the incorrect class.
   GraphQL coordinate: User.username (line 11, column 3)
-  GraphQL object type: User
-  GraphQL field: username
   Mapped class: ${User.name}
   Mapped method: getUsername()
   Provided class: ${Integer.name}

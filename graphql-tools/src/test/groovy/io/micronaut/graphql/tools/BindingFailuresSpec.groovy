@@ -75,20 +75,14 @@ type Book {
         failures.message == """[binding-failures] The schema cannot be bound: 3 errors.
   1) [field-not-bound] The property or method `isbn` not found in ${Book.name}'s type.
      GraphQL coordinate: Book.isbn (line 14, column 3)
-     GraphQL object type: Book
-     GraphQL field: isbn
   2) [incorrect-class-mapping] The field is mapped to the incorrect class.
      GraphQL coordinate: Query.count (line 8, column 3)
-     GraphQL object type: Query
-     GraphQL field: count
      Mapped class: ${Query.name}
      Mapped method: count()
      Provided class: java.lang.String
      Supported classes: int, java.lang.Integer
   3) [field-not-bound] The method `missing` not found in any root resolvers: [${Query.name}].
-     GraphQL coordinate: Query.missing (line 9, column 3)
-     GraphQL object type: Query
-     GraphQL field: missing"""
+     GraphQL coordinate: Query.missing (line 9, column 3)"""
     }
 
     void "a single failure is thrown as is, with its coordinate and source location"() {
@@ -120,7 +114,7 @@ type Book {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause.message.contains('\n  GraphQL coordinate: Book.isbn (books.graphqls, line 12, column 3)\n')
+        e.cause.message.contains('\n  GraphQL coordinate: Book.isbn (books.graphqls, line 12, column 3)')
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

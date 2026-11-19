@@ -49,8 +49,6 @@ type Query {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The argument is mapped to a built-in class, when required an instance of Iterable interface.
   GraphQL coordinate: Query.testString(input:) (line 7, column 14)
-  GraphQL object type: Query
-  GraphQL field: testString
   GraphQL argument: input
   Mapped class: ${Query.name}
   Mapped method: testString(${String.name} input)

@@ -16,7 +16,9 @@
 package io.micronaut.graphql.tools.exceptions;
 
 import io.micronaut.graphql.tools.binding.BindingCode;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,17 +49,33 @@ public final class InvalidAllowUnreachableException extends SchemaBindingExcepti
      */
     public InvalidAllowUnreachableException(List<String> undefinedTypeNames, List<String> notUnreachableTypeNames,
                                             String kinds) {
+        this(undefinedTypeNames, reasons(notUnreachableTypeNames, "not an unreachable " + kinds + " type"), kinds);
+    }
+
+    /**
+     * @param undefinedTypeNames listed names that the schema does not define
+     * @param notUnreachable     listed names that the schema defines, but not as unreachable types of the kinds that can
+     *                           be allowed, each with the reason (for example {@code is reachable} or {@code is an enum})
+     * @param kinds              the kinds of types that can be allowed, for the message
+     */
+    public InvalidAllowUnreachableException(List<String> undefinedTypeNames, Map<String, String> notUnreachable,
+                                            String kinds) {
         super(BindingCode.INVALID_ALLOW_UNREACHABLE, "micronaut.graphql.tools.allow.unreachable lists types that are not unreachable " + kinds
                 + " types of the schema: "
                 + Stream.concat(
                         undefinedTypeNames.stream().map(it -> it + " (not defined in the schema)"),
-                        notUnreachableTypeNames.stream()
-                                .map(it -> it + " (not an unreachable " + kinds + " type)"))
+                        notUnreachable.entrySet().stream().map(it -> it.getKey() + " (" + it.getValue() + ")"))
                 .collect(Collectors.joining(", "))
                 + ".\n  Remove them from the list.");
 
         this.undefinedTypeNames = List.copyOf(undefinedTypeNames);
-        this.notUnreachableTypeNames = List.copyOf(notUnreachableTypeNames);
+        this.notUnreachableTypeNames = List.copyOf(notUnreachable.keySet());
+    }
+
+    private static Map<String, String> reasons(List<String> names, String reason) {
+        Map<String, String> result = new LinkedHashMap<>();
+        names.forEach(it -> result.put(it, reason));
+        return result;
     }
 
     public List<String> getUndefinedTypeNames() {

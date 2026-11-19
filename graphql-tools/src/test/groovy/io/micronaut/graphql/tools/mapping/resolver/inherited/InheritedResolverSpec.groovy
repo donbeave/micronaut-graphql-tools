@@ -180,8 +180,6 @@ type Book {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.book (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: book
   Methods:\u0020
   1) ${AnnotatedQuery.name} book(java.lang.String id)
   2) ${SubclassQuery.name} book(java.lang.String id)
@@ -200,8 +198,6 @@ type Book {
         e.cause instanceof MultipleMethodsFoundException
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Book.summary (line 13, column 3)
-  GraphQL object type: Book
-  GraphQL field: summary
   Methods:\u0020
   1) ${AnnotatedBookResolver.name} summary(${Book.name} book)
   2) ${SubclassBookResolver.name} summary(${Book.name} book)

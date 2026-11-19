@@ -390,8 +390,6 @@ declared, as graphql-java parsed it (the source name appears when the schema was
 ```
 The method `missing` not found in any root resolvers: [example.BookQuery].
   GraphQL coordinate: Query.missing (books.graphqls, line 9, column 3)
-  GraphQL object type: Query
-  GraphQL field: missing
 ```
 
 `getMappingContext().getCoordinate()` and `getMappingContext().getSourceLocation()` give the same information to code.
@@ -416,8 +414,7 @@ that serves it, in a stable, versioned text format (`graphql-binding-manifest 2`
 and diffed. Recording is opt-in: set `micronaut.graphql.tools.manifest.record: true` to record it while the schema is
 bound (without it nothing is recorded and getting the bean fails with a message saying so). Getting the bean binds the
 schema first. With `micronaut.graphql.tools.manifest.enabled: true` it is written
-at startup to `micronaut.graphql.tools.manifest.path` (directories are created), or logged at INFO when no path is
-set. The format is specified in the guide page "Binding Manifest" (`src/main/docs/guide/manifest.adoc`): the grammar,
+at startup to `micronaut.graphql.tools.manifest.path` (directories are created). Without a path, one line is logged at INFO, and the manifest lines at DEBUG on the `BindingManifestWriter` logger (the manifest is rendered only when DEBUG is on). The format is specified in the guide page "Binding Manifest" (`src/main/docs/guide/manifest.adoc`): the grammar,
 the line kinds, the sorting, the escape of non-ASCII characters and the schema hash, which does not depend on the order
 of the schema files or of the extensions.
 
@@ -770,7 +767,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.eager-init` | `true` \| `false` | Bind the schema when the application context starts, so that a broken binding fails the startup (also when the application defines its own `GraphQL` bean) and the first request does no binding work. `false` binds it when the first bean that needs the `GraphQLSchema` is created. |
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded. The checks run the same either way. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
-| `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path it is logged at INFO. |
+| `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path one line is logged at INFO and the manifest lines at DEBUG. |
 | `micronaut.graphql.tools.allow.unreachable` | list of type names (empty) | Unreachable types that the checks accept; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar), otherwise the startup fails, so the list cannot go stale. An allowed type also allows the enum, input and scalar types that its fields and arguments use, and that those input types use in turn (transitive); list only the type itself. A type that only a type that is not allowed uses stays unreachable. |
 | `micronaut.graphql.tools.allow.inert-directives` | list of directive names, without `@` (empty) | Directives the schema may apply without a wiring, because they have no effect at runtime; they are logged at INFO. An entry with `*` is a pattern (`fed*`) that must match at least one declared directive without a wiring. Every other applied directive needs a wiring (see [Schema directives](#schema-directives)). Every exact entry must be a directive the schema declares, that is not built in, that has no wiring and that is not a `resolver-directives` entry, otherwise the startup fails in every mode, so the list cannot go stale. |
 | `micronaut.graphql.tools.allow.schema-customizer-directives` | list of directive names, without `@` (empty) | Directives that a `GraphQLSchemaCustomizer` handles on the `schema` definition or on directive arguments, where graphql-java calls no wiring (see [Schema directives](#schema-directives)). Every entry must be a directive the schema declares that is not built in and that it applies on the schema definition or on a directive argument, otherwise the startup fails in every mode. |
@@ -1123,8 +1120,6 @@ which names the GraphQL type, the field and the interface:
 ```
 The property or method `draftNote` not found in example.ArticleGraph's type. Properties are read from the interface
 example.ArticleGraph, so a getter that only an implementation class declares is not a property.
-  GraphQL object type: Article
-  GraphQL field: draftNote
 ```
 
 Declare the getter on the interface, or resolve the field with a `@GraphQLTypeResolver(TheInterface.class)` method.

@@ -53,8 +53,6 @@ type User {
         e.cause instanceof ClassNotIntrospectedException
         e.cause.message == """[class-not-introspected] The class ${User.name} is not introspected. Ensure the class is annotated with ${GraphQLType.name}.
   GraphQL coordinate: Query.user (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()"""
         e.cause.mappingContext.graphQlObjectType == 'Query'

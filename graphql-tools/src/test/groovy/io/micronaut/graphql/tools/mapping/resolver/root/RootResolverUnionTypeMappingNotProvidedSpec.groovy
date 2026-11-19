@@ -64,8 +64,6 @@ type ValidationError {
         e.cause instanceof UnionTypeMappingNotProvidedException
         e.cause.message == """[union-type-mapping-not-provided] Can not detect representation class for type ValidationError, member of PayloadError union. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
   GraphQL coordinate: Query.unionTest (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: unionTest
   Mapped class: ${Query.name}
   Mapped method: unionTest()"""
         e.cause.mappingContext.graphQlObjectType == 'Query'
