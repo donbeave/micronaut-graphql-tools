@@ -51,12 +51,7 @@ class ArchitectureRulesSpec extends Specification {
      * the issue that removes it. Any other reflective access in that class fails the rule, and the list may only shrink: an
      * access that no longer happens fails the spec, so delete it with the fix.
      */
-    static final Map<String, Map<String, Object>> REFLECTION_ALLOWLIST = [
-            'io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry': [
-                    accesses: ['java.lang.Class.getDeclaredAnnotation'],
-                    reason  : 'reads @GraphQLTypeResolver from the user class, removed by #34',
-            ],
-    ]
+    static final Map<String, Map<String, Object>> REFLECTION_ALLOWLIST = [:]
 
     /** The members of java.lang.Class that look up user classes, members or annotations at run time. */
     static final Set<String> REFLECTIVE_CLASS_METHODS = [
@@ -79,6 +74,12 @@ class ArchitectureRulesSpec extends Specification {
         classes.size() > 200
     }
 
+    void "the resolvers registry reads no class annotation, superclass or interface by reflection"() {
+        expect:
+        REFLECTION_ALLOWLIST.isEmpty()
+        reflectiveAccesses(classes.get('io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry')).isEmpty()
+    }
+
     void "no class reflects outside the allowlist"() {
         expect:
         noClasses().should(reflects(true))
@@ -88,11 +89,12 @@ class ArchitectureRulesSpec extends Specification {
 
     void "the reflection rule fails on a class that reflects and names it"() {
         given:
-        def result = noClasses().should(reflects(false)).evaluate(classes)
+        def fixture = new ClassFileImporter().importClasses(ReflectingFixture)
+        def result = noClasses().should(reflects(false)).evaluate(fixture)
 
         expect:
         result.hasViolation()
-        result.failureReport.details.any { it.contains('GraphQLResolversRegistry') && it.contains('getDeclaredAnnotation') }
+        result.failureReport.details.any { it.contains('ReflectingFixture') && it.contains('getDeclaredAnnotation') }
     }
 
     void "every allowlisted access still happens, with a reason and an issue"() {

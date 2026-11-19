@@ -82,18 +82,23 @@ jobs:
         java: ['17']
         # the default graphql-java leg only
         graphql-java: [default]
-    # The library modules (graphql-tools, graphql-tools-binding) compile to release 17 (see buildSrc); the test-suite-* modules
-    # need Java 21 and cannot run here.
+    # The library modules (graphql-tools, graphql-tools-binding) compile to release 17 (see buildSrc) and their tests run on JDK 17
+    # (-PtestJdk). Gradle itself runs on JDK 21: the test compilation of graphql-tools runs the visitor of graphql-tools-processor,
+    # which is Java 21 bytecode until #144. The test-suite-* modules need Java 21 and are not built here.
     name: check library (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup-build
         with:
-          jdk: ${{ matrix.java }}
+          jdk: '21'
           tools: java
+      - name: Install the test JDK
+        run: |
+          MISE_ENV=jdk${{ matrix.java }} mise install java
+          echo "TEST_JDK_HOME=$(MISE_ENV=jdk${{ matrix.java }} mise where java)" >> "$GITHUB_ENV"
       - name: Build with Gradle
-        run: ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }} -PtestJdk=${{ matrix.java }} "-Dorg.gradle.java.installations.paths=$TEST_JDK_HOME"
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
