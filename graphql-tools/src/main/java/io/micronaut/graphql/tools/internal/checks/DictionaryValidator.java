@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import io.micronaut.graphql.tools.SchemaMappingDictionary;
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 
 /**
  * The check of the {@link SchemaMappingDictionary}: two entries must not map one type to an interface and another to a

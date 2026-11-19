@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.internal.checks;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.value.PropertyResolver;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.DefaultSeverities;
 import io.micronaut.graphql.tools.binding.internal.finding.Severity;

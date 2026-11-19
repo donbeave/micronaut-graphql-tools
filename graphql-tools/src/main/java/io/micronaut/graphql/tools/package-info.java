@@ -14,19 +14,10 @@
  * limitations under the License.
  */
 /**
- * The runtime library: the configuration, and the customizer, mapping and directive types that an application implements
- * or reads.
+ * The root package of the runtime library. It holds no types: the public API is in the sub-packages
+ * {@code config}, {@code customizer}, {@code mapping}, {@code directive}, {@code input}, {@code manifest},
+ * {@code annotation} and {@code exceptions}.
  *
- * <p><b>Audience.</b> Public API: {@link io.micronaut.graphql.tools.GraphQLToolsConfiguration}, the customizers
- * ({@link io.micronaut.graphql.tools.GraphQLBuilderCustomizer}, {@link io.micronaut.graphql.tools.GraphQLSchemaCustomizer},
- * {@link io.micronaut.graphql.tools.RuntimeWiringCustomizer}, {@link io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer},
- * {@link io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer}), the mapping types
- * ({@link io.micronaut.graphql.tools.SchemaMappingDictionary}, {@link io.micronaut.graphql.tools.GraphQLScalarMapping},
- * {@link io.micronaut.graphql.tools.MappingContext}), the directive types ({@link io.micronaut.graphql.tools.SchemaDirective},
- * {@link io.micronaut.graphql.tools.CustomWiring}), {@link io.micronaut.graphql.tools.ArgumentValue} and
- * {@link io.micronaut.graphql.tools.BindingManifest}.</p>
- *
- * <p>The implementation is in {@code io.micronaut.graphql.tools.internal}. Annotations are in
- * {@code io.micronaut.graphql.tools.annotation}, the startup failure in {@code io.micronaut.graphql.tools.exceptions}.</p>
+ * <p><b>Audience.</b> Public API (a namespace only). The implementation is in {@code io.micronaut.graphql.tools.internal}.</p>
  */
 package io.micronaut.graphql.tools;

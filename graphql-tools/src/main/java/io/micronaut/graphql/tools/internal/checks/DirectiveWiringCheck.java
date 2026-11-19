@@ -29,7 +29,7 @@ import graphql.language.TypeDefinition;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.internal.exceptions.UnwiredDirectivesException;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder;

@@ -24,8 +24,8 @@ import graphql.schema.idl.SchemaDirectiveWiringEnvironment
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
-import io.micronaut.graphql.tools.GraphQLSchemaCustomizer
-import io.micronaut.graphql.tools.SchemaDirective
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer
+import io.micronaut.graphql.tools.directive.SchemaDirective
 import jakarta.inject.Singleton
 
 import java.util.function.Consumer

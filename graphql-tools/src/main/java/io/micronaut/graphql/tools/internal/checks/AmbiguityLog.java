@@ -16,8 +16,8 @@
 package io.micronaut.graphql.tools.internal.checks;
 
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
-import io.micronaut.graphql.tools.TypeMappingContext;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.Precedence;
+import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder;
 import io.micronaut.graphql.tools.internal.model.BeanDefinitionAndMethod;

@@ -22,7 +22,7 @@ import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.core.io.ResourceResolver
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
 import jakarta.inject.Singleton
 
 @Factory

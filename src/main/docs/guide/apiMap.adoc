@@ -5,7 +5,7 @@ This page tells you which package holds what, which packages you may import from
 * A package has one responsibility. A package with more than 15 types is a smell: the build lists the ones that are over the limit, each with a reason, and a package that is no longer over the limit leaves the list.
 * The public API is what you import from application code: the annotations, the customizer, mapping and directive interfaces and mapping contexts, `CustomWiring`, the configuration class, `ArgumentValue`, `BindingManifest`, `BindingCode` and the one exception, `SchemaBindingException`. The table below lists where each one is. Everything else is implementation and can change in any release.
 * Implementation is marked in two ways. A type is annotated `@Internal` (`io.micronaut.core.annotation.Internal`, the same marker Micronaut uses), and a package of implementation types carries the `internal` segment in its name and an `@Internal` on the package in its `package-info.java`. Micronaut itself follows this convention.
-* A public type never lives in an `internal` package, and an internal type belongs in an `internal` package. The code follows both halves; see <<plannedLayout,Planned layout>> for the packages that are still to be split.
+* A public type never lives in an `internal` package, and an internal type belongs in an `internal` package. The code follows both halves; see <<plannedLayout,Planned layout>> for what is still to be split.
 * If a package holds both, the Javadoc of its `package-info.java` says so, and an `@Internal` type is not API even when it is `public`.
 
 == Which package do I import from?
@@ -16,12 +16,12 @@ This page tells you which package holds what, which packages you may import from
 |Mark a resolver class, a method, a parameter or an input class |`io.micronaut.graphql.tools.annotation`
 |Catch a startup failure |`io.micronaut.graphql.tools.exceptions` (`SchemaBindingException`; match on its code)
 |Read an error code |`io.micronaut.graphql.tools.binding` (`BindingCode`)
-|Change a setting in code |`io.micronaut.graphql.tools` (`GraphQLToolsConfiguration`)
-|Change the `GraphQL` builder, the schema, the runtime wiring or the type registry |`io.micronaut.graphql.tools` (the `*Customizer` interfaces)
-|Map a custom scalar, or a union member to a Java type |`io.micronaut.graphql.tools` (`GraphQLScalarMapping`, `SchemaMappingDictionary`)
-|Tell an omitted argument from an explicit `null` |`io.micronaut.graphql.tools` (`ArgumentValue`)
-|Wire a directive |`io.micronaut.graphql.tools` (`SchemaDirective`)
-|Read what the schema is bound to |`io.micronaut.graphql.tools` (`BindingManifest`)
+|Change a setting in code |`io.micronaut.graphql.tools.config` (`GraphQLToolsConfiguration`)
+|Change the `GraphQL` builder, the schema, the runtime wiring or the type registry |`io.micronaut.graphql.tools.customizer` (the `*Customizer` interfaces)
+|Map a custom scalar, or a union member to a Java type |`io.micronaut.graphql.tools.mapping` (`GraphQLScalarMapping`, `SchemaMappingDictionary`)
+|Tell an omitted argument from an explicit `null` |`io.micronaut.graphql.tools.input` (`ArgumentValue`)
+|Wire a directive |`io.micronaut.graphql.tools.directive` (`SchemaDirective`)
+|Read what the schema is bound to |`io.micronaut.graphql.tools.manifest` (`BindingManifest`)
 |===
 
 Do not import any type annotated `@Internal`, and nothing from a package named `internal`.
@@ -33,7 +33,13 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 [cols="5,2,2,6", options="header"]
 |===
 |Package |Module |Audience |Holds
-|`io.micronaut.graphql.tools` |graphql-tools |Public API |The configuration, the customizer, mapping and directive interfaces, mapping contexts, `CustomWiring`, `ArgumentValue` and `BindingManifest`
+|`io.micronaut.graphql.tools` |graphql-tools |Public API |No types: the namespace of the packages below
+|`io.micronaut.graphql.tools.config` |graphql-tools |Public API |The configuration class, `GraphQLToolsConfiguration`
+|`io.micronaut.graphql.tools.customizer` |graphql-tools |Public API |The five `*Customizer` interfaces
+|`io.micronaut.graphql.tools.mapping` |graphql-tools |Public API |`SchemaMappingDictionary`, `GraphQLScalarMapping` and the mapping contexts
+|`io.micronaut.graphql.tools.directive` |graphql-tools |Public API |`SchemaDirective` and `CustomWiring`
+|`io.micronaut.graphql.tools.input` |graphql-tools |Public API |`ArgumentValue`
+|`io.micronaut.graphql.tools.manifest` |graphql-tools |Public API |`BindingManifest`
 |`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes
 |`io.micronaut.graphql.tools.exceptions` |graphql-tools |Public API |The startup failure: `SchemaBindingException`, the one exception to catch
 |`io.micronaut.graphql.tools.internal.exceptions` |graphql-tools |Internal |The classes that build each failure, one for each kind
@@ -64,30 +70,7 @@ Kotlin and Groovy sources need no `package-info`; the library modules are Java.
 [[plannedLayout]]
 == Planned layout
 
-Most of this section does not exist yet; `internal` and all of its sub-packages (`checks`, `discovery`, `input`, `manifest`, `model`, `registry`, `resolver` and `wiring`) do, and `internal` no longer holds the whole implementation. It is the target of the package structure work, which lands as small changes, one area at a time, so that it does not collide with other work. Each public type that moves gets an entry in <<breaks,Breaking Changes>> and in the migration page.
-
-[cols="5,2,6", options="header"]
-|===
-|Package |Audience |Will hold
-|`io.micronaut.graphql.tools.annotation` |Public API |The annotations (unchanged)
-|`io.micronaut.graphql.tools.config` |Public API |`GraphQLToolsConfiguration`
-|`io.micronaut.graphql.tools.customizer` |Public API |The five `*Customizer` interfaces
-|`io.micronaut.graphql.tools.mapping` |Public API |`SchemaMappingDictionary`, `GraphQLScalarMapping` and the mapping contexts
-|`io.micronaut.graphql.tools.directive` |Public API |`SchemaDirective` and `CustomWiring`
-|`io.micronaut.graphql.tools.input` |Public API |`ArgumentValue`
-|`io.micronaut.graphql.tools.manifest` |Public API |`BindingManifest`
-|`io.micronaut.graphql.tools.internal` |Internal |The factories that create the beans, the eager binding and the bean selection
-|`io.micronaut.graphql.tools.internal.registry` |Internal |The resolver registry, the bean selection and the method processors (the method processors are here already)
-|`io.micronaut.graphql.tools.internal.wiring` |Internal |The runtime wiring generator and the directive wirings
-|`io.micronaut.graphql.tools.internal.resolver` |Internal |The data fetchers and the type resolvers
-|`io.micronaut.graphql.tools.internal.input` |Internal |Input binding and the value conversion
-|`io.micronaut.graphql.tools.internal.discovery` |Internal |Schema discovery
-|`io.micronaut.graphql.tools.internal.checks` |Internal |The strict checks and the validators
-|`io.micronaut.graphql.tools.internal.manifest` |Internal |Recording and writing the binding manifest
-|`io.micronaut.graphql.tools.internal.model` |Internal |The runtime registries and models of the beans and types
-|===
-
-`io.micronaut.graphql.tools` itself will hold no types. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, `processing` is deleted when the visitor replaces the JSR-269 processor, and `visitor` stays.
+The public API is split into its role packages (`config`, `customizer`, `mapping`, `directive`, `input` and `manifest`), and the root package `io.micronaut.graphql.tools` holds no types. What is still to do is on the implementation side: the `internal` package still holds the factories, the eager binding and the shared helpers, and `internal.exceptions` holds the failure classes, one for each kind. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, `processing` is deleted when the visitor replaces the JSR-269 processor, and `visitor` stays. Each change that moves a public type gets an entry in <<breaks,Breaking Changes>> and in the migration page.
 
 == How the build keeps this true
 

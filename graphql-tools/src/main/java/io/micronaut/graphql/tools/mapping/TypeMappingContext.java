@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools;
+package io.micronaut.graphql.tools.mapping;
 
 import graphql.language.FieldDefinition;
 import graphql.language.InputValueDefinition;

@@ -34,8 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import io.micronaut.graphql.tools.RuntimeWiringCustomizer;
-import io.micronaut.graphql.tools.SchemaDirective;
+import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.directive.SchemaDirective;
 
 /** The runtime wiring customizer that applies the schema directive wirings of the application. */
 @Internal

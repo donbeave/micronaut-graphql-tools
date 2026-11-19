@@ -22,7 +22,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver

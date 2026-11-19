@@ -31,7 +31,13 @@ Each package has a `package-info.java`. The [API map](../src/main/docs/guide/api
 
 | Package | Audience | Holds |
 | --- | --- | --- |
-| `io.micronaut.graphql.tools` | Public API | The configuration, the customizers, the mapping and directive interfaces, `ArgumentValue` and `BindingManifest` |
+| `io.micronaut.graphql.tools` | Public API | No types: the namespace of the packages below |
+| `io.micronaut.graphql.tools.config` | Public API | The configuration class, `GraphQLToolsConfiguration` |
+| `io.micronaut.graphql.tools.customizer` | Public API | The five `*Customizer` interfaces |
+| `io.micronaut.graphql.tools.mapping` | Public API | `SchemaMappingDictionary`, `GraphQLScalarMapping` and the mapping contexts |
+| `io.micronaut.graphql.tools.directive` | Public API | `SchemaDirective` and `CustomWiring` |
+| `io.micronaut.graphql.tools.input` | Public API | `ArgumentValue` |
+| `io.micronaut.graphql.tools.manifest` | Public API | `BindingManifest` |
 | `io.micronaut.graphql.tools.annotation` | Public API | The annotations of resolvers and input classes |
 | `io.micronaut.graphql.tools.exceptions` | Public API | The startup failure, `SchemaBindingException` |
 | `io.micronaut.graphql.tools.internal` | Internal | The entry points of the binding: the factories, the eager binding, the bean selection and the shared helpers |
@@ -57,10 +63,11 @@ The public API is what applications import. The package layout is reviewed in #3
 - `io.micronaut.graphql.tools.annotation`: the public annotations (`@GraphQLType`, `@GraphQLRootResolver`,
   `@GraphQLTypeResolver`, `@GraphQLInput`, `@GraphQLField`, `@GraphQLArgument`, `@GraphQLIgnore`,
   `@GraphQLSchemaCoordinate`).
-- `io.micronaut.graphql.tools` (top level): the extension points and the types around them, for example `RuntimeWiringCustomizer`,
-  `SchemaMappingDictionaryCustomizer`, `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer`,
-  `TypeDefinitionRegistryCustomizer`, `SchemaDirective`, `GraphQLScalarMapping`, `ArgumentValue`, `BindingManifest`
-  and `GraphQLToolsConfiguration`. Every type of the package is public API.
+- `io.micronaut.graphql.tools.config`, `customizer`, `mapping`, `directive`, `input` and `manifest`: the extension points
+  and the types around them: `GraphQLToolsConfiguration`; `RuntimeWiringCustomizer`, `SchemaMappingDictionaryCustomizer`,
+  `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer` and `TypeDefinitionRegistryCustomizer`; `SchemaMappingDictionary`
+  and `GraphQLScalarMapping`; `SchemaDirective` and `CustomWiring`; `ArgumentValue`; `BindingManifest`. Every type of
+  these packages is public API; the root package `io.micronaut.graphql.tools` holds no types.
 - `io.micronaut.graphql.tools.exceptions`: the startup failure, `SchemaBindingException`. Match on its code.
 - `io.micronaut.graphql.tools.internal` (and its sub-packages): internal. Every
   class is annotated `@Internal`.

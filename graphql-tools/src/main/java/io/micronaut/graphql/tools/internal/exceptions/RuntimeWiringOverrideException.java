@@ -21,9 +21,9 @@ import java.util.List;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 
 /**
- * Thrown when {@link io.micronaut.graphql.tools.RuntimeWiringCustomizer} beans replace a data fetcher, default data
+ * Thrown when {@link io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer} beans replace a data fetcher, default data
  * fetcher, type resolver or scalar that the library registered, the wiring of a
- * {@link io.micronaut.graphql.tools.SchemaDirective} bean, or the wiring factory, or put a data fetcher or type
+ * {@link io.micronaut.graphql.tools.directive.SchemaDirective} bean, or the wiring factory, or put a data fetcher or type
  * resolver for something the library wired into a code registry: the replacement would silently undo the binding.
  */
 @Internal

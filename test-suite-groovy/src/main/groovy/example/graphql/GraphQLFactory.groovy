@@ -23,8 +23,8 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.core.io.ResourceResolver
-import io.micronaut.graphql.tools.SchemaMappingDictionary
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
 import jakarta.inject.Singleton
 
 @CompileStatic

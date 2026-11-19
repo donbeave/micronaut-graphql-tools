@@ -189,7 +189,7 @@ type Item {
 
         when:
         def result = executeQuery('{ items { name price } }')
-        def manifest = applicationContext.getBean(io.micronaut.graphql.tools.BindingManifest)
+        def manifest = applicationContext.getBean(io.micronaut.graphql.tools.manifest.BindingManifest)
 
         then:
         result.errors.isEmpty()

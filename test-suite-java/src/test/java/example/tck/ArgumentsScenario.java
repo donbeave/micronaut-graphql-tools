@@ -18,7 +18,7 @@ package example.tck;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.ArgumentValue;
+import io.micronaut.graphql.tools.input.ArgumentValue;
 import io.micronaut.graphql.tools.annotation.GraphQLArgument;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;

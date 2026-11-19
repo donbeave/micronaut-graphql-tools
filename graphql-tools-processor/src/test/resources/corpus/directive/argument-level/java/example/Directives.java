@@ -3,7 +3,7 @@ package example;
 import graphql.schema.idl.SchemaDirectiveWiring;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.graphql.tools.SchemaDirective;
+import io.micronaut.graphql.tools.directive.SchemaDirective;
 import jakarta.inject.Singleton;
 import java.util.List;
 

@@ -69,7 +69,7 @@ final class BindingChecks {
     static final String PUBLISHER = "org.reactivestreams.Publisher";
     static final String DATA_FETCHER_RESULT = "graphql.execution.DataFetcherResult";
     static final String OPTIONAL = "java.util.Optional";
-    static final String ARGUMENT_VALUE = "io.micronaut.graphql.tools.ArgumentValue";
+    static final String ARGUMENT_VALUE = "io.micronaut.graphql.tools.input.ArgumentValue";
 
     static final Map<String, Set<String>> BUILT_IN_SCALARS = Map.of(
             "String", Set.of("java.lang.String"),

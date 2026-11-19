@@ -19,7 +19,7 @@ import graphql.execution.DataFetcherResult;
 import graphql.language.Type;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
-import io.micronaut.graphql.tools.TypeMappingContext;
+import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
 import io.micronaut.graphql.tools.internal.JavaTypeNames;

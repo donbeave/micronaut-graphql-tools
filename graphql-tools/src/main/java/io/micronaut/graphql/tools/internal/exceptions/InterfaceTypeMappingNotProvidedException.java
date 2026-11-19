@@ -17,8 +17,8 @@ package io.micronaut.graphql.tools.internal.exceptions;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.BindingCode;
-import io.micronaut.graphql.tools.MappingContext;
-import io.micronaut.graphql.tools.SchemaMappingDictionary;
+import io.micronaut.graphql.tools.mapping.MappingContext;
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 
 /**
  * Thrown when an object type that implements a GraphQL interface returned by a field has no class registered in the

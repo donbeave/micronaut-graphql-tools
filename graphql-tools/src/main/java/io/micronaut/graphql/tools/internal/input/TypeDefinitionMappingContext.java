@@ -19,7 +19,7 @@ import graphql.language.SourceLocation;
 import graphql.language.TypeDefinition;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.MappingContext;
+import io.micronaut.graphql.tools.mapping.MappingContext;
 
 /**
  * The mapping context of a finding about the Java class that backs an input type or an enum: the coordinate is the schema

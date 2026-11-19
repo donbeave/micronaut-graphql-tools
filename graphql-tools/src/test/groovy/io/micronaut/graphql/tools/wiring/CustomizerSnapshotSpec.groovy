@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.wiring
 
 import graphql.schema.idl.RuntimeWiring
 import graphql.schema.idl.SchemaParser
-import io.micronaut.graphql.tools.RuntimeWiringCustomizer
+import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer
 import spock.lang.Specification
 
 import java.lang.reflect.Constructor

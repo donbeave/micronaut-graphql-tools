@@ -15,6 +15,9 @@
  */
 package io.micronaut.graphql.tools
 
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
+import io.micronaut.graphql.tools.manifest.BindingManifest
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
 import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.annotation.Requires

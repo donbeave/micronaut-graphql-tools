@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.internal;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.convert.ConversionContext;
 import io.micronaut.core.convert.TypeConverter;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration.Precedence;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.Precedence;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.internal.exceptions.InvalidConfigurationException;
 import jakarta.inject.Singleton;
@@ -26,7 +26,7 @@ import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import io.micronaut.graphql.tools.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 
 /**
  * Reads {@code micronaut.graphql.tools.precedence}. The value {@code strict}, the former default, was renamed

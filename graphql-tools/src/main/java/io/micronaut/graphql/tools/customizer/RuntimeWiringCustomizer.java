@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools;
+package io.micronaut.graphql.tools.customizer;
 
 import graphql.schema.FieldCoordinates;
 import graphql.schema.idl.RuntimeWiring;

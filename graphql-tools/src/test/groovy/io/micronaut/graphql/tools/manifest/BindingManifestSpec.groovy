@@ -30,10 +30,10 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.BindingManifest
+import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestWriter
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLInput

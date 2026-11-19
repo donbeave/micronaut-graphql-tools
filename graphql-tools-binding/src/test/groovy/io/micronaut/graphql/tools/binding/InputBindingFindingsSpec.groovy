@@ -156,7 +156,7 @@ enum Color { RED GREEN }
 
     void "an ArgumentValue at a nullable position binds what it wraps"() {
         given:
-        def wrapper = 'io.micronaut.graphql.tools.ArgumentValue'
+        def wrapper = 'io.micronaut.graphql.tools.input.ArgumentValue'
         def argument = { String name, TypeRef inner -> [name: { name }, nameIsSynthetic: { false }, type: { ref(wrapper, inner) },
                                                         annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
         def ok = method('omitted', [:], [argument('a', STRING), FakeModel.parameter('b', 'java.lang.String')], STRING, 'a.R#omitted(av,String)')
@@ -167,7 +167,7 @@ enum Color { RED GREEN }
 
     void "an ArgumentValue at a non-null position is unsupported-input-type"() {
         given:
-        def wrapper = 'io.micronaut.graphql.tools.ArgumentValue'
+        def wrapper = 'io.micronaut.graphql.tools.input.ArgumentValue'
         def argument = { String name -> [name: { name }, nameIsSynthetic: { false }, type: { ref(wrapper, STRING) },
                                          annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
         def atNonNull = method('omitted', [:], [FakeModel.parameter('a', 'java.lang.String'), argument('b')], STRING, 'a.R#omitted(String,av)')
@@ -251,7 +251,7 @@ enum Color { RED GREEN }
 
     void "an ArgumentValue around an asynchronous type is not unwrapped again: the startup rejects the class mapping"() {
         given:
-        def wrapper = 'io.micronaut.graphql.tools.ArgumentValue'
+        def wrapper = 'io.micronaut.graphql.tools.input.ArgumentValue'
         def argument = { String name, TypeRef type -> [name: { name }, nameIsSynthetic: { false }, type: { type },
                                                        annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
         def omitted = method('omitted', [:], [argument('a', ref(wrapper, ref('java.util.concurrent.CompletionStage', ref('a.Filter')))),
@@ -263,7 +263,7 @@ enum Color { RED GREEN }
 
     void "an ArgumentValue around an asynchronous type is not unwrapped again: the startup rejects the class mapping"() {
         given:
-        def wrapper = 'io.micronaut.graphql.tools.ArgumentValue'
+        def wrapper = 'io.micronaut.graphql.tools.input.ArgumentValue'
         def argument = { String name, TypeRef type -> [name: { name }, nameIsSynthetic: { false }, type: { type },
                                                        annotations: { view([]) }] as io.micronaut.graphql.tools.binding.internal.model.JParameter }
         def omitted = method('omitted', [:], [argument('a', ref(wrapper, ref('java.util.concurrent.CompletionStage', ref('a.Filter')))),

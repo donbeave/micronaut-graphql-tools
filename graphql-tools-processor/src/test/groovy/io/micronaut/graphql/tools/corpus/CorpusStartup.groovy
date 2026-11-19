@@ -19,7 +19,7 @@ import graphql.GraphQL
 import graphql.language.SourceLocation
 import groovy.transform.CompileStatic
 import io.micronaut.context.ApplicationContext
-import io.micronaut.graphql.tools.BindingManifest
+import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException
 import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException

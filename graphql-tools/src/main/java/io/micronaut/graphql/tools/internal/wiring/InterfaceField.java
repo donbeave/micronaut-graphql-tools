@@ -19,7 +19,7 @@ import graphql.language.FieldDefinition;
 import graphql.language.ObjectTypeDefinition;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.TypeMappingContext;
+import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.internal.model.ModelMember;
 import java.util.List;
 import java.util.Map;
