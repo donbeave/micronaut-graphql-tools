@@ -68,7 +68,6 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.binding.internal.rules` |graphql-tools-binding |Internal |The per-class rules and their verdicts
 |`io.micronaut.graphql.tools.binding.internal.schema` |graphql-tools-binding |Internal |Reading the schema files and the schema model
 |`io.micronaut.graphql.tools.visitor` |graphql-tools-processor |Compiler plug-in |The compile-time `TypeElementVisitor`, loaded by the compiler and never imported
-|`io.micronaut.graphql.tools.processing` |graphql-tools-processor |Internal |The legacy JSR-269 processor, to be deleted
 |`io.micronaut.graphql.tools.tck` |graphql-tools-tck |Test helper |The TCK runner; not published
 |===
 
@@ -77,7 +76,7 @@ Kotlin and Groovy sources need no `package-info`; the library modules are Java.
 [[plannedLayout]]
 == Planned layout
 
-The public API is split into its role packages (`config`, `customizer`, `mapping`, `directive`, `input` and `manifest`), and the root package `io.micronaut.graphql.tools` holds no types. The implementation side is split by responsibility too: `internal` holds the factories, the eager binding and the shared helpers, and `internal.exceptions` holds the base failure classes with one sub-package for each kind of failure. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, `processing` is deleted when the visitor replaces the JSR-269 processor, and `visitor` stays. Each change that moves a public type gets an entry in <<breaks,Breaking Changes>> and in the migration page.
+The public API is split into its role packages (`config`, `customizer`, `mapping`, `directive`, `input` and `manifest`), and the root package `io.micronaut.graphql.tools` holds no types. The implementation side is split by responsibility too: `internal` holds the factories, the eager binding and the shared helpers, and `internal.exceptions` holds the base failure classes with one sub-package for each kind of failure. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, only `visitor` remains. Each change that moves a public type gets an entry in <<breaks,Breaking Changes>> and in the migration page.
 
 == How the build keeps this true
 
