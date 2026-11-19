@@ -31,7 +31,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Kotlin cases of the binding corpus | `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` | Changes to the visitor or to a corpus case with a `kotlin/` directory (JDK 25, needs the network; CI job `build tools`; `-Pcorpus.kotlin.processor=kapt` is the nightly variant) |
 | Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |
 | Benchmarks | `./gradlew :benchmarks:check` | Hot path, allocation or startup changes |
-| Workflow lint | `mise exec -- jactionlint` | Any change under `.github/` |
+| Workflow lint | `mise exec -- jactionlint` and `python3 .github/scripts/check-gate.py` | Any change under `.github/` |
 
 - Leg values are roles (`floor`, `default`, `ceiling`, `latest`). The floor and ceiling versions are in
   `gradle/libs.versions.toml`; the default leg takes the graphql-java that micronaut-graphql manages; `latest` is resolved in `build.gradle.kts`.
@@ -86,7 +86,11 @@ Run the checks that cover what you changed, and before you push run the full bui
 - Open the PR ready for review, not as a draft. Do not merge it yourself.
 - Merge: squash only. Merge commits and rebase merges are disabled. Resolve every review conversation first.
 - Required status check: `required checks` only. It is green when every job in its `needs:` list in `gradle.yml`
-  succeeded. A new gated job is added to that list, never to the ruleset. The `native Groovy smoke` jobs and `build tools` are gated; the other native jobs are not gated yet.
+  succeeded. A new job is added to that list, never to the ruleset. Every job of `gradle.yml` is gated (the native jobs
+  included), has no `if:` and runs on `push`, `pull_request` and `merge_group` alike; `.github/scripts/check-gate.py` (the
+  `actionlint` job) fails otherwise. No other workflow may run on a push to a branch: the canary and the start-up benchmark
+  are scheduled or manual and never gate. The ruleset requires the branch to be up to date with `master`, so a PR is tested
+  on top of the current `master`; after another PR merges, update your branch and let `required checks` run again.
 - No admin bypass: a red, cancelled or pending check blocks the merge.
 
 ## Model routing

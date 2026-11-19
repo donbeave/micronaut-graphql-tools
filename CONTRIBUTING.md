@@ -231,7 +231,7 @@ where the gate is skipped (the module is not built there). Run the update on 21 
 
 ## Creating a pull request
 
-`master` is protected: every change goes through a pull request, and the pull request is squash-merged once the `required checks` status check is green. `required checks` is the only check the ruleset requires: it is the gate job in `gradle.yml`, and a job that must block merging is added to the `needs:` of that job (no ruleset edit). The native image jobs (`native (GraalVM 25, ...)`) are in the same workflow but not part of the gate yet; the `native Groovy smoke (...)` jobs and `build tools (Java 25, graphql-java default)` are in the gate.
+`master` is protected: every change goes through a pull request, and the pull request is squash-merged once the `required checks` status check is green. `required checks` is the only check the ruleset requires: it is the gate job in `gradle.yml`, and a job that must block merging is added to the `needs:` of that job (no ruleset edit). Every job of the workflow is in the gate, the native image jobs (`native (GraalVM 25, ...)`) included, and the branch must be up to date with `master` before it merges (see "One gate" in `MAINTAINING.md`).
 
 - Create a branch, commit with `git commit -s` (DCO sign-off) and push it to your fork or to a branch of the repository.
 - Use a [conventional commit](https://www.conventionalcommits.org/) style title for the pull request (`feat:`, `fix:`, `docs:`, `build:`, `ci:`, `perf:`, `test:`, `chore:`). It becomes the squashed commit message.
