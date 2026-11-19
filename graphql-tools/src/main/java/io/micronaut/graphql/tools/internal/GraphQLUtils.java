@@ -28,19 +28,20 @@ import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaTypes;
-
+import io.micronaut.graphql.tools.internal.wiring.GraphQLSpecifiedDirectives;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
 
+/** Helpers over graphql-java schema types that the binding classes share. */
 @Internal
-final class GraphQLUtils {
+public final class GraphQLUtils {
 
     private GraphQLUtils() {
     }
 
-    static String getType(TypeDefinition<?> typeDefinition) {
+    public static String getType(TypeDefinition<?> typeDefinition) {
         if (typeDefinition instanceof EnumTypeDefinition) {
             return "enum";
         } else if (typeDefinition instanceof UnionTypeDefinition) {
@@ -57,22 +58,22 @@ final class GraphQLUtils {
         throw unsupportedTypeDefinition(typeDefinition);
     }
 
-    static String printType(Type<?> graphQlType) {
+    public static String printType(Type<?> graphQlType) {
         return SchemaTypes.print(graphQlType);
     }
 
-    static TypeName getTypeName(Type<?> graphQlType) {
+    public static TypeName getTypeName(Type<?> graphQlType) {
         return requireTypeName(unwrapNonNullType(graphQlType));
     }
 
-    static Type<?> unwrapNonNullType(Type<?> type) {
+    public static Type<?> unwrapNonNullType(Type<?> type) {
         if (type instanceof NonNullType typeNonNull) {
             return unwrapNonNullType(typeNonNull.getType());
         }
         return type;
     }
 
-    static TypeName requireTypeName(Type<?> graphQlType) {
+    public static TypeName requireTypeName(Type<?> graphQlType) {
         if (!(graphQlType instanceof TypeName)) {
             throw new UnsupportedOperationException("Unsupported type: " + graphQlType);
         }
@@ -80,11 +81,11 @@ final class GraphQLUtils {
         return (TypeName) graphQlType;
     }
 
-    static UnsupportedOperationException unsupportedTypeDefinition(TypeDefinition<?> typeDefinition) {
+    public static UnsupportedOperationException unsupportedTypeDefinition(TypeDefinition<?> typeDefinition) {
         return new UnsupportedOperationException("Unsupported type definition " + typeDefinition);
     }
 
-    static Set<String> findDirectiveArgumentTypes(TypeDefinitionRegistry typeDefinitionRegistry) {
+    public static Set<String> findDirectiveArgumentTypes(TypeDefinitionRegistry typeDefinitionRegistry) {
         Set<String> result = new HashSet<>();
         Deque<graphql.language.Type<?>> pending = new ArrayDeque<>();
         typeDefinitionRegistry.getDirectiveDefinitions().values().stream()

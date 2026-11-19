@@ -63,7 +63,7 @@ public final class LibraryBeanSelection {
      * @return the application bean that makes the library's bean of this type step aside, or null
      */
     @Nullable
-    static Provided competitor(BeanContext context, Class<?> type) {
+    public static Provided competitor(BeanContext context, Class<?> type) {
         return competitor(context, type, new Visits());
     }
 
@@ -210,7 +210,7 @@ public final class LibraryBeanSelection {
         return definition.getDeclaringType().filter(GraphQLFactory.class::equals).isPresent();
     }
 
-    static String describe(Provided bean) {
+    public static String describe(Provided bean) {
         BeanDefinition<?> definition = bean.definition();
         String origin = definition.getDeclaringType()
                 .map(declaring -> declaring.getName() + "#" + definition.getBeanType().getSimpleName())
@@ -236,7 +236,7 @@ public final class LibraryBeanSelection {
      * @param qualifier  the qualifier of the bean, or null
      * @param primary    whether the bean is primary
      */
-    record Provided(BeanDefinition<?> definition, @Nullable Qualifier<?> qualifier, boolean primary) {
+    public record Provided(BeanDefinition<?> definition, @Nullable Qualifier<?> qualifier, boolean primary) {
         Provided(BeanDefinition<?> definition) {
             this(definition, definition.getDeclaredQualifier(), definition.hasStereotype(Primary.class));
         }

@@ -28,13 +28,6 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
-import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
-import jakarta.inject.Singleton;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import io.micronaut.graphql.tools.BindingManifest;
 import io.micronaut.graphql.tools.GraphQLBuilderCustomizer;
 import io.micronaut.graphql.tools.GraphQLSchemaCustomizer;
@@ -44,6 +37,18 @@ import io.micronaut.graphql.tools.SchemaDirective;
 import io.micronaut.graphql.tools.SchemaMappingDictionary;
 import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer;
 import io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
+import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
+import io.micronaut.graphql.tools.internal.checks.DirectiveWiringCheck;
+import io.micronaut.graphql.tools.internal.manifest.BindingManifestHolder;
+import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry;
+import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry;
+import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator;
+import io.micronaut.graphql.tools.internal.wiring.SchemaDirectiveWirings;
+import jakarta.inject.Singleton;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Creates the {@link GraphQLSchema} bound from the application's {@link TypeDefinitionRegistry} and the

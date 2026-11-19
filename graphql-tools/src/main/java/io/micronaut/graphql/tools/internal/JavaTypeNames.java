@@ -36,7 +36,7 @@ public final class JavaTypeNames {
     private JavaTypeNames() {
     }
 
-    static String parameters(Executable<?, ?> executable) {
+    public static String parameters(Executable<?, ?> executable) {
         return Arrays.stream(executable.getArguments()).map(JavaTypeNames::of)
                 .collect(Collectors.joining(", ", "(", ")"));
     }

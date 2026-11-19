@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools
 
 import graphql.Directives
 import spock.lang.Specification
-import io.micronaut.graphql.tools.internal.GraphQLSpecifiedDirectives
+import io.micronaut.graphql.tools.internal.wiring.GraphQLSpecifiedDirectives
 import io.micronaut.graphql.tools.internal.GraphQLUtils
 
 /**

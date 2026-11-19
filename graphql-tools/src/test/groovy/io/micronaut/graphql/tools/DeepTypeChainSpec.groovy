@@ -23,9 +23,9 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions
-import io.micronaut.graphql.tools.internal.GraphQLBeanIntrospectionRegistry
-import io.micronaut.graphql.tools.internal.GraphQLResolversRegistry
-import io.micronaut.graphql.tools.internal.GraphQLRuntimeWiringGenerator
+import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry
+import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry
+import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
 
 /**
  * A schema that is a chain of thousands of types binds on the default thread stack: the walk from a field to the types

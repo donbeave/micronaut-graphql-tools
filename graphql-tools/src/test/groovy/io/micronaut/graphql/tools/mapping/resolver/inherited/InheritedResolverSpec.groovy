@@ -22,7 +22,7 @@ import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.internal.GraphQLResolversRegistry
+import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver

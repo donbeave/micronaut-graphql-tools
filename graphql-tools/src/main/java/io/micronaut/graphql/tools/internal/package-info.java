@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 /**
- * The implementation of the binding at startup: the factories that create the {@code GraphQLSchema} and the
- * {@code GraphQL} beans, the runtime wiring generator, the binders of input types and interface fields, the strict
- * checks and the validators, the recording of the binding manifest and the helpers they share.
+ * The entry points of the binding at startup: the factories that create the {@code GraphQLSchema} and the
+ * {@code GraphQL} beans, the eager binding, the selection of the library's beans against the application's own and
+ * the helpers that the sub-packages share.
  *
  * <p><b>Audience.</b> Internal. Not part of the API; do not import it. It can change or move in any release. The
- * package is the one place of the implementation until the split described in the guide page "API Map".</p>
+ * implementation is split by responsibility into the sub-packages {@code checks}, {@code discovery}, {@code input},
+ * {@code manifest}, {@code model}, {@code registry}, {@code resolver} and {@code wiring}; see the guide page
+ * "API Map".</p>
  */
 @Internal
 package io.micronaut.graphql.tools.internal;

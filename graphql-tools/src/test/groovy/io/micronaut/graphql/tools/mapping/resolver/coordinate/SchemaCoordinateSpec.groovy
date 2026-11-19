@@ -391,7 +391,7 @@ type Author {
     }
 
     private static Logger generatorLogger() {
-        (Logger) LoggerFactory.getLogger("io.micronaut.graphql.tools.internal.GraphQLRuntimeWiringGenerator")
+        (Logger) LoggerFactory.getLogger("io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator")
     }
 
     void "type resolver methods of one class bind the object type their coordinates name"() {
