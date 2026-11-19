@@ -408,6 +408,34 @@ type Writer {
         e.cause.message.contains('@GraphQLTypeResolver only through an inherited annotation')
     }
 
+    void "a bean annotated directly that also inherits another contract fails loudly, naming the bean, when the contract types cannot be read"() {
+        given:
+        startContext(CONTRACTS_SCHEMA, CONTRACTS_SPEC_NAME + ".mixed")
+        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { BeanDefinition<?> definition -> [:] }
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+        e.cause.beanType == MixedResolvers
+        e.cause.message.contains(MixedResolvers.name)
+    }
+
+    @Requires(property = 'spec.name', value = CONTRACTS_SPEC_NAME + ".mixed")
+    @GraphQLTypeResolver(Novel.class)
+    static class MixedResolvers implements WriterContract {
+        String bookExtra(Novel novel) {
+            return 'extra'
+        }
+
+        String authorExtra(Writer writer) {
+            return 'author'
+        }
+    }
+
     void "a bean annotated directly binds as before when the contract types cannot be read"() {
         given:
         CountedInterceptor.CALLS.set(0)
