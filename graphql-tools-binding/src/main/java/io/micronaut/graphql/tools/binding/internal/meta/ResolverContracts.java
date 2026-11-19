@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
 /**
  * The contracts that a concrete type resolver class inherits. The visitor writes it into the annotation metadata of the
  * class and the runtime reads it from the bean definition, so that no reflection is needed to find a class annotation
- * of a supertype. Nothing reads or writes it yet.
+ * of a supertype. The visitor writes it, also when the checks are off.
  */
 @Internal
 @Documented

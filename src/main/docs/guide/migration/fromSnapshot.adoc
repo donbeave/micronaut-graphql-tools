@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-32` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-33` follow it. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -44,6 +44,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-31 role packages for the public API (#354) | The 15 public types of `io.micronaut.graphql.tools` moved to role packages: `GraphQLToolsConfiguration` to `config`; the five `*Customizer` interfaces to `customizer`; `SchemaMappingDictionary`, `GraphQLScalarMapping`, `MappingContext`, `TypeMappingContext` and `InputMappingContext` to `mapping`; `SchemaDirective` and `CustomWiring` to `directive`; `ArgumentValue` to `input`; `BindingManifest` to `manifest`. The root package holds no types. The names, members and behaviour are unchanged. | Change the imports (`io.micronaut.graphql.tools.X` becomes `io.micronaut.graphql.tools.<package>.X`), and any full class name in a configuration file or a logger setting. `@ConfigurationProperties` prefixes (`micronaut.graphql.tools.*`) are unchanged.
 | #144 JSR-269 processor | _Pending._ The JSR-269 code is removed from `graphql-tools-processor`. | Use the visitor that replaces it.
 | BC-32 compile-time options renamed (#291) | The build runs the visitor, not the JSR-269 processor. `micronaut.graphql.tools.sdlDir` is replaced by `micronaut.graphql.tools.processor.schema.dirs`, `micronaut.graphql.tools.processor.checks` switches the checks off, and a build that passes `sdlDir` fails with `[processor-option-removed]`. The binding manifest has no accessor file, so the member of a property is written `Class#property`. | Rename the option, and put the processor on the path of your compiler (see the Compile-Time Verification page). Regenerate a checked-in manifest.
+| BC-33 inherited type resolver contracts (#34) | A bean that is a type resolver only through an inherited `@GraphQLTypeResolver` (a class that implements an annotated interface) needs the processor on the compiler path: the visitor records its contracts, and the startup no longer reads class annotations by reflection. Without it the startup fails with `[type-resolver-contracts-not-found]`. | Add `micronaut-graphql-tools-processor` to `annotationProcessor`, `ksp` or `kapt`, or `compileOnly` (Groovy); `micronaut.graphql.tools.processor.checks=false` keeps the checks off and still records the contracts. A bean annotated directly needs nothing.
 |===
 
 == Entries for 1.0.0-M1
@@ -742,6 +743,16 @@ A build that passes `micronaut.graphql.tools.sdlDir` fails with `[processor-opti
 The build no longer writes `binding-manifest.txt`, `binding-manifest-omitted.txt` or `accessors.txt` into the class output (the startup writes the manifest, and a build guard that checks for the file must go), and the member of a property in the manifest is written `Class#property`, not `Class#getProperty()`. Regenerate a checked-in manifest.
 
 A misnamed or missing resolver parameter now fails the build with `[argument-mismatch]` (#15). `[class-not-introspected]` stays a compile-time warning, since an `@Introspected(classes = ...)` declaration in another class can make the class introspected; a build with `-Werror` fails on the warning.
+
+Status: breaking by design; no opt-out.
+
+=== BC-33: inherited type resolver contracts are recorded at compile time (#34)
+
+The startup used to read `@GraphQLTypeResolver` from the class hierarchy of each type resolver bean with `Class.getDeclaredAnnotation`, which needs reflection metadata in a native image and returns a JDK annotation proxy. Now the visitor of `graphql-tools-processor` walks the superclasses and interfaces of the bean class and writes the contracts into the annotation metadata of the bean, and the registry reads them from the bean definition: no reflection, and the same binding on the JVM and in a native image. The visitor writes them also with `micronaut.graphql.tools.processor.checks=false`.
+
+What breaks: a build that does not run the processor, with a bean that is a type resolver only through an inherited annotation, fails the startup with `[type-resolver-contracts-not-found]`. Before, this worked on the JVM. The message names the processor and where to add it.
+
+Fix: put `micronaut-graphql-tools-processor` on the path of the compiler as the compile-time checks section of the README shows for each tool (`annotationProcessor`, `ksp` or `kapt`, `compileOnly`), or annotate the bean class directly. A bean annotated directly binds without the processor.
 
 Status: breaking by design; no opt-out.
 

@@ -19,6 +19,7 @@ classes (`GraphQLSchemaBindingProcessor` and its package) stay until #144 delete
 
 The visitor (package `io.micronaut.graphql.tools.visitor`):
 
+- `ResolverContractsWriter`: records the contracts that a type resolver class inherits. It writes `@ResolverContracts` into the annotation metadata of each bean class, also with `checks=false`, and the startup reads it from the bean definition instead of reading class annotations by reflection (#34).
 - `GraphQLToolsVisitor`: an isolating `TypeElementVisitor` that checks the concrete resolver classes (and an `@Introduction`
   interface that is a resolver) with the per-class rules of `graphql-tools-binding` (`ResolverClassFindings`), and reports each
   finding as a compile error (one finding is a warning, see below). The findings are those of one stage, as at startup: invalid coordinates, then the binding

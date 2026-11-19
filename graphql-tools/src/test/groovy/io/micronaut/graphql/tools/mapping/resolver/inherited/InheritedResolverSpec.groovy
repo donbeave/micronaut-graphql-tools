@@ -22,6 +22,8 @@ import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.binding.internal.meta.ResolverContracts
+import io.micronaut.inject.BeanDefinition
 import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -362,7 +364,7 @@ type Writer {
     void "a bean that is a type resolver only through inheritance fails when its contract types cannot be read"() {
         given:
         startContext(CONTRACTS_SCHEMA, CONTRACTS_SPEC_NAME)
-        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { Class<?> type -> [:] }
+        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { BeanDefinition<?> definition -> [:] }
 
         when:
         getGraphQLBean()
@@ -372,15 +374,27 @@ type Writer {
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.message == "[type-resolver-contracts-not-found] The bean ${BothResolvers.name} is a @GraphQLTypeResolver only through an inherited " +
-                "annotation, but no type of its class hierarchy declares the annotation at runtime, so its contracts " +
-                "cannot be read. Make the annotations of the contract types available to reflection (for example the " +
-                "reflection configuration of a native image), or annotate the bean class directly."
+                "annotation, but the build did not record its contracts. Add micronaut-graphql-tools-processor to the path that " +
+                "your compiler reads Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, " +
+                "compileOnly for Groovy; the compile-time checks section of the README shows the setting of each tool, and " +
+                "micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the " +
+                "contracts), or annotate the bean class directly."
+    }
+
+    void "the build records the inherited contracts in the annotation metadata of the bean definition"() {
+        given:
+        startContext(CONTRACTS_SCHEMA, CONTRACTS_SPEC_NAME)
+        def metadata = applicationContext.getBeanDefinition(BothResolvers).annotationMetadata
+
+        expect:
+        metadata.classValues(ResolverContracts, 'value').toList() == [Novel, Writer]
+        metadata.stringValues(ResolverContracts, 'declaredBy').toList() == [NovelContract.name, WriterContract.name]
     }
 
     void "a bean with a single inherited contract fails loudly, naming the bean, when the contract types cannot be read"() {
         given:
         startContext(SCHEMA, SPEC_NAME)
-        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { Class<?> type -> [:] }
+        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { BeanDefinition<?> definition -> [:] }
 
         when:
         getGraphQLBean()
@@ -398,7 +412,7 @@ type Writer {
         given:
         CountedInterceptor.CALLS.set(0)
         startContext(SCHEMA, SPEC_NAME + ".direct")
-        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { Class<?> type -> [:] }
+        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { BeanDefinition<?> definition -> [:] }
 
         when:
         def result = executeQuery('{ book(id: "3") { title summary } }')

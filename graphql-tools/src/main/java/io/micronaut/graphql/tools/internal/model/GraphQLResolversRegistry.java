@@ -26,6 +26,7 @@ import io.micronaut.graphql.tools.mapping.MappingContext;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+import io.micronaut.graphql.tools.binding.internal.meta.ResolverContracts;
 import io.micronaut.graphql.tools.binding.internal.model.JMethod;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.internal.MicronautUtils;
@@ -38,13 +39,10 @@ import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.qualifiers.Qualifiers;
 import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -52,7 +50,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -69,14 +66,14 @@ public final class GraphQLResolversRegistry {
 
     private final Map<BeanDefinition<?>, BeanDefinitionAndMethods> rootResolvers = new LinkedHashMap<>();
     private final Map<Class<?>, List<BeanDefinitionAndMethods>> typeResolvers = new HashMap<>();
-    private final Map<BeanDefinition<?>, Map<Class<?>, Class<?>>> typeResolverContracts = new HashMap<>();
+    private final Map<BeanDefinition<?>, Map<String, Class<?>>> typeResolverContracts = new HashMap<>();
     private final Map<BeanDefinition<?>, List<ExecutableMethod<Object, ?>>> unassignedTypeResolverMethods =
             new HashMap<>();
     private final Map<BeanDefinition<?>, List<ExecutableMethod<Object, ?>>> pendingTypeResolverMethods =
             new LinkedHashMap<>();
     private final List<BeanDefinition<?>> unreadableTypeResolverContracts = new ArrayList<>();
-    private Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader =
-            GraphQLResolversRegistry::findTypeResolverContracts;
+    private Function<BeanDefinition<?>, Map<String, Class<?>>> typeResolverContractReader =
+            GraphQLResolversRegistry::readTypeResolverContracts;
     private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
     // by the signature of the method as the type model prints it
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
@@ -134,14 +131,14 @@ public final class GraphQLResolversRegistry {
             BeanDefinition<?> beanDefinition = entry.getKey();
             Class<?> annotatedClass = getTypeResolverValue(beanDefinition);
 
-            Map<Class<?>, Class<?>> contracts = typeResolverContractReader.apply(beanDefinition.getBeanType());
+            Map<String, Class<?>> contracts = typeResolverContractReader.apply(beanDefinition);
             if (contracts.isEmpty()) {
-                // reflection shows no class annotations (for example a native image without configuration for them)
+                // the visitor wrote no contracts: only a class that carries the annotation itself is still a resolver
                 if (!beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class)) {
                     unreadableTypeResolverContracts.add(beanDefinition);
                     continue;
                 }
-                contracts = Map.of(getUserBeanType(beanDefinition), annotatedClass);
+                contracts = Map.of(getUserBeanType(beanDefinition).getName(), annotatedClass);
             }
             typeResolverContracts.put(beanDefinition, contracts);
 
@@ -177,7 +174,7 @@ public final class GraphQLResolversRegistry {
                 .addExecutableMethod(method);
     }
 
-    void setTypeResolverContractReader(Function<Class<?>, Map<Class<?>, Class<?>>> typeResolverContractReader) {
+    void setTypeResolverContractReader(Function<BeanDefinition<?>, Map<String, Class<?>>> typeResolverContractReader) {
         this.typeResolverContractReader = typeResolverContractReader;
     }
 
@@ -303,26 +300,15 @@ public final class GraphQLResolversRegistry {
         return result;
     }
 
-    private static Map<Class<?>, Class<?>> findTypeResolverContracts(Class<?> beanType) {
-        Map<Class<?>, Class<?>> contracts = new TreeMap<>(Comparator.comparing(Class::getName));
-        Deque<Class<?>> types = new ArrayDeque<>(List.of(beanType));
-        Set<Class<?>> visited = new HashSet<>();
-
-        while (!types.isEmpty()) {
-            Class<?> type = types.poll();
-            if (!visited.add(type)) {
-                continue;
-            }
-            GraphQLTypeResolver annotation = type.getDeclaredAnnotation(GraphQLTypeResolver.class);
-            if (annotation != null) {
-                contracts.put(type, annotation.value());
-            }
-            if (type.getSuperclass() != null && type.getSuperclass() != Object.class) {
-                types.add(type.getSuperclass());
-            }
-            types.addAll(Arrays.asList(type.getInterfaces()));
+    // The visitor of graphql-tools-processor writes @ResolverContracts into the annotation metadata of the bean class.
+    private static Map<String, Class<?>> readTypeResolverContracts(BeanDefinition<?> beanDefinition) {
+        AnnotationMetadata metadata = beanDefinition.getAnnotationMetadata();
+        Class<?>[] models = metadata.classValues(ResolverContracts.class, AnnotationMetadata.VALUE_MEMBER);
+        String[] declaredBy = metadata.stringValues(ResolverContracts.class, "declaredBy");
+        Map<String, Class<?>> contracts = new LinkedHashMap<>();
+        for (int i = 0; i < models.length && i < declaredBy.length; i++) {
+            contracts.put(declaredBy[i], models[i]);
         }
-
         return contracts;
     }
 

@@ -37,14 +37,14 @@ public final class AmbiguousTypeResolverException extends SchemaBindingException
 
     /**
      * @param beanType  the bean class
-     * @param contracts each type that declares {@link GraphQLTypeResolver}, and its value, in the order to report them
+     * @param contracts the binary name of each type that declares {@link GraphQLTypeResolver}, and its value, in the order to report them
      * @param methods   the methods that cannot be assigned, in the order to report them
      */
-    public AmbiguousTypeResolverException(Class<?> beanType, Map<Class<?>, Class<?>> contracts, List<String> methods) {
+    public AmbiguousTypeResolverException(Class<?> beanType, Map<String, Class<?>> contracts, List<String> methods) {
         super(BindingCode.AMBIGUOUS_TYPE_RESOLVER, "The bean " + beanType.getName() + " is a @" + GraphQLTypeResolver.class.getSimpleName()
                 + " for several classes through "
                 + contracts.entrySet().stream()
-                .map(it -> it.getKey().getName() + " (" + it.getValue().getName() + ")")
+                .map(it -> it.getKey() + " (" + it.getValue().getName() + ")")
                 .collect(Collectors.joining(" and "))
                 + ", and the first parameter of these methods is none of those classes, so they cannot be assigned "
                 + "to one: " + String.join(", ", methods)

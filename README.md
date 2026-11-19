@@ -272,13 +272,15 @@ each method binds for the class of its first parameter (the source object). A pu
 none of those classes fails the startup with `[ambiguous-type-resolver]`, naming the bean and every contract (on a
 bean that uses `@GraphQLSchemaCoordinate`, only methods with a coordinate count).
 
-This is the one place where the library reads class annotations by reflection
-(`Class.getDeclaredAnnotation(GraphQLTypeResolver.class)` on the bean class, its superclasses and interfaces). The
-annotations are retained at runtime, so this works on the JVM. Where class annotations are not available at runtime,
-for example in a native image without reflection configuration for the contract types, a bean annotated directly
-keeps its annotation value, and a bean that is a type resolver only through an inherited annotation fails the startup
-with `[type-resolver-contracts-not-found]`. Annotate such a bean directly or make the annotations of its contract
-types available to reflection.
+The contracts are found at compile time: the visitor of `micronaut-graphql-tools-processor` walks the superclasses and
+interfaces of each bean class and writes the contracts into the annotation metadata of the bean (the internal
+`@ResolverContracts`), and the startup reads them from the bean definition. It uses no reflection, so a bean binds the
+same way on the JVM and in a native image. The visitor writes the contracts also with
+`micronaut.graphql.tools.processor.checks=false`. A bean that is a type resolver only through an inherited annotation,
+in a build that does not run the processor, fails the startup with `[type-resolver-contracts-not-found]`, which names
+the processor and where to add it (see [Compile-time checks](#compile-time-checks)). Add the processor,
+or annotate the bean class directly: a bean annotated directly binds without the processor (but a bean that is
+annotated directly and also inherits another contract needs the processor to see the inherited one).
 
 ## Property or type resolver
 
