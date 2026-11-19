@@ -1,0 +1,8 @@
+ID -> scalar ; ID ; - ; -
+Parcel -> object ; example.Parcel ; - ; -
+Parcel.class: String! -> resolver ; example.ParcelResolver#kind(example.Parcel) ; java.lang.String ; java.lang.String
+Parcel.id: ID! -> property ; example.Parcel#id ; java.lang.String ; java.lang.String
+Query -> object ; - ; - ; -
+Query.default: String! -> root ; example.Query#defaultValue() ; java.lang.String ; java.lang.String
+Query.parcel: Parcel -> root ; example.Query#fetchParcel() ; example.Parcel ; example.Parcel
+String -> scalar ; String ; - ; -

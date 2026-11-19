@@ -27,8 +27,10 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
   failures (the arguments, the input classes and enums they reach, the return type), then the strict checks, which the
   startup runs only after a binding that failed nowhere. It keeps its state per `start()`, looks up no class by name, asks for no project directory and
   writes no file (`VisitorArchitectureSpec`).
-- `ProcessorOptions`: the two options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
-  separator) and `micronaut.graphql.tools.processor.checks` (`true` or `false`). An unknown key under
+- `ProcessorOptions`: the three options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
+  separator), `micronaut.graphql.tools.processor.checks` (`true` or `false`) and
+  `micronaut.graphql.tools.processor.resolverAccessorPrefixes` (`true` or `false`, the runtime
+  `resolver-accessor-prefixes`; camel case because `javac` rejects a hyphen in an option name). An unknown key under
   `micronaut.graphql.tools.processor.` is an error; a runtime key that is present as a system property is not.
 - `CheckedSchema`: reads the schema once per compilation, on the first class that is checked.
 - `ElementTypeModel`: the adapter of the type model over `ClassElement` and `MethodElement`; the properties of an input class

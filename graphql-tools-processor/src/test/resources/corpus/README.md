@@ -34,7 +34,8 @@ compile-time check does not read the severity settings, so a `warn` or `ignore` 
 compile finding, and the soundness check is made on the `fail` case.
 
 Case names are the relative paths. `tags` are free `key:value` words; `lang:all` means the case has a Java, a Groovy and
-a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.graphql.tools.strict=false`).
+a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.graphql.tools.strict=false`); the checks-on compilation also gets
+`config.micronaut.graphql.tools.resolver-accessor-prefixes` as the visitor option `micronaut.graphql.tools.processor.resolverAccessorPrefixes`.
 
 ## What the runner asserts
 

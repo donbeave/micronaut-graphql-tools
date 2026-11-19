@@ -36,6 +36,7 @@ public class GraphQLToolsConfiguration {
     private Precedence precedence = Precedence.FAIL;
     private List<String> resolverDirectives = Collections.emptyList();
     private boolean strict = true;
+    private boolean resolverAccessorPrefixes;
     private Map<String, String> checks = Collections.emptyMap();
     private AllowConfiguration allow = new AllowConfiguration();
     private boolean eagerInit = true;
@@ -100,6 +101,26 @@ public class GraphQLToolsConfiguration {
      */
     public void setStrict(boolean strict) {
         this.strict = strict;
+    }
+
+    /**
+     * @return whether a resolver method named {@code getX} or {@code isX} also binds the field {@code x}
+     */
+    public boolean isResolverAccessorPrefixes() {
+        return resolverAccessorPrefixes;
+    }
+
+    /**
+     * Sets whether a resolver method named {@code getX} or {@code isX} (followed by an upper-case letter) also binds
+     * the field {@code x}, besides the field named like the method. It applies to the methods of root and type
+     * resolvers that do not declare a coordinate with {@code @GraphQLSchemaCoordinate}, and it is decided once at
+     * startup. A class where both {@code author} and {@code getAuthor} bind the field {@code author} fails the startup.
+     * The compile-time checks read the processor option of the same name. Default: {@code false}.
+     *
+     * @param resolverAccessorPrefixes whether the prefixes are matched
+     */
+    public void setResolverAccessorPrefixes(boolean resolverAccessorPrefixes) {
+        this.resolverAccessorPrefixes = resolverAccessorPrefixes;
     }
 
     /**

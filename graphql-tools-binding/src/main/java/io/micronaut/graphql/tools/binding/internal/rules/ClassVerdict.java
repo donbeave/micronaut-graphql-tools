@@ -36,8 +36,8 @@ public record ClassVerdict(String type, List<MethodVerdict> methods) {
 
     /**
      * @param signature   the method as messages print it
-     * @param coordinates the coordinates the method can bind, which may be empty: a declared coordinate whose field
-     *                    name differs from the method name binds nothing, as in {@link ResolverClassRules#bindsField}
+     * @param coordinates the coordinates the method can bind, which may be empty: a method that binds no field of
+     *                    the root types, as in {@link ResolverClassRules#bindsField}
      * @param fields      the verdicts of the coordinates that name a field of the schema
      */
     public record MethodVerdict(String signature, List<String> coordinates, List<FieldVerdict> fields) {

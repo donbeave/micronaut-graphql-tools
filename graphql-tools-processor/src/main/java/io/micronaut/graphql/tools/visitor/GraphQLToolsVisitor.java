@@ -158,7 +158,8 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
         current.checked++;
         ElementTypeModel model = current.model;
-        List<Finding> findings = ResolverClassFindings.check(schema.get(), model, model.of(element));
+        List<Finding> findings = ResolverClassFindings.check(schema.get(), model, model.of(element),
+                current.options.accessorPrefixes());
         for (Finding finding : findings) {
             MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());
             Element at = method != null && element.equals(method.getDeclaringType()) ? method : element;

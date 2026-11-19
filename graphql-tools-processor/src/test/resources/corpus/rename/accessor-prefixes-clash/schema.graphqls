@@ -1,0 +1,14 @@
+schema {
+  query: Query
+}
+
+type Query {
+  version: String!
+  parcel: Parcel
+}
+
+type Parcel {
+  id: ID!
+  author: String!
+  active: Boolean!
+}

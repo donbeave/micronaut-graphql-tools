@@ -101,7 +101,7 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLType` Maps a Java class to a GraphQL type.
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
-- `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+- `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field. `@GraphQLField("name")` on a method or a property binds the field of that name, see [Binding a field to a differently named member](#binding-a-field-to-a-differently-named-member).
 - `@GraphQLIgnore` Marks a method, a property or an enum constant that binds no field, so that strict mode does not report it, see [Escape hatches](#escape-hatches).
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
 
@@ -222,9 +222,9 @@ Methods of beans without coordinates are matched by name. The coordinate is also
   are not candidates.
 - The startup fails with `InvalidSchemaCoordinateException`, listing every problem, when a coordinate is not of the
   form `Type.field`, names a type or field the schema does not have or a type that is neither an object type nor an
-  interface, names a field
-  that differs from the method name, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
-  `@GraphQLTypeResolver`, or sits on a bean that is neither.
+  interface, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
+  `@GraphQLTypeResolver`, or sits on a bean that is neither. The method may have any name: the coordinate decides, see
+  [Binding a field to a differently named member](#binding-a-field-to-a-differently-named-member).
 - It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
   class that the `@GraphQLTypeResolver` does not resolve (a method that declares its coordinate wins over a property of
   the mapped class, see [Property or type resolver](#property-or-type-resolver)). A coordinate whose type
@@ -336,6 +336,58 @@ With the `fail` default, a getter that happens to have the name of a field a typ
 shadows the type resolver silently. An application that relied on the getter winning sets `precedence: property-first`
 (and gets a warning that lists the fields where it applies). A field without both members binds as before in every
 mode.
+
+## Binding a field to a differently named member
+
+A member binds the field of its own name unless it says otherwise. Three forms bind a field to a member with another
+name: a field named like a Java keyword or an `Object` method (`class`, `default`, `new`, `hashCode`) cannot be bound any
+other way, and a migration often meets resolvers named `getAuthor(Book)` for the field `author`.
+
+**A member of the Java type: `@GraphQLField("name")`.** On a method of a `@GraphQLType` class, the method binds the field
+of that name. On a property (its field, its getter, or a Kotlin or Groovy property) the property binds it. The value is
+optional: `@GraphQLField` alone keeps the name of the method.
+
+```java
+// type Parcel { class: String!  headline: String! }
+@GraphQLType
+public class Parcel {
+    @GraphQLField("class")
+    public String kind() { ... }
+
+    @GraphQLField("headline")
+    private String title;
+}
+```
+
+A renamed member binds the field of its new name only; a field of its old name needs another member. When two members
+bind one field (a renamed one and another, or two renamed to the same field), the startup fails with
+`multiple-methods-found` (`MultipleMethodsFoundException`) naming the field coordinate and the members. A member marked
+`@GraphQLIgnore` binds nothing. On a resolver bean the value is not read: use the coordinate.
+
+**A resolver method: `@GraphQLSchemaCoordinate("Type.field")`.** The coordinate names the field, whatever the name of
+the method is (before, the startup failed when they differed):
+
+```java
+@GraphQLTypeResolver(Parcel.class)
+public class ParcelResolver {
+    @GraphQLSchemaCoordinate("Parcel.class")
+    public String kind(Parcel parcel) { ... }
+}
+```
+
+The rest of [Resolver contracts](#resolver-contracts) holds: on a bean where one method declares a coordinate, only the
+methods that do bind, and two methods that declare one coordinate fail with `multiple-methods-found`.
+
+**Accessor prefixes: `micronaut.graphql.tools.resolver-accessor-prefixes`.** With `true` (default `false`) a resolver
+method of a bean without coordinates named `getX` or `isX` (an upper-case letter after the prefix) also binds the field
+`x`, besides the field named like the method. That lets resolvers written for other tools (`getAuthor(Book)`) bind
+without renaming. `getAuthor` and `author` in one class both bind `author` and fail the startup. Off, `getAuthor`
+binds the field `getAuthor` only. The compile-time checks read `micronaut.graphql.tools.processor.resolverAccessorPrefixes`
+(the visitor) or `micronaut.graphql.tools.resolverAccessorPrefixes` (the JSR-269 processor): set it in the build when the
+runtime key is set, so that the checks judge the arguments and the return type of those methods. Without it they leave
+a method that only a prefix could bind unreported.
+
+All three are decided once at startup (and by the compile-time checks); a request does no name lookup.
 
 ## Resolver scopes
 
@@ -764,6 +816,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 |---|---|---|
 | `micronaut.graphql.tools.schema.locations` | list of locations (`classpath:graphql/**/*.graphqls`) | Where the schema files are read from when the application has no `TypeDefinitionRegistry` bean: `classpath:`, `classpath*:` (dependency jars too) or `file:`, then an Ant-style path. See [Schema discovery](#schema-discovery). |
 | `micronaut.graphql.tools.precedence` | `fail` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `fail` (default) fails the startup; a field that carries a resolver directive, or whose resolver method declares its coordinate, is not ambiguous. |
+| `micronaut.graphql.tools.resolver-accessor-prefixes` | `false` \| `true` | Whether a resolver method named `getX` or `isX` also binds the field `x`, see [Binding a field to a differently named member](#binding-a-field-to-a-differently-named-member). |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
 | `micronaut.graphql.tools.strict` | `true` \| `false` | The shorthand for the severity of every check that has no `checks` entry: `true` leaves every check at `fail`, `false` makes every check `warn` (the findings are logged and listed in the manifest). It does not change `precedence`. See [Strict mode](#strict-mode). |
 | `micronaut.graphql.tools.checks` | map of check code to `fail` \| `warn` \| `ignore` (empty) | The severity of single checks, for example `checks.unwired-directive: ignore`: `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`, `unreachable-type`, `unreachable-value-type`, `unused-dictionary-entry`, `interface-read-through-implementation`, `unwired-directive`. An entry wins over `strict`. An unknown code or severity fails the startup. The five compile-time checks (`unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`) are not relaxed at compile time. |
@@ -863,6 +916,7 @@ compilation, and so does an unknown option under `micronaut.graphql.tools.`, so 
 | `micronaut.graphql.tools.strict` | `strict` |
 | `micronaut.graphql.tools.precedence` | `precedence` |
 | `micronaut.graphql.tools.resolverDirectives` | `resolver-directives` (comma-separated) |
+| `micronaut.graphql.tools.resolverAccessorPrefixes` | `resolver-accessor-prefixes` |
 | `micronaut.graphql.tools.allowUnreachable` | `allow.unreachable` (comma-separated) |
 | `micronaut.graphql.tools.unreachableTypes` | `checks.unreachable-type` and `checks.unreachable-value-type` (`ignore` is `warn` there) |
 | `micronaut.graphql.tools.input.unmappedProperties` | `checks.unmapped-input-property` |

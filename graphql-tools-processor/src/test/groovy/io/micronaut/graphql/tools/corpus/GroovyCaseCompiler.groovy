@@ -58,7 +58,12 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
     CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
         Path schemaDir = Files.createDirectories(work.resolve('schema'))
         corpusCase.schemaFiles().each { Files.copy(it, schemaDir.resolve(it.fileName.toString())) }
-        return compileWith(corpusCase, work, [(PREFIX + 'schema.dirs'): schemaDir.toString()])
+        Map<String, String> options = [(PREFIX + 'schema.dirs'): schemaDir.toString()]
+        String prefixes = corpusCase.config[JavaCaseCompiler.ACCESSOR_PREFIXES_CONFIG]
+        if (prefixes != null) {
+            options.put(JavaCaseCompiler.ACCESSOR_PREFIXES, prefixes)
+        }
+        return compileWith(corpusCase, work, options)
     }
 
     private CompiledCase compileWith(CorpusCase corpusCase, Path work, Map<String, String> options) {

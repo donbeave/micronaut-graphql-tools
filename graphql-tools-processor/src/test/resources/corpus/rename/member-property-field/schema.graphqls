@@ -1,0 +1,12 @@
+schema {
+  query: Query
+}
+
+type Query {
+  parcel: Parcel
+}
+
+type Parcel {
+  id: ID!
+  headline: String!
+}

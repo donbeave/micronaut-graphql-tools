@@ -118,8 +118,7 @@ final class SchemaCoordinateValidator {
         if (typeResolver) {
             kinds.add(ResolverKind.TYPE);
         }
-        return SchemaCoordinates.check(typeDefinitionRegistry, operationTypeNames, coordinateMethod.coordinate(),
-                coordinateMethod.method().getMethodName(), kinds).orElse(null);
+        return SchemaCoordinates.check(typeDefinitionRegistry, operationTypeNames, coordinateMethod.coordinate(), kinds).orElse(null);
     }
 
     Optional<RuntimeException> verifySchemaCoordinateBindings(Set<String> unboundTypes,

@@ -112,7 +112,7 @@ enum Genre {
         def operations = new TreeSet(['Query', 'Events'])
 
         expect:
-        SchemaCoordinates.check(TypeExtensions.merge(registry), operations, coordinate, method, kinds as Set).orElse(null) == expected
+        SchemaCoordinates.check(TypeExtensions.merge(registry), operations, coordinate, kinds as Set).orElse(null) == expected
 
         where:
         coordinate       | method      | kinds                | expected
@@ -122,7 +122,7 @@ enum Genre {
         'Missing.x'      | 'x'         | [ResolverKind.ROOT]  | 'the schema has no type Missing.'
         'Genre.FICTION'  | 'FICTION'   | [ResolverKind.TYPE]  | 'Genre is neither an object type nor an interface.'
         'Query.nothing'  | 'nothing'   | [ResolverKind.ROOT]  | 'the type Query has no field nothing.'
-        'Query.book'     | 'other'     | [ResolverKind.ROOT]  | 'the field name book differs from the method name other.'
+        'Query.book'     | 'other'     | [ResolverKind.ROOT]  | null
         'Book.pages'     | 'pages'     | [ResolverKind.ROOT]  | 'a @GraphQLRootResolver binds fields of the root operation types [Events, Query] only, not of Book.'
         'Query.book'     | 'book'      | [ResolverKind.TYPE]  | 'a @GraphQLTypeResolver cannot bind a field of the root operation type Query.'
     }

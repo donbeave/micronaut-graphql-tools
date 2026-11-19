@@ -42,7 +42,7 @@ record ModelMember(BeanIntrospection<Object> beanIntrospection,
     Map<Class<?>, List<String>> members() {
         return beanProperty != null
                 ? toMap(Collections.emptyList(), beanProperty)
-                : toMap(List.of(beanMethod), null);
+                : toMap(List.of(beanMethod), List.of());
     }
 
     String manifestMember() {

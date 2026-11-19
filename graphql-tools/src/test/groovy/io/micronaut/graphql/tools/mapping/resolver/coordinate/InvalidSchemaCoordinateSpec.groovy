@@ -75,7 +75,6 @@ enum Genre {
         'unknownType'      | "@GraphQLSchemaCoordinate(\"Novel.summary\") on ${UnknownTypeResolver.name} summary(${Book.name} book): the schema has no type Novel."
         'notObjectType'    | "@GraphQLSchemaCoordinate(\"Genre.summary\") on ${EnumTypeResolver.name} summary(${Book.name} book): Genre is neither an object type nor an interface."
         'unknownField'     | "@GraphQLSchemaCoordinate(\"Book.synopsis\") on ${UnknownFieldResolver.name} synopsis(${Book.name} book): the type Book has no field synopsis."
-        'nameMismatch'     | "@GraphQLSchemaCoordinate(\"Book.summary\") on ${NameMismatchResolver.name} summaryText(${Book.name} book): the field name summary differs from the method name summaryText."
         'malformed'        | "@GraphQLSchemaCoordinate(\"summary\") on ${MalformedResolver.name} summary(${Book.name} book): the value is not a schema coordinate of the form Type.field."
         'rootOnObjectType' | "@GraphQLSchemaCoordinate(\"Book.title\") on ${RootOnObjectTypeQuery.name} title(): a @GraphQLRootResolver binds fields of the root operation types [Mutation, Query] only, not of Book."
         'typeOnRootType'   | "@GraphQLSchemaCoordinate(\"Query.book\") on ${TypeOnRootTypeResolver.name} book(${Book.name} book): a @GraphQLTypeResolver cannot bind a field of the root operation type Query."
@@ -94,7 +93,7 @@ enum Genre {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof InvalidSchemaCoordinateException
         e.cause.message == """[unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:
-  1) @GraphQLSchemaCoordinate("Book.summary") on ${SeveralResolver.name} summaryText(${Book.name} book): the field name summary differs from the method name summaryText.
+  1) @GraphQLSchemaCoordinate("Genre.summary") on ${SeveralResolver.name} summaryText(${Book.name} book): Genre is neither an object type nor an interface.
   2) @GraphQLSchemaCoordinate("Book.synopsis") on ${SeveralResolver.name} synopsis(${Book.name} book): the type Book has no field synopsis."""
     }
 
@@ -143,15 +142,6 @@ enum Genre {
         }
     }
 
-    @Requires(property = 'spec.name', value = SPEC_NAME + ".nameMismatch")
-    @GraphQLTypeResolver(Book.class)
-    static class NameMismatchResolver {
-        @GraphQLSchemaCoordinate("Book.summary")
-        String summaryText(Book book) {
-            return 'summary'
-        }
-    }
-
     @Requires(property = 'spec.name', value = SPEC_NAME + ".malformed")
     @GraphQLTypeResolver(Book.class)
     static class MalformedResolver {
@@ -196,7 +186,7 @@ enum Genre {
             return 'synopsis'
         }
 
-        @GraphQLSchemaCoordinate("Book.summary")
+        @GraphQLSchemaCoordinate("Genre.summary")
         String summaryText(Book book) {
             return 'summary'
         }

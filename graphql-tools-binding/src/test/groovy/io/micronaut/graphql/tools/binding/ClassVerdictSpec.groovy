@@ -74,7 +74,7 @@ type Book {
         ]
 
         when:
-        def verdict = ResolverClassRules.check(schema, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+        def verdict = ResolverClassRules.check(schema, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, false)
 
         then:
         verdict.type() == 'a.R'
@@ -92,7 +92,7 @@ type Book {
         def methods = [method('book', [:], [FakeModel.parameter('limit', 'int')], ref(STAGE, ref('a.Book')), 'a.R#book(int)')]
 
         when:
-        def field = ResolverClassRules.check(schema, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+        def field = ResolverClassRules.check(schema, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, false)
                 .methods()[0].fields()[0]
 
         then:
@@ -109,7 +109,7 @@ type Book {
         ]
 
         when:
-        def verdict = ResolverClassRules.check(schema, model(), resolver('a.T', methods, AnnotationNames.TYPE_RESOLVER), 'a.Book')
+        def verdict = ResolverClassRules.check(schema, model(), resolver('a.T', methods, AnnotationNames.TYPE_RESOLVER), 'a.Book', false)
 
         then:
         verdict.methods()*.signature() == ['a.T#title(Book,Boolean)']
@@ -127,7 +127,7 @@ type Book {
         ]
 
         when:
-        def verdict = ResolverClassRules.check(schema, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+        def verdict = ResolverClassRules.check(schema, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, false)
 
         then:
         verdict.methods()*.signature() == ['a.R#nowhere()', 'a.R#broken()']
@@ -135,16 +135,30 @@ type Book {
         verdict.methods()*.fields() == [[], []]
     }
 
-    void "a declared coordinate whose field name differs from the method name binds nothing"() {
+    void "a declared coordinate whose field name differs from the method name binds that field"() {
         given:
-        def methods = [method('titleText', coordinate('Book.title'), [FakeModel.parameter('book', 'a.Book')], STRING, 'a.T#titleText(Book)')]
+        def methods = [method('titleText', coordinate('Book.title'), [FakeModel.parameter('book', 'a.Book'), FakeModel.parameter('upper', 'java.lang.Boolean')], STRING, 'a.T#titleText(Book,Boolean)')]
 
         when:
-        def verdict = ResolverClassRules.check(schema, model(), resolver('a.T', methods, AnnotationNames.TYPE_RESOLVER), 'a.Book')
+        def verdict = ResolverClassRules.check(schema, model(), resolver('a.T', methods, AnnotationNames.TYPE_RESOLVER), 'a.Book', false)
 
         then:
-        verdict.methods()*.coordinates() == [[]]
-        verdict.methods()*.fields() == [[]]
+        verdict.methods()*.coordinates() == [['Book.title']]
+        verdict.methods()[0].fields()*.coordinate() == ['Book.title']
+        verdict.methods()[0].fields()[0].arguments().failure() == null
+    }
+
+    void "a root method binds the field its prefix leaves only with accessor prefixes"() {
+        given:
+        def methods = [method('getPing', [:], [], STRING, 'a.R#getPing()')]
+
+        when:
+        def off = ResolverClassRules.check(schema, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, false)
+        def on = ResolverClassRules.check(schema, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, true)
+
+        then:
+        off.methods()*.coordinates() == [[]]
+        on.methods()*.coordinates() == [['Mutation.ping', 'Query.ping']]
     }
 
     void "the wrappers of a list element are checked one level down, as the runtime does"() {
@@ -156,7 +170,7 @@ type Book {
         ]
 
         when:
-        def verdict = ResolverClassRules.check(schema, lists, resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+        def verdict = ResolverClassRules.check(schema, lists, resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, false)
         def books = verdict.methods()[0].fields()[0].returns()
         def titles = verdict.methods()[1].fields()[0].returns()
 
@@ -176,7 +190,7 @@ type Book {
         def methods = [method('books', [:], [], ref('java.util.List', ref(OPTIONAL, ref('a.Book'))), 'a.R#books()')]
 
         when:
-        def returns = ResolverClassRules.check(schema, lists, resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+        def returns = ResolverClassRules.check(schema, lists, resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, false)
                 .methods()[0].fields()[0].returns()
 
         then:
@@ -193,7 +207,7 @@ type Events { ping: String }
         def methods = [method('ping', coordinate('Events.ping'), [], STRING, 'a.R#ping()')]
 
         when:
-        def verdict = ResolverClassRules.check(subscription, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+        def verdict = ResolverClassRules.check(subscription, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null, false)
 
         then:
         verdict.methods()[0].fields()[0].returns().failure() == WrapperRules.subscriptionNeedsPublisher('java.lang.String')

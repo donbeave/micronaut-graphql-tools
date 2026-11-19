@@ -53,7 +53,7 @@ The library provides these annotations (package `io.micronaut.graphql.tools.anno
 * `@GraphQLType` maps a Java class to a GraphQL type.
 * `@GraphQLTypeResolver` specifies a resolver for a field of a specific GraphQL type, to map nested or complex fields.
 * `@GraphQLInput` defines a GraphQL input type, structured input data for mutations or queries.
-* `@GraphQLField` marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field.
+* `@GraphQLField` marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field. `@GraphQLField("name")` on a method or a property binds the field of that name (see <<renaming,Binding a field to a differently named member>>).
 * `@GraphQLSchemaCoordinate("Type.field")` names the field a resolver method binds; it is meant for resolver contracts (interfaces).
 
 GraphQL enums map to Java enums annotated with `@Introspected`, and unions and interfaces to Java interfaces, without an annotation of their own.

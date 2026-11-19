@@ -684,6 +684,14 @@ The visitor replaces the JSR-269 processor of `graphql-tools-processor`. #291 re
 
 Until #291 lands, the JSR-269 processor reads the options it has today, `sdlDir` among them. #144 then deletes the JSR-269 code. Builds that pass the old options fail once their names are removed.
 
+== Renaming a binding
+
+Nothing that worked before changes (the new setting is off by default, and the coordinate of a method with another name used to fail the startup, so no application relies on it). Three additions help a migration, see <<renaming,Binding a field to a differently named member>>:
+
+* A resolver named after a getter (`getAuthor(Book)` for the field `author`) binds without renaming with `micronaut.graphql.tools.resolver-accessor-prefixes: true`. A resolver that has both `author` and `getAuthor` for the field then fails the startup with `[multiple-methods-found]`.
+* A field named like a Java keyword or an `Object` method (`class`, `default`, `hashCode`) is bound with `@GraphQLField("class")` on a method or a property of the type, or with `@GraphQLSchemaCoordinate("Book.class")` on a resolver method.
+* A renamed member binds the new name only; the field of its old name needs another member.
+
 == Migration recipe
 
 To move an application from `1.0.0-SNAPSHOT` in one pass, set these options first. They relax the optional checks and write the binding manifest. They do not relax the changes without an opt-out (BC-01, 02, 04, 05, 06, 10, 11, 13, 15 and 17): the startup still fails for those, and each failure must be fixed as it is reported:

@@ -15,6 +15,8 @@
  */
 package io.micronaut.graphql.tools.processing;
 
+import io.micronaut.graphql.tools.binding.internal.rules.FieldNames;
+
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -38,10 +40,12 @@ final class ResolverBeans {
             "clone()", "finalize()");
 
     private final JavaTypes javaTypes;
+    private final boolean accessorPrefixes;
     private final List<Bean> beans = new ArrayList<>();
 
-    ResolverBeans(JavaTypes javaTypes, Collection<TypeElement> types) {
+    ResolverBeans(JavaTypes javaTypes, Collection<TypeElement> types, boolean accessorPrefixes) {
         this.javaTypes = javaTypes;
+        this.accessorPrefixes = accessorPrefixes;
         for (TypeElement type : types) {
             if (isBean(type)) {
                 Bean bean = createBean(type);
@@ -135,7 +139,7 @@ final class ResolverBeans {
         }
 
         Bean bean = new Bean(type, javaTypes.name(type), root, contracts, methods, usesCoordinates, byModelClass,
-                unassigned);
+                unassigned, accessorPrefixes);
         methods.forEach(it -> it.bean = bean);
         return bean;
     }
@@ -166,7 +170,8 @@ final class ResolverBeans {
                 List<Method> methods,
                 boolean usesCoordinates,
                 Map<String, List<Method>> methodsByModelClass,
-                List<Method> unassigned) {
+                List<Method> unassigned,
+                boolean accessorPrefixes) {
 
         boolean isCandidate(Method method) {
             return !usesCoordinates || method.coordinate() != null;
@@ -174,9 +179,20 @@ final class ResolverBeans {
 
         List<Method> find(List<Method> methods, String name, String coordinate) {
             return methods.stream()
-                    .filter(it -> it.element().getSimpleName().contentEquals(name))
-                    .filter(it -> !usesCoordinates || coordinate.equals(it.coordinate()))
+                    .filter(it -> usesCoordinates ? coordinate.equals(it.coordinate()) : names(it).contains(name))
                     .toList();
+        }
+
+        // whether the method may bind the field, for a rule that does not know the type of the field yet
+        boolean mayBind(Method method, String fieldName, boolean declaredCoordinate) {
+            if (method.coordinate() != null) {
+                return method.coordinate().substring(method.coordinate().indexOf('.') + 1).equals(fieldName);
+            }
+            return !declaredCoordinate && names(method).contains(fieldName);
+        }
+
+        private List<String> names(Method method) {
+            return FieldNames.ofResolverMethod(method.element().getSimpleName().toString(), accessorPrefixes);
         }
 
     }

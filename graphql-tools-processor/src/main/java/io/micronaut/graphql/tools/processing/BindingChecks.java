@@ -122,7 +122,7 @@ final class BindingChecks {
         this.problems = problems;
         this.javaTypes = javaTypes;
         this.types = types;
-        this.beans = new ResolverBeans(javaTypes, types);
+        this.beans = new ResolverBeans(javaTypes, types, options.resolverAccessorPrefixes());
         this.models = new ModelMembers(javaTypes, types);
         this.manifest = manifest;
         this.typeNames = new TypeNames(javaTypes);
@@ -247,10 +247,6 @@ final class BindingChecks {
         }
         if (fields.stream().noneMatch(it -> it.getName().equals(fieldName))) {
             return "the type " + typeName + " has no field " + fieldName + ".";
-        }
-        String methodName = method.element().getSimpleName().toString();
-        if (!fieldName.equals(methodName)) {
-            return "the field name " + fieldName + " differs from the method name " + methodName + ".";
         }
         boolean operationType = operationTypes.contains(typeName);
         if (bean.root() && !operationType) {
@@ -585,17 +581,19 @@ final class BindingChecks {
     private void bindField(ObjectTypeDefinition type, FieldDefinition field, TypeElement introspected,
                            TypeElement sourceClass) {
         String coordinate = type.getName() + "." + field.getName();
-        Optional<Property> property = models.property(introspected, field.getName());
+        List<Property> properties = models.properties(introspected, field.getName());
         List<ExecutableElement> fieldMethods = models.fieldMethods(introspected, field.getName());
 
-        if (property.isPresent() && !fieldMethods.isEmpty() || fieldMethods.size() > 1) {
+        if (properties.size() + fieldMethods.size() > 1) {
             List<String> members = new ArrayList<>();
-            property.ifPresent(it -> members.add(javaTypes.describe(it.accessor())));
+            properties.forEach(it -> members.add(javaTypes.describe(it.accessor())));
             fieldMethods.forEach(it -> members.add(javaTypes.describe(it)));
             problems.error(coordinate, "several members of " + javaTypes.name(introspected) + " can bind the field: "
-                    + String.join(", ", members) + ".", field, fieldMethods.get(0));
+                    + String.join(", ", members) + ".", field,
+                    fieldMethods.isEmpty() ? properties.get(0).accessor() : fieldMethods.get(0));
             return;
         }
+        Optional<Property> property = properties.stream().findFirst();
 
         boolean declaredByInterface = isDeclaredByInterface(type, field.getName());
         List<Method> resolvers = typeResolverMethods(sourceClass, coordinate, field.getName());
@@ -720,8 +718,7 @@ final class BindingChecks {
                 if (modelClass.getKind() == ElementKind.INTERFACE && !modelClass.equals(introspected)
                         && javaTypes.isA(introspected.asType(), modelClass.getQualifiedName().toString())
                         && bean.methodsByModelClass().getOrDefault(javaTypes.name(modelClass), List.of()).stream()
-                        .anyMatch(it -> it.element().getSimpleName().contentEquals(fieldName)
-                                && (!declaredCoordinate || it.coordinate() != null))) {
+                        .anyMatch(it -> bean.mayBind(it, fieldName, declaredCoordinate))) {
                     return true;
                 }
             }

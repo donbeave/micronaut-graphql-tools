@@ -89,9 +89,14 @@ final class MicronautUtils {
 
     static Map<Class<?>, List<String>> toMap(List<BeanMethod<Object, ?>> beanMethods,
                                              @Nullable BeanProperty<Object, Object> beanProperty) {
+        return toMap(beanMethods, beanProperty == null ? List.of() : List.of(beanProperty));
+    }
+
+    static Map<Class<?>, List<String>> toMap(List<BeanMethod<Object, ?>> beanMethods,
+                                             List<BeanProperty<Object, Object>> beanProperties) {
         Map<Class<?>, List<String>> methods = new TreeMap<>(Comparator.comparing(Class::getName));
 
-        if (beanProperty != null) {
+        for (BeanProperty<Object, Object> beanProperty : beanProperties) {
             methods.putIfAbsent(beanProperty.getDeclaringBean().getBeanType(), new ArrayList<>());
             methods.get(beanProperty.getDeclaringBean().getBeanType()).add(getPropertyMethodName(beanProperty));
         }

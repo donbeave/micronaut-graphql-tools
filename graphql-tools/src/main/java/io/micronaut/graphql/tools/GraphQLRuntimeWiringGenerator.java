@@ -148,6 +148,7 @@ final class GraphQLRuntimeWiringGenerator {
     private final List<AbstractMappingException> bindingFailures = new ArrayList<>();
 
     private AmbiguityLog ambiguityLog;
+    private final Map<BeanIntrospection<Object>, ModelMemberIndex> memberIndexes = new IdentityHashMap<>();
 
     private Ambiguities ambiguities = Ambiguities.NONE;
 
@@ -724,22 +725,19 @@ final class GraphQLRuntimeWiringGenerator {
 
         TypeMappingContext mappingContext = TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
 
-        Optional<BeanProperty<Object, Object>> beanProperty =
-                beanIntrospection.getProperty(fieldDefinition.getName())
-                        .filter(it -> !isIgnored(it, BindingManifestRecorder.propertyMember(it)));
-        List<BeanMethod<Object, ?>> beanMethods = beanIntrospection.getBeanMethods().stream()
-                .filter(it -> it.getName().equals(fieldDefinition.getName()))
+        ModelMemberIndex members = memberIndexes.computeIfAbsent(beanIntrospection, ModelMemberIndex::new);
+        List<BeanProperty<Object, Object>> beanProperties = members.properties(fieldDefinition.getName()).stream()
+                .filter(it -> !isIgnored(it, BindingManifestRecorder.propertyMember(it)))
+                .toList();
+        List<BeanMethod<Object, ?>> beanMethods = members.methods(fieldDefinition.getName()).stream()
                 .filter(it -> !isIgnored(it, BindingManifestRecorder.introspectedMethodMember(it,
                         beanIntrospection.getBeanType())))
                 .collect(Collectors.toList());
 
-        if (beanProperty.isPresent() && !beanMethods.isEmpty()) {
-            throw new MultipleMethodsFoundException(mappingContext, toMap(beanMethods, beanProperty.get()));
+        if (beanProperties.size() + beanMethods.size() > 1) {
+            throw new MultipleMethodsFoundException(mappingContext, toMap(beanMethods, beanProperties));
         }
-
-        if (beanMethods.size() > 1) {
-            throw new MultipleMethodsFoundException(mappingContext, toMap(beanMethods, null));
-        }
+        Optional<BeanProperty<Object, Object>> beanProperty = beanProperties.stream().findFirst();
 
         List<InterfaceTypeDefinition> declaringInterfaces =
                 interfaceIndex.of(objectTypeDefinition, fieldDefinition.getName());

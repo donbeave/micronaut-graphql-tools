@@ -79,12 +79,11 @@ public final class SchemaCoordinates {
      * @param registry           the schema
      * @param operationTypeNames the names of the root operation types
      * @param coordinate         the declared coordinate
-     * @param methodName         the name of the method that declares it
      * @param kinds              the kinds of the resolver class (a class can be both)
      * @return the sentence that names the first violation, or empty when the coordinate is valid
      */
     public static Optional<String> check(TypeDefinitionRegistry registry, Set<String> operationTypeNames,
-                                         String coordinate, String methodName, Set<ResolverKind> kinds) {
+                                         String coordinate, Set<ResolverKind> kinds) {
         if (!isWellFormed(coordinate)) {
             return Optional.of("the value is not a schema coordinate of the form Type.field.");
         }
@@ -106,10 +105,6 @@ public final class SchemaCoordinates {
         }
         if (fieldDefinitions.stream().noneMatch(it -> it.getName().equals(fieldName))) {
             return Optional.of("the type " + typeName + " has no field " + fieldName + ".");
-        }
-
-        if (!fieldName.equals(methodName)) {
-            return Optional.of("the field name " + fieldName + " differs from the method name " + methodName + ".");
         }
 
         boolean operationType = operationTypeNames.contains(typeName);

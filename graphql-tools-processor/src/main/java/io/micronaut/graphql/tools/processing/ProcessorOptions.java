@@ -29,7 +29,8 @@ record ProcessorOptions(String sdlDir,
                         Set<String> allowUnreachable,
                         boolean ignoreUnreachable,
                         String unmappedProperties,
-                        boolean manifest) {
+                        boolean manifest,
+                        boolean resolverAccessorPrefixes) {
 
     static final String PREFIX = "micronaut.graphql.tools.";
 
@@ -49,8 +50,10 @@ record ProcessorOptions(String sdlDir,
 
     static final String MANIFEST = PREFIX + "manifest";
 
+    static final String RESOLVER_ACCESSOR_PREFIXES = PREFIX + "resolverAccessorPrefixes";
+
     static final Set<String> NAMES = Set.of(SDL_DIR, STRICT, PRECEDENCE, RESOLVER_DIRECTIVES, ALLOW_UNREACHABLE,
-            UNREACHABLE_TYPES, UNMAPPED_PROPERTIES, MANIFEST);
+            UNREACHABLE_TYPES, UNMAPPED_PROPERTIES, MANIFEST, RESOLVER_ACCESSOR_PREFIXES);
 
     enum Precedence {
 
@@ -97,6 +100,7 @@ record ProcessorOptions(String sdlDir,
         }
 
         boolean manifest = bool(options, MANIFEST, true, problems);
+        boolean resolverAccessorPrefixes = bool(options, RESOLVER_ACCESSOR_PREFIXES, false, problems);
 
         String sdlDir = options.get(SDL_DIR);
         return new ProcessorOptions(
@@ -107,7 +111,8 @@ record ProcessorOptions(String sdlDir,
                 new TreeSet<>(list(options.get(ALLOW_UNREACHABLE))),
                 unreachableTypes.equals("ignore"),
                 unmappedProperties,
-                manifest
+                manifest,
+                resolverAccessorPrefixes
         );
     }
 
