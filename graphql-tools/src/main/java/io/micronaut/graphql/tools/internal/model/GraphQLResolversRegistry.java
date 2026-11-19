@@ -346,10 +346,10 @@ public final class GraphQLResolversRegistry {
         resolveTypeResolverMethods();
 
         unreadableTypeResolverContracts.stream()
-                .map(GraphQLResolversRegistry::getUserBeanType)
-                .min(Comparator.comparing(Class::getName))
-                .ifPresent(beanType -> {
-                    throw new TypeResolverContractsNotFoundException(beanType);
+                .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))
+                .ifPresent(beanDefinition -> {
+                    throw new TypeResolverContractsNotFoundException(getUserBeanType(beanDefinition),
+                            beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class));
                 });
 
         unassignedTypeResolverMethods.entrySet().stream()

@@ -422,6 +422,7 @@ type Writer {
         e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.beanType == MixedResolvers
         e.cause.message.contains(MixedResolvers.name)
+        !e.cause.message.contains('annotate the bean class directly')
     }
 
     @Requires(property = 'spec.name', value = CONTRACTS_SPEC_NAME + ".mixed")
