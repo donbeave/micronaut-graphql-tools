@@ -15,14 +15,29 @@
  */
 package example.app;
 
-import example.BookQuery;
+import graphql.ExecutionResult;
+import graphql.GraphQL;
+import io.micronaut.context.ApplicationContext;
 
 public final class Application {
 
     private Application() {
     }
 
+    /**
+     * Starts the application, which binds the schema to the resolvers of every module, and runs one query through all of them.
+     * A binding failure ends the process with the exception on the standard error stream.
+     */
     public static void main(String[] args) {
-        System.out.println(new BookQuery().books(1).size());
+        try (ApplicationContext context = ApplicationContext.run()) {
+            ExecutionResult result = context.getBean(GraphQL.class).execute(
+                    "{ book(id: \"7\") { id title author { name } } books { id } authors(genre: FICTION) { name genre } }");
+            System.out.println("errors: " + result.getErrors());
+            System.out.println("data: " + result.getData());
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            // a context that failed to start leaves its executor threads running
+            System.exit(1);
+        }
     }
 }

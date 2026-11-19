@@ -128,6 +128,41 @@ class CorpusRunnerSpec extends Specification {
         corpus.units().collect { [it[0].toString(), ((Language) it[1]).dir] } == [['a', 'java'], ['b/c', 'groovy']]
     }
 
+    void "a language directory of module directories is one compilation per module, in name order"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 0\n', [
+                'a/java/module-b-feature/example/B.java': 'package example; class B { }\n',
+                'a/java/module-a-model/example/A.java'  : 'package example; class A { }\n',
+        ])
+        Files.delete(dir.resolve('a/java/example/A.java'))
+        Files.delete(dir.resolve('a/java/example'))
+
+        when:
+        CorpusCase c = new Corpus(root).byName('a')
+
+        then:
+        c.problems == []
+        c.units(Language.JAVA)*.name == ['module-a-model', 'module-b-feature']
+        c.units(Language.JAVA).collect { it.sources*.fileName*.toString() } == [['A.java'], ['B.java']]
+        c.sources(Language.JAVA)*.fileName*.toString() == ['A.java', 'B.java']
+    }
+
+    void "a language directory that mixes packages and module directories, or has an empty module, is a problem"() {
+        given:
+        Path root = corpus(['runtime.txt': 'ok\n'], 'max-entries: 0\n', [
+                'a/java/module-a/example/B.java': 'package example; class B { }\n',
+                'a/java/module-empty/readme.txt': 'nothing\n',
+        ])
+
+        when:
+        CorpusCase c = new Corpus(root).byName('a')
+
+        then:
+        c.problems.any { it.contains('java/example sits next to the module-* directories') }
+        c.problems.any { it.contains('java/module-empty/ has no .java source') }
+        c.units(Language.JAVA)*.name == ['module-a', 'module-empty']
+    }
+
     void "the properties of a case: tags, environments and the runtime configuration"() {
         given:
         Path root = corpus(['runtime.txt': 'ok\n'])

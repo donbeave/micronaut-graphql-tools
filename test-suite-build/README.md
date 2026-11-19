@@ -20,7 +20,13 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   | `kotlin-ksp` | `ksp` | `ksp { arg(...) }` | explicit `inputs.files` on the `ksp*Kotlin` tasks |
   | `kotlin-kapt` | `kapt` | `kapt { arguments { arg(...) } }` | explicit `inputs.files` on `kaptKotlin` and `kaptGenerateStubsKotlin` |
   | `groovy-gradle` | `compileOnly` | `-D` in the `jvmArgs` of the forked `compileGroovy` | explicit `inputs.files` on `compileGroovy` |
-  | `multi-module-gradle` | `annotationProcessor` of the module with the resolvers | as `java-gradle`, reading the schema of another module | as `java-gradle` |
+  | `multi-module-gradle` | `annotationProcessor` of each module with resolvers | as `java-gradle`, reading the schema of another module | as `java-gradle` |
+
+  `multi-module-gradle` has five modules: `schema` (the schema file), `model` (the classes the resolvers return and take: an
+  object type, an enum, an input class), `books` and `authors` (resolver classes, one of them a type resolver for a model class
+  of another module) and `app` (starts the application with `./gradlew :app:run`). Only `books` and `authors` apply the processor and
+  the snippet, each with the schema directory of `schema`; `model` and `app` do not, so a schema edit leaves them up to date.
+  What a feature module cannot know, a field that no module resolves, is reported by the startup of `app`.
 
 - `samples/<name>-maven` (`java-maven`, `kotlin-kapt-maven`, `groovy-maven`): Maven projects with a Micronaut 4 parent.
   Java passes the option as a `-A` compiler argument and puts the processor on `annotationProcessorPaths`; Kotlin passes
@@ -37,6 +43,11 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   schema directory: the compiler plugin of a Java project calls the classes up to date after a schema edit, so the
   documented rule is `mvn clean verify` after a schema edit. The spec shows it, and records what each sample does without
   `clean`; the startup still runs every check.
+  `MultiModuleGradleSampleTest` adds, on top of the contract: every module compiles and `app` starts and answers a query through
+  the resolvers of both feature modules; a schema edit reruns `books` and `authors` and leaves `model` and `app` up to date; a
+  wrong argument type, a wrong argument name, or a model enum that drifts from the schema fails the compile task of the module
+  whose resolver is affected, with the code and the coordinate, while the module next to it still compiles (`--continue`); a field
+  with no resolver in any module compiles everywhere and fails `:app:run` with the coordinate.
 - `stageSampleRepository`: copies `build/repo` for the samples and registers the visitor in the processor jar's copy. Until the
   registration switch (#291) the published jar still registers the JSR-269 processor, so the copy drops that registration
   and adds the visitor's, which is what #291 makes true of the jar itself. The task copies the jar unchanged once the jar

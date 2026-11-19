@@ -51,6 +51,34 @@ The JSR-269 processor (`processing/`, until #144):
 - Not in this module: the runtime library and the Micronaut bean lookup. The processor must not depend on the runtime:
   the `checkNoRuntimeDependency` task fails `check` when a main classpath contains `graphql-tools`.
 
+## Resolvers in several modules
+
+A build that keeps resolver classes in feature modules applies the processor in each module that holds resolver classes, and
+only there (a module without resolvers has nothing to check, and a schema edit then does not recompile it). A compilation sees
+its own sources and its classpath, so the checks split in two:
+
+- **What one class determines runs in every module**, whichever module defines the classes it reaches: a method that binds no
+  field, a wrong argument name or type, a primitive at a nullable position, an input class property or an enum constant that
+  the schema does not define, the shape of the return type. The input classes and enums of a dependency are read from its
+  class files. A module that fails fails its own build, with the code, the coordinate and the schema location; a module that
+  does not depend on it still compiles.
+- **What needs the whole program never fails at compile time**: a field that no resolver binds (the resolver may be in another
+  module), two modules that resolve one field, a type that nothing reaches, the dictionary, directives. The visitor never reports
+  a field as unbound because no resolver is in the module. The startup of the application, which sees every module, reports
+  these with the coordinate (`field-not-bound`, `multiple-methods-found`, ...).
+- **The schema** is a directory per module: each module that applies the processor sets
+  `micronaut.graphql.tools.processor.schema.dirs` to the directory that holds the schema, for example the source directory of the
+  schema module. A schema that only exists inside a jar on the classpath (`classpath*:` at startup) cannot be read by a compiler
+  plug-in, so a module with resolvers and no directory fails with `processor-schema-not-configured`; the explicit way out is
+  `micronaut.graphql.tools.processor.checks=false`, and the startup still checks everything. The schema directory is an input of
+  every module that sets the option, so a schema edit reruns exactly those modules. Set the option in every module that applies
+  the processor: Micronaut copies the options of a compilation into system properties, and a later compilation of the same process
+  reads them when it sets none, so a module that forgot the option can be checked against the schema directory of the module that
+  compiled before it instead of failing (the startup still checks every class).
+
+The sample is `multi-module-gradle` in `test-suite-build`; the corpus cases that split their sources into compilation units are
+under `modules/` (see the corpus README).
+
 ## Packages
 
 Each package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
@@ -94,7 +122,8 @@ The module compiles for Java 21 (`micronautBuild.javaVersion = 21`), so it does 
 leg), `ParitySpec` (the soundness and completeness rules and the exception list), `ProcessorOptionsDocsSpec` (it fails when a processor option is not named in the options page) and
 `checkNoRuntimeDependency`. The floor and ceiling legs skip the corpus.
 
-- The corpus is data in `src/test/resources/corpus`; its README says how to add a case. For Java and Groovy the runner compiles
+- The corpus is data in `src/test/resources/corpus`; its README says how to add a case, and how a case splits its sources into
+  modules that are compiled one after the other. For Java and Groovy the runner compiles
   each case twice: with `checks=false`, which must succeed for every case (the escape hatch), and with the visitor on
   (`VisitorCompileTimeBinder`), whose errors and warnings must equal `expected/compile.txt`. It asserts them against the startup:
   soundness (a compile error is a startup finding; the five documented exceptions to the soundness rule are in

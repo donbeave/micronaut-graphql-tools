@@ -91,6 +91,27 @@ class CheckedCompilationSpec extends Specification {
         language << [Language.JAVA, Language.GROOVY]
     }
 
+    @Unroll
+    void "a case split into modules is compiled module by module: a module with a finding does not hide the next one's [#language.dir]"() {
+        given:
+        CheckedCaseCompiler compiler = compilers.get(language)
+        CorpusCase corpusCase = corpus.byName('modules/findings-in-two-modules')
+
+        when:
+        CompiledCase on = compiler.compileChecked(corpusCase, work.resolve('on'))
+        CompiledCase off = compiler.compile(corpusCase, work.resolve('off'))
+
+        then:
+        !on.success
+        on.errors.any { it.contains('[nullable-primitive] Query.books(limit:)') }
+        on.errors.any { it.contains('[argument-mismatch] Query.authors') }
+        off.success
+        off.more.size() == 2
+
+        where:
+        language << [Language.JAVA, Language.GROOVY]
+    }
+
     static final Map<Language, CheckedCaseCompiler> compilers = [
             (Language.JAVA)  : new JavaCaseCompiler(),
             (Language.GROOVY): new GroovyCaseCompiler(),
