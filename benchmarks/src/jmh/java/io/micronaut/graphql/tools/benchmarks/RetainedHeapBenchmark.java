@@ -27,11 +27,12 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Heap retained by a started context that binds a generated schema of {@code fields} fields, with the binding manifest
+ * Heap retained by a started context that binds a generated schema of {@code shape} (rings or interfaces) of {@code fields} fields, with the binding manifest
  * recorded or not. One invocation is one fresh context: the heap in use after a full collection, taken before the start
  * and again with the context open, and the difference is reported as the {@code retainedBytes} secondary result. The
  * registry the context is started with is in both figures, so the difference is what the context itself keeps: its
@@ -49,6 +50,9 @@ public class RetainedHeapBenchmark {
     @Param({"false", "true"})
     public boolean record;
 
+    @Param({LargeSchema.RINGS, LargeSchema.INTERFACES})
+    public String shape;
+
     private TypeDefinitionRegistry registry;
 
     /** The secondary result: the bytes the context retains. */
@@ -60,7 +64,7 @@ public class RetainedHeapBenchmark {
 
     @Setup
     public void parse() {
-        registry = LargeSchema.registry(fields);
+        registry = LargeSchema.registry(shape, fields);
     }
 
     @Benchmark
@@ -68,7 +72,7 @@ public class RetainedHeapBenchmark {
         long before = usedHeapAfterGc();
         try (ApplicationContext context = start()) {
             retained.retainedBytes = usedHeapAfterGc() - before;
-            LargeSchema.checkBound(context);
+            LargeSchema.checkBound(context, shape);
             if (LargeSchema.manifestAvailable(context) != record) {
                 throw new IllegalStateException("The manifest is " + (record ? "not " : "") + "recorded, but record is "
                         + record);
@@ -92,13 +96,10 @@ public class RetainedHeapBenchmark {
     }
 
     private ApplicationContext start() {
+        Map<String, Object> properties = new HashMap<>(LargeSchema.properties(shape, fields));
+        properties.put("micronaut.graphql.tools.manifest.record", record);
         return ApplicationContext.builder()
-                .properties(Map.of(
-                        "graphql.graphql-ws.enabled", false,
-                        "graphql.graphiql.enabled", false,
-                        "benchmarks.large", true,
-                        LargeSchema.FIELDS, fields,
-                        "micronaut.graphql.tools.manifest.record", record))
+                .properties(properties)
                 .singletons(registry)
                 .start();
     }

@@ -24,22 +24,53 @@ import io.micronaut.graphql.tools.BindingManifest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * The generated large schemas of the start-up benchmarks (see {@code generateLargeSchema} in build.gradle.kts): one per
- * field count, 10 fields per object type. {@link #FIELDS} selects the one a context binds.
+ * field count and shape, 10 fields per object type. The {@link #RINGS} shape is object types linked in rings; the
+ * {@link #INTERFACES} shape is many interfaces, the types that implement them, shared fields and a type-mapping
+ * dictionary with entries mapped to interfaces. {@link #FIELDS} (rings) or {@link #INTERFACE_FIELDS} selects the one a
+ * context binds.
  */
 final class LargeSchema {
 
     /** The property that selects the generated schema of a context. */
     static final String FIELDS = "benchmarks.large.fields";
 
+    /** The property that selects the generated interface-heavy schema of a context. */
+    static final String INTERFACE_FIELDS = "benchmarks.interface.fields";
+
+    /** The shape of object types linked in rings. */
+    static final String RINGS = "rings";
+
+    /** The interface-heavy shape. */
+    static final String INTERFACES = "interfaces";
+
     private LargeSchema() {
     }
 
-    /** The schema with {@code fields} fields, parsed. */
+    /** The context properties that select the schema of {@code shape} with {@code fields} fields. */
+    static Map<String, Object> properties(String shape, int fields) {
+        return Map.of(
+                "graphql.graphql-ws.enabled", false,
+                "graphql.graphiql.enabled", false,
+                "benchmarks.large", true,
+                INTERFACES.equals(shape) ? INTERFACE_FIELDS : FIELDS, fields);
+    }
+
+    /** The schema of {@code shape} with {@code fields} fields, parsed. */
+    static TypeDefinitionRegistry registry(String shape, int fields) {
+        return parse(INTERFACES.equals(shape) ? "/interface-schema-" + fields + ".graphqls"
+                : "/large-schema-" + fields + ".graphqls");
+    }
+
+    /** The ring schema with {@code fields} fields, parsed. */
     static TypeDefinitionRegistry registry(int fields) {
-        String resource = "/large-schema-" + fields + ".graphqls";
+        return registry(RINGS, fields);
+    }
+
+    private static TypeDefinitionRegistry parse(String resource) {
         try (InputStream in = LargeSchema.class.getResourceAsStream(resource)) {
             if (in == null) {
                 throw new IllegalStateException("No generated schema " + resource);
@@ -51,8 +82,9 @@ final class LargeSchema {
     }
 
     /** Throws when the large schema of the context is not bound. */
-    static void checkBound(ApplicationContext context) {
-        if (context.getBean(GraphQL.class).getGraphQLSchema().getObjectType("Node0") == null) {
+    static void checkBound(ApplicationContext context, String shape) {
+        String type = INTERFACES.equals(shape) ? "Obj0" : "Node0";
+        if (context.getBean(GraphQL.class).getGraphQLSchema().getObjectType(type) == null) {
             throw new IllegalStateException("The large schema was not bound");
         }
     }

@@ -62,6 +62,6 @@ Run from the repository root. JDK 21 or 25.
   allocation the change added. Use `-PgraphqlJavaLeg=floor` or `ceiling` for the other legs, which have their own
   baselines.
 - `:benchmarks:jmhJar` builds the benchmark jar.
-- `-PlargeFields=<fields>` generates the start-up schema of another size, one size per build.
+- `-PlargeFields=<fields>` generates the start-up schema of another size, one size per build; `-PlargeShape=interfaces` generates the interface-heavy schema instead of the rings.
 
 The full description, including the cold start procedure, is the "Benchmarks" section of `CONTRIBUTING.md`.
