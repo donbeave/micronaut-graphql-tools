@@ -839,7 +839,10 @@ micronaut:
 The `micronaut-graphql-tools-processor` module registers a Micronaut `TypeElementVisitor`
 (`io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor`) that reads the schema files while the application compiles and
 fails the build on drift that the startup would report. The visitor is isolating: it checks each resolver class on its own
-with the rules of the startup, so an incremental compilation checks the classes that changed. Each error starts with the
+with the rules of the startup, so an incremental compilation checks the classes that changed. The build tests of this
+repository back that statement: for each edit kind (a body, a binary interface, a new class, a deleted class), the class
+files that an incremental build rewrites with the processor equal those that a control build without it rewrites, in Java,
+Kotlin (kapt and KSP) and Groovy, and an incremental build never fails where a clean build of the same sources passes. Each error starts with the
 code of the check and the schema coordinate, and names the schema file and line:
 
 ```
