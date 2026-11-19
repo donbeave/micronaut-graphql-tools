@@ -37,8 +37,10 @@ def branches(block, event):
                     break
                 if re.match(r"^    branches:\s*$", m):
                     found, in_branches = [], True
+                elif inline := re.match(r"^    branches:\s*\[(.*)\]\s*$", m):
+                    found, in_branches = [x.strip().strip("'\"") for x in inline.group(1).split(",") if x.strip()], False
                 elif in_branches and (item := re.match(r"^      - (.+?)\s*$", m)):
-                    found.append(item.group(1))
+                    found.append(item.group(1).strip("'\""))
                 elif re.match(r"^    \S", m):
                     in_branches = False
             return found
@@ -69,7 +71,7 @@ gradle = (workflows / "gradle.yml").read_text().splitlines()
 jobs_at = next(i for i, l in enumerate(gradle) if l == "jobs:")
 jobs, current = {}, None
 for l in gradle[jobs_at + 1:]:
-    if m := re.match(r"^  ([A-Za-z0-9_-]+):\s*$", l):
+    if m := re.match(r"^  [\"']?([A-Za-z0-9_-]+)[\"']?:\s*$", l):
         current = m.group(1)
         jobs[current] = []
     elif current:
@@ -94,6 +96,8 @@ for name, body in jobs.items():
             problems.append("the `required` job must have exactly `if: always()`: a skipped gate reads as a pass")
     elif conditions:
         problems.append(f"job `{name}` has an `if:`: a gated job must run on every event, so remove the condition")
+    if any(re.match(r"^    continue-on-error:", l) for l in body):
+        problems.append(f"job `{name}` has `continue-on-error:`: a failure would still report success to `required`")
 
 block = on_block(gradle)
 for event in ("push", "pull_request", "merge_group"):
@@ -101,6 +105,8 @@ for event in ("push", "pull_request", "merge_group"):
         problems.append(f"gradle.yml does not run on `{event}`")
 for event in ("push", "pull_request"):
     for i, l in enumerate(block):
+        if re.match(rf"^  {event}:\s*[^\s#]", l):
+            problems.append(f"gradle.yml: write `{event}:` as a block (its keys on the next lines), not inline, so this script can read its filters")
         if re.match(rf"^  {event}:", l):
             for m in block[i + 1:]:
                 if re.match(r"^  \S", m):
