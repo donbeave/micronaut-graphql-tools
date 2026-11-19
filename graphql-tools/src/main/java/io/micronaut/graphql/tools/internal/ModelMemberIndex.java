@@ -47,7 +47,10 @@ final class ModelMemberIndex {
         Map<String, String> accessorRenames = new HashMap<>();
         for (BeanMethod<Object, ?> method : introspection.getBeanMethods()) {
             String declared = declared(method.getAnnotationMetadata());
-            String property = FieldNames.accessedProperty(method.getName(), method.getArguments().length);
+            String property = FieldNames.accessedProperty(method.getName(), method.getArguments().length,
+                    method.getReturnType().getType() == void.class || method.getReturnType().getType() == Void.class,
+                    method.getReturnType().getType() == boolean.class
+                            || method.getReturnType().getType() == Boolean.class);
             if (declared != null && property != null && propertyNames.contains(property)) {
                 // the accessor of a property that carries the name renames the property, it binds no field itself
                 accessorRenames.put(property, declared);

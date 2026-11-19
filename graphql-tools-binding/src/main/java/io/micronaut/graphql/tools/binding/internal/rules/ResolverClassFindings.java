@@ -157,7 +157,7 @@ public final class ResolverClassFindings {
                 }
                 failed |= !bindField(schema, inputs, failures, resolver, method, field, sourceType);
             }
-            if (methodVerdict.coordinates().size() > 1) {
+            if (methodVerdict.coordinates().stream().map(SchemaCoordinates::typeName).distinct().count() > 1) {
                 strict.add(finding(resolver, method, BindingCode.ROOT_METHOD_SEVERAL_OPERATIONS, method.signature(),
                         "the root resolver method " + method.signature() + " binds fields of several operation types: "
                                 + String.join(", ", methodVerdict.coordinates()),

@@ -299,6 +299,38 @@ type Slip {
         'resolver-first' | 'resolver'
     }
 
+    @Language("GraphQL")
+    static final String ALIAS_SCHEMA = """
+schema {
+  query: Query
+}
+
+type Query {
+  foo: String!
+  getFoo: String!
+}
+"""
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + ".aliases")
+    @GraphQLRootResolver
+    static class AliasQuery {
+        String getFoo() {
+            return 'foo'
+        }
+    }
+
+    void "with the accessor prefixes on, one method that binds two fields of one operation type is not several operation types"() {
+        given:
+        startContext(ALIAS_SCHEMA, SPEC_NAME + ".aliases", ['micronaut.graphql.tools.resolver-accessor-prefixes': true])
+
+        when:
+        def result = executeQuery('{ foo getFoo }')
+
+        then:
+        result.errors.isEmpty()
+        result.data == [foo: 'foo', getFoo: 'foo']
+    }
+
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(coordinates|duplicateCoordinate)')
     @GraphQLRootResolver
     static class CoordinateQuery {

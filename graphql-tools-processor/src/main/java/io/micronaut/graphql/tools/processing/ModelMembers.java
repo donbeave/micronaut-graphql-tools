@@ -125,7 +125,10 @@ final class ModelMembers {
 
     @Nullable
     private static String accessedProperty(ExecutableElement method) {
-        return FieldNames.accessedProperty(method.getSimpleName().toString(), method.getParameters().size());
+        TypeMirror result = method.getReturnType();
+        return FieldNames.accessedProperty(method.getSimpleName().toString(), method.getParameters().size(),
+                result.getKind() == TypeKind.VOID,
+                result.getKind() == TypeKind.BOOLEAN || result.toString().equals("java.lang.Boolean"));
     }
 
     Map<String, Property> properties(TypeElement type) {

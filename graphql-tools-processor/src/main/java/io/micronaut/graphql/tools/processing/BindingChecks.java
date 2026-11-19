@@ -32,7 +32,7 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules;
+import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules; import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
 import io.micronaut.graphql.tools.processing.ModelMembers.Property;
 import io.micronaut.graphql.tools.processing.ResolverBeans.Bean;
 import io.micronaut.graphql.tools.processing.ResolverBeans.Method;
@@ -1029,7 +1029,8 @@ final class BindingChecks {
             return;
         }
         boundMethods.forEach((method, coordinates) -> {
-            if (method.bean().root() && method.coordinate() == null && coordinates.size() > 1) {
+            if (method.bean().root() && method.coordinate() == null
+                    && coordinates.stream().map(SchemaCoordinates::typeName).distinct().count() > 1) {
                 problems.error(javaTypes.describe(method.element()), "the root resolver method binds fields of several "
                         + "root operation types (" + String.join(", ", coordinates) + ") (strict mode). Give each "
                         + "operation type its own method with @GraphQLSchemaCoordinate.", null, method.element());

@@ -54,14 +54,21 @@ public final class FieldNames {
     }
 
     /**
-     * @param methodName     a method name
-     * @param parameterCount the number of parameters
-     * @return the property a getter ({@code getX}, {@code isX}, no parameter) or a setter ({@code setX}, one parameter)
-     * reads or writes, or {@code null} for any other method
+     * @param methodName       a method name
+     * @param parameterCount   the number of parameters
+     * @param returnsVoid      whether the method returns nothing
+     * @param returnsBoolean   whether the method returns {@code boolean} or {@code Boolean}
+     * @return the property a getter ({@code getX} with a result, {@code isX} with a boolean result, no parameter) or a
+     * setter ({@code setX}, one parameter) reads or writes, or {@code null} for any other method
      */
     @Nullable
-    public static String accessedProperty(String methodName, int parameterCount) {
+    public static String accessedProperty(String methodName, int parameterCount, boolean returnsVoid,
+                                          boolean returnsBoolean) {
         if (parameterCount == 0) {
+            boolean isGetter = !methodName.startsWith("get") && methodName.startsWith("is");
+            if (returnsVoid || isGetter && !returnsBoolean) {
+                return null;
+            }
             return unprefixed(methodName);
         }
         if (parameterCount == 1 && methodName.startsWith("set")) {

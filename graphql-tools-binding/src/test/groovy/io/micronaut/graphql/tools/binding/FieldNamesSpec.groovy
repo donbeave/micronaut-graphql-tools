@@ -46,16 +46,18 @@ class FieldNamesSpec extends Specification {
 
     void "the property an accessor reads or writes is #property"() {
         expect:
-        FieldNames.accessedProperty(method, parameters) == property
+        FieldNames.accessedProperty(method, parameters, returnsVoid, returnsBoolean) == property
 
         where:
-        method      | parameters | property
-        'getTitle'  | 0          | 'title'
-        'isActive'  | 0          | 'active'
-        'setTitle'  | 1          | 'title'
-        'setTitle'  | 0          | null
-        'getTitle'  | 1          | null
-        'setup'     | 1          | null
-        'title'     | 0          | null
+        method      | parameters | returnsVoid | returnsBoolean | property
+        'getTitle'  | 0          | false       | false          | 'title'
+        'isActive'  | 0          | false       | true           | 'active'
+        'isName'    | 0          | false       | false          | null
+        'getName'   | 0          | true        | false          | null
+        'setTitle'  | 1          | true        | false          | 'title'
+        'setTitle'  | 0          | true        | false          | null
+        'getTitle'  | 1          | false       | false          | null
+        'setup'     | 1          | true        | false          | null
+        'title'     | 0          | false       | false          | null
     }
 }
