@@ -33,7 +33,9 @@ val graphqlJavaLeg = providers.gradleProperty("graphqlJavaLeg").getOrElse("defau
 //
 // -PlargeShape=interfaces generates the interface-heavy schema (#368) of that size instead of the rings (3,000 fields
 // when -PlargeFields is not given); the jmhSmokeTest source set has both shapes at its two sizes.
-val interfaceShape = providers.gradleProperty("largeShape").orNull == "interfaces"
+val largeShape = providers.gradleProperty("largeShape").getOrElse("rings")
+require(largeShape == "rings" || largeShape == "interfaces") { "-PlargeShape must be rings or interfaces, not $largeShape" }
+val interfaceShape = largeShape == "interfaces"
 val largeTypeCounts = providers.gradleProperty("largeFields").map { listOf(it.toInt() / 10) }
     .orElse(listOf(if (interfaceShape) 300 else 160)).get()
 val smokeTypeCounts = listOf(10, 1000)

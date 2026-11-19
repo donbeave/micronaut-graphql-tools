@@ -32,8 +32,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Heap retained by a started context that binds a generated schema of {@code shape} (rings or interfaces) of {@code fields} fields, with the binding manifest
- * recorded or not. One invocation is one fresh context: the heap in use after a full collection, taken before the start
+ * Heap retained by a started context that binds a generated schema of {@code shape} (rings or interfaces) of
+ * {@code fields} fields, with the binding manifest recorded or not. One invocation is one fresh context: the heap in use after a full collection, taken before the start
  * and again with the context open, and the difference is reported as the {@code retainedBytes} secondary result. The
  * registry the context is started with is in both figures, so the difference is what the context itself keeps: its
  * beans and the bound schema. The figure includes whatever the first start leaves in static state, which is why it is
