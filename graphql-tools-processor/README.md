@@ -79,10 +79,19 @@ its own sources and its classpath, so the checks split in two:
   `micronaut.graphql.tools.processor.module.dir` to its own project directory, next to `schema.dirs` (both are in the documented
   snippet). The visitor compares it with the output directory of the compilation: a value whose directory does not contain
   the output belongs to another module, and the build fails with `processor-schema-not-configured`, naming that directory and the
-  output of this compilation. The rule has two limits: a module that sets `schema.dirs` without `module.dir` is trusted, and a
-  compiler that gives no output directory (kapt and KSP) cannot be compared; both keep the old behaviour. A build that moves the
-  output of a module outside its project directory sets `module.dir` to a directory that contains it. `multi-module-gradle` and
-  `multi-module-maven` in `test-suite-build` prove the failure: the module that forgot the snippet is built after one that set it.
+  output of this compilation. The rule has these limits, and each keeps or fails safe:
+  - A module that sets `schema.dirs` without `module.dir` is trusted when no earlier module of the JVM set `module.dir`. Micronaut
+    cannot say which options a compilation passed itself, so once one module sets `module.dir`, a later module that sets only
+    `schema.dirs` sees the earlier marker and fails with `processor-schema-not-configured`; set both options in every module.
+  - A compiler that gives no output directory (kapt and KSP) cannot be compared and keeps the old behaviour.
+  - `checks=false` is honoured as before, also when an earlier module left it behind: a module that forgot every option is then
+    compiled without checks, and the startup still checks every class.
+  - The marker is a directory that contains the output, so a module whose output lies inside the project directory of an earlier
+    module (a root project that applies the processor, compiled before a subproject that forgot the options) is not told apart
+    from it, which is one more reason to set the options in every module.
+  - A build that moves the output of a module outside its project directory sets `module.dir` to a directory that contains it.
+
+  `multi-module-gradle` and `multi-module-maven` in `test-suite-build` prove the failure: the module that forgot the snippet is built after one that set it.
 
 The samples are `multi-module-gradle` and `multi-module-maven` in `test-suite-build`; the corpus cases that split their sources into compilation units are
 under `modules/` (see the corpus README).
