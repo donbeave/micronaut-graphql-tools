@@ -170,7 +170,7 @@ the JSON. Both are measured cold, one fresh JVM per sample, only by `scripts/sta
 The benchmark jar generates the 1,600-field ring schema only, as before, so the other start-up benchmarks bind the same
 schema as before. Each other size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build; add
 `-PlargeShape=interfaces` for the interface-heavy schema, 3,000 fields by default), so
-that the JVM of a size has no other size on its classpath. `jmhSmokeTest` generates the 100 and 10,000-field schemas of both shapes in
+that the JVM of a size has no other size on its classpath. A jar packages one size and one shape, but JMH crosses every `@Param` value, so a direct run of the startup benchmarks passes `-p fields=<size> -p shape=<shape>` for the ones the jar was built with; `startup-report.py` does. `jmhSmokeTest` generates the 100 and 10,000-field schemas of both shapes in
 its own source set and runs those two sizes only. Measured: the 100-field context retained 14.4 MB with all three sizes on the
 classpath and 4.7 MB with the 100-field classes alone. The 10,000-field schema is 1,000 types in rings of 100 types, each reached from a root field of its own: graphql-java
 builds the executable schema with one recursive call per type of a chain, so one ring of 1,000 types overflows the default
