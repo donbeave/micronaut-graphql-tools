@@ -1,10 +1,9 @@
 name: Canary
 # Runs what Micronaut 4 does not support yet (JDK 27, the newest graphql-java and Kotlin) and audits the pinned versions.
-# Never on pull_request and never in the `required checks` gate of gradle.yml: a red canary blocks no merge.
+# Never on pull_request, never on a push and never in the `required checks` gate of gradle.yml: a red canary blocks no merge
+# and is no verdict on a commit of master (it runs against the newest releases of its inputs, so it goes red for its own
+# reasons). Only gradle.yml runs on a push; `.github/scripts/check-gate.py` fails when another workflow does.
 on:
-  push:
-    branches:
-      - master
   schedule:
     - cron: '17 4 * * *'
     # the versions audit runs on this one; the canary jobs skip it (see each job's `if`)
