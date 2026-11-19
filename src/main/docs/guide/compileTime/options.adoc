@@ -1,0 +1,62 @@
+:repo: https://github.com/{githubSlug}/blob/master
+
+[[compileTimeOptions]]
+
+The compile-time checks have four options. Every option name starts with `micronaut.graphql.tools.processor.`, and no other key under that prefix is accepted: an unknown option fails the build with `[processor-option-unknown]`, so that a typo cannot switch a check off. A value that does not parse fails with `[processor-option-invalid]`. A boolean is read as Micronaut reads booleans (`true`, `yes`, `on` and their opposites).
+
+[cols="3,1,1,6", options="header"]
+|===
+|Option |Value |Default |Meaning
+|`micronaut.graphql.tools.processor.schema.dirs` |directories, joined with the platform path separator |none |The directories that hold the `*.graphqls` files, read recursively with the rules of the startup discovery (a `*.graphql` file is not a schema file). The compilation needs it when it has resolver classes: without it the build fails with `[processor-schema-not-configured]`, and a directory that has no schema file fails with `[processor-schema-not-found]`. The directories are an input of the compilation: list every directory that holds schema, also schema that the application adds by code.
+|`micronaut.graphql.tools.processor.checks` |`true` or `false` |`true` |`false` compiles without the checks and prints one note. The startup still checks everything. It is the escape hatch of the whole compilation.
+|`micronaut.graphql.tools.processor.module.dir` |a directory |none |The project directory of the module that sets `schema.dirs`. A module of a build with several modules sets it, so that a `schema.dirs` that an earlier module compiled in the same JVM left behind fails the build instead of being read. See <<compileTime,the multi-module rules>>.
+|`micronaut.graphql.tools.processor.resolverAccessorPrefixes` |`true` or `false` |`false` |The value of `micronaut.graphql.tools.resolver-accessor-prefixes` that the checks apply when they decide which method binds a field. Set it to the value of the application, or the checks and the startup read different names. The name is in camel case because `javac` rejects a hyphen in an option name.
+|===
+
+The names are written with dots and camel case because `javac` accepts only dot-separated identifiers as option names.
+
+== How each tool passes an option
+
+[cols="1,4", options="header"]
+|===
+|Compiler |The option reaches it as
+|javac (Gradle) |`-A<name>=<value>`, from a `CommandLineArgumentProvider` whose directories are an `@InputFiles` property, so that a schema edit reruns the task
+|javac (Maven) |`-A<name>=<value>` in `compilerArgs` of `maven-compiler-plugin`
+|KSP2 |`ksp { arg("<name>", "<value>") }`
+|kapt (Gradle) |`kapt { arguments { arg("<name>", "<value>") } }`
+|kapt (Maven) |`annotationProcessorArg` of the `kapt` execution of `kotlin-maven-plugin`
+|Groovy compiler |a system property of the compiler JVM: `-D<name>=<value>` in the `jvmArgs` of the forked `compileGroovy` task (Gradle), or `properties-maven-plugin` in the Maven JVM
+|===
+
+The snippets are on the <<compileTime,Compile-Time Verification>> page. Each one is the tagged part of a sample build that a test builds (see the support matrix there).
+
+== The module marker
+
+`module.dir` exists because Micronaut copies the options of a compilation into system properties, and a later compilation of the same JVM (the Gradle daemon and its compile workers, the Maven reactor) reads them when it sets none. A module that forgot `schema.dirs` would then be checked against the schema of the module compiled before it. With `module.dir` set in every module, the visitor compares it with the output directory of the compilation: a value whose directory does not contain the output belongs to another module, and the build fails with `[processor-schema-not-configured]`, naming that directory and the output of this compilation. The rule has limits, and each one keeps or fails safe:
+
+* A module that sets `schema.dirs` without `module.dir` is trusted when no earlier module of the JVM set `module.dir`. Once one module sets it, a later module that sets only `schema.dirs` fails with `[processor-schema-not-configured]`: set both options in every module.
+* A compiler that gives no output directory (kapt and KSP) cannot be compared, so the marker has no effect there.
+* `checks=false` is honoured also when an earlier module left it behind: a module that forgot every option is compiled without checks, and the startup still checks every class.
+* A module whose output lies inside the project directory of an earlier module is not told apart from it. A build that moves the output of a module outside its project directory sets `module.dir` to a directory that contains it.
+
+The tests that prove it are `MultiModuleGradleSampleTest` and `MultiModuleMavenSampleTest` in the {repo}/test-suite-build/src/test/java/io/micronaut/graphql/tools/buildtools[build-tools tests]: the module that forgot the snippet is built after one that set it, in the same JVM, and its build fails.
+
+== The retired option
+
+`micronaut.graphql.tools.sdlDir` of the earlier annotation processor is retired. A build that still passes it, with the checks on, fails with `[processor-option-removed]` (with `checks=false` nothing reads it), and the message names `micronaut.graphql.tools.processor.schema.dirs`, which replaces it (a list of directories, not one). The rename is entry BC-32 of the migration page. The corpus case that shows it is {repo}/graphql-tools-processor/src/test/resources/corpus/options/removed-option-sdl-dir[`options/removed-option-sdl-dir`].
+
+A runtime key (`micronaut.graphql.tools.schema.locations`, `micronaut.graphql.tools.strict` and the others) is never a processor option: the checks do not read it, and having one in the system properties of the JVM is not an error ({repo}/graphql-tools-processor/src/test/resources/corpus/options/runtime-key-is-not-an-option[`options/runtime-key-is-not-an-option`]).
+
+== The tests behind each option
+
+[cols="3,5", options="header"]
+|===
+|Behaviour |Proof
+|`schema.dirs` arrives, and a schema edit reruns the Gradle task |`theOptionArrivesAndASchemaEditRerunsTheCheckedTask` in `GradleSampleContract`, for each Gradle sample
+|`schema.dirs` missing fails with `processor-schema-not-configured` |`aMissingOptionFails` in `GradleSampleContract` and `MavenSampleContract`; corpus `options/schema-dirs-not-configured`
+|A directory without schema files fails with `processor-schema-not-found` |corpus `options/schema-dir-without-schema-files`
+|Several directories are read |corpus `options/several-schema-directories`
+|`checks=false` compiles with one note |`checksFalsePrintsItsNoteAndPasses` in both contracts; corpus `options/checks-off`
+|An unknown option or a bad value fails |corpus `options/unknown-option` and `options/invalid-checks-value`
+|`module.dir` rejects another module's schema directory |`MultiModuleGradleSampleTest`, `MultiModuleMavenSampleTest`
+|===

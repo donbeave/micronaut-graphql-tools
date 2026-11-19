@@ -1,1 +1,258 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+:repo: https://github.com/{githubSlug}/blob/master
+:samples: {sourcedir}/test-suite-build/samples
+:tests: {repo}/test-suite-build/src/test/java/io/micronaut/graphql/tools/buildtools
+:corpus: {repo}/graphql-tools-processor/src/test/resources/corpus
+
+The compile-time checks read the schema files while the application compiles and fail the build on drift that the startup would also reject: a resolver parameter that names no argument, a primitive at a nullable position, an input class with a property the schema does not define. Each error starts with the code of the check and the schema coordinate, and names the schema file and line. The code and the coordinate are the ones the startup reports for the same fault (see the <<exceptions,error reference>>), so a build error and a startup error are one finding.
+
+The checks are a Micronaut `TypeElementVisitor` in the `micronaut-graphql-tools-processor` artifact. It is the only compile-time engine: the jar registers the visitor and no `javax.annotation.processing.Processor`. A build puts it on the path that its compiler reads Micronaut's processors from, and passes the schema directories as an option (see <<compileTimeOptions,Options>>).
+
+Every statement on this page that says what the checks do, in which language and build tool, or how they behave in an incremental build, links the test or the sample build that proves it. The links point to the build-tools tests of `test-suite-build` (a sample build for each tool, built with Gradle TestKit or Maven), to the binding corpus of `graphql-tools-processor` (the same case compiled and started in each language), or to the three example suites.
+
+== What a failure looks like
+
+The example suites each keep a resolver that drifts from the schema on purpose. The argument of `Query.searchProfile` is named `limit`, and the parameter is named `count`:
+
+snippet::example.drift.DriftedSearchProfileQuery[project-base="test-suite", source="driftFixture", tags="drifted", indent="0"]
+
+The compilation of this source set fails, and the build prints the code, the coordinate, the Java member and the schema location:
+
+[source]
+----
+error: [argument-mismatch] Query.searchProfile: the parameter count binds no argument of Query.searchProfile (arguments: contains, limit).
+    at example.drift.DriftedSearchProfileQuery#searchProfile(java.lang.String,java.lang.Integer)
+    schema src/main/resources/schema.graphqls:11:3
+    fix: rename the parameter to an argument name, annotate it with @GraphQLArgument("<name>"), or add the argument to the schema
+----
+
+The task `driftFixtureTest` of `test-suite-java`, `test-suite-kotlin` and `test-suite-groovy` asserts this failure, with the `[code] coordinate` line, for each language, and `check` runs it. The fix is the one the message says: rename the parameter, or keep the name and annotate it:
+
+snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="by-name", indent="0"]
+
+== Set up the build
+
+Add the processor to the path that the compiler of the language reads Micronaut's processors from, and pass `micronaut.graphql.tools.processor.schema.dirs`. Each snippet below is a tagged part of a sample build under `test-suite-build/samples`, and the sample is built by a test, so a documented snippet is one that has run.
+
+TIP: Add the directories of schema that the application adds by code to `schema.dirs` too, so that the checks see it.
+
+=== Gradle with Java
+
+The processor goes on `annotationProcessor`. The schema directory is the `@InputFiles` input of a `CommandLineArgumentProvider`: a plain `compilerArgs` string would leave `compileJava` up to date after a schema edit.
+
+[source,kotlin]
+----
+include::{samples}/java-gradle/build.gradle.kts[tags=dependencies]
+
+include::{samples}/java-gradle/build.gradle.kts[tags=schema-dirs]
+----
+
+=== Gradle with Kotlin and KSP
+
+The processor goes on `ksp`. KSP2 does not track the schema files by itself, so they are declared as an input of the `ksp*Kotlin` tasks.
+
+[source,kotlin]
+----
+include::{samples}/kotlin-ksp/build.gradle.kts[tags=dependencies]
+
+include::{samples}/kotlin-ksp/build.gradle.kts[tags=schema-dirs]
+----
+
+=== Gradle with Kotlin and kapt
+
+The processor goes on `kapt`. Under kapt, `compileJava` runs with `-proc:none`, so a processor that is only on `annotationProcessor` does not run: register it with `kapt`. The schema files are declared as an input of `kaptKotlin` and `kaptGenerateStubsKotlin`.
+
+[source,kotlin]
+----
+include::{samples}/kotlin-kapt/build.gradle.kts[tags=dependencies]
+
+include::{samples}/kotlin-kapt/build.gradle.kts[tags=schema-dirs]
+----
+
+=== Gradle with Groovy
+
+The Groovy compiler loads Micronaut's visitors from its compile classpath, so the processor goes on `compileOnly`. The Groovy compiler reads its options from system properties, so `compileGroovy` runs in its own JVM (the default) with the option as a `-D` argument.
+
+[source,kotlin]
+----
+include::{samples}/groovy-gradle/build.gradle.kts[tags=dependencies]
+
+include::{samples}/groovy-gradle/build.gradle.kts[tags=schema-dirs]
+----
+
+=== Maven with Java
+
+The processor goes on `annotationProcessorPaths` of `maven-compiler-plugin`, and the option is a `-A` compiler argument. The library BOM manages the version of the processor.
+
+[source,xml]
+----
+include::{samples}/java-maven/pom.xml[tags=bom]
+
+include::{samples}/java-maven/pom.xml[tags=processor]
+----
+
+=== Maven with Kotlin and kapt
+
+The processor goes on the `annotationProcessorPaths` of the `kapt` execution of `kotlin-maven-plugin`, next to the Micronaut processor that kapt needs.
+
+[source,xml]
+----
+include::{samples}/kotlin-kapt-maven/pom.xml[tags=processor]
+----
+
+=== Maven with Groovy
+
+The processor goes on the `provided` scope. The Groovy compiler reads the option from a system property of the Maven JVM, which `properties-maven-plugin` sets.
+
+[source,xml]
+----
+include::{samples}/groovy-maven/pom.xml[tags=processor]
+
+include::{samples}/groovy-maven/pom.xml[tags=schema-dirs]
+----
+
+=== Switch the checks off
+
+`micronaut.graphql.tools.processor.checks=false` compiles without the checks and prints one note. The startup still runs every check, so the switch only moves a finding from the build to the first start. Each sample passes it from a build property (`-PgraphqlChecks=false` for Gradle, `-Dgraphql.checks=false` for Maven), for example for Gradle with Java:
+
+[source,kotlin]
+----
+include::{samples}/java-gradle/build.gradle.kts[tags=checks]
+----
+
+A build prints one note that names the schema directory of each compilation that runs the checks, so a build log shows whether they ran. A processor that is not on the path of the compiler does not fail anything: it does not run, and no note appears.
+
+== What fails the build
+
+[cols="3,3,4", options="header"]
+|===
+|The build |The result |Proof
+|The option is missing (the processor runs, `schema.dirs` is not set) |`[processor-schema-not-configured]` |`aMissingOptionFails` in the Gradle and Maven contracts ({tests}/GradleSampleContract.java[`GradleSampleContract`], {tests}/MavenSampleContract.java[`MavenSampleContract`])
+|The directory has no schema file |`[processor-schema-not-found]` |corpus case {corpus}/options/schema-dir-without-schema-files[`options/schema-dir-without-schema-files`]
+|An unknown option, a bad value, or the retired `sdlDir` |`[processor-option-unknown]`, `[processor-option-invalid]`, `[processor-option-removed]` |corpus cases {corpus}/options/unknown-option[`unknown-option`], {corpus}/options/invalid-checks-value[`invalid-checks-value`], {corpus}/options/removed-option-sdl-dir[`removed-option-sdl-dir`]
+|A schema file that cannot be parsed or merged |`[schema-invalid]` |corpus case {corpus}/options/schema-invalid[`options/schema-invalid`]
+|A resolver class drifts from the schema |the code and coordinate of the finding, with the schema location |`theOptionArrivesAndASchemaEditRerunsTheCheckedTask` (Gradle) and `theOptionArrivesAndADriftedClassFailsAfterClean` (Maven), and the `driftFixtureTest` of each suite
+|`checks=false` |the build passes, with one note |`checksFalsePrintsItsNoteAndPasses` in both contracts
+|A module of a multi-module build forgot the options |`[processor-schema-not-configured]`, naming the directory of the other module |{tests}/MultiModuleGradleSampleTest.java[`MultiModuleGradleSampleTest`], {tests}/MultiModuleMavenSampleTest.java[`MultiModuleMavenSampleTest`]
+|===
+
+== What is checked at compile time
+
+The visitor checks one resolver class at a time, with the per-class rules that the startup uses. The <<exceptions,error reference>> lists every code, and its `Compile time` column says whether the compile-time check reports it. Two groups exist.
+
+*The strict checks that run at compile time.* Five of the ten checks of strict mode are decided by one class and run in the build: `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property` and `nullable-primitive`. The other five (`unreachable-type`, `unreachable-value-type`, `unused-dictionary-entry`, `interface-read-through-implementation` and `unwired-directive`) need the whole program and run at startup only.
+
+*The per-class failures.* A method that binds no field, a parameter that binds no argument or binds it twice, the number of parameters, the Java type of an argument or of an input property, the input classes and enums that the arguments reach, the shape of the return type, `@GraphQLSchemaCoordinate`, and the introspection of the classes behind input and enum types are all decided by the class and its types, so they are reported at compile time.
+
+Every compile-time check is the same in the three languages. The corpus compiles each case in each language the case has a directory for and compares the findings with one expected file; a language that differs needs an entry in {corpus}/corpus-language-differences.txt[`corpus-language-differences.txt`], and the list is empty and may only shrink ({repo}/graphql-tools-processor/src/test/groovy/io/micronaut/graphql/tools/corpus/BindingCorpusSpec.groovy[`BindingCorpusSpec`]).
+
+=== The soundness rule
+
+A compile-time error is a finding that the startup also reports at its default severity, with the same code and the same coordinate. The compile-time check never reads the severity settings (`strict`, `checks.<code>` and `allow.*` of the runtime): the five checks above are errors at compile time even where a runtime setting would relax them. A build that is rejected by a check a runtime setting relaxes is rejected on purpose, and the way out is an annotation (see below).
+
+The corpus asserts the rule for every case and language (`BindingCorpusSpec`, rule 5 of the {repo}/graphql-tools-processor/src/test/resources/corpus/README.md[corpus README]). Five documented exceptions remain, each one a case where the build also fails at startup, but with another code first. They are in {corpus}/corpus-soundness-exceptions.txt[`corpus-soundness-exceptions.txt`] with a reason each, and the list may only shrink:
+
+* two resolver classes bind one root field (the startup reports the ambiguity first);
+* a `RuntimeWiringCustomizer` claims the field (the startup binds no method to it);
+* binding the field throws before the argument rule runs;
+* a binding failure of another resolver class stops the startup before the strict checks of this class;
+* two resolver classes bind one input type or enum to different Java classes.
+
+=== Only the startup can prove it
+
+`class-not-introspected` is the one finding that a check of one class cannot prove: another class can make a class introspected with `@Introspected(classes = ...)` or `@Introspected(packages = ...)`, and so can a dependency. So the compile-time check reports it as a *warning*, and the startup decides. The walk stops at that finding, as the startup stops at its failure, so the findings of the same class that come after it are the startup's.
+
+A build that turns compiler warnings into errors (`-Werror` for javac) fails on this warning like on any other, because the visitor reports it through the compiler's own warning channel; no sample build runs with `-Werror`, so no test covers that. There, put `@Introspected` on the class itself: a class that carries `@Introspected`, or an annotation that carries it (`@GraphQLInput`, `@GraphQLType`, `@Serdeable`), is seen as introspected at compile time. The corpus shows the finding as a `warning` line in `compile.txt` ({corpus}/README.md[corpus README]).
+
+=== Several modules
+
+A build that keeps resolver classes in feature modules applies the processor in each module that holds resolver classes, and only there: a module without resolvers has nothing to check, and a schema edit does not recompile it. A compilation sees its own sources and its classpath, so the checks split in two.
+
+*What one class determines runs in every module*, whichever module defines the classes it reaches: a method that binds no field, a wrong argument name or type, a primitive at a nullable position, an input class property or an enum constant that the schema does not define, the shape of the return type. The input classes and enums of a dependency are read from its class files. A module that fails fails its own build, with the code, the coordinate and the schema location, and a module that does not depend on it still compiles.
+
+*What needs the whole program never fails at compile time*: a field that no resolver binds (the resolver may be in another module), two modules that resolve one field, a type that nothing reaches, the dictionary and the directives. The visitor never reports a field as unbound because no resolver is in the module. The startup of the application, which sees every module, reports these with the coordinate (`field-not-bound`, `multiple-methods-found`, and the others whose `Compile time` column says `no`).
+
+The schema is a directory of each module that applies the processor: the module sets `schema.dirs` to the directory that holds the schema, for example the source directory of the schema module. A schema that exists only inside a jar of the classpath (`classpath*:` at startup) cannot be read by a compiler plug-in, so a module with resolvers and no directory fails with `[processor-schema-not-configured]`; the explicit way out is `checks=false` there, and the startup still checks everything. Each module also sets `module.dir` to its own project directory (see <<compileTimeOptions,Options>>), as in these snippets:
+
+[source,kotlin]
+----
+include::{samples}/multi-module-gradle/books/build.gradle.kts[tags=schema-dirs]
+----
+
+[source,xml]
+----
+include::{samples}/multi-module-maven/books/pom.xml[tags=schema-dirs]
+----
+
+The samples prove it: in {repo}/test-suite-build/samples/multi-module-gradle[`multi-module-gradle`] (five modules) every module compiles and the application answers a query through the resolvers of both feature modules; a schema edit reruns `books` and `authors` and leaves `model` and `app` up to date; a wrong argument type, a wrong argument name, or a model enum that drifts from the schema fails the compile task of the module whose resolver is affected, while the module next to it still compiles; a field with no resolver in any module compiles everywhere and fails `:app:run` with its coordinate. {repo}/test-suite-build/samples/multi-module-maven[`multi-module-maven`] builds a reactor and builds it again with the snippet removed from the module built last. The corpus cases under {corpus}/modules[`modules/`] compile each module of a case on its own.
+
+=== Conditional beans, `@Requires` and `@Replaces`
+
+The visitor checks the class as written. It does not evaluate `@Requires` or `@Replaces`, and it does not know which beans an environment creates: that is a property of the running application. So the facts that depend on the set of beans are the startup's. When a subclass carries `@Replaces(<original>.class)`, the original is dropped at startup and only the subclass binds; when both stay active and bind one field, the startup fails with `[multiple-methods-found]`. Neither outcome is a compile-time finding, because the `Compile time` column of both `multiple-methods-found` and `field-not-bound` is `no`. A conditional bean gets the same per-class compile-time checks as any other bean. A class that `@Requires` excludes in some environment is still compiled with the checks on, so a per-class error in it (an argument that does not match the schema, for example) fails the build although no environment may ever create the bean. This is the documented behaviour, not a gap in the soundness rule: the startup reports the same finding with the same code and coordinate when it binds the class, and a build can only reject what the class itself decides. The corpus cases {corpus}/conditional/per-class-finding[`conditional/per-class-finding`] and {corpus}/conditional/replaces-per-class-finding[`conditional/replaces-per-class-finding`] show a per-class error in a conditional class failing the build, and {corpus}/modules/conditional-replaces-library-resolver[`modules/conditional-replaces-library-resolver`] shows a `@Replaces` of a resolver from another module deciding nothing at compile time. The checks that need the set of beans (`multiple-methods-found` and the other whole-program findings) run at startup only, where the conditions decide which beans count. If a module holds classes that must compile without checks, keep them in a module that does not apply the processor, or set `checks=false` there.
+
+=== Customizers
+
+A customizer (a `SchemaMappingDictionaryCustomizer`, a `RuntimeWiringCustomizer`, a customizer of the registry) adds schema or wiring that no schema file holds, and the compile-time checks do not see it. The checks read the files of `schema.dirs` only, and there is no option that makes the visitor run a customizer. A field that a customizer claims is the case of the `RuntimeWiringCustomizer` soundness exception above. Keep the schema a customizer adds in files and list their directory in `schema.dirs`, or leave that part to the startup.
+
+=== The escape hatches at compile time
+
+The way out of a compile-time check is an annotation on the code, not a setting: the compile-time check does not read `strict`, `checks.<code>` or `allow.*`. `@GraphQLArgument("<name>")` binds a parameter whose name is not the argument's, `@GraphQLSchemaCoordinate` binds a method to a field explicitly, `@GraphQLIgnore` takes a public method out of binding, and `@Introspected` on the class makes it introspected (see above). `checks=false` is the one switch for a whole compilation.
+
+=== Parameter names
+
+A method declared in the sources that Micronaut processes (Java, Kotlin or Groovy) binds by the name in its source: no `-parameters` flag is needed. The corpus compiles Java without `-parameters` and Groovy without `parameters`, so its `argument/` cases show it. The flag is needed for one case only: a method inherited from a class file without parameter names, such as an interface method of a dependency. See <<inputs,Inputs>>, "Where the names come from".
+
+== Support matrix
+
+Each cell is a combination of language, compiler and build tool, and links the test or sample that proves it. A sample is a small project with a Book resolver and a one-file schema, built against the library as published ({tests}/GradleSampleContract.java[`GradleSampleContract`] for Gradle, {tests}/MavenSampleContract.java[`MavenSampleContract`] for Maven). The engine column says which corpus run checks the findings of the language.
+
+[cols="2,2,3,3,3", options="header"]
+|===
+|Language |Compiler |Gradle |Maven |Findings of the language
+|Java |javac, `annotationProcessor` |{repo}/test-suite-build/samples/java-gradle[`java-gradle`], {tests}/JavaGradleSampleTest.java[test] |{repo}/test-suite-build/samples/java-maven[`java-maven`], {tests}/JavaMavenSampleTest.java[test] |the corpus compiles each case with javac in process (`BindingCorpusSpec`, part of `check`)
+|Kotlin |KSP2, `ksp` |{repo}/test-suite-build/samples/kotlin-ksp[`kotlin-ksp`], {tests}/KotlinKspGradleSampleTest.java[test] |no sample; KSP is not documented for Maven |the `corpusKotlin` task runs each Kotlin case under KSP2 (CI job `build tools`)
+|Kotlin |kapt, `kapt` |{repo}/test-suite-build/samples/kotlin-kapt[`kotlin-kapt`], {tests}/KotlinKaptGradleSampleTest.java[test] |{repo}/test-suite-build/samples/kotlin-kapt-maven[`kotlin-kapt-maven`], {tests}/KotlinKaptMavenSampleTest.java[test] |the `lang:all` cases of `corpusKotlin` run under kapt every night (`-Pcorpus.kotlin.processor=kapt`)
+|Groovy |the Groovy compiler, `compileOnly` or `provided` |{repo}/test-suite-build/samples/groovy-gradle[`groovy-gradle`], {tests}/GroovyGradleSampleTest.java[test] |{repo}/test-suite-build/samples/groovy-maven[`groovy-maven`], {tests}/GroovyMavenSampleTest.java[test] |the corpus compiles each case with the Groovy compiler and Micronaut's AST transformation in process (`BindingCorpusSpec`)
+|===
+
+The example suites apply the processor too: `test-suite-java` (`annotationProcessor`), `test-suite-kotlin` (`ksp`) and `test-suite-groovy` (`compileOnly`), each with a drift fixture that must fail to compile. `buildToolsTest` builds the samples and needs the network and, for Maven, `mvn`. It is not part of `build`; the CI job `build tools` runs it.
+
+== Incrementality
+
+The visitor is isolating: it checks each resolver class on its own, so an incremental compilation checks the classes that changed. {tests}/IncrementalCompilationContract.java[`IncrementalCompilationContract`] proves what that means for each Gradle sample (Java, kapt, KSP and Groovy). It builds a copy of the sample with 22 classes twice, once with the processor and once as a control without it, and applies the same edits to both. The set of class files that an incremental build rewrote (modification time, size or presence) must be the same in both, so the visitor makes the compiler redo no work that it would not redo anyway.
+
+[cols="3,5", options="header"]
+|===
+|Edit |What the test asserts
+|The body of a bean, the body of the resolver |The rewritten class files equal those of the control build.
+|The binary interface of `Book` |The same.
+|A new class with a stereotype that the visitor does not claim |The same.
+|A deleted class |The same.
+|Every state, built from scratch in a copy |It passes: an incremental build never fails where a clean build of the same sources passes.
+|A schema edit that drifts the resolver |The incremental build fails with the code and the coordinate, and the repair passes.
+|A schema edit (Gradle) |The checked task reruns, because the build declares the schema directory as an input ({tests}/GradleSampleContract.java[`GradleSampleContract`]); with nothing changed the task is up to date.
+|A schema edit (Maven) |A build without `clean` can pass on the old result: see the Maven rule below.
+|===
+
+The tests assert no wall-clock time. They record the clean and the incremental time with the JDK and the load of the machine in `build/reports/build-tools/outcomes.txt`, so a number is quoted with its context or not at all. The checks add no build cache problem: a clean rebuild takes the checked javac task from the build cache, and so does the same project at another path, because the schema input is path sensitive by its relative path ({tests}/GradleSampleContract.java[`GradleSampleContract`] asserts `FROM_CACHE` for the Java sample, `aCleanRebuildAndARelocatedProjectUseTheBuildCache`). For the kapt, KSP and Groovy tasks the tests record the outcome and assert only that the task passes: they take the absolute path of the schema as an input.
+
+=== The Maven rule
+
+Maven does not track the schema directory. The compiler plugin of a Java project calls the classes up to date after a schema edit, so run `mvn clean verify` after a schema edit. What each sample does without `clean` is asserted in {tests}/MavenSampleContract.java[`MavenSampleContract`]: the Java sample passes on the stale result, and the kapt and Groovy samples run again and fail on the drift. The documented rule is the same for all three: clean after a schema edit. The startup runs every check in any case.
+
+== Native image
+
+The compile-time checks run in the compiler and add nothing to the application at runtime: the processor goes on the compiler path (`annotationProcessor`, `ksp`, `kapt`, `compileOnly`, or Maven's `provided`), not on the runtime classpath, and the module depends on no runtime class. The visitor writes no file. It writes the type resolver contracts that a bean class inherits into the annotation metadata of the class (`@ResolverContracts`), which the startup reads from the bean definition without reflection, so a bean that is a type resolver only through an inherited annotation binds the same way on the JVM and in a native image. A build that does not run the processor fails such a bean at startup with `[type-resolver-contracts-not-found]`, which names the processor. The rule that the library uses no reflection is enforced by `ArchitectureRulesSpec` (see <<nativeImage,Native Image>>).
+
+== Troubleshooting
+
+[cols="2,5", options="header"]
+|===
+|Symptom |What to do
+|A schema edit does not fail the build |Gradle: the schema directory must be a declared input of the compile task (the snippets above do it); a `compilerArgs` string is not. Maven: run `mvn clean verify` after a schema edit.
+|The build prints no note about the checks |The processor did not run. Check the path of the compiler: `annotationProcessor` for javac, `ksp` or `kapt` for Kotlin (under kapt `compileJava` runs with `-proc:none`), `compileOnly` or `provided` for Groovy.
+|`[processor-schema-not-configured]` |Set `micronaut.graphql.tools.processor.schema.dirs` in this module, and `module.dir` next to it in a build with several modules. A schema that exists only in a jar cannot be read: point to a directory, or set `checks=false`.
+|A `[type-resolver-contracts-not-found]` at startup |The module that holds the bean does not run the processor.
+|A parameter is `arg0` in the message |The method is inherited from a class file built without `-parameters`: build the class with `-parameters`.
+|A warning `class-not-introspected` fails a `-Werror` build |Put `@Introspected` on the class.
+|The checks and the startup disagree on a getter name |Set `resolverAccessorPrefixes` to the value of `micronaut.graphql.tools.resolver-accessor-prefixes`.
+|===

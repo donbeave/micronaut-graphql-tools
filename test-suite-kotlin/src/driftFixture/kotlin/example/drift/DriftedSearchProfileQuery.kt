@@ -18,6 +18,7 @@ package example.drift
 import example.graphql.type.Profile
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
+// tag::drifted[]
 /**
  * A resolver that drifts from the schema on purpose: the argument of `Query.searchProfile` is named `limit`, and the parameter is
  * named `count`. The compilation of this source set must fail with `[argument-mismatch] Query.searchProfile` (task
@@ -28,3 +29,4 @@ open class DriftedSearchProfileQuery {
 
     open fun searchProfile(contains: String, count: Int?): List<Profile> = emptyList()
 }
+// end::drifted[]
