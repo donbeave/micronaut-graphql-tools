@@ -63,6 +63,12 @@ tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative"
 // so that a schema edit reruns them. `module.dir` is the project directory: a compilation that forgot the options in the same JVM
 // fails instead of reading these.
 val graphqlSchemaDirs = files("src/main/resources")
+// The checks cover `main` only: the test fixtures (for example the precedence classes) have no schema file in the schema directories.
+// KSP gives `kspTest` the processors of `ksp`, so the processor is excluded from it.
+configurations.matching { it.name == "kspTest" }.configureEach {
+    val processor = project(":graphql-tools-processor")
+    exclude(group = processor.group.toString(), module = processor.name)
+}
 ksp {
     arg("micronaut.graphql.tools.processor.schema.dirs", graphqlSchemaDirs.files.joinToString(File.pathSeparator) { it.absolutePath })
     arg("micronaut.graphql.tools.processor.module.dir", layout.projectDirectory.asFile.absolutePath)
