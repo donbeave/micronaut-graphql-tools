@@ -219,7 +219,7 @@ where the gate is skipped (the module is not built there). Run the update on 21 
 - Create a branch, commit with `git commit -s` (DCO sign-off) and push it to your fork or to a branch of the repository.
 - Use a [conventional commit](https://www.conventionalcommits.org/) style title for the pull request (`feat:`, `fix:`, `docs:`, `build:`, `ci:`, `perf:`, `test:`, `chore:`). It becomes the squashed commit message.
 - Run `./gradlew build` before you push, and link the issue the change closes (`Closes #123`).
-- Comments and docs give their reason in place. Do not cite decision IDs, design rule IDs, planning files or links outside this repository; cite an issue or pull request number instead. `NoPlanningReferencesSpec` fails `check` on such a reference.
+- Comments and docs give their reason in place. Do not cite decision IDs, design rule IDs or planning files, and do not link to notes kept outside this repository; cite an issue or pull request number instead. `NoPlanningReferencesSpec` fails `check` on the first three; reviewers check the links.
 - Fill in the checklist of the [pull request template](.github/PULL_REQUEST_TEMPLATE.md).
 - Send us a [pull request](https://help.github.com/articles/creating-a-pull-request).
 

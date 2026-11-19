@@ -75,6 +75,31 @@ class NoPlanningReferencesSpec extends Specification {
 
     static List<String> scan(Path base) {
         def findings = []
+        treeFiles(base).each { file ->
+            def bytes = Files.readAllBytes(file)
+            if ((0..<bytes.length).any { bytes[it] == (byte) 0 }) {
+                return
+            }
+            new String(bytes, StandardCharsets.UTF_8).split('\n', -1).eachWithIndex { line, index ->
+                if (FORBIDDEN.any { it.matcher(line).find() }) {
+                    findings << "${base.relativize(file)}:${index + 1}: ${line.trim()}".toString()
+                }
+            }
+        }
+        findings
+    }
+
+    // The files Git tracks or would track, so ignored local content (an IDE folder, a log) is not scanned.
+    // Outside a Git work tree, every file below the base that is not in a skipped directory.
+    static List<Path> treeFiles(Path base) {
+        def git = new ProcessBuilder('git', '-C', base.toString(), 'ls-files', '-z', '--cached', '--others', '--exclude-standard')
+                .redirectError(ProcessBuilder.Redirect.DISCARD).start()
+        def listed = git.inputStream.readAllBytes()
+        if (git.waitFor() == 0) {
+            return new String(listed, StandardCharsets.UTF_8).split('\u0000').collect { base.resolve(it) }
+                    .findAll { Files.isRegularFile(it) && !inSkippedDirectory(base, it) }
+        }
+        def files = []
         Files.walkFileTree(base, new SimpleFileVisitor<Path>() {
             @Override
             FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
@@ -83,18 +108,15 @@ class NoPlanningReferencesSpec extends Specification {
 
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                def bytes = Files.readAllBytes(file)
-                if ((0..<bytes.length).any { bytes[it] == (byte) 0 }) {
-                    return FileVisitResult.CONTINUE
-                }
-                new String(bytes, StandardCharsets.UTF_8).split('\n', -1).eachWithIndex { line, index ->
-                    if (FORBIDDEN.any { it.matcher(line).find() }) {
-                        findings << "${base.relativize(file)}:${index + 1}: ${line.trim()}".toString()
-                    }
-                }
+                files << file
                 FileVisitResult.CONTINUE
             }
         })
-        findings
+        files
+    }
+
+    static boolean inSkippedDirectory(Path base, Path file) {
+        def parts = base.relativize(file).collect { it.toString() }
+        parts.dropRight(1).any { SKIPPED_DIRECTORIES.contains(it) }
     }
 }
