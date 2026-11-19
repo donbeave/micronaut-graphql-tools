@@ -58,7 +58,7 @@ public final class GraphQLFactory {
     public GraphQLSchema graphQLSchema(ApplicationContext applicationContext,
                                        GraphQLResolversRegistry graphQLResolversRegistry,
                                        TypeDefinitionRegistry typeDefinitionRegistry,
-                                       SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer,
+                                       List<SchemaMappingDictionaryCustomizer> schemaMappingDictionaryCustomizers,
                                        GraphQLToolsConfiguration configuration,
                                        List<TypeDefinitionRegistryCustomizer> typeDefinitionRegistryCustomizers,
                                        List<RuntimeWiringCustomizer> runtimeWiringCustomizers,
@@ -67,7 +67,7 @@ public final class GraphQLFactory {
                                        List<BeanRegistration<SchemaDirective>> schemaDirectives,
                                        BindingManifestHolder bindingManifestHolder) {
         SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
-        schemaMappingDictionaryCustomizer.customize(schemaMappingDictionary);
+        schemaMappingDictionaryCustomizers.forEach(customizer -> customizer.customize(schemaMappingDictionary));
 
         TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(typeDefinitionRegistry);
         typeDefinitionRegistryCustomizers.forEach(customizer -> customizer.customize(registry));
