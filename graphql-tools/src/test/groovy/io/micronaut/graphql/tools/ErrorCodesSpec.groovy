@@ -37,9 +37,10 @@ class ErrorCodesSpec extends Specification {
 
         when:
         def classes = Files.walk(dir).withCloseable { stream ->
-            stream.map { dir.relativize(it).toString() }
-                    .filter { it.endsWith('.class') && !it.contains('$') && !it.endsWith('package-info.class') }
-                    .map { Class.forName('io.micronaut.graphql.tools.internal.exceptions.' + it.substring(0, it.length() - 6).replace('/', '.')) }
+            stream.map { dir.relativize(it) }
+                    .filter { it.toString().endsWith('.class') && !it.toString().contains('$') && !it.endsWith('package-info.class') }
+                    // the name comes from the path elements, so a Windows separator never reaches Class.forName
+                    .map { Class.forName('io.micronaut.graphql.tools.internal.exceptions.' + (it.collect { part -> part.toString() }.join('.') - '.class')) }
                     .toList()
         }
 
