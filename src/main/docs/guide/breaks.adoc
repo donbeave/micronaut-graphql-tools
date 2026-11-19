@@ -12,11 +12,9 @@ Tagged `1.0.0-M2` and published to GitHub Packages. The breaking changes are num
 
 * BC-20 (#173): the `graphql-tools` mapper seam is internal and no longer documented. See the migration page, entries for 1.0.0-M2.
 
-== Planned after 1.0.0-M2
+== 1.0.0-M3
 
-These changes are planned for the 1.0.0 milestones. Each one is _pending_ until it lands on `master`; the migration page describes each one.
-
-=== 1.0.0-M3
+Tagged `1.0.0-M3` and published to GitHub Packages. The breaking changes are numbered `BC-21` to `BC-33`, as in the release notes of 1.0.0-M3. See the migration page, entries for 1.0.0-M3, for the fix of each one.
 
 * #33 (BC-21): a bound Java enum needs a bean introspection (`@Introspected`); the startup fails without one. See the migration page, entries for 1.0.0-M3.
 * #237 (BC-22): one code system for checks and errors. Messages start with `[code]`, and the `!` lines of the binding manifest are named by the code. See the migration page, entries for 1.0.0-M3.
