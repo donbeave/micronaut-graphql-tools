@@ -17,6 +17,8 @@ package io.micronaut.graphql.tools
 
 import graphql.Directives
 import spock.lang.Specification
+import io.micronaut.graphql.tools.internal.wiring.GraphQLSpecifiedDirectives
+import io.micronaut.graphql.tools.internal.GraphQLUtils
 
 /**
  * The library keeps its own set of built-in directive names, because {@code DirectiveInfo} is gone in graphql-java 26 and

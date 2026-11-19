@@ -37,7 +37,6 @@ class PackageDocumentationSpec extends Specification {
 
     /** A package over the limit needs an entry here, with the reason and the issue that removes it. */
     static final Map<String, String> OVER_THE_LIMIT = [
-            'io.micronaut.graphql.tools'            : 'public API and @Internal implementation share the package until the split of #354',
             'io.micronaut.graphql.tools.internal.exceptions': 'one small class for each kind of failure, so the package is a flat list; the classes are internal',
     ]
 

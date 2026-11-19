@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Start-up report (#39): binding time and retained heap per schema size, as medians of cold JVMs.
+"""Start-up report (#39): binding time and retained heap per schema shape and size, as medians of cold JVMs.
 
-Run from anywhere. For each schema size it builds a JMH jar that generates that size only (-PlargeFields), then runs
-both start-up benchmarks on it, one fresh JVM per fork. The last jar built stays in benchmarks/build/libs, so run
+Run from anywhere. For each schema shape and size it builds a JMH jar that generates that case only (-PlargeFields,
+-PlargeShape), then runs both start-up benchmarks on it, one fresh JVM per fork. The last jar built stays in benchmarks/build/libs, so run
 `./gradlew :benchmarks:jmhJar` again before the other benchmarks:
 
   python3 benchmarks/scripts/startup-report.py                       run, print the medians
@@ -26,7 +26,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BENCHMARKS = "BindingBenchmark|RetainedHeapBenchmark"
 STARTUP_CLASSES = ("BindingBenchmark", "RetainedHeapBenchmark")
-SIZES = (100, 1600, 3000, 10000, 20000)
+# (shape, fields): the rings of up to 100 types at every size, and the interface-heavy schema (#368) at two
+CASES = tuple(("rings", size) for size in (100, 1600, 3000, 10000, 20000)) + (("interfaces", 3000), ("interfaces", 20000))
 MB = 1e6
 
 
@@ -36,13 +37,15 @@ def per_fork(metric):
 
 
 def cases(results):
-    """(fields, manifest recorded) -> {"ms": per-fork binding time, "bytes": per-fork retained heap}."""
+    """(shape, fields, manifest recorded) -> {"ms": per-fork binding time, "bytes": per-fork retained heap}."""
     table = {}
     for result in results:
         cls = result["benchmark"].split(".")[-2]
         if cls not in STARTUP_CLASSES:
             continue
-        key = (int(result["params"]["fields"]), result["params"]["record"] == "true")
+        # a JSON archived before the interface-heavy schema has no shape parameter: it is the rings
+        key = (result["params"].get("shape", "rings"), int(result["params"]["fields"]),
+               result["params"]["record"] == "true")
         entry = table.setdefault(key, {"ms": [], "bytes": []})
         if cls == "BindingBenchmark":
             entry["ms"] = per_fork(result["primaryMetric"])
@@ -52,17 +55,17 @@ def cases(results):
 
 
 def label(key):
-    fields, record = key
-    return f"fields={fields:,} manifest={'on' if record else 'off'}"
+    shape, fields, record = key
+    return f"{shape} fields={fields:,} manifest={'on' if record else 'off'}"
 
 
 def print_medians(results, out):
     first = results[0]
     out.write(f"JDK {first['jdkVersion']} ({first['vmName']}), {first['forks']} forks per case\n")
-    out.write(f"{'case':<46}{'median ms':>11}{'min ms':>10}{'max ms':>10}{'median retained MB':>21}\n")
+    out.write(f"{'case':<56}{'median ms':>11}{'min ms':>10}{'max ms':>10}{'median retained MB':>21}\n")
     for key, entry in sorted(cases(results).items()):
         ms, retained = entry["ms"], entry["bytes"]
-        out.write(f"{label(key):<46}{statistics.median(ms):>11.1f}{min(ms):>10.1f}{max(ms):>10.1f}"
+        out.write(f"{label(key):<56}{statistics.median(ms):>11.1f}{min(ms):>10.1f}{max(ms):>10.1f}"
                   f"{statistics.median(retained) / MB:>21.2f}\n")
 
 
@@ -76,28 +79,29 @@ def print_change(results, previous, out):
         for name, unit, scale in (("ms", "ms", 1.0), ("bytes", "MB", MB)):
             new = statistics.median(now[key][name]) / scale
             old = statistics.median(before[key][name]) / scale
-            out.write(f"  {label(key):<46} {name:<6}{old:>10.2f} -> {new:>10.2f} {unit} "
+            out.write(f"  {label(key):<56} {name:<6}{old:>10.2f} -> {new:>10.2f} {unit} "
                       f"({new - old:+.2f} {unit}, {100.0 * (new - old) / old:+.1f}%)\n")
 
 
 def run_jmh(json_path, forks):
-    """One jar per schema size, so that the other sizes are not on the classpath of the JVM that measures a size."""
+    """One jar per schema shape and size, so that the other cases are not on the classpath of the JVM that measures one."""
     results = []
     with tempfile.TemporaryDirectory(prefix="startup-report-") as tmp:
-        for size in SIZES:
+        for shape, size in CASES:
             # A jar of an earlier build (another project version or size) must not be taken for this one: remove them
             # first, so that the build recreates the jar, and take the newest below in any case.
             for stale in (ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"):
                 stale.unlink()
-            subprocess.run([str(ROOT / "gradlew"), ":benchmarks:jmhJar", f"-PlargeFields={size}", "--no-daemon"],
+            subprocess.run([str(ROOT / "gradlew"), ":benchmarks:jmhJar", f"-PlargeFields={size}", f"-PlargeShape={shape}",
+                            "--no-daemon"],
                            cwd=ROOT, check=True)
             jars = sorted((ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"), key=lambda p: p.stat().st_mtime)
             if not jars:
                 sys.exit("no benchmark jar in benchmarks/build/libs")
-            jar = Path(tmp) / f"jmh-{size}.jar"
-            part = Path(tmp) / f"jmh-{size}.json"
+            jar = Path(tmp) / f"jmh-{shape}-{size}.jar"
+            part = Path(tmp) / f"jmh-{shape}-{size}.json"
             jar.write_bytes(jars[-1].read_bytes())
-            subprocess.run(["java", "-jar", str(jar), BENCHMARKS, "-p", f"fields={size}", "-f", str(forks),
+            subprocess.run(["java", "-jar", str(jar), BENCHMARKS, "-p", f"fields={size}", "-p", f"shape={shape}", "-f", str(forks),
                             "-wi", "0", "-i", "1", "-bm", "ss", "-rf", "json", "-rff", str(part)],
                            cwd=ROOT, check=True)
             results.extend(load(part))

@@ -17,7 +17,7 @@ package example.claimed;
 
 import graphql.ExecutionResult;
 import graphql.GraphQL;
-import io.micronaut.graphql.tools.BindingManifest;
+import io.micronaut.graphql.tools.manifest.BindingManifest;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;

@@ -22,7 +22,6 @@ import io.micronaut.runtime.context.scope.refresh.RefreshEvent
 import io.micronaut.runtime.http.scope.RequestScope
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.GraphQLFactory
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver

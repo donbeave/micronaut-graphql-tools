@@ -31,7 +31,7 @@ import java.util.TreeSet;
 
 /**
  * The options of the visitor, read from the options of the compilation: {@code -A} under javac and kapt, {@code arg}
- * under KSP, system properties under the Groovy compiler. There are three, all under {@code micronaut.graphql.tools.processor.},
+ * under KSP, system properties under the Groovy compiler. There are four, all under {@code micronaut.graphql.tools.processor.},
  * a segment that no runtime key uses, so that the visitor rejects an unknown key there without failing on a runtime key that
  * happens to be a system property.
  *
@@ -39,9 +39,12 @@ import java.util.TreeSet;
  * @param moduleDir  the directory of the module that sets {@code schema.dirs}, null when the option is absent; the output of
  *                   the compilation must lie inside it, or the options are those of an earlier compilation of the same JVM
  * @param checks     whether the checks run
+ * @param accessorPrefixes whether a resolver method {@code getX} or {@code isX} also binds the field {@code x}, as
+ *                   {@code micronaut.graphql.tools.resolver-accessor-prefixes} says at startup
  * @param errors     the options that are wrong; the checks do not run when there are any
  */
-record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean checks, List<Finding> errors) {
+record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean checks,
+                        boolean accessorPrefixes, List<Finding> errors) {
 
     static final String PREFIX = "micronaut.graphql.tools.processor.";
 
@@ -51,7 +54,9 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
     static final String MODULE_DIR = PREFIX + "module.dir";
 
-    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS);
+    static final String ACCESSOR_PREFIXES = PREFIX + "resolverAccessorPrefixes";
+
+    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES);
 
     /** The key of the JSR-269 processor that the visitor replaces. */
     static final String REMOVED_SDL_DIR = "micronaut.graphql.tools.sdlDir";
@@ -75,17 +80,8 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
                     + ": pass the schema directories there (several are joined with the path separator)"));
         }
 
-        boolean checks = true;
-        String checksValue = options.get(CHECKS);
-        if (checksValue != null) {
-            String normalized = checksValue.trim().toLowerCase(Locale.ROOT);
-            if (Set.of("false", "no", "off").contains(normalized)) {
-                checks = false;
-            } else if (!Set.of("true", "yes", "on").contains(normalized)) {
-                errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, CHECKS + " must be true or false (or yes/no, "
-                        + "on/off), not '" + checksValue + "'"));
-            }
-        }
+        boolean checks = flag(options, CHECKS, true, errors);
+        boolean accessorPrefixes = flag(options, ACCESSOR_PREFIXES, false, errors);
 
         List<Path> directories = new ArrayList<>();
         String dirsValue = options.get(SCHEMA_DIRS);
@@ -111,7 +107,23 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
                         + moduleValue.trim() + "' (" + e.getReason() + ")"));
             }
         }
-        return new ProcessorOptions(directories, moduleDir, checks, errors);
+        return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes, errors);
+    }
+
+    private static boolean flag(Map<String, String> options, String name, boolean absent, List<Finding> errors) {
+        String value = options.get(name);
+        if (value == null) {
+            return absent;
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if (Set.of("false", "no", "off").contains(normalized)) {
+            return false;
+        }
+        if (!Set.of("true", "yes", "on").contains(normalized)) {
+            errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, name + " must be true or false (or yes/no, "
+                    + "on/off), not '" + value + "'"));
+        }
+        return normalized.equals("true") || normalized.equals("yes") || normalized.equals("on");
     }
 
     private static Finding error(BindingCode code, String sentence) {

@@ -15,7 +15,7 @@
  */
 package example.tck
 
-import io.micronaut.graphql.tools.ArgumentValue
+import io.micronaut.graphql.tools.input.ArgumentValue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

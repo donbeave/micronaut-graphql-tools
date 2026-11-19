@@ -41,7 +41,8 @@ not hide the findings of the next one, because the checked compilation of a modu
 it. The startup runs with every module on the classpath. A language directory holds either packages or modules, never both.
 
 Case names are the relative paths. `tags` are free `key:value` words; `lang:all` means the case has a Java, a Groovy and
-a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.graphql.tools.strict=false`).
+a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.graphql.tools.strict=false`); the checks-on compilation also gets
+`config.micronaut.graphql.tools.resolver-accessor-prefixes` as the visitor option `micronaut.graphql.tools.processor.resolverAccessorPrefixes`.
 
 ## What the runner asserts
 

@@ -24,7 +24,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 @Requires(property = "spec.name", value = "IntroductionCoordinateSpec")
 public interface IntroductionCoordinateResolver {
 
-    @GraphQLSchemaCoordinate("Query.hello")
+    @GraphQLSchemaCoordinate("Query.nowhere")
     String greeting();
 
 }

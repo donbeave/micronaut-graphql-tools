@@ -23,7 +23,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.context.exceptions.ConfigurationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.GraphQLRuntimeWiringGenerator
+import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
@@ -189,7 +189,7 @@ type Item {
 
         when:
         def result = executeQuery('{ items { name price } }')
-        def manifest = applicationContext.getBean(io.micronaut.graphql.tools.BindingManifest)
+        def manifest = applicationContext.getBean(io.micronaut.graphql.tools.manifest.BindingManifest)
 
         then:
         result.errors.isEmpty()

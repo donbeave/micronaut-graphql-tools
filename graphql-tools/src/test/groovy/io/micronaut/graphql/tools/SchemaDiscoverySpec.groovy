@@ -23,7 +23,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaIndex
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.schema.SchemaDiscovery
+import io.micronaut.graphql.tools.internal.discovery.SchemaDiscovery
 import spock.lang.Specification
 import spock.lang.TempDir
 

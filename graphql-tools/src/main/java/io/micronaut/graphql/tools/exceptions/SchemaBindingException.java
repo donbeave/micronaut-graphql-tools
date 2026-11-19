@@ -16,7 +16,7 @@
 package io.micronaut.graphql.tools.exceptions;
 
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.MappingContext;
+import io.micronaut.graphql.tools.mapping.MappingContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
 
 import java.util.List;

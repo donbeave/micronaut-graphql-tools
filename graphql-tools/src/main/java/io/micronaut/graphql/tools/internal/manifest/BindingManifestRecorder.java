@@ -1,0 +1,234 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.micronaut.graphql.tools.internal.manifest;
+
+import graphql.language.FieldDefinition;
+import graphql.language.ObjectTypeDefinition;
+import graphql.schema.idl.TypeDefinitionRegistry;
+import io.micronaut.aop.Intercepted;
+import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.beans.BeanProperty;
+import io.micronaut.core.type.Argument;
+import io.micronaut.core.type.Executable;
+import io.micronaut.graphql.tools.manifest.BindingManifest;
+import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
+import io.micronaut.graphql.tools.binding.internal.manifest.SchemaHash;
+import io.micronaut.graphql.tools.binding.internal.plan.BindingPlan;
+import io.micronaut.graphql.tools.internal.JavaTypeNames;
+import io.micronaut.graphql.tools.internal.MicronautUtils;
+import io.micronaut.graphql.tools.internal.resolver.ReturnTypes;
+import io.micronaut.graphql.tools.internal.wiring.GraphQLSpecifiedDirectives;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import static io.micronaut.graphql.tools.internal.GraphQLUtils.printType;
+
+/** Collects what the binding decides, to build the binding manifest at startup. */
+@Internal
+public final class BindingManifestRecorder {
+
+    public static final String KIND_ROOT = "root";
+    public static final String KIND_RESOLVER = "resolver";
+    public static final String KIND_PROPERTY = "property";
+    static final String KIND_CLAIMED = "claimed";
+
+    private static final String NONE = BindingPlan.NONE;
+
+    private final Map<String, BindingPlan.Entry> entries = new HashMap<>();
+    private final Set<String> diagnostics = new TreeSet<>();
+    private final Set<String> ignored = new TreeSet<>();
+    private final Set<String> scalars = new TreeSet<>();
+    private final boolean recording;
+
+  public   BindingManifestRecorder(boolean recording) {
+        this.recording = recording;
+    }
+
+    public boolean isRecording() {
+        return recording;
+    }
+
+    public void type(String typeName, String kind, @Nullable Class<?> javaType) {
+        if (!recording) {
+            return;
+        }
+        entries.put(typeName, BindingPlan.Entry.of(typeName, kind,
+                () -> javaType == null ? NONE : nameOf(javaType)));
+    }
+
+    public void scalar(String typeName) {
+        scalars.add(typeName);
+    }
+
+    public void field(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String kind,
+               Supplier<String> member, Argument<?> declaredType, boolean subscription) {
+        if (!recording) {
+            return;
+        }
+        entries.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                new BindingPlan.Entry(coordinate(objectTypeDefinition, fieldDefinition), kind, member,
+                        () -> JavaTypeNames.of(declaredType),
+                        () -> ReturnTypes.convertedTypeName(declaredType, subscription, true)));
+    }
+
+    public void claimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String customizer) {
+        if (!recording) {
+            return;
+        }
+        entries.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
+                BindingPlan.Entry.of(coordinate(objectTypeDefinition, fieldDefinition), KIND_CLAIMED, () -> customizer));
+    }
+
+    private static String coordinate(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition) {
+        StringBuilder coordinate = new StringBuilder(objectTypeDefinition.getName()).append('.')
+                .append(fieldDefinition.getName());
+        if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
+            coordinate.append(fieldDefinition.getInputValueDefinitions().stream()
+                    .map(it -> it.getName() + ": " + printType(it.getType()))
+                    .collect(Collectors.joining(", ", "(", ")")));
+        }
+        return coordinate.append(": ").append(printType(fieldDefinition.getType())).toString();
+    }
+
+    public void resolves(String abstractTypeName, String objectTypeName, Class<?> javaType) {
+        if (!recording) {
+            return;
+        }
+        entries.put(abstractTypeName + "/" + objectTypeName,
+                BindingPlan.Entry.of(abstractTypeName + "/" + objectTypeName, "resolves", () -> nameOf(javaType)));
+    }
+
+    public void enumValue(String enumTypeName, String value, Class<?> enumClass) {
+        if (!recording) {
+            return;
+        }
+        entries.put(enumTypeName + "." + value, BindingPlan.Entry.of(enumTypeName + "." + value, "enumValue",
+                () -> enumClass.getTypeName() + "#" + value));
+    }
+
+    public void inputField(String inputTypeName, String fieldName, graphql.language.Type<?> graphQlType, Class<?> inputClass,
+                    BeanProperty<?, ?> property) {
+        if (!recording) {
+            return;
+        }
+        entries.put(inputTypeName + "." + fieldName, new BindingPlan.Entry(
+                inputTypeName + "." + fieldName + ": " + printType(graphQlType), "inputField",
+                () -> inputClass.getTypeName() + "#" + property.getName(),
+                () -> JavaTypeNames.of(property.asArgument()),
+                () -> ReturnTypes.convertedTypeName(property.asArgument(), false, false)));
+    }
+
+    public void diagnostic(BindingCode code, String... parts) {
+        if (!recording) {
+            return;
+        }
+        diagnostics.add(diagnosticLine(code, parts));
+    }
+
+    /**
+     * @param code  the check
+     * @param parts the subject of the finding
+     * @return the {@code !} line that the manifest has for the finding, which is also what {@code allow.findings} lists
+     */
+    public static String diagnosticLine(BindingCode code, String... parts) {
+        return ManifestRenderer.diagnostic(code.code(), parts);
+    }
+
+    public void ignored(String member) {
+        if (!recording) {
+            return;
+        }
+        ignored.add(ManifestRenderer.ignored(member));
+    }
+
+    public boolean isScalarReached(String typeName) {
+        return scalars.contains(typeName);
+    }
+
+    Set<String> getDiagnostics() {
+        return diagnostics;
+    }
+
+    @Nullable
+    public BindingManifest build(TypeDefinitionRegistry registry) {
+        if (!recording) {
+            return null;
+        }
+        List<BindingPlan.Entry> bound = new ArrayList<>(entries.values());
+        for (String scalar : scalars) {
+            bound.add(BindingPlan.Entry.of(scalar, "scalar", () -> scalar));
+        }
+        BindingPlan plan = new BindingPlan(bound, List.copyOf(diagnostics), List.copyOf(ignored));
+        return new BindingManifest(() -> {
+            List<String> header = ManifestRenderer.header(
+                    version(BindingManifestRecorder.class.getPackage().getImplementationVersion()),
+                    GraphQLJavaVersion.get(),
+                    SchemaHash.sha256(registry, GraphQLSpecifiedDirectives::isProvided));
+            ManifestRenderer.Rendered rendered = ManifestRenderer.render(plan, header);
+            return Map.entry(rendered.header(), rendered.lines());
+        });
+    }
+
+    public static String methodMember(Executable<?, ?> executable, Class<?> ownerType) {
+        return userClass(ownerType).getTypeName() + "#" + MicronautUtils.getMethodName(executable)
+                + JavaTypeNames.parameters(executable);
+    }
+
+    public static String introspectedMethodMember(Executable<?, ?> executable, Class<?> beanType) {
+        String member = CompileTimeAccessors.get().get(beanType.getTypeName() + "#"
+                + MicronautUtils.getMethodName(executable) + "/" + executable.getArguments().length);
+        return member != null ? member : methodMember(executable, beanType);
+    }
+
+    public static String propertyMember(BeanProperty<?, ?> beanProperty) {
+        String beanType = beanProperty.getDeclaringBean().getBeanType().getTypeName();
+        String member = CompileTimeAccessors.get().get(beanType + "#" + beanProperty.getName());
+        return member != null ? member : beanType + "#" + beanProperty.getName();
+    }
+
+    public static String nameOf(Class<?> type) {
+        Class<?> named = userClass(type);
+        while (named.isAnonymousClass() || named.isHidden() || named.isSynthetic()) {
+            Class<?> next = named.isAnonymousClass() && named.getEnclosingClass() != null ? named.getEnclosingClass()
+                    : named.getInterfaces().length > 0 ? named.getInterfaces()[0] : named.getSuperclass();
+            if (next == null || next == named) {
+                break;
+            }
+            named = userClass(next);
+        }
+        return named.getTypeName();
+    }
+
+    private static Class<?> userClass(Class<?> type) {
+        if (Intercepted.class.isAssignableFrom(type) && type.getSuperclass() != null) {
+            return type.getSuperclass();
+        }
+        return type;
+    }
+
+    private static String version(@Nullable String version) {
+        return version == null || version.isBlank() ? "unknown" : version;
+    }
+
+}

@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.internal.exceptions;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.BindingCode;
-import io.micronaut.graphql.tools.MappingContext;
+import io.micronaut.graphql.tools.mapping.MappingContext;
 
 import java.util.Comparator;
 import java.util.List;

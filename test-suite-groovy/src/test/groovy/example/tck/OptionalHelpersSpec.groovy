@@ -15,7 +15,7 @@
  */
 package example.tck
 
-import io.micronaut.graphql.tools.ArgumentValue
+import io.micronaut.graphql.tools.input.ArgumentValue
 import spock.lang.Specification
 
 class OptionalHelpersSpec extends Specification {

@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools
 import io.micronaut.inject.BeanDefinition
 import io.micronaut.inject.ExecutableMethod
 import spock.lang.Specification
+import io.micronaut.graphql.tools.internal.model.BeanDefinitionAndMethods
 
 class BeanDefinitionAndMethodsSpec extends Specification {
 

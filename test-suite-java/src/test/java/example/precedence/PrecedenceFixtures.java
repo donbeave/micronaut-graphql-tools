@@ -23,8 +23,8 @@ import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer;
-import io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
 import jakarta.inject.Singleton;
 
 @Factory

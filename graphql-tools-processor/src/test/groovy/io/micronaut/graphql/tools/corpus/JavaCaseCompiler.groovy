@@ -42,6 +42,11 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
     static final String LEGACY_PROCESSOR_PACKAGE = 'io.micronaut.graphql.tools.processing'
 
     /** The visitor of this module is on the test classpath: this compilation only builds the case, a binder checks it. */
+    /** The runtime key of a case that the visitor reads as an option of its own. */
+    static final String ACCESSOR_PREFIXES_CONFIG = 'micronaut.graphql.tools.resolver-accessor-prefixes'
+
+    static final String ACCESSOR_PREFIXES = 'micronaut.graphql.tools.processor.resolverAccessorPrefixes'
+
     static final String CHECKS_OFF = 'micronaut.graphql.tools.processor.checks=false'
 
     @Override
@@ -71,6 +76,10 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
     @Override
     CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
         List<String> checked = CompileOptions.of(corpusCase, work).collect { String key, String value -> "-A${key}=${value}".toString() }
+        String prefixes = corpusCase.config[ACCESSOR_PREFIXES_CONFIG]
+        if (prefixes != null) {
+            checked.add("-A${ACCESSOR_PREFIXES}=${prefixes}".toString())
+        }
         List<SourceUnit> units = corpusCase.units(Language.JAVA)
         List<Path> dependencies = []
         List<String> errors = []

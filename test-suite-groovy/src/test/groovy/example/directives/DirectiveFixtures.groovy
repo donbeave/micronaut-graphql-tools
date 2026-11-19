@@ -24,7 +24,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.io.ResourceResolver
-import io.micronaut.graphql.tools.SchemaDirective
+import io.micronaut.graphql.tools.directive.SchemaDirective
 import jakarta.inject.Singleton
 
 @CompileStatic

@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools
 
 import spock.lang.Specification
+import io.micronaut.graphql.tools.internal.checks.StrictModeChecks
 
 class StrictModeChecksSpec extends Specification {
 

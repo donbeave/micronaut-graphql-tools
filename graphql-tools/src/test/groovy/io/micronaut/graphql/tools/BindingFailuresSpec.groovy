@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
 import graphql.parser.MultiSourceReader
 import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry

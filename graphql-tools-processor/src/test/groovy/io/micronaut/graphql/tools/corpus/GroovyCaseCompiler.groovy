@@ -66,6 +66,10 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
     @Override
     CompiledCase compileChecked(CorpusCase corpusCase, Path work) {
         Map<String, String> checked = CompileOptions.of(corpusCase, work)
+        String prefixes = corpusCase.config[JavaCaseCompiler.ACCESSOR_PREFIXES_CONFIG]
+        if (prefixes != null) {
+            checked.put(JavaCaseCompiler.ACCESSOR_PREFIXES, prefixes)
+        }
         List<SourceUnit> units = corpusCase.units(Language.GROOVY)
         List<Path> dependencies = []
         List<String> errors = []

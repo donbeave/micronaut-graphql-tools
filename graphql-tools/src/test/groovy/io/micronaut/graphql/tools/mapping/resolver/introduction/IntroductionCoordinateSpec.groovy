@@ -31,6 +31,7 @@ class IntroductionCoordinateSpec extends AbstractTest {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.UNKNOWN_SCHEMA_COORDINATE
+        e.cause.message.contains('the type Query has no field nowhere.')
     }
 
 }

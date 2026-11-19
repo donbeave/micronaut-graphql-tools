@@ -35,7 +35,7 @@ import java.util.TreeSet;
 public final class InputTypeRules {
 
     /** The binary name of the wrapper that tells an omitted value from a null. */
-    public static final String ARGUMENT_VALUE = "io.micronaut.graphql.tools.ArgumentValue";
+    public static final String ARGUMENT_VALUE = "io.micronaut.graphql.tools.input.ArgumentValue";
 
     // the declared types a list argument may have: the collections that the startup instantiates (an ArrayList, a
     // LinkedHashSet, a TreeSet or a LinkedList) and every type that those collections have as a supertype

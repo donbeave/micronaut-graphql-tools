@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.customizer;
 import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
 import jakarta.inject.Singleton;
 
 @Requires(property = "spec.name", value = "RuntimeWiringCustomizerSpec.shadowJava")

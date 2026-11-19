@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.internal.exceptions;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.BindingCode;
-import io.micronaut.graphql.tools.MappingContext;
+import io.micronaut.graphql.tools.mapping.MappingContext;
 
 /**
  * Thrown when an object type of a union or interface is mapped to a Java type that is provably disjoint from the Java

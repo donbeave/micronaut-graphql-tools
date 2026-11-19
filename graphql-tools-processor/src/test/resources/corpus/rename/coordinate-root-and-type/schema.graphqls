@@ -1,0 +1,13 @@
+schema {
+  query: Query
+}
+
+type Query {
+  default: String!
+  parcel: Parcel
+}
+
+type Parcel {
+  id: ID!
+  class: String!
+}

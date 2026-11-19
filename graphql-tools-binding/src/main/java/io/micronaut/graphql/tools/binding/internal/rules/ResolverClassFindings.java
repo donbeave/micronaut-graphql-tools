@@ -75,6 +75,17 @@ public final class ResolverClassFindings {
      * @return the findings, in declaration order of the methods
      */
     public static List<Finding> check(SchemaModel schema, TypeModel model, JClass resolver) {
+        return check(schema, model, resolver, false);
+    }
+
+    /**
+     * @param schema           the schema
+     * @param model            the type model
+     * @param resolver         a concrete resolver class, or an introduction interface that is a resolver bean
+     * @param accessorPrefixes whether {@code getX} and {@code isX} also bind the field {@code x}
+     * @return the findings, in declaration order of the methods
+     */
+    public static List<Finding> check(SchemaModel schema, TypeModel model, JClass resolver, boolean accessorPrefixes) {
         boolean root = resolver.annotations().has(AnnotationNames.ROOT_RESOLVER);
         boolean type = resolver.annotations().has(AnnotationNames.TYPE_RESOLVER);
         if (!root && !type) {
@@ -105,7 +116,7 @@ public final class ResolverClassFindings {
                 if (coordinate == null) {
                     continue;
                 }
-                String problem = SchemaCoordinates.check(schema.registry(), rootTypes, coordinate, method.name(), kinds)
+                String problem = SchemaCoordinates.check(schema.registry(), rootTypes, coordinate, kinds)
                         .orElse(null);
                 if (problem != null) {
                     invalidCoordinates.add(method.signature());
@@ -122,7 +133,7 @@ public final class ResolverClassFindings {
             return findings;
         }
 
-        ClassVerdict verdict = ResolverClassRules.check(schema, model, resolver, sourceType);
+        ClassVerdict verdict = ResolverClassRules.check(schema, model, resolver, sourceType, accessorPrefixes);
         InputBindingFindings inputs = new InputBindingFindings(schema, model);
         List<Finding> failures = new ArrayList<>();
         List<Finding> strict = new ArrayList<>();
@@ -146,7 +157,7 @@ public final class ResolverClassFindings {
                 }
                 failed |= !bindField(schema, inputs, failures, resolver, method, field, sourceType);
             }
-            if (methodVerdict.coordinates().size() > 1) {
+            if (methodVerdict.coordinates().stream().map(SchemaCoordinates::typeName).distinct().count() > 1) {
                 strict.add(finding(resolver, method, BindingCode.ROOT_METHOD_SEVERAL_OPERATIONS, method.signature(),
                         "the root resolver method " + method.signature() + " binds fields of several operation types: "
                                 + String.join(", ", methodVerdict.coordinates()),
@@ -155,12 +166,18 @@ public final class ResolverClassFindings {
             } else if (declared == null && methodVerdict.coordinates().isEmpty()) {
                 // a root resolver binds by the root fields alone; a type resolver is judged by the fields of every object
                 // and interface type, and only when it has one contract: with several, the type of a method is not known
-                boolean unbound = true;
+                // a method that only the accessor prefixes could bind is not judged: whether they are on is a startup
+                // setting, and the compile-time option may differ from it
+                boolean unbound;
+                List<String> names = FieldNames.ofResolverMethod(method.name(), true);
                 if (type) {
                     if (objectFields == null) {
                         objectFields = objectFieldNames(schema);
                     }
-                    unbound = contracts.size() == 1 && !objectFields.contains(method.name());
+                    unbound = contracts.size() == 1 && names.stream().noneMatch(objectFields::contains);
+                } else {
+                    unbound = names.stream().noneMatch(name -> rootTypes.stream()
+                            .anyMatch(rootType -> fieldDefinition(schema, rootType, name) != null));
                 }
                 if (unbound) {
                     strict.add(finding(resolver, method, BindingCode.UNBOUND_RESOLVER_METHOD, method.signature(),

@@ -15,6 +15,8 @@
  */
 package io.micronaut.graphql.tools
 
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires

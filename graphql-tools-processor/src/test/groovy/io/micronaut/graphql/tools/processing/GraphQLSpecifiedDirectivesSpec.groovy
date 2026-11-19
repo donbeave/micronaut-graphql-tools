@@ -25,13 +25,13 @@ class GraphQLSpecifiedDirectivesSpec extends Specification {
 
     def "the names equal the runtime module's"() {
         expect:
-        GraphQLSpecifiedDirectives.NAMES == io.micronaut.graphql.tools.GraphQLSpecifiedDirectives.NAMES
+        GraphQLSpecifiedDirectives.NAMES == io.micronaut.graphql.tools.internal.wiring.GraphQLSpecifiedDirectives.NAMES
     }
 
     def "defer is built in but not specified"() {
         expect:
         GraphQLSpecifiedDirectives.isBuiltIn("defer") && !GraphQLSpecifiedDirectives.isSpecified("defer")
-        GraphQLSpecifiedDirectives.SPECIFIED == io.micronaut.graphql.tools.GraphQLSpecifiedDirectives.SPECIFIED
+        GraphQLSpecifiedDirectives.SPECIFIED == io.micronaut.graphql.tools.internal.wiring.GraphQLSpecifiedDirectives.SPECIFIED
     }
 
     def "other names, a different case, an empty name and null are not specified"() {

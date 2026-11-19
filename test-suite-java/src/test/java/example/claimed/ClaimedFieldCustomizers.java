@@ -23,8 +23,8 @@ import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.RuntimeWiringCustomizer;
-import io.micronaut.graphql.tools.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
 import jakarta.inject.Singleton;
 
 import java.util.Set;

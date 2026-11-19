@@ -1,16 +1,27 @@
 NOTE: This page is pending: the prose will be written with the user guide (epic #97). The reference below is generated from the configuration class.
 
-include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration.adoc[]
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.adoc[]
 
-include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$AllowConfiguration.adoc[]
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$AllowConfiguration.adoc[]
 
-include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$SchemaConfiguration.adoc[]
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$SchemaConfiguration.adoc[]
 
-include::{includedir}/configurationProperties/io.micronaut.graphql.tools.GraphQLToolsConfiguration$ManifestConfiguration.adoc[]
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ManifestConfiguration.adoc[]
 
 == Precedence
 
 `micronaut.graphql.tools.precedence` decides a field that a member of the Java type (a property or a `@GraphQLField` method) and a type resolver method can both bind. One rule covers object and interface fields: `fail` (the default) fails the startup with `[precedence-ambiguity]`, `resolver-first` binds the resolver method, and `property-first` binds the member; the lenient values log the ambiguity at WARN and write a `!precedence-ambiguity` line to the binding manifest. A resolver directive, a type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate`, or `@GraphQLIgnore` on the member says which side binds one field, and the setting is not consulted. `precedence` is independent of `strict` and is not a `checks.<code>` entry. The value `strict`, the former name of `fail`, is rejected (BC-29).
+
+[[renaming]]
+== Binding a field to a differently named member
+
+A member binds the field of its own name unless it says otherwise. There are three ways to bind a field to a member with another name, for example for a field named `class`, `default`, `new` or `hashCode`, which no Java member can be named:
+
+* `@GraphQLField("name")` on a method of a `@GraphQLType` class, or on a property (its field, its getter, or the Kotlin or Groovy property), binds the field `name`. A renamed member binds the new name only. A renamed member and another member for one field, or two members renamed to one field, fail the startup with `[multiple-methods-found]` and the coordinate of the field. A member marked `@GraphQLIgnore` binds nothing.
+* `@GraphQLSchemaCoordinate("Type.field")` on a resolver method binds that field whatever the name of the method is. Before, the startup failed with `[unknown-schema-coordinate]` when the names differed. The coordinate rules of the annotation hold: only the methods of a bean that declare a coordinate bind, and two methods with one coordinate fail with `[multiple-methods-found]`.
+* `micronaut.graphql.tools.resolver-accessor-prefixes: true` lets a resolver method named `getX` or `isX` bind the field `x` as well, for resolvers written for other tools (`getAuthor(Book)` for `author`). It is off by default. `getAuthor` and `author` in one class both bind the field and fail the startup. The compile-time checks take the same setting as the processor option `micronaut.graphql.tools.processor.resolverAccessorPrefixes` (`-Amicronaut.graphql.tools.resolverAccessorPrefixes` for the JSR-269 processor); without it they do not judge a method that only a prefix could bind.
+
+The names are resolved once at startup and by the compile-time checks, with the same rules; a request does no name lookup.
 
 == Check severity
 

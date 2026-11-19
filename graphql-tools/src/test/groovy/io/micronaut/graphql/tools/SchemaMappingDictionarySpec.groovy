@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
 import io.micronaut.core.annotation.Introspected
 import spock.lang.Specification
 

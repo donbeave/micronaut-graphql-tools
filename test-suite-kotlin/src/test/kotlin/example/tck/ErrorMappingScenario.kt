@@ -22,7 +22,7 @@ import graphql.language.SourceLocation
 import graphql.execution.DataFetcherExceptionHandler
 import graphql.execution.DataFetcherExceptionHandlerResult
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.GraphQLBuilderCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import java.util.concurrent.CompletableFuture

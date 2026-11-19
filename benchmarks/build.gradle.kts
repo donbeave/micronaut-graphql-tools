@@ -30,7 +30,14 @@ val graphqlJavaLeg = providers.gradleProperty("graphqlJavaLeg").getOrElse("defau
 // instead, so that the benchmark JVM of that size has no other generated bean on its classpath (scripts/startup-report.py
 // builds one jar per size). jmhSmokeTest needs the 100 and 10,000-field schemas as well: they are generated into its
 // own source set.
-val largeTypeCounts = providers.gradleProperty("largeFields").map { listOf(it.toInt() / 10) }.orElse(listOf(160)).get()
+//
+// -PlargeShape=interfaces generates the interface-heavy schema (#368) of that size instead of the rings (3,000 fields
+// when -PlargeFields is not given); the jmhSmokeTest source set has both shapes at its two sizes.
+val largeShape = providers.gradleProperty("largeShape").getOrElse("rings")
+require(largeShape == "rings" || largeShape == "interfaces") { "-PlargeShape must be rings or interfaces, not $largeShape" }
+val interfaceShape = largeShape == "interfaces"
+val largeTypeCounts = providers.gradleProperty("largeFields").map { listOf(it.toInt() / 10) }
+    .orElse(listOf(if (interfaceShape) 300 else 160)).get()
 val smokeTypeCounts = listOf(10, 1000)
 // The types form rings of at most this many types, each reached from a root field of its own. graphql-java builds the
 // executable schema with one recursive call per type of a chain, so one ring of a thousand types overflows the default
@@ -38,6 +45,7 @@ val smokeTypeCounts = listOf(10, 1000)
 val ringLength = 100
 val generatedLargeSchema = layout.buildDirectory.dir("generated/large-schema")
 val generatedSmokeSchema = layout.buildDirectory.dir("generated/smoke-schema")
+val generatedSmokeInterfaceSchema = layout.buildDirectory.dir("generated/smoke-interface-schema")
 
 fun registerLargeSchema(name: String, output: org.gradle.api.provider.Provider<org.gradle.api.file.Directory>,
                         typeCounts: List<Int>) = tasks.register(name) {
@@ -137,8 +145,167 @@ $ringRoots
         }
     }
 }
-val generateLargeSchema = registerLargeSchema("generateLargeSchema", generatedLargeSchema, largeTypeCounts)
+
+// The interface-heavy schema: fields / 10 object types of 10 fields, in groups of ten types. Every type implements the
+// interface Shared and the interface Group<g> of its group, which extends Shared, so the interfaces declare shared fields
+// and a field is declared by two interfaces. The group's types are linked in a ring through next, each group is reached
+// from a root field returning a list of its interface, and the type-mapping dictionary has an entry for every object
+// type: a quarter of them map to a Java interface, the rest to a class.
+fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provider<org.gradle.api.file.Directory>,
+                            typeCounts: List<Int>) = tasks.register(name) {
+    inputs.property("typeCounts", typeCounts)
+    outputs.dir(output)
+    doLast {
+        val root = output.get().asFile
+        root.deleteRecursively()
+        val resourceDir = root.resolve("resources").also { it.mkdirs() }
+        for (types in typeCounts) {
+            val fields = types * 10
+            val pkg = "io.micronaut.graphql.tools.benchmarks.large.i$fields"
+            val javaDir = root.resolve("java/" + pkg.replace('.', '/')).also { it.mkdirs() }
+            val groups = maxOf(1, types / 10)
+            val requires = "@Requires(property = \"benchmarks.interface.fields\", value = \"$fields\")"
+            // an object type maps to its interface when its number is a multiple of four
+            fun javaType(i: Int) = if (i % 4 == 0) "Obj${i}Api" else "Obj$i"
+            fun write(file: String, body: String) = javaDir.resolve("$file.java").writeText(body.trimMargin())
+            val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n  shared: [Shared!]!\n")
+            for (g in 0 until groups) {
+                sdl.append("  group$g: [Group$g!]!\n")
+            }
+            sdl.append("}\n\ninterface Shared {\n  id: ID!\n  name: String!\n}\n")
+            write("Shared", """
+                |package $pkg;
+                |
+                |public interface Shared {
+                |    String getId();
+                |    String getName();
+                |}
+                |""")
+            for (g in 0 until groups) {
+                sdl.append("\ninterface Group$g implements Shared {\n  id: ID!\n  name: String!\n  count: Int!\n  label: String\n}\n")
+                write("Group$g", """
+                    |package $pkg;
+                    |
+                    |public interface Group$g extends Shared {
+                    |    int getCount();
+                    |    String getLabel();
+                    |}
+                    |""")
+            }
+            val dictionary = StringBuilder()
+            for (i in 0 until types) {
+                val g = i % groups
+                val next = (i + groups) % types
+                val self = javaType(i)
+                sdl.append(
+                    """
+                    |
+                    |type Obj$i implements Group$g & Shared {
+                    |  id: ID!
+                    |  name: String!
+                    |  count: Int!
+                    |  label: String
+                    |  price: Float!
+                    |  active: Boolean!
+                    |  note: String
+                    |  tags: [String!]!
+                    |  next: Obj$next
+                    |  extra: String
+                    |}
+                    |""".trimMargin()
+                )
+                val getters = """
+                    |    public String getId() { return "id"; }
+                    |    public String getName() { return "name"; }
+                    |    public int getCount() { return 1; }
+                    |    public String getLabel() { return "label"; }
+                    |    public double getPrice() { return 1.5; }
+                    |    public boolean isActive() { return true; }
+                    |    public String getNote() { return "note"; }
+                    |    public java.util.List<String> getTags() { return java.util.List.of("tag"); }
+                    |    public ${javaType(next)} getNext() { return null; }
+                    |    public String getExtra() { return "extra"; }"""
+                if (i % 4 == 0) {
+                    write("Obj${i}Api", """
+                        |package $pkg;
+                        |
+                        |import io.micronaut.graphql.tools.annotation.GraphQLType;
+                        |
+                        |@GraphQLType
+                        |public interface Obj${i}Api extends Group$g {
+                        |    double getPrice();
+                        |    boolean isActive();
+                        |    String getNote();
+                        |    java.util.List<String> getTags();
+                        |    ${javaType(next)} getNext();
+                        |    String getExtra();
+                        |}
+                        |""")
+                }
+                val implemented = if (i % 4 == 0) "Obj${i}Api" else "Group$g"
+                val mapping = if (i % 4 == 0) "@GraphQLType(Obj${i}Api.class)" else "@GraphQLType"
+                write("Obj$i", """
+                    |package $pkg;
+                    |
+                    |import io.micronaut.context.annotation.Requires;
+                    |import io.micronaut.graphql.tools.annotation.GraphQLType;
+                    |
+                    |$requires
+                    |$mapping
+                    |public class Obj$i implements $implemented {
+                    |$getters
+                    |}
+                    |""")
+                dictionary.append("\n                |            dictionary.registerType(\"Obj$i\", $self.class);")
+            }
+            write("LargeDictionary", """
+                |package $pkg;
+                |
+                |import io.micronaut.context.annotation.Bean;
+                |import io.micronaut.context.annotation.Factory;
+                |import io.micronaut.context.annotation.Requires;
+                |import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer;
+                |import jakarta.inject.Singleton;
+                |
+                |$requires
+                |@Factory
+                |public class LargeDictionary {
+                |
+                |    @Bean
+                |    @Singleton
+                |    SchemaMappingDictionaryCustomizer largeTypes() {
+                |        // statements, not one chained call: javac overflows its stack on a chain of two thousand calls
+                |        return dictionary -> {$dictionary
+                |        };
+                |    }
+                |}
+                |""")
+            val roots = StringBuilder("|    public java.util.List<Shared> shared() { return java.util.List.of(); }\n")
+            for (g in 0 until groups) {
+                roots.append("|    public java.util.List<Group$g> group$g() { return java.util.List.of(); }\n")
+            }
+            write("LargeQuery", """
+                |package $pkg;
+                |
+                |import io.micronaut.context.annotation.Requires;
+                |import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+                |
+                |$requires
+                |@GraphQLRootResolver
+                |public class LargeQuery {
+$roots|}
+                |""")
+            resourceDir.resolve("interface-schema-$fields.graphqls").writeText(sdl.toString())
+        }
+    }
+}
+val generateLargeSchema = if (interfaceShape) {
+    registerInterfaceSchema("generateLargeSchema", generatedLargeSchema, largeTypeCounts)
+} else {
+    registerLargeSchema("generateLargeSchema", generatedLargeSchema, largeTypeCounts)
+}
 val generateSmokeSchema = registerLargeSchema("generateSmokeSchema", generatedSmokeSchema, smokeTypeCounts)
+val generateSmokeInterfaceSchema = registerInterfaceSchema("generateSmokeInterfaceSchema", generatedSmokeInterfaceSchema, smokeTypeCounts)
 
 sourceSets.main {
     java.srcDir(files(generatedLargeSchema.map { it.dir("java") }).builtBy(generateLargeSchema))
@@ -150,6 +317,8 @@ val jmhSmokeTest by sourceSets.creating
 
 jmhSmokeTest.java.srcDir(files(generatedSmokeSchema.map { it.dir("java") }).builtBy(generateSmokeSchema))
 jmhSmokeTest.resources.srcDir(files(generatedSmokeSchema.map { it.dir("resources") }).builtBy(generateSmokeSchema))
+jmhSmokeTest.java.srcDir(files(generatedSmokeInterfaceSchema.map { it.dir("java") }).builtBy(generateSmokeInterfaceSchema))
+jmhSmokeTest.resources.srcDir(files(generatedSmokeInterfaceSchema.map { it.dir("resources") }).builtBy(generateSmokeInterfaceSchema))
 
 configurations {
     named(allocationTest.implementationConfigurationName) { extendsFrom(configurations.implementation.get()) }

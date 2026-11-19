@@ -15,12 +15,17 @@
  */
 package io.micronaut.graphql.tools.processing;
 
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.graphql.tools.binding.internal.rules.FieldNames;
+
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.RecordComponentElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -83,8 +88,47 @@ final class ModelMembers {
         return contractOf(type).orElse(type);
     }
 
-    Optional<Property> property(TypeElement type, String name) {
-        return Optional.ofNullable(properties(type).get(name));
+    // the properties that bind the field: a property binds the field of its own name, or the one @GraphQLField names
+    List<Property> properties(TypeElement type, String fieldName) {
+        List<Property> result = new ArrayList<>();
+        for (Property property : properties(type).values()) {
+            if (FieldNames.ofMember(property.name(), declaredName(type, property)).equals(fieldName)) {
+                result.add(property);
+            }
+        }
+        return result;
+    }
+
+    @Nullable
+    private String declaredName(TypeElement type, Property property) {
+        String declared = declaredName(property.accessor());
+        if (declared != null) {
+            return declared;
+        }
+        for (VariableElement field : ElementFilter.fieldsIn(javaTypes.elements().getAllMembers(type))) {
+            if (field.getSimpleName().contentEquals(property.name()) && declaredName(field) != null) {
+                return declaredName(field);
+            }
+        }
+        for (ExecutableElement method : methods(type)) {
+            if (property.name().equals(accessedProperty(method)) && declaredName(method) != null) {
+                return declaredName(method);
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private static String declaredName(Element element) {
+        return Annotations.find(element, Annotations.FIELD).flatMap(Annotations::stringValue).orElse(null);
+    }
+
+    @Nullable
+    private static String accessedProperty(ExecutableElement method) {
+        TypeMirror result = method.getReturnType();
+        return FieldNames.accessedProperty(method.getSimpleName().toString(), method.getParameters().size(),
+                result.getKind() == TypeKind.VOID,
+                result.getKind() == TypeKind.BOOLEAN || result.toString().equals("java.lang.Boolean"));
     }
 
     Map<String, Property> properties(TypeElement type) {
@@ -142,10 +186,13 @@ final class ModelMembers {
         return constructor.getParameters().stream().map(it -> it.getSimpleName().toString()).toList();
     }
 
-    List<ExecutableElement> fieldMethods(TypeElement type, String name) {
+    // the methods that bind the field; a getter or setter that carries the name renames its property instead
+    List<ExecutableElement> fieldMethods(TypeElement type, String fieldName) {
+        Set<String> propertyNames = properties(type).keySet();
         return methods(type).stream()
-                .filter(it -> it.getSimpleName().contentEquals(name))
                 .filter(it -> Annotations.has(it, Annotations.FIELD))
+                .filter(it -> declaredName(it) == null || !propertyNames.contains(accessedProperty(it)))
+                .filter(it -> FieldNames.ofMember(it.getSimpleName().toString(), declaredName(it)).equals(fieldName))
                 .toList();
     }
 

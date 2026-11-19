@@ -37,8 +37,8 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 
 /**
- * The bytecode of the library and the binding module (not the processor, which runs at compile time) obeys three rules:
- * no reflection outside a short allowlist, no Jackson, and no internal type in the signature of the public API. The rules
+ * The bytecode of the library and the binding module (not the processor, which runs at compile time) obeys four rules:
+ * no reflection outside a short allowlist, no Jackson, no internal type in the signature of the public API, and no dependency of a public package on an internal one. The rules
  * keep the native image free of reflection metadata and the public API free of types that can change in any release.
  */
 class ArchitectureRulesSpec extends Specification {
@@ -52,7 +52,7 @@ class ArchitectureRulesSpec extends Specification {
      * access that no longer happens fails the spec, so delete it with the fix.
      */
     static final Map<String, Map<String, Object>> REFLECTION_ALLOWLIST = [
-            'io.micronaut.graphql.tools.GraphQLResolversRegistry': [
+            'io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry': [
                     accesses: ['java.lang.Class.getDeclaredAnnotation'],
                     reason  : 'reads @GraphQLTypeResolver from the user class, removed by #34',
             ],
@@ -74,7 +74,7 @@ class ArchitectureRulesSpec extends Specification {
 
     void "the classes of the library and the binding module are found"() {
         expect:
-        classes.contain('io.micronaut.graphql.tools.GraphQLFactory')
+        classes.contain('io.micronaut.graphql.tools.internal.GraphQLFactory')
         classes.contain('io.micronaut.graphql.tools.binding.BindingCode')
         classes.size() > 200
     }
@@ -121,6 +121,23 @@ class ArchitectureRulesSpec extends Specification {
                 .check(classes)
     }
 
+    void "no class of a public package depends on a class of an internal package"() {
+        expect:
+        noClasses().that(inPublicPackage()).should(dependOnInternalPackage())
+                .because('a public type that reaches into an internal package ties the API to code that changes in any release')
+                .check(classes)
+    }
+
+    void "the internal package rule fails on a class that depends on one and names it"() {
+        given:
+        def result = noClasses().that(DescribedPredicate.describe('any class', { JavaClass c -> true }))
+                .should(dependOnInternalPackage()).evaluate(classes)
+
+        expect:
+        result.hasViolation()
+        result.failureReport.details.any { it.contains('io.micronaut.graphql.tools.internal') }
+    }
+
     /** The reflective accesses of a class: the key (owner.member or the type used) with a message for each. */
     private static Map<String, List<String>> reflectiveAccesses(JavaClass item) {
         Map<String, List<String>> found = [:].withDefault { [] }
@@ -154,6 +171,23 @@ class ArchitectureRulesSpec extends Specification {
                         messages.each { events.add(SimpleConditionEvent.satisfied(item, it)) }
                     }
                 }
+            }
+        }
+    }
+
+    private static DescribedPredicate<JavaClass> inPublicPackage() {
+        DescribedPredicate.describe('classes of a public package: not in an internal package, not annotated @Internal', { JavaClass c ->
+            !generated(c) && !internalChain(c)
+        })
+    }
+
+    private static ArchCondition<JavaClass> dependOnInternalPackage() {
+        new ArchCondition<JavaClass>('depend on a class of an internal package') {
+            @Override
+            void check(JavaClass item, ConditionEvents events) {
+                item.directDependenciesFromSelf.findAll {
+                    ('internal' in it.targetClass.packageName.split('\\.').toList())
+                }.each { events.add(SimpleConditionEvent.satisfied(item, it.description)) }
             }
         }
     }

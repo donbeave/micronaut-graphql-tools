@@ -12,8 +12,8 @@ Start with the guide: `src/main/docs/guide/quickStart.adoc` and `binding.adoc`.
 
 ## Responsibility
 
-- Schema discovery (`schema/SchemaDiscovery`) and the runtime wiring that connects fields to beans
-  (`GraphQLRuntimeWiringGenerator`, `RuntimeWiringCustomizers`, the data fetchers in `schema/`).
+- Schema discovery (`internal.discovery.SchemaDiscovery`) and the runtime wiring that connects fields to beans
+  (`GraphQLRuntimeWiringGenerator`, `RuntimeWiringCustomizers`, the data fetchers in `internal.resolver`).
 - The strict checks and the startup failures, which are reported as the exceptions of `io.micronaut.graphql.tools.exceptions`.
 - Recording the binding manifest (`BindingManifestRecorder`, `BindingManifestWriter`).
 - The Micronaut integration: `GraphQLFactory` builds the `GraphQL` bean, and the `processor/` package holds the method
@@ -31,11 +31,25 @@ Each package has a `package-info.java`. The [API map](../src/main/docs/guide/api
 
 | Package | Audience | Holds |
 | --- | --- | --- |
-| `io.micronaut.graphql.tools` | Mixed | The configuration, the customizers, the mapping and directive interfaces (public) and the binding implementation (`@Internal`) |
+| `io.micronaut.graphql.tools` | Public API | No types: the namespace of the packages below |
+| `io.micronaut.graphql.tools.config` | Public API | The configuration class, `GraphQLToolsConfiguration` |
+| `io.micronaut.graphql.tools.customizer` | Public API | The five `*Customizer` interfaces |
+| `io.micronaut.graphql.tools.mapping` | Public API | `SchemaMappingDictionary`, `GraphQLScalarMapping` and the mapping contexts |
+| `io.micronaut.graphql.tools.directive` | Public API | `SchemaDirective` and `CustomWiring` |
+| `io.micronaut.graphql.tools.input` | Public API | `ArgumentValue` |
+| `io.micronaut.graphql.tools.manifest` | Public API | `BindingManifest` |
 | `io.micronaut.graphql.tools.annotation` | Public API | The annotations of resolvers and input classes |
-| `io.micronaut.graphql.tools.exceptions` | Public API | The startup failures (`SchemaBindingException` and subclasses) |
-| `io.micronaut.graphql.tools.processor` | Internal | The runtime method processors that register the resolvers |
-| `io.micronaut.graphql.tools.schema` | Internal | Schema discovery, the data fetchers, the type resolvers, the value conversion |
+| `io.micronaut.graphql.tools.exceptions` | Public API | The startup failure, `SchemaBindingException` |
+| `io.micronaut.graphql.tools.internal` | Internal | The entry points of the binding: the factories, the eager binding, the bean selection and the shared helpers |
+| `io.micronaut.graphql.tools.internal.exceptions` | Internal | The classes that build each startup failure |
+| `io.micronaut.graphql.tools.internal.registry` | Internal | The runtime method processors that register the resolvers |
+| `io.micronaut.graphql.tools.internal.discovery` | Internal | Schema discovery: reads the schema files into the type registry |
+| `io.micronaut.graphql.tools.internal.input` | Internal | The conversion of argument and input values, and the input type binder |
+| `io.micronaut.graphql.tools.internal.resolver` | Internal | The data fetchers and the type resolvers, and the planning of resolver arguments |
+| `io.micronaut.graphql.tools.internal.wiring` | Internal | The runtime wiring generator, the wiring factory, the interface field binder and the directive wirings |
+| `io.micronaut.graphql.tools.internal.checks` | Internal | The startup checks and validators |
+| `io.micronaut.graphql.tools.internal.manifest` | Internal | Recording and writing the binding manifest |
+| `io.micronaut.graphql.tools.internal.model` | Internal | The runtime registries and models of the beans and types |
 
 ## Who uses it
 
@@ -44,22 +58,21 @@ run it in their tests.
 
 ## Public and internal
 
-The public API is what applications import. It is not fixed for 1.0 yet: the package layout is reviewed in #354, and the
-public surface is reduced in #109.
+The public API is what applications import. The package layout is reviewed in #354.
 
 - `io.micronaut.graphql.tools.annotation`: the public annotations (`@GraphQLType`, `@GraphQLRootResolver`,
   `@GraphQLTypeResolver`, `@GraphQLInput`, `@GraphQLField`, `@GraphQLArgument`, `@GraphQLIgnore`,
   `@GraphQLSchemaCoordinate`).
-- `io.micronaut.graphql.tools` (top level): mixed. The extension points and the types around them, for example `RuntimeWiringCustomizer`,
-  `SchemaMappingDictionaryCustomizer`, `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer`,
-  `TypeDefinitionRegistryCustomizer`, `SchemaDirective`, `GraphQLScalarMapping`, `ArgumentValue`, `BindingManifest`
-  and `GraphQLToolsConfiguration`, are not annotated `@Internal`. This list is not complete. Most other types in the package are annotated `@Internal`. Check the annotation on the class
-  before you use it.
-- `io.micronaut.graphql.tools.exceptions`: the startup failures. Not annotated `@Internal` today.
-- `io.micronaut.graphql.tools.processor` and `io.micronaut.graphql.tools.schema`: internal. Every class is annotated
-  `@Internal`.
+- `io.micronaut.graphql.tools.config`, `customizer`, `mapping`, `directive`, `input` and `manifest`: the extension points
+  and the types around them: `GraphQLToolsConfiguration`; `RuntimeWiringCustomizer`, `SchemaMappingDictionaryCustomizer`,
+  `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer` and `TypeDefinitionRegistryCustomizer`; `SchemaMappingDictionary`
+  and `GraphQLScalarMapping`; `SchemaDirective` and `CustomWiring`; `ArgumentValue`; `BindingManifest`. Every type of
+  these packages is public API; the root package `io.micronaut.graphql.tools` holds no types.
+- `io.micronaut.graphql.tools.exceptions`: the startup failure, `SchemaBindingException`. Match on its code.
+- `io.micronaut.graphql.tools.internal` (and its sub-packages): internal. Every
+  class is annotated `@Internal`.
 
-Application code should not import an internal class. The package layout will be documented in `package-info.java` (#354).
+Application code should not import an internal class.
 
 ## Relation to other modules
 

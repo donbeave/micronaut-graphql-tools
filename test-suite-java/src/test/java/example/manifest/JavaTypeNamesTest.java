@@ -16,7 +16,7 @@
 package example.manifest;
 
 import io.micronaut.context.BeanContext;
-import io.micronaut.graphql.tools.JavaTypeNames;
+import io.micronaut.graphql.tools.internal.JavaTypeNames;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;

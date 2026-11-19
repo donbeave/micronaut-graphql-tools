@@ -15,6 +15,8 @@
  */
 package io.micronaut.graphql.tools
 
+import io.micronaut.graphql.tools.input.ArgumentValue
+import io.micronaut.graphql.tools.manifest.BindingManifest
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -29,6 +31,7 @@ import static io.micronaut.graphql.tools.StrictModeSpec.ItemResolver
 import static io.micronaut.graphql.tools.StrictModeSpec.Query
 import static io.micronaut.graphql.tools.StrictModeSpec.Color
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
 
 /**
  * Per-check severity (#86): the defaults, the strict shorthand, explicit entries, the validation of the settings and

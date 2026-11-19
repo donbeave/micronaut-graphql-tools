@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
 import spock.lang.Specification
 
 /**

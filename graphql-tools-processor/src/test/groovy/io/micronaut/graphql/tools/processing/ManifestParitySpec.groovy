@@ -584,8 +584,8 @@ package example;
 import graphql.schema.GraphQLScalarType;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.graphql.tools.GraphQLScalarMapping;
-import io.micronaut.graphql.tools.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
 import jakarta.inject.Singleton;
 import java.time.LocalDate;
 

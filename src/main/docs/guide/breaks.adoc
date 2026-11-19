@@ -27,7 +27,8 @@ These changes are planned for the 1.0.0 milestones. Each one is _pending_ until 
 * #86 (BC-27): per-check severity; six old keys are removed. See the migration page, entries for 1.0.0-M3.
 * #159 (BC-28): the option `micronaut.graphql.tools.input.detect-omission` is removed; declaring `ArgumentValue` is enough. See the migration page, entries for 1.0.0-M3.
 * #105 (BC-29): the precedence value `strict` is named `fail` and `strict` is rejected; a type resolver method that declares its coordinate wins over a getter. See the migration page, entries for 1.0.0-M3.
-* #109 (BC-30): `SchemaBindingException` is the only public exception; the subclasses are internal. See the migration page, entries for 1.0.0-M3.
+* #109 (BC-30): `SchemaBindingException` is the only public exception; the subclasses are internal, and the `@Internal` types left the API package `io.micronaut.graphql.tools`. See the migration page, entries for 1.0.0-M3.
+* #354 (BC-31): the 15 public types of the root package `io.micronaut.graphql.tools` moved into the role packages `config`, `customizer`, `mapping`, `directive`, `input` and `manifest`; the root holds no types. See the migration page, entries for 1.0.0-M3.
 * #144: the JSR-269 code is removed from `graphql-tools-processor` (_pending_).
 * #291: the visitor replaces the JSR-269 processor, and the processor options are renamed (_pending_).
 
