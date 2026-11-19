@@ -37,7 +37,10 @@ Each package has a `package-info.java`. The [API map](../src/main/docs/guide/api
 | `io.micronaut.graphql.tools.internal` | Internal | The binding implementation: the factories, the wiring, the binders, the checks, the manifest recording |
 | `io.micronaut.graphql.tools.internal.exceptions` | Internal | The classes that build each startup failure |
 | `io.micronaut.graphql.tools.internal.registry` | Internal | The runtime method processors that register the resolvers |
-| `io.micronaut.graphql.tools.schema` | Internal | Schema discovery, the data fetchers, the type resolvers, the value conversion |
+| `io.micronaut.graphql.tools.internal.discovery` | Internal | Schema discovery: reads the schema files into the type registry |
+| `io.micronaut.graphql.tools.internal.input` | Internal | The conversion of argument and input values |
+| `io.micronaut.graphql.tools.internal.resolver` | Internal | The data fetchers and the type resolvers |
+| `io.micronaut.graphql.tools.internal.wiring` | Internal | The wiring factory that picks the data fetcher and the type resolver of each field and type |
 
 ## Who uses it
 
@@ -56,7 +59,7 @@ The public API is what applications import. The package layout is reviewed in #3
   `TypeDefinitionRegistryCustomizer`, `SchemaDirective`, `GraphQLScalarMapping`, `ArgumentValue`, `BindingManifest`
   and `GraphQLToolsConfiguration`. Every type of the package is public API.
 - `io.micronaut.graphql.tools.exceptions`: the startup failure, `SchemaBindingException`. Match on its code.
-- `io.micronaut.graphql.tools.internal` (and its sub-packages) and `io.micronaut.graphql.tools.schema`: internal. Every
+- `io.micronaut.graphql.tools.internal` (and its sub-packages): internal. Every
   class is annotated `@Internal`.
 
 Application code should not import an internal class.

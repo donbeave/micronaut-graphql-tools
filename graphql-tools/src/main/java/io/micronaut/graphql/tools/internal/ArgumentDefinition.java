@@ -19,7 +19,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.ArgumentUtils;
-import io.micronaut.graphql.tools.schema.ValueConverter;
+import io.micronaut.graphql.tools.internal.input.ValueConverter;
 
 import java.util.Optional;
 

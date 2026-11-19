@@ -67,10 +67,10 @@ import io.micronaut.graphql.tools.internal.exceptions.RootResolverNotFoundExcept
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 import io.micronaut.graphql.tools.internal.exceptions.SchemaDefinitionNotProvidedException;
 import io.micronaut.graphql.tools.internal.exceptions.StrictModeException;
-import io.micronaut.graphql.tools.schema.DefaultWiringFactory;
-import io.micronaut.graphql.tools.schema.MicronautExecutableMethodDataFetcher;
-import io.micronaut.graphql.tools.schema.MicronautIntrospectionDataFetcher;
-import io.micronaut.graphql.tools.schema.MicronautPropertyDataFetcher;
+import io.micronaut.graphql.tools.internal.wiring.DefaultWiringFactory;
+import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDataFetcher;
+import io.micronaut.graphql.tools.internal.resolver.MicronautIntrospectionDataFetcher;
+import io.micronaut.graphql.tools.internal.resolver.MicronautPropertyDataFetcher;
 import io.micronaut.inject.ExecutableMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
