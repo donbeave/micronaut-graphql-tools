@@ -3,8 +3,8 @@
 
 Reads .github/workflows/*.yml as text (no YAML library: the files keep the layout this script relies on) and fails when:
   1. a job of gradle.yml other than `required` is missing from the `needs:` of `required`, or `needs:` names a job that does not exist;
-  2. a job of gradle.yml has an `if:` (only `required` has one, `always()`): a conditional job can be skipped on a pull request and run on master;
-  3. gradle.yml does not run on pull_request, push and merge_group, or the pull_request branches differ from the push branches;
+  2. a job of gradle.yml has an `if:` (only `required` has one, exactly `always()`): a conditional job can be skipped on a pull request and run on master;
+  3. gradle.yml does not run on pull_request, push and merge_group, the pull_request branches differ from the push branches, or either event has a paths, paths-ignore or branches-ignore filter;
   4. another workflow runs on a push to a branch (tags are fine): a check that only master pushes run is red on master and invisible on the pull request.
 """
 import re
@@ -59,7 +59,7 @@ def runs_on_branch_push(lines):
                 if re.match(r"^  \S", m):
                     break
                 body.append(m)
-            has_tags = any(re.match(r"^    tags:", m) for m in body)
+            has_tags = any(re.match(r"^    tags(-ignore)?:", m) for m in body)
             has_branches = any(re.match(r"^    branches(-ignore)?:", m) for m in body)
             return not has_tags or has_branches
     return False
@@ -88,13 +88,25 @@ else:
         if need not in jobs:
             problems.append(f"`needs:` of `required` names `{need}`, which is not a job of gradle.yml")
 for name, body in jobs.items():
-    if name != "required" and any(re.match(r"^    if:", l) for l in body):
+    conditions = [l.strip() for l in body if re.match(r"^    if:", l)]
+    if name == "required":
+        if conditions != ["if: always()"]:
+            problems.append("the `required` job must have exactly `if: always()`: a skipped gate reads as a pass")
+    elif conditions:
         problems.append(f"job `{name}` has an `if:`: a gated job must run on every event, so remove the condition")
 
 block = on_block(gradle)
 for event in ("push", "pull_request", "merge_group"):
     if not any(re.match(rf"^  {event}:", l) for l in block):
         problems.append(f"gradle.yml does not run on `{event}`")
+for event in ("push", "pull_request"):
+    for i, l in enumerate(block):
+        if re.match(rf"^  {event}:", l):
+            for m in block[i + 1:]:
+                if re.match(r"^  \S", m):
+                    break
+                if re.match(r"^    (paths|paths-ignore|branches-ignore):", m):
+                    problems.append(f"gradle.yml: `{event}` has `{m.strip()}`: only `branches` may filter it, so that both events run for the same changes")
 push, pr = branches(block, "push"), branches(block, "pull_request")
 if push != pr:
     problems.append(f"gradle.yml: `push` branches {push} differ from `pull_request` branches {pr}")
