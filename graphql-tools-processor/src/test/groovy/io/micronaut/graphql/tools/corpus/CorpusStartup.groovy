@@ -23,12 +23,12 @@ import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException
 import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException
-import io.micronaut.graphql.tools.internal.exceptions.InvalidSchemaCoordinateException
+import io.micronaut.graphql.tools.internal.exceptions.checks.InvalidSchemaCoordinateException
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.internal.exceptions.StrictModeException
-import io.micronaut.graphql.tools.internal.exceptions.UnmappedInputPropertiesException
-import io.micronaut.graphql.tools.internal.exceptions.UnreachableTypesException
-import io.micronaut.graphql.tools.internal.exceptions.UnwiredDirectivesException
+import io.micronaut.graphql.tools.internal.exceptions.checks.StrictModeException
+import io.micronaut.graphql.tools.internal.exceptions.input.UnmappedInputPropertiesException
+import io.micronaut.graphql.tools.internal.exceptions.checks.UnreachableTypesException
+import io.micronaut.graphql.tools.internal.exceptions.wiring.UnwiredDirectivesException
 
 import java.util.regex.Matcher
 

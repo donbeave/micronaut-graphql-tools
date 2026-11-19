@@ -19,7 +19,7 @@ import graphql.language.ObjectTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.internal.exceptions.AmbiguousTypeMappingException;
+import io.micronaut.graphql.tools.internal.exceptions.mapping.AmbiguousTypeMappingException;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 /**
- * The failures of the binding at startup, one class for each kind of failure. Every one of them is a
- * {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException} that carries the {@link io.micronaut.graphql.tools.binding.BindingCode}
- * of its failure and builds its own message.
+ * The base classes of the startup failures and the failures that stand for no one kind: the abstract mapping failure that
+ * the binding failures extend, the aggregate of all failures of one binding run and the unexpected binding error. The classes of
+ * each kind of failure are in the sub-packages. Every one of them is a
+ * {@link io.micronaut.graphql.tools.exceptions.SchemaBindingException} that carries the
+ * {@link io.micronaut.graphql.tools.binding.BindingCode} of its failure and builds its own message.
  *
  * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Catch
  * {@code SchemaBindingException} and match on its code.</p>
