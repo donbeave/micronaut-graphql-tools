@@ -92,6 +92,16 @@ subprojects {
     tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.add("-Xlint:removal")
     }
+
+    // -PtestJdk=17 runs the tests on that JDK while Gradle itself runs on a newer one. The library check on JDK 17 needs it: the test
+    // compilation of graphql-tools runs the visitor of graphql-tools-processor, which is Java 21 bytecode (#144), so Gradle runs on 21.
+    providers.gradleProperty("testJdk").orNull?.let { testJdk ->
+        tasks.withType<Test>().configureEach {
+            javaLauncher.set(project.extensions.getByType<JavaToolchainService>().launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(testJdk.toInt()))
+            })
+        }
+    }
 }
 
 // The guide takes its code examples from the test-suite-* sources with the `snippet::` macro. The macro reads them behind
