@@ -89,7 +89,7 @@ class VisitorArchitectureSpec extends Specification {
         violations(parse(files().collect { new FileSource(it) })) == []
     }
 
-    def "the isolating visitor claims exactly the three annotations, the four options and the retired key of the JSR-269 processor"() {
+    def "the isolating visitor claims exactly the three annotations, the four options and the retired key"() {
         expect:
         visitor.visitorKind == TypeElementVisitor.VisitorKind.ISOLATING
         visitor.supportedAnnotationNames == [

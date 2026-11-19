@@ -9,11 +9,10 @@ The compile-time checks. The annotation processor reads the schema files while `
 fails the build on drift that the startup would otherwise report, for example an object type that nothing reachable
 returns. Each error names the schema coordinate and the schema file line. The guide page is `src/main/docs/guide/compileTime.adoc`.
 
-The processor is a `TypeElementVisitor` (`GraphQLToolsVisitor`, package `io.micronaut.graphql.tools.visitor`), registered in
+The compile-time engine is a `TypeElementVisitor` (`GraphQLToolsVisitor`, package `io.micronaut.graphql.tools.visitor`), registered in
 `META-INF/services/io.micronaut.inject.visitor.TypeElementVisitor` of the jar. The jar holds that service file and no other
-(`RegistrationSpec`): the JSR-269 service files (`javax.annotation.processing.Processor` and
-`META-INF/gradle/incremental.annotation.processors`) are gone (#291), so one compile-time engine runs in a build. The JSR-269
-classes (`GraphQLSchemaBindingProcessor` and its package) stay until #144 deletes them; nothing registers them.
+(`RegistrationSpec`): it registers no `javax.annotation.processing.Processor` and no
+`META-INF/gradle/incremental.annotation.processors`, so the visitor is the one compile-time engine of a build.
 
 ## Responsibility
 
@@ -44,14 +43,9 @@ class introspects passes at startup). The other findings are errors. The walk st
 at its failure, so the findings of the same class that come after it are the startup's. A build that turns compiler warnings into errors (`-Werror`) fails on it as well, so there the hatch is `@Introspected` on the class itself. The walk down a chain of input types
 runs from a work stack (a chain of 5,000 types is checked on the default stack), as the startup binds with one.
 
-The JSR-269 processor (`processing/`, until #144):
-
-- Read the schema files and the resolver beans of one compilation (`processing/`: `SchemaFiles`, `ResolverBeans`,
-  `SchemaChecks`, `BindingChecks`).
-- Read the processor options that are passed as `-A` compiler arguments (`ProcessorOptions`).
-- Report the findings as compiler errors and, when the checks pass, write the binding manifest to the class output.
-- Not in this module: the runtime library and the Micronaut bean lookup. The processor must not depend on the runtime:
-  the `checkNoRuntimeDependency` task fails `check` when a main classpath contains `graphql-tools`.
+Not in this module: the runtime library and the Micronaut bean lookup. The module must not depend on the runtime:
+the `checkNoRuntimeDependency` task fails `check` when a main classpath contains `graphql-tools`. The visitor writes no binding
+manifest; the runtime renders it.
 
 ## Resolvers in several modules
 
@@ -104,7 +98,6 @@ Each package has a `package-info.java`. See the [API map](../src/main/docs/guide
 | Package | Audience | Holds |
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.visitor` | Compiler plug-in | The compile-time `TypeElementVisitor`; loaded by the compiler, never imported |
-| `io.micronaut.graphql.tools.processing` | Internal | The legacy JSR-269 processor, deleted by #144 |
 
 ## Who uses it
 
@@ -114,7 +107,7 @@ Application developers, who add it to the path that their compiler reads Microna
 ## Public and internal
 
 Application code does not import anything from this module. Its classes are used by the compiler only, through the visitor's
-service registration. The `processing` package is annotated `@Internal` in its `package-info.java`; it is implementation and is removed by #144.
+service registration.
 
 ## Relation to other modules
 
@@ -129,15 +122,15 @@ service registration. The `processing` package is annotated `@Internal` in its `
 
 ## Build and test
 
-The module compiles for Java 21 (`micronautBuild.javaVersion = 21`), so it does not run on JDK 17. Use JDK 21 or 25:
+The module compiles with `--release 17`, like the other library modules, and `check` runs on JDK 17, 21 and 25 (the CI job `check library` runs it on JDK 17):
 
 ```
 ./gradlew :micronaut-graphql-tools-processor:check
 ```
 
 `check` runs the unit tests (the visitor under javac in process: `GraphQLToolsVisitorSpec`, `ProcessorOptionsSpec`,
-`ContractsGateSpec`), `compileVisitorRelease17` (the visitor package compiled alone at release 17), the binding corpus (`BindingCorpusSpec`, about 70 seconds on the default graphql-java
-leg), `ParitySpec` (the soundness and completeness rules and the exception list), `ProcessorOptionsDocsSpec` (it fails when a processor option is not named in the options page) and
+`ContractsGateSpec`), the binding corpus (`BindingCorpusSpec`, about 70 seconds on the default graphql-java
+leg), `ParitySpec` (the soundness and completeness rules and the exception list), `ProcessorOptionsDocsSpec` (it fails when a compile-time option is not named in the options page) and
 `checkNoRuntimeDependency`. The floor and ceiling legs skip the corpus.
 
 - The corpus is data in `src/test/resources/corpus`; its README says how to add a case, and how a case splits its sources into
