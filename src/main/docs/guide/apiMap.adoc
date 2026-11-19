@@ -44,7 +44,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.internal.wiring` |graphql-tools |Internal |The runtime wiring generator, the wiring factory that picks the data fetcher and the type resolver of each field and type, the interface field binder and the directive wirings
 |`io.micronaut.graphql.tools.binding` |graphql-tools-binding |Public API |`BindingCode`, the registry of the error codes
 |`io.micronaut.graphql.tools.internal.input` |graphql-tools |Internal |The conversion of argument and input values, and the input type binder
-|`io.micronaut.graphql.tools.internal.checks` |graphql-tools |Internal |The startup checks and validators: strict mode, unreachable types, schema coordinates, directive wirings
+|`io.micronaut.graphql.tools.internal.checks` |graphql-tools |Internal |The startup checks and validators: strict mode, unreachable types, schema coordinates, the directive wiring check and the mapping dictionary
 |`io.micronaut.graphql.tools.internal.manifest` |graphql-tools |Internal |Recording and writing the binding manifest at startup
 |`io.micronaut.graphql.tools.internal.model` |graphql-tools |Internal |The runtime model the binding reads: the resolver registry, the introspection registry, the type and bean models
 |`io.micronaut.graphql.tools.binding.internal.finding` |graphql-tools-binding |Internal |Findings and their rendering
@@ -76,7 +76,7 @@ Most of this section does not exist yet; `internal` and all of its sub-packages 
 |`io.micronaut.graphql.tools.directive` |Public API |`SchemaDirective` and `CustomWiring`
 |`io.micronaut.graphql.tools.input` |Public API |`ArgumentValue`
 |`io.micronaut.graphql.tools.manifest` |Public API |`BindingManifest`
-|`io.micronaut.graphql.tools.internal` |Internal |The factories that create the beans (today it holds the whole implementation of the binding)
+|`io.micronaut.graphql.tools.internal` |Internal |The factories that create the beans, the eager binding and the bean selection
 |`io.micronaut.graphql.tools.internal.registry` |Internal |The resolver registry, the bean selection and the method processors (the method processors are here already)
 |`io.micronaut.graphql.tools.internal.wiring` |Internal |The runtime wiring generator and the directive wirings
 |`io.micronaut.graphql.tools.internal.resolver` |Internal |The data fetchers and the type resolvers
