@@ -180,7 +180,36 @@ type Book {
                 .methods()[0].fields()[0].returns()
 
         then:
-        returns.firstFailure() == WrapperRules.optionalAtNonNull('Book!')
+        returns.firstFailure() == WrapperRules.optionalAtNonNull('Book!', false)
+        returns.firstFailure().contains('the list element type is Book!')
+        !returns.firstFailure().contains('field type')
+    }
+
+    void "a raw or Object-typed wrapper fails with the dedicated message, not with its type argument"() {
+        given:
+        def wrapped = SchemaModel.load(new SchemaParser().parse('''
+schema { query: Query }
+type Query { raw: String objectOptional: String rawStage: String objectStage: String }
+type Book { title: String }
+''')).get()
+        def methods = [
+                method('raw', [:], [], ref(OPTIONAL), 'a.R#raw()'),
+                method('objectOptional', [:], [], ref(OPTIONAL, ref('java.lang.Object')), 'a.R#objectOptional()'),
+                method('rawStage', [:], [], ref(STAGE), 'a.R#rawStage()'),
+                method('objectStage', [:], [], ref(STAGE, ref('java.lang.Object')), 'a.R#objectStage()'),
+        ]
+
+        when:
+        def methodVerdicts = ResolverClassRules.check(wrapped, model(), resolver('a.R', methods, AnnotationNames.ROOT_RESOLVER), null)
+                .methods()
+
+        then:
+        methodVerdicts.collect { it.fields()[0].returns().failure() } == [
+                WrapperRules.missingTypeArgument(OPTIONAL),
+                WrapperRules.missingTypeArgument(OPTIONAL),
+                WrapperRules.missingTypeArgument(STAGE),
+                WrapperRules.missingTypeArgument(STAGE),
+        ]
     }
 
     void "a field of the subscription type needs a Publisher"() {

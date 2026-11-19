@@ -55,8 +55,6 @@ input HelloInput {
         e.cause instanceof MethodNotFoundException
         e.cause.message == """[field-not-bound] The property or method `lastName` not found in ${HelloInput.name}'s input.
   GraphQL coordinate: HelloInput.lastName (line 12, column 3)
-  GraphQL input object type: HelloInput
-  GraphQL input value: lastName
   Mapped class: ${HelloInput.name}"""
         e.cause.mappingContext.graphQlInputObjectType == 'HelloInput'
         e.cause.mappingContext.mappedClass == HelloInput

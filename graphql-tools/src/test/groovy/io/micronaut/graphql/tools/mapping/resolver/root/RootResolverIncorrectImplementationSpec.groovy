@@ -55,8 +55,6 @@ type User {
         e.cause instanceof IncorrectImplementationException
         e.cause.message == """[incorrect-implementation] The annotated implementation class is not implementing the ${User.name} interface.
   GraphQL coordinate: Query.user (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: user
   Mapped class: ${Query.name}
   Mapped method: user()
   Implementation class: ${UserImpl.name}"""

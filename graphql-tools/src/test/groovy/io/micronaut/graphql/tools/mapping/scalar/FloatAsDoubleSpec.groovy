@@ -158,7 +158,7 @@ type Query {
         e.cause instanceof IncorrectClassMappingException
         e.cause.providedClass == Long
         e.cause.supportedClasses == [float, Float, double, Double] as HashSet
-        e.cause.message.contains("GraphQL field: ratio")
+        e.cause.message.contains("GraphQL coordinate: Query.ratio")
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

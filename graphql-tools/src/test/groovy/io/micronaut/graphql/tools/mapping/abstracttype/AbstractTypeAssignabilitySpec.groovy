@@ -400,8 +400,6 @@ type Stray implements Coded {
         e.cause instanceof IncorrectMemberMappingException
         e.cause.message == """[incorrect-member-mapping] The union Payload is returned as ${PayloadGraph.name}, but its object type Stray is mapped to ${StrayModel.name}, and no object can be an instance of both ${PayloadGraph.name} and ${StrayModel.name}, so no object the field returns can resolve to Stray. Map Stray to a Java type that ${PayloadGraph.name} can implement or extend.
   GraphQL coordinate: Query.payload (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: payload
   Mapped class: ${StrayQuery.name}
   Mapped method: payload(java.lang.String kind)"""
     }

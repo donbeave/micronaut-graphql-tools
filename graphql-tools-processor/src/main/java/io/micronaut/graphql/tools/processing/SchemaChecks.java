@@ -174,8 +174,8 @@ final class SchemaChecks {
                 problems.error(ProcessorOptions.ALLOW_UNREACHABLE + " lists " + allowed
                         + ", which the schema does not define.");
             } else if (!unreachable.containsKey(allowed) && !unreachableValueTypes.containsKey(allowed)) {
-                problems.error(ProcessorOptions.ALLOW_UNREACHABLE + " lists " + allowed
-                        + ", which is not an unreachable object, interface, union, enum, input or scalar type.");
+                problems.error(ProcessorOptions.ALLOW_UNREACHABLE + " lists " + allowed + ", which "
+                        + whyNotUnreachable(allowed, reached) + ".");
             }
         }
 
@@ -255,6 +255,14 @@ final class SchemaChecks {
         registry.types().values().forEach(result::add);
         result.sort(Comparator.comparing(TypeDefinition::getName));
         return result;
+    }
+
+    // the reason that a listed type is not unreachable: the reached types, the built-in scalars and the directive types
+    private static String whyNotUnreachable(String name, Set<String> reached) {
+        if (ScalarInfo.isGraphqlSpecifiedScalar(name)) {
+            return "is a built-in scalar";
+        }
+        return reached.contains(name) ? "is reachable" : "is used by a directive";
     }
 
     static String kind(TypeDefinition<?> type) {

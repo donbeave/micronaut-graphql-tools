@@ -55,8 +55,6 @@ type User {
         e.cause instanceof IncorrectClassMappingException
         e.cause.message == """[incorrect-class-mapping] The field is mapped to an enum, when required a custom class.
   GraphQL coordinate: User.username (line 11, column 3)
-  GraphQL object type: User
-  GraphQL field: username
   Provided class: ${User.name}"""
         e.cause.mappingContext.graphQlObjectType == 'User'
         e.cause.mappingContext.graphQlField == 'username'

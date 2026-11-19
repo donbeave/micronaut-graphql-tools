@@ -230,8 +230,7 @@ type Report {
         !result.success
         result.graphqlErrors == [
                 '[graphql] micronaut.graphql.tools.allowUnreachable lists Ghost, which the schema does not define.',
-                '[graphql] micronaut.graphql.tools.allowUnreachable lists Query, which is not an unreachable object, '
-                        + 'interface, union, enum, input or scalar type.'
+                '[graphql] micronaut.graphql.tools.allowUnreachable lists Query, which is reachable.'
         ]
     }
 

@@ -59,24 +59,26 @@ public final class WrapperRules {
     }
 
     /**
-     * @param graphQlType the printed GraphQL type of the field
+     * @param graphQlType the printed GraphQL type of the field, or of the list element
+     * @param fieldLevel  whether the type is the type of the field itself, not the element of a list
      * @return the sentence for an {@code Optional} at a non-null position
      */
-    public static String optionalAtNonNull(String graphQlType) {
-        return OPTIONAL + " is only allowed for a nullable GraphQL type, the field type is " + graphQlType
-                + ". Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself "
-                + "instead of an Optional.";
+    public static String optionalAtNonNull(String graphQlType, boolean fieldLevel) {
+        return OPTIONAL + " is only allowed for a nullable GraphQL type, the " + typeOf(fieldLevel) + " is " + graphQlType
+                + ". Fix: make the GraphQL " + typeOf(fieldLevel) + " nullable (remove the trailing '!'), or return the "
+                + "value itself instead of an Optional.";
     }
 
     /**
      * @param primitiveOptional the binary name of {@code OptionalInt}, {@code OptionalLong} or {@code OptionalDouble}
-     * @param graphQlType       the printed GraphQL type of the field
+     * @param graphQlType       the printed GraphQL type of the field, or of the list element
+     * @param fieldLevel        whether the type is the type of the field itself, not the element of a list
      * @return the sentence for a primitive optional at a non-null position
      */
-    public static String primitiveOptionalAtNonNull(String primitiveOptional, String graphQlType) {
-        return primitiveOptional + " is only allowed for a nullable GraphQL type, the field type is " + graphQlType
-                + ". Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself "
-                + "instead of an " + simpleName(primitiveOptional) + ".";
+    public static String primitiveOptionalAtNonNull(String primitiveOptional, String graphQlType, boolean fieldLevel) {
+        return primitiveOptional + " is only allowed for a nullable GraphQL type, the " + typeOf(fieldLevel) + " is "
+                + graphQlType + ". Fix: make the GraphQL " + typeOf(fieldLevel) + " nullable (remove the trailing '!'), "
+                + "or return the value itself instead of an " + simpleName(primitiveOptional) + ".";
     }
 
     /**
@@ -109,6 +111,10 @@ public final class WrapperRules {
         String simple = simpleName(wrapper);
         return wrapper + " must declare the type it wraps. Fix: add the type argument, for example " + simple
                 + "<String>.";
+    }
+
+    private static String typeOf(boolean fieldLevel) {
+        return fieldLevel ? "field type" : "list element type";
     }
 
     private static String simpleName(String binaryName) {

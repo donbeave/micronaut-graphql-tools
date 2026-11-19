@@ -100,10 +100,8 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message == """[unsupported-return-type] The return type of the method is not supported for this field: ${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!. Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself instead of an Optional.
+        e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!. Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself instead of an Optional.
   GraphQL coordinate: Query.name (line 7, column 3)
-  GraphQL object type: Query
-  GraphQL field: name
   Mapped class: ${NonNullQuery.name}
   Mapped method: name()"""
         e.cause.mappingContext.graphQlObjectType == 'Query'
@@ -135,10 +133,8 @@ type Holder {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message == """[unsupported-return-type] The return type of the method is not supported for this field: ${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!. Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself instead of an Optional.
+        e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!. Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself instead of an Optional.
   GraphQL coordinate: Holder.note (line 11, column 3)
-  GraphQL object type: Holder
-  GraphQL field: note
   Mapped class: ${Holder.name}
   Mapped method: getNote()"""
     }
@@ -163,9 +159,9 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message.startsWith("[unsupported-return-type] The return type of the method is not supported for this field: " +
-                "${Optional.name} is only allowed for a nullable GraphQL type, the field type is String!.")
-        e.cause.message.contains("GraphQL field: names")
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
+                "${Optional.name} is only allowed for a nullable GraphQL type, the list element type is String!.")
+        e.cause.message.contains("GraphQL coordinate: Query.names")
     }
 
     void "Optional wrapping a DataFetcherResult fails at startup"() {
@@ -188,7 +184,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof UnsupportedReturnTypeException
-        e.cause.message.startsWith("[unsupported-return-type] The return type of the method is not supported for this field: " +
+        e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "${Optional.name} cannot wrap ${DataFetcherResult.name}.")
     }
 
