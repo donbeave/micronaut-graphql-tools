@@ -75,13 +75,13 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
             }
         });
 
-        if (options.containsKey(REMOVED_SDL_DIR)) {
+        boolean checks = flag(options, CHECKS, true, errors);
+        boolean accessorPrefixes = flag(options, ACCESSOR_PREFIXES, false, errors);
+        // with the checks off nothing reads a schema directory, so a leftover key of the JSR-269 processor does no harm
+        if (checks && options.containsKey(REMOVED_SDL_DIR)) {
             errors.add(error(BindingCode.PROCESSOR_OPTION_REMOVED, REMOVED_SDL_DIR + " was renamed to " + SCHEMA_DIRS
                     + ": pass the schema directories there (several are joined with the path separator)"));
         }
-
-        boolean checks = flag(options, CHECKS, true, errors);
-        boolean accessorPrefixes = flag(options, ACCESSOR_PREFIXES, false, errors);
 
         List<Path> directories = new ArrayList<>();
         String dirsValue = options.get(SCHEMA_DIRS);

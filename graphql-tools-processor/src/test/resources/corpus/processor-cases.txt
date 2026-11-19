@@ -45,6 +45,11 @@ ModelChecksSpec	a record model binds its components	bound/record-model
 ModelChecksSpec	an enum argument and a list of input objects are checked through	bound/enum-argument-and-input-list,argument/wrong-enum-argument	
 ModelChecksSpec	the removed option input.detectOmission is an unknown option	options/unknown-option	the JSR-269 option was removed with ArgumentValue; a key under the processor segment is an unknown option
 ModelChecksSpec	ArgumentValue needs a nullable type and the field level; a property needs a getter and a setter	bound/argument-value,argument/argument-value-non-null,input/argument-value-read-only-property	
+RenameChecksSpec	a @GraphQLField method binds the field of the name it declares	rename/member-method,rename/member-property-field,rename/member-property-getter	
+RenameChecksSpec	a member renamed to the name of another member fails with the coordinate and both members	rename/member-clash	
+RenameChecksSpec	a renamed property binds the field of its new name only	rename/member-renamed-away	
+RenameChecksSpec	a coordinate binds a method with another name	rename/coordinate-root-and-type,rename/coordinate-argument-mismatch	
+RenameChecksSpec	a getX resolver method binds the field x only with the accessor prefixes option	rename/accessor-prefixes-on,rename/accessor-prefixes-off	
 ResolverChecksSpec	matching resolvers, a model and a type resolver compile	bound/root-and-type-fields	
 ResolverChecksSpec	a root field without a resolver method fails, naming the field, the schema line and the root resolvers	failure/method-not-found-root	
 ResolverChecksSpec	an object type field without a property or type resolver method fails	failure/property-not-found	
@@ -64,7 +69,7 @@ ResolverChecksSpec	a resolver method that declares its coordinate wins over the 
 ResolverChecksSpec	the old precedence value strict is rejected and names fail	-	deleted: a value of the precedence option of the JSR-269 processor; the visitor reads no precedence and the startup reads the runtime key
 ResolverChecksSpec	a resolver directive binds the type resolver; property-first and resolver-first decide; a marked field without resolver fails	precedence/resolver-directive,precedence/property-first,precedence/resolver-first,precedence/directive-without-resolver	a resolver directive that the schema does not declare is a configuration error of the startup outside the binding verdicts (FieldBindingPrecedenceSpec)
 ResolverChecksSpec	two root resolver methods for one field fail once, naming both	exception/two-classes-one-root-field	
-ResolverChecksSpec	a schema coordinate is validated: unknown field, method name, root resolver on another type, bean that is no resolver	coordinate/unknown-type,coordinate/unknown-field,coordinate/name-differs,coordinate/not-a-coordinate	
+ResolverChecksSpec	a schema coordinate is validated: unknown field, root resolver on another type, bean that is no resolver	coordinate/unknown-type,coordinate/unknown-field,coordinate/not-a-coordinate	the method name row is gone: a coordinate may name a method of another name (rename/coordinate-root-and-type)
 ResolverChecksSpec	a schema coordinate on a bean that is neither resolver fails	coordinate/on-non-resolver	
 ResolverChecksSpec	a type resolver method with a coordinate for a type mapped to another class is not bound and fails	coordinate/type-resolver-method-for-other-class	
 ResolverChecksSpec	a coordinate scopes a root method to its operation type; an un-annotated method on two operation types fails in strict mode	strict/root-method-several-operations,bound/coordinate-scopes-root-method	

@@ -75,6 +75,9 @@ public class QueryResolver {
         !result.success
         result.findings == ['[processor-option-removed] -']
         result.errors[0].contains(ProcessorOptions.SCHEMA_DIRS)
+
+        and: 'with the checks off nothing reads a schema directory, so a leftover key is harmless'
+        compilation().option('micronaut.graphql.tools.sdlDir', '/x').option(ProcessorOptions.CHECKS, 'false').compile().success
     }
 
     def "a value that is not a boolean is an error"() {
