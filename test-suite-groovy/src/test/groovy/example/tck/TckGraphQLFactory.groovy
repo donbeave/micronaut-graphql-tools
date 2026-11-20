@@ -23,7 +23,6 @@ import graphql.schema.idl.TypeDefinitionRegistry
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
@@ -32,7 +31,6 @@ import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.tck.Scenarios
 import io.micronaut.graphql.tools.tck.Tck
 import jakarta.inject.Singleton
-import org.dataloader.DataLoaderRegistry
 
 /** While a TCK scenario runs, the application serves the example schema and the extensions of that scenario's schema. */
 @CompileStatic
@@ -63,16 +61,5 @@ class TckGraphQLFactory {
                     .registerType('ValidationError', ValidationError)
             scenarioMappings.each { it.register(dictionary) }
         } as SchemaMappingDictionaryCustomizer
-    }
-
-    // The example's registry is request scoped, and a request-scoped proxy has no request on the thread that completes a
-    // CompletionStage. Every scenario but the one that tests a registry for each request (tck.registry=per-request) serves a
-    // plain registry.
-    @Bean
-    @Singleton
-    @Primary
-    @Requires(missingProperty = 'tck.registry')
-    DataLoaderRegistry dataLoaderRegistry() {
-        return new DataLoaderRegistry()
     }
 }

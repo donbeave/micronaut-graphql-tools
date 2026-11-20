@@ -16,6 +16,8 @@
 package io.micronaut.graphql.tools.internal.resolver;
 
 import graphql.language.InputValueDefinition;
+import io.micronaut.context.BeanContext;
+import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanProperty;
@@ -25,9 +27,13 @@ import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules.SchemaArgument;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
+import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
+import io.micronaut.graphql.tools.internal.exceptions.resolver.DataLoaderParameterException;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.IncorrectArgumentNameException;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.InvalidSourceArgumentException;
+import io.micronaut.graphql.tools.internal.execution.DataLoaderTable;
+import io.micronaut.graphql.tools.internal.execution.ExecutionContextAvailability;
 import io.micronaut.graphql.tools.internal.input.InputTypeBinder;
 import io.micronaut.graphql.tools.internal.input.ValueConverter;
 import io.micronaut.graphql.tools.internal.model.RuntimeTypeModel;
@@ -46,10 +52,12 @@ public final class ArgumentPlanner {
 
     private final InputTypeBinder inputTypeBinder;
     private final RuntimeTypeModel typeModel;
+    private final BeanContext beanContext;
 
-  public   ArgumentPlanner(InputTypeBinder inputTypeBinder, RuntimeTypeModel typeModel) {
+    public ArgumentPlanner(InputTypeBinder inputTypeBinder, RuntimeTypeModel typeModel, BeanContext beanContext) {
         this.inputTypeBinder = inputTypeBinder;
         this.typeModel = typeModel;
+        this.beanContext = beanContext;
     }
 
     public List<ArgumentDefinition> plan(Executable<?, ?> executable, @Nullable Class<?> sourceClass,
@@ -69,6 +77,9 @@ public final class ArgumentPlanner {
                 result.add(ArgumentDefinition.ofSourceArgument());
             } else if (slot.kind() == ArgumentVerdict.SlotKind.ENVIRONMENT) {
                 result.add(ArgumentDefinition.ofDataFetchingEnvironmentArgument());
+            } else if (slot.kind() == ArgumentVerdict.SlotKind.DATA_LOADER) {
+                result.add(ArgumentDefinition.ofDataLoaderArgument(dataLoader(arguments[slot.parameter()], executable,
+                        mappingContext)));
             } else {
                 Argument<?> argument = arguments[slot.parameter()];
                 InputValueDefinition input = inputs.stream()
@@ -81,6 +92,9 @@ public final class ArgumentPlanner {
             }
         }
 
+        if (verdict.failure() instanceof ArgumentVerdict.UntypedDataLoader untyped) {
+            throw IncorrectArgumentNameException.untypedDataLoader(mappingContext, arguments[untyped.parameter()].getName());
+        }
         if (verdict.failure() instanceof ArgumentVerdict.InvalidSource invalid) {
             throw new InvalidSourceArgumentException(mappingContext, arguments[invalid.parameter()].getType(),
                     sourceClass);
@@ -93,6 +107,23 @@ public final class ArgumentPlanner {
             throw IncorrectArgumentNameException.duplicateParameter(mappingContext, duplicate.name());
         }
         return result;
+    }
+
+    /**
+     * Resolves a {@code DataLoader<K, V>} parameter to the index of a loader bean, once at startup: the fetcher then reads
+     * the loader by index and does no string lookup.
+     */
+    private int dataLoader(Argument<?> parameter, Executable<?, ?> executable, TypeMappingContext mappingContext) {
+        String location = mappingContext.getGraphQlObjectType() + "." + mappingContext.getGraphQlField() + " (parameter '"
+                + parameter.getName() + "' of " + executable.getDeclaringType().getName() + "#" + getMethodName(executable) + ")";
+        try {
+            ExecutionContextAvailability.require(beanContext, location, "a DataLoader");
+            Argument<?>[] types = parameter.getTypeParameters();
+            String named = parameter.getAnnotationMetadata().stringValue(AnnotationUtil.NAMED).orElse(null);
+            return beanContext.getBean(DataLoaderTable.class).resolve(named, types[0], types[1], location);
+        } catch (ExecutionSetupException e) {
+            throw new DataLoaderParameterException(e.code(), e.getMessage(), mappingContext);
+        }
     }
 
     public void checkArgumentCount(BeanProperty<?, ?> beanProperty, TypeMappingContext mappingContext) {

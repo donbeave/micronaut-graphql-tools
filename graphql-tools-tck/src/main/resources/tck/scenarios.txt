@@ -11,4 +11,5 @@ bean-scopes
 input-errors
 execution-thread
 execution-thread-none
+per-execution-context
 async-context

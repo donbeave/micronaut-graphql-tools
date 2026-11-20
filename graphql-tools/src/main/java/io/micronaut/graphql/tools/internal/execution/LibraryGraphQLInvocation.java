@@ -19,6 +19,8 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
 import graphql.GraphQL;
+import graphql.GraphQLContext;
+import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import io.micronaut.configuration.graphql.DefaultGraphQLExecutionInputCustomizer;
 import io.micronaut.configuration.graphql.DefaultGraphQLInvocation;
@@ -26,7 +28,6 @@ import io.micronaut.configuration.graphql.GraphQLExecutionInputCustomizer;
 import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.BeanContext;
-import io.micronaut.context.BeanProvider;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
@@ -37,6 +38,8 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.ExecutionConfiguration;
 import io.micronaut.graphql.tools.internal.LibraryBeanSelection;
+import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
+import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
@@ -67,8 +70,9 @@ import java.util.function.BiConsumer;
  * hop again at the execution strategy or per field.
  *
  * <p>The order after the hop: build the base {@link ExecutionInput} with the {@link ExecutionState} in its GraphQL
- * context; call the application's customizer (skipped when it is the transport's default); put the state back when the
- * customizer built a fresh input; run graphql-java. The propagated context is captured once on the calling thread and
+ * context and, when the application has batch loader beans, the lazy {@link LazyDataLoaderRegistry}; call the
+ * application's customizer (skipped when it is the transport's default); put the state back when the customizer built a
+ * fresh input; call the {@code GraphQLContextContributor} beans; run graphql-java. The propagated context is captured once on the calling thread and
  * installed in the hop only when the executing thread does not hold it already.</p>
  *
  * <p>The bean steps aside when the application declares a {@code GraphQLInvocation} that is {@code @Primary} or
@@ -88,17 +92,25 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     @Nullable
     private final GraphQLExecutionInputCustomizer customizer;
     @Nullable
-    private final BeanProvider<DataLoaderRegistry> dataLoaderRegistry;
+    private final DataLoaderTable loaders;
+    @Nullable
+    private final GraphQLContextContributor[] contributors;
+    @Nullable
+    private final String customizerName;
     @Nullable
     private final ExecutorService executor;
     private final String executorName;
 
     LibraryGraphQLInvocation(GraphQL graphQL, GraphQLExecutionInputCustomizer customizer, GraphQLToolsConfiguration configuration,
-                             ExecutorSelector executorSelector, BeanContext beanContext,
-                             BeanProvider<DataLoaderRegistry> dataLoaderRegistry) {
+                             ExecutorSelector executorSelector, BeanContext beanContext, DataLoaderTable loaders,
+                             List<GraphQLContextContributor> contributors) {
         this.graphQL = graphQL;
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
-        this.dataLoaderRegistry = dataLoaderRegistry.isPresent() ? dataLoaderRegistry : null;
+        this.customizerName = this.customizer == null ? null : this.customizer.getClass().getName();
+        rejectRegistryBean(beanContext);
+        // no loader bean, no registry: graphql-java keeps its empty registry and selects its no-op dispatch strategy
+        this.loaders = loaders.isEmpty() ? null : loaders;
+        this.contributors = contributors.isEmpty() ? null : contributors.toArray(new GraphQLContextContributor[0]);
         this.executorName = configuration.getExecution().getExecutor();
         this.executor = resolveExecutor(executorName, executorSelector, beanContext);
     }
@@ -113,7 +125,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public Publisher<ExecutionResult> invoke(GraphQLInvocationData data, HttpRequest request, MutableHttpResponse<String> response) {
-        return execute(data, ExecutionTransport.HTTP, request, response, ConvertibleValues.empty());
+        return execute(data, GraphQLTransport.HTTP, request, response, ConvertibleValues.empty());
     }
 
     /**
@@ -127,14 +139,15 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
      * @param attributes the connection attributes of a WebSocket connection, else empty
      * @return a publisher of the one result
      */
-    public Publisher<ExecutionResult> execute(GraphQLInvocationData data, ExecutionTransport transport,
+    public Publisher<ExecutionResult> execute(GraphQLInvocationData data, GraphQLTransport transport,
                                               @Nullable HttpRequest<?> request, @Nullable MutableHttpResponse<?> response,
                                               ConvertibleValues<Object> attributes) {
         PropagatedContext captured = PropagatedContext.getOrEmpty();
         if (request != null && captured.find(ServerHttpRequestContext.class).isEmpty()) {
             captured = captured.plus(new ServerHttpRequestContext(request));
         }
-        Execution execution = new Execution(data, new ExecutionState(captured, transport, request, response, attributes, executor));
+        Execution execution = new Execution(data, new ExecutionState(captured, transport, request, response, attributes, executor,
+                customizerName));
         if (executor == null) {
             execution.run();
         } else {
@@ -171,6 +184,30 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         message.append("The executor beans are: ").append(String.join(", ", names)).append(". Use one of them, or 'none' to run on the "
                 + "calling thread, or configure '").append(name).append("' under micronaut.executors.");
         return new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR, message.toString());
+    }
+
+    private static void rejectRegistryBean(BeanContext beanContext) {
+        List<String> beans = new ArrayList<>();
+        beanContext.getBeanDefinitions(DataLoaderRegistry.class).forEach(definition -> beans.add(definition.getDeclaringType().orElse(definition.getBeanType()).getName()));
+        if (!beans.isEmpty()) {
+            beans.sort(null);
+            throw new ExecutionSetupException(BindingCode.DATA_LOADER_REGISTRY_BEAN, "The application has a DataLoaderRegistry bean ("
+                    + String.join(", ", beans) + "). The library's invocation does not use it: its loaders would be shared across "
+                    + "operations on one WebSocket connection. Fix: register the loaders as BatchLoader beans (BatchLoader, "
+                    + "BatchLoaderWithContext, MappedBatchLoader or MappedBatchLoaderWithContext), add them in a "
+                    + "GraphQLContextContributor through the registry of the ExecutionInput, or provide your own GraphQLInvocation "
+                    + "with @Replaces(DefaultGraphQLInvocation.class).");
+        }
+    }
+
+    private static ExecutionResult contributorFailed() {
+        return ExecutionResultImpl.newExecutionResult()
+                .data(null)
+                .addError(GraphqlErrorBuilder.newError()
+                        .message("The operation could not be prepared: an internal error occurred.")
+                        .extensions(Map.of("code", "INTERNAL_ERROR"))
+                        .build())
+                .build();
     }
 
     private static ExecutionResult rejected() {
@@ -218,8 +255,8 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                         .query(data.getQuery())
                         .operationName(data.getOperationName())
                         .variables(data.getVariables());
-                if (dataLoaderRegistry != null) {
-                    builder.dataLoaderRegistry(dataLoaderRegistry.get());
+                if (loaders != null) {
+                    builder.dataLoaderRegistry(new LazyDataLoaderRegistry(loaders, state));
                 }
                 ExecutionInput input = builder.build();
                 state.storeIn(input.getGraphQLContext());
@@ -236,7 +273,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         @SuppressWarnings("unchecked")
         private void customize(ExecutionInput input) {
             hopThread = Thread.currentThread();
-            Mono.from(customizer.customize(input, state.request(), (MutableHttpResponse<String>) state.response()))
+            Mono.from(customizer.customize(input, state.httpRequest(), (MutableHttpResponse<String>) state.response()))
                     .switchIfEmpty(Mono.error(() -> new IllegalStateException("The GraphQLExecutionInputCustomizer "
                             + customizer.getClass().getName() + " published no ExecutionInput")))
                     .subscribe(this::customized, result::completeExceptionally);
@@ -267,7 +304,32 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         }
 
         private void executeAsync(ExecutionInput input) {
-            graphQL.executeAsync(input).whenComplete(this);
+            state.executionInput(input);
+            if (contribute(input.getGraphQLContext())) {
+                graphQL.executeAsync(input).whenComplete(this);
+            }
+        }
+
+        /** Runs the contributors, in order; false when one failed and the result is already answered. */
+        private boolean contribute(GraphQLContext context) {
+            if (contributors == null) {
+                return true;
+            }
+            for (GraphQLContextContributor contributor : contributors) {
+                try {
+                    contributor.contribute(context, state);
+                } catch (Exception e) {
+                    if (e instanceof GraphQLError error) {
+                        result.complete(ExecutionResultImpl.newExecutionResult().data(null).addError(error).build());
+                    } else {
+                        LOG.error("The GraphQLContextContributor {} failed; the operation is answered with an error",
+                                contributor.getClass().getName(), e);
+                        result.complete(contributorFailed());
+                    }
+                    return false;
+                }
+            }
+            return true;
         }
 
         @Override

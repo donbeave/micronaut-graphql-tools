@@ -20,8 +20,6 @@ import example.ElapsedTime;
 import example.data.Book;
 import example.data.BookSeller;
 import example.data.BookSellerRepository;
-import example.graphql.BookSellerDataLoader;
-import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import org.dataloader.DataLoader;
 
@@ -39,9 +37,7 @@ public class BookResolver {
     }
 
     @ElapsedTime
-    public CompletionStage<List<BookSeller>> sellers(Book book, DataFetchingEnvironment dfe) {
-        DataLoader<String, List<BookSeller>> dataLoader = dfe.getDataLoader(BookSellerDataLoader.class.getName());
-
+    public CompletionStage<List<BookSeller>> sellers(Book book, DataLoader<String, List<BookSeller>> dataLoader) {
         return dataLoader.load(book.getId());
     }
 
