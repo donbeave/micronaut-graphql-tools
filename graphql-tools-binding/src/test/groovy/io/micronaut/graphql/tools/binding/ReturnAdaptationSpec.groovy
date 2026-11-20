@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.binding
 import graphql.language.ListType
 import graphql.language.NonNullType
 import graphql.language.TypeName
+import graphql.schema.idl.SchemaParser
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules
 import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict
 import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules
@@ -39,8 +40,10 @@ class ReturnAdaptationSpec extends Specification {
     static final STRING = ref('java.lang.String')
     static final MODEL = model(['java.util.concurrent.CompletableFuture': [STAGE], 'reactor.core.publisher.Flux': [PUBLISHER], 'reactor.core.publisher.Mono': [PUBLISHER]])
 
+    static final REGISTRY = new SchemaParser().parse('scalar JSON\ntype Book { title: String }')
+
     private static adapt(declared, type = nullable, boolean fieldLevel = true, boolean subscription = false) {
-        ResolverClassRules.returnAdaptation(MODEL, declared, type, fieldLevel, subscription)
+        ResolverClassRules.returnAdaptation(MODEL, REGISTRY, declared, type, fieldLevel, subscription)
     }
 
     void "a type without a wrapper is adapted to itself"() {
@@ -133,6 +136,9 @@ class ReturnAdaptationSpec extends Specification {
 
     void "an explicit Object argument is a raw wrapper only where no custom scalar can take it"() {
         expect:
+        adapt(ref(STAGE, ref('java.lang.Object')), nullable).failure() == WrapperRules.missingTypeArgument(STAGE)
+        adapt(ref(STAGE, ref('java.lang.Object')), new NonNullType(new ListType(nonNull))).failure() ==
+                WrapperRules.missingTypeArgument(STAGE)
         adapt(ref(OPTIONAL, ref('java.lang.Object')), new TypeName('JSON')).failure() == null
         adapt(ref(OPTIONAL, ref('java.lang.Object')), new TypeName('String')).failure() ==
                 WrapperRules.missingTypeArgument(OPTIONAL)

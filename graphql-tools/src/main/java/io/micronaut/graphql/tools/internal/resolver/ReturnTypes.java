@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.internal.resolver;
 
 import graphql.execution.DataFetcherResult;
 import graphql.language.Type;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.mapping.TypeMappingContext;
@@ -47,10 +48,11 @@ public final class ReturnTypes {
     }
 
     // ResolverClassRules.returnAdaptation decides; this turns a violation into its exception
-    public static ReturnVerdict adaptation(RuntimeTypeModel typeModel, Argument<?> argument, Type<?> graphQlType,
-                                           boolean fieldLevel, boolean subscription, TypeMappingContext mappingContext) {
-        ReturnVerdict verdict = ResolverClassRules.returnAdaptation(typeModel, typeModel.ref(argument), graphQlType,
-                fieldLevel, subscription);
+    public static ReturnVerdict adaptation(RuntimeTypeModel typeModel, TypeDefinitionRegistry registry,
+                                           Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
+                                           boolean subscription, TypeMappingContext mappingContext) {
+        ReturnVerdict verdict = ResolverClassRules.returnAdaptation(typeModel, registry, typeModel.ref(argument),
+                graphQlType, fieldLevel, subscription);
         if (verdict.failure() != null) {
             throw new UnsupportedReturnTypeException(mappingContext, verdict.failure());
         }
