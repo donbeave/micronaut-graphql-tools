@@ -19,6 +19,7 @@ import graphql.schema.DataFetcher;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.convert.ConversionService;
+import io.micronaut.graphql.tools.execution.FieldExecutionKind;
 import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
 import io.micronaut.graphql.tools.internal.resolver.PublisherAdaptingDataFetcher;
 
@@ -27,25 +28,13 @@ import java.util.concurrent.Executor;
 /**
  * Decides, once per field at startup, how a method field executes, and composes its fetcher. The kind comes from the
  * same {@link ReturnVerdict} that the compile-time check reads, so the startup and the build agree. A field that is not
- * {@link Kind#ASYNC} keeps the method fetcher it had, byte for byte: no wrapper, no thread-local read, no allocation.
+ * {@link FieldExecutionKind#ASYNC} keeps the method fetcher it had, byte for byte: no wrapper, no thread-local read, no allocation.
  * The composition of a field, outermost first: the async boundary (async fields only), then the executor hop (a field
  * whose {@code @ExecuteOn} names another executor than the operation's), then the adapter of a publisher, then the
  * method fetcher.
  */
 @Internal
 public final class FieldExecutionPlanner {
-
-    /** How a field executes. */
-    public enum Kind {
-        /** A property or an introspection read: never wrapped. */
-        TRIVIAL,
-        /** A method with a plain return: runs on the thread that resolves its parent. */
-        SYNC,
-        /** A method that returns a {@code CompletionStage} or a publisher, or is a Kotlin {@code suspend} function: passes through the async boundary. */
-        ASYNC,
-        /** A root field of the subscription type, which streams. */
-        STREAM
-    }
 
     private FieldExecutionPlanner() {
     }
@@ -55,11 +44,11 @@ public final class FieldExecutionPlanner {
      * @param subscriptionField whether the field belongs to the subscription type
      * @return the kind of a method field
      */
-    public static Kind kind(ReturnVerdict verdict, boolean subscriptionField) {
+    public static FieldExecutionKind kind(ReturnVerdict verdict, boolean subscriptionField) {
         if (subscriptionField) {
-            return Kind.STREAM;
+            return FieldExecutionKind.STREAM;
         }
-        return verdict.async() ? Kind.ASYNC : Kind.SYNC;
+        return verdict.async() ? FieldExecutionKind.ASYNC : FieldExecutionKind.SYNCHRONOUS;
     }
 
     /**
@@ -77,6 +66,6 @@ public final class FieldExecutionPlanner {
         if (fieldExecutor != null) {
             adapted = new ExecutorHopDataFetcher(fieldExecutor, adapted);
         }
-        return kind(verdict, subscriptionField) == Kind.ASYNC ? new AsyncBoundaryDataFetcher(adapted) : adapted;
+        return kind(verdict, subscriptionField) == FieldExecutionKind.ASYNC ? new AsyncBoundaryDataFetcher(adapted) : adapted;
     }
 }
