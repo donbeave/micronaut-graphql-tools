@@ -63,14 +63,7 @@ With `executor: none` there is no hop: the operation runs on the thread that rec
 
 Either keep the customizer on the calling thread, or complete its publisher on a thread that suits the operation:
 
-[source,java]
-----
-@Override
-public Publisher<ExecutionInput> customize(ExecutionInput input, HttpRequest<?> request, MutableHttpResponse<String> response) {
-    return Mono.fromCallable(() -> input)
-            .publishOn(Schedulers.boundedElastic()); // the rest of the operation runs on this pool
-}
-----
+snippet::example.tck.ExecutorNoneCustomizerScenario[project-base="test-suite", source="test", tags="executor-none-customizer", indent="0"]
 
 To keep the operation on a blocking executor, keep the default `blocking` or name your own: when the customizer answers on another thread, the library hops back to the executor once more.
 
