@@ -73,7 +73,8 @@ public final class FieldExecutionPlanner {
     public static DataFetcher<Object> plan(DataFetcher<Object> method, ReturnVerdict verdict, boolean subscriptionField,
                                            ConversionService conversionService, @Nullable Executor fieldExecutor) {
         if (subscriptionField) {
-            return new StreamDataFetcher(method, conversionService);
+            // the hop of an @ExecuteOn runs the method on its executor; the stream fetcher wraps the publisher that comes back
+            return new StreamDataFetcher(fieldExecutor == null ? method : new ExecutorHopDataFetcher(fieldExecutor, method), conversionService);
         }
         DataFetcher<Object> adapted = verdict.reactive() == ReturnVerdict.Reactive.NONE ? method
                 : new PublisherAdaptingDataFetcher(method, verdict.reactive() == ReturnVerdict.Reactive.MULTI, conversionService);

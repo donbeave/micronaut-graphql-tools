@@ -179,7 +179,16 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         return executor;
     }
 
-    private ExecutionResult customizeErrors(ExecutionResult executionResult) {
+    /**
+     * Applies the {@link GraphQLErrorsCustomizer} beans to one result; a subscription event is a response of its own.
+     *
+     * @param executionResult the result
+     * @return the result, with the customized errors when there are customizers and the result has errors
+     */
+    public ExecutionResult customizeErrors(ExecutionResult executionResult) {
+        if (errorsCustomizers == null) {
+            return executionResult;
+        }
         List<GraphQLError> errors = executionResult.getErrors();
         if (errors == null || errors.isEmpty()) {
             return executionResult;
@@ -200,7 +209,13 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         return current == errors ? executionResult : ExecutionResultImpl.newExecutionResult().from(executionResult).errors(current).build();
     }
 
-    static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {
+    /**
+     * @param name        the executor name from the configuration
+     * @param selector    finds the executor
+     * @param beanContext the bean context
+     * @return the executor, or null for {@code none}; fails startup for a name that is unknown or reserved
+     */
+    public static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {
         if (name.equals(ExecutionConfiguration.NO_EXECUTOR)) {
             return null;
         }

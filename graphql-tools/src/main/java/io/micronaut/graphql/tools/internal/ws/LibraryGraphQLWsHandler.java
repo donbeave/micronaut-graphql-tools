@@ -22,6 +22,7 @@ import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.configuration.graphql.ws.GraphQLWsConfiguration;
 import io.micronaut.configuration.graphql.ws.GraphQLWsHandler;
+import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
@@ -107,10 +108,12 @@ public class LibraryGraphQLWsHandler {
      * @param interceptors the connection interceptors, in order
      * @param toolsConfiguration the library's configuration, which names the execution executor
      * @param executorSelector   finds that executor when the application replaced the invocation
+     * @param beanContext        names the executor beans in the failure of an unknown executor
      */
     public LibraryGraphQLWsHandler(GraphQLInvocation invocation, GraphQLWsConfiguration configuration, TaskScheduler scheduler,
                                    JsonMapper json, List<GraphQLConnectionInterceptor> interceptors,
-                                   GraphQLToolsConfiguration toolsConfiguration, ExecutorSelector executorSelector) {
+                                   GraphQLToolsConfiguration toolsConfiguration, ExecutorSelector executorSelector,
+                                   BeanContext beanContext) {
         this.invocation = invocation;
         this.configuration = configuration;
         this.scheduler = scheduler;
@@ -118,7 +121,7 @@ public class LibraryGraphQLWsHandler {
         this.interceptors = interceptors;
         // the interceptors may block, so they run on the execution executor whichever invocation the application uses
         this.interceptorExecutor = invocation instanceof LibraryGraphQLInvocation library ? library.executor()
-                : executorSelector.select(toolsConfiguration.getExecution().getExecutor()).orElse(null);
+                : LibraryGraphQLInvocation.resolveExecutor(toolsConfiguration.getExecution().getExecutor(), executorSelector, beanContext);
     }
 
     /**
@@ -265,7 +268,7 @@ public class LibraryGraphQLWsHandler {
         }
         AtomicBoolean failed = new AtomicBoolean();
         Mono<Void> operation = Flux.from(execute(data, state))
-                .flatMap(result -> result.getData() instanceof Publisher<?> events ? asResults(events) : Flux.just(result))
+                .flatMap(result -> result.getData() instanceof Publisher<?> events ? asResults(events).map(this::customizeErrors) : Flux.just(result))
                 .concatMap(result -> result(session, id, result, failed))
                 .then(Mono.defer(() -> failed.get() ? Mono.empty() : send(session, Map.of("id", id, "type", "complete"))));
         handle.update(operation
@@ -286,6 +289,11 @@ public class LibraryGraphQLWsHandler {
     }
 
     @SuppressWarnings("unchecked")
+    /** The outer result went through the errors customizers of the library's invocation; each event is a response of its own. */
+    private ExecutionResult customizeErrors(ExecutionResult result) {
+        return invocation instanceof LibraryGraphQLInvocation library ? library.customizeErrors(result) : result;
+    }
+
     private static Flux<ExecutionResult> asResults(Publisher<?> events) {
         return Flux.from((Publisher<Object>) events).map(event -> {
             if (event instanceof ExecutionResult result) {
