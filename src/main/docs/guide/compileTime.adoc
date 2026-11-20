@@ -150,13 +150,26 @@ Every compile-time check is the same in the three languages. The corpus compiles
 
 A compile-time error is a finding that the startup also reports at its default severity, with the same code and the same coordinate. The compile-time check never reads the severity settings (`strict`, `checks.<code>` and `allow.*` of the runtime): the five checks above are errors at compile time even where a runtime setting would relax them. A build that is rejected by a check a runtime setting relaxes is rejected on purpose, and the way out is an annotation (see below).
 
-The corpus asserts the rule for every case and language (`BindingCorpusSpec`, rule 5 of the {repo}/graphql-tools-processor/src/test/resources/corpus/README.md[corpus README]). Five documented exceptions remain, each one a case where the build also fails at startup, but with another code first. They are in {corpus}/corpus-soundness-exceptions.txt[`corpus-soundness-exceptions.txt`] with a reason each, and the list may only shrink:
+The corpus asserts the rule for every case and language (`BindingCorpusSpec`, rule 5 of the {repo}/graphql-tools-processor/src/test/resources/corpus/README.md[corpus README]). Six documented exceptions remain, five of them cases where the build also fails at startup, but with another code first. They are in {corpus}/corpus-soundness-exceptions.txt[`corpus-soundness-exceptions.txt`] with a reason each, and the list may only shrink:
 
 * two resolver classes bind one root field (the startup reports the ambiguity first);
 * a `RuntimeWiringCustomizer` claims the field (the startup binds no method to it);
 * binding the field throws before the argument rule runs;
 * a binding failure of another resolver class stops the startup before the strict checks of this class;
-* two resolver classes bind one input type or enum to different Java classes.
+* two resolver classes bind one input type or enum to different Java classes;
+* a Kotlin nullability mismatch, which only the compiler can see (see <<kotlinNullability,Kotlin nullability>>): the startup reports nothing.
+
+=== Kotlin nullability
+
+[[kotlinNullability]]
+Kotlin writes nullability into the type (`String?` against `String`), and under KSP the visitor reads it. It compares it with the nullability of the schema at each position: the return type of a field, a parameter that binds an argument, a property of an input class, and the element of a list. Two codes report it:
+
+* `kotlin-nullability-mismatch` is a compile error, because the code fails at run time: a return type that is nullable where the field is non-null (`String?` for `String!`) nulls out the parent, and a non-null parameter or input property where the schema accepts `null` (`String` for `term: String`) cannot take it. The finding names the schema coordinate and the Kotlin member.
+* `kotlin-nullability-loose` is the reverse: a non-null return type where the field is nullable, or a nullable parameter or property where the schema requires a value. The code is stricter than the schema, so nothing fails, but the schema promises something else than the code. Plain Kotlin returns `String` for a nullable field all the time, so the check is off by default. The option `micronaut.graphql.tools.processor.looseNullability` (`ignore`, `warn` or `fail`, see <<compileTimeOptions,the options>>) sets its severity, with the vocabulary of the `checks` setting of strict mode: `warn` reports a compiler warning and `fail` a compile error.
+
+What the check leaves alone: Java and Groovy, whose results do not change (a `@Nullable` annotation is not compared); a platform type, which has no declared nullability; a return type wrapped in `Optional`, `Mono`, `Maybe` or another type that can be empty, because the wrapper already says the position is nullable; and arrays. Under kapt a Kotlin class is read as Java stubs, so the check does not run there.
+
+The startup does not read Kotlin metadata, so the check costs nothing at run time and in a native image; the compile-time cost is one flag per type that the visitor already reads. The corpus case {corpus}/exception/kotlin-nullability[`exception/kotlin-nullability`] shows each error, the cases under {corpus}/nullability[`nullability`] show the warnings and the combinations that must stay silent.
 
 === Only the startup can prove it
 

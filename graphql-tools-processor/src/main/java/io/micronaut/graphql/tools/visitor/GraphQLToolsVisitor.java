@@ -21,6 +21,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 import io.micronaut.graphql.tools.binding.internal.finding.FindingRenderer;
+import io.micronaut.graphql.tools.binding.internal.finding.Severity;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassFindings;
 import io.micronaut.graphql.tools.binding.internal.rules.TypeClassDerivation;
@@ -279,9 +280,19 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
                 // warning is made when the compilation finishes; the walk stopped at the class it names
                 current.pending.add(new Pending(current.checked, finding, current.coverage.missedIn(finding.sentence())));
             } else {
-                current.findings++;
                 MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());
-                report(context, finding, method != null && element.equals(method.getDeclaringType()) ? method : element);
+                Element at = method != null && element.equals(method.getDeclaringType()) ? method : element;
+                if (BindingCode.KOTLIN_NULLABILITY_LOOSE.code().equals(finding.code())
+                        && current.options.looseNullability() != Severity.FAIL) {
+                    // stricter than the schema: the code cannot fail for it, so it is off, or a warning, unless the build asks
+                    if (current.options.looseNullability() == Severity.WARN) {
+                        current.warnings++;
+                        context.warn(FindingRenderer.render(finding), at);
+                    }
+                } else {
+                    current.findings++;
+                    report(context, finding, at);
+                }
             }
         }
     }
