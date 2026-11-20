@@ -1,0 +1,162 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.micronaut.graphql.tools.scalars.internal.json;
+
+import graphql.execution.CoercedVariables;
+import graphql.language.ArrayValue;
+import graphql.language.BooleanValue;
+import graphql.language.EnumValue;
+import graphql.language.FloatValue;
+import graphql.language.IntValue;
+import graphql.language.NullValue;
+import graphql.language.ObjectField;
+import graphql.language.ObjectValue;
+import graphql.language.StringValue;
+import graphql.language.Value;
+import graphql.language.VariableReference;
+import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.scalars.internal.WireCoercing;
+import io.micronaut.json.JsonMapper;
+import io.micronaut.json.tree.JsonNode;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
+
+/**
+ * The JSON scalar. A value that is already JSON (a string, a number, a boolean, a map, a collection) is passed on as it is,
+ * which allocates nothing. Any other value, such as a bean or a record, is converted with the application's {@link JsonMapper}
+ * (Micronaut Serialization in an application that uses it) into maps, lists and primitives.
+ */
+@Internal
+public final class JsonCoercing extends WireCoercing<Object, Object> {
+
+    private final Supplier<JsonMapper> mapper;
+
+    /**
+     * @param scalarName the name of the scalar in the schema
+     * @param mapper     the mapper that converts a value that is not JSON yet; asked only when there is such a value
+     */
+    public JsonCoercing(String scalarName, Supplier<JsonMapper> mapper) {
+        super(scalarName);
+        this.mapper = mapper;
+    }
+
+    @Override
+    protected Object write(Object value) {
+        if (isJson(value)) {
+            return value;
+        }
+        try {
+            return toJava(mapper.get().writeValueToTree(value));
+        } catch (IOException e) {
+            throw new IllegalArgumentException("a " + value.getClass().getName() + " cannot be written as JSON: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    protected Object read(Object input) {
+        return input;
+    }
+
+    @Override
+    protected Object readLiteral(Value<?> literal, CoercedVariables variables) {
+        if (literal instanceof NullValue) {
+            return null;
+        }
+        if (literal instanceof StringValue) {
+            return ((StringValue) literal).getValue();
+        }
+        if (literal instanceof EnumValue) {
+            return ((EnumValue) literal).getName();
+        }
+        if (literal instanceof BooleanValue) {
+            return ((BooleanValue) literal).isValue();
+        }
+        if (literal instanceof IntValue) {
+            return integer(((IntValue) literal).getValue());
+        }
+        if (literal instanceof FloatValue) {
+            return ((FloatValue) literal).getValue().doubleValue();
+        }
+        if (literal instanceof VariableReference) {
+            return variables.get(((VariableReference) literal).getName());
+        }
+        if (literal instanceof ArrayValue) {
+            List<Object> list = new ArrayList<>();
+            for (Value<?> element : ((ArrayValue) literal).getValues()) {
+                list.add(readLiteral(element, variables));
+            }
+            return list;
+        }
+        if (literal instanceof ObjectValue) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            for (ObjectField field : ((ObjectValue) literal).getObjectFields()) {
+                map.put(field.getName(), readLiteral(field.getValue(), variables));
+            }
+            return map;
+        }
+        throw new IllegalArgumentException("expected a JSON value, but was " + literal.getClass().getSimpleName());
+    }
+
+    private static boolean isJson(Object value) {
+        return value == null || value instanceof CharSequence || value instanceof Number || value instanceof Boolean
+                || value instanceof Map || value instanceof Collection;
+    }
+
+    private static Object integer(BigInteger value) {
+        if (value.bitLength() < Integer.SIZE) {
+            return value.intValue();
+        }
+        if (value.bitLength() < Long.SIZE) {
+            return value.longValue();
+        }
+        return value;
+    }
+
+    private static Object toJava(JsonNode node) {
+        if (node.isNull()) {
+            return null;
+        }
+        if (node.isObject()) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            for (Map.Entry<String, JsonNode> entry : node.entries()) {
+                map.put(entry.getKey(), toJava(entry.getValue()));
+            }
+            return map;
+        }
+        if (node.isArray()) {
+            List<Object> list = new ArrayList<>(node.size());
+            for (JsonNode element : node.values()) {
+                list.add(toJava(element));
+            }
+            return list;
+        }
+        if (node.isNumber()) {
+            return node.getNumberValue();
+        }
+        if (node.isBoolean()) {
+            return node.getBooleanValue();
+        }
+        return node.getStringValue();
+    }
+
+}
