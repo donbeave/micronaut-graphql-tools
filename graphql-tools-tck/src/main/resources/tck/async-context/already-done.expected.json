@@ -1,0 +1,9 @@
+{
+  "data": {
+    "asyncDone": {
+      "contextElement": "tck-request",
+      "loggingEntry": "tck-request",
+      "onEventLoop": false
+    }
+  }
+}

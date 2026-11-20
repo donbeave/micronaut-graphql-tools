@@ -44,15 +44,18 @@ public final class ReturnTypes {
     private static final Map<Class<?>, Class<?>> PRIMITIVE_OPTIONALS = Map.of(
             OptionalInt.class, Integer.class, OptionalLong.class, Long.class, OptionalDouble.class, Double.class);
 
+    // what a Completable emits: nothing, so the field is null
+    private static final Argument<Void> NO_VALUE = Argument.of(Void.class);
+
     private ReturnTypes() {
     }
 
     // ResolverClassRules.returnAdaptation decides; this turns a violation into its exception
     public static ReturnVerdict adaptation(RuntimeTypeModel typeModel, TypeDefinitionRegistry registry,
                                            Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
-                                           boolean subscription, TypeMappingContext mappingContext) {
+                                           boolean subscription, boolean singleResult, TypeMappingContext mappingContext) {
         ReturnVerdict verdict = ResolverClassRules.returnAdaptation(typeModel, registry, typeModel.ref(argument),
-                graphQlType, fieldLevel, subscription);
+                graphQlType, fieldLevel, subscription, singleResult);
         if (verdict.failure() != null) {
             throw new UnsupportedReturnTypeException(mappingContext, verdict.failure());
         }
@@ -64,7 +67,7 @@ public final class ReturnTypes {
     public static Argument<?> unwrap(Argument<?> argument, ReturnVerdict verdict) {
         Argument<?> result = argument;
         for (int i = 0; i < verdict.depth(); i++) {
-            result = result.getFirstTypeVariable().get();
+            result = result.getFirstTypeVariable().orElse(NO_VALUE);
         }
         if (verdict.reactive() == ReturnVerdict.Reactive.MULTI) {
             return Argument.listOf(result);
@@ -74,21 +77,23 @@ public final class ReturnTypes {
 
     private static boolean isSingleValue(Class<?> type) {
         for (Class<?> c = type; c != null; c = c.getSuperclass()) {
-            if (WrapperRules.SINGLE_VALUE_PUBLISHER.equals(c.getName())) {
+            if (WrapperRules.SINGLE_VALUE_TYPES.contains(c.getName())) {
                 return true;
             }
         }
         return false;
     }
 
-    public static String convertedTypeName(Argument<?> declaredType, boolean subscription, boolean returnType) {
+    public static String convertedTypeName(Argument<?> declaredType, boolean subscription, boolean returnType,
+                                           boolean singleResult) {
         Argument<?> result = declaredType;
         if (CompletionStage.class.isAssignableFrom(result.getType()) || Future.class.isAssignableFrom(result.getType())) {
             result = result.getFirstTypeVariable().orElse(result);
         }
-        if (Publisher.class.isAssignableFrom(result.getType())) {
-            boolean many = !subscription && returnType && !isSingleValue(result.getType());
-            result = result.getFirstTypeVariable().orElse(result);
+        boolean singleType = !subscription && isSingleValue(result.getType());
+        if (Publisher.class.isAssignableFrom(result.getType()) || singleType) {
+            boolean many = !subscription && returnType && !singleType && !singleResult;
+            result = result.getFirstTypeVariable().orElse(singleType ? NO_VALUE : result);
             if (many) {
                 result = Argument.listOf(result);
             }

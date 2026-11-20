@@ -15,11 +15,11 @@ A method of a Query, Mutation or type field can return a `Publisher` instead of 
 
 snippet::example.tck.ReturnTypesScenario[project-base="test-suite", source="test", tags="publisher-returns", indent="0"]
 
-* A single-value publisher (`Mono`) gives the value of the field. An empty `Mono` is `null`.
+* A single-value publisher gives the value of the field, and an empty one is `null`. The single-value types are named once, by their class name: `Mono`, the `Single`, `Maybe` and `Completable` of RxJava 3 (`io.reactivex.rxjava3.core`) and of RxJava 2 (`io.reactivex`), and Micronaut's `CompletableFuturePublisher`. Any other `Publisher` is a single-value publisher on a method that is annotated with `@SingleResult`. A `Completable` emits no value and is read as `Void`, so the field is `null`. The RxJava types are converted through Micronaut's reactive converters: add `micronaut-rxjava3` or `micronaut-rxjava2` to the application.
 * A publisher of many values (`Flux`, an RxJava `Flowable` or a plain `Publisher`) needs a list field. The values are collected into the list, in order. An empty `Flux` is an empty list.
 * An error signal is an error of that field, like an exception thrown by the method or a failed `CompletionStage`: the field is `null` (or the nearest nullable parent, for a non-null field) and the rest of the response is unchanged.
 * A `Mono` can be wrapped in `DataFetcherResult` or `Optional` inside, as `Mono<Optional<T>>`. For a `Flux`, the wrappers apply to each element: `Flux<DataFetcherResult<T>>`.
-* A `Flux` on a field that is not a list fails the startup, as does a `Publisher` inside a `CompletionStage`, inside a list, or on a bean property (a property is read, not invoked). `Single`, `Maybe` and `Observable` of RxJava are not `Publisher`; convert them with `toFlowable()` first.
+* A `Flux` on a field that is not a list fails the startup, as does a `Publisher` inside a `CompletionStage`, inside a list, or on a bean property (a property is read, not invoked). An `Observable` of RxJava is not a `Publisher`; convert it with `toFlowable()` first.
 * A field of the subscription type is different: its `Publisher` is the stream of events and is not collected.
 
 The adapted future completes on the thread that signals the publisher. The adaptation itself neither captures nor restores a propagated context: that belongs to the execution model of the library, and a reactive library that propagates the context on its own (as `micronaut-reactor` does) keeps doing so.

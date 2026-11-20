@@ -46,6 +46,8 @@ import io.micronaut.graphql.tools.benchmarks.Fixtures.Rectangle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Square;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Triangle;
 
+import reactor.core.publisher.Mono;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +69,10 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String UNION_RESOLUTION = "unionResolution";
     public static final String INTERFACE_RESOLUTION = "interfaceResolution";
     public static final String DIRECTIVE_WRAPPED_FETCHER = "directiveWrappedFetcher";
+    public static final String ASYNC_BOUNDARY_DONE = "asyncBoundaryDone";
+    public static final String ASYNC_BOUNDARY_OTHER_THREAD = "asyncBoundaryOtherThread";
+    /** The future of an async field that is not done, without the boundary: what the other-thread case subtracts. */
+    public static final String ASYNC_PENDING_SOURCE = "asyncPendingSource";
     public static final String INVOCATION_OVERHEAD = "invocationOverhead";
     public static final String INVOCATION_SLOPE = "invocationSlope";
     public static final String QUERY_1K = "query1kObjects";
@@ -112,6 +118,9 @@ public final class BenchmarkCases implements AutoCloseable {
               shape(circle: Boolean!): Shape
               figure(triangle: Boolean!): Figure
               guarded: String @guard
+              asyncDone: String
+              asyncPending: String
+              captured: String
             }
 
             type Item {
@@ -166,6 +175,13 @@ public final class BenchmarkCases implements AutoCloseable {
         invocation = context.getBean(GraphQLInvocation.class);
         schema = graphQL.getGraphQLSchema();
 
+        // an execution through the library's invocation hands the async fetchers the context they find their state in
+        ExecutionResult captureResult = Mono.from(invocation.invoke(new GraphQLInvocationData("{ captured }", null, Map.of()), null, null)).block();
+        if (captureResult == null || !captureResult.getErrors().isEmpty()) {
+            throw new IllegalStateException("The query that captures the execution context failed: "
+                    + (captureResult == null ? "no result" : captureResult.getErrors()));
+        }
+
         ops.put(PROPERTY_FETCH, fetch("Item", "name", new Item("id", "name", 1), Map.of()));
         ops.put(GRAPHQL_JAVA_PROPERTY_FETCH, graphqlJavaPropertyFetch());
         ops.put(ROOT_METHOD, fetch("Query", "ping", null, Map.of()));
@@ -183,6 +199,10 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(NESTED_INPUT_ARGUMENT, fetch("Query", "line", null,
                 Map.of("line", Map.of("label", "l", "point", point("a", 1, 2), "tags", List.of("x", "y")))));
         ops.put(DIRECTIVE_WRAPPED_FETCHER, fetch("Query", "guarded", null, Map.of()));
+        ops.put(ASYNC_BOUNDARY_DONE, fetch("Query", "asyncDone", null, Map.of()));
+        ops.put(ASYNC_BOUNDARY_OTHER_THREAD, fetch("Query", "asyncPending", null, Map.of()));
+        Resolvers.Query resolver = new Resolvers.Query();
+        ops.put(ASYNC_PENDING_SOURCE, resolver::asyncPending);
         ops.put(UNION_RESOLUTION, resolve(schema.getType("Shape"), new Circle(), new Square()));
         ops.put(INTERFACE_RESOLUTION, resolve(schema.getType("Figure"), new Triangle(), new Rectangle()));
         ops.put(invokeOp(SMALL_QUERY_FIELDS), invoke(SMALL_QUERY_FIELDS));
@@ -246,6 +266,7 @@ public final class BenchmarkCases implements AutoCloseable {
                 .graphQLSchema(schema)
                 .source(source)
                 .arguments(arguments)
+                .graphQLContext(Resolvers.capturedContext())
                 .parentType(parent)
                 .fieldDefinition(definition)
                 .mergedField(MergedField.newMergedField(Field.newField(definition.getName()).build()).build())

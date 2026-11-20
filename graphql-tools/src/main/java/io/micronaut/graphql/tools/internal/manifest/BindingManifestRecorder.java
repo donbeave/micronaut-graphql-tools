@@ -82,14 +82,14 @@ public final class BindingManifestRecorder {
     }
 
     public void field(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String kind,
-               Supplier<String> member, Argument<?> declaredType, boolean subscription) {
+               Supplier<String> member, Argument<?> declaredType, boolean subscription, boolean singleResult) {
         if (!recording) {
             return;
         }
         entries.put(objectTypeDefinition.getName() + "." + fieldDefinition.getName(),
                 new BindingPlan.Entry(coordinate(objectTypeDefinition, fieldDefinition), kind, member,
                         () -> JavaTypeNames.of(declaredType),
-                        () -> ReturnTypes.convertedTypeName(declaredType, subscription, true)));
+                        () -> ReturnTypes.convertedTypeName(declaredType, subscription, true, singleResult)));
     }
 
     public void claimed(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition, String customizer) {
@@ -136,7 +136,7 @@ public final class BindingManifestRecorder {
                 inputTypeName + "." + fieldName + ": " + printType(graphQlType), "inputField",
                 () -> inputClass.getTypeName() + "#" + property.getName(),
                 () -> JavaTypeNames.of(property.asArgument()),
-                () -> ReturnTypes.convertedTypeName(property.asArgument(), false, false)));
+                () -> ReturnTypes.convertedTypeName(property.asArgument(), false, false, false)));
     }
 
     public void diagnostic(BindingCode code, String... parts) {

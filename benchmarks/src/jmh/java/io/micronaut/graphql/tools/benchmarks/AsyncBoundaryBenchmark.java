@@ -19,6 +19,11 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.schema.DataFetcher;
+import io.micronaut.core.convert.value.ConvertibleValues;
+import io.micronaut.core.propagation.PropagatedContext;
+import io.micronaut.graphql.tools.internal.execution.AsyncBoundaryDataFetcher;
+import io.micronaut.graphql.tools.internal.execution.ExecutionState;
+import io.micronaut.graphql.tools.internal.execution.ExecutionTransport;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -39,12 +44,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A prototype of the async boundary, in this benchmark source only: a field that returns a {@link CompletionStage}
- * completes on some thread, and graphql-java runs the children of the field on that thread. When it is an event-loop
- * thread (one that implements Reactor's {@link NonBlocking} marker), the children would run on the event loop, so the
- * boundary completes the field's future on the request executor instead. {@code completion} says where the stage is
- * completed, {@code boundary} whether the prototype wraps the field; the query reads ten property fields of the
- * object the field returns. Like {@link InvocationBenchmark}, each trial asserts the counted hops first.
+ * The async boundary: a field that returns a {@link CompletionStage} completes on some thread, and graphql-java runs the
+ * children of the field on that thread. When it is an event-loop thread (one that implements Reactor's
+ * {@link NonBlocking} marker), the children would run on the event loop, so the library's
+ * {@link AsyncBoundaryDataFetcher} completes the field's future on the request executor instead. {@code completion} says
+ * where the stage is completed, {@code boundary} whether the library's fetcher wraps the field; the query reads ten
+ * property fields of the object the field returns. Like {@link InvocationBenchmark}, each trial asserts the counted hops
+ * first.
  */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
@@ -110,6 +116,9 @@ public class AsyncBoundaryBenchmark {
     private static final class Run implements AutoCloseable {
 
         private final GraphQL graphQL;
+        private final ExecutionState state;
+        // what the field returns this time: the delegate of the library's fetcher hands it back
+        private CompletableFuture<Object> next;
         private volatile CompletableFuture<Void> attached = CompletableFuture.completedFuture(null);
         private final ExecutorService requestExecutor = Executors.newVirtualThreadPerTaskExecutor();
         private final ExecutorService completionExecutor;
@@ -127,12 +136,23 @@ public class AsyncBoundaryBenchmark {
             Executor request = counter == null ? requestExecutor : counter.counting(requestExecutor);
             boolean sameThread = completionExecutor == null;
             boolean boundaryOn = boundary.equals("on");
+            state = new ExecutionState(PropagatedContext.getOrEmpty(), ExecutionTransport.HTTP, null, null,
+                    ConvertibleValues.empty(), request);
+            AsyncBoundaryDataFetcher boundaryFetcher = new AsyncBoundaryDataFetcher(env -> next);
             Map<String, HopSchema.Method> methods = Map.of("asyncRoot", env -> {
                 CompletableFuture<Object> source = new CompletableFuture<>();
-                CompletableFuture<Object> field = boundaryOn ? boundary(source, request) : source;
+                next = source;
                 if (sameThread) {
+                    // already done when the method returns: the boundary hands it back as it is
                     source.complete(HopSchema.NODE);
-                } else {
+                }
+                Object field;
+                try {
+                    field = boundaryOn ? boundaryFetcher.get(env) : source;
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+                if (!sameThread) {
                     CompletableFuture<Void> gate = attached;
                     completionExecutor.execute(() -> {
                         // complete only after executeAsync returned, when graphql-java has attached everything that
@@ -146,31 +166,12 @@ public class AsyncBoundaryBenchmark {
             graphQL = HopSchema.build(methods, method -> (DataFetcher<Object>) method::apply, counter);
         }
 
-        /** The prototype: a future that completes on the request executor when the stage completes on an event loop. */
-        private static CompletableFuture<Object> boundary(CompletionStage<Object> stage, Executor requestExecutor) {
-            CompletableFuture<Object> field = new CompletableFuture<>();
-            stage.whenComplete((value, error) -> {
-                Runnable complete = () -> {
-                    if (error != null) {
-                        field.completeExceptionally(error);
-                    } else {
-                        field.complete(value);
-                    }
-                };
-                if (Thread.currentThread() instanceof NonBlocking) {
-                    requestExecutor.execute(complete);
-                } else {
-                    complete.run();
-                }
-            });
-            return field;
-        }
-
         ExecutionResult execute() {
             CompletableFuture<Void> gate = new CompletableFuture<>();
             attached = gate;
-            CompletableFuture<ExecutionResult> result = graphQL.executeAsync(
-                    ExecutionInput.newExecutionInput().query(HopSchema.ASYNC_QUERY).build());
+            ExecutionInput input = ExecutionInput.newExecutionInput().query(HopSchema.ASYNC_QUERY).build();
+            state.storeIn(input.getGraphQLContext());
+            CompletableFuture<ExecutionResult> result = graphQL.executeAsync(input);
             gate.complete(null);
             return result.join();
         }

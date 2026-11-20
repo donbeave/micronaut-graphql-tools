@@ -185,7 +185,7 @@ type Holder {
         CANCELLATIONS.get() == 2
     }
 
-    void "a field that is not reactive keeps its plain data fetcher"() {
+    void "a field that is not reactive keeps its plain data fetcher, and a reactive one is adapted inside the async boundary"() {
         given:
         startContext(SCHEMA, SPEC_NAME)
         def schema = getGraphQLBean().graphQLSchema
@@ -195,7 +195,7 @@ type Holder {
         schema.codeRegistry.getDataFetcher(queryType, queryType.getFieldDefinition('plain')).getClass().simpleName ==
                 'MicronautExecutableMethodDataFetcher'
         schema.codeRegistry.getDataFetcher(queryType, queryType.getFieldDefinition('one')).getClass().simpleName ==
-                'PublisherAdaptingDataFetcher'
+                'AsyncBoundaryDataFetcher'
     }
 
     void "a Publisher on a bean property fails at startup"() {
