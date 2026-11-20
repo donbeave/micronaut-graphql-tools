@@ -16,3 +16,4 @@ async-context
 execute-on
 error-handling
 error-details
+field-decorator

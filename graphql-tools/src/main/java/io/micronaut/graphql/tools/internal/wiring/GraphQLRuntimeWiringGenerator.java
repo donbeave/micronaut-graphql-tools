@@ -30,6 +30,7 @@ import graphql.language.TypeName;
 import graphql.language.UnionTypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetcher;
+import graphql.schema.FieldCoordinates;
 import graphql.schema.idl.MapEnumValuesProvider;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -104,7 +105,11 @@ import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
 import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.UnsupportedReturnTypeException;
 import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDataFetcher;
+import io.micronaut.graphql.tools.execution.FieldDescriptor;
+import io.micronaut.graphql.tools.execution.FieldExecutionKind;
+import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
 import io.micronaut.graphql.tools.internal.execution.FieldExecutionPlanner;
+import io.micronaut.graphql.tools.internal.execution.FieldFetcherDecorators;
 import io.micronaut.graphql.tools.internal.resolver.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.MicronautPropertyDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.ResolverInstances;
@@ -223,6 +228,8 @@ public final class GraphQLRuntimeWiringGenerator {
 
     private final FieldExecutors fieldExecutors;
 
+    private final FieldFetcherDecorators fieldDecorators;
+
     private final AbstractTypeWiring abstractTypeWiring;
 
     @Nullable
@@ -234,7 +241,8 @@ public final class GraphQLRuntimeWiringGenerator {
                                   TypeDefinitionRegistry typeDefinitionRegistry,
                                   SchemaMappingDictionary schemaMappingDictionary,
                                   GraphQLToolsConfiguration configuration,
-                                  Set<String> extensionFields) {
+                                  Set<String> extensionFields,
+                                  List<FieldFetcherDecorator> fieldDecorators) {
         requireNonNull("applicationContext", applicationContext);
         requireNonNull("graphQLBeanIntrospectionRegistry", graphQLBeanIntrospectionRegistry);
         requireNonNull("graphQLResolversRegistry", graphQLResolversRegistry);
@@ -270,6 +278,7 @@ public final class GraphQLRuntimeWiringGenerator {
                 checkPolicy, manifestRecorder, typeModel, applicationContext, new InputCallbacks());
         this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel, applicationContext);
         this.fieldExecutors = new FieldExecutors(applicationContext, configuration);
+        this.fieldDecorators = new FieldFetcherDecorators(fieldDecorators);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,
                 graphQLBeanIntrospectionRegistry, manifestRecorder, rootRuntimeWiringBuilder);
@@ -443,11 +452,23 @@ public final class GraphQLRuntimeWiringGenerator {
         // decided once per field here: a field that is not async and has no @ExecuteOn keeps the plain method fetcher and allocates nothing more
         Executor fieldExecutor = fieldExecutors.forMethod(executable.getAnnotationMetadata(), owner, mappingContext);
         DataFetcher<Object> fetcher = new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance);
+        boolean subscriptionField = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
+        DataFetcher<Object> planned = FieldExecutionPlanner.plan(fetcher, verdict, subscriptionField,
+                applicationContext.getConversionService(), fieldExecutor);
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
-                FieldExecutionPlanner.plan(fetcher, verdict, mappingContext.getGraphQlObjectType().equals(subscriptionTypeName),
-                        applicationContext.getConversionService(), fieldExecutor)
+                fieldDecorators.apply(new FieldDescriptor(coordinates(mappingContext),
+                        FieldExecutionPlanner.kind(verdict, subscriptionField), hasArguments(mappingContext), fieldExecutor,
+                        executable.getAnnotationMetadata()), planned)
         );
+    }
+
+    private static FieldCoordinates coordinates(TypeMappingContext mappingContext) {
+        return FieldCoordinates.coordinates(mappingContext.getGraphQlObjectType(), mappingContext.getGraphQlField());
+    }
+
+    private static boolean hasArguments(TypeMappingContext mappingContext) {
+        return !mappingContext.getFieldDefinition().getInputValueDefinitions().isEmpty();
     }
 
     private static boolean isSingleResult(AnnotationMetadataProvider method) {
@@ -932,7 +953,10 @@ public final class GraphQLRuntimeWiringGenerator {
                         + "method, or move the field to a type resolver, and put @ExecuteOn there.", mappingContext);
             }
 
-            typeRuntimeWiringBuilder.dataFetcher(fieldDefinition.getName(), new MicronautPropertyDataFetcher(beanProperty));
+            typeRuntimeWiringBuilder.dataFetcher(fieldDefinition.getName(), fieldDecorators.apply(
+                    new FieldDescriptor(coordinates(mappingContext), FieldExecutionKind.TRIVIAL, hasArguments(mappingContext), null,
+                            beanProperty.getAnnotationMetadata()),
+                    new MicronautPropertyDataFetcher(beanProperty)));
 
             processFieldReturnType(beanProperty.asArgument(), fieldDefinition.getType(), mappingContext);
 
