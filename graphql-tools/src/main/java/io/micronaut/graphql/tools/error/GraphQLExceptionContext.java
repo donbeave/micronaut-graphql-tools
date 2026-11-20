@@ -21,6 +21,7 @@ import graphql.execution.ResultPath;
 import graphql.language.SourceLocation;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
 
 import java.util.Map;
 
@@ -42,9 +43,10 @@ public interface GraphQLExceptionContext {
     ResultPath getPath();
 
     /**
-     * @return the location of the field in the query document
+     * @return the location of the field in the query document, or null when graphql-java has none for it; an error
+     * that {@link #newError()} or {@link #error} creates then has no entry in {@code locations}
      */
-    @NonNull
+    @Nullable
     SourceLocation getSourceLocation();
 
     /**

@@ -107,13 +107,15 @@ public final class LibraryBeanSelection {
      * The invocations that are not the application's: the library's own, whose condition calls this class, and the
      * transport's default, which the library's invocation replaces.
      */
-    private static boolean isInvocationOfLibraryOrTransport(Class<?> beanType) {
-        return beanType == LibraryGraphQLInvocation.class || beanType == DefaultGraphQLInvocation.class;
+    private static boolean isInvocationOfLibraryOrTransport(BeanDefinition<?> definition) {
+        Class<?> beanType = definition.getBeanType();
+        return beanType == LibraryGraphQLInvocation.class
+                || beanType == DefaultGraphQLInvocation.class && definition.getDeclaringType().isEmpty();
     }
 
     /**
      * The application's {@code GraphQLInvocation} that makes the library's invocation step aside: a bean that is
-     * {@code @Primary} or that declares {@code @Replaces(DefaultGraphQLInvocation.class)}, the two ways the transport
+     * {@code @Primary} (a factory method that returns {@code DefaultGraphQLInvocation} included) or that declares {@code @Replaces(DefaultGraphQLInvocation.class)}, the two ways the transport
      * documents to bring an invocation of one's own.
      *
      * @param context the bean context to search
@@ -134,11 +136,10 @@ public final class LibraryBeanSelection {
     private static List<Provided> provided(BeanContext context, Class<?> type, boolean withLibrary, Visits visits) {
         List<BeanDefinition<?>> enabled = new ArrayList<>();
         for (BeanDefinitionReference<?> reference : context.getBeanDefinitionReferences()) {
-            if (type.isAssignableFrom(reference.getBeanType()) && !isInvocationOfLibraryOrTransport(reference.getBeanType())
-                    && reference.isPresent()) {
+            if (type.isAssignableFrom(reference.getBeanType()) && reference.isPresent()) {
                 BeanDefinition<?> definition = reference.load();
                 // the library's own references are never asked isEnabled, which would evaluate its condition again
-                if (definition != null && (isLibrary(definition)
+                if (definition != null && !isInvocationOfLibraryOrTransport(definition) && (isLibrary(definition)
                         ? withLibrary && libraryEnabled(context, reference, definition, visits)
                         : reference.isEnabled(context))) {
                     enabled.add(definition);
