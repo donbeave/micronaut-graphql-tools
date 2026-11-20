@@ -21,9 +21,11 @@ import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
+import graphql.language.ScalarTypeDefinition;
 import graphql.language.Type;
 import graphql.language.TypeName;
 import graphql.schema.idl.ScalarInfo;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
@@ -277,14 +279,15 @@ public final class ResolverClassRules {
      * (nullable types only).
      *
      * @param model        the type model
+     * @param registry     the schema, which tells a custom scalar (that may take {@code Object}) from the other types
      * @param declared     the declared return type, or the type argument of a list at a deeper level
      * @param fieldType    the type of the field, or the element type of a list at a deeper level
      * @param fieldLevel   whether this is the type of the field itself, not an element of a list
      * @param subscription whether the field belongs to the subscription type
      * @return the verdict
      */
-    public static ReturnVerdict returnAdaptation(TypeModel model, TypeRef declared, Type<?> fieldType,
-                                                 boolean fieldLevel, boolean subscription) {
+    public static ReturnVerdict returnAdaptation(TypeModel model, TypeDefinitionRegistry registry, TypeRef declared,
+                                                 Type<?> fieldType, boolean fieldLevel, boolean subscription) {
         TypeRef result = declared;
         int depth = 0;
         String outer = null;
@@ -295,7 +298,7 @@ public final class ResolverClassRules {
                 return ReturnVerdict.failed(WrapperRules.completionStageInList());
             }
             outer = COMPLETION_STAGE;
-            if (untyped(result, fieldType)) {
+            if (untyped(registry, result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(COMPLETION_STAGE));
             }
             result = result.typeArguments().get(0);
@@ -309,7 +312,7 @@ public final class ResolverClassRules {
                 return ReturnVerdict.failed(WrapperRules.subscriptionNeedsPublisher(className(result)));
             }
             outer = PUBLISHER;
-            if (untyped(result, fieldType)) {
+            if (untyped(registry, result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
             }
             result = result.typeArguments().get(0);
@@ -321,10 +324,13 @@ public final class ResolverClassRules {
             if (outer != null) {
                 return ReturnVerdict.failed(WrapperRules.publisherInCompletionStage());
             }
-            if (untyped(result, fieldType)) {
+            boolean multiValue = !isAssignableTo(model, result, WrapperRules.SINGLE_VALUE_PUBLISHER);
+            // a multi-value publisher emits the elements of the list, so its argument is judged against the element type
+            Type<?> emitted = multiValue && unwrapNonNull(fieldType) instanceof ListType list ? list.getType() : fieldType;
+            if (untyped(registry, result, emitted)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
             }
-            if (!isAssignableTo(model, result, WrapperRules.SINGLE_VALUE_PUBLISHER)) {
+            if (multiValue) {
                 if (!(unwrapNonNull(fieldType) instanceof ListType)) {
                     return ReturnVerdict.failed(WrapperRules.multiValuePublisherNeedsList(SchemaTypes.print(fieldType)));
                 }
@@ -338,7 +344,7 @@ public final class ResolverClassRules {
 
         if (isAssignableTo(model, result, DATA_FETCHER_RESULT)) {
             outer = DATA_FETCHER_RESULT;
-            if (untyped(result, fieldType)) {
+            if (untyped(registry, result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(DATA_FETCHER_RESULT));
             }
             result = result.typeArguments().get(0);
@@ -350,7 +356,7 @@ public final class ResolverClassRules {
                 return ReturnVerdict.failed(WrapperRules.optionalAtNonNull(SchemaTypes.print(fieldType), fieldLevel));
             }
             outer = OPTIONAL;
-            if (untyped(result, fieldType)) {
+            if (untyped(registry, result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(OPTIONAL));
             }
             result = result.typeArguments().get(0);
@@ -381,9 +387,9 @@ public final class ResolverClassRules {
     }
 
     // a wrapper without a type argument: the raw type, whose argument the type model reports as Object. An explicit
-    // Object argument is a raw wrapper only where no scalar can take an Object (a built-in scalar): a custom scalar may
-    // declare Object as an output class, and Optional<Object> then binds
-    private static boolean untyped(TypeRef wrapper, Type<?> fieldType) {
+    // Object argument is a raw wrapper wherever no scalar can take an Object: only a custom scalar may declare Object
+    // as an output class, and Optional<Object> then binds. A list, an object type or a built-in scalar cannot take it
+    private static boolean untyped(TypeDefinitionRegistry registry, TypeRef wrapper, Type<?> fieldType) {
         if (wrapper.typeArguments().isEmpty()) {
             return true;
         }
@@ -391,10 +397,14 @@ public final class ResolverClassRules {
             return false;
         }
         Type<?> named = fieldType;
-        while (named instanceof NonNullType || named instanceof ListType) {
-            named = named instanceof NonNullType nonNull ? nonNull.getType() : ((ListType) named).getType();
+        while (named instanceof NonNullType) {
+            named = ((NonNullType) named).getType();
         }
-        return named instanceof TypeName typeName && ScalarInfo.isGraphqlSpecifiedScalar(typeName.getName());
+        if (!(named instanceof TypeName typeName)) {
+            return true;
+        }
+        return ScalarInfo.isGraphqlSpecifiedScalar(typeName.getName())
+                || registry.getType(typeName.getName()).filter(ScalarTypeDefinition.class::isInstance).isEmpty();
     }
 
     /**
@@ -468,7 +478,7 @@ public final class ResolverClassRules {
                 boolean subscription = schema.subscriptionType().filter(typeName::equals).isPresent();
                 fields.add(new FieldVerdict(coordinate,
                         arguments(rootField ? null : sourceType, method.parameters(), argumentNames),
-                        fieldReturn(model, method.genericReturnType(), field.getType(), true, subscription)));
+                        fieldReturn(model, schema.registry(), method.genericReturnType(), field.getType(), true, subscription)));
             }
             methods.add(new MethodVerdict(method.signature(), coordinates, fields));
         }
@@ -480,9 +490,9 @@ public final class ResolverClassRules {
      * declared type, then, where the field type is a list, the wrappers of the element type with {@code fieldLevel}
      * false, down to the innermost element.
      */
-    private static ReturnVerdict fieldReturn(TypeModel model, TypeRef declared, Type<?> fieldType, boolean fieldLevel,
-                                             boolean subscription) {
-        ReturnVerdict verdict = returnAdaptation(model, declared, fieldType, fieldLevel, subscription);
+    private static ReturnVerdict fieldReturn(TypeModel model, TypeDefinitionRegistry registry, TypeRef declared,
+                                             Type<?> fieldType, boolean fieldLevel, boolean subscription) {
+        ReturnVerdict verdict = returnAdaptation(model, registry, declared, fieldType, fieldLevel, subscription);
         Type<?> unwrapped = fieldType instanceof NonNullType nonNull ? nonNull.getType() : fieldType;
         if (verdict.failure() != null || verdict.primitiveOptional() || !(unwrapped instanceof ListType list)) {
             return verdict;
@@ -494,14 +504,14 @@ public final class ResolverClassRules {
         if (verdict.reactive() == ReturnVerdict.Reactive.MULTI) {
             // the type reached is the element: the publisher collects its values into the list
             return new ReturnVerdict(verdict.depth(), false, null, verdict.reactive(),
-                    fieldReturn(model, adapted, list.getType(), false, subscription));
+                    fieldReturn(model, registry, adapted, list.getType(), false, subscription));
         }
         if (!isAssignableTo(model, adapted, ITERABLE) && !isAssignableTo(model, adapted, ITERATOR)
                 || adapted.typeArguments().isEmpty()) {
             return verdict;
         }
         return new ReturnVerdict(verdict.depth(), false, null, verdict.reactive(),
-                fieldReturn(model, adapted.typeArguments().get(0), list.getType(), false, subscription));
+                fieldReturn(model, registry, adapted.typeArguments().get(0), list.getType(), false, subscription));
     }
 
     private static Type<?> unwrapNonNull(Type<?> type) {
