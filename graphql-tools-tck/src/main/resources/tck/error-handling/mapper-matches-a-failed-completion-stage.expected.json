@@ -1,0 +1,25 @@
+{
+  "data": {
+    "stockMissingLater": null
+  },
+  "errors": [
+    {
+      "message": "no stock for item 9",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "stockMissingLater"
+      ],
+      "extensions": {
+        "code": "OUT_OF_STOCK",
+        "id": 9,
+        "service": "catalog",
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

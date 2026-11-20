@@ -1,0 +1,11 @@
+# Extends the Query of the example schema that every suite serves; the types below must not clash with its names.
+extend type Query {
+  stock: String!
+  stockBoom: String
+  stockBoomNonNull: String!
+  stockMissing(id: Int!): String
+  stockMissingLater(id: Int!): String
+  stockBoomLater: String
+  stockRejected: String
+  stockSoldOut: String
+}

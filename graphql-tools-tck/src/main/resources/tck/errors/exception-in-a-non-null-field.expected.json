@@ -2,10 +2,10 @@
   "data": null,
   "errors": [
     {
-      "message": "Exception while fetching data (/failNonNull) : boom",
+      "message": "Internal server error",
       "locations": [{ "line": 3, "column": 3 }],
       "path": ["failNonNull"],
-      "extensions": { "classification": "DataFetchingException" }
+      "extensions": { "code": "INTERNAL_ERROR", "classification": "DataFetchingException" }
     }
   ]
 }

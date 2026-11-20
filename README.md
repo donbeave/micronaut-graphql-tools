@@ -1231,6 +1231,28 @@ public GraphQLBuilderCustomizer tracing(MyTracingInstrumentation instrumentation
 }
 ```
 
+## Error handling
+
+The library installs a `DataFetcherExceptionHandler` that hides the message of an exception that a resolver throws: the
+client gets `Internal server error` with `extensions.code` `INTERNAL_ERROR`, and the exception is logged once at ERROR
+without a stack trace. A `GraphQLError` exception is sent as it is. A `GraphQLExceptionMapper<E>` bean maps an exception
+type to an error with a message and extensions (`@Order` or `Ordered` decides between mappers; a failure of a
+`CompletionStage` is matched by its real type); a `GraphQLErrorsCustomizer` bean changes the final list of errors;
+`jakarta.validation.ConstraintViolationException` becomes one error for each violation with its argument. Two options
+(`micronaut.graphql.tools.errors.details` and `micronaut.graphql.tools.errors.stack-traces`, both `false` by default) show
+the message in development and add the stack trace to the log entry. A `GraphQLBuilderCustomizer` that sets its own
+handler replaces the library's. See the Errors page of the guide.
+
+```java
+@Singleton
+class OutOfStockMapper implements GraphQLExceptionMapper<OutOfStockException> {
+    @Override
+    public GraphQLError map(OutOfStockException exception, GraphQLExceptionContext context) {
+        return context.error(exception.getMessage(), Map.of("code", "OUT_OF_STOCK"));
+    }
+}
+```
+
 ## Building the GraphQL bean yourself
 
 The library creates two beans: the bound `GraphQLSchema`, and the `GraphQL` engine that runs it. Each one is created
