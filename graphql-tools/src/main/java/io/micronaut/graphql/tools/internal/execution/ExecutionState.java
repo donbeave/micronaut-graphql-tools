@@ -54,6 +54,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     @Nullable
     private final Executor requestExecutor;
     private volatile boolean cancelled;
+    private volatile boolean subscription;
     @Nullable
     private final String customizer;
     private ExecutionInput executionInput;
@@ -161,6 +162,20 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      */
     public boolean isCancelled() {
         return cancelled;
+    }
+
+    /**
+     * Marks the execution as a subscription operation: the loaders that it creates from now on have caching off.
+     */
+    void markSubscription() {
+        subscription = true;
+    }
+
+    /**
+     * @return whether the operation is a subscription, known once its root field is fetched
+     */
+    boolean isSubscription() {
+        return subscription;
     }
 
     @Override

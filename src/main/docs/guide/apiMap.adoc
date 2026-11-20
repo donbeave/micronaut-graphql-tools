@@ -27,7 +27,7 @@ This page tells you which package holds what, which packages you may import from
 |Accept or reject a `graphql-transport-ws` connection, with attributes |`io.micronaut.graphql.tools.websocket` (`GraphQLConnectionInterceptor`, `GraphQLConnectionRequest`, `GraphQLConnectionResult`)
 |Wire a directive |`io.micronaut.graphql.tools.directive` (`SchemaDirective`)
 |Read what the schema is bound to |`io.micronaut.graphql.tools.manifest` (`BindingManifest`)
-|Add values to the GraphQL context of each operation |`io.micronaut.graphql.tools.execution` (`GraphQLContextContributor`, `GraphQLExecutionRequest`, `GraphQLTransport`, `DataLoaderBatchStatistics`)
+|Add values to the GraphQL context of each operation |`io.micronaut.graphql.tools.execution` (`GraphQLContextContributor`, `GraphQLExecutionRequest`, `GraphQLTransport`, `DataLoaderBatchStatistics`, `DataLoaderOptionsCustomizer`)
 |Wrap the data fetchers of selected fields |`io.micronaut.graphql.tools.execution` (`FieldFetcherDecorator`, `FieldDescriptor`, `FieldExecutionKind`)
 |===
 
@@ -48,7 +48,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.directive` |graphql-tools |Public API |`SchemaDirective` and `CustomWiring`
 |`io.micronaut.graphql.tools.input` |graphql-tools |Public API |`ArgumentValue`
 |`io.micronaut.graphql.tools.manifest` |graphql-tools |Public API |`BindingManifest`
-|`io.micronaut.graphql.tools.execution` |graphql-tools |Public API |`GraphQLContextContributor`, the read-only `GraphQLExecutionRequest` that it receives, the `GraphQLTransport` kinds, the `DataLoaderBatchStatistics` of an execution, and `FieldFetcherDecorator` with its `FieldDescriptor` and `FieldExecutionKind`
+|`io.micronaut.graphql.tools.execution` |graphql-tools |Public API |`GraphQLContextContributor`, the read-only `GraphQLExecutionRequest` that it receives, the `GraphQLTransport` kinds, the `DataLoaderBatchStatistics` of an execution, the `DataLoaderOptionsCustomizer` of one batch loader, and `FieldFetcherDecorator` with its `FieldDescriptor` and `FieldExecutionKind`
 |`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes, and `ResolverBeanCondition`, the bean condition behind the resolver annotations (an application never refers to it)
 |`io.micronaut.graphql.tools.resolver` |graphql-tools |Public API |The marker interfaces of resolver contracts: `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>`
 |`io.micronaut.graphql.tools.websocket` |graphql-tools |Public API |The connection hook of the `graphql-transport-ws` endpoint: `GraphQLConnectionInterceptor`, the request it receives and the result it returns

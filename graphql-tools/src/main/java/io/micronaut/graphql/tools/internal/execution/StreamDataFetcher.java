@@ -56,8 +56,11 @@ public final class StreamDataFetcher implements DataFetcher<Object> {
 
     @Override
     public Object get(DataFetchingEnvironment environment) throws Exception {
-        Object result = delegate.get(environment);
         ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
+        if (state != null) {
+            state.markSubscription();
+        }
+        Object result = delegate.get(environment);
         if (result instanceof CompletionStage<?> stage) {
             // CompletionStage<Publisher<T>>: graphql-java unwraps the stage later, so the publisher is wrapped when it arrives
             return stage.thenApply(value -> wrap(value, state));
