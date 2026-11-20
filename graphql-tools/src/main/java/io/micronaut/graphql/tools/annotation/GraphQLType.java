@@ -25,6 +25,15 @@ import java.lang.annotation.Target;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
+ * Marks a class that represents a GraphQL type: it is introspected, and it is a candidate for the object type named by
+ * {@link #name()}.
+ *
+ * <p>{@link #value()} makes the class an implementation of a Java interface that stands for a GraphQL type.
+ * {@link #name()} makes it the class of the object type of that name, so that a union member or an interface
+ * implementation needs no {@code SchemaMappingDictionary} entry. The startup and the compile-time checks read the
+ * annotation, and a dictionary entry for the same type wins over it. Two classes that match one object type fail
+ * with {@code [ambiguous-type-class]}.</p>
+ *
  * @author Alexey Zhokhov
  */
 @Documented
@@ -34,5 +43,11 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 public @interface GraphQLType {
 
     Class value() default Void.class;
+
+    /**
+     * @return the name of the GraphQL object type that this class represents, or an empty string for none. A class
+     * with a name is not matched by the naming convention
+     */
+    String name() default "";
 
 }

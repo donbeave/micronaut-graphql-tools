@@ -38,7 +38,8 @@ public final class InterfaceTypeMappingNotProvidedException extends AbstractMapp
         super(BindingCode.INTERFACE_TYPE_MAPPING_NOT_PROVIDED,
                 String.format(
                         "Can not detect representation class for type %s, implementation of %s interface. " +
-                                "Ensure the representation class is registered via %s.",
+                                "Ensure the representation class is registered via %s, declared with @GraphQLType(name) "
+                                + "or named by micronaut.graphql.tools.type-class-convention.",
                         objectType,
                         interfaceType,
                         SchemaMappingDictionary.class.getName()

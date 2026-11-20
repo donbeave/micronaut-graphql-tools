@@ -44,6 +44,11 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
 
     static final String ACCESSOR_PREFIXES = 'micronaut.graphql.tools.processor.resolverAccessorPrefixes'
 
+    /** The runtime key of a case that the visitor reads as an option of its own. */
+    static final String TYPE_CLASS_CONVENTION_CONFIG = 'micronaut.graphql.tools.type-class-convention'
+
+    static final String TYPE_CLASS_CONVENTION = 'micronaut.graphql.tools.processor.typeClassConvention'
+
     static final String CHECKS_OFF = 'micronaut.graphql.tools.processor.checks=false'
 
     @Override
@@ -76,6 +81,10 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
         String prefixes = corpusCase.config[ACCESSOR_PREFIXES_CONFIG]
         if (prefixes != null) {
             checked.add("-A${ACCESSOR_PREFIXES}=${prefixes}".toString())
+        }
+        String convention = corpusCase.config[TYPE_CLASS_CONVENTION_CONFIG]
+        if (convention != null) {
+            checked.add("-A${TYPE_CLASS_CONVENTION}=${convention}".toString())
         }
         List<SourceUnit> units = corpusCase.units(Language.JAVA)
         List<Path> dependencies = []
