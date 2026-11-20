@@ -40,7 +40,8 @@ import io.micronaut.graphql.tools.binding.BindingCode
 final class Parity {
 
     static final Set<String> PER_CLASS_CODES = BindingCode.values()
-            .findAll { it.compileTime() && !it.code().startsWith('processor-') && it != BindingCode.SCHEMA_INVALID }
+            .findAll { it.compileTime() && !it.code().startsWith('processor-') && it != BindingCode.SCHEMA_INVALID
+                    && it != BindingCode.SCHEMA_DEFINITION_NOT_PROVIDED }
             *.code() as Set<String>
 
     /**
