@@ -28,6 +28,7 @@ import io.micronaut.core.type.Executable;
 import io.micronaut.graphql.tools.input.ArgumentValue;
 import io.micronaut.graphql.tools.internal.execution.ExecutionState;
 import io.micronaut.graphql.tools.internal.execution.LazyDataLoaderRegistry;
+import io.micronaut.graphql.tools.internal.execution.SuspendInvoker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,13 +67,32 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     private final int[] loaders;
     private final Object instance;
     private final PerCallResolver perCall;
+    @Nullable
+    private final SuspendInvoker suspendInvoker;
 
     public MicronautExecutableMethodDataFetcher(
             Executable<Object, ?> executable,
             List<ArgumentDefinition> argumentDefinitions,
             @Nullable Object instance
     ) {
+        this(executable, argumentDefinitions, instance, null);
+    }
+
+    /**
+     * @param executable          the method
+     * @param argumentDefinitions how each parameter of the method is bound
+     * @param instance            the resolver instance, or null when the source or a per-call supplier is the target
+     * @param suspendInvoker      starts the coroutine of a Kotlin {@code suspend} method and returns its stage, or null for a
+     *                            method that is not {@code suspend}: such a field pays a null check and nothing more
+     */
+    public MicronautExecutableMethodDataFetcher(
+            Executable<Object, ?> executable,
+            List<ArgumentDefinition> argumentDefinitions,
+            @Nullable Object instance,
+            @Nullable SuspendInvoker suspendInvoker
+    ) {
         this.executable = executable;
+        this.suspendInvoker = suspendInvoker;
         int size = argumentDefinitions.size();
         this.kinds = new int[size];
         this.names = new String[size];
@@ -103,7 +123,8 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     @Override
     public Object get(DataFetchingEnvironment environment) {
         int size = kinds.length;
-        Object[] arguments = size == 0 ? NO_ARGUMENTS : new Object[size];
+        // a suspend method has one more parameter than the field has arguments: the continuation, which the invoker fills
+        Object[] arguments = suspendInvoker != null ? new Object[size + 1] : size == 0 ? NO_ARGUMENTS : new Object[size];
 
         int i = 0;
         try {
@@ -120,7 +141,7 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         if (target == null) {
             target = perCall != null ? perCall.supplier().get() : environment.getSource();
         }
-        return executable.invoke(target, arguments);
+        return suspendInvoker != null ? suspendInvoker.invoke(executable, target, arguments) : executable.invoke(target, arguments);
     }
 
     private Object argument(DataFetchingEnvironment environment, int index) {
