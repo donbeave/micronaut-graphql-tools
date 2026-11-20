@@ -139,8 +139,23 @@ public final class TimeScalars {
      * A pattern is resolved strictly, so that a value such as 31/02/2026 is refused instead of clamped to the end of the month.
      * Strict resolution needs the proleptic year {@code u}, as {@code y} (year of era) cannot resolve a date without an era, so
      * the {@code y} letters of the pattern, outside quotes, are read as {@code u}: the same digits for every year since 1 AD.
+     * A pattern with an era letter ({@code G}) keeps its {@code y}, as the era makes it resolvable.
      */
+    private static boolean unquoted(String format, char letter) {
+        boolean quoted = false;
+        for (int i = 0; i < format.length(); i++) {
+            char c = format.charAt(i);
+            if (c == '\'') {
+                quoted = !quoted;
+            } else if (!quoted && c == letter) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static DateTimeFormatter formatter(String format) {
+        boolean era = unquoted(format, 'G');
         StringBuilder pattern = new StringBuilder(format.length());
         boolean quoted = false;
         for (int i = 0; i < format.length(); i++) {
@@ -148,7 +163,7 @@ public final class TimeScalars {
             if (c == '\'') {
                 quoted = !quoted;
             }
-            pattern.append(!quoted && c == 'y' ? 'u' : c);
+            pattern.append(!quoted && !era && c == 'y' ? 'u' : c);
         }
         return DateTimeFormatter.ofPattern(pattern.toString(), Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
     }

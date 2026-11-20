@@ -26,6 +26,7 @@ import io.micronaut.graphql.tools.scalars.internal.json.JsonCoercing;
 import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
 import io.micronaut.json.JsonMapper;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -58,7 +59,8 @@ final class StandardMappings {
                         .coercing(new JsonCoercing(name, mapper)).build();
                 return GraphQLScalarMapping.builder(json)
                         .outputClasses(Object.class)
-                        .inputClasses(Object.class, Map.class, List.class)
+                        .inputClasses(Object.class, Map.class, List.class, String.class, Boolean.class, Integer.class, Long.class,
+                                BigInteger.class, Double.class)
                         .build();
             default:
                 settings.format(scalar);

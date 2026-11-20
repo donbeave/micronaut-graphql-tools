@@ -67,7 +67,7 @@ final class IsoDates {
      */
     static Instant parseInstant(String text) {
         int length = text.length();
-        if (length < MIN_INSTANT_LENGTH || length > MIN_INSTANT_LENGTH + MAX_FRACTION_DIGITS || text.charAt(4) != '-'
+        if (length < MIN_INSTANT_LENGTH || length > MIN_INSTANT_LENGTH + 1 + MAX_FRACTION_DIGITS || text.charAt(4) != '-'
                 || text.charAt(7) != '-' || text.charAt(10) != 'T' || text.charAt(13) != ':' || text.charAt(16) != ':'
                 || text.charAt(length - 1) != 'Z') {
             return Instant.parse(text);

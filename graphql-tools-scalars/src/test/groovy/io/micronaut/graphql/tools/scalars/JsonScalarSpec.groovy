@@ -158,4 +158,18 @@ type Query {
         fields.b.values*.class == [BooleanValue, StringValue, FloatValue, NullValue]
         fields.c instanceof ObjectValue
     }
+
+    void "a number that is not finite is a serialize error"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        coercing.serialize(value, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingSerializeException)
+
+        where:
+        value << [Double.NaN, Double.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY]
+    }
 }

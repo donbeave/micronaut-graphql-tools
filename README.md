@@ -678,7 +678,7 @@ Serialization in an application that uses it), and a selection of the extended s
 `Currency` and the signed `Int` and `Float` scalars). Add the dependency and declare the scalar in the schema.
 
 ```
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-scalars")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-scalars:1.0.0-M1")
 ```
 
 Each scalar is configured under `micronaut.graphql.tools.scalars.<id>`: `name` renames the scalar in the schema, `format`

@@ -271,4 +271,22 @@ class JavaTimeScalarsSpec extends Specification {
         coercing.parseValue('24/12/2026', CONTEXT, Locale.ROOT) == LocalDate.of(2026, 12, 24)
         coercing.serialize(LocalDate.of(2026, 12, 24), CONTEXT, Locale.ROOT) == '24/12/2026'
     }
+
+    void "an instant with nine fractional digits is read like Instant.parse"() {
+        given:
+        def coercing = TimeScalars.coercing(StandardScalar.INSTANT, 'Instant', null)
+
+        expect:
+        coercing.parseValue('2026-12-24T10:15:30.123456789Z', CONTEXT, Locale.ROOT) == Instant.parse('2026-12-24T10:15:30.123456789Z')
+    }
+
+    void "a pattern with an era keeps the year of era"() {
+        given:
+        def coercing = TimeScalars.coercing(StandardScalar.LOCAL_DATE, 'LocalDate', "G yyyy-MM-dd")
+
+        expect:
+        [LocalDate.of(2026, 12, 24), LocalDate.of(0, 1, 1), LocalDate.of(-5, 3, 4)].every {
+            coercing.parseValue(coercing.serialize(it, CONTEXT, Locale.ROOT), CONTEXT, Locale.ROOT) == it
+        }
+    }
 }

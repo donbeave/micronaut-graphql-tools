@@ -67,6 +67,10 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
     @Override
     protected Object write(Object value) {
         if (isJson(value)) {
+            if (value instanceof Double && !Double.isFinite((Double) value)
+                    || value instanceof Float && !Float.isFinite((Float) value)) {
+                throw new IllegalArgumentException("a number that is not finite cannot be written as JSON");
+            }
             return value;
         }
         try {
