@@ -10,16 +10,13 @@ dependencies {
     api(projects.micronautGraphqlToolsBinding)
     api(mnGraphql.micronaut.graphql)
     api(mnGraphql.graphql.java.extended.scalars)
-<<<<<<< HEAD
     // Kotlin suspend resolvers (#185): the support bean is active only when these are on the classpath, so the library links no
     // Kotlin type otherwise. The versions are the ones that the Micronaut BOM manages.
     compileOnly(mn.kotlin.stdlib)
     compileOnly(mn.kotlinx.coroutines.core)
-=======
     // ConstraintViolationException is mapped to errors when Micronaut Validation is on the application's classpath (#32)
     compileOnly(platform(libs.micronaut.platform))
     compileOnly("jakarta.validation:jakarta.validation-api")
->>>>>>> origin/master
 
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)

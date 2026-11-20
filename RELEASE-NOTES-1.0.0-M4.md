@@ -5,11 +5,8 @@ Not released yet. This milestone follows [1.0.0-M3](RELEASE-NOTES-1.0.0-M3.md). 
 ## What this release changes
 
 - Resolver marker interfaces (#73, BC-34): `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` in the package `io.micronaut.graphql.tools.resolver`. A marker fixes the root operation type (the root type that the schema names for the operation), `TypeResolver<T>` gives the source type as a type argument with no class literal, and only the methods that implement a method of a contract interface bind, so a public helper of an implementation binds nothing and does not trip strict mode. The visitor of `graphql-tools-processor` records the operations, the source type and the contract methods in the annotation metadata of the implementation, and the startup reads them from the bean definition. The reflective read of a class annotation in the registry is removed. The compile-time checks and the startup use the same rules for the markers.
-<<<<<<< HEAD
 - Kotlin `suspend` resolvers (#185): a `suspend` function binds as a query, mutation or type resolver method, its continuation is not a parameter, and the field is an async field. The support is a bean of the library that exists only when the Kotlin and kotlinx-coroutines classes are on the classpath, so a Java-only application and its native image link no Kotlin type. The propagated context is visible inside the coroutine, an exception becomes an error of the field, and cancelling the field cancels the coroutine. Binding a `suspend` function without kotlinx-coroutines-core fails the startup with `[suspend-without-coroutines]`.
-=======
 - Default error handling (#32, BC-37): the message of an unhandled exception is hidden (`Internal server error`, code `INTERNAL_ERROR`), `GraphQLExceptionMapper` beans map an exception type to an error with a message and extensions, by order, matching the real exception of a failed `CompletionStage`; `GraphQLErrorsCustomizer` changes the final list of errors; a `ConstraintViolationException` becomes one error for each violation with its argument path. `micronaut.graphql.tools.errors.details` shows the message in development, `micronaut.graphql.tools.errors.stack-traces` adds the stack trace to the log entry. See the Errors page.
->>>>>>> origin/master
 
 ## Breaking changes (BC-34, BC-37)
 
