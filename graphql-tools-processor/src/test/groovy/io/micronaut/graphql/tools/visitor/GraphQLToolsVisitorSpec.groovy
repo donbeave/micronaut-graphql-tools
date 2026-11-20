@@ -269,6 +269,32 @@ public class QueryResolver {
         result.findings == ['[unknown-schema-coordinate] Missing.field', '[unknown-schema-coordinate] Query.nowhere']
     }
 
+    def "the contract methods include the methods a contract inherits and those of an annotated contract beside a marker contract"() {
+        when:
+        def result = compilation('''
+public interface Named {
+    String ping(String extra);
+}''', '''
+public interface QueryContract extends io.micronaut.graphql.tools.resolver.QueryResolver, Named {
+    String version();
+}''', '''
+@GraphQLRootResolver
+public interface SearchContract {
+    String search(Integer term);
+}''', '''
+@jakarta.inject.Singleton
+public class Implementation implements QueryContract, SearchContract {
+    public String ping(String extra) { return ""; }
+    public String version() { return ""; }
+    public String search(Integer term) { return ""; }
+    public String stray() { return ""; }
+}''').compile()
+
+        then:
+        // the inherited and the annotated contract methods are checked, the helper is not
+        result.findings.sort() == ['[argument-mismatch] Query.ping', '[argument-mismatch] Query.search']
+    }
+
     def "a type resolver is checked through its contract: the source parameter and the arguments"() {
         when:
         def result = compilation('''

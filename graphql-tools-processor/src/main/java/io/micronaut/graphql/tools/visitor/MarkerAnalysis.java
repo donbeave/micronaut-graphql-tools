@@ -57,6 +57,7 @@ final class MarkerAnalysis {
     static ResolverMarkers of(ClassElement element) {
         Set<String> operations = new TreeSet<>();
         List<ClassElement> contracts = new ArrayList<>();
+        List<ClassElement> annotated = new ArrayList<>();
         Deque<ClassElement> types = new ArrayDeque<>(List.of(element));
         Set<String> visited = new HashSet<>();
         while (!types.isEmpty()) {
@@ -70,11 +71,26 @@ final class MarkerAnalysis {
             }
             if (type.isInterface() && !MARKERS.contains(type.getName()) && markerBelow(type)) {
                 contracts.add(type);
+            } else if (type.isInterface() && !MARKERS.contains(type.getName()) && annotatedContract(type)) {
+                annotated.add(type);
             }
             type.getSuperType().ifPresent(types::add);
             types.addAll(type.getInterfaces());
         }
-        return new ResolverMarkers(List.copyOf(operations), sourceType(element), contractMethods(contracts));
+        return new ResolverMarkers(List.copyOf(operations), sourceType(element),
+                contractMethods(contracts.isEmpty() ? contracts : concat(contracts, annotated)));
+    }
+
+    // a contract interface that carries @GraphQLRootResolver or @GraphQLTypeResolver itself: a class that also implements a
+    // marker contract keeps binding its methods
+    private static boolean annotatedContract(ClassElement type) {
+        return type.hasDeclaredStereotype(AnnotationNames.ROOT_RESOLVER) || type.hasDeclaredStereotype(AnnotationNames.TYPE_RESOLVER);
+    }
+
+    private static List<ClassElement> concat(List<ClassElement> first, List<ClassElement> second) {
+        List<ClassElement> all = new ArrayList<>(first);
+        all.addAll(second);
+        return all;
     }
 
     private static boolean markerBelow(ClassElement type) {
@@ -126,14 +142,14 @@ final class MarkerAnalysis {
         return type == null || type.getName().equals("java.lang.Object") ? null : type.getName();
     }
 
-    // the names of the methods that the contract interfaces declare: the class implements each of them, so these are the
+    // the names of the methods that the contract interfaces declare or inherit from the interfaces they extend: the class implements each of them, so these are the
     // methods of the class that are contract methods. The methods of the class itself are not listed here: asking the class
     // element for its methods before the visitor annotates it makes the annotation not reach the bean definition.
     @Nullable
     private static Set<String> contractMethods(List<ClassElement> contracts) {
         Set<String> names = new TreeSet<>();
         for (ClassElement contract : contracts) {
-            for (MethodElement method : contract.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance().onlyDeclared())) {
+            for (MethodElement method : contract.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance())) {
                 if (!method.isStatic() && !method.isPrivate()) {
                     names.add(method.getName());
                 }
