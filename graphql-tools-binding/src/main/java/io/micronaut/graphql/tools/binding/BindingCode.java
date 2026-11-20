@@ -211,6 +211,9 @@ public enum BindingCode {
     /** Failure: a DataLoader parameter matches no batch loader bean, or several. */
     DATA_LOADER_NOT_FOUND("data-loader-not-found", false, false,
             "A DataLoader parameter of a resolver method matches no batch loader bean, or more than one."),
+    /** Failure: a Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath. */
+    SUSPEND_WITHOUT_COROUTINES("suspend-without-coroutines", false, false,
+            "A Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath."),
     /** Failure: binding a field threw an exception the library does not know. */
     UNEXPECTED_BINDING_ERROR("unexpected-binding-error", false, false,
             "Binding a field failed with an unexpected exception; the cause is attached."),

@@ -53,9 +53,10 @@ public final class ReturnTypes {
     // ResolverClassRules.returnAdaptation decides; this turns a violation into its exception
     public static ReturnVerdict adaptation(RuntimeTypeModel typeModel, TypeDefinitionRegistry registry,
                                            Argument<?> argument, Type<?> graphQlType, boolean fieldLevel,
-                                           boolean subscription, boolean singleResult, TypeMappingContext mappingContext) {
+                                           boolean subscription, boolean singleResult, boolean suspend,
+                                           TypeMappingContext mappingContext) {
         ReturnVerdict verdict = ResolverClassRules.returnAdaptation(typeModel, registry, typeModel.ref(argument),
-                graphQlType, fieldLevel, subscription, singleResult);
+                graphQlType, fieldLevel, subscription, singleResult, suspend);
         if (verdict.failure() != null) {
             throw new UnsupportedReturnTypeException(mappingContext, verdict.failure());
         }

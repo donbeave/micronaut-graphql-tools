@@ -10,6 +10,10 @@ dependencies {
     api(projects.micronautGraphqlToolsBinding)
     api(mnGraphql.micronaut.graphql)
     api(mnGraphql.graphql.java.extended.scalars)
+    // Kotlin suspend resolvers (#185): the support bean is active only when these are on the classpath, so the library links no
+    // Kotlin type otherwise. The versions are the ones that the Micronaut BOM manages.
+    compileOnly(mn.kotlin.stdlib)
+    compileOnly(mn.kotlinx.coroutines.core)
 
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)

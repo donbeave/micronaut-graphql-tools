@@ -25,6 +25,9 @@ dependencies {
     // the Kotlin side of the corpus compiles its cases in a batched TestKit build
     testImplementation(gradleTestKit())
     testRuntimeOnly("ch.qos.logback:logback-classic")
+    // the Kotlin cases of the corpus with a suspend resolver start up with the library's suspend support, which needs these
+    testRuntimeOnly(mn.kotlin.stdlib)
+    testRuntimeOnly(mn.kotlinx.coroutines.core)
 }
 
 micronautBuild {

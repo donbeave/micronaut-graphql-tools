@@ -60,10 +60,10 @@ class FakeMethods {
     }
 
     static JMethod method(String name, Map<String, Map<String, String>> annotations = [:], List<JParameter> parameters = [],
-                          TypeRef returns = ref('java.lang.String'), String signature = null) {
+                          TypeRef returns = ref('java.lang.String'), String signature = null, boolean suspend = false) {
         String sig = signature ?: "a.R#${name}()".toString()
         [name: { name }, signature: { sig }, parameters: { parameters }, declaringType: { [name: { sig.substring(0, sig.indexOf('#')) }] as JClass },
-         genericReturnType: { returns }, annotations: { view(annotations) }] as JMethod
+         genericReturnType: { returns }, suspend: { suspend }, annotations: { view(annotations) }] as JMethod
     }
 
     static Map<String, Map<String, String>> coordinate(String coordinate) {
