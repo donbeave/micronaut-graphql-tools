@@ -15,6 +15,7 @@
  */
 package example.scalars
 
+import jakarta.inject.Singleton
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -26,6 +27,7 @@ import java.time.OffsetDateTime
 // tag::resolver[]
 @CompileStatic
 @Requires(env = [ScalarsFixtures.DEFAULTS, ScalarsFixtures.RENAMED])
+@Singleton
 @GraphQLRootResolver
 class ScalarsQuery {
 
