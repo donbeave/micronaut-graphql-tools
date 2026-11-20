@@ -84,6 +84,7 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String ASYNC_PENDING_SOURCE = "asyncPendingSource";
     public static final String INVOCATION_OVERHEAD = "invocationOverhead";
     public static final String INVOCATION_SLOPE = "invocationSlope";
+    public static final String LOADER_OVERHEAD = "loaderOverhead";
     public static final String QUERY_1K = "query1kObjects";
     public static final String QUERY_10K = "query10kObjects";
 
@@ -172,6 +173,13 @@ public final class BenchmarkCases implements AutoCloseable {
     }
 
     public BenchmarkCases() {
+        this(0);
+    }
+
+    /**
+     * @param loaders how many batch loader beans no operation uses: 0, 1 or 50
+     */
+    public BenchmarkCases(int loaders) {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
         context = ApplicationContext.builder()
@@ -180,7 +188,8 @@ public final class BenchmarkCases implements AutoCloseable {
                         // start-up of every other case
                         "micronaut.graphql.tools.scalars.enabled", false,
                         // the invocation gates measure the calling thread, so the operation must not hop
-                        "micronaut.graphql.tools.execution.executor", "none"))
+                        "micronaut.graphql.tools.execution.executor", "none",
+                        "benchmarks.loaders", loaders))
                 .singletons(registry)
                 .start();
         graphQL = context.getBean(GraphQL.class);

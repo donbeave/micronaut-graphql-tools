@@ -3,7 +3,7 @@ This page tells you which package holds what, which packages you may import from
 == The rules
 
 * A package has one responsibility. A package with more than 15 types is a smell: the build lists the ones that are over the limit, each with a reason, and a package that is no longer over the limit leaves the list.
-* The public API is what you import from application code: the annotations, the customizer, mapping and directive interfaces and mapping contexts, `CustomWiring`, the configuration class, `ArgumentValue`, `BindingManifest`, `BindingCode` and the one exception, `SchemaBindingException`. The table below lists where each one is. Everything else is implementation and can change in any release.
+* The public API is what you import from application code: the annotations, the customizer, mapping and directive interfaces and mapping contexts, `CustomWiring`, the context contributor interface and the request view it receives, the configuration class, `ArgumentValue`, `BindingManifest`, `BindingCode` and the one exception, `SchemaBindingException`. The table below lists where each one is. Everything else is implementation and can change in any release.
 * Implementation is marked in two ways. A type is annotated `@Internal` (`io.micronaut.core.annotation.Internal`, the same marker Micronaut uses), and a package of implementation types carries the `internal` segment in its name and an `@Internal` on the package in its `package-info.java`. Micronaut itself follows this convention.
 * A public type never lives in an `internal` package, and an internal type belongs in an `internal` package. The code follows both halves; see <<plannedLayout,Planned layout>> for what is still to be split.
 * If a package holds both, the Javadoc of its `package-info.java` says so, and an `@Internal` type is not API even when it is `public`.
@@ -25,6 +25,7 @@ This page tells you which package holds what, which packages you may import from
 |Tell an omitted argument from an explicit `null` |`io.micronaut.graphql.tools.input` (`ArgumentValue`)
 |Wire a directive |`io.micronaut.graphql.tools.directive` (`SchemaDirective`)
 |Read what the schema is bound to |`io.micronaut.graphql.tools.manifest` (`BindingManifest`)
+|Add values to the GraphQL context of each operation |`io.micronaut.graphql.tools.execution` (`GraphQLContextContributor`, `GraphQLExecutionRequest`, `GraphQLTransport`)
 |===
 
 Do not import any type annotated `@Internal`, and nothing from a package named `internal`.
@@ -44,6 +45,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.directive` |graphql-tools |Public API |`SchemaDirective` and `CustomWiring`
 |`io.micronaut.graphql.tools.input` |graphql-tools |Public API |`ArgumentValue`
 |`io.micronaut.graphql.tools.manifest` |graphql-tools |Public API |`BindingManifest`
+|`io.micronaut.graphql.tools.execution` |graphql-tools |Public API |`GraphQLContextContributor`, the read-only `GraphQLExecutionRequest` that it receives and the `GraphQLTransport` kinds
 |`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes, and `ResolverBeanCondition`, the bean condition behind the resolver annotations (an application never refers to it)
 |`io.micronaut.graphql.tools.resolver` |graphql-tools |Public API |The marker interfaces of resolver contracts: `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>`
 |`io.micronaut.graphql.tools.exceptions` |graphql-tools |Public API |The startup failure: `SchemaBindingException`, the one exception to catch
@@ -62,7 +64,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.internal.wiring` |graphql-tools |Internal |The runtime wiring generator, the wiring factory that picks the data fetcher and the type resolver of each field and type, the interface field binder and the directive wirings
 |`io.micronaut.graphql.tools.binding` |graphql-tools-binding |Public API |`BindingCode`, the registry of the error codes
 |`io.micronaut.graphql.tools.internal.error` |graphql-tools |Internal |The default `DataFetcherExceptionHandler` that hides messages and runs the exception mappers, and the mapper of `ConstraintViolationException`
-|`io.micronaut.graphql.tools.internal.execution` |graphql-tools |Internal |The library's GraphQL invocation: the executor hop, the per-execution state and the step-aside rules
+|`io.micronaut.graphql.tools.internal.execution` |graphql-tools |Internal |The library's GraphQL invocation: the executor hop, the per-execution state, the lazy DataLoader registry and the step-aside rules
 |`io.micronaut.graphql.tools.internal.input` |graphql-tools |Internal |The conversion of argument and input values, and the input type binder
 |`io.micronaut.graphql.tools.internal.checks` |graphql-tools |Internal |The startup checks and validators: strict mode, unreachable types, schema coordinates, the directive wiring check and the mapping dictionary
 |`io.micronaut.graphql.tools.internal.manifest` |graphql-tools |Internal |Recording and writing the binding manifest at startup

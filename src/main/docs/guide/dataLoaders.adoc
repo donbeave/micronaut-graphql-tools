@@ -1,1 +1,82 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+This page describes how to batch the loads of a resolver with a `DataLoader`, and how to add values to the GraphQL context of each operation. The library creates the `DataLoaderRegistry` of every execution itself: you register loaders as beans and declare the loader a resolver needs as a parameter.
+
+== A loader is a bean
+
+Register a `BatchLoader`, `BatchLoaderWithContext`, `MappedBatchLoader` or `MappedBatchLoaderWithContext` bean. The library finds them at startup from the bean definitions (compile-time metadata, no reflection), so the lookup works in a native image.
+
+snippet::example.tck.DataLoaderScenario[project-base="test-suite", source="test", tags="loader", indent="0"]
+
+The name of a loader is the `@Named` qualifier of its bean, or else the simple class name with a lower-case first letter (`VolumeLoader` is `volumeLoader`). Two loaders with one name fail the startup with `[duplicate-data-loader]`; give one of them a `@Named` qualifier.
+
+== A resolver declares the loader it needs
+
+Declare a `DataLoader<K, V>` parameter. The library matches it to the loader bean with the same key and value types, once at startup, and passes the loader of the current execution.
+
+snippet::example.tck.DataLoaderScenario[project-base="test-suite", source="test", tags="typed-parameter", indent="0"]
+
+The rules:
+
+* The parameter can be in any position after the source object. It is not an argument of the field, so it does not count against the arguments of the schema field, and the other parameters still bind by name.
+* The type arguments must be the types of the loader bean. A parameter that matches no loader, or more than one, fails the startup with `[data-loader-not-found]`, and the message names the method, the parameter and the loaders that exist. Name the loader with `@Named("<name>")` on the parameter when two loaders have the same types.
+* A raw `DataLoader` parameter, or `DataLoader<Object, Object>`, is rejected with `[argument-mismatch]`. The compile-time check reports the same error as the startup, because both use the same binding rules. Whether a matching loader bean exists is a fact about the whole program, so only the startup reports it.
+* The match is made at startup and the field reads its loader by position: no string lookup per call.
+* A resolver with a `DataLoader` parameter needs the library's invocation. When the application provides its own `GraphQLInvocation`, the startup fails with `[execution-context-unavailable]`.
+
+A resolver can still call `DataFetchingEnvironment#getDataLoader(String)` with the name of the loader. It gets the same loader as the typed parameter.
+
+== One registry for each execution
+
+The registry of an execution holds no loader when it is created. A loader is created on first use, from its bean, and is registered in the registry then; so `dispatchAll`, the list of loaders and the statistics see only the loaders that the execution used. A loader that is registered as a bean and never used by an operation is never created for it, and costs nothing: the cost of an operation does not grow with the number of loader beans.
+
+An execution is one HTTP request, or one operation on a WebSocket connection. Each has its own registry, so two operations of one connection, and two concurrent requests, never share a loader or its cache.
+
+When the application has no loader bean, the library sets no registry. graphql-java then keeps its empty registry and selects its no-op dispatch strategy, so an application without loaders pays nothing for them.
+
+A batch function runs inside the propagated context of the execution, also when graphql-java dispatches from a thread that does not hold it. The library wraps the batch function once, when it creates the loader, and installs the context only when the calling thread lacks it, so a call on the right thread allocates nothing. `ServerRequestContext`, security and tracing elements are therefore visible in a batch function.
+
+Loader creation takes a short monitor and does no I/O; a batch function is never called under it, so a virtual thread that waits in a batch function does not pin its carrier. That holds for the library's own locking; the locking inside a `DataLoader` is java-dataloader's. On JDK 21 to 23 a virtual thread that blocks inside a `synchronized` block pins its carrier thread (fixed in JDK 24), so prefer a batch function that completes a `CompletionStage` over one that blocks.
+
+=== Dispatch on graphql-java
+
+The library does not dispatch loaders itself: graphql-java does, and the library only makes the loaders visible to it.
+
+* On the floor leg (graphql-java 21.x) the `DataLoaderDispatcherInstrumentation` of graphql-java tracks the registry that the execution input carries, and treats only its own empty registry instance as "no data loaders". The lazy registry is not that instance, so the loaders created during the execution are dispatched, level by level.
+* From graphql-java 22 the execution selects a `DataLoaderDispatchStrategy`: `NO_OP` for the empty registry (an application without loader beans), and the per-level strategy for any other registry. Newer lines of graphql-java can dispatch from a thread that is not the one that fetched the field. The batch function wrapper installs the context there.
+* The tests of the library run these checks on the floor, default and ceiling legs.
+
+== Replacing the registry
+
+A `GraphQLExecutionInputCustomizer` that returns an input with another `DataLoaderRegistry` replaces the library's registry for that execution. The library's loaders are then unavailable: a resolver with a `DataLoader` parameter returns a field error (`extensions.code` is `DATA_LOADER_UNAVAILABLE`) that names the customizer. `DataFetchingEnvironment#getDataLoader(String)` serves the customizer's own registry as usual.
+
+== Context contributors
+
+A `GraphQLContextContributor` bean adds values to the `GraphQLContext` of each execution, where resolvers read them with `DataFetchingEnvironment#getGraphQlContext()`.
+
+snippet::example.tck.PerExecutionContextScenario[project-base="test-suite", source="test", tags="contributor", indent="0"]
+
+* Every contributor bean runs once per execution, in the order of `@Order` (or `Ordered#getOrder()`), lowest first. The beans are resolved once at startup; when there are none the library does nothing here.
+* It runs on the execution executor (see the Execution page), after the `GraphQLExecutionInputCustomizer` and before graphql-java, inside the propagated context of the request. A contributor may therefore block and may use request-scoped beans.
+* `GraphQLExecutionRequest` is a read-only view of the execution: `httpRequest()` (null for a direct call), `httpResponse()` (empty on a WebSocket connection), `transport()` (`GraphQLTransport.HTTP`, `WEBSOCKET` or `DIRECT`), `connectionAttributes()` (empty except on a WebSocket connection) and `executionInput()`.
+* A contributor rejects an operation by throwing a `graphql.GraphQLError` (for example `GraphqlErrorException`): its error is the only error of the response, with `data` of `null`, and no resolver runs. Any other exception is logged at ERROR and the response carries one generic error, `extensions.code` `INTERNAL_ERROR`, without the message of the exception.
+* When the application has loader beans, `request.executionInput().getDataLoaderRegistry()` is the library's registry of this execution, and a contributor may register more loaders in it. Without loader beans it is graphql-java's shared empty registry, which no contributor may change.
+
+== Startup failures
+
+[cols="1,3", options="header"]
+|===
+| Code | When
+| `data-loader-registry-bean` | The application has a `DataLoaderRegistry` bean. The library's invocation does not use it, because its loaders would be shared across the operations of one WebSocket connection. The message says how to fix it: register the loaders as batch loader beans, add them in a `GraphQLContextContributor` through the registry of the `ExecutionInput`, or provide your own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)`.
+| `duplicate-data-loader` | Two batch loader beans have the same name.
+| `data-loader-not-found` | A `DataLoader<K, V>` parameter matches no loader bean, or several.
+| `execution-context-unavailable` | A `DataLoader` parameter, while the application's own `GraphQLInvocation` replaced the library's.
+|===
+
+== Breaking change
+
+A `DataLoaderRegistry` bean is not used any more and fails the startup (BC-36). See the migration page for the before and after.
+
+== Not in this version
+
+* A per-loader options customizer. A loader is created with the default `DataLoaderOptions`; the options API differs between java-dataloader 3.x and 6.x, and a customizer needs a version-neutral shape first.
+* Caching is not switched off for the loaders of a subscription operation, and the `BatchLoaderEnvironment` of a `BatchLoaderWithContext` carries no context. Both need the options above.
+* An `@GraphQLBatch` annotation.

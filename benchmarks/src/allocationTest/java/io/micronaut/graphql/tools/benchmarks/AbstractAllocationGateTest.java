@@ -32,6 +32,9 @@ abstract class AbstractAllocationGateTest {
     private static final String DEFAULT_LEG = "default";
     // the first budget of the constant per-request overhead of the invocation; the recorded baseline holds after that
     private static final double INVOCATION_OVERHEAD_BUDGET_BYTES = 1024;
+    // a registered but unused loader costs nothing per request: at most this much for each loader beyond the first
+    private static final double UNUSED_LOADER_BYTES = 0.5;
+    private static final int UNUSED_LOADERS = 50;
     // what the async boundary adds to a field whose future completes on another thread (#428)
     private static final double ASYNC_BOUNDARY_BUDGET_BYTES = 128;
 
@@ -70,6 +73,19 @@ abstract class AbstractAllocationGateTest {
         return invoked - direct;
     }
 
+    /**
+     * The bytes that a request allocates on the calling thread with 50 loader beans that it does not use, minus those with
+     * one: the cost of a registered but unused loader.
+     */
+    private static double loaderOverhead() throws Exception {
+        try (BenchmarkCases fifty = new BenchmarkCases(50); BenchmarkCases one = new BenchmarkCases(1)) {
+            double many = AllocationMeter.bytesPerOperation(fifty.op(BenchmarkCases.invokeOp(BenchmarkCases.SMALL_QUERY_FIELDS)), 200_000, 20_000, 5);
+            double single = AllocationMeter.bytesPerOperation(one.op(BenchmarkCases.invokeOp(BenchmarkCases.SMALL_QUERY_FIELDS)), 200_000, 20_000, 5);
+            System.out.printf("allocation with 50 loader beans = %.2f B/op, with 1 = %.2f B/op%n", many, single);
+            return many - single;
+        }
+    }
+
     private void check(String name) throws Exception {
         boolean wholeQuery = BenchmarkCases.isWholeQuery(name);
 
@@ -78,6 +94,7 @@ abstract class AbstractAllocationGateTest {
             // the overhead of a query of 1,000 fields minus that of 10 fields: a slope of 0 B per field leaves 0
             case BenchmarkCases.INVOCATION_SLOPE -> invocationOverhead(BenchmarkCases.LARGE_QUERY_FIELDS)
                     - invocationOverhead(BenchmarkCases.SMALL_QUERY_FIELDS);
+            case BenchmarkCases.LOADER_OVERHEAD -> loaderOverhead();
             // the fetcher of an async field with a pending future, less the future that the resolver itself creates
             case BenchmarkCases.ASYNC_BOUNDARY_OTHER_THREAD -> AllocationMeter.bytesPerOperation(cases.op(name), 3_000_000, 1_000_000, 5)
                     - AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.ASYNC_PENDING_SOURCE), 3_000_000, 1_000_000, 5);
@@ -95,6 +112,11 @@ abstract class AbstractAllocationGateTest {
             assertTrue(measured <= INVOCATION_OVERHEAD_BUDGET_BYTES, String.format(java.util.Locale.ROOT,
                     "The invocation adds %.2f B/op to a direct execution, over its budget of %.0f B/op.", measured,
                     INVOCATION_OVERHEAD_BUDGET_BYTES));
+        }
+        if (name.equals(BenchmarkCases.LOADER_OVERHEAD)) {
+            assertTrue(measured <= UNUSED_LOADER_BYTES * (UNUSED_LOADERS - 1), String.format(java.util.Locale.ROOT,
+                    "50 registered but unused loader beans add %.2f B/op to a request, over %.1f B x %d.", measured,
+                    UNUSED_LOADER_BYTES, UNUSED_LOADERS - 1));
         }
         if (name.equals(BenchmarkCases.ASYNC_BOUNDARY_OTHER_THREAD)) {
             assertTrue(measured <= ASYNC_BOUNDARY_BUDGET_BYTES, String.format(java.util.Locale.ROOT,

@@ -15,18 +15,12 @@
  */
 package example.tck;
 
-import graphql.schema.DataFetchingEnvironment;
-import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
-import io.micronaut.runtime.http.scope.RequestScope;
 import jakarta.inject.Singleton;
 import org.dataloader.DataLoader;
-import org.dataloader.DataLoaderFactory;
-import org.dataloader.DataLoaderRegistry;
 import org.dataloader.MappedBatchLoader;
 
 import java.util.List;
@@ -42,8 +36,6 @@ import java.util.stream.Collectors;
  * often it ran and with how many keys.
  */
 public final class DataLoaderScenario {
-
-    static final String VOLUMES = "volumes";
 
     private DataLoaderScenario() {
     }
@@ -93,8 +85,9 @@ public final class DataLoaderScenario {
         }
     }
 
-    @Singleton
     @Requires(property = "tck.scenario", value = "data-loader")
+    // tag::loader[]
+    @Singleton
     public static class VolumeLoader implements MappedBatchLoader<String, List<Volume>> {
 
         final AtomicInteger batches = new AtomicInteger();
@@ -108,26 +101,7 @@ public final class DataLoaderScenario {
                     Collectors.toMap(author -> author, author -> List.of(new Volume(author + "-1"), new Volume(author + "-2")))));
         }
     }
-
-    /**
-     * One registry for each request: a batch and a cache that live as long as the request.
-     */
-    @Factory
-    @Requires(property = "tck.registry", value = "per-request")
-    public static class Registry {
-
-        private final VolumeLoader volumeLoader;
-
-        public Registry(VolumeLoader volumeLoader) {
-            this.volumeLoader = volumeLoader;
-        }
-
-        @Primary // over the registry of the example, which a request-scoped proxy cannot replace
-        @RequestScope
-        public DataLoaderRegistry dataLoaderRegistry() {
-            return new DataLoaderRegistry().register(VOLUMES, DataLoaderFactory.newMappedDataLoader(volumeLoader));
-        }
-    }
+    // end::loader[]
 
     @Singleton
     @GraphQLRootResolver
@@ -149,15 +123,16 @@ public final class DataLoaderScenario {
         }
     }
 
+    @Requires(property = "tck.scenario", value = "data-loader")
+    // tag::typed-parameter[]
     @Singleton
     @GraphQLTypeResolver(Author.class)
-    @Requires(property = "tck.scenario", value = "data-loader")
     public static class AuthorResolver {
 
-        public CompletionStage<List<Volume>> volumes(Author author, DataFetchingEnvironment environment) {
-            DataLoader<String, List<Volume>> loader = environment.getDataLoader(VOLUMES);
+        public CompletionStage<List<Volume>> volumes(Author author, DataLoader<String, List<Volume>> loader) {
             return loader.load(author.getName());
         }
     }
+    // end::typed-parameter[]
 
 }

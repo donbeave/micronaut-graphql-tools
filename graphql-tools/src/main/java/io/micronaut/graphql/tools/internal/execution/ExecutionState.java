@@ -16,6 +16,9 @@
 package io.micronaut.graphql.tools.internal.execution;
 
 import graphql.GraphQLContext;
+import graphql.ExecutionInput;
+import io.micronaut.graphql.tools.execution.GraphQLExecutionRequest;
+import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.convert.value.ConvertibleValues;
@@ -23,6 +26,7 @@ import io.micronaut.core.propagation.PropagatedContext;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 
+import java.util.Optional;
 import java.util.concurrent.Executor;
 
 /**
@@ -31,7 +35,7 @@ import java.util.concurrent.Executor;
  * is the one entry the library puts in the {@link GraphQLContext}, under a key of its own.
  */
 @Internal
-public final class ExecutionState {
+public final class ExecutionState implements GraphQLExecutionRequest {
 
     private static final Object KEY = new Object() {
         @Override
@@ -41,7 +45,7 @@ public final class ExecutionState {
     };
 
     private final PropagatedContext propagatedContext;
-    private final ExecutionTransport transport;
+    private final GraphQLTransport transport;
     @Nullable
     private final HttpRequest<?> request;
     @Nullable
@@ -49,6 +53,9 @@ public final class ExecutionState {
     private final ConvertibleValues<Object> connectionAttributes;
     @Nullable
     private final Executor requestExecutor;
+    @Nullable
+    private final String customizer;
+    private ExecutionInput executionInput;
 
     /**
      * Public for the benchmarks of this repository, which build an execution without the invocation; the library's
@@ -60,16 +67,18 @@ public final class ExecutionState {
      * @param response             the response, or null
      * @param connectionAttributes the attributes of a WebSocket connection, else empty
      * @param requestExecutor      the executor of the operation, or null when it runs on the calling thread
+     * @param customizer           the class name of the application's customizer, or null when there is none
      */
-    public ExecutionState(PropagatedContext propagatedContext, ExecutionTransport transport, @Nullable HttpRequest<?> request,
-                   @Nullable MutableHttpResponse<?> response, ConvertibleValues<Object> connectionAttributes,
-                   @Nullable Executor requestExecutor) {
+    public ExecutionState(PropagatedContext propagatedContext, GraphQLTransport transport, @Nullable HttpRequest<?> request,
+                          @Nullable MutableHttpResponse<?> response, ConvertibleValues<Object> connectionAttributes,
+                          @Nullable Executor requestExecutor, @Nullable String customizer) {
         this.propagatedContext = propagatedContext;
         this.transport = transport;
         this.request = request;
         this.response = response;
         this.connectionAttributes = connectionAttributes;
         this.requestExecutor = requestExecutor;
+        this.customizer = customizer;
     }
 
     /**
@@ -108,34 +117,50 @@ public final class ExecutionState {
         return requestExecutor;
     }
 
-    /**
-     * @return how the operation arrived
-     */
-    public ExecutionTransport transport() {
+    @Override
+    public GraphQLTransport transport() {
         return transport;
     }
 
-    /**
-     * @return the HTTP request, or the upgrade request of a WebSocket connection; null for a call that has none
-     */
+    @Override
     @Nullable
-    public HttpRequest<?> request() {
+    public HttpRequest<?> httpRequest() {
         return request;
+    }
+
+    @Override
+    public Optional<MutableHttpResponse<?>> httpResponse() {
+        return Optional.ofNullable(response);
     }
 
     /**
      * @return the HTTP response, or null when the transport has none (WebSocket)
      */
     @Nullable
-    public MutableHttpResponse<?> response() {
+    MutableHttpResponse<?> response() {
         return response;
     }
 
-    /**
-     * @return the attributes of the WebSocket connection; empty over HTTP
-     */
+    @Override
     public ConvertibleValues<Object> connectionAttributes() {
         return connectionAttributes;
+    }
+
+    @Override
+    public ExecutionInput executionInput() {
+        return executionInput;
+    }
+
+    void executionInput(ExecutionInput input) {
+        this.executionInput = input;
+    }
+
+    /**
+     * @return the class name of the application's {@code GraphQLExecutionInputCustomizer}, or null when there is none
+     */
+    @Nullable
+    public String customizer() {
+        return customizer;
     }
 
 }
