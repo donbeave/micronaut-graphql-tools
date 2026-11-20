@@ -100,7 +100,7 @@ public final class TimeScalars {
 
     private static Coercing<?, ?> instant(String name, String format, boolean iso) {
         if (iso) {
-            return new TextCoercing<>(name, Instant.class, Instant::parse, Instant::toString, "ISO-8601 yyyy-MM-dd'T'HH:mm:ssZ");
+            return new TextCoercing<>(name, Instant.class, IsoDates::parseInstant, IsoDates::writeInstant, "ISO-8601 yyyy-MM-dd'T'HH:mm:ssZ");
         }
         if ("epoch-seconds".equalsIgnoreCase(format)) {
             return new CountCoercing<>(name, Instant.class, Instant::getEpochSecond, Instant::ofEpochSecond,

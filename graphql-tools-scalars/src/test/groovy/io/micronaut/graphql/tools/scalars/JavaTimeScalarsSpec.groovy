@@ -164,6 +164,59 @@ class JavaTimeScalarsSpec extends Specification {
         text << ['0001-01-01', '9999-12-31', '+10000-01-01', '-0001-01-01', '2024-02-29']
     }
 
+    void "the instant fast path agrees with Instant.parse for random instants, fractions and the edges of the calendar"() {
+        given:
+        def coercing = TimeScalars.coercing(StandardScalar.INSTANT, 'Instant', null)
+        def random = new Random(46)
+        def texts = ['0000-01-01T00:00:00Z', '1970-01-01T00:00:00Z', '1969-12-31T23:59:59.999999999Z', '2024-02-29T12:00:00Z',
+                     '2100-02-28T23:59:59Z', '2000-02-29T00:00:00.5Z', '9999-12-31T23:59:59.123456Z', '2026-12-24T10:15:30.1Z']
+        2000.times {
+            def instant = Instant.ofEpochSecond(random.nextLong() % 253_402_300_800L, random.nextInt(1_000_000_000))
+            if (instant.epochSecond >= -62_167_219_200L) {
+                texts << instant.toString()
+            }
+        }
+
+        expect:
+        texts.every { coercing.parseValue(it, CONTEXT, Locale.ROOT) == Instant.parse(it) }
+    }
+
+    void "the instant writer agrees with Instant.toString, also outside the years the fast path writes"() {
+        given:
+        def coercing = TimeScalars.coercing(StandardScalar.INSTANT, 'Instant', null)
+        def random = new Random(47)
+        def instants = [Instant.EPOCH, Instant.MIN, Instant.MAX, Instant.parse('0000-01-01T00:00:00Z'), Instant.parse('-0001-12-31T23:59:59Z'),
+                        Instant.parse('9999-12-31T23:59:59.999999999Z'), Instant.parse('+10000-01-01T00:00:00Z'),
+                        Instant.parse('2024-02-29T00:00:00.120Z'), Instant.parse('2024-02-29T00:00:00.000120Z'),
+                        Instant.parse('1900-03-01T05:06:07.000000001Z')]
+        5000.times {
+            instants << Instant.ofEpochSecond(random.nextLong() % 400_000_000_000L, random.nextInt(1_000_000_000))
+        }
+
+        expect:
+        instants.every { coercing.serialize(it, CONTEXT, Locale.ROOT) == it.toString() }
+    }
+
+    void "a text that the instant fast path does not take is read, or refused, by the JDK parser"() {
+        given:
+        def coercing = TimeScalars.coercing(StandardScalar.INSTANT, 'Instant', null)
+
+        expect:
+        coercing.parseValue('2026-12-24T10:15:30+01:00', CONTEXT, Locale.ROOT) == Instant.parse('2026-12-24T09:15:30Z')
+        coercing.parseValue('2016-12-31T23:59:60Z', CONTEXT, Locale.ROOT) == Instant.parse('2016-12-31T23:59:60Z')
+
+        when:
+        coercing.parseValue(text, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+
+        where:
+        text << ['2026-13-24T10:15:30Z', '2026-02-30T10:15:30Z', '2025-02-29T10:15:30Z', '2026-12-24T24:15:30Z', '2026-12-24T10:60:30Z',
+                 '2026-12-24T10:15:30.1234567890Z', '2026-12-24 10:15:30Z', '2026-12-24T10:15:3xZ',
+                 '2026-12-24T10:15:30', 'Z']
+    }
+
     void "the old coercing methods agree with the new ones"() {
         given:
         def coercing = TimeScalars.coercing(StandardScalar.LOCAL_DATE, 'LocalDate', null)

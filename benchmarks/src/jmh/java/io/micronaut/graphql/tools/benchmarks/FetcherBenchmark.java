@@ -37,6 +37,9 @@ public class FetcherBenchmark extends CaseState {
     private BenchmarkCases.Op typeResolverMethodWithArgument;
     private BenchmarkCases.Op directiveWrapped;
     private BenchmarkCases.Op scalarArgument;
+    private BenchmarkCases.Op localDateCoercion;
+    private BenchmarkCases.Op instantCoercion;
+    private BenchmarkCases.Op jsonCoercion;
     private BenchmarkCases.Op enumArgument;
     private BenchmarkCases.Op inputObjectArgument;
     private BenchmarkCases.Op listOfInputsArgument;
@@ -53,6 +56,9 @@ public class FetcherBenchmark extends CaseState {
         typeResolverMethodWithArgument = op(BenchmarkCases.TYPE_RESOLVER_METHOD_ARGUMENT);
         directiveWrapped = op(BenchmarkCases.DIRECTIVE_WRAPPED_FETCHER);
         scalarArgument = op(BenchmarkCases.SCALAR_ARGUMENT);
+        localDateCoercion = op(BenchmarkCases.LOCAL_DATE_COERCION);
+        instantCoercion = op(BenchmarkCases.INSTANT_COERCION);
+        jsonCoercion = op(BenchmarkCases.JSON_COERCION);
         enumArgument = op(BenchmarkCases.ENUM_ARGUMENT);
         inputObjectArgument = op(BenchmarkCases.INPUT_OBJECT_ARGUMENT);
         listOfInputsArgument = op(BenchmarkCases.LIST_OF_INPUTS_ARGUMENT);
@@ -94,6 +100,21 @@ public class FetcherBenchmark extends CaseState {
     @Benchmark
     public Object scalarArgument() throws Exception {
         return scalarArgument.run();
+    }
+
+    @Benchmark
+    public Object localDateCoercion() throws Exception {
+        return localDateCoercion.run();
+    }
+
+    @Benchmark
+    public Object instantCoercion() throws Exception {
+        return instantCoercion.run();
+    }
+
+    @Benchmark
+    public Object jsonCoercion() throws Exception {
+        return jsonCoercion.run();
     }
 
     @Benchmark
