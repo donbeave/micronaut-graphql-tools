@@ -107,6 +107,15 @@ enum Genre {
         !ScalarTable.isJavaBuiltInClass(Object)
     }
 
+    void "a String field accepts a GString and an ID field does not"() {
+        expect:
+        ScalarTable.acceptsReturnClass('String', GString)
+        ScalarTable.acceptsReturnClass('String', String)
+        !ScalarTable.acceptsReturnClass('ID', GString)
+        !ScalarTable.acceptsReturnClass('Int', GString)
+        !ScalarTable.acceptsReturnClass('String', CharSequence)
+    }
+
     void "a coordinate rule reports #expected"() {
         given:
         def operations = new TreeSet(['Query', 'Events'])

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.annotation.Internal;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderRegistry;
@@ -38,11 +39,14 @@ public final class LazyDataLoaderRegistry extends DataLoaderRegistry {
 
     private final DataLoaderTable table;
     private final ExecutionState state;
+    @Nullable
+    private final BatchCounters counters;
     private volatile Created created = NONE;
 
-    LazyDataLoaderRegistry(DataLoaderTable table, ExecutionState state) {
+    LazyDataLoaderRegistry(DataLoaderTable table, ExecutionState state, @Nullable BatchCounters counters) {
         this.table = table;
         this.state = state;
+        this.counters = counters;
     }
 
     /**
@@ -92,7 +96,8 @@ public final class LazyDataLoaderRegistry extends DataLoaderRegistry {
             }
             DataLoader<?, ?> registered = super.getDataLoader(entry.name());
             DataLoader<?, ?> loader = registered != null ? registered
-                    : ContextualBatchLoaders.create(entry.kind(), bean, state.propagatedContext());
+                    : ContextualBatchLoaders.create(entry.kind(), bean, state.propagatedContext(),
+                            counters == null ? null : counters.counter(entry.name()));
             int size = snapshot.indexes.length;
             int[] indexes = Arrays.copyOf(snapshot.indexes, size + 1);
             DataLoader<?, ?>[] loaders = Arrays.copyOf(snapshot.loaders, size + 1);

@@ -28,13 +28,26 @@ import java.util.List;
  * @param nullability   whether the position accepts {@code null}
  * @param primitive     whether the type is a primitive
  * @param array         whether the type is an array
+ * @param kotlin        whether {@code nullability} is the compile-time nullability of a Kotlin type, which the rules check
+ *                      against the schema; the nullability of a Java annotation never is
  */
 @Internal
 public record TypeRef(String rawName, List<TypeRef> typeArguments, Nullability nullability, boolean primitive,
-                      boolean array) {
+                      boolean array, boolean kotlin) {
 
     public TypeRef {
         typeArguments = List.copyOf(typeArguments);
+    }
+
+    /**
+     * @param rawName       the binary name of the class
+     * @param typeArguments the type arguments
+     * @param nullability   whether the position accepts {@code null}
+     * @param primitive     whether the type is a primitive
+     * @param array         whether the type is an array
+     */
+    public TypeRef(String rawName, List<TypeRef> typeArguments, Nullability nullability, boolean primitive, boolean array) {
+        this(rawName, typeArguments, nullability, primitive, array, false);
     }
 
     /**
