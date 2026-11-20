@@ -25,7 +25,7 @@ import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.core.propagation.PropagatedContextElement
 import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict
 import io.micronaut.graphql.tools.internal.execution.ExecutionState
-import io.micronaut.graphql.tools.internal.execution.ExecutionTransport
+import io.micronaut.graphql.tools.execution.GraphQLTransport
 import io.micronaut.graphql.tools.internal.execution.ExecutorHopDataFetcher
 import io.micronaut.graphql.tools.internal.execution.FieldExecutionPlanner
 import spock.lang.Specification
@@ -56,7 +56,7 @@ class ExecutorHopSpec extends Specification {
 
     private static DataFetchingEnvironment environment(PropagatedContext context) {
         GraphQLContext graphQlContext = GraphQLContext.newContext().build()
-        new ExecutionState(context, ExecutionTransport.HTTP, null, null, ConvertibleValues.empty(), null).storeIn(graphQlContext)
+        new ExecutionState(context, GraphQLTransport.HTTP, null, null, ConvertibleValues.empty(), null, null).storeIn(graphQlContext)
         DataFetchingEnvironmentImpl.newDataFetchingEnvironment().graphQLContext(graphQlContext).build()
     }
 
