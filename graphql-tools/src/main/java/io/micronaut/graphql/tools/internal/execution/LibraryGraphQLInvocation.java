@@ -97,7 +97,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                              ExecutorSelector executorSelector, BeanContext beanContext,
                              BeanProvider<DataLoaderRegistry> dataLoaderRegistry) {
         this.graphQL = graphQL;
-        this.customizer = customizer instanceof DefaultGraphQLExecutionInputCustomizer ? null : customizer;
+        this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
         this.dataLoaderRegistry = dataLoaderRegistry.isPresent() ? dataLoaderRegistry : null;
         this.executorName = configuration.getExecution().getExecutor();
         this.executor = resolveExecutor(executorName, executorSelector, beanContext);

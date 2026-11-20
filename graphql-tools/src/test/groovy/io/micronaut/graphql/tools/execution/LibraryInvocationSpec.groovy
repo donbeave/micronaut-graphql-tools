@@ -22,6 +22,7 @@ import ch.qos.logback.core.read.ListAppender
 import graphql.ExecutionInput
 import graphql.ExecutionResult
 import graphql.schema.DataFetchingEnvironment
+import io.micronaut.configuration.graphql.DefaultGraphQLExecutionInputCustomizer
 import io.micronaut.configuration.graphql.DefaultGraphQLInvocation
 import io.micronaut.configuration.graphql.GraphQLExecutionInputCustomizer
 import io.micronaut.configuration.graphql.GraphQLInvocation
@@ -148,6 +149,17 @@ type Child {
         RESOLVER_THREADS.toSet().size() == 1
         CUSTOMIZER_THREADS.size() == 1
         CUSTOMIZER_THREADS[0] == RESOLVER_THREADS[0]
+    }
+
+    void "a customizer that extends the transport's default one still runs"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.subclass', ['micronaut.graphql.tools.execution.executor': 'io'])
+
+        when:
+        run()
+
+        then:
+        CUSTOMIZER_THREADS.size() == 1
     }
 
     void "the customizer runs after the hop and before graphql-java, and the state survives a fresh input"() {
@@ -380,7 +392,7 @@ type Child {
         String name = 'kid'
     }
 
-    @Requires(property = 'spec.name', value = SPEC_NAME + '.customizer')
+    @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(customizer|subclass)')
     @GraphQLRootResolver
     static class CustomizedQuery {
         String hello(DataFetchingEnvironment environment) {
@@ -404,6 +416,16 @@ type Child {
             SEEN << Thread.currentThread()
             // a fresh input: the library's entry in the context is gone
             Mono.just(ExecutionInput.newExecutionInput().query(executionInput.query).build())
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.subclass')
+    @Singleton
+    static class SubclassedCustomizer extends DefaultGraphQLExecutionInputCustomizer {
+        @Override
+        Publisher<ExecutionInput> customize(ExecutionInput executionInput, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
+            CUSTOMIZER_THREADS << Thread.currentThread()
+            super.customize(executionInput, httpRequest, httpResponse)
         }
     }
 
