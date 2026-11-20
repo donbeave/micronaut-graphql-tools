@@ -152,6 +152,11 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
                     + "so it makes no class introspected; list the classes, or the packages with includedAnnotations", element);
             return;
         }
+        if (!classes.isEmpty() && !packages.isEmpty() && current.options.checks()) {
+            context.warn(TAG + "@GraphQLModels on " + element.getName() + " lists classes and packages, and Micronaut's "
+                    + "@Introspected generates only one of the two for one annotation; use one annotation for the classes "
+                    + "and another for the packages", element);
+        }
         // the classes the annotation lists, and the classes of its packages that carry one of the annotations it names
         List<String> markers = Arrays.stream(annotation.annotationClassValues("includedAnnotations"))
                 .map(AnnotationClassValue::getName).toList();

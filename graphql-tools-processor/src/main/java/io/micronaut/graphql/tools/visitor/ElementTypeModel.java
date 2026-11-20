@@ -387,8 +387,9 @@ final class ElementTypeModel implements TypeModel {
         @Override
         public boolean introspected() {
             // @GraphQLModels carries @Introspected for the classes it lists, not for the class it is declared on
-            boolean own = element.hasDeclaredAnnotation(INTROSPECTED) || element.getAnnotationNamesByStereotype(INTROSPECTED)
-                    .stream().anyMatch(it -> !it.equals(MODELS));
+            boolean own = element.hasStereotype(INTROSPECTED) && (!element.hasDeclaredAnnotation(MODELS)
+                    || element.hasDeclaredAnnotation(INTROSPECTED) || element.getAnnotationNamesByStereotype(INTROSPECTED)
+                    .stream().anyMatch(it -> !it.equals(MODELS)));
             return own || coverage.covers(element.getName(), element.getAnnotationNames(),
                     element.isPublic());
         }
