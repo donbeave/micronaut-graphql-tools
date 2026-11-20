@@ -22,10 +22,19 @@ dependencies {
     implementation("io.micrometer:micrometer-core")
     implementation("io.opentelemetry:opentelemetry-api")
     implementation(mn.micronaut.inject)
+    // the per-class binding rules in the form the compiler runs them (#417): the processor's element adapter over compiler class elements,
+    // compiled in process; no part of it reaches the library's runtime API
+    implementation(projects.micronautGraphqlToolsProcessor)
+    implementation(projects.micronautGraphqlToolsBinding)
+    implementation(mn.micronaut.inject.java)
     annotationProcessor(mn.micronaut.inject.java)
     runtimeOnly("ch.qos.logback:logback-classic")
 
     jmh(libs.jmh.core)
+    // the jmh plugin resolves jmh-generator-asm's asm 9.0 on its own, ahead of the platform's: the in-process compilation of the binding
+    // rules fixture (#417) runs Micronaut's processors in the benchmark JVM, and they need the platform's ASM
+    jmh(platform(libs.micronaut.platform))
+    jmh("org.ow2.asm:asm")
     jmhAnnotationProcessor(libs.jmh.generator.annprocess)
 }
 
