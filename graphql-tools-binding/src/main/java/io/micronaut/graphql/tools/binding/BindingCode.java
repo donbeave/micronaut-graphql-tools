@@ -202,6 +202,15 @@ public enum BindingCode {
     /** Failure: a resolver needs the execution context and the application replaced the library's invocation. */
     EXECUTION_CONTEXT_UNAVAILABLE("execution-context-unavailable", false, false,
             "A resolver needs the execution context, and the application's GraphQLInvocation replaces the library's."),
+    /** Failure: the application has a DataLoaderRegistry bean, which the library's invocation does not use. */
+    DATA_LOADER_REGISTRY_BEAN("data-loader-registry-bean", false, false,
+            "A DataLoaderRegistry bean exists, and the library's invocation does not use it."),
+    /** Failure: two DataLoader beans have one name. */
+    DUPLICATE_DATA_LOADER("duplicate-data-loader", false, false,
+            "Two batch loader beans have the same name."),
+    /** Failure: a DataLoader parameter matches no batch loader bean, or several. */
+    DATA_LOADER_NOT_FOUND("data-loader-not-found", false, false,
+            "A DataLoader parameter of a resolver method matches no batch loader bean, or more than one."),
     /** Failure: binding a field threw an exception the library does not know. */
     UNEXPECTED_BINDING_ERROR("unexpected-binding-error", false, false,
             "Binding a field failed with an unexpected exception; the cause is attached."),

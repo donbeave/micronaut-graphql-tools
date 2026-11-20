@@ -26,6 +26,8 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.graphql.tools.input.ArgumentValue;
+import io.micronaut.graphql.tools.internal.execution.ExecutionState;
+import io.micronaut.graphql.tools.internal.execution.LazyDataLoaderRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,11 +57,13 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     private static final int DATA_FETCHING_ENVIRONMENT = 1;
     private static final int ARGUMENT_VALUE = 2;
     private static final int INPUT_VALUE = 3;
+    private static final int DATA_LOADER = 4;
 
     private final Executable<Object, ?> executable;
     private final int[] kinds;
     private final String[] names;
     private final ValueConverter[] converters;
+    private final int[] loaders;
     private final Object instance;
     private final PerCallResolver perCall;
 
@@ -73,6 +77,7 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         this.kinds = new int[size];
         this.names = new String[size];
         this.converters = new ValueConverter[size];
+        this.loaders = new int[size];
         for (int i = 0; i < size; i++) {
             ArgumentDefinition argumentDefinition = argumentDefinitions.get(i);
             names[i] = argumentDefinition.getName();
@@ -80,6 +85,9 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                 kinds[i] = SOURCE;
             } else if (argumentDefinition.isDataFetchingEnvironmentArgument()) {
                 kinds[i] = DATA_FETCHING_ENVIRONMENT;
+            } else if (argumentDefinition.isDataLoaderArgument()) {
+                kinds[i] = DATA_LOADER;
+                loaders[i] = argumentDefinition.getDataLoaderIndex();
             } else {
                 Argument<?> argument = argumentDefinition.getInputValueArgument().orElseThrow();
                 boolean argumentValue = ArgumentValue.class.equals(argument.getType());
@@ -102,6 +110,8 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             for (; i < size; i++) {
                 arguments[i] = argument(environment, i);
             }
+        } catch (DataLoaderUnavailableException e) {
+            return dataLoaderUnavailable(environment, e);
         } catch (RuntimeException e) {
             return inputConversionFailure(environment, names[i], e);
         }
@@ -117,6 +127,13 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         return switch (kinds[index]) {
             case SOURCE -> environment.getSource();
             case DATA_FETCHING_ENVIRONMENT -> environment;
+            case DATA_LOADER -> {
+                // by index, from the registry of this execution: no string lookup, and the loader is created on first use
+                if (environment.getDataLoaderRegistry() instanceof LazyDataLoaderRegistry registry) {
+                    yield registry.loader(loaders[index]);
+                }
+                throw new DataLoaderUnavailableException();
+            }
             case ARGUMENT_VALUE -> {
                 // graphql-java leaves an argument out of the map only if the client did not provide it and the
                 // schema declares no default value for it
@@ -127,6 +144,33 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             }
             default -> convert(index, environment.getArgument(names[index]));
         };
+    }
+
+    /** The registry of the execution is not the library's: an application's customizer replaced it. */
+    private static final class DataLoaderUnavailableException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        DataLoaderUnavailableException() {
+            super(null, null, false, false);
+        }
+    }
+
+    private static DataFetcherResult<Object> dataLoaderUnavailable(DataFetchingEnvironment environment,
+                                                                   DataLoaderUnavailableException failure) {
+        ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
+        String customizer = state == null ? null : state.customizer();
+        String coordinate = ((GraphQLNamedType) environment.getParentType()).getName() + "."
+                + environment.getFieldDefinition().getName();
+        LOG.error("{} needs a DataLoader of the library, and the DataLoaderRegistry of the ExecutionInput is not the library's: {}",
+                coordinate, customizer == null
+                        ? "something replaced it" : "the GraphQLExecutionInputCustomizer " + customizer + " replaced it");
+        GraphQLError error = GraphqlErrorBuilder.newError(environment)
+                .message("The DataLoader of " + coordinate + " is unavailable: the DataLoaderRegistry of this execution was replaced"
+                        + (customizer == null ? "." : " by the GraphQLExecutionInputCustomizer " + customizer + "."))
+                .extensions(Map.of("code", "DATA_LOADER_UNAVAILABLE"))
+                .build();
+        return DataFetcherResult.newResult().error(error).build();
     }
 
     private Object convert(int index, Object value) {

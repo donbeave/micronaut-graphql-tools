@@ -44,7 +44,9 @@ public record ArgumentVerdict(List<Slot> slots, @Nullable Failure failure) {
         /** An argument of the field. */
         ARGUMENT,
         /** The {@code DataFetchingEnvironment}: always the last parameter. */
-        ENVIRONMENT
+        ENVIRONMENT,
+        /** A {@code DataLoader<K, V>} of the execution: in any position after the source. */
+        DATA_LOADER
     }
 
     /**
@@ -58,7 +60,7 @@ public record ArgumentVerdict(List<Slot> slots, @Nullable Failure failure) {
     /**
      * A violation of the argument rules.
      */
-    public sealed interface Failure permits CountMismatch, InvalidSource, ParameterWithoutArgument, DuplicateParameter {
+    public sealed interface Failure permits CountMismatch, InvalidSource, ParameterWithoutArgument, DuplicateParameter, UntypedDataLoader {
     }
 
     /**
@@ -101,5 +103,13 @@ public record ArgumentVerdict(List<Slot> slots, @Nullable Failure failure) {
      * @param name the argument name
      */
     public record DuplicateParameter(String name) implements Failure {
+    }
+
+    /**
+     * A {@code DataLoader} parameter without its key and value types: the library picks the loader by those types.
+     *
+     * @param parameter the index of the parameter
+     */
+    public record UntypedDataLoader(int parameter) implements Failure {
     }
 }

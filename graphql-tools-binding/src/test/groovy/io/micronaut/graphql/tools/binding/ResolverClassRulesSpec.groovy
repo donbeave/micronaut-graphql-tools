@@ -19,6 +19,10 @@ import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.SlotKind
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules.SchemaArgument
+import io.micronaut.graphql.tools.binding.internal.model.AnnotationView
+import io.micronaut.graphql.tools.binding.internal.model.JParameter
+import io.micronaut.graphql.tools.binding.internal.model.Nullability
+import io.micronaut.graphql.tools.binding.internal.model.TypeRef
 import spock.lang.Specification
 
 class ResolverClassRulesSpec extends Specification {
@@ -27,6 +31,38 @@ class ResolverClassRulesSpec extends Specification {
 
     private static List<String> schema(String... names) {
         names as List
+    }
+
+    private static final String DATA_LOADER = 'org.dataloader.DataLoader'
+
+    private static JParameter loader(String name, String... typeArguments) {
+        def type = new TypeRef(DATA_LOADER, typeArguments.collect { TypeRef.of(it) }, Nullability.UNKNOWN, false, false)
+        [name: { name }, nameIsSynthetic: { false }, type: { type }, annotations: { AnnotationView.none() }] as JParameter
+    }
+
+    void "a DataLoader parameter is no argument: it binds in any position after the source, and the others still bind by name"() {
+        when:
+        def verdict = ResolverClassRules.arguments('a.Book',
+                [FakeModel.parameter('book', 'a.Book'), loader('loader', 'java.lang.String', 'a.Seller'),
+                 FakeModel.parameter('genre', 'java.lang.String'), loader('other', 'java.lang.Long', 'java.lang.String'),
+                 FakeModel.parameter('env', DFE)], schema('genre'))
+
+        then:
+        verdict.failure() == null
+        verdict.slots()*.kind() == [SlotKind.SOURCE, SlotKind.DATA_LOADER, SlotKind.ARGUMENT, SlotKind.DATA_LOADER, SlotKind.ENVIRONMENT]
+        verdict.slots()*.parameter() == [0, 1, 2, 3, 4]
+    }
+
+    void "a DataLoader without its key and value types fails, raw or with Object for both"() {
+        when:
+        def raw = ResolverClassRules.arguments(null, [loader('loader')], schema())
+        def objects = ResolverClassRules.arguments(null, [loader('loader', 'java.lang.Object', 'java.lang.Object')], schema())
+        def typed = ResolverClassRules.arguments(null, [loader('loader', 'java.lang.Object', 'java.lang.String')], schema())
+
+        then:
+        raw.failure() == new ArgumentVerdict.UntypedDataLoader(0)
+        objects.failure() == new ArgumentVerdict.UntypedDataLoader(0)
+        typed.failure() == null
     }
 
     void "parameters bind the arguments by name, the environment last"() {

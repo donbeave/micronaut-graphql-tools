@@ -84,7 +84,7 @@ To add a scenario:
 2. In each suite add the fixtures (resolvers, types, loaders) in `src/test/{java,kotlin,groovy}/example/tck/<Scenario>Scenario.*`. Every fixture bean carries `@Requires(property = "tck.scenario", value = "<id>")`, so that only the scenario that runs has resolvers; classes of unions and interfaces are mapped by a `TckTypeMappings` bean with the same condition. Names stay unique across scenarios, because the fixtures of all scenarios are on one classpath.
 3. Run the three suites. A scenario without fixtures in a suite fails there when the application starts. A suite that cannot have the fixtures lists the id and a reason in `src/test/resources/tck-exemptions.txt` (`<id> <reason>`); the list only shrinks: the meta-test `exemptionsAreCurrent` fails on an id that is no scenario, and on one whose scenario passes. No suite has an exemption today.
 
-The fixtures serve a plain `DataLoaderRegistry` in every scenario except the ones that set `tck.registry=per-request` (`data-loader`). The example's registry is request scoped, and a request-scoped bean has no request on the thread that completes a `CompletionStage`: the call fails with `No request present` (the per-execution context and lazy DataLoader registry of #44 and #20 are the fix, and this scenario setting goes away with them).
+The shared fixtures register their DataLoaders as `BatchLoader` beans: the library creates the registry of each execution, and a `DataLoaderRegistry` bean fails the startup.
 
 Out of scope here: HTTP transport details and WebSocket scenarios (#50), subscriptions (a `Publisher` return type is the event stream on subscription fields, and is adapted to a `CompletionStage` on other fields), and per-request context propagation.
 
@@ -217,7 +217,10 @@ Two checks run on every `./gradlew check`:
   `invocationOverhead` and `invocationSlope` gate the library's invocation with the executor `none` (the gates measure the
   calling thread, and a hop moves the work to another one): the first is the bytes that `invoke` allocates beyond a direct
   `executeAsync` of the same 10-field query (a budget of 1,024 B, and its recorded baseline), the second is that overhead at 1,000
-  fields minus the one at 10 fields, which must stay within 0.5 B of its baseline of 0.
+  fields minus the one at 10 fields, which must stay within 0.5 B of its baseline of 0. `loaderOverhead` is the bytes that a
+  request allocates in an application with 50 batch loader beans that it does not use, minus those with one (`benchmarks.loaders`
+  selects the beans of `Loaders`): a registered but unused loader costs nothing, so the gate allows 0.5 B for each of the 49 and
+  its baseline is 0.
 
 To measure, run `./gradlew :benchmarks:jmh` (two forks, the `gc` profiler; the allocation figure is
 `gc.alloc.rate.norm` in bytes per operation) or `./gradlew :benchmarks:jmh -Pjmh.profile=quick` for a short run. Narrow

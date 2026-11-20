@@ -60,14 +60,15 @@ The cost of the hop is measured by the `InvocationBenchmark` of the `benchmarks`
 
 After the hop the library runs, in this order:
 
-. build the `ExecutionInput` from the query, the operation name and the variables, and put the library's per-execution state in its `GraphQLContext`;
+. build the `ExecutionInput` from the query, the operation name and the variables, put the library's per-execution state in its `GraphQLContext`, and set the lazy `DataLoaderRegistry` (only when the application has loader beans);
 . call the application's `GraphQLExecutionInputCustomizer` (skipped when it is the transport's default one);
 . put the state back in the `GraphQLContext` when the customizer returned a fresh `ExecutionInput`;
+. call every `GraphQLContextContributor`, in order;
 . run graphql-java.
 
 The customizer therefore runs on the executor and may block. A customizer that publishes its input on another thread makes the operation hop to the executor once more. The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
 
-If the application has a `DataLoaderRegistry` bean, the library still sets it on the input, as the transport did, once the operation is on the executor.
+The state is also the read-only `GraphQLExecutionRequest` that the context contributors receive. The registry is the library's own: an application with a `DataLoaderRegistry` bean fails the startup (BC-36). See the Data Loaders page for the loaders and the contributors.
 
 == Your own invocation
 
