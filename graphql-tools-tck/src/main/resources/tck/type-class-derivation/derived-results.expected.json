@@ -1,0 +1,9 @@
+{
+  "data": {
+    "derivedResults": [
+      { "__typename": "DerivedBook", "title": "by convention" },
+      { "__typename": "DerivedMagazine", "issue": 7 },
+      { "__typename": "DerivedPoster", "caption": "by dictionary" }
+    ]
+  }
+}
