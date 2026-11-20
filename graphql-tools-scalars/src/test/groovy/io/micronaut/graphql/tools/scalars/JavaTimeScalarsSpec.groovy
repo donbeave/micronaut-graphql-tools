@@ -294,23 +294,24 @@ class JavaTimeScalarsSpec extends Specification {
     void "#scalar with the optional-section pattern #format reads #wire and writes #written"() {
         given:
         def coercing = TimeScalars.coercing(scalar, scalar.defaultName(), format)
+        String era = java.time.format.DateTimeFormatter.ofPattern('G', Locale.ROOT).format(LocalDate.of(2026, 5, 1))
 
-        expect:
-        coercing.parseValue(wire, CONTEXT, Locale.ROOT) == value
-        coercing.parseValue(written, CONTEXT, Locale.ROOT) == value
-        coercing.serialize(value, CONTEXT, Locale.ROOT) == written
+        expect: 'the era text is the one of the JDK, AD or CE'
+        coercing.parseValue(wire.replace('{era}', era), CONTEXT, Locale.ROOT) == value
+        coercing.parseValue(written.replace('{era}', era), CONTEXT, Locale.ROOT) == value
+        coercing.serialize(value, CONTEXT, Locale.ROOT) == written.replace('{era}', era)
 
         where:
         scalar                         | format                        | wire                   | written                   | value
-        StandardScalar.LOCAL_DATE      | '[G ]yyyy-MM-dd'              | '2026-05-01'           | 'AD 2026-05-01'           | LocalDate.of(2026, 5, 1)
-        StandardScalar.LOCAL_DATE      | '[G ]yyyy-MM-dd'              | 'AD 2026-05-01'        | 'AD 2026-05-01'           | LocalDate.of(2026, 5, 1)
-        StandardScalar.LOCAL_DATE      | 'yyyy-MM-dd[ G]'              | '2026-05-01'           | '2026-05-01 AD'           | LocalDate.of(2026, 5, 1)
-        StandardScalar.LOCAL_DATE_TIME | '[G ]yyyy-MM-dd HH:mm'        | '2026-05-01 10:15'     | 'AD 2026-05-01 10:15'     | LocalDateTime.of(2026, 5, 1, 10, 15)
-        StandardScalar.OFFSET_DATE_TIME | '[G ]yyyy-MM-dd HH:mmXXX'    | '2026-05-01 10:15Z'    | 'AD 2026-05-01 10:15Z'    | OffsetDateTime.of(2026, 5, 1, 10, 15, 0, 0, ZoneOffset.UTC)
-        StandardScalar.ZONED_DATE_TIME | '[G ]yyyy-MM-dd HH:mmXXX'     | '2026-05-01 10:15Z'    | 'AD 2026-05-01 10:15Z'    | ZonedDateTime.of(2026, 5, 1, 10, 15, 0, 0, ZoneOffset.UTC)
-        StandardScalar.INSTANT         | '[G ]yyyy-MM-dd HH:mm:ss'     | '2026-05-01 10:15:30'  | 'AD 2026-05-01 10:15:30'  | Instant.parse('2026-05-01T10:15:30Z')
-        StandardScalar.YEAR_MONTH      | '[G ]yyyy-MM'                 | '2026-05'              | 'AD 2026-05'              | YearMonth.of(2026, 5)
-        StandardScalar.YEAR            | '[G ]yyyy'                    | '2026'                 | 'AD 2026'                 | Year.of(2026)
+        StandardScalar.LOCAL_DATE      | '[G ]yyyy-MM-dd'              | '2026-05-01'           | '{era} 2026-05-01'           | LocalDate.of(2026, 5, 1)
+        StandardScalar.LOCAL_DATE      | '[G ]yyyy-MM-dd'              | '{era} 2026-05-01'        | '{era} 2026-05-01'           | LocalDate.of(2026, 5, 1)
+        StandardScalar.LOCAL_DATE      | 'yyyy-MM-dd[ G]'              | '2026-05-01'           | '2026-05-01 {era}'           | LocalDate.of(2026, 5, 1)
+        StandardScalar.LOCAL_DATE_TIME | '[G ]yyyy-MM-dd HH:mm'        | '2026-05-01 10:15'     | '{era} 2026-05-01 10:15'     | LocalDateTime.of(2026, 5, 1, 10, 15)
+        StandardScalar.OFFSET_DATE_TIME | '[G ]yyyy-MM-dd HH:mmXXX'    | '2026-05-01 10:15Z'    | '{era} 2026-05-01 10:15Z'    | OffsetDateTime.of(2026, 5, 1, 10, 15, 0, 0, ZoneOffset.UTC)
+        StandardScalar.ZONED_DATE_TIME | '[G ]yyyy-MM-dd HH:mmXXX'     | '2026-05-01 10:15Z'    | '{era} 2026-05-01 10:15Z'    | ZonedDateTime.of(2026, 5, 1, 10, 15, 0, 0, ZoneOffset.UTC)
+        StandardScalar.INSTANT         | '[G ]yyyy-MM-dd HH:mm:ss'     | '2026-05-01 10:15:30'  | '{era} 2026-05-01 10:15:30'  | Instant.parse('2026-05-01T10:15:30Z')
+        StandardScalar.YEAR_MONTH      | '[G ]yyyy-MM'                 | '2026-05'              | '{era} 2026-05'              | YearMonth.of(2026, 5)
+        StandardScalar.YEAR            | '[G ]yyyy'                    | '2026'                 | '{era} 2026'                 | Year.of(2026)
     }
 
     void "an optional section stays strict, so a date that does not exist is refused"() {

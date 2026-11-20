@@ -15,6 +15,8 @@ The module registers one `GraphQLScalarMapping` bean for each scalar of the tabl
 
 snippet::example.scalars.ScalarsFixtures[project-base="test-suite", source="test", tags="schema", indent="0"]
 
+The schema of the example application declares `scalar JSON`, which the field `payload` uses.
+
 snippet::example.scalars.ScalarsQuery[project-base="test-suite", source="test", tags="resolver", indent="0"]
 
 snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="round-trip", indent="0"]
@@ -56,7 +58,7 @@ The id is the key of the scalar in the configuration. The name is the default na
 
 `Long`, `Short`, `BigDecimal` and `BigInteger` are built in and are not part of the table.
 
-A pattern is resolved strictly: a date that does not exist, such as `2026-02-31`, is refused. The letter `y` is read as the proleptic year, so a year reads and writes the same digits as written. A pattern may hold an optional section, and an era section is supported: `[G ]yyyy-MM-dd` reads `2026-05-01` and `AD 2026-05-01` as the same date (a text without an era is read as AD) and writes `AD 2026-05-01`. An optional section of any other field is supported when the fields outside it still resolve the value; a pattern that cannot resolve a value fails as a value that does not parse.
+A pattern is resolved strictly: a date that does not exist, such as `2026-02-31`, is refused. The letter `y` is read as the proleptic year, so a year reads and writes the same digits as written. A pattern may hold an optional section, and an era section is supported: `[G ]yyyy-MM-dd` reads `2026-05-01` and `AD 2026-05-01` as the same date (a text without an era is read as AD) and writes `AD 2026-05-01` (the era text is the one of the JDK, `CE` on JDK 25 and later). An optional section of any other field is supported when the fields outside it still resolve the value; a pattern that cannot resolve a value fails as a value that does not parse.
 
 The `java.time` scalars write a string (or a count for the epoch and duration keywords) and read it back. A value that does not parse is a GraphQL error that names the scalar and the expected format, in the phase it happened: a bad literal fails the validation of the query, a bad variable fails the coercion of the variables, and a bad value that a resolver returns fails that field.
 
