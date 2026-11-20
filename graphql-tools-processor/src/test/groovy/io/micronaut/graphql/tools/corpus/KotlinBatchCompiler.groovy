@@ -288,6 +288,10 @@ plugins {
         if (checked && prefixes != null) {
             values.put(JavaCaseCompiler.ACCESSOR_PREFIXES, prefixes)
         }
+        String convention = c.config[JavaCaseCompiler.TYPE_CLASS_CONVENTION_CONFIG]
+        if (checked && convention != null) {
+            values.put(JavaCaseCompiler.TYPE_CLASS_CONVENTION, convention)
+        }
         List<String> arguments = values.findAll { it.value != null }.collect { String key, String value ->
             "arg(\"${key}\", \"${value.replace('\\', '/')}\")".toString()
         }
