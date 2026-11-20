@@ -31,6 +31,7 @@ class RawWrapperReturnTypeSpec extends AbstractTest {
 
     static final String SPEC_NAME_OPTIONAL = "RawWrapperReturnTypeSpecOptional"
     static final String SPEC_NAME_STAGE = "RawWrapperReturnTypeSpecStage"
+    static final String SPEC_NAME_STAGE_LIST = "RawWrapperReturnTypeSpecStageList"
 
     void "a raw Optional fails at startup with the dedicated message, not with Object as the mapped class"() {
         given:
@@ -82,6 +83,43 @@ type Query {
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 "java.util.concurrent.CompletionStage must declare the type it wraps.")
         e.cause.message.contains("GraphQL coordinate: Query.value")
+    }
+
+    void "a raw CompletionStage on a list of objects fails with the dedicated message too"() {
+        given:
+        @Language("GraphQL")
+        String schema = """
+schema {
+  query: Query
+}
+
+type Query {
+  books: [Book!]!
+}
+
+type Book {
+  title: String!
+}
+"""
+        startContext(schema, SPEC_NAME_STAGE_LIST)
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
+        e.cause.message.contains("java.util.concurrent.CompletionStage must declare the type it wraps.")
+        e.cause.message.contains("GraphQL coordinate: Query.books")
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME_STAGE_LIST)
+    @GraphQLRootResolver
+    static class StageListQuery {
+        CompletionStage books() {
+            return CompletableFuture.completedFuture([])
+        }
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_OPTIONAL)

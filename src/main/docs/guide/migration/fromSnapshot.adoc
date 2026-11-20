@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-33` follow it, and `BC-34` is the first of 1.0.0-M4. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-33` follow it, then the changes of 1.0.0-M4. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -45,6 +45,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-32 compile-time options renamed (#291) | The build runs the visitor, not the earlier annotation processor. `micronaut.graphql.tools.sdlDir` is replaced by `micronaut.graphql.tools.processor.schema.dirs`, `micronaut.graphql.tools.processor.checks` switches the checks off, and a build that passes `sdlDir` fails with `[processor-option-removed]`. The binding manifest has no accessor file, so the member of a property is written `Class#property`. | Rename the option, and put the processor on the path of your compiler (see the Compile-Time Verification page). Regenerate a checked-in manifest.
 | BC-33 inherited type resolver contracts (#34) | A bean that is a type resolver only through an inherited `@GraphQLTypeResolver` (a class that implements an annotated interface) needs the processor on the compiler path: the visitor records its contracts, and the startup no longer reads class annotations by reflection. Without it the startup fails with `[type-resolver-contracts-not-found]`. | Add `micronaut-graphql-tools-processor` to `annotationProcessor`, `ksp` or `kapt`, or `compileOnly` (Groovy); `micronaut.graphql.tools.processor.checks=false` keeps the checks off and still records the contracts. A bean annotated directly needs nothing.
 | BC-34 resolver stereotypes carry no bean (#73) | A class that carries `@GraphQLRootResolver` or `@GraphQLTypeResolver`, extends an annotated class or implements an annotated interface is a bean only when it has a scope annotation of its own. | Annotate each resolver class with `@Singleton`; see <<resolverContracts,Resolver Contracts>>.
+| BC-35 resolvers run on the blocking executor (#49) | Every operation hops once to Micronaut's blocking executor before graphql-java runs, so parsing, validation, the customizer and every synchronous resolver run on a virtual thread (JDK 21 and later) or an `io` pool thread (JDK 17), not on the Netty event loop. A resolver that relied on the event loop thread, or on a thread local set there, sees another thread. The transport's own invocation is replaced: an application with its own `GraphQLInvocation` needs `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary`, and the library then steps aside. | Nothing for a resolver that does not depend on its thread; it can now block. To keep the old behaviour set `micronaut.graphql.tools.execution.executor: none`. Choose another executor with its name.
 |===
 
 == Entries for 1.0.0-M1
@@ -815,3 +816,25 @@ micronaut:
 Then read the `!` lines of the binding manifest, and fix, annotate with `@GraphQLIgnore`, or allow each one. The compile-time visitor reads `@GraphQLIgnore` and applies the same rules.
 
 When the runtime findings are fixed, add `graphql-tools-processor` to the build. It needs its own build option, `-Amicronaut.graphql.tools.processor.schema.dirs=<directory of the SDL files>` (see the Compile-Time Verification page). It does not read the runtime settings above, and it needs JDK 21 or newer to build.
+
+== Entries for 1.0.0-M4
+
+=== BC-35: resolvers run on the blocking executor by default (#49)
+
+The transport's invocation ran parsing, validation and every synchronous resolver on the thread that received the request, the Netty event loop, so one blocking resolver stalled the server. The library now owns the invocation. Each operation hops once to the executor named by `micronaut.graphql.tools.execution.executor` (default `blocking`) before graphql-java runs. On JDK 21 and later Micronaut maps `blocking` to virtual threads, on JDK 17 to the `io` pool; the library itself makes no call that needs JDK 21.
+
+What breaks: nothing in the schema or the resolvers, but the thread changes. A resolver that read a thread local that is set only on the event loop, or that assumed it runs on the event loop, sees the executor's thread. The propagated context (the request, security and tracing elements of your filters) is installed on the executor thread, so `ServerRequestContext` and `@RequestScope` beans keep working. An application with its own `GraphQLInvocation` declares `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary`; the library then creates none and logs one INFO line.
+
+Status: approved, opt-out with `none`.
+
+[source,yaml]
+----
+# Before: the event loop. To keep it:
+micronaut:
+  graphql:
+    tools:
+      execution:
+        executor: none
+----
+
+See the Execution page for the executors, the order of the steps and the rejection response.

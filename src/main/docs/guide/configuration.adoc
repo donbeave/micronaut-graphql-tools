@@ -8,6 +8,12 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ManifestConfiguration.adoc[]
 
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ExecutionConfiguration.adoc[]
+
+== Execution
+
+`micronaut.graphql.tools.execution.executor` names the executor that every operation hops to once, before graphql-java runs: `blocking` (the default), `io`, `virtual` (JDK 21 and later), an executor you configure under `micronaut.executors`, or `none` to run on the thread that receives the operation. An unknown name fails the startup with `[unknown-executor]`. See <<execution,Execution>>.
+
 == Precedence
 
 `micronaut.graphql.tools.precedence` decides a field that a member of the Java type (a property or a `@GraphQLField` method) and a type resolver method can both bind. One rule covers object and interface fields: `fail` (the default) fails the startup with `[precedence-ambiguity]`, `resolver-first` binds the resolver method, and `property-first` binds the member; the lenient values log the ambiguity at WARN and write a `!precedence-ambiguity` line to the binding manifest. A resolver directive, a type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate`, or `@GraphQLIgnore` on the member says which side binds one field, and the setting is not consulted. `precedence` is independent of `strict` and is not a `checks.<code>` entry. The value `strict`, the former name of `fail`, is rejected (BC-29).

@@ -188,14 +188,20 @@ public enum BindingCode {
     UNWRAPPED_DIRECTIVE_WIRING("unwrapped-directive-wiring", false, false,
             "A SchemaDirectiveWiring bean is not wrapped by a SchemaDirective."),
     /** Failure: the schema has no schema definition. */
-    SCHEMA_DEFINITION_NOT_PROVIDED("schema-definition-not-provided", false, false,
-            "No schema definition is configured."),
+    SCHEMA_DEFINITION_NOT_PROVIDED("schema-definition-not-provided", false, true,
+            "The schema has neither a schema definition nor a Query type."),
     /** Failure: the schema cannot be loaded or merged. */
     SCHEMA_INVALID("schema-invalid", false, true,
             "The schema files cannot be parsed or merged."),
     /** Failure: no schema file is found at the configured locations. */
     SCHEMA_NOT_FOUND("schema-not-found", false, false,
             "No schema file is found at the configured locations, or a location is invalid."),
+    /** Failure: the execution executor names no executor. */
+    UNKNOWN_EXECUTOR("unknown-executor", false, false,
+            "micronaut.graphql.tools.execution.executor names no executor bean, or names one that cannot run operations."),
+    /** Failure: a resolver needs the execution context and the application replaced the library's invocation. */
+    EXECUTION_CONTEXT_UNAVAILABLE("execution-context-unavailable", false, false,
+            "A resolver needs the execution context, and the application's GraphQLInvocation replaces the library's."),
     /** Failure: binding a field threw an exception the library does not know. */
     UNEXPECTED_BINDING_ERROR("unexpected-binding-error", false, false,
             "Binding a field failed with an unexpected exception; the cause is attached."),

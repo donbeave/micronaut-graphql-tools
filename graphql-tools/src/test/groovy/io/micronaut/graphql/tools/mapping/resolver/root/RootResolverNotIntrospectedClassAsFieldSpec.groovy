@@ -54,7 +54,7 @@ type User {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
-        e.cause.message == """[class-not-introspected] The class ${User.name} is not introspected. Ensure the class is annotated with ${GraphQLType.name}.
+        e.cause.message == """[class-not-introspected] The class ${User.name} is not introspected. Ensure the class is annotated with ${GraphQLType.name}. A class that cannot carry it, such as a generated or external one, is listed (or its package) in @GraphQLModels.
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}
   Mapped method: user()"""

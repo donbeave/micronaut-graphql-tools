@@ -63,6 +63,9 @@ final class MavenSample {
         command.addAll(List.of("-B", "-ntp",
                 // the library under test is a snapshot that every run publishes again
                 "-U",
+                // Maven Central answers HTTP 429 under load: retry it more often and further apart than the default of 3 at 5 s
+                "-Daether.connector.http.retryHandler.count=5",
+                "-Daether.connector.http.retryHandler.interval=10000",
                 "-Dmaven.repo.local=" + Environment.WORK.resolve("maven-repository"),
                 "-Dgraphql.tools.repository=" + Environment.REPOSITORY.toUri(),
                 "-Dmicronaut.graphql.tools.version=" + Environment.GRAPHQL_TOOLS_VERSION));

@@ -34,13 +34,15 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
 - `CheckedSchema`: reads the schema once per compilation, on the first class that is checked.
 - `ElementTypeModel`: the adapter of the type model over `ClassElement` and `MethodElement`; the properties of an input class
   are read with the query that Micronaut's introspection visitor uses, and a class is introspected when it carries
-  `@Introspected` (a class that only another class lists in `@Introspected(classes)` or `(packages)`, or that a dependency
-  introspects, is not seen as introspected).
+  `@Introspected`, or a `@GraphQLModels` of the same compilation lists it (a class that only another class lists in
+  `@Introspected(classes)` or `(packages)`, or that a dependency introspects, is not seen as introspected). The visitor
+  records the `@GraphQLModels` annotations as it visits and judges the classes they did not cover when the compilation
+  finishes, so the declaration order does not matter.
 
 `class-not-introspected` is the one finding that a check of one class cannot prove, so the visitor reports it as a compile-time
 **warning** and the startup decides (the soundness rule: a compile error must also be a startup failure, and a class that another
 class introspects passes at startup). The other findings are errors. The walk stops at that finding, as the startup does
-at its failure, so the findings of the same class that come after it are the startup's. A build that turns compiler warnings into errors (`-Werror`) fails on it as well, so there the hatch is `@Introspected` on the class itself. The walk down a chain of input types
+at its failure, so the findings of the same class that come after it are the startup's. A build that turns compiler warnings into errors (`-Werror`) fails on it as well, so there the hatch is `@Introspected` on the class itself, or a `@GraphQLModels` that lists it. The walk down a chain of input types
 runs from a work stack (a chain of 5,000 types is checked on the default stack), as the startup binds with one.
 
 Not in this module: the runtime library and the Micronaut bean lookup. The module must not depend on the runtime:
@@ -147,5 +149,5 @@ leg), `ParitySpec` (the soundness and completeness rules and the exception list)
   Gradle TestKit build with two subprojects per case (the unchecked one is started, the checked one runs `kspKotlin` with the schema
   of the case, and its `e: [ksp] [code] coordinate` lines are compared with `expected/compile.txt`). It needs the network and is not
   part of `check` or `build`; the CI job `build tools` runs it on every pull request, and the canary workflow runs it under kapt
-  (`-Pcorpus.kotlin.processor=kapt`, the `lang:all` cases) every night. Its budget is 3 minutes on JDK 25.
+  (`-Pcorpus.kotlin.processor=kapt`, the `lang:all` cases) every night. Its budget is 8 minutes on JDK 25 (`corpus.kotlin.budget-seconds`, 480 s by default).
   `-Pcorpus.update` with it rewrites the Kotlin expectations.

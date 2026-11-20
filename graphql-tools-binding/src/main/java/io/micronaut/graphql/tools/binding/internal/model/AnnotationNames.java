@@ -41,6 +41,8 @@ public final class AnnotationNames {
     public static final String INPUT = PACKAGE + "GraphQLInput";
     /** {@code @GraphQLType}. */
     public static final String TYPE = PACKAGE + "GraphQLType";
+    /** {@code @GraphQLModels}. */
+    public static final String MODELS = PACKAGE + "GraphQLModels";
     /** {@code @GraphQLField}. */
     public static final String FIELD = PACKAGE + "GraphQLField";
 

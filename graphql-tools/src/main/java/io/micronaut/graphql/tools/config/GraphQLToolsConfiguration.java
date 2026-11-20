@@ -42,6 +42,7 @@ public class GraphQLToolsConfiguration {
     private boolean eagerInit = true;
     private SchemaConfiguration schema = new SchemaConfiguration();
     private ManifestConfiguration manifest = new ManifestConfiguration();
+    private ExecutionConfiguration execution = new ExecutionConfiguration();
 
     /**
      * @return how a field is bound when both a member of its Java type (a property or a {@code @GraphQLField} method)
@@ -214,6 +215,22 @@ public class GraphQLToolsConfiguration {
     }
 
     /**
+     * @return the options of the execution of operations, under {@value #PREFIX}.execution
+     */
+    @NonNull
+    public ExecutionConfiguration getExecution() {
+        return execution;
+    }
+
+    /**
+     * @param execution the options of the execution of operations
+     */
+    public void setExecution(@NonNull ExecutionConfiguration execution) {
+        ArgumentUtils.requireNonNull("execution", execution);
+        this.execution = execution;
+    }
+
+    /**
      * Options of the schema files, under {@value GraphQLToolsConfiguration#PREFIX}{@code .schema}.
      */
     @ConfigurationProperties("schema")
@@ -242,6 +259,46 @@ public class GraphQLToolsConfiguration {
         public void setLocations(@NonNull List<String> locations) {
             ArgumentUtils.requireNonNull("locations", locations);
             this.locations = List.copyOf(locations);
+        }
+
+    }
+
+    /**
+     * Options of the execution of operations, under {@value GraphQLToolsConfiguration#PREFIX}{@code .execution}.
+     */
+    @ConfigurationProperties("execution")
+    public static class ExecutionConfiguration {
+
+        /** The default of {@link #getExecutor()}: Micronaut's {@code blocking} executor. */
+        public static final String DEFAULT_EXECUTOR = "blocking";
+
+        /** The value of {@link #getExecutor()} that runs the operation on the thread that receives it. */
+        public static final String NO_EXECUTOR = "none";
+
+        private String executor = DEFAULT_EXECUTOR;
+
+        /**
+         * @return the executor that runs every operation: an executor bean name or {@code none}
+         */
+        @NonNull
+        public String getExecutor() {
+            return executor;
+        }
+
+        /**
+         * Sets the executor that runs every operation. The operation hops to it once, before graphql-java parses the
+         * query, so parsing, validation, the {@code GraphQLExecutionInputCustomizer} and every synchronous resolver
+         * run on it. {@code blocking} (Micronaut's blocking executor: virtual threads on JDK 21 and later, the
+         * {@code io} pool on JDK 17) is the default; {@code none} runs the operation on the thread that receives it,
+         * which is the Netty event loop over HTTP and WebSocket; {@code io}, {@code virtual} (JDK 21 and later) or the
+         * name of an executor configured under {@code micronaut.executors} choose that executor. {@code scheduled} is
+         * rejected. An unknown name fails the startup with {@code unknown-executor}. Default: {@code blocking}.
+         *
+         * @param executor the executor bean name, or {@code none}
+         */
+        public void setExecutor(@NonNull String executor) {
+            ArgumentUtils.requireNonNull("executor", executor);
+            this.executor = executor.strip();
         }
 
     }

@@ -35,3 +35,9 @@ Tagged `1.0.0-M3` and published to GitHub Packages. The breaking changes are num
 * #73 (BC-34): `@GraphQLRootResolver` and `@GraphQLTypeResolver` no longer carry the bean stereotype, so a resolver class needs a scope annotation of its own, for example `@Singleton`; a type resolver, also one that is annotated directly, needs `micronaut-graphql-tools-processor` on the compiler path when it has a supertype besides `Object`. The marker interfaces `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` are new. See the migration page, entries for 1.0.0-M4.
 
 Issue #15 (BC-19, resolver parameters bound by name): its runtime half is listed for 1.0.0-M1; the visitor applies the same rule at compile time, and #291 registers it, so a misnamed or missing resolver parameter fails the build.
+
+== 1.0.0-M4
+
+Not tagged yet. Entries for a change that is on `master` are listed here; the fix is on the migration page, entries for 1.0.0-M4.
+
+* #49 (BC-35): resolvers run on the blocking executor by default, not on the Netty event loop; `micronaut.graphql.tools.execution.executor: none` keeps the old behaviour. See the migration page, entries for 1.0.0-M4.

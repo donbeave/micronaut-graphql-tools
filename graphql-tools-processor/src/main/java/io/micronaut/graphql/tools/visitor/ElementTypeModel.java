@@ -63,6 +63,7 @@ final class ElementTypeModel implements TypeModel {
 
     private static final String INTRODUCTION = "io.micronaut.aop.Introduction";
     private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
+    private static final String MODELS = "io.micronaut.graphql.tools.annotation.GraphQLModels";
 
     // what makes a class a bean by its own declaration, as the startup's bean set sees it
     private static final Set<String> BEAN_DEFINING = Set.of("jakarta.inject.Singleton", "jakarta.inject.Scope",
@@ -79,9 +80,14 @@ final class ElementTypeModel implements TypeModel {
     private static final Set<String> GROOVY_OBJECT = Set.of("getMetaClass", "setMetaClass", "getProperty", "setProperty",
             "invokeMethod");
 
+    private final ModelCoverage coverage;
     private final Map<String, ClassElement> reachable = new HashMap<>();
     private final Map<String, ElementClass> classes = new HashMap<>();
     private final Map<String, MethodElement> methods = new HashMap<>();
+
+    ElementTypeModel(ModelCoverage coverage) {
+        this.coverage = coverage;
+    }
 
     /**
      * @param element a class element that the visitor was given
@@ -330,7 +336,8 @@ final class ElementTypeModel implements TypeModel {
         }
 
         private boolean isBindable(MethodElement method) {
-            if (!method.isPublic() || method.isStatic() || method.isSynthetic()) {
+            // the startup binds the executable methods of the bean, which are the non-private ones
+            if (method.isPrivate() || method.isStatic() || method.isSynthetic()) {
                 return false;
             }
             String name = method.getName();
@@ -377,11 +384,17 @@ final class ElementTypeModel implements TypeModel {
                     .toList();
         }
 
-        // a class has an introspection when it is annotated with @Introspected or an annotation that carries it; the
-        // classes that another class lists in @Introspected(classes) are not visible from this one
+        // a class has an introspection when it is annotated with @Introspected or an annotation that carries it, or a
+        // @GraphQLModels of this compilation lists it; the classes that @Introspected(classes) on another class lists are
+        // not visible from this one
         @Override
         public boolean introspected() {
-            return element.hasStereotype(INTROSPECTED);
+            // @GraphQLModels carries @Introspected for the classes it lists, not for the class it is declared on
+            boolean own = element.hasStereotype(INTROSPECTED) && (!element.hasDeclaredAnnotation(MODELS)
+                    || element.hasDeclaredAnnotation(INTROSPECTED) || element.getAnnotationNamesByStereotype(INTROSPECTED)
+                    .stream().anyMatch(it -> !it.equals(MODELS)));
+            return own || coverage.covers(element.getName(), element.getAnnotationNames(),
+                    element.isPublic());
         }
 
         @Override

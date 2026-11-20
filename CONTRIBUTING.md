@@ -183,6 +183,25 @@ JVM per sample; the jar leaves `BindingBenchmark` and `RetainedHeapBenchmark` ou
 generates the 1,600-field schema only). None has an allocation gate: a whole context start is not a path the library owns. A gain is claimed
 only with a figure from these benchmarks.
 
+`InvocationBenchmark` measures the executor hop of the execution model on plain graphql-java (`direct`, `hopVirtual`,
+`hopPlatform`, `perFieldHop`: no library code) and behind the library's own invocation (`library` and `libraryNone`): one
+operation over a root object (`query=root`) or over 1,000 objects (`query=items1000`), each object with ten property
+fields and one method field. `mode=direct` runs `executeAsync` on the calling thread (the executor `none`),
+`hopVirtual` and `hopPlatform` submit the whole execution to a virtual-thread executor or to a fixed platform pool and wait
+(one hop per request), and `perFieldHop` wraps every method fetcher in `supplyAsync` on the virtual-thread executor (one hop per
+method field; property fields never hop). `library` runs the same `GraphQL` behind the library's `GraphQLInvocation` with the
+default executor (`blocking`), `libraryNone` with `none`; both wait for the result, so they include the `Mono` that the transport
+subscribes to. Read `library` against `hopVirtual` and `libraryNone` against `direct`. Read the figure as the difference to `direct` for the same query: the time per
+operation includes the calling thread waiting for the executor, and `gc.alloc.rate.norm` counts the allocation of every
+thread, because the profiler sees the whole JVM (the allocation gate sees the calling thread only, which is why nothing here is gated).
+`AsyncBoundaryBenchmark` prototypes the async boundary: a field returns a `CompletionStage` that completes on the calling thread
+(`completion=sameThread`), on a pool thread or on a thread that implements Reactor's `NonBlocking` marker, with the
+prototype boundary off or on. With it on, a field that completes on a `NonBlocking` thread completes its future on the request
+executor, so its children leave the event loop. Before each trial both benchmarks run the operation once with a
+`ThreadChanges` counter and fail when the counted hops differ from the expected ones (none for `direct`, one for the `hop`
+modes, one per method field for `perFieldHop`; the `library` modes assert where the fetchers ran), so the number of hops is asserted, not assumed. The counter is not
+attached to the measured operations. `jmhSmokeTest` runs every case.
+
 Two checks run on every `./gradlew check`:
 
 - `:benchmarks:jmhSmokeTest` runs every JMH benchmark once in the test JVM (no fork, single shot), so the benchmarks
@@ -195,6 +214,10 @@ Two checks run on every `./gradlew check`:
   `gc.alloc.rate.norm` is the C2 steady state, so it is lower for some operations.) A path the library owns may allocate its baseline plus 0.5 bytes, so a path with a baseline of 0
   stays at 0. A whole query may allocate 5 percent more than its baseline, and only on the default graphql-java leg.
   Wall-clock time is never gated.
+  `invocationOverhead` and `invocationSlope` gate the library's invocation with the executor `none` (the gates measure the
+  calling thread, and a hop moves the work to another one): the first is the bytes that `invoke` allocates beyond a direct
+  `executeAsync` of the same 10-field query (a budget of 1,024 B, and its recorded baseline), the second is that overhead at 1,000
+  fields minus the one at 10 fields, which must stay within 0.5 B of its baseline of 0.
 
 To measure, run `./gradlew :benchmarks:jmh` (two forks, the `gc` profiler; the allocation figure is
 `gc.alloc.rate.norm` in bytes per operation) or `./gradlew :benchmarks:jmh -Pjmh.profile=quick` for a short run. Narrow

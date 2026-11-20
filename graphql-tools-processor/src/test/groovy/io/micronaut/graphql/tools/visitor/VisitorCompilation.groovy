@@ -160,6 +160,11 @@ class VisitorCompilation {
             return errors.findAll { it.startsWith('[') }.collect { it.readLines().first().replaceFirst(/: .*/, '') }
         }
 
+        List<String> getWarnings() {
+            return diagnostics.findAll { it.kind == Diagnostic.Kind.WARNING || it.kind == Diagnostic.Kind.MANDATORY_WARNING }
+                    .collect { it.getMessage(Locale.ROOT) }
+        }
+
         List<String> getNotes() {
             return diagnostics.findAll { it.kind == Diagnostic.Kind.NOTE && it.getMessage(Locale.ROOT).startsWith('[graphql-tools]') }
                     .collect { it.getMessage(Locale.ROOT) }

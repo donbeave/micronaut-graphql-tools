@@ -8,6 +8,7 @@ schema: Schema
 binding: Binding
 resolverContracts: Resolver Contracts
 typeSystem: Type System
+models: Model Classes
 inputs: Inputs
 scalars: Scalars
 directives: Directives
@@ -15,8 +16,7 @@ dataLoaders: Data Loaders
 errors: Errors
 subscriptions: Subscriptions
 context: Context
-threadSelection:
-  title: Thread Selection
+execution: Execution
 customization: Customization
 safety: Safety
 manifest: Binding Manifest

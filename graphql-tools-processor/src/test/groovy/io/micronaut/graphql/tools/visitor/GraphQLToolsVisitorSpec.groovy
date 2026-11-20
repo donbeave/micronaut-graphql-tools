@@ -77,7 +77,7 @@ public class QueryResolver {
         result.errorFor('[unbound-resolver-method]').getMessage(Locale.ROOT).contains('fix: ')
     }
 
-    def "the hatches: @GraphQLIgnore, a lifecycle method, a non-public method, a static method and an Object method"() {
+    def "the hatches: @GraphQLIgnore, a lifecycle method, a private method, a static method and an Object method"() {
         when:
         def result = compilation('''
 @jakarta.inject.Singleton
@@ -86,7 +86,7 @@ public class QueryResolver {
     public String version() { return "1"; }
     @GraphQLIgnore public String helper() { return ""; }
     @jakarta.annotation.PreDestroy public void close() { }
-    String packagePrivate() { return ""; }
+    private String hidden() { return ""; }
     public static String util() { return ""; }
     @Override public String toString() { return "q"; }
 }''').compile()
@@ -94,6 +94,20 @@ public class QueryResolver {
         then:
         result.success
         result.findings == []
+    }
+
+    def "a package-private method of a resolver bean is an unbound resolver method, as at startup"() {
+        when:
+        def result = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String version() { return "1"; }
+    String packagePrivate() { return ""; }
+}''').compile()
+
+        then:
+        !result.success
+        result.findings == ['[unbound-resolver-method] example.QueryResolver#packagePrivate()']
     }
 
     def "a parameter that binds no argument is reported with the coordinate, the schema location and the member"() {
@@ -456,5 +470,59 @@ public class QueryResolver {
 
         where:
         length << [1000, 5000]
+    }
+
+    static final String BOOK_QUERY = '''
+@GraphQLRootResolver
+public class QueryResolver {
+    public Book book(String id) { return null; }
+}'''
+
+    static final String BOOK = '''
+public class Book {
+    public String getId() { return "1"; }
+}'''
+
+    def "a returned model class that nothing introspects is a warning that names the class and the field"() {
+        when:
+        def result = compilation(BOOK_QUERY, BOOK).compile()
+
+        then:
+        result.success
+        result.warnings.size() == 1
+        result.warnings.first().startsWith('[class-not-introspected] Query.book: ')
+        result.warnings.first().contains('example.Book')
+        result.warnings.first().contains('is not introspected')
+    }
+
+    def "a class that @GraphQLModels lists is introspected, whichever class the compiler visits first"() {
+        expect:
+        compilation(BOOK_QUERY, book, models).compile().warnings.empty
+
+        where:
+        book                                  | models
+        BOOK                                  | '@GraphQLModels(classes = Book.class) public class ZModels { }'
+        BOOK                                  | '@GraphQLModels(classes = Book.class) public class AModels { }'
+        '@Deprecated ' + BOOK.strip()         | '@GraphQLModels(packages = "example", includedAnnotations = Deprecated.class) public class ZModels { }'
+        '@Deprecated ' + BOOK.strip()         | '@GraphQLModels(packages = "example", includedAnnotations = Deprecated.class) public class AModels { }'
+    }
+
+    def "a listed package covers the classes that carry a listed annotation and no other"() {
+        when:
+        def result = compilation(BOOK_QUERY, BOOK, '@GraphQLModels(packages = "example", includedAnnotations = Deprecated.class) public class Models { }').compile()
+
+        then:
+        result.success
+        result.warnings.any { it.startsWith('[class-not-introspected] Query.book: ') }
+    }
+
+    def "a @GraphQLModels that lists nothing is reported, and covers nothing"() {
+        when:
+        def result = compilation(BOOK_QUERY, BOOK, '@GraphQLModels public class EmptyModels { }').compile()
+
+        then:
+        result.success
+        result.warnings.any { it.contains('@GraphQLModels on example.EmptyModels lists no class and no package') }
+        result.warnings.any { it.startsWith('[class-not-introspected] Query.book: ') }
     }
 }

@@ -13,7 +13,7 @@ This page tells you which package holds what, which packages you may import from
 [cols="4,5", options="header"]
 |===
 |I want to |Import from
-|Mark a resolver class, a method, a parameter or an input class |`io.micronaut.graphql.tools.annotation`
+|Mark a resolver class, a method, a parameter, an input class, or list model classes without an annotation |`io.micronaut.graphql.tools.annotation`
 |Declare a resolver contract that fixes the root operation type or the source type |`io.micronaut.graphql.tools.resolver` (`QueryResolver`, `MutationResolver`, `SubscriptionResolver`, `TypeResolver<T>`)
 |Catch a startup failure |`io.micronaut.graphql.tools.exceptions` (`SchemaBindingException`; match on its code)
 |Read an error code |`io.micronaut.graphql.tools.binding` (`BindingCode`)
@@ -58,6 +58,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.internal.resolver` |graphql-tools |Internal |The data fetchers and the type resolvers, and the planning of resolver arguments
 |`io.micronaut.graphql.tools.internal.wiring` |graphql-tools |Internal |The runtime wiring generator, the wiring factory that picks the data fetcher and the type resolver of each field and type, the interface field binder and the directive wirings
 |`io.micronaut.graphql.tools.binding` |graphql-tools-binding |Public API |`BindingCode`, the registry of the error codes
+|`io.micronaut.graphql.tools.internal.execution` |graphql-tools |Internal |The library's GraphQL invocation: the executor hop, the per-execution state and the step-aside rules
 |`io.micronaut.graphql.tools.internal.input` |graphql-tools |Internal |The conversion of argument and input values, and the input type binder
 |`io.micronaut.graphql.tools.internal.checks` |graphql-tools |Internal |The startup checks and validators: strict mode, unreachable types, schema coordinates, the directive wiring check and the mapping dictionary
 |`io.micronaut.graphql.tools.internal.manifest` |graphql-tools |Internal |Recording and writing the binding manifest at startup

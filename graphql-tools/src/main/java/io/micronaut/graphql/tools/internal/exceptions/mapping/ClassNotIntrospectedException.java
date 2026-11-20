@@ -30,9 +30,10 @@ public final class ClassNotIntrospectedException extends AbstractMappingExceptio
                                          Class<?> annotationClass) {
         super(BindingCode.CLASS_NOT_INTROSPECTED,
                 String.format(
-                        "The class %s is not introspected. Ensure the class is annotated with %s.",
+                        "The class %s is not introspected. Ensure the class is annotated with %s.%s",
                         returningType.getName(),
-                        annotationClass.getName()
+                        annotationClass.getName(),
+ " A class that cannot carry it, such as a generated or external one, is listed (or its package) in @GraphQLModels."
                 ),
                 mappingContext
         );

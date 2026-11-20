@@ -48,6 +48,7 @@ class BindingCodeSpec extends Specification {
             'unsupported-input-type',
             'input-field-not-settable',
             'class-not-introspected',
+            'schema-definition-not-provided',
             'schema-invalid',
             'processor-option-unknown',
             'processor-option-invalid',
