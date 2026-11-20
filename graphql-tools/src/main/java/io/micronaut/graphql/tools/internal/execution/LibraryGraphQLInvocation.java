@@ -320,6 +320,8 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             // the subscriber cancels after it has the result too, and a result that is done has nothing left to stop
             if (!isDone()) {
                 state.cancel();
+                // a pending stage may never complete, so nothing else would stop the watch of the connection
+                state.finished();
             }
             return super.cancel(mayInterruptIfRunning);
         }
