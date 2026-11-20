@@ -17,4 +17,5 @@ websocket
 execute-on
 error-handling
 error-details
+field-decorator
 type-class-derivation
