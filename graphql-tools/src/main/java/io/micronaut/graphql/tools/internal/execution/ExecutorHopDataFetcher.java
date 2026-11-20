@@ -77,18 +77,39 @@ public final class ExecutorHopDataFetcher implements DataFetcher<Object> {
         try {
             Object value = delegate.get(environment);
             if (value instanceof CompletionStage<?> stage) {
+                Thread hopThread = Thread.currentThread();
                 stage.whenComplete((v, failure) -> {
-                    if (failure != null) {
-                        result.completeExceptionally(AsyncBoundaryDataFetcher.unwrap(failure));
-                    } else {
-                        result.complete(v);
+                    if (Thread.currentThread() == hopThread) {
+                        finish(result, v, failure);
+                        return;
+                    }
+                    // the stage completed elsewhere: the field completes on its executor, so its children continue there
+                    try {
+                        executor.execute(() -> finish(result, v, failure));
+                    } catch (RejectedExecutionException e) {
+                        result.completeExceptionally(e);
                     }
                 });
+                if (stage instanceof CompletableFuture<?> source) {
+                    result.whenComplete((v, failure) -> {
+                        if (result.isCancelled()) {
+                            source.cancel(true);
+                        }
+                    });
+                }
             } else {
                 result.complete(value);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             result.completeExceptionally(e);
+        }
+    }
+
+    private static void finish(CompletableFuture<Object> result, Object value, Throwable failure) {
+        if (failure != null) {
+            result.completeExceptionally(AsyncBoundaryDataFetcher.unwrap(failure));
+        } else {
+            result.complete(value);
         }
     }
 }

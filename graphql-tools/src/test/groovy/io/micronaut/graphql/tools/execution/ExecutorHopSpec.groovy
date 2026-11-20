@@ -117,4 +117,47 @@ class ExecutorHopSpec extends Specification {
         def e = thrown(ExecutionException)
         e.cause instanceof RejectedExecutionException
     }
+
+    void 'a stage that completes on another thread completes the field on its executor'() {
+        given:
+        ExecutorService other = Executors.newSingleThreadExecutor { task -> new Thread(task, 'other-pool') }
+        CompletableFuture<Object> gate = new CompletableFuture<>()
+        DataFetcher<Object> fetcher = new ExecutorHopDataFetcher(pool, { env -> gate } as DataFetcher<Object>)
+        CompletableFuture<Object> field = (CompletableFuture) fetcher.get(environment(PropagatedContext.empty()))
+        String completedOn = null
+        field.thenAccept { completedOn = Thread.currentThread().name }
+
+        when:
+        other.submit { gate.complete('late') }.get(5, TimeUnit.SECONDS)
+        field.get(5, TimeUnit.SECONDS)
+        sleep(100)
+
+        then:
+        completedOn == 'hop-pool'
+
+        cleanup:
+        other.shutdownNow()
+    }
+
+    void 'an error thrown by the method fails the future, and cancelling the field cancels the source'() {
+        given:
+        DataFetcher<Object> erroring = new ExecutorHopDataFetcher(pool, { env -> throw new StackOverflowError('deep') } as DataFetcher<Object>)
+        CompletableFuture<Object> source = new CompletableFuture<>()
+        DataFetcher<Object> pending = new ExecutorHopDataFetcher(pool, { env -> source } as DataFetcher<Object>)
+
+        when:
+        ((CompletableFuture) erroring.get(environment(PropagatedContext.empty()))).get(5, TimeUnit.SECONDS)
+
+        then:
+        def e = thrown(ExecutionException)
+        e.cause instanceof StackOverflowError
+
+        when:
+        CompletableFuture<Object> field = (CompletableFuture) pending.get(environment(PropagatedContext.empty()))
+        sleep(200)
+        field.cancel(true)
+
+        then:
+        source.isCancelled()
+    }
 }
