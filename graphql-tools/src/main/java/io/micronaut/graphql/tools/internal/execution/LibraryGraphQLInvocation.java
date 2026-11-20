@@ -39,6 +39,7 @@ import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.ExecutionConfiguration;
 import io.micronaut.graphql.tools.internal.LibraryBeanSelection;
+import io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics;
 import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
@@ -348,11 +349,16 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                         .query(data.getQuery())
                         .operationName(data.getOperationName())
                         .variables(data.getVariables());
+                BatchCounters counters = null;
                 if (loaders != null) {
-                    builder.dataLoaderRegistry(new LazyDataLoaderRegistry(loaders, state));
+                    counters = loaders.statistics() ? new BatchCounters() : null;
+                    builder.dataLoaderRegistry(new LazyDataLoaderRegistry(loaders, state, counters));
                 }
                 ExecutionInput input = builder.build();
                 state.storeIn(input.getGraphQLContext());
+                if (counters != null) {
+                    input.getGraphQLContext().put(DataLoaderBatchStatistics.CONTEXT_KEY, counters);
+                }
                 if (customizer == null) {
                     executeAsync(input);
                 } else {

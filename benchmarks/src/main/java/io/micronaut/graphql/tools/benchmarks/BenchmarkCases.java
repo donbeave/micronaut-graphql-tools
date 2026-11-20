@@ -20,6 +20,7 @@ import graphql.GraphQLContext;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.TypeResolutionEnvironment;
+import graphql.execution.instrumentation.SimplePerformantInstrumentation;
 import graphql.execution.MergedField;
 import graphql.execution.TypeResolutionParameters;
 import graphql.language.Field;
@@ -41,18 +42,22 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.ApplicationContextBuilder;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Circle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Item;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.PlainItem;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Rectangle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Square;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Triangle;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micronaut.graphql.tools.scalars.StandardScalar;
+import io.opentelemetry.api.OpenTelemetry;
 import io.micronaut.graphql.tools.scalars.internal.json.JsonCoercing;
 import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
 
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -85,6 +90,8 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String INVOCATION_OVERHEAD = "invocationOverhead";
     public static final String INVOCATION_SLOPE = "invocationSlope";
     public static final String LOADER_OVERHEAD = "loaderOverhead";
+    /** What the observability module adds per field to a request: the invocation slope with it on, less the one with an empty instrumentation. */
+    public static final String OBSERVED_INVOCATION_SLOPE = "observedInvocationSlope";
     public static final String QUERY_1K = "query1kObjects";
     public static final String QUERY_10K = "query10kObjects";
 
@@ -156,6 +163,16 @@ public final class BenchmarkCases implements AutoCloseable {
     static final int SMALL_QUERY_FIELDS = 10;
     static final int LARGE_QUERY_FIELDS = 1_000;
 
+    /** The {@code Instrumentation} bean of the application. */
+    public enum Instrumented {
+        /** None: the library sets no instrumentation. */
+        NONE,
+        /** One that implements no hook: what any instrumentation costs graphql-java, with nothing of ours in it. */
+        EMPTY,
+        /** The observability module's, with a meter registry and the no-op OpenTelemetry. */
+        OBSERVABILITY
+    }
+
     @FunctionalInterface
     public interface Op {
         Object run() throws Exception;
@@ -180,9 +197,24 @@ public final class BenchmarkCases implements AutoCloseable {
      * @param loaders how many batch loader beans no operation uses: 0, 1 or 50
      */
     public BenchmarkCases(int loaders) {
+        this(loaders, Instrumented.NONE);
+    }
+
+    /**
+     * @param loaders     how many batch loader beans no operation uses: 0, 1 or 50
+     * @param instrumented which {@code Instrumentation} bean the application has
+     */
+    public BenchmarkCases(int loaders, Instrumented instrumented) {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
-        context = ApplicationContext.builder()
+        ApplicationContextBuilder builder = ApplicationContext.builder();
+        switch (instrumented) {
+            case NONE -> { }
+            case EMPTY -> builder.singletons(new SimplePerformantInstrumentation());
+            // the beans of the observability module, with no field selected for a span
+            case OBSERVABILITY -> builder.singletons(new SimpleMeterRegistry(), OpenTelemetry.noop());
+        }
+        context = builder
                 .properties(Map.of("graphql.graphql-ws.enabled", false, "graphql.graphiql.enabled", false,
                         // the scalars module is on the classpath for the coercion cases below; its beans would only add to the
                         // start-up of every other case
@@ -214,7 +246,7 @@ public final class BenchmarkCases implements AutoCloseable {
                 "2026-12-24"));
         ops.put(INSTANT_COERCION, coercion(TimeScalars.coercing(StandardScalar.INSTANT, "Instant", null),
                 "2026-12-24T10:15:30Z"));
-        ops.put(JSON_COERCION, coercion(new JsonCoercing("JSON", () -> null), Map.of("kind", "x")));
+        ops.put(JSON_COERCION, coercion(new JsonCoercing("JSON", () -> null), jsonValue()));
         ops.put(ENUM_ARGUMENT, fetch("Query", "enumArg", null, Map.of("color", coercedEnum("Color", "GREEN"))));
         ops.put(INPUT_OBJECT_ARGUMENT, fetch("Query", "input", null, Map.of("input", point("a", 1, 2))));
         ops.put(LIST_OF_INPUTS_ARGUMENT, fetch("Query", "inputs", null,
@@ -280,6 +312,14 @@ public final class BenchmarkCases implements AutoCloseable {
 
     // What a request does with the scalar: parse the variable, then write the value that a resolver returns from it
     @SuppressWarnings("unchecked")
+    private static Map<String, Object> jsonValue() {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("kind", "x");
+        value.put("tags", new ArrayList<>(List.of("a", "b")));
+        value.put("ratio", 2.5d);
+        return value;
+    }
+
     private static Op coercion(Coercing<?, ?> scalar, Object input) {
         Coercing<Object, Object> coercing = (Coercing<Object, Object>) scalar;
         GraphQLContext graphQLContext = GraphQLContext.getDefault();

@@ -21,6 +21,7 @@ import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
 import io.micronaut.inject.BeanDefinition;
 import jakarta.inject.Singleton;
@@ -48,9 +49,11 @@ public final class DataLoaderTable {
     private final BeanContext beanContext;
     private final Entry[] entries;
     private final Map<String, Entry> byName;
+    private final boolean statistics;
 
-    DataLoaderTable(BeanContext beanContext) {
+    DataLoaderTable(BeanContext beanContext, GraphQLToolsConfiguration configuration) {
         this.beanContext = beanContext;
+        this.statistics = configuration.getExecution().isDataLoaderStatistics();
         Map<BeanDefinition<?>, Kind> kinds = new LinkedHashMap<>();
         // a bean that implements several interfaces is served as the first of them, in this order
         for (Kind kind : new Kind[] {Kind.MAPPED_WITH_CONTEXT, Kind.MAPPED, Kind.BATCH_WITH_CONTEXT, Kind.BATCH}) {
@@ -78,6 +81,11 @@ public final class DataLoaderTable {
         }
         this.entries = list.toArray(new Entry[0]);
         this.byName = Map.copyOf(names);
+    }
+
+    /** @return whether the batches of each execution are counted ({@code micronaut.graphql.tools.execution.data-loader-statistics}) */
+    boolean statistics() {
+        return statistics;
     }
 
     /** @return whether the application has no batch loader bean */

@@ -19,7 +19,7 @@ import graphql.GraphQL;
 import io.micronaut.core.annotation.NonNull;
 
 /**
- * Configures the {@link GraphQL} bean the library creates: instrumentation, a
+ * Configures the {@link GraphQL} bean the library creates: a
  * {@link graphql.execution.preparsed.PreparsedDocumentProvider}, execution strategies, the default
  * {@link graphql.execution.DataFetcherExceptionHandler}, and so on.
  *
@@ -27,7 +27,12 @@ import io.micronaut.core.annotation.NonNull;
  * The beans run lowest order first: by {@link io.micronaut.core.annotation.Order @Order} on the bean class or factory
  * method, or by {@link io.micronaut.core.order.Ordered#getOrder()} if the bean implements {@code Ordered}. A builder
  * setter such as {@code instrumentation(...)} keeps one value, so a later customizer replaces what an earlier one set
- * there; chain instrumentations with {@link graphql.execution.instrumentation.ChainedInstrumentation}.</p>
+ * there.</p>
+ *
+ * <p>Do not use a customizer for instrumentation: the library collects every
+ * {@link graphql.execution.instrumentation.Instrumentation} bean, orders them like the customizers, and installs one as it is
+ * or several in a {@link graphql.execution.instrumentation.ChainedInstrumentation}, before the customizers run. With no
+ * such bean it installs none. A customizer that calls {@code instrumentation(...)} replaces what the beans installed.</p>
  *
  * <p>An application that provides its own {@code GraphQL} bean gets none from the library, so these beans are not
  * called; such an application configures its builder itself. The library never calls

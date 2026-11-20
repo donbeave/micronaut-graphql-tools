@@ -56,6 +56,17 @@ micronaut:
 
 The cost of the hop is measured by the `InvocationBenchmark` of the `benchmarks` module (see CONTRIBUTING.md): it reports the time and the allocation of an operation on the calling thread, with one hop to a virtual-thread executor and to a platform pool, and of the library's own invocation.
 
+[[executorNone]]
+=== Executor none
+
+With `executor: none` there is no hop: the operation runs on the thread that receives it. If the application's `GraphQLExecutionInputCustomizer` answers on another thread, the operation continues on the thread that completes its publisher. graphql-java parses and validates there, and every synchronous resolver runs there. The library does not move the operation back, and the propagated context of the receiving thread is not restored on that thread. An event-loop thread of another system, or a pool the application did not intend, then runs the rest of the operation.
+
+Either keep the customizer on the calling thread, or complete its publisher on a thread that suits the operation:
+
+snippet::example.tck.ExecutorNoneCustomizerScenario[project-base="test-suite", source="test", tags="executor-none-customizer", indent="0"]
+
+To keep the operation on a blocking executor, keep the default `blocking` or name your own: when the customizer answers on another thread, the library hops back to the executor once more.
+
 == Order of the steps
 
 After the hop the library runs, in this order:
@@ -66,7 +77,7 @@ After the hop the library runs, in this order:
 . call every `GraphQLContextContributor`, in order;
 . run graphql-java.
 
-The customizer therefore runs on the executor and may block. A customizer that publishes its input on another thread makes the operation hop to the executor once more. The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
+The customizer therefore runs on the executor and may block. A customizer that publishes its input on another thread makes the operation hop to the executor once more (with `executor: none` it does not, see <<executorNone,Executor none>>). The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
 
 The state is also the read-only `GraphQLExecutionRequest` that the context contributors receive. The registry is the library's own: an application with a `DataLoaderRegistry` bean fails the startup (BC-36). See the Data Loaders page for the loaders and the contributors.
 
