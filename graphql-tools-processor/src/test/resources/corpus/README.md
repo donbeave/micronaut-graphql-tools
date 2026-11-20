@@ -158,7 +158,7 @@ job `build tools` runs `corpusKotlin` on every pull request, and it is a gated c
 
 Kotlin compilation is the cost of the corpus. The batch builds `2 x N` subprojects with `--parallel`; the measurements of 23 cases are
 in the pull request that added the checked variant (the Gradle build took 40 s unchecked only and 45 s with the checked variant on a
-10-core machine, 50 to 80 s under kapt). The budget is 3 minutes (`corpus.kotlin.budget-seconds`); over it, a `kotlin:pr` tag would
+10-core machine, 50 to 80 s under kapt). The budget is 8 minutes (`corpus.kotlin.budget-seconds`, 480 s by default); over it, a `kotlin:pr` tag would
 select the subset for pull requests and the nightly run would keep all of them. Under kapt, Gradle runs the annotation processing
 in a process of its own (`kapt.workers.isolation=process`), because javac copies a `micronaut.*` option into the system properties of
 its JVM and a later compilation in the same JVM would read the first value.
