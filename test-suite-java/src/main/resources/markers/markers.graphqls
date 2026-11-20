@@ -1,0 +1,14 @@
+type Shelf {
+  id: ID!
+  slots: Int!
+  label: String!
+}
+
+extend type Query {
+  shelf: Shelf
+  stock: String!
+}
+
+extend type Mutation {
+  stock: String!
+}

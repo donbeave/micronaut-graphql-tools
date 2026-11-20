@@ -369,6 +369,7 @@ type Child {
     record MarkerElement(String id) implements PropagatedContextElement {
     }
 
+    @Singleton
     @Requires(property = 'spec.name', pattern = 'LibraryInvocationSpec(\\.recording)?')
     @GraphQLRootResolver
     static class Query {
@@ -392,6 +393,7 @@ type Child {
         String name = 'kid'
     }
 
+    @Singleton
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(customizer|subclass)')
     @GraphQLRootResolver
     static class CustomizedQuery {

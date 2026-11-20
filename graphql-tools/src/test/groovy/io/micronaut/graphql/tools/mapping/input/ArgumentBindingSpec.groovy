@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input
 
+import jakarta.inject.Singleton
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -214,6 +215,7 @@ type User { name(prefix: String!, suffix: String!): String! }
     }
 
     @Requires(property = 'spec.name', value = SPEC_REORDERED)
+    @Singleton
     @GraphQLRootResolver
     static class ReorderedQuery {
         String page(Integer offset, Integer first) { "first=$first offset=$offset" }
@@ -221,12 +223,14 @@ type User { name(prefix: String!, suffix: String!): String! }
     }
 
     @Requires(property = 'spec.name', value = SPEC_SDL_REORDERED)
+    @Singleton
     @GraphQLRootResolver
     static class SdlReorderedQuery {
         String page(Integer offset, Integer first) { "first=$first offset=$offset" }
     }
 
     @Requires(property = 'spec.name', value = SPEC_RENAMED)
+    @Singleton
     @GraphQLRootResolver
     static class RenamedQuery {
         String page(Integer first, Integer offset) { null }
@@ -236,30 +240,35 @@ type User { name(prefix: String!, suffix: String!): String! }
     }
 
     @Requires(property = 'spec.name', value = SPEC_MISNAMED)
+    @Singleton
     @GraphQLRootResolver
     static class MisnamedQuery {
         String page(Integer count, Integer offset) { null }
     }
 
     @Requires(property = 'spec.name', value = SPEC_DUPLICATE)
+    @Singleton
     @GraphQLRootResolver
     static class DuplicateQuery {
         String page(Integer first, @GraphQLArgument('first') Integer offset) { null }
     }
 
     @Requires(property = 'spec.name', value = SPEC_EXTRA)
+    @Singleton
     @GraphQLRootResolver
     static class ExtraQuery {
         String page(Integer first, Integer offset, Integer limit) { null }
     }
 
     @Requires(property = 'spec.name', value = SPEC_MISSING)
+    @Singleton
     @GraphQLRootResolver
     static class MissingQuery {
         String page(Integer first) { null }
     }
 
     @Requires(property = 'spec.name', value = SPEC_SOURCE)
+    @Singleton
     @GraphQLRootResolver
     static class SourceQuery {
         User user() { new User() }
@@ -270,6 +279,7 @@ type User { name(prefix: String!, suffix: String!): String! }
     }
 
     @Requires(property = 'spec.name', value = SPEC_SOURCE)
+    @Singleton
     @GraphQLTypeResolver(User)
     static class UserResolver {
         String name(User user, String suffix, String prefix, DataFetchingEnvironment env) {
@@ -278,6 +288,7 @@ type User { name(prefix: String!, suffix: String!): String! }
     }
 
     @Requires(property = 'spec.name', value = SPEC_BAD_OVERRIDE)
+    @Singleton
     @GraphQLRootResolver
     static class BadOverrideQuery {
         String page(@GraphQLArgument('frist') Integer first, Integer offset) { null }
@@ -289,6 +300,7 @@ type User { name(prefix: String!, suffix: String!): String! }
     }
 
     @Requires(property = 'spec.name', value = SPEC_CONTRACT)
+    @Singleton
     @GraphQLRootResolver
     static class ContractQuery implements RenamedContract {
         @Override

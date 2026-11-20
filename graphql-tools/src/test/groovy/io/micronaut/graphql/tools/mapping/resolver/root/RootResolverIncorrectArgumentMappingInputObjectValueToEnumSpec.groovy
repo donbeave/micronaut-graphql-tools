@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.root
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Introspected
@@ -71,6 +72,7 @@ input PriceInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Float price(PriceInput input) {

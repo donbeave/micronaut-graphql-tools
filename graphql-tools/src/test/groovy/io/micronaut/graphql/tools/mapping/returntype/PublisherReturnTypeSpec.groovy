@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.returntype
 
+import jakarta.inject.Singleton
 import graphql.ExecutionResult
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
@@ -300,6 +301,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {
@@ -308,6 +310,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Subscription {
         Publisher<Integer> ticks() {
@@ -328,6 +331,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Item)
     static class ItemResolver {
         String label(Item item, DataFetchingEnvironment env) {
@@ -345,6 +349,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_QUERY)
+    @Singleton
     @GraphQLRootResolver
     static class PublisherQuery {
         Publisher<Integer> events() {
@@ -353,6 +358,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_MUTATION)
+    @Singleton
     @GraphQLRootResolver
     static class PublisherMutation {
         String hello() {
@@ -365,6 +371,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_NOT_PUBLISHER)
+    @Singleton
     @GraphQLRootResolver
     static class NotPublisherSubscription {
         String hello() {
@@ -377,6 +384,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_IN_LIST)
+    @Singleton
     @GraphQLRootResolver
     static class InListSubscription {
         String hello() {
@@ -389,6 +397,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_QUERY_LIST)
+    @Singleton
     @GraphQLRootResolver
     static class QueryListOfPublishers {
         List<Publisher<Integer>> numbers() {
@@ -397,6 +406,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_OBJECT_FIELD)
+    @Singleton
     @GraphQLRootResolver
     static class ObjectFieldQuery {
         Item item() {
@@ -405,6 +415,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_OBJECT_FIELD)
+    @Singleton
     @GraphQLTypeResolver(Item)
     static class ItemTicksResolver {
         Publisher<Integer> ticks(Item item) {
@@ -413,6 +424,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_WRAPPED_PUBLISHER)
+    @Singleton
     @GraphQLRootResolver
     static class WrappedPublisherSubscription {
         String hello() {

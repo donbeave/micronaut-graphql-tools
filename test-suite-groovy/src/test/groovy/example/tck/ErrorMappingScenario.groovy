@@ -70,6 +70,7 @@ class ErrorMappingCustomizer implements GraphQLBuilderCustomizer {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'error-mapping')
 class ErrorMappingQueries {

@@ -87,6 +87,7 @@ class Sprocket : Gizmo {
 }
 
 @Requires(env = [PRECEDENCE_RELAY])
+@Singleton
 @GraphQLTypeResolver(Gizmo::class)
 open class GizmoResolver {
 
@@ -95,6 +96,7 @@ open class GizmoResolver {
 }
 
 @Requires(env = [PRECEDENCE_RELAY])
+@Singleton
 @GraphQLRootResolver
 open class RelayQuery {
 
@@ -108,6 +110,7 @@ class Gadget {
 }
 
 @Requires(env = [PRECEDENCE_AMBIGUOUS])
+@Singleton
 @GraphQLTypeResolver(Gadget::class)
 open class GadgetResolver {
 
@@ -115,6 +118,7 @@ open class GadgetResolver {
 }
 
 @Requires(env = [PRECEDENCE_AMBIGUOUS])
+@Singleton
 @GraphQLRootResolver
 open class GadgetQuery {
 

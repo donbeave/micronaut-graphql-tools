@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.type
 
+import jakarta.inject.Singleton
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.AbstractTest
@@ -75,6 +76,7 @@ type PaymentMethod {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         User user() {
@@ -88,6 +90,7 @@ type PaymentMethod {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(User.class)
     static class UserResolver {
         List<PaymentMethod> paymentMethodList(User user, DataFetchingEnvironment env) {

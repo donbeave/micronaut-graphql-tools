@@ -78,6 +78,7 @@ type Extra implements Labeled {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         List<Section> sections() {
@@ -101,6 +102,7 @@ type Extra implements Labeled {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Section.class)
     static class SectionResolver {
         Extra extra(Section section) {

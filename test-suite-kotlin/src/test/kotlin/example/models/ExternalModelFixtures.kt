@@ -114,6 +114,7 @@ class GeneratedModels
 class HolderModels
 
 // tag::resolver[]
+@Singleton
 @Requires(env = [EXTERNAL_CLASSES])
 @GraphQLRootResolver
 class AtlasQuery {
@@ -124,6 +125,7 @@ class AtlasQuery {
 }
 // end::resolver[]
 
+@Singleton
 @Requires(env = [EXTERNAL_PACKAGE])
 @GraphQLRootResolver
 class ChartQuery {
@@ -131,6 +133,7 @@ class ChartQuery {
     fun chart(): Chart = Chart("Sales", Axis("EUR"))
 }
 
+@Singleton
 @Requires(env = [EXTERNAL_MISSING])
 @GraphQLRootResolver
 class UnlistedQuery {
@@ -138,6 +141,7 @@ class UnlistedQuery {
     fun unlisted(): Unlisted = Unlisted()
 }
 
+@Singleton
 @Requires(env = [EXTERNAL_NESTED])
 @GraphQLRootResolver
 class HolderQuery {

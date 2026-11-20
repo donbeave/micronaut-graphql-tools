@@ -20,6 +20,7 @@ and test it.
 | --- | --- | --- |
 | [`graphql-tools`](graphql-tools/README.md) | `:micronaut-graphql-tools` | The runtime library that applications depend on. |
 | [`graphql-tools-binding`](graphql-tools-binding/README.md) | `:micronaut-graphql-tools-binding` | The binding rules used by the runtime library. |
+| [`graphql-tools-scalars`](graphql-tools-scalars/README.md) | `:micronaut-graphql-tools-scalars` | The standard scalars: `java.time`, JSON and extended scalars, as beans. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
@@ -194,10 +195,35 @@ The mapping then checks `T`. Anything else fails at startup with `[unsupported-r
 
 `@GraphQLRootResolver` and `@GraphQLTypeResolver` are inherited (`@Inherited`). They may sit on an interface, for
 example one emitted by a code generator, and a bean that implements it is a resolver without a GraphQL annotation of
-its own. The implementing class still needs a bean annotation such as `@Singleton`: the contract's annotation does not
-make the class a bean, and the compile-time checks report a contract that no bean class implements. Every bean that
-implements the contract is a resolver, so a hand-written fake or delegating adapter that implements it and is a bean is
-registered too. Micronaut AOP advice (`@Around`) on the implementation still applies.
+its own. The annotations carry no bean stereotype: a class that carries one, extends an annotated class or implements
+an annotated interface is a bean only when it has a scope annotation of its own, such as `@Singleton`. A class without
+one is not a bean, so a fake or a second implementation does not become a second resolver by accident, and the
+compile-time checks report a contract that no bean class implements. Every bean that implements the contract is a
+resolver, so a hand-written fake or delegating adapter that implements it and is a bean is registered too: annotate it
+with `@Replaces(<original>.class)` (`@Requires(env = "test")` alone does not help, because both beans are active in the
+test environment). Micronaut AOP advice (`@Around`) on the implementation still applies.
+
+**Marker interfaces.** `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` (package
+`io.micronaut.graphql.tools.resolver`) are the contracts without an annotation. `interface BookTitleResolver extends
+TypeResolver<Book>` binds to `Book` with no class literal, and the root marker fixes the operation type: the methods of
+a `MutationResolver` bind fields of the mutation type only, so one method name can serve a field of each operation type.
+Only the methods that implement a method of a contract interface bind: a public helper of the implementation binds
+nothing and does not fail strict mode. A class that implements a marker directly binds all its public methods. The
+processor records the operation, the source type and the contract methods in the annotation metadata of the
+implementation (the build needs `micronaut-graphql-tools-processor`, otherwise the startup fails with
+`[type-resolver-contracts-not-found]`). The guide page Resolver Contracts has the examples.
+
+```java
+public interface BookTitleResolver extends TypeResolver<Book> {
+    String title(Book book);
+}
+
+@Singleton
+public class BookTitles implements BookTitleResolver {
+    @Override
+    public String title(Book book) { ... }
+}
+```
 
 ```java
 @GraphQLTypeResolver(Book.class)
@@ -237,12 +263,14 @@ Methods of beans without coordinates are matched by name. The coordinate is also
 field name on two operation types binds two different methods:
 
 ```java
+@Singleton
 @GraphQLRootResolver
 public class StatusQuery {
     @GraphQLSchemaCoordinate("Query.status")
     public String status(String id) { ... }
 }
 
+@Singleton
 @GraphQLRootResolver
 public class StatusSubscription {
     @GraphQLSchemaCoordinate("Subscription.status")
@@ -371,6 +399,7 @@ bind one field (a renamed one and another, or two renamed to the same field), th
 the method is (before, the startup failed when they differed):
 
 ```java
+@Singleton
 @GraphQLTypeResolver(Parcel.class)
 public class ParcelResolver {
     @GraphQLSchemaCoordinate("Parcel.class")
@@ -652,8 +681,9 @@ public class ScalarsFactory {
 - A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type
   (`Count!`), because `null` cannot be passed to it.
 
-The library ships no scalar implementations of its own beyond the built-in ones; graphql-java-extended-scalars and
-other libraries provide many. A mapping only takes effect for scalars the schema declares.
+The library itself ships no scalar implementations beyond the built-in ones. The [standard scalars](#standard-scalars) module
+registers the common ones; graphql-java-extended-scalars and other libraries provide many more. A mapping only takes
+effect for scalars the schema declares.
 
 The startup fails:
 
@@ -667,6 +697,25 @@ The startup fails:
 Values of custom scalars inside input objects reach the input class as the instances the scalar parsed. When the
 declared class is another one of the mapping's input classes, the value goes through the Micronaut `ConversionService`,
 which has the application's `TypeConverter` beans (see [Converting input values](#converting-input-values)).
+
+## Standard scalars
+
+The `micronaut-graphql-tools-scalars` module registers a `GraphQLScalarMapping` bean for the scalars that most services
+need: `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `OffsetTime`, `OffsetDateTime`, `ZonedDateTime`, `YearMonth`,
+`Year`, `Duration` and `Period` (ISO-8601 by default), `JSON` (converted with the application's `JsonMapper`, Micronaut
+Serialization in an application that uses it), and a selection of the extended scalars (`Url`, `UUID`, `Locale`,
+`Currency` and the signed `Int` and `Float` scalars). Add the dependency and declare the scalar in the schema.
+
+```
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-scalars:1.0.0-M4")
+```
+
+The module is available from `1.0.0-M4`; earlier milestones do not include it.
+
+Each scalar is configured under `micronaut.graphql.tools.scalars.<id>`: `name` renames the scalar in the schema, `format`
+changes the wire format of a `java.time` scalar (`iso`, a keyword such as `epoch-millis`, or a `DateTimeFormatter`
+pattern) and `enabled=false` turns the scalar off; `micronaut.graphql.tools.scalars.enabled=false` turns all of them off.
+The ids, the default names and formats are in the guide page on scalars.
 
 ## Arguments and input objects
 
@@ -1256,6 +1305,7 @@ To build or test against a role locally:
 |---|---|
 | Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
 | Binding rules (internal, pulled in by the library) | `io.micronaut.graphql.tools:micronaut-graphql-tools-binding` |
+| Standard scalars ([`java.time`, JSON and extended scalars](#standard-scalars)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 

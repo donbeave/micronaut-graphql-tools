@@ -50,6 +50,7 @@ class AbstractTypesMappings : TckTypeMappings {
     }
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "abstract-types")
 class AbstractTypesQueries {

@@ -122,6 +122,7 @@ public final class InputErrorsScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "input-errors")
     public static class Queries {

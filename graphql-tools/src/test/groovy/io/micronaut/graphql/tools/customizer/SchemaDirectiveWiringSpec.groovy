@@ -409,6 +409,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', pattern = 'SchemaDirectiveWiringSpec(|\\.duplicate|\\.namedAndEveryElement|\\.replaced|\\.wrappedBean|\\.unwrappedBean|\\.prototype|\\.prototypeUnwrapped|\\.customizerBean)')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {
@@ -453,6 +454,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_VALIDATION)
+    @Singleton
     @GraphQLRootResolver
     static class ValidatedQuery {
         String greet(String name) {

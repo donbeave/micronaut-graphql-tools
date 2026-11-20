@@ -18,7 +18,7 @@ The compile-time engine is a `TypeElementVisitor` (`GraphQLToolsVisitor`, packag
 
 The visitor (package `io.micronaut.graphql.tools.visitor`):
 
-- `ResolverContractsWriter`: records the contracts that a type resolver class inherits. It writes `@ResolverContracts` into the annotation metadata of each bean class, also with `checks=false`, and the startup reads it from the bean definition instead of reading class annotations by reflection (#34).
+- `ResolverContractsWriter`: records what a resolver class inherits: the contracts of a type resolver, the root operations of the marker interfaces (`QueryResolver`, `MutationResolver`, `SubscriptionResolver`), the source type of `TypeResolver<T>` and the contract methods (`MarkerAnalysis` reads them from the class hierarchy, and the per-class rules read the same answer). It writes `@ResolverContracts` into the annotation metadata of each bean class, also with `checks=false`, and the startup reads it from the bean definition instead of reading class annotations or generic types by reflection (#34, #73).
 - `GraphQLToolsVisitor`: an isolating `TypeElementVisitor` that checks the concrete resolver classes (and an `@Introduction`
   interface that is a resolver) with the per-class rules of `graphql-tools-binding` (`ResolverClassFindings`), and reports each
   finding as a compile error (one finding is a warning, see below). The findings are those of one stage, as at startup: invalid coordinates, then the binding

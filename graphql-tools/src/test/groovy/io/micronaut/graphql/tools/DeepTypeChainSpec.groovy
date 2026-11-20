@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
+import jakarta.inject.Singleton
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
@@ -89,6 +90,7 @@ class DeepTypeChainSpec extends AbstractTest {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Node root() {

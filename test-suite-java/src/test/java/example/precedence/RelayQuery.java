@@ -15,10 +15,12 @@
  */
 package example.precedence;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 @Requires(env = PrecedenceFixtures.RELAY)
+@Singleton
 @GraphQLRootResolver
 public class RelayQuery {
 

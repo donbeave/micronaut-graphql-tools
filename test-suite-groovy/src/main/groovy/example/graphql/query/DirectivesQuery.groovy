@@ -15,10 +15,12 @@
  */
 package example.graphql.query
 
+import jakarta.inject.Singleton
 import groovy.transform.CompileStatic
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 class DirectivesQuery {
 

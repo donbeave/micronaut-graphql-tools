@@ -107,6 +107,7 @@ type Book {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(root|requiresOnly)')
+    @Singleton
     @GraphQLRootResolver
     static class OriginalQuery {
         Book book(String id) {
@@ -127,6 +128,7 @@ type Book {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".type")
+    @Singleton
     @GraphQLRootResolver
     static class TypeQuery {
         Book book(String id) {
@@ -135,6 +137,7 @@ type Book {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".type")
+    @Singleton
     @GraphQLTypeResolver(Book)
     static class OriginalBookResolver {
         String summary(Book book) {

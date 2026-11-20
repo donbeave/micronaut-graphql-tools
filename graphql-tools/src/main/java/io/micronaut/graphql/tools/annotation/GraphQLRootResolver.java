@@ -15,10 +15,8 @@
  */
 package io.micronaut.graphql.tools.annotation;
 
-import io.micronaut.context.annotation.Bean;
-import io.micronaut.context.annotation.DefaultScope;
 import io.micronaut.context.annotation.Executable;
-import jakarta.inject.Singleton;
+import io.micronaut.context.annotation.Requires;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -32,6 +30,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * Marks a bean whose public methods bind the fields of the root operation types (query, mutation, subscription) by
  * method name.
  *
+ * <p>The annotation carries no bean stereotype: the class is a bean when it has a scope annotation of its own, for example
+ * {@code @Singleton}. The marker interfaces {@code QueryResolver}, {@code MutationResolver} and
+ * {@code SubscriptionResolver} also fix the root operation type.</p>
+ *
  * <p>The annotation is {@link Inherited}: it may sit on an interface (for example a generated resolver contract) or a
  * superclass, and every bean implementing or extending it is a root resolver without an annotation of its own. Methods
  * that carry {@link GraphQLSchemaCoordinate} restrict and validate the binding, see there.</p>
@@ -42,8 +44,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Inherited
 @Retention(RUNTIME)
 @Target({ElementType.TYPE})
-@Bean
+@Requires(condition = ResolverBeanCondition.class)
 @Executable(processOnStartup = true)
-@DefaultScope(Singleton.class)
 public @interface GraphQLRootResolver {
 }

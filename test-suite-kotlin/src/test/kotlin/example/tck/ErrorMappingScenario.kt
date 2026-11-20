@@ -68,6 +68,7 @@ class ErrorMappingCustomizer : GraphQLBuilderCustomizer {
     }
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "error-mapping")
 class ErrorMappingQueries {

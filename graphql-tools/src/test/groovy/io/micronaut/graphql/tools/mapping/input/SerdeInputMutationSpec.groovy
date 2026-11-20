@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
@@ -64,6 +65,7 @@ input ItemInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String status() {
@@ -72,6 +74,7 @@ input ItemInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Mutation {
         String addItem(ItemInput item) {

@@ -61,6 +61,7 @@ class Ticket {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'bean-scopes')
 class BeanScopesQueries {

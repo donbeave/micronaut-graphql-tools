@@ -15,6 +15,7 @@
  */
 package example.graphql.query;
 
+import jakarta.inject.Singleton;
 import example.ElapsedTime;
 import example.data.User;
 import example.data.UserRepository;
@@ -25,6 +26,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Singleton
 @GraphQLRootResolver
 public class SearchProfileQuery {
 

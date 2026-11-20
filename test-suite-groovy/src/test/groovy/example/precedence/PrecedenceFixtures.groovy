@@ -96,6 +96,7 @@ class Sprocket implements Gizmo {
 
 @CompileStatic
 @Requires(env = PrecedenceFixtures.RELAY)
+@Singleton
 @GraphQLTypeResolver(Gizmo)
 class GizmoResolver {
 
@@ -108,6 +109,7 @@ class GizmoResolver {
 
 @CompileStatic
 @Requires(env = PrecedenceFixtures.RELAY)
+@Singleton
 @GraphQLRootResolver
 class RelayQuery {
 
@@ -126,6 +128,7 @@ class Gadget {
 
 @CompileStatic
 @Requires(env = PrecedenceFixtures.AMBIGUOUS)
+@Singleton
 @GraphQLTypeResolver(Gadget)
 class GadgetResolver {
 
@@ -137,6 +140,7 @@ class GadgetResolver {
 
 @CompileStatic
 @Requires(env = PrecedenceFixtures.AMBIGUOUS)
+@Singleton
 @GraphQLRootResolver
 class GadgetQuery {
 

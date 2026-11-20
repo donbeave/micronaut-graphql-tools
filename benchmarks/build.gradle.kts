@@ -15,6 +15,8 @@ java {
 dependencies {
     implementation(platform(libs.micronaut.platform))
     implementation(projects.micronautGraphqlTools)
+    // the coercions of the standard scalars (#46) are benchmarked next to the argument conversion
+    implementation(projects.micronautGraphqlToolsScalars)
     implementation(mn.micronaut.inject)
     annotationProcessor(mn.micronaut.inject.java)
     runtimeOnly("ch.qos.logback:logback-classic")
@@ -114,8 +116,10 @@ fun registerLargeSchema(name: String, output: org.gradle.api.provider.Provider<o
                     |
                     |import io.micronaut.context.annotation.Requires;
                     |import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+                    |import jakarta.inject.Singleton;
                     |
                     |@Requires(property = "benchmarks.large.fields", value = "$fields")
+                    |@Singleton
                     |@GraphQLTypeResolver(Node$i.class)
                     |public class Node${i}Resolver {
                     |    public String computed(Node$i node, int n) { return "computed"; }
@@ -132,8 +136,10 @@ fun registerLargeSchema(name: String, output: org.gradle.api.provider.Provider<o
                 |
                 |import io.micronaut.context.annotation.Requires;
                 |import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+                |import jakarta.inject.Singleton;
                 |
                 |@Requires(property = "benchmarks.large.fields", value = "$fields")
+                |@Singleton
                 |@GraphQLRootResolver
                 |public class LargeQuery {
                 |    public Node0 root() { return new Node0(); }
@@ -289,8 +295,10 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
                 |
                 |import io.micronaut.context.annotation.Requires;
                 |import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+                |import jakarta.inject.Singleton;
                 |
                 |$requires
+                |@Singleton
                 |@GraphQLRootResolver
                 |public class LargeQuery {
 $roots|}

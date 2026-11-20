@@ -212,6 +212,7 @@ type Legacy {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Item item(String id) {
@@ -228,6 +229,7 @@ type Legacy {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Mutation {
         Optional<Item> rename(String id, String name) {
@@ -236,6 +238,7 @@ type Legacy {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Subscription {
         Publisher<Long> priceChanges(String id) {
@@ -286,6 +289,7 @@ type Legacy {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Item.class)
     static class ItemResolver {
         CompletionStage<Long> price(Item item) {
@@ -546,6 +550,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".directives")
+    @Singleton
     @GraphQLRootResolver
     static class LabelQuery {
         String label() {
@@ -608,6 +613,7 @@ type Unlisted {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".unlisted")
+    @Singleton
     @GraphQLRootResolver
     static class UnlistedQuery {
         UnlistedType unlisted() {
@@ -648,6 +654,7 @@ type Book {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".reflected")
+    @Singleton
     @GraphQLRootResolver
     static class WildcardQuery {
         CompletionStage<List<? extends LabelledBook>> books() {

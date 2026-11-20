@@ -15,12 +15,14 @@
  */
 package example.graphql.type.resolver
 
+import jakarta.inject.Singleton
 import example.ElapsedTime
 import example.data.Book
 import example.data.User
 import example.data.UserBookRepository
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 
+@Singleton
 @GraphQLTypeResolver(User::class)
 open class UserResolver(private val userBookRepository: UserBookRepository) {
 

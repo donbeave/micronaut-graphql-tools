@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.type
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -63,6 +64,7 @@ type User {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query1 {
         User user() {
@@ -76,6 +78,7 @@ type User {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(User.class)
     static class UserResolver {
         String lastName(User user) {

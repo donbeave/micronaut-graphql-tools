@@ -255,6 +255,7 @@ interface Node {
     }
 
     @Requires(property = 'spec.name', pattern = 'ClaimedFieldsSpec.*')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {

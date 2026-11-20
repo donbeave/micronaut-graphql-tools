@@ -189,6 +189,7 @@ type AdminQuery {
     }
 
     @Requires(property = 'spec.name', pattern = 'QualifiedBeansSpec\\.(qualifiedSchema|qualifiedGraphQL|unqualifiedGraphQL|primaryQualifiedGraphQL)')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {

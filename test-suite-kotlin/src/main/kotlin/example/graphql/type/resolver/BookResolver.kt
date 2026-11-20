@@ -15,6 +15,7 @@
  */
 package example.graphql.type.resolver
 
+import jakarta.inject.Singleton
 import example.ElapsedTime
 import example.data.Book
 import example.data.BookSeller
@@ -23,6 +24,7 @@ import graphql.schema.DataFetchingEnvironment
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import java.util.concurrent.CompletionStage
 
+@Singleton
 @GraphQLTypeResolver(Book::class)
 open class BookResolver {
 

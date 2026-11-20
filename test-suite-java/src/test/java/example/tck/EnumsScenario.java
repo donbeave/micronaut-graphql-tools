@@ -15,6 +15,7 @@
  */
 package example.tck;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
@@ -69,6 +70,7 @@ public final class EnumsScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "enums")
     public static class Queries {

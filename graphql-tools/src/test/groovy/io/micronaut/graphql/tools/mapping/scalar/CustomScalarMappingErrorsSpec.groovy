@@ -473,6 +473,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_UNMAPPED + '|' + SPEC_BARE + '|' + SPEC_BROKEN_BARE)
+    @Singleton
     @GraphQLRootResolver
     static class UnmappedQuery {
         LocalDate today() {
@@ -530,6 +531,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_MAPPED)
+    @Singleton
     @GraphQLRootResolver
     static class MappedQuery {
         String todayAsString() {
@@ -591,6 +593,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_OUTPUT_ONLY)
+    @Singleton
     @GraphQLRootResolver
     static class OutputOnlyQuery {
         LocalDate echo(LocalDate date) {
@@ -610,6 +613,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_PRIMITIVE)
+    @Singleton
     @GraphQLRootResolver
     static class PrimitiveQuery {
         String repeat(long times) {
@@ -618,6 +622,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_PRIMITIVE_INPUT)
+    @Singleton
     @GraphQLRootResolver
     static class PrimitiveInputQuery {
         String repeat(RepeatInput input) {
@@ -631,6 +636,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_PRIMITIVE_NON_NULL)
+    @Singleton
     @GraphQLRootResolver
     static class PrimitiveNonNullQuery {
         String repeat(long times) {
@@ -639,6 +645,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_DUPLICATE)
+    @Singleton
     @GraphQLRootResolver
     static class DuplicateQuery {
         String hello() {
@@ -647,6 +654,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_BUILT_IN)
+    @Singleton
     @GraphQLRootResolver
     static class BuiltInQuery {
         String hello() {

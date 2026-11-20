@@ -96,6 +96,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '(\\.ownProperty|\\.ownResolver|\\.coordinate)?')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         List<Section> sections() {
@@ -131,6 +132,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '(\\.ownProperty|\\.ownResolver)?')
+    @Singleton
     @GraphQLTypeResolver(Section.class)
     static class SectionResolver {
         String summary(Section section) {
@@ -209,6 +211,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".ownResolver")
+    @Singleton
     @GraphQLTypeResolver(MediaSection.class)
     static class MediaSectionResolver {
         String summary(MediaSection section) {
@@ -259,6 +262,7 @@ type Tag implements Item & Labelled {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".twoInterfaces")
+    @Singleton
     @GraphQLRootResolver
     static class TagQuery {
         List<Item> items() {
@@ -283,6 +287,7 @@ type Tag implements Item & Labelled {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".twoInterfaces")
+    @Singleton
     @GraphQLTypeResolver(Item.class)
     static class ItemResolver {
         String label(Item item) {
@@ -291,6 +296,7 @@ type Tag implements Item & Labelled {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".twoInterfaces")
+    @Singleton
     @GraphQLTypeResolver(Labelled.class)
     static class LabelledResolver {
         String label(Labelled labelled) {
@@ -355,6 +361,7 @@ type TextSection implements Section & Node {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".nested")
+    @Singleton
     @GraphQLRootResolver
     static class NestedQuery {
         List<NestedSection> sections() {
@@ -382,6 +389,7 @@ type TextSection implements Section & Node {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".nested")
+    @Singleton
     @GraphQLTypeResolver(Node.class)
     static class NodeResolver {
         String label(Node node) {

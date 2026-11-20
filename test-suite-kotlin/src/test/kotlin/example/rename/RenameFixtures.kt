@@ -117,6 +117,7 @@ class Parcel {
 }
 
 @Requires(env = [RENAME_MEMBERS])
+@Singleton
 @GraphQLRootResolver
 open class ParcelQuery {
 
@@ -133,6 +134,7 @@ class Slip {
 }
 
 @Requires(env = [RENAME_CLASH])
+@Singleton
 @GraphQLRootResolver
 open class SlipQuery {
 
@@ -145,6 +147,7 @@ class CoordinateParcel {
 }
 
 @Requires(env = [RENAME_COORDINATES])
+@Singleton
 @GraphQLRootResolver
 open class CoordinateQuery {
 
@@ -156,6 +159,7 @@ open class CoordinateQuery {
 }
 
 @Requires(env = [RENAME_COORDINATES])
+@Singleton
 @GraphQLTypeResolver(CoordinateParcel::class)
 open class CoordinateParcelResolver {
 
@@ -169,6 +173,7 @@ class PrefixParcel {
 }
 
 @Requires(env = [RENAME_PREFIXES])
+@Singleton
 @GraphQLRootResolver
 open class PrefixQuery {
 
@@ -178,6 +183,7 @@ open class PrefixQuery {
 }
 
 @Requires(env = [RENAME_PREFIXES])
+@Singleton
 @GraphQLTypeResolver(PrefixParcel::class)
 open class PrefixParcelResolver {
 

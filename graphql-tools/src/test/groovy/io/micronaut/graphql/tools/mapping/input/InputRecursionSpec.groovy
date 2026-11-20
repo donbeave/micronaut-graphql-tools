@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
@@ -103,6 +104,7 @@ input EdgeInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NODE_FIRST)
+    @Singleton
     @GraphQLRootResolver
     static class NodeFirstQuery {
         String graph(NodeInput root, EdgeInput edge) {
@@ -111,6 +113,7 @@ input EdgeInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_EDGE_FIRST)
+    @Singleton
     @GraphQLRootResolver
     static class EdgeFirstQuery {
         String graph(EdgeInput edge, NodeInput root) {

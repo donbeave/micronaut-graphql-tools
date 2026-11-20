@@ -15,6 +15,7 @@
  */
 package example.tck
 
+import jakarta.inject.Singleton
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -38,6 +39,7 @@ class Parent {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'errors')
 class ErrorsQueries {

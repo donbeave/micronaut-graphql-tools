@@ -138,6 +138,7 @@ type OrdN3 implements OrdNode {
     ]
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         OrdA deep() { null }

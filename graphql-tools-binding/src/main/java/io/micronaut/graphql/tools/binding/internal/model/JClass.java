@@ -56,6 +56,13 @@ public interface JClass {
     List<JMethod> bindableMethods();
 
     /**
+     * @return what the marker interfaces fix for the class, {@link ResolverMarkers#NONE} when it implements none
+     */
+    default ResolverMarkers markers() {
+        return ResolverMarkers.NONE;
+    }
+
+    /**
      * @return the readable properties, as {@code BeanIntrospection#getBeanProperties()} lists them
      */
     List<JProperty> readableProperties();

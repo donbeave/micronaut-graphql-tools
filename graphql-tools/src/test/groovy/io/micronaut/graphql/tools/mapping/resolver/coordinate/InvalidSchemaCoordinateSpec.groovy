@@ -100,6 +100,7 @@ enum Genre {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\..*')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Book book(String id) {
@@ -118,6 +119,7 @@ enum Genre {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".unknownType")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class UnknownTypeResolver {
         @GraphQLSchemaCoordinate("Novel.summary")
@@ -127,6 +129,7 @@ enum Genre {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".notObjectType")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class EnumTypeResolver {
         @GraphQLSchemaCoordinate("Genre.summary")
@@ -136,6 +139,7 @@ enum Genre {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".unknownField")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class UnknownFieldResolver {
         @GraphQLSchemaCoordinate("Book.synopsis")
@@ -145,6 +149,7 @@ enum Genre {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".malformed")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class MalformedResolver {
         @GraphQLSchemaCoordinate("summary")
@@ -154,6 +159,7 @@ enum Genre {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".rootOnObjectType")
+    @Singleton
     @GraphQLRootResolver
     static class RootOnObjectTypeQuery {
         @GraphQLSchemaCoordinate("Book.title")
@@ -163,6 +169,7 @@ enum Genre {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".typeOnRootType")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class TypeOnRootTypeResolver {
         @GraphQLSchemaCoordinate("Query.book")
@@ -181,6 +188,7 @@ enum Genre {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".several")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class SeveralResolver {
         @GraphQLSchemaCoordinate("Book.synopsis")

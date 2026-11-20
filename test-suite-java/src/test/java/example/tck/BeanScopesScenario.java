@@ -66,6 +66,7 @@ public final class BeanScopesScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "bean-scopes")
     public static class Queries {

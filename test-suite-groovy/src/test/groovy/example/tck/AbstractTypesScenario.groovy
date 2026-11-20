@@ -85,6 +85,7 @@ class AbstractTypesMappings implements TckTypeMappings {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'abstract-types')
 class AbstractTypesQueries {

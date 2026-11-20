@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input
 
+import jakarta.inject.Singleton
 import graphql.ExecutionInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -402,6 +403,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_DEFAULT)
+    @Singleton
     @GraphQLRootResolver
     static class DefaultQuery {
         String update(String name, Color color, Integer limit, ProfileInput profile) {
@@ -410,6 +412,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_DETECT)
+    @Singleton
     @GraphQLRootResolver
     static class DetectQuery {
         String update(ArgumentValue<String> name, ArgumentValue<Color> color, ArgumentValue<Integer> limit,
@@ -419,6 +422,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NON_NULL)
+    @Singleton
     @GraphQLRootResolver
     static class NonNullQuery {
         String rename(ArgumentValue<String> name) {
@@ -427,6 +431,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_LIST_ELEMENT)
+    @Singleton
     @GraphQLRootResolver
     static class ListElementQuery {
         String tag(List<ArgumentValue<String>> tags) {
@@ -435,6 +440,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_READ_ONLY)
+    @Singleton
     @GraphQLRootResolver
     static class ReadOnlyQuery {
         String update(String name, Color color, Integer limit, ReadOnlyProfileInput profile) {
@@ -454,6 +460,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_WRITE_ONLY)
+    @Singleton
     @GraphQLRootResolver
     static class WriteOnlyQuery {
         String login(LoginInput input) {
@@ -480,6 +487,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_WRITE_ONLY_WRAPPER)
+    @Singleton
     @GraphQLRootResolver
     static class WriteOnlyWrapperQuery {
         String update(String name, Color color, Integer limit, WriteOnlyWrapperProfileInput profile) {
@@ -505,6 +513,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_WRITE_ONLY_NESTED)
+    @Singleton
     @GraphQLRootResolver
     static class WriteOnlyNestedQuery {
         String update(String name, Color color, Integer limit, WriteOnlyNestedProfileInput profile) {
@@ -530,6 +539,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_SHARED_CLASS)
+    @Singleton
     @GraphQLRootResolver
     static class SharedQuery {
         String create(SharedW input) {
@@ -542,6 +552,7 @@ input CreateW {
     }
 
     @Requires(property = 'spec.name', value = SPEC_SHARED_CLASS_REVERSED)
+    @Singleton
     @GraphQLRootResolver
     static class SharedReversedQuery {
         String create(SharedW input) {

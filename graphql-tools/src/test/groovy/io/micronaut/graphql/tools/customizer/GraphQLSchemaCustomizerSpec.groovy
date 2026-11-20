@@ -146,6 +146,7 @@ type Other {
     }
 
     @Requires(property = 'spec.name', pattern = 'GraphQLSchemaCustomizerSpec.*')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {
