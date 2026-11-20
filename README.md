@@ -1074,7 +1074,7 @@ resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them s
 field the library wired is reported as `[runtime-wiring-override]` on every line. On some graphql-java lines `RuntimeWiring.Builder#type` for a
 type the library wired clears that type's default data fetcher; the library puts it back, so calling `type` to add a
 field fetcher is not a replacement.) To wrap data fetchers, use a
-`SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
+`FieldFetcherDecorator` bean (see below) or a `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
 
@@ -1154,6 +1154,15 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
 - All `named` wirings run before every `everyElement` wiring, so they are always innermost. `@Order` on a `named` bean
   has no effect: the library does not sort them, and they run in the order the SDL applies the directives to the
   element.
+
+To wrap the data fetchers of selected fields, for example to sanitise arguments, prefer a `FieldFetcherDecorator` bean to a
+wrap-all `everyElement` wiring. The library asks each decorator once for each field at startup, and the decorator returns the
+fetcher it received for a field it does not select, so unselected fields and trivial property fetchers keep their base
+fetcher. A field without arguments and a property are not offered unless the decorator overrides
+`decoratesFieldsWithoutArguments()` or `decoratesTrivialFields()`. The `FieldDescriptor` carries the coordinates, the
+`FieldExecutionKind`, whether the field has arguments, the field executor and the annotation metadata. Decorators wrap
+outermost: decorators (lowest order first), the async boundary, the `@ExecuteOn` hop, the adapters, the base fetcher. The
+guide has the details.
 
 A `SchemaDirectiveWiring` bean is **not** applied on its own: if neither a `SchemaDirective` bean wraps it nor a
 `RuntimeWiringCustomizer` registers it (`RuntimeWiring.Builder#directive` or `#directiveWiring`), the startup fails with
