@@ -1,1 +1,36 @@
 NOTE: This page is pending. It will be written with the user guide (epic #97).
+
+== Kotlin data classes
+
+A Kotlin data class is a model, an input class and a parameter type without Jackson and without `kotlin-reflect`. The library reads and builds it through the bean introspection that Micronaut generates at compile time, as it does a Java record.
+
+As a model, a data class needs `@GraphQLType` and nothing else; the properties are read through the introspection:
+
+[source,kotlin]
+----
+@GraphQLType
+data class Account(val name: String, val nickname: String? = null, val level: Int = 1, val tags: List<String> = emptyList())
+----
+
+As an input class, it needs `@GraphQLInput`. The primary constructor takes the input fields, and a default argument stands for a field that the client leaves out:
+
+[source,kotlin]
+----
+@GraphQLInput
+data class AccountInput(
+    val name: String,
+    val nickname: String? = "anonymous",
+    val level: Int? = 1,
+    val tags: List<String> = listOf("new"),
+)
+----
+
+The rules:
+
+* A field that the client omits takes the default argument. A field that the client sends as `null` is `null` when the parameter type is nullable (`String?`), whatever its default argument is. A parameter with a non-null type keeps its default argument for an explicit `null`.
+* Use a nullable type for a primitive parameter that the client may omit or null (`Int?`): a nullable GraphQL field mapped to a primitive fails the startup with `[nullable-primitive]`.
+* A parameter of type `ArgumentValue` gets `ArgumentValue.omitted()` for an omitted field and `ArgumentValue.ofNullable(value)` for a present one, so its default argument is not used. See <<inputs,Inputs>>.
+* Nested data classes, and lists of them, apply their own default arguments.
+* A function parameter, such as `fun describe(input: AccountInput)`, takes a data class the same way. `copy` and the other generated members are not read by the binding.
+* The converter does no reflection per request: it calls the generated introspection. An explicit `null` for a defaulted nullable parameter costs one more instance, built through the introspection, so a request that sends none pays nothing.
+* On a native image nothing more is needed: the introspection holds the constructor call, including the default arguments.

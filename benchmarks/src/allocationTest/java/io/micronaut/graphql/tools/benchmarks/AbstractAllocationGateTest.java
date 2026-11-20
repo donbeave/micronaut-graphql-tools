@@ -86,6 +86,31 @@ abstract class AbstractAllocationGateTest {
         }
     }
 
+    /**
+     * The bytes per field that a request allocates with the observability module on and no field traced, beyond the same request
+     * with an instrumentation that implements no hook: the overhead of a query of 1,000 fields minus that of 10 fields. The empty
+     * instrumentation is the control, because graphql-java 21 chains any instrumentation with its own and that costs each field
+     * whatever the instrumentation is. A slope of 0 B per field leaves 0.
+     */
+    private static double observedSlope() throws Exception {
+        try (BenchmarkCases observed = new BenchmarkCases(0, BenchmarkCases.Instrumented.OBSERVABILITY);
+             BenchmarkCases empty = new BenchmarkCases(0, BenchmarkCases.Instrumented.EMPTY)) {
+            double large = observedOverhead(observed, empty, BenchmarkCases.LARGE_QUERY_FIELDS);
+            double small = observedOverhead(observed, empty, BenchmarkCases.SMALL_QUERY_FIELDS);
+            return large - small;
+        }
+    }
+
+    private static double observedOverhead(BenchmarkCases observed, BenchmarkCases empty, int fields) throws Exception {
+        String op = BenchmarkCases.invokeOp(fields);
+        int measured = 200_000 / Math.max(1, fields / 10);
+        int warmup = 20_000 / Math.max(1, fields / 10);
+        double with = AllocationMeter.bytesPerOperation(observed.op(op), measured, warmup, 5);
+        double control = AllocationMeter.bytesPerOperation(empty.op(op), measured, warmup, 5);
+        System.out.printf("allocation %d fields: observed = %.2f B/op, empty instrumentation = %.2f B/op%n", fields, with, control);
+        return with - control;
+    }
+
     private void check(String name) throws Exception {
         boolean wholeQuery = BenchmarkCases.isWholeQuery(name);
 
@@ -95,6 +120,7 @@ abstract class AbstractAllocationGateTest {
             case BenchmarkCases.INVOCATION_SLOPE -> invocationOverhead(BenchmarkCases.LARGE_QUERY_FIELDS)
                     - invocationOverhead(BenchmarkCases.SMALL_QUERY_FIELDS);
             case BenchmarkCases.LOADER_OVERHEAD -> loaderOverhead();
+            case BenchmarkCases.OBSERVED_INVOCATION_SLOPE -> observedSlope();
             // the fetcher of an async field with a pending future, less the future that the resolver itself creates
             case BenchmarkCases.ASYNC_BOUNDARY_OTHER_THREAD -> AllocationMeter.bytesPerOperation(cases.op(name), 3_000_000, 1_000_000, 5)
                     - AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.ASYNC_PENDING_SOURCE), 3_000_000, 1_000_000, 5);

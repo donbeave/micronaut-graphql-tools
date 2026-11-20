@@ -19,6 +19,12 @@ dependencies {
     implementation(libs.apollo.java.rx3)
     implementation(libs.apollo.api) // the Java client 1.0.0 resolves apollo-api 5.0.1; keep the API at the plugin's version
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
+    // The observability module and the libraries its tests observe with: a Micrometer registry and an OpenTelemetry SDK that
+    // exports to memory (#24). Test scope: the application itself does not depend on them.
+    testImplementation(projects.micronautGraphqlToolsObservability)
+    testImplementation("io.micrometer:micrometer-core")
+    testImplementation("io.opentelemetry:opentelemetry-sdk")
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
     runtimeOnly("ch.qos.logback:logback-classic")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

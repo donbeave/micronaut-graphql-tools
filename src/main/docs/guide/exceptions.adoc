@@ -59,6 +59,8 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`unsupported-return-type` |failure |yes |The return type of a method cannot be bound to the field type.
 |`unsupported-input-type` |failure |yes |The Java type of an argument or input field cannot be used there.
 |`input-field-not-settable` |failure |yes |An input field maps to a property that cannot be set.
+|`kotlin-nullability-mismatch` |failure |yes |A Kotlin return type is nullable where the schema field is non-null, or a Kotlin parameter or input property is non-null where the schema accepts null.
+|`kotlin-nullability-loose` |failure |yes |A Kotlin return type is non-null where the schema field is nullable, or a Kotlin parameter or input property is nullable where the schema requires a value; the compiler reports it as a warning.
 |`class-not-introspected` |failure |yes |A class that backs an input or enum type has no bean introspection.
 |`field-not-bound` |failure |no |No property or method binds a schema field.
 |`multiple-methods-found` |failure |no |Several resolver methods can bind one field.
