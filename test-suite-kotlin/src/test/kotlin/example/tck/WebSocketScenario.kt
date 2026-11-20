@@ -16,7 +16,6 @@
 package example.tck
 
 import graphql.GraphQLError
-import graphql.GraphqlErrorBuilder
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -76,9 +75,7 @@ class TickFailureMapper : GraphQLExceptionMapper<TickFailure> {
 class StreamCustomizer : GraphQLErrorsCustomizer {
 
     override fun customize(errors: List<GraphQLError>): List<GraphQLError> = errors.map { error ->
-        GraphqlErrorBuilder.newError()
-            .message(error.message).path(error.path).locations(error.locations)
-            .errorType(error.errorType).extensions((error.extensions ?: emptyMap()) + ("stream" to "customized")).build()
+        MappedError(error.message, error.path ?: emptyList(), error.locations?.firstOrNull(), (error.extensions ?: emptyMap()) + ("stream" to "customized"))
     }
 }
 
@@ -106,9 +103,9 @@ class WebSocketQueries(private val cancelled: CancelledStreams) {
 @Requires(property = "tck.scenario", value = "websocket")
 class WebSocketSubscriptions(private val cancelled: CancelledStreams) {
 
-    fun failing(): Flux<Tick> = Flux.error(IllegalStateException("secret internal detail"))
+    fun failing(): Flux<Tick> = Flux.error<Tick>(IllegalStateException("secret internal detail"))
 
-    fun failingMapped(): Flux<Tick> = Flux.error(TickFailure())
+    fun failingMapped(): Flux<Tick> = Flux.error<Tick>(TickFailure())
 
     fun brokenEvent(): Flux<Tick> = Flux.just(Tick(1, true))
 
@@ -133,7 +130,9 @@ class TickFields {
 
     fun onEventLoop(tick: Tick): Boolean = Thread.currentThread() is NonBlocking
 
-    fun broken(tick: Tick): String? = throw IllegalStateException("secret internal detail")
+    fun broken(tick: Tick): String? {
+        throw IllegalStateException("secret internal detail")
+    }
 
     fun requestHeader(tick: Tick): String? =
         ServerRequestContext.currentRequest<Any>().map { it.headers.get("X-Tck") }.orElse(null)
