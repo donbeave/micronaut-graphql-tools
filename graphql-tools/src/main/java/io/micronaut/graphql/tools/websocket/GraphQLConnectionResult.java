@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.websocket;
 
 import io.micronaut.core.annotation.NonNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -30,6 +31,8 @@ public final class GraphQLConnectionResult {
 
     /** The close code of a rejection that names none: {@code 4403}, Forbidden, as the protocol defines it. */
     public static final int DEFAULT_REJECT_CODE = 4403;
+
+    private static final int MAX_REASON_BYTES = 123;
 
     private static final GraphQLConnectionResult ACCEPTED = new GraphQLConnectionResult(true, Collections.emptyMap(), 0, "");
 
@@ -74,7 +77,7 @@ public final class GraphQLConnectionResult {
 
     /**
      * @param closeCode the WebSocket close code, in the range {@code 4000} to {@code 4999} that is free for applications
-     * @param reason    the close reason that the client receives; keep it short and free of internals
+     * @param reason    the close reason that the client receives, at most 123 bytes in UTF-8; keep it short and free of internals
      * @return a result that closes the connection
      */
     @NonNull
@@ -82,7 +85,12 @@ public final class GraphQLConnectionResult {
         if (closeCode < 4000 || closeCode > 4999) {
             throw new IllegalArgumentException("The close code of a rejection is in 4000..4999, was " + closeCode);
         }
-        return new GraphQLConnectionResult(false, Collections.emptyMap(), closeCode, Objects.requireNonNull(reason, "reason"));
+        Objects.requireNonNull(reason, "reason");
+        if (reason.getBytes(StandardCharsets.UTF_8).length > MAX_REASON_BYTES) {
+            throw new IllegalArgumentException("The reason of a rejection is at most " + MAX_REASON_BYTES
+                    + " bytes in UTF-8, the limit of a WebSocket close frame (RFC 6455)");
+        }
+        return new GraphQLConnectionResult(false, Collections.emptyMap(), closeCode, reason);
     }
 
     /**
