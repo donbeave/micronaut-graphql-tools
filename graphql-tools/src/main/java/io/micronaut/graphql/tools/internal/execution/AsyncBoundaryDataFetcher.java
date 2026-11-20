@@ -70,7 +70,7 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
                 && PropagatedContext.getOrEmpty() == state.propagatedContext()) {
             return result;
         }
-        Boundary boundary = new Boundary(state);
+        Boundary boundary = new Boundary(state, stage);
         stage.whenComplete(boundary);
         return boundary;
     }
@@ -87,9 +87,21 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
     private static final class Boundary extends CompletableFuture<Object> implements BiConsumer<Object, Throwable> {
 
         private final ExecutionState state;
+        private final CompletionStage<?> source;
 
-        Boundary(ExecutionState state) {
+        Boundary(ExecutionState state, CompletionStage<?> source) {
             this.state = state;
+            this.source = source;
+        }
+
+        /** Cancelling the returned future (graphql-java does on a timeout) cancels the source, as the adapter of a publisher does. */
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            boolean cancelled = super.cancel(mayInterruptIfRunning);
+            if (cancelled && source instanceof CompletableFuture<?> future) {
+                future.cancel(mayInterruptIfRunning);
+            }
+            return cancelled;
         }
 
         @Override

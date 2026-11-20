@@ -458,6 +458,10 @@ public final class GraphQLRuntimeWiringGenerator {
         boolean subscription = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
         ReturnVerdict verdict = ReturnTypes.adaptation(typeModel, typeDefinitionRegistry, argument, graphQlType, fieldLevel, subscription,
                 singleResult, mappingContext);
+        if (verdict.reactive() == ReturnVerdict.Reactive.VALUELESS) {
+            // the field is null: no value type to check against the schema
+            return verdict;
+        }
         argument = ReturnTypes.unwrap(argument, verdict);
         graphQlType = unwrapNonNullType(graphQlType);
 

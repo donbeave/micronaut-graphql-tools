@@ -9,4 +9,6 @@ class BookQuery {
 
     fun maybeBook(id: String): io.reactivex.rxjava3.core.Maybe<Book>? = null
 
+    fun done(): io.reactivex.rxjava3.core.Completable? = null
+
 }

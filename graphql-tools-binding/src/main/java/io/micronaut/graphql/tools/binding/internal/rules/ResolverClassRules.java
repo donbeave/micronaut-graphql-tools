@@ -344,10 +344,13 @@ public final class ResolverClassRules {
                 }
                 return new ReturnVerdict(depth + 1, false, null, ReturnVerdict.Reactive.MULTI, true, null);
             }
+            if (valueless) {
+                // a Completable emits no value and has no type argument: the field is null, there is nothing to unwrap or bind
+                return new ReturnVerdict(depth, false, null, ReturnVerdict.Reactive.VALUELESS, !subscription, null);
+            }
             reactive = ReturnVerdict.Reactive.SINGLE;
             outer = PUBLISHER;
-            // a Completable emits no value: it is a publisher of nothing, which is null
-            result = valueless ? TypeRef.of("java.lang.Void") : result.typeArguments().get(0);
+            result = result.typeArguments().get(0);
             depth++;
         }
 
@@ -520,7 +523,8 @@ public final class ResolverClassRules {
         ReturnVerdict verdict = returnAdaptation(model, registry, declared, fieldType, fieldLevel, subscription,
                 singleResult);
         Type<?> unwrapped = fieldType instanceof NonNullType nonNull ? nonNull.getType() : fieldType;
-        if (verdict.failure() != null || verdict.primitiveOptional() || !(unwrapped instanceof ListType list)) {
+        if (verdict.failure() != null || verdict.primitiveOptional() || verdict.reactive() == ReturnVerdict.Reactive.VALUELESS
+                || !(unwrapped instanceof ListType list)) {
             return verdict;
         }
         TypeRef adapted = declared;

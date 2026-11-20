@@ -266,6 +266,23 @@ type Parent {
         new AsyncBoundaryDataFetcher({ pending } as DataFetcher).get(bare).is(pending)
     }
 
+    void "cancelling the future of the boundary cancels the source"() {
+        given:
+        def state = new ExecutionState(PropagatedContext.getOrEmpty(), ExecutionTransport.HTTP, null, null, ConvertibleValues.empty(), null)
+        def context = GraphQLContext.newContext().build()
+        state.storeIn(context)
+        def environment = DataFetchingEnvironmentImpl.newDataFetchingEnvironment().graphQLContext(context).build()
+        def source = new CompletableFuture()
+
+        when:
+        def boundary = new AsyncBoundaryDataFetcher({ source } as DataFetcher).get(environment)
+        boundary.cancel(true)
+
+        then:
+        !boundary.is(source)
+        source.isCancelled()
+    }
+
     private static DataFetcher fetcher(schema, String type, String field) {
         def definition = schema.getObjectType(type).getFieldDefinition(field)
         schema.codeRegistry.getDataFetcher(FieldCoordinates.coordinates(type, field), definition)

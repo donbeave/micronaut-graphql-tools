@@ -48,7 +48,9 @@ public record ReturnVerdict(int depth, boolean primitiveOptional, @Nullable Stri
         /** A publisher of one value ({@code Mono}): the value, or {@code null} when it is empty. */
         SINGLE,
         /** A publisher of many values ({@code Flux}) on a list field: the values collected into a list. */
-        MULTI
+        MULTI,
+        /** A single-value type that emits no value ({@code Completable}): the field is {@code null}, nothing is unwrapped. */
+        VALUELESS
     }
 
     static ReturnVerdict failed(String failure) {

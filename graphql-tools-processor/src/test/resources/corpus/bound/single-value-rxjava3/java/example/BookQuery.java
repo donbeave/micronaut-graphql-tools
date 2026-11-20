@@ -13,4 +13,8 @@ public class BookQuery {
         return null;
     }
 
+    public io.reactivex.rxjava3.core.Completable done() {
+        return null;
+    }
+
 }

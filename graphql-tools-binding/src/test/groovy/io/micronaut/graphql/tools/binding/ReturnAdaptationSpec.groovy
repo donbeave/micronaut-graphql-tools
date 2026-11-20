@@ -110,9 +110,11 @@ class ReturnAdaptationSpec extends Specification {
         adapt(ref('io.reactivex.Maybe', STRING)).reactive() == ReturnVerdict.Reactive.SINGLE
         adapt(ref('io.micronaut.core.async.publisher.CompletableFuturePublisher', STRING)).reactive() == ReturnVerdict.Reactive.SINGLE
         adapt(ref('io.micronaut.core.async.publisher.CompletableFuturePublisher', STRING), list).depth() == 1
-        // a Completable emits no value: Void
+        // a Completable emits no value and has no type argument: nothing is unwrapped
         adapt(ref('io.reactivex.rxjava3.core.Completable')).failure() == null
-        adapt(ref('io.reactivex.rxjava3.core.Completable')).depth() == 1
+        adapt(ref('io.reactivex.rxjava3.core.Completable')).reactive() == ReturnVerdict.Reactive.VALUELESS
+        adapt(ref('io.reactivex.rxjava3.core.Completable')).depth() == 0
+        adapt(ref('io.reactivex.rxjava3.core.Completable')).async()
         adapt(ref(PUBLISHER, STRING), nullable, true, false, true).reactive() == ReturnVerdict.Reactive.SINGLE
         adapt(ref('reactor.core.publisher.Flux', STRING), list, true, false, true).reactive() == ReturnVerdict.Reactive.SINGLE
         adapt(ref(PUBLISHER, STRING), list).reactive() == ReturnVerdict.Reactive.MULTI

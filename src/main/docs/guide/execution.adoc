@@ -91,7 +91,7 @@ A few rules:
 * An exception that fails the future reaches the error handling as the exception that you threw: `CompletionException` and `ExecutionException` are unwrapped first.
 * A future that is already done, without a failure, when the method returns is used as it is, with no cost.
 * The cost of an async field that completes on another thread is one small object (the future that the library returns) and its callback, and nothing for a future that is already done. A field that returns `Object` and a `CompletionStage` at runtime is a synchronous field for the library: graphql-java still waits for it, but its children get neither the context nor the move off the event loop. Declare the stage in the return type.
-* `@ExecuteOn` and cancellation are not part of this boundary.
+* When graphql-java cancels the future of the field (a timeout, for example), the library cancels the source future, and the adapter of a publisher cancels its subscription. `@ExecuteOn` is not part of this boundary.
 
 == Breaking change
 

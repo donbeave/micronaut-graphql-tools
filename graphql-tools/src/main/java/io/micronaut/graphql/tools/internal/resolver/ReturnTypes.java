@@ -67,7 +67,7 @@ public final class ReturnTypes {
     public static Argument<?> unwrap(Argument<?> argument, ReturnVerdict verdict) {
         Argument<?> result = argument;
         for (int i = 0; i < verdict.depth(); i++) {
-            result = result.getFirstTypeVariable().orElse(NO_VALUE);
+            result = result.getFirstTypeVariable().get();
         }
         if (verdict.reactive() == ReturnVerdict.Reactive.MULTI) {
             return Argument.listOf(result);

@@ -13,4 +13,8 @@ class BookQuery {
         return null
     }
 
+    io.reactivex.Completable done() {
+        return null
+    }
+
 }

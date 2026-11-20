@@ -39,6 +39,8 @@ type Query {
   rx3Single: String
   rx3Maybe: String
   rx3EmptyMaybe: String
+  rx3Completable: String
+  rx2Completable: String
   rx2Single: String
   rx2Maybe: String
   futurePublisher: String
@@ -54,11 +56,11 @@ type Query {
         startContext(SCHEMA, SPEC_NAME)
 
         when:
-        ExecutionResult result = executeQuery('{ rx3Single rx3Maybe rx3EmptyMaybe rx2Single rx2Maybe futurePublisher singleResultPublisher singleResultFlux manyStrings }')
+        ExecutionResult result = executeQuery('{ rx3Single rx3Maybe rx3EmptyMaybe rx3Completable rx2Completable rx2Single rx2Maybe futurePublisher singleResultPublisher singleResultFlux manyStrings }')
 
         then:
         result.errors.isEmpty()
-        result.data == [rx3Single: 'a', rx3Maybe: 'b', rx3EmptyMaybe: null, rx2Single: 'c', rx2Maybe: 'd', futurePublisher: 'e',
+        result.data == [rx3Single: 'a', rx3Maybe: 'b', rx3EmptyMaybe: null, rx3Completable: null, rx2Completable: null, rx2Single: 'c', rx2Maybe: 'd', futurePublisher: 'e',
                         singleResultPublisher: 'f', singleResultFlux: 'g', manyStrings: ['x', 'y']]
     }
 
@@ -102,6 +104,14 @@ type Query {
 
         io.reactivex.rxjava3.core.Maybe<String> rx3EmptyMaybe() {
             io.reactivex.rxjava3.core.Maybe.empty()
+        }
+
+        io.reactivex.rxjava3.core.Completable rx3Completable() {
+            io.reactivex.rxjava3.core.Completable.complete()
+        }
+
+        io.reactivex.Completable rx2Completable() {
+            io.reactivex.Completable.complete()
         }
 
         io.reactivex.Single<String> rx2Single() {
