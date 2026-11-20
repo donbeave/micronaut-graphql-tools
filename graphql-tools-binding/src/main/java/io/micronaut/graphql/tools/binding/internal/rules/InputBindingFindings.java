@@ -217,26 +217,29 @@ public final class InputBindingFindings {
             if (declared.typeArguments().isEmpty()) {
                 return Halt.SILENT;
             }
-            return walkType(site, declared.typeArguments().get(0), schemaType, fieldLevel);
+            return walkType(site, declared.typeArguments().get(0), schemaType, fieldLevel, false);
         }
-        return walkType(site, declared, schemaType, fieldLevel);
+        return walkType(site, declared, schemaType, fieldLevel, false);
     }
 
     @Nullable
-    private Halt walkType(Site site, TypeRef declared, Type<?> schemaType, boolean fieldLevel) {
+    private Halt walkType(Site site, TypeRef declared, Type<?> schemaType, boolean fieldLevel, boolean argumentValue) {
         boolean nonNull = schemaType instanceof NonNullType;
         if (!declared.array() && InputTypeRules.ARGUMENT_VALUE.equals(declared.rawName())) {
             ArgumentValueMisuse misuse = InputTypeRules.argumentValueMisuse(declared, fieldLevel, nonNull);
             if (misuse == null) {
-                // the startup binds what the wrapper wraps
-                return walkType(site, declared.typeArguments().get(0), schemaType, fieldLevel);
+                // the startup binds what the wrapper wraps; the wrapper itself carries null and omission, so the wrapped
+                // type is not compared with the schema nullability
+                return walkType(site, declared.typeArguments().get(0), schemaType, fieldLevel, true);
             }
             return failed(site, BindingCode.UNSUPPORTED_INPUT_TYPE,
                     "the Java type is not supported for this argument or input field: "
                             + InputTypeRules.argumentValueReason(misuse, SchemaTypes.print(schemaType)),
                     null);
         }
-        nullability(site, declared, schemaType, fieldLevel);
+        if (!argumentValue) {
+            nullability(site, declared, schemaType, fieldLevel);
+        }
         Type<?> unwrapped = unwrap(schemaType);
         if (unwrapped instanceof ListType list) {
             return list(site, declared, list);
