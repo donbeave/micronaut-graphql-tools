@@ -146,16 +146,6 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         };
     }
 
-    /** The registry of the execution is not the library's: an application's customizer replaced it. */
-    private static final class DataLoaderUnavailableException extends RuntimeException {
-
-        private static final long serialVersionUID = 1L;
-
-        DataLoaderUnavailableException() {
-            super(null, null, false, false);
-        }
-    }
-
     private static DataFetcherResult<Object> dataLoaderUnavailable(DataFetchingEnvironment environment,
                                                                    DataLoaderUnavailableException failure) {
         ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
@@ -210,6 +200,16 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                 .extensions(Map.of("code", INPUT_CONVERSION_FAILED, "coordinate", coordinate, "inputPath", inputPath))
                 .build();
         return DataFetcherResult.newResult().error(error).build();
+    }
+
+    /** The registry of the execution is not the library's: an application's customizer replaced it. */
+    private static final class DataLoaderUnavailableException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        DataLoaderUnavailableException() {
+            super(null, null, false, false);
+        }
     }
 
 }

@@ -70,8 +70,9 @@ import java.util.function.BiConsumer;
  * hop again at the execution strategy or per field.
  *
  * <p>The order after the hop: build the base {@link ExecutionInput} with the {@link ExecutionState} in its GraphQL
- * context; call the application's customizer (skipped when it is the transport's default); put the state back when the
- * customizer built a fresh input; run graphql-java. The propagated context is captured once on the calling thread and
+ * context and, when the application has batch loader beans, the lazy {@link LazyDataLoaderRegistry}; call the
+ * application's customizer (skipped when it is the transport's default); put the state back when the customizer built a
+ * fresh input; call the {@code GraphQLContextContributor} beans; run graphql-java. The propagated context is captured once on the calling thread and
  * installed in the hop only when the executing thread does not hold it already.</p>
  *
  * <p>The bean steps aside when the application declares a {@code GraphQLInvocation} that is {@code @Primary} or

@@ -45,42 +45,6 @@ import java.util.Map;
 @Requires(property = "graphql.enabled", notEquals = "false")
 public final class DataLoaderTable {
 
-    /** The batch loader interface that a bean implements. */
-    enum Kind {
-        BATCH(BatchLoader.class),
-        BATCH_WITH_CONTEXT(BatchLoaderWithContext.class),
-        MAPPED(MappedBatchLoader.class),
-        MAPPED_WITH_CONTEXT(MappedBatchLoaderWithContext.class);
-
-        private final Class<?> type;
-
-        Kind(Class<?> type) {
-            this.type = type;
-        }
-
-        boolean mapped() {
-            return this == MAPPED || this == MAPPED_WITH_CONTEXT;
-        }
-    }
-
-    /**
-     * One batch loader bean.
-     *
-     * @param index      the position in the table
-     * @param name       the name of the loader in the {@code DataLoaderRegistry}
-     * @param kind       the batch loader interface of the bean
-     * @param definition the bean definition
-     * @param key        the key type
-     * @param value      the value type
-     */
-    record Entry(int index, String name, Kind kind, BeanDefinition<?> definition, Argument<?> key, Argument<?> value) {
-
-        /** @return the loader as a description for a message: its name and types */
-        String describe() {
-            return name + " (" + definition.getBeanType().getName() + ", DataLoader<" + typeName(key) + ", " + typeName(value) + ">)";
-        }
-    }
-
     private final BeanContext beanContext;
     private final Entry[] entries;
     private final Map<String, Entry> byName;
@@ -116,11 +80,6 @@ public final class DataLoaderTable {
         this.byName = Map.copyOf(names);
     }
 
-    /** @return the number of loaders */
-    public int size() {
-        return entries.length;
-    }
-
     /** @return whether the application has no batch loader bean */
     public boolean isEmpty() {
         return entries.length == 0;
@@ -132,10 +91,6 @@ public final class DataLoaderTable {
 
     Entry entry(String name) {
         return byName.get(name);
-    }
-
-    List<Entry> entries() {
-        return List.of(entries);
     }
 
     BeanContext beanContext() {
@@ -216,6 +171,42 @@ public final class DataLoaderTable {
         }
         String simple = definition.getBeanType().getSimpleName();
         return Character.toLowerCase(simple.charAt(0)) + simple.substring(1);
+    }
+
+    /** The batch loader interface that a bean implements. */
+    enum Kind {
+        BATCH(BatchLoader.class),
+        BATCH_WITH_CONTEXT(BatchLoaderWithContext.class),
+        MAPPED(MappedBatchLoader.class),
+        MAPPED_WITH_CONTEXT(MappedBatchLoaderWithContext.class);
+
+        private final Class<?> type;
+
+        Kind(Class<?> type) {
+            this.type = type;
+        }
+
+        boolean mapped() {
+            return this == MAPPED || this == MAPPED_WITH_CONTEXT;
+        }
+    }
+
+    /**
+     * One batch loader bean.
+     *
+     * @param index      the position in the table
+     * @param name       the name of the loader in the {@code DataLoaderRegistry}
+     * @param kind       the batch loader interface of the bean
+     * @param definition the bean definition
+     * @param key        the key type
+     * @param value      the value type
+     */
+    record Entry(int index, String name, Kind kind, BeanDefinition<?> definition, Argument<?> key, Argument<?> value) {
+
+        /** @return the loader as a description for a message: its name and types */
+        String describe() {
+            return name + " (" + definition.getBeanType().getName() + ", DataLoader<" + typeName(key) + ", " + typeName(value) + ">)";
+        }
     }
 
 }

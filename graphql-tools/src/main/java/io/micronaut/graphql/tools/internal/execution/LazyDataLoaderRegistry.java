@@ -62,13 +62,6 @@ public final class LazyDataLoaderRegistry extends DataLoaderRegistry {
         return create(index);
     }
 
-    /**
-     * @return the state of the execution that this registry belongs to
-     */
-    ExecutionState state() {
-        return state;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public <K, V> DataLoader<K, V> getDataLoader(String key) {
