@@ -39,6 +39,8 @@ With `type-class-convention: "{Type}Graph"`, `DerivedBook` and `DerivedPoster` m
 
 Two classes that match one object type, by the annotation, by the convention or one by each, fail the startup with `[ambiguous-type-class]` naming the type and both classes. A dictionary entry for that type ends the ambiguity, because an explicit entry always wins. A convention without `{Type}`, or with it twice, fails the startup with `[invalid-type-class-convention]`.
 
+The same three sources name the class of an interface that no field returns, so that a `@GraphQLTypeResolver` of that interface binds its fields on every implementation. Register the interface in the dictionary (`registerType("Node", Node.class)`), annotate it with `@GraphQLType(name)`, or let the convention find it. An implementation that binds the same field itself, with a member or a resolver of its own, is still reported: `[multiple-methods-found]` for two resolvers, and the `precedence` rules for a member. The dictionary entry of such an interface counts as used, so `strict` reports no `[unused-dictionary-entry]` for it.
+
 The derivation reads the compile-time introspection metadata only, so it works in a native image and adds no reflection. It runs once for each type at startup. A request resolves the object type of a value through a cache with one entry for each runtime class, and does no lookup of a name.
 
 === Compile-time check

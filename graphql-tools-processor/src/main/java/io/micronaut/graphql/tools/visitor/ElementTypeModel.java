@@ -63,6 +63,7 @@ final class ElementTypeModel implements TypeModel {
 
     private static final String INTRODUCTION = "io.micronaut.aop.Introduction";
     private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
+    private static final String KOTLIN_ELEMENTS = "io.micronaut.kotlin.processing.";
     private static final String MODELS = "io.micronaut.graphql.tools.annotation.GraphQLModels";
 
     // what makes a class a bean by its own declaration, as the startup's bean set sees it
@@ -150,14 +151,21 @@ final class ElementTypeModel implements TypeModel {
         for (ClassElement argument : raw.getBoundGenericTypes()) {
             arguments.add(argument(argument, open));
         }
-        Nullability nullability = declaration.hasStereotype("javax.annotation.Nullable")
+        boolean kotlin = isKotlin(type);
+        Nullability nullability = kotlin ? type.isNullable() ? Nullability.NULLABLE : Nullability.NON_NULL
+                : declaration.hasStereotype("javax.annotation.Nullable")
                 || declaration.hasStereotype("jakarta.annotation.Nullable")
                 || declaration.hasStereotype("io.micronaut.core.annotation.Nullable")
                 ? Nullability.NULLABLE
                 : declaration.hasStereotype("io.micronaut.core.annotation.NonNull")
                 || declaration.hasStereotype("jakarta.annotation.Nonnull")
                 ? Nullability.NON_NULL : Nullability.UNKNOWN;
-        return new TypeRef(raw.getName(), arguments, nullability, raw.isPrimitive(), array);
+        return new TypeRef(raw.getName(), arguments, nullability, raw.isPrimitive(), array, kotlin);
+    }
+
+    // only the KSP elements carry the nullability of a Kotlin type; under kapt a Kotlin class is read as Java stubs
+    private static boolean isKotlin(ClassElement type) {
+        return type.getClass().getName().startsWith(KOTLIN_ELEMENTS);
     }
 
     // a wildcard or a type variable is read as its first bound, as the runtime reads the type argument; a variable that is

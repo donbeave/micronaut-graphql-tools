@@ -366,6 +366,26 @@ public class GraphQLToolsConfiguration {
         public static final String NO_EXECUTOR = "none";
 
         private String executor = DEFAULT_EXECUTOR;
+        private boolean dataLoaderStatistics;
+
+        /**
+         * @return whether the batches of each batch loader bean are counted
+         */
+        public boolean isDataLoaderStatistics() {
+            return dataLoaderStatistics;
+        }
+
+        /**
+         * Sets whether the library counts the batches that each batch loader bean dispatches in an execution and the keys
+         * they load, which {@link io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics} reports from the GraphQL
+         * context and the observability module turns into metrics. Counting adds two atomic increments to each batch, so the
+         * default is off. Default: {@code false}.
+         *
+         * @param dataLoaderStatistics whether to collect statistics
+         */
+        public void setDataLoaderStatistics(boolean dataLoaderStatistics) {
+            this.dataLoaderStatistics = dataLoaderStatistics;
+        }
 
         /**
          * @return the executor that runs every operation: an executor bean name or {@code none}

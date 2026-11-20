@@ -39,7 +39,7 @@ micronaut:
 
 `scheduled` is rejected: it is the executor for scheduled tasks, not for work. A name that matches no executor bean, and `virtual` on JDK 17, fail the startup with `[unknown-executor]`, which lists the executor beans that exist.
 
-The default is `blocking` because the library cannot prove that a resolver never blocks. `none` is for applications whose resolvers never block and that want to avoid the hop; it is the behaviour of the transport's own invocation. Size a bounded executor for the operations that wait on it: when it rejects the hop, the client gets a GraphQL response with the status 200, `data` of `null` and one error whose `extensions.code` is `EXECUTION_REJECTED`, and the library logs a warning.
+The default is `blocking` because the library cannot prove that a resolver never blocks. `none` is for applications whose resolvers never block and that want to avoid the hop; it is the behaviour of the transport's own invocation. Size a bounded executor for the operations that wait on it: when it rejects the hop, the client gets a GraphQL response with the status 200, `data` of `null` and one error whose `extensions.code` is `EXECUTION_REJECTED`, and the library logs a warning. An executor that throws any other exception from `execute` (a custom executor with a bug) does not make `invoke` throw: the exception is the error of the returned publisher, and the transport answers as it does for any failed publisher.
 
 [source,yaml]
 ----
@@ -56,6 +56,17 @@ micronaut:
 
 The cost of the hop is measured by the `InvocationBenchmark` of the `benchmarks` module (see CONTRIBUTING.md): it reports the time and the allocation of an operation on the calling thread, with one hop to a virtual-thread executor and to a platform pool, and of the library's own invocation.
 
+[[executorNone]]
+=== Executor none
+
+With `executor: none` there is no hop: the operation runs on the thread that receives it. If the application's `GraphQLExecutionInputCustomizer` answers on another thread, the operation continues on the thread that completes its publisher. graphql-java parses and validates there, and every synchronous resolver runs there. The library does not move the operation back, and the propagated context of the receiving thread is not restored on that thread. An event-loop thread of another system, or a pool the application did not intend, then runs the rest of the operation.
+
+Either keep the customizer on the calling thread, or complete its publisher on a thread that suits the operation:
+
+snippet::example.tck.ExecutorNoneCustomizerScenario[project-base="test-suite", source="test", tags="executor-none-customizer", indent="0"]
+
+To keep the operation on a blocking executor, keep the default `blocking` or name your own: when the customizer answers on another thread, the library hops back to the executor once more.
+
 == Order of the steps
 
 After the hop the library runs, in this order:
@@ -66,13 +77,13 @@ After the hop the library runs, in this order:
 . call every `GraphQLContextContributor`, in order;
 . run graphql-java.
 
-The customizer therefore runs on the executor and may block. A customizer that publishes its input on another thread makes the operation hop to the executor once more. The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
+The customizer therefore runs on the executor and may block. A customizer that publishes its input on another thread makes the operation hop to the executor once more (with `executor: none` it does not, see <<executorNone,Executor none>>). The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
 
 The state is also the read-only `GraphQLExecutionRequest` that the context contributors receive. The registry is the library's own: an application with a `DataLoaderRegistry` bean fails the startup (BC-36). See the Data Loaders page for the loaders and the contributors.
 
 == Your own invocation
 
-An application that declares its own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary` wins: the library creates no invocation, logs one INFO line at startup, and the operations run as your invocation decides. A resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`, and the message names the application's invocation.
+An application that declares its own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary` wins, and so does a `@Primary` factory method that returns `DefaultGraphQLInvocation`: the library creates no invocation, logs one INFO line at startup, and the operations run as your invocation decides. A resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`, and the message names the application's invocation.
 
 == Async resolvers
 
@@ -123,7 +134,18 @@ The cost of a hop is one task and one future for the annotated field only. The `
 
 == Cancellation
 
-An execution can be cancelled: a WebSocket `complete` and the close of the connection do it (see <<subscriptions,Subscriptions>>). The library then stops starting new work for it: a hop task that has not started is skipped and the operation ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, the continuation of an async field that completes afterwards is aborted, and the stream of a subscription is cancelled. Synchronous code that is running is never interrupted.
+An execution is cancelled when its client goes away: an HTTP client that closes its connection, a WebSocket `complete` and the close of a WebSocket connection (see <<subscriptions,Subscriptions>>). Cancellation is cooperative, and it does not depend on the graphql-java version. The library stops starting new work for the execution, and never interrupts code that is running, because interrupting a thread inside a JDBC driver can break the connection:
+
+* A hop task that is still queued, the one of the operation or the one of an `@ExecuteOn` field, is skipped. The operation then ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, which goes through the default error handling and the `GraphQLErrorsCustomizer` beans like any other error of the execution (see <<errors,Errors>>). Nobody reads that response over HTTP, because the client is gone.
+* The continuation of an async field that completes afterwards is aborted with graphql-java's `AbortExecutionException`: the children of the field, and every later async field, do not run.
+* The stream of a subscription is cancelled upstream.
+* A synchronous resolver that is already running finishes.
+
+The example has a slow async field, and a child field of its result that counts its runs. A client that closes the connection while the first field is pending leaves the count unchanged:
+
+snippet::example.tck.DisconnectScenario[project-base="test-suite", source="test", tags="disconnect-slow-field", indent="0"]
+
+An HTTP disconnect is noticed on the Netty server: Micronaut does not cancel the response of a request that is still being answered when the connection closes, so the library watches the connection itself, and only from the moment a field returns a stage that is still pending. An operation that has only synchronous fields registers nothing and pays nothing. A client over HTTP/2 that resets a stream but keeps the connection open is not noticed, and neither is a server other than Netty: the operation then runs to its end.
 
 [[fieldDecorators]]
 == Decorate the fetchers of selected fields

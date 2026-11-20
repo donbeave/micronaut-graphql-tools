@@ -17,6 +17,10 @@ dependencies {
     implementation(projects.micronautGraphqlTools)
     // the coercions of the standard scalars (#46) are benchmarked next to the argument conversion
     implementation(projects.micronautGraphqlToolsScalars)
+    // a request with the observability module on and no field traced is gated against the same request without it (#24)
+    implementation(projects.micronautGraphqlToolsObservability)
+    implementation("io.micrometer:micrometer-core")
+    implementation("io.opentelemetry:opentelemetry-api")
     implementation(mn.micronaut.inject)
     annotationProcessor(mn.micronaut.inject.java)
     runtimeOnly("ch.qos.logback:logback-classic")

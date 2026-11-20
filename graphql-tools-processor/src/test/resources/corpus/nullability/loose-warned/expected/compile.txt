@@ -1,0 +1,2 @@
+warning kotlin-nullability-loose Query.search(term:) schema.graphqls:7:10
+warning kotlin-nullability-loose Query.title schema.graphqls:6:3

@@ -138,6 +138,7 @@ public final class ResolverClassFindings {
         ClassVerdict verdict = ResolverClassRules.check(schema, model, resolver, sourceType, accessorPrefixes);
         InputBindingFindings inputs = new InputBindingFindings(schema, model);
         List<Finding> failures = new ArrayList<>();
+        List<Finding> nullability = new ArrayList<>();
         List<Finding> strict = new ArrayList<>();
         boolean failed = false;
         // several methods that can bind one field are an ambiguity of the startup, which judges no argument of them
@@ -157,7 +158,7 @@ public final class ResolverClassFindings {
                     // the source type of the fields of the other types is a whole-program fact for this class
                     continue;
                 }
-                failed |= !bindField(schema, inputs, failures, resolver, method, field, sourceType);
+                failed |= !bindField(schema, inputs, failures, nullability, resolver, method, field, sourceType);
             }
             if (methodVerdict.coordinates().stream().map(SchemaCoordinates::typeName).distinct().count() > 1) {
                 strict.add(finding(resolver, method, BindingCode.ROOT_METHOD_SEVERAL_OPERATIONS, method.signature(),
@@ -190,11 +191,15 @@ public final class ResolverClassFindings {
             }
         }
         failures.addAll(inputs.failures());
+        // the startup does not read the nullability of Kotlin, so what the rule finds is independent of the stage
+        nullability.addAll(inputs.nullability());
         if (failed || inputs.halted() || !failures.isEmpty()) {
             // the startup throws the binding failures before it runs a strict check
+            failures.addAll(nullability);
             return dedupe(failures);
         }
         strict.addAll(inputs.checks());
+        strict.addAll(nullability);
         return dedupe(strict);
     }
 
@@ -249,8 +254,9 @@ public final class ResolverClassFindings {
      *
      * @return whether the binding of the field did not fail, so that the startup goes on to the next field
      */
-    private static boolean bindField(SchemaModel schema, InputBindingFindings inputs, List<Finding> failures, JClass resolver,
-                                     JMethod method, FieldVerdict field, @Nullable String sourceType) {
+    private static boolean bindField(SchemaModel schema, InputBindingFindings inputs, List<Finding> failures,
+                                     List<Finding> nullability, JClass resolver, JMethod method, FieldVerdict field,
+                                     @Nullable String sourceType) {
         String coordinate = field.coordinate();
         FieldDefinition definition = fieldDefinition(schema, SchemaCoordinates.typeName(coordinate),
                 SchemaCoordinates.fieldName(coordinate));
@@ -320,6 +326,11 @@ public final class ResolverClassFindings {
             return false;
         }
         if (definition != null) {
+            for (NullabilityRules.Mismatch mismatch : NullabilityRules.returned(method.genericReturnType(),
+                    definition.getType(), field.returns())) {
+                nullability.add(finding(resolver, method, mismatch.code(), coordinate,
+                        mismatch.sentence() + " in " + method.signature(), schema, coordinate, mismatch.fix()));
+            }
             InputBindingFindings.Leaf leaf = InputBindingFindings.leaf(method.genericReturnType(), definition.getType(),
                     field.returns());
             if (leaf != null) {

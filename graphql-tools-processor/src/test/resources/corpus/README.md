@@ -112,6 +112,7 @@ case under `exception/` that shows it:
 | `customizer-claimed-field` | binds no method to a field that a `RuntimeWiringCustomizer` claims (`unbound-resolver-method` with strict on, nothing with strict off) |
 | `runtime-exception-first` | binding the field throws before the argument rule (a singleton resolver that cannot be created): `unexpected-binding-error` |
 | `other-class-binding-failure` | stops at a binding failure of another class before the strict checks of this one |
+| `kotlin-nullability` | reports nothing: the nullability of a Kotlin type is compile-time metadata (`kotlin-nullability-mismatch`) |
 | `conflicting-class-mapping` | reports `mapping-conflict` when two classes bind one input type or enum to different Java classes, before the strict checks |
 | `dictionary-entry-wins` | lets a `SchemaMappingDictionary` entry win over two classes that match one object type by name (`ambiguous-type-class`); the visitor cannot see the dictionary |
 
@@ -132,7 +133,7 @@ compile time silent; `input/class-not-introspected` shows both sides for a class
    exists, even empty) and, for Java and Groovy, `expected/compile.txt` from the checks-on compilation. A Kotlin case writes
    `expected/compile.txt` by hand from the rule set (only per-class checks and failures, `ok` where the finding is whole-program).
 3. Read the diff: it is the review. Check each verdict against what the case is meant to show.
-4. `./gradlew :micronaut-graphql-tools-processor:corpusShard1 :micronaut-graphql-tools-processor:corpusShard2 :micronaut-graphql-tools-processor:test --tests '*BindingCorpusSpec'` must pass (the corpus runs in three JVMs, one third of the units each, because every unit leaves its class loader behind; `test` alone runs the first third). `-Pcorpus.only='<regex>'` runs
+4. `./gradlew :micronaut-graphql-tools-processor:test --tests '*BindingCorpusSpec'` must pass (the whole corpus runs in one JVM). `-Pcorpus.only='<regex>'` runs
    only the cases whose name matches it (for example `-Pcorpus.only='input/.*'`), for writing a case; CI runs them all.
 
 Updating after a behaviour change is the same task (`-Pcorpus.update` on `test` does the same). The diff of the expected

@@ -113,6 +113,28 @@ public class QueryResolver {
         options.errors()[0].sentence().contains(ProcessorOptions.ACCESSOR_PREFIXES)
     }
 
+    def "the loose nullability option is ignore by default, reads a severity and rejects anything else"() {
+        expect:
+        ProcessorOptions.read([:]).looseNullability().token() == 'ignore'
+        ProcessorOptions.read([(ProcessorOptions.LOOSE_NULLABILITY): value]).looseNullability().token() == expected
+        ProcessorOptions.read([(ProcessorOptions.LOOSE_NULLABILITY): value]).errors().empty
+
+        where:
+        value  | expected
+        'warn' | 'warn'
+        'FAIL' | 'fail'
+        'ignore' | 'ignore'
+    }
+
+    def "a loose nullability value that is not a severity is an error"() {
+        when:
+        def options = ProcessorOptions.read([(ProcessorOptions.LOOSE_NULLABILITY): 'maybe'])
+
+        then:
+        options.errors()*.code() == ['processor-option-invalid']
+        options.errors()[0].sentence().contains(ProcessorOptions.LOOSE_NULLABILITY)
+    }
+
     def "a directory that this system cannot use as a path is an option error, not a crash of the compiler"() {
         when:
         def options = ProcessorOptions.read([(ProcessorOptions.SCHEMA_DIRS): "ok${File.pathSeparator}bad\u0000path".toString()])
