@@ -1,0 +1,11 @@
+{
+  executeOnBox {
+    property
+    modelMethod
+    typeResolver
+  }
+  executeOnCrate {
+    property
+    crated
+  }
+}

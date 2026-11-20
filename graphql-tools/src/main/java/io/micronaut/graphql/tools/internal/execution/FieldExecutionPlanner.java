@@ -17,15 +17,19 @@ package io.micronaut.graphql.tools.internal.execution;
 
 import graphql.schema.DataFetcher;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.convert.ConversionService;
 import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
 import io.micronaut.graphql.tools.internal.resolver.PublisherAdaptingDataFetcher;
+
+import java.util.concurrent.Executor;
 
 /**
  * Decides, once per field at startup, how a method field executes, and composes its fetcher. The kind comes from the
  * same {@link ReturnVerdict} that the compile-time check reads, so the startup and the build agree. A field that is not
  * {@link Kind#ASYNC} keeps the method fetcher it had, byte for byte: no wrapper, no thread-local read, no allocation.
- * The composition of an async field, outermost first: the async boundary, then the adapter of a publisher, then the
+ * The composition of a field, outermost first: the async boundary (async fields only), then the executor hop (a field
+ * whose {@code @ExecuteOn} names another executor than the operation's), then the adapter of a publisher, then the
  * method fetcher.
  */
 @Internal
@@ -63,15 +67,19 @@ public final class FieldExecutionPlanner {
      * @param verdict           the return adaptation of the method
      * @param subscriptionField whether the field belongs to the subscription type
      * @param conversionService converts a reactive type that is not a {@code Publisher} (RxJava) to one
+     * @param fieldExecutor     the executor that {@code @ExecuteOn} names when it differs from the executor of the operation, else null
      * @return the fetcher of the field
      */
     public static DataFetcher<Object> plan(DataFetcher<Object> method, ReturnVerdict verdict, boolean subscriptionField,
-                                           ConversionService conversionService) {
+                                           ConversionService conversionService, @Nullable Executor fieldExecutor) {
         if (subscriptionField) {
             return new StreamDataFetcher(method, conversionService);
         }
         DataFetcher<Object> adapted = verdict.reactive() == ReturnVerdict.Reactive.NONE ? method
                 : new PublisherAdaptingDataFetcher(method, verdict.reactive() == ReturnVerdict.Reactive.MULTI, conversionService);
-        return verdict.async() ? new AsyncBoundaryDataFetcher(adapted) : adapted;
+        if (fieldExecutor != null) {
+            adapted = new ExecutorHopDataFetcher(fieldExecutor, adapted);
+        }
+        return kind(verdict, subscriptionField) == Kind.ASYNC ? new AsyncBoundaryDataFetcher(adapted) : adapted;
     }
 }
