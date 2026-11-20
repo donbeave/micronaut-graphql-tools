@@ -12,7 +12,8 @@ runs, or when they claim a performance gain.
 
 - `src/jmh/java` (package `io.micronaut.graphql.tools.benchmarks`): the JMH benchmarks. They cover property, root and
   type resolver methods, argument conversion, union and interface resolution, a directive-wrapped fetcher, whole queries,
-  and start-up (`BindingBenchmark`, `RetainedHeapBenchmark`).
+  start-up (`BindingBenchmark`, `RetainedHeapBenchmark`), and the executor hop (`InvocationBenchmark`,
+  `AsyncBoundaryBenchmark`; plain graphql-java, no library code, no allocation gate).
 - `src/allocationTest/java`: the allocation gate. It fails when an operation allocates more bytes than its baseline in
   `allocation-baselines.properties`.
 - `src/jmhSmokeTest/java`: runs every JMH benchmark once, so that the benchmarks compile and start. Its numbers mean nothing.
