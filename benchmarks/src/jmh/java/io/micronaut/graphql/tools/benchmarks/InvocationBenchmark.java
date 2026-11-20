@@ -19,6 +19,9 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.schema.DataFetcher;
+import io.micronaut.configuration.graphql.GraphQLInvocation;
+import io.micronaut.configuration.graphql.GraphQLInvocationData;
+import io.micronaut.context.ApplicationContext;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -28,6 +31,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -45,6 +49,11 @@ import java.util.concurrent.TimeUnit;
  *   executor or to a fixed pool of platform threads, and waits: one hop per request;</li>
  *   <li>{@code perFieldHop}: the execution starts on the calling thread and every method fetcher is wrapped in
  *   {@code supplyAsync} on the virtual-thread executor: a hop per method field (property fields never hop).</li>
+ *   <li>{@code library}, {@code libraryNone}: the same {@code GraphQL} behind the library's own invocation, with the default
+ *   executor ({@code blocking}: virtual threads on JDK 21 and later) and with {@code none}. They run the library's
+ *   {@code GraphQLInvocation} from a started application context and wait for its result, so they include the
+ *   {@code Mono} that the transport subscribes to. Read {@code library} against {@code hopVirtual} and {@code libraryNone}
+ *   against {@code direct}.</li>
  * </ul>
  *
  * Each trial first runs the operation once with a {@link ThreadChanges} counter attached and fails when the number of
@@ -55,7 +64,7 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class InvocationBenchmark {
 
-    @Param({"direct", "hopVirtual", "hopPlatform", "perFieldHop"})
+    @Param({"direct", "hopVirtual", "hopPlatform", "perFieldHop", "library", "libraryNone"})
     public String mode;
 
     @Param({"root", "items1000"})
@@ -79,6 +88,8 @@ public class InvocationBenchmark {
                 case "direct" -> counter.assertCounts(mode, 0, 0, fetches, 0, 0);
                 case "hopVirtual", "hopPlatform" -> counter.assertCounts(mode, 1, 1, fetches, fetches, 0);
                 case "perFieldHop" -> counter.assertCounts(mode, methodFields, methodFields, fetches, -1, 0);
+                case "library" -> counter.assertCounts(mode, -1, -1, fetches, fetches, 0);
+                case "libraryNone" -> counter.assertCounts(mode, -1, -1, fetches, 0, 0);
                 default -> throw new IllegalArgumentException(mode);
             }
         }
@@ -103,6 +114,8 @@ public class InvocationBenchmark {
         private final GraphQL graphQL;
         private final ExecutorService executor;
         private final java.util.concurrent.Executor submit;
+        private final ApplicationContext context;
+        private final GraphQLInvocation invocation;
 
         Run(String mode, String queryName, ThreadChanges counter) {
             this.mode = mode;
@@ -113,7 +126,7 @@ public class InvocationBenchmark {
                     thread.setDaemon(true);
                     return thread;
                 });
-                case "direct" -> null;
+                case "direct", "library", "libraryNone" -> null;
                 default -> Executors.newVirtualThreadPerTaskExecutor();
             };
             this.submit = executor == null || counter == null ? executor : counter.counting(executor);
@@ -121,9 +134,25 @@ public class InvocationBenchmark {
             this.graphQL = HopSchema.build(methods, mode.equals("perFieldHop")
                     ? method -> (DataFetcher<Object>) env -> CompletableFuture.supplyAsync(() -> method.apply(env), submit)
                     : method -> method::apply, counter);
+            if (mode.startsWith("library")) {
+                // the application's own GraphQL bean: the library creates no schema and uses this engine behind its invocation
+                this.context = ApplicationContext.builder()
+                        .properties(Map.of("graphql.graphql-ws.enabled", false, "graphql.graphiql.enabled", false,
+                                "micronaut.graphql.tools.eager-init", false,
+                                "micronaut.graphql.tools.execution.executor", mode.equals("libraryNone") ? "none" : "blocking"))
+                        .singletons(graphQL)
+                        .start();
+                this.invocation = context.getBean(GraphQLInvocation.class);
+            } else {
+                this.context = null;
+                this.invocation = null;
+            }
         }
 
         ExecutionResult execute() {
+            if (invocation != null) {
+                return Mono.from(invocation.invoke(new GraphQLInvocationData(query, null, Map.of()), null, null)).block();
+            }
             ExecutionInput input = ExecutionInput.newExecutionInput().query(query).build();
             if (mode.startsWith("hop")) {
                 return CompletableFuture.supplyAsync(() -> graphQL.executeAsync(input), submit)
@@ -136,6 +165,9 @@ public class InvocationBenchmark {
         public void close() {
             if (executor != null) {
                 executor.shutdown();
+            }
+            if (context != null) {
+                context.close();
             }
         }
     }

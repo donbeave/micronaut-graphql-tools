@@ -30,6 +30,8 @@ abstract class AbstractAllocationGateTest {
     private static final double LIBRARY_TOLERANCE_BYTES = 0.5;
     private static final double QUERY_TOLERANCE_FACTOR = 1.05;
     private static final String DEFAULT_LEG = "default";
+    // the first budget of the constant per-request overhead of the invocation; the recorded baseline holds after that
+    private static final double INVOCATION_OVERHEAD_BUDGET_BYTES = 1024;
 
     private static BenchmarkCases cases;
     private static Baselines baselines;
@@ -58,18 +60,36 @@ abstract class AbstractAllocationGateTest {
         check(operation());
     }
 
+    /** The bytes the library's invocation allocates on the calling thread beyond a direct execution of the same query. */
+    private static double invocationOverhead(int fields) throws Exception {
+        double invoked = AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.invokeOp(fields)), 200_000 / Math.max(1, fields / 10), 20_000 / Math.max(1, fields / 10), 5);
+        double direct = AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.directOp(fields)), 200_000 / Math.max(1, fields / 10), 20_000 / Math.max(1, fields / 10), 5);
+        System.out.printf("allocation invoke %d fields = %.2f B/op, direct = %.2f B/op%n", fields, invoked, direct);
+        return invoked - direct;
+    }
+
     private void check(String name) throws Exception {
         boolean wholeQuery = BenchmarkCases.isWholeQuery(name);
-        BenchmarkCases.Op op = cases.op(name);
 
-        double measured = wholeQuery
-                ? AllocationMeter.bytesPerOperation(op, 1_000, 100, 5)
-                : AllocationMeter.bytesPerOperation(op, 3_000_000, 1_000_000, 5);
+        double measured = switch (name) {
+            case BenchmarkCases.INVOCATION_OVERHEAD -> invocationOverhead(BenchmarkCases.SMALL_QUERY_FIELDS);
+            // the overhead of a query of 1,000 fields minus that of 10 fields: a slope of 0 B per field leaves 0
+            case BenchmarkCases.INVOCATION_SLOPE -> invocationOverhead(BenchmarkCases.LARGE_QUERY_FIELDS)
+                    - invocationOverhead(BenchmarkCases.SMALL_QUERY_FIELDS);
+            default -> wholeQuery
+                    ? AllocationMeter.bytesPerOperation(cases.op(name), 1_000, 100, 5)
+                    : AllocationMeter.bytesPerOperation(cases.op(name), 3_000_000, 1_000_000, 5);
+        };
         String key = Baselines.key(name, LEG, JDK);
         System.out.printf("allocation %s = %.2f B/op%n", key, measured);
 
         if (name.equals(BenchmarkCases.GRAPHQL_JAVA_PROPERTY_FETCH)) {
             return;
+        }
+        if (name.equals(BenchmarkCases.INVOCATION_OVERHEAD)) {
+            assertTrue(measured <= INVOCATION_OVERHEAD_BUDGET_BYTES, String.format(java.util.Locale.ROOT,
+                    "The invocation adds %.2f B/op to a direct execution, over its budget of %.0f B/op.", measured,
+                    INVOCATION_OVERHEAD_BUDGET_BYTES));
         }
         Assumptions.assumeTrue(UPDATE || !"latest".equals(LEG), "No allocation baselines are recorded for the latest leg");
         if (UPDATE) {
