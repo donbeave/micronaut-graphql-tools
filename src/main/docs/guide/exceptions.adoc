@@ -101,6 +101,7 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`data-loader-registry-bean` |failure |no |A DataLoaderRegistry bean exists, and the library's invocation does not use it.
 |`duplicate-data-loader` |failure |no |Two batch loader beans have the same name.
 |`data-loader-not-found` |failure |no |A DataLoader parameter of a resolver method matches no batch loader bean, or more than one.
+|`suspend-without-coroutines` |failure |no |A Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath.
 |`unexpected-binding-error` |failure |no |Binding a field failed with an unexpected exception; the cause is attached.
 |`binding-failures` |failure |no |Several fields or types cannot be bound; each failure carries its own code.
 |`strict-findings` |failure |no |The strict checks found problems; each finding carries its own check code.

@@ -72,6 +72,23 @@ public final class WrapperRules {
     }
 
     /**
+     * @return the sentence for a Kotlin {@code suspend} function on a field of the subscription type
+     */
+    public static String suspendOnSubscription() {
+        return "a Kotlin suspend function cannot be a field of the subscription type, which streams. Fix: return "
+                + "a Publisher<T> without suspend.";
+    }
+
+    /**
+     * @param found the Java type that the suspend function declares
+     * @return the sentence for a Kotlin {@code suspend} function that returns a stage or a publisher
+     */
+    public static String suspendWithAsyncReturn(String found) {
+        return "a Kotlin suspend function already returns its value later, and cannot also return " + found
+                + ". Fix: declare the value type as the return type of the suspend function, or drop suspend.";
+    }
+
+    /**
      * @return the sentence for a {@code Publisher} that a bean property holds
      */
     public static String publisherOnProperty() {

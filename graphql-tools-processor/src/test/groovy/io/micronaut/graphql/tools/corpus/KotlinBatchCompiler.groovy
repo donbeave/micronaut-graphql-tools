@@ -208,7 +208,9 @@ plugins {
 """)
         // kapt: one JVM per compilation, so that the options of one case cannot stay in the system properties of the next (javac
         // copies a micronaut option there and the first value stays)
-        Files.writeString(buildDir.resolve('gradle.properties'), 'kapt.workers.isolation=process\n')
+        // the build runs every case in one daemon, whose default heap of 512 MiB runs out at about 80 cases
+        Files.writeString(buildDir.resolve('gradle.properties'),
+                'kapt.workers.isolation=process\norg.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=1g\n')
         Path registration = Files.createDirectories(buildDir.resolve('visitor-registration/META-INF/services'))
         Files.writeString(registration.resolve('io.micronaut.inject.visitor.TypeElementVisitor'), 'io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor\n')
         List<String> visitorPath = visitorPath().collect { it.replace('\\', '/') } + [buildDir.resolve('visitor-registration').toString().replace('\\', '/')]
@@ -324,6 +326,8 @@ dependencies {
 ${classpath}
     ))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
+    // the version that the Micronaut platform manages, for the cases that call kotlinx.coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     ${processor.configuration}(platform("io.micronaut.platform:micronaut-platform:${micronaut}"))
     ${processor.configuration}("${processor.micronaut}")
     ${processor.configuration}(files(
