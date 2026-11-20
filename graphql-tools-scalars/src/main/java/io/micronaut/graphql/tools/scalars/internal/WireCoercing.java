@@ -17,9 +17,16 @@ package io.micronaut.graphql.tools.scalars.internal;
 
 import graphql.GraphQLContext;
 import graphql.execution.CoercedVariables;
+import graphql.language.ArrayValue;
+import graphql.language.BooleanValue;
+import graphql.language.EnumValue;
+import graphql.language.FloatValue;
 import graphql.language.IntValue;
+import graphql.language.NullValue;
+import graphql.language.ObjectValue;
 import graphql.language.StringValue;
 import graphql.language.Value;
+import graphql.language.VariableReference;
 import graphql.schema.Coercing;
 import graphql.schema.CoercingParseLiteralException;
 import graphql.schema.CoercingParseValueException;
@@ -151,7 +158,54 @@ public abstract class WireCoercing<T, O> implements Coercing<T, O> {
         if (value instanceof CharSequence) {
             return "'" + value + "'";
         }
-        return value.getClass().getSimpleName();
+        if (value instanceof Boolean) {
+            return "a boolean";
+        }
+        if (value instanceof Number) {
+            return "a number";
+        }
+        if (value instanceof Map) {
+            return "an object";
+        }
+        if (value instanceof Iterable || value.getClass().isArray()) {
+            return "a list";
+        }
+        return "a value of another kind";
+    }
+
+    /**
+     * @param literal a literal of the query document
+     * @return a short description of the kind of the literal for a message, in GraphQL terms (never a class name)
+     */
+    protected static String describeLiteral(Value<?> literal) {
+        if (literal instanceof StringValue) {
+            return "a string";
+        }
+        if (literal instanceof IntValue) {
+            return "an integer";
+        }
+        if (literal instanceof FloatValue) {
+            return "a float";
+        }
+        if (literal instanceof BooleanValue) {
+            return "a boolean";
+        }
+        if (literal instanceof EnumValue) {
+            return "an enum value";
+        }
+        if (literal instanceof NullValue) {
+            return "null";
+        }
+        if (literal instanceof ArrayValue) {
+            return "a list";
+        }
+        if (literal instanceof ObjectValue) {
+            return "an object";
+        }
+        if (literal instanceof VariableReference) {
+            return "a variable";
+        }
+        return "a literal of another kind";
     }
 
 }

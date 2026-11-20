@@ -101,6 +101,7 @@ class JavaTimeScalarsSpec extends Specification {
         then:
         def e = thrown(CoercingParseValueException)
         e.message.startsWith(scalar.defaultName() + ': ')
+        !e.message.contains('java.')
 
         where:
         scalar                          | format          | input
@@ -141,7 +142,9 @@ class JavaTimeScalarsSpec extends Specification {
 
         then:
         def e = thrown(CoercingSerializeException)
-        e.message.contains('java.time.LocalDate')
+        e.message.startsWith('LocalDate: ')
+        !e.message.contains('java.')
+        !e.message.contains('String')
     }
 
     void "a pattern that cannot write the Java type fails when a value is written"() {

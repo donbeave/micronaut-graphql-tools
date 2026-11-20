@@ -65,9 +65,13 @@ final class TextCoercing<T> extends WireCoercing<T, String> {
     @Override
     protected String write(Object value) {
         if (!type.isInstance(value)) {
-            throw new IllegalArgumentException("expected a " + type.getName() + ", but was " + describe(value));
+            throw new IllegalArgumentException("cannot write " + describe(value) + ", expected a value to write as " + expected);
         }
-        return writer.apply(type.cast(value));
+        try {
+            return writer.apply(type.cast(value));
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("the value cannot be written as " + expected, e);
+        }
     }
 
     @Override
@@ -86,7 +90,7 @@ final class TextCoercing<T> extends WireCoercing<T, String> {
         if (literal instanceof StringValue) {
             return parse(((StringValue) literal).getValue());
         }
-        throw new IllegalArgumentException("expected a string " + expected + ", but was " + literal.getClass().getSimpleName());
+        throw new IllegalArgumentException("expected a string " + expected + ", but was " + describeLiteral(literal));
     }
 
     private T parse(String text) {

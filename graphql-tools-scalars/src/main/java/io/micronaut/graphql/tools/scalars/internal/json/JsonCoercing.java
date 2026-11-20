@@ -68,7 +68,7 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
         try {
             return toJava(mapper.get().writeValueToTree(value));
         } catch (IOException e) {
-            throw new IllegalArgumentException("a " + value.getClass().getName() + " cannot be written as JSON: " + e.getMessage(), e);
+            throw new IllegalArgumentException("the value cannot be written as JSON", e);
         }
     }
 
@@ -114,7 +114,7 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
             }
             return map;
         }
-        throw new IllegalArgumentException("expected a JSON value, but was " + literal.getClass().getSimpleName());
+        throw new IllegalArgumentException("expected a JSON value, but was " + describeLiteral(literal));
     }
 
     private static boolean isJson(Object value) {

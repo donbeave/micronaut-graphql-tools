@@ -49,7 +49,7 @@ final class CountCoercing<T> extends WireCoercing<T, Long> {
     @Override
     protected Long write(Object value) {
         if (!type.isInstance(value)) {
-            throw new IllegalArgumentException("expected a " + type.getName() + ", but was " + describe(value));
+            throw new IllegalArgumentException("cannot write " + describe(value) + ", expected a value to write as " + expected);
         }
         return writer.applyAsLong(type.cast(value));
     }
@@ -63,7 +63,7 @@ final class CountCoercing<T> extends WireCoercing<T, Long> {
             return build(((Number) input).longValue());
         }
         if (input instanceof BigInteger) {
-            return build(((BigInteger) input).longValueExact());
+            return build(exact((BigInteger) input));
         }
         throw new IllegalArgumentException("expected " + expected + ", but was " + describe(input));
     }
@@ -71,9 +71,16 @@ final class CountCoercing<T> extends WireCoercing<T, Long> {
     @Override
     protected T readLiteral(Value<?> literal, CoercedVariables variables) {
         if (literal instanceof IntValue) {
-            return build(((IntValue) literal).getValue().longValueExact());
+            return build(exact(((IntValue) literal).getValue()));
         }
-        throw new IllegalArgumentException("expected " + expected + ", but was " + literal.getClass().getSimpleName());
+        throw new IllegalArgumentException("expected " + expected + ", but was " + describeLiteral(literal));
+    }
+
+    private long exact(BigInteger value) {
+        if (value.bitLength() >= Long.SIZE) {
+            throw new IllegalArgumentException(value + " is out of range, expected " + expected);
+        }
+        return value.longValue();
     }
 
     private T build(long count) {
