@@ -89,13 +89,14 @@ class VisitorArchitectureSpec extends Specification {
         violations(parse(files().collect { new FileSource(it) })) == []
     }
 
-    def "the isolating visitor claims exactly the three annotations, the four options and the retired key"() {
+    def "the isolating visitor claims exactly the four annotations, the four options and the retired key"() {
         expect:
         visitor.visitorKind == TypeElementVisitor.VisitorKind.ISOLATING
         visitor.supportedAnnotationNames == [
                 'io.micronaut.graphql.tools.annotation.GraphQLRootResolver',
                 'io.micronaut.graphql.tools.annotation.GraphQLTypeResolver',
-                'io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate'] as Set
+                'io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate',
+                'io.micronaut.graphql.tools.annotation.GraphQLModels'] as Set
         visitor.supportedOptions == ['micronaut.graphql.tools.processor.schema.dirs', 'micronaut.graphql.tools.processor.module.dir',
                                      'micronaut.graphql.tools.processor.checks',
                                      'micronaut.graphql.tools.processor.resolverAccessorPrefixes',

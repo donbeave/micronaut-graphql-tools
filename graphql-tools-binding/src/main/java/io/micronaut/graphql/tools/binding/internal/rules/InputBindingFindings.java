@@ -21,6 +21,7 @@ import graphql.language.InputObjectTypeDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.ListType;
 import graphql.language.NonNullType;
+import graphql.language.ObjectTypeDefinition;
 import graphql.language.SourceLocation;
 import graphql.language.Type;
 import graphql.language.TypeDefinition;
@@ -163,7 +164,29 @@ public final class InputBindingFindings {
         TypeDefinition<?> definition = schema.registry().getType(name.getName()).orElse(null);
         if (definition instanceof EnumTypeDefinition enumType) {
             finish(enumType(new Site(member, coordinate, location), enumType, leaf));
+        } else if (definition instanceof ObjectTypeDefinition objectType) {
+            finish(objectType(new Site(member, coordinate, location), objectType, leaf));
         }
+    }
+
+    // the startup reads the bean introspection of the class that backs an object type, and names the field that reaches it
+    @Nullable
+    private Halt objectType(Site site, ObjectTypeDefinition definition, TypeRef declared) {
+        if (declared.array() || declared.primitive() || isPlatformClass(declared.rawName())) {
+            return null;
+        }
+        JClass objectClass = model.resolve(declared);
+        if (objectClass.kind() == JClass.Kind.INTERFACE
+                || objectClass.introspected()) {
+            return null;
+        }
+        return failed(site, BindingCode.CLASS_NOT_INTROSPECTED,
+                "the class " + objectClass.name() + " that backs " + definition.getName() + " is not introspected",
+                "annotate the class with @GraphQLType, or list it or its package in @GraphQLModels on a class of this module");
+    }
+
+    private static boolean isPlatformClass(String name) {
+        return name.startsWith("java.") || name.startsWith("javax.") || name.startsWith("kotlin.") || name.startsWith("groovy.");
     }
 
     private boolean finish(@Nullable Halt halt) {
