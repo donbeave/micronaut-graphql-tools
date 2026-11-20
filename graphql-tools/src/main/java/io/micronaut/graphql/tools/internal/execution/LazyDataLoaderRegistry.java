@@ -92,7 +92,8 @@ public final class LazyDataLoaderRegistry extends DataLoaderRegistry {
             }
             DataLoader<?, ?> registered = super.getDataLoader(entry.name());
             DataLoader<?, ?> loader = registered != null ? registered
-                    : ContextualBatchLoaders.create(entry.kind(), bean, state.propagatedContext());
+                    : ContextualBatchLoaders.create(entry.kind(), bean, state.propagatedContext(),
+                            state.batchCounters() == null ? null : state.batchCounters().counter(entry.name()));
             int size = snapshot.indexes.length;
             int[] indexes = Arrays.copyOf(snapshot.indexes, size + 1);
             DataLoader<?, ?>[] loaders = Arrays.copyOf(snapshot.loaders, size + 1);

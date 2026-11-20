@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.internal.execution;
 
 import graphql.GraphQLContext;
 import graphql.ExecutionInput;
+import io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics;
 import io.micronaut.graphql.tools.execution.GraphQLExecutionRequest;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.core.annotation.Internal;
@@ -56,6 +57,8 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     @Nullable
     private final String customizer;
     private ExecutionInput executionInput;
+    @Nullable
+    private BatchCounters batchCounters;
 
     /**
      * Public for the benchmarks of this repository, which build an execution without the invocation; the library's
@@ -95,6 +98,18 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      */
     public void storeIn(GraphQLContext context) {
         context.put(KEY, this);
+        if (batchCounters != null) {
+            context.put(DataLoaderBatchStatistics.CONTEXT_KEY, batchCounters);
+        }
+    }
+
+    void countBatches() {
+        batchCounters = new BatchCounters();
+    }
+
+    @Nullable
+    BatchCounters batchCounters() {
+        return batchCounters;
     }
 
     boolean isStoredIn(GraphQLContext context) {

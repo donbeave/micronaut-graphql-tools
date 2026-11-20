@@ -290,6 +290,9 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                         .operationName(data.getOperationName())
                         .variables(data.getVariables());
                 if (loaders != null) {
+                    if (loaders.statistics()) {
+                        state.countBatches();
+                    }
                     builder.dataLoaderRegistry(new LazyDataLoaderRegistry(loaders, state));
                 }
                 ExecutionInput input = builder.build();

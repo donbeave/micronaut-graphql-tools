@@ -14,6 +14,7 @@ scalars: Scalars
 directives: Directives
 dataLoaders: Data Loaders
 errors: Errors
+observability: Observability
 subscriptions: Subscriptions
 context: Context
 execution: Execution

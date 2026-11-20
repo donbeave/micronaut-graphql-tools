@@ -16,6 +16,8 @@
 package io.micronaut.graphql.tools.internal;
 
 import graphql.GraphQL;
+import graphql.execution.instrumentation.ChainedInstrumentation;
+import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaDirectiveWiring;
@@ -59,6 +61,10 @@ import java.util.Objects;
  * {@code GraphQLSchema} gets no binding from the library at all. A bean with a qualifier (for example
  * {@code @Named("admin")}) does not make them step aside; the library's beans are {@code @Primary}, so an unqualified
  * injection point still gets them.
+ *
+ * <p>The {@code GraphQL} bean installs the application's {@code Instrumentation} beans: none when there is no bean, the bean
+ * itself when there is one, and a {@code ChainedInstrumentation} in bean order when there are several. The
+ * {@code GraphQLBuilderCustomizer} beans run after that.</p>
  *
  * @author Alexey Zhokhov
  */
@@ -133,9 +139,14 @@ public final class GraphQLFactory {
     @Primary
     @Requires(condition = LibraryBeanSelection.NoCompetingGraphQL.class)
     public GraphQL graphQL(GraphQLSchema graphQLSchema, List<GraphQLBuilderCustomizer> graphQLBuilderCustomizers,
-                           LibraryDataFetcherExceptionHandler exceptionHandler) {
+                           LibraryDataFetcherExceptionHandler exceptionHandler, List<Instrumentation> instrumentations) {
         GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema)
                 .defaultDataFetcherExceptionHandler(exceptionHandler);
+        if (instrumentations.size() == 1) {
+            builder.instrumentation(instrumentations.get(0));
+        } else if (!instrumentations.isEmpty()) {
+            builder.instrumentation(new ChainedInstrumentation(instrumentations));
+        }
         graphQLBuilderCustomizers.forEach(customizer -> customizer.customize(builder));
         return builder.build();
     }

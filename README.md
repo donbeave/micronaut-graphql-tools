@@ -21,6 +21,7 @@ and test it.
 | [`graphql-tools`](graphql-tools/README.md) | `:micronaut-graphql-tools` | The runtime library that applications depend on. |
 | [`graphql-tools-binding`](graphql-tools-binding/README.md) | `:micronaut-graphql-tools-binding` | The binding rules used by the runtime library. |
 | [`graphql-tools-scalars`](graphql-tools-scalars/README.md) | `:micronaut-graphql-tools-scalars` | The standard scalars: `java.time`, JSON and extended scalars, as beans. |
+| [`graphql-tools-observability`](graphql-tools-observability/README.md) | `:micronaut-graphql-tools-observability` | Request metrics (Micrometer) and traces (OpenTelemetry), optional. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
@@ -867,6 +868,7 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.strict` | `true` \| `false` | The shorthand for the severity of every check that has no `checks` entry: `true` leaves every check at `fail`, `false` makes every check `warn` (the findings are logged and listed in the manifest). It does not change `precedence`. See [Strict mode](#strict-mode). |
 | `micronaut.graphql.tools.checks` | map of check code to `fail` \| `warn` \| `ignore` (empty) | The severity of single checks, for example `checks.unwired-directive: ignore`: `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`, `unreachable-type`, `unreachable-value-type`, `unused-dictionary-entry`, `interface-read-through-implementation`, `unwired-directive`. An entry wins over `strict`. An unknown code or severity fails the startup. The five compile-time checks (`unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`) are not relaxed at compile time. |
 | `micronaut.graphql.tools.eager-init` | `true` \| `false` | Bind the schema when the application context starts, so that a broken binding fails the startup (also when the application defines its own `GraphQL` bean) and the first request does no binding work. `false` binds it when the first bean that needs the `GraphQLSchema` is created. |
+| `micronaut.graphql.tools.execution.data-loader-statistics` | `false` \| `true` | Whether the library counts the batches that each batch loader bean dispatches in an execution (`DataLoaderBatchStatistics` in the GraphQL context); the [observability module](#observability) turns the counts into DataLoader metrics. Off by default: counting adds two atomic increments to each batch. |
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded. The checks run the same either way. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path one line is logged at INFO and the manifest lines at DEBUG. |
@@ -1217,11 +1219,22 @@ Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 wit
 ## Configuring the GraphQL bean
 
 `GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean (created with the
-library's schema) before it is built, lowest order first (`@Order` or `Ordered`): instrumentation, a
-`PreparsedDocumentProvider`, execution strategies, the default `DataFetcherExceptionHandler`, and so on. A builder
-setter keeps one value, so a later customizer replaces what an earlier one set there; chain instrumentations with
-`ChainedInstrumentation`. The library itself never calls `doNotAddDefaultInstrumentations()`, which graphql-java 25
-removed.
+library's schema) before it is built, lowest order first (`@Order` or `Ordered`): a
+`PreparsedDocumentProvider`, execution strategies, the default `DataFetcherExceptionHandler`, and so on.
+
+Every `Instrumentation` bean is collected and installed before the customizers run: one bean is installed as it is, several
+are chained in a `ChainedInstrumentation`, lowest order first (`@Order` or `Ordered`), so the first `beginExecution` is the
+first bean's. With no `Instrumentation` bean the library sets none, and graphql-java keeps its default. The library never
+calls `doNotAddDefaultInstrumentations()`, which graphql-java 25 removed. A customizer that sets `instrumentation(...)`
+replaces what the beans installed, so register an instrumentation as a bean instead.
+
+```java
+@Singleton
+@Order(10)
+public class MyTracingInstrumentation extends SimplePerformantInstrumentation {
+    // ...
+}
+```
 
 ```java
 @Bean
@@ -1230,6 +1243,28 @@ public GraphQLBuilderCustomizer tracing(MyTracingInstrumentation instrumentation
     return builder -> builder.instrumentation(instrumentation);
 }
 ```
+
+## Observability
+
+The `micronaut-graphql-tools-observability` module records request metrics with Micrometer and traces with OpenTelemetry.
+Neither library is a dependency of the module: add the one you use, with a `MeterRegistry` bean (Micronaut Micrometer) or an
+`OpenTelemetry` bean (Micronaut Tracing), and the module's instrumentation appears.
+
+```groovy
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability:1.0.0-M4")
+```
+
+- `graphql.request` is a timer of each request, tagged with `operation` (the operation name, capped at
+  `micronaut.graphql.tools.observability.metrics.max-operations`, default 100, the rest is `other`) and `outcome`
+  (`success` or `error`).
+- `graphql.dataloader.batches` and `graphql.dataloader.batch.keys` count the batches of each
+  batch loader bean and the keys they loaded, tagged with `loader`, when `micronaut.graphql.tools.execution.data-loader-statistics` is `true`.
+- Each request is one span. `micronaut.graphql.tools.observability.tracing.fields` lists the fields that also get a span
+  (`Type.field` or `Type.*`); with the default empty list no field has a span, and a property read never has one.
+- `micronaut.graphql.tools.observability.enabled`, `.metrics.enabled` and `.tracing.enabled` switch the module, the metrics
+  and the tracing off.
+
+The guide page on observability has the details, the span layout and the cost.
 
 ## Error handling
 
@@ -1328,6 +1363,7 @@ To build or test against a role locally:
 | Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
 | Binding rules (internal, pulled in by the library) | `io.micronaut.graphql.tools:micronaut-graphql-tools-binding` |
 | Standard scalars ([`java.time`, JSON and extended scalars](#standard-scalars)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
+| Observability ([Micrometer metrics and OpenTelemetry traces](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-observability` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 
