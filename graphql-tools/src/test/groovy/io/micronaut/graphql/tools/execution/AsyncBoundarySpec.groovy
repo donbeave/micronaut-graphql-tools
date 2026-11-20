@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.execution
 
+import jakarta.inject.Singleton
 import graphql.ExecutionResult
 import graphql.GraphQLContext
 import graphql.ExceptionWhileDataFetching
@@ -292,6 +293,7 @@ type Parent {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
 
@@ -342,6 +344,7 @@ type Parent {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Parent)
     static class ParentResolver {
         String marker(Parent parent) {

@@ -1,8 +1,10 @@
 package example;
 
+import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.core.async.annotation.SingleResult;
 
+@Singleton
 @GraphQLRootResolver
 public class BookQuery {
 

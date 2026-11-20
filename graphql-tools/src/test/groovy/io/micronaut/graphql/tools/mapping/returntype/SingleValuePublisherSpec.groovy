@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.returntype
 
+import jakarta.inject.Singleton
 import graphql.ExecutionResult
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.async.annotation.SingleResult
@@ -92,6 +93,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         io.reactivex.rxjava3.core.Single<String> rx3Single() {

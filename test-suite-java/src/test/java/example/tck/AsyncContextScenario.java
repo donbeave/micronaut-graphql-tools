@@ -15,6 +15,7 @@
  */
 package example.tck;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.propagation.MutablePropagatedContext;
 import io.micronaut.core.propagation.PropagatedContext;
@@ -97,6 +98,7 @@ public final class AsyncContextScenario {
     public static class AsyncParent {
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = SCENARIO)
     public static class Queries {
@@ -133,6 +135,7 @@ public final class AsyncContextScenario {
         }
     }
 
+    @Singleton
     @GraphQLTypeResolver(AsyncParent.class)
     @Requires(property = "tck.scenario", value = SCENARIO)
     public static class ParentFields {
