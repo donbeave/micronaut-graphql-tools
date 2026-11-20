@@ -44,7 +44,7 @@ import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.internal.BeanSelectionLogger
 import io.micronaut.graphql.tools.internal.execution.ExecutionContextAvailability
 import io.micronaut.graphql.tools.internal.execution.ExecutionState
-import io.micronaut.graphql.tools.internal.execution.ExecutionTransport
+import io.micronaut.graphql.tools.execution.GraphQLTransport
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
@@ -175,7 +175,7 @@ type Child {
         CALLS == ['customizer', 'fetch']
         and: 'it saw the base input with the state in its context, off the calling thread'
         SEEN[0] instanceof ExecutionState
-        SEEN[0].transport() == ExecutionTransport.HTTP
+        SEEN[0].transport() == GraphQLTransport.HTTP
         SEEN[1] instanceof Thread && SEEN[1] != Thread.currentThread()
         and: 'the resolver found the state in the context of the fresh input'
         SEEN[2] instanceof ExecutionState

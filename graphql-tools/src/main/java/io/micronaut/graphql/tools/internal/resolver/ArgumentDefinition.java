@@ -32,31 +32,54 @@ public final class ArgumentDefinition {
     private static final String SOURCE_ARGUMENT = "* SRC *";
     private static final String DATA_FETCHING_ENVIRONMENT_ARGUMENT = "* DFE *";
 
+    private static final String DATA_LOADER_ARGUMENT = "* LOADER *";
+
     private final String name;
     private final Argument<?> inputValueArgument;
     private final ValueConverter converter;
+    private final int dataLoaderIndex;
 
     private ArgumentDefinition(String name, @Nullable Argument<?> inputValueArgument,
-                               @Nullable ValueConverter converter) {
+                               @Nullable ValueConverter converter, int dataLoaderIndex) {
         ArgumentUtils.requireNonNull("name", name);
         this.name = name;
         this.inputValueArgument = inputValueArgument;
         this.converter = converter;
+        this.dataLoaderIndex = dataLoaderIndex;
     }
 
     static ArgumentDefinition ofSourceArgument() {
-        return new ArgumentDefinition(SOURCE_ARGUMENT, null, null);
+        return new ArgumentDefinition(SOURCE_ARGUMENT, null, null, -1);
     }
 
     static ArgumentDefinition ofDataFetchingEnvironmentArgument() {
-        return new ArgumentDefinition(DATA_FETCHING_ENVIRONMENT_ARGUMENT, null, null);
+        return new ArgumentDefinition(DATA_FETCHING_ENVIRONMENT_ARGUMENT, null, null, -1);
     }
 
     static ArgumentDefinition ofInputValueArgument(String name, Argument<?> inputValueArgument,
                                                    ValueConverter converter) {
         ArgumentUtils.requireNonNull("inputValueArgument", inputValueArgument);
         ArgumentUtils.requireNonNull("converter", converter);
-        return new ArgumentDefinition(name, inputValueArgument, converter);
+        return new ArgumentDefinition(name, inputValueArgument, converter, -1);
+    }
+
+    /**
+     * @param index the index of the loader in the table of batch loader beans
+     * @return the definition of a {@code DataLoader} parameter
+     */
+    static ArgumentDefinition ofDataLoaderArgument(int index) {
+        return new ArgumentDefinition(DATA_LOADER_ARGUMENT, null, null, index);
+    }
+
+    public boolean isDataLoaderArgument() {
+        return name.equals(DATA_LOADER_ARGUMENT);
+    }
+
+    /**
+     * @return the index of the loader in the table of batch loader beans, for a {@code DataLoader} parameter
+     */
+    public int getDataLoaderIndex() {
+        return dataLoaderIndex;
     }
 
     public boolean isSourceArgument() {

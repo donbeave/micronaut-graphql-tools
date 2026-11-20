@@ -39,6 +39,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.Duplica
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.InvalidSource;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.ParameterWithoutArgument;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.Slot;
+import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.UntypedDataLoader;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.SlotKind;
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.FieldVerdict;
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.MethodVerdict;
@@ -61,6 +62,8 @@ import java.util.TreeSet;
 public final class ResolverClassRules {
 
     private static final String DATA_FETCHING_ENVIRONMENT = "graphql.schema.DataFetchingEnvironment";
+    private static final String DATA_LOADER = "org.dataloader.DataLoader";
+    private static final String OBJECT = "java.lang.Object";
     private static final String COMPLETION_STAGE = "java.util.concurrent.CompletionStage";
     private static final String PUBLISHER = "org.reactivestreams.Publisher";
     private static final String DATA_FETCHER_RESULT = "graphql.execution.DataFetcherResult";
@@ -84,8 +87,9 @@ public final class ResolverClassRules {
 
     /**
      * Matches the parameters of a resolver method with the arguments of the field it binds: the source parameter first
-     * (type resolver methods only), the {@code DataFetchingEnvironment} last, and every other parameter by its name
-     * or its {@code @GraphQLArgument} value.
+     * (type resolver methods only), the {@code DataFetchingEnvironment} last, a {@code DataLoader<K, V>} in any position
+     * after the source (it is no argument of the field and is not counted), and every other parameter by its name or its
+     * {@code @GraphQLArgument} value.
      *
      * @param sourceType      the binary name of the source type, or {@code null} for a root resolver method
      * @param parameters      the parameters of the method, in declaration order
@@ -99,7 +103,7 @@ public final class ResolverClassRules {
             return new ArgumentVerdict(List.of(), null);
         }
 
-        int found = (int) parameters.stream().filter(it -> !isEnvironment(it.type())).count();
+        int found = (int) parameters.stream().filter(it -> !isEnvironment(it.type()) && !isDataLoader(it.type())).count();
         if (found != required) {
             return new ArgumentVerdict(List.of(), new CountMismatch(found > required, found, required));
         }
@@ -123,6 +127,13 @@ public final class ResolverClassRules {
         Set<String> bound = new HashSet<>();
         for (int i = first; i < end; i++) {
             JParameter parameter = parameters.get(i);
+            if (isDataLoader(parameter.type())) {
+                if (untypedDataLoader(parameter.type())) {
+                    return new ArgumentVerdict(slots, new UntypedDataLoader(i));
+                }
+                slots.add(new Slot(SlotKind.DATA_LOADER, i, null));
+                continue;
+            }
             String declared = parameter.annotations().stringValue(AnnotationNames.ARGUMENT, "value").orElse(null);
             String name = declared != null ? declared : parameter.name();
             if (!available.contains(name)) {
@@ -585,6 +596,19 @@ public final class ResolverClassRules {
             };
         }
         return "[L" + type.rawName() + ";";
+    }
+
+    /**
+     * A {@code DataLoader} without key and value types: raw, or declared with {@code Object} for both, which a raw type is
+     * at run time and cannot be told from.
+     */
+    private static boolean untypedDataLoader(TypeRef type) {
+        List<TypeRef> arguments = type.typeArguments();
+        return arguments.size() != 2 || (OBJECT.equals(arguments.get(0).rawName()) && OBJECT.equals(arguments.get(1).rawName()));
+    }
+
+    private static boolean isDataLoader(TypeRef type) {
+        return isType(type, DATA_LOADER);
     }
 
     private static boolean isEnvironment(TypeRef type) {

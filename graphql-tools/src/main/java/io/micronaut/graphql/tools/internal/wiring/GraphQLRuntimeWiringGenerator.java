@@ -268,7 +268,7 @@ public final class GraphQLRuntimeWiringGenerator {
         scalarMappings.all().forEach(it -> rootRuntimeWiringBuilder.scalar(it.getScalarType()));
         this.inputTypeBinder = new InputTypeBinder(typeDefinitionRegistry, scalarMappings, configuration,
                 checkPolicy, manifestRecorder, typeModel, applicationContext, new InputCallbacks());
-        this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel);
+        this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel, applicationContext);
         this.fieldExecutors = new FieldExecutors(applicationContext, configuration);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,

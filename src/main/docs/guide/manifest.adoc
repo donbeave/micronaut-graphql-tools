@@ -141,7 +141,7 @@ A character outside `0x20` to `0x7e`, and the backslash, in a part is written as
 !precedence-ambiguity Book.title ; example.data.Book#getTitle() | example.graphql.type.resolver.BookResolver#title(example.data.Book)
 !unreachable-type Legacy
 Book -> object ; example.data.Book ; - ; -
-Book.sellers: [BookSeller!]! -> resolver ; example.graphql.type.resolver.BookResolver#sellers(example.data.Book, graphql.schema.DataFetchingEnvironment) ; java.util.concurrent.CompletionStage<java.util.List<example.data.BookSeller>> ; java.util.List<example.data.BookSeller>
+Book.sellers: [BookSeller!]! -> resolver ; example.graphql.type.resolver.BookResolver#sellers(example.data.Book, org.dataloader.DataLoader<java.lang.String, java.util.List<example.data.BookSeller>>) ; java.util.concurrent.CompletionStage<java.util.List<example.data.BookSeller>> ; java.util.List<example.data.BookSeller>
 Book.title: String! -> property ; example.data.Book#getTitle() ; java.lang.String ; java.lang.String
 Error -> union ; example.graphql.type.Error ; - ; -
 Error/SecurityError -> resolves ; example.graphql.type.SecurityError ; - ; -

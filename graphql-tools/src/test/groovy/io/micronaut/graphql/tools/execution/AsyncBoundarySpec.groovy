@@ -33,9 +33,9 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
+import io.micronaut.graphql.tools.execution.GraphQLTransport
 import io.micronaut.graphql.tools.internal.execution.AsyncBoundaryDataFetcher
 import io.micronaut.graphql.tools.internal.execution.ExecutionState
-import io.micronaut.graphql.tools.internal.execution.ExecutionTransport
 import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDataFetcher
 import io.micronaut.graphql.tools.internal.resolver.MicronautPropertyDataFetcher
 import org.intellij.lang.annotations.Language
@@ -214,7 +214,7 @@ type Parent {
     void "a future that is already done on a thread that holds the context is returned as it is"() {
         given:
         def captured = PropagatedContext.getOrEmpty().plus(new MarkerElement('x'))
-        def state = new ExecutionState(captured, ExecutionTransport.HTTP, null, null, ConvertibleValues.empty(), null)
+        def state = new ExecutionState(captured, GraphQLTransport.HTTP, null, null, ConvertibleValues.empty(), null, null)
         def context = GraphQLContext.newContext().build()
         state.storeIn(context)
         def done = CompletableFuture.completedFuture('value')
@@ -237,7 +237,7 @@ type Parent {
     void "a failed future, a future of another thread and a result that is no stage are not returned as they are"() {
         given:
         def captured = PropagatedContext.getOrEmpty().plus(new MarkerElement('x'))
-        def state = new ExecutionState(captured, ExecutionTransport.HTTP, null, null, ConvertibleValues.empty(), null)
+        def state = new ExecutionState(captured, GraphQLTransport.HTTP, null, null, ConvertibleValues.empty(), null, null)
         def context = GraphQLContext.newContext().build()
         state.storeIn(context)
         def environment = DataFetchingEnvironmentImpl.newDataFetchingEnvironment().graphQLContext(context).build()
@@ -270,7 +270,7 @@ type Parent {
     void "a minimal stage, which refuses to be inspected, is completed through its callback"() {
         given:
         def captured = PropagatedContext.getOrEmpty().plus(new MarkerElement('x'))
-        def state = new ExecutionState(captured, ExecutionTransport.HTTP, null, null, ConvertibleValues.empty(), null)
+        def state = new ExecutionState(captured, GraphQLTransport.HTTP, null, null, ConvertibleValues.empty(), null, null)
         def context = GraphQLContext.newContext().build()
         state.storeIn(context)
         def environment = DataFetchingEnvironmentImpl.newDataFetchingEnvironment().graphQLContext(context).build()
@@ -299,7 +299,7 @@ type Parent {
 
     void "cancelling the future of the boundary cancels the source"() {
         given:
-        def state = new ExecutionState(PropagatedContext.getOrEmpty(), ExecutionTransport.HTTP, null, null, ConvertibleValues.empty(), null)
+        def state = new ExecutionState(PropagatedContext.getOrEmpty(), GraphQLTransport.HTTP, null, null, ConvertibleValues.empty(), null, null)
         def context = GraphQLContext.newContext().build()
         state.storeIn(context)
         def environment = DataFetchingEnvironmentImpl.newDataFetchingEnvironment().graphQLContext(context).build()
