@@ -102,6 +102,7 @@ public class ExternalModelFixtures {
     }
 
     // tag::resolver[]
+    @Singleton
     @Requires(env = CLASSES)
     @GraphQLRootResolver
     public static class AtlasQuery {
@@ -117,6 +118,7 @@ public class ExternalModelFixtures {
     }
     // end::resolver[]
 
+    @Singleton
     @Requires(env = PACKAGE)
     @GraphQLRootResolver
     public static class ChartQuery {
@@ -127,6 +129,7 @@ public class ExternalModelFixtures {
 
     }
 
+    @Singleton
     @Requires(env = MISSING)
     @GraphQLRootResolver
     public static class UnlistedQuery {
@@ -137,6 +140,7 @@ public class ExternalModelFixtures {
 
     }
 
+    @Singleton
     @Requires(env = NESTED)
     @GraphQLRootResolver
     public static class HolderQuery {

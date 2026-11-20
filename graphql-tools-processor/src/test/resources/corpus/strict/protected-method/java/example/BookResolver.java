@@ -1,9 +1,12 @@
 package example;
 
+import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 
 import java.util.Optional;
 
+@Singleton
+@Singleton
 @GraphQLTypeResolver(Book.class)
 public class BookResolver {
 

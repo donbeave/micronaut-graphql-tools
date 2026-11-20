@@ -114,6 +114,7 @@ type Book {
         e.cause.message.contains("GraphQL coordinate: Query.books")
     }
 
+    @Singleton
     @Requires(property = 'spec.name', value = SPEC_NAME_STAGE_LIST)
     @GraphQLRootResolver
     static class StageListQuery {

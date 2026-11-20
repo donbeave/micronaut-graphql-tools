@@ -1,11 +1,13 @@
 package example;
 
+import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import example.model.Book;
 import example.model.Author;
 import java.util.List;
 
+@Singleton
 @GraphQLRootResolver
 public class Query {
 

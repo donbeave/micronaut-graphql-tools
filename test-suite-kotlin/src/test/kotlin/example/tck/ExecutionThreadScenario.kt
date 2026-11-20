@@ -46,6 +46,7 @@ class CountingExecutor : ThreadPoolExecutor(0, Int.MAX_VALUE, 10, TimeUnit.SECON
     fun tasks(): Int = tasks.get()
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", pattern = EXECUTION_THREAD_SCENARIOS)
 class ExecutionThreadQueries(@Named("tck-counting") private val executor: CountingExecutor) {

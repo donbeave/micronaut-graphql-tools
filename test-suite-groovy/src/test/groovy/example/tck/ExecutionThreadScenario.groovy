@@ -54,6 +54,7 @@ class CountingExecutor extends ThreadPoolExecutor {
     }
 }
 
+@Singleton
 @CompileStatic
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', pattern = 'execution-thread(-none)?')
