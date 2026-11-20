@@ -147,7 +147,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         return Mono.fromFuture(execution.result);
     }
 
-    private static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {
+    static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {
         if (name.equals(ExecutionConfiguration.NO_EXECUTOR)) {
             return null;
         }
@@ -156,21 +156,29 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                     + "scheduled tasks, which does not run operations. Use 'blocking' (the default), 'io', 'virtual' (JDK 21 and "
                     + "later), an executor configured under micronaut.executors, or 'none' to run on the calling thread.");
         }
-        return selector.select(name).orElseThrow(() -> unknownExecutor(name, beanContext));
+        return selector.select(name).orElseThrow(() -> new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR,
+                unknownExecutor(EXECUTOR_KEY + " is '" + name + "'", name, beanContext,
+                        "Use one of them, or 'none' to run on the calling thread, or configure '" + name + "' under micronaut.executors.")));
     }
 
-    private static ExecutionSetupException unknownExecutor(String name, BeanContext beanContext) {
+    /**
+     * @param subject     what names the executor, for example the key with its value or an {@code @ExecuteOn} with its location
+     * @param name        the executor name
+     * @param beanContext the bean context
+     * @param fix         the closing advice
+     * @return the message of the failure, with the executor beans that exist
+     */
+    static String unknownExecutor(String subject, String name, BeanContext beanContext, String fix) {
         List<String> names = new ArrayList<>();
         beanContext.getBeanRegistrations(ExecutorService.class).forEach(registration -> names.add(registration.getIdentifier().getName()));
         names.sort(null);
-        StringBuilder message = new StringBuilder(EXECUTOR_KEY).append(" is '").append(name).append("', which names no executor bean. ");
+        StringBuilder message = new StringBuilder(subject).append(", which names no executor bean. ");
         if (name.equals(TaskExecutors.VIRTUAL) && Runtime.version().feature() < 21) {
             message.append("The 'virtual' executor needs JDK 21 or later, and this JVM is JDK ").append(Runtime.version().feature())
                     .append("; use 'blocking', which is the io pool on JDK 17 and virtual threads on JDK 21 and later. ");
         }
-        message.append("The executor beans are: ").append(String.join(", ", names)).append(". Use one of them, or 'none' to run on the "
-                + "calling thread, or configure '").append(name).append("' under micronaut.executors.");
-        return new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR, message.toString());
+        message.append("The executor beans are: ").append(String.join(", ", names)).append(". ").append(fix);
+        return message.toString();
     }
 
     private static ExecutionResult rejected() {

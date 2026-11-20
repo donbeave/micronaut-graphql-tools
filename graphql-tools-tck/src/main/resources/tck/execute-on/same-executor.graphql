@@ -1,0 +1,6 @@
+{
+  plain: onThreadPlain
+  same: onThreadSame
+  requestTasks
+  otherTasks
+}

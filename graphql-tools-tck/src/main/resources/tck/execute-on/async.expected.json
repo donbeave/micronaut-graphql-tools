@@ -1,0 +1,6 @@
+{
+  "data": {
+    "onThreadAsync": "tck-execute-on-other-pool",
+    "otherTasks": 2
+  }
+}

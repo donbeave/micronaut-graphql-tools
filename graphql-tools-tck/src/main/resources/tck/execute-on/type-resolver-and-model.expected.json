@@ -1,0 +1,13 @@
+{
+  "data": {
+    "executeOnBox": {
+      "property": "tck-execute-on-request-pool",
+      "modelMethod": "tck-execute-on-other-pool",
+      "typeResolver": "tck-execute-on-other-pool"
+    },
+    "executeOnCrate": {
+      "property": "tck-execute-on-request-pool",
+      "crated": "tck-execute-on-other-pool"
+    }
+  }
+}
