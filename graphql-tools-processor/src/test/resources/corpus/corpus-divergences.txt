@@ -1,6 +1,6 @@
 # The known completeness gaps: a startup finding of a per-class code that the compile-time checks do not report. One line per
 # case, language, code and coordinate, with the reason above it. The list may only shrink; an entry that no longer diverges is stale.
-max-entries: 4
+max-entries: 3
 
 wrapper/nested-data-fetcher-result java unsupported-return-type Book.title
 wrapper/optional-non-null all unsupported-return-type Book.title
