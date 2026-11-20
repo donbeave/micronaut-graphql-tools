@@ -16,6 +16,7 @@ rootProject.name = "graphql-tools-parent"
 include("graphql-tools")
 include("graphql-tools-binding")
 include("graphql-tools-bom")
+include("graphql-tools-scalars")
 include("graphql-tools-processor")
 include("benchmarks")
 include("graphql-tools-tck")
