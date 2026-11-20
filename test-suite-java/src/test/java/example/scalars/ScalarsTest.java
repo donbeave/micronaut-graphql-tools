@@ -98,4 +98,20 @@ class ScalarsTest {
         }
     }
 
+    @Test
+    void aJsonNumberThatCannotBeWrittenIsAnErrorThatNamesTheScalar() {
+        try (ApplicationContext context = ApplicationContext.run(Map.of(), ScalarsFixtures.DEFAULTS)) {
+            for (Object value : new Object[] {
+                    Map.of("a", Double.NaN), Map.of("a", java.util.List.of(new java.math.BigDecimal("1e-10000"))),
+                    java.util.List.of(new java.math.BigDecimal("1e10000"))}) {
+                ExecutionResult result = execute(context, "query ($j: JSON) { payload(data: $j) }", Map.of("j", value));
+                assertFalse(result.getErrors().isEmpty(), String.valueOf(value));
+                assertTrue(result.getErrors().get(0).getMessage().contains("JSON"), result.getErrors().toString());
+            }
+            ExecutionResult literal = execute(context, "{ payload(data: {a: 1e10000}) }", Map.of());
+            assertFalse(literal.getErrors().isEmpty());
+            assertTrue(literal.getErrors().get(0).getMessage().contains("JSON"), literal.getErrors().toString());
+        }
+    }
+
 }
