@@ -36,13 +36,13 @@ import java.util.concurrent.CompletionStage
 class LoaderRegisteringContributor : GraphQLContextContributor {
 
     override fun contribute(context: GraphQLContext, request: GraphQLExecutionRequest) {
-        request.executionInput().dataLoaderRegistry.register(
-            "contributed",
-            DataLoaderFactory.newDataLoader(BatchLoader<String, String> { keys ->
-                CompletableFuture.completedFuture(keys.map { "contributed:$it:${keys.size}" })
-            })
-        )
+        request.executionInput().dataLoaderRegistry.register("contributed", DataLoaderFactory.newDataLoader(ContributedBatch()))
     }
+}
+
+class ContributedBatch : BatchLoader<String, String> {
+    override fun load(keys: List<String>): CompletionStage<List<String>> =
+        CompletableFuture.completedFuture(keys.map { "contributed:$it:${keys.size}" })
 }
 // end::contributor-loader[]
 
