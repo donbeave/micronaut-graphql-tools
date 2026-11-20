@@ -384,7 +384,8 @@ final class ElementTypeModel implements TypeModel {
         // not visible from this one
         @Override
         public boolean introspected() {
-            return element.hasStereotype(INTROSPECTED) || coverage.covers(element.getName(), element.getAnnotationNames());
+            return element.hasStereotype(INTROSPECTED) || coverage.covers(element.getName(), element.getAnnotationNames(),
+                    !element.isAssignable("groovy.lang.GroovyObject"));
         }
 
         @Override

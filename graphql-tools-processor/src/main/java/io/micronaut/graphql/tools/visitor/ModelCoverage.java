@@ -45,22 +45,23 @@ final class ModelCoverage {
     /**
      * @param binaryName  the binary name of a class
      * @param annotations the binary names of the annotations of the class
+     * @param scanned     whether Micronaut scans the class for a listed package; it does not for a Groovy class
      * @return whether a {@code @GraphQLModels} of this compilation lists the class, or lists its package and an annotation
      * that the class carries
      */
-    boolean covers(String binaryName, Set<String> annotations) {
+    boolean covers(String binaryName, Set<String> annotations, boolean scanned) {
         int dot = binaryName.lastIndexOf('.');
         String packageName = dot > 0 ? binaryName.substring(0, dot) : "";
-        if (classes.contains(binaryName) || packages.stream().anyMatch(it -> it.name.equals(packageName)
+        if (classes.contains(binaryName) || scanned && packages.stream().anyMatch(it -> it.name.equals(packageName)
                 && it.markers.stream().anyMatch(annotations::contains))) {
             return true;
         }
-        lastMissed = new Missed(binaryName, annotations);
+        lastMissed = new Missed(binaryName, annotations, scanned);
         return false;
     }
 
     boolean covers(Missed missed) {
-        return covers(missed.name, missed.annotations);
+        return covers(missed.name, missed.annotations, missed.scanned);
     }
 
     void resetMissed() {
@@ -83,8 +84,9 @@ final class ModelCoverage {
      *
      * @param name        the binary name
      * @param annotations the binary names of the annotations of the class
+     * @param scanned     whether Micronaut scans the class for a listed package
      */
-    record Missed(String name, Set<String> annotations) {
+    record Missed(String name, Set<String> annotations, boolean scanned) {
     }
 
 }
