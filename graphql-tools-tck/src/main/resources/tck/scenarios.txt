@@ -5,6 +5,7 @@ return-types
 abstract-types
 errors
 data-loader
+data-loader-options
 enums
 error-mapping
 bean-scopes

@@ -26,11 +26,16 @@ import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionResult;
 import io.micronaut.http.context.ServerRequestContext;
 import jakarta.inject.Singleton;
+import org.dataloader.BatchLoader;
+import org.dataloader.DataLoader;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.NonBlocking;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -66,6 +71,25 @@ public final class WebSocketScenario {
     public static class CancelledStreams {
 
         final AtomicInteger count = new AtomicInteger();
+        final AtomicInteger echoKeys = new AtomicInteger();
+    }
+
+    /** Counts the keys that reach its batch function. */
+    @Singleton
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class EchoLoader implements BatchLoader<Integer, String> {
+
+        private final CancelledStreams counters;
+
+        public EchoLoader(CancelledStreams counters) {
+            this.counters = counters;
+        }
+
+        @Override
+        public CompletionStage<List<String>> load(List<Integer> keys) {
+            counters.echoKeys.addAndGet(keys.size());
+            return CompletableFuture.completedFuture(keys.stream().map(key -> "e" + key).toList());
+        }
     }
 
     @GraphQLType
@@ -102,6 +126,10 @@ public final class WebSocketScenario {
 
         public int cancelledStreams() {
             return cancelled.count.get();
+        }
+
+        public int echoLoaderKeys() {
+            return cancelled.echoKeys.get();
         }
     }
 
@@ -147,6 +175,14 @@ public final class WebSocketScenario {
 
         public boolean onEventLoop(Tick tick) {
             return Thread.currentThread() instanceof NonBlocking;
+        }
+
+        public CompletionStage<String> echo(Tick tick, DataLoader<Integer, String> loader) {
+            return loader.load(1);
+        }
+
+        public CompletionStage<String> echoAgain(Tick tick, DataLoader<Integer, String> loader) {
+            return loader.load(1);
         }
 
         public String requestHeader(Tick tick) {

@@ -6,6 +6,8 @@ extend type Query {
   connectionUser: String
   # how many streams were cancelled
   cancelledStreams: Int!
+  # how many keys the batch function of the echo loader received, over all batches
+  echoLoaderKeys: Int!
 }
 
 # The example schema has a schema definition, which does not name a subscription type.
@@ -26,4 +28,7 @@ type Tick {
   sourceNonBlocking: Boolean!
   onEventLoop: Boolean!
   requestHeader: String
+  # both load the same key from one loader: with caching off (a subscription) the batch function receives it twice
+  echo: String
+  echoAgain: String
 }
