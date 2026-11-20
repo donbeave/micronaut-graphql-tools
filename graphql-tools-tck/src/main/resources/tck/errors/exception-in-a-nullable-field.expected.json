@@ -2,10 +2,10 @@
   "data": { "ok": "fine", "failNullable": null },
   "errors": [
     {
-      "message": "Exception while fetching data (/failNullable) : boom",
+      "message": "Internal server error",
       "locations": [{ "line": 3, "column": 3 }],
       "path": ["failNullable"],
-      "extensions": { "classification": "DataFetchingException" }
+      "extensions": { "code": "INTERNAL_ERROR", "classification": "DataFetchingException" }
     }
   ]
 }

@@ -10,9 +10,15 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ExecutionConfiguration.adoc[]
 
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ErrorsConfiguration.adoc[]
+
 == Execution
 
 `micronaut.graphql.tools.execution.executor` names the executor that every operation hops to once, before graphql-java runs: `blocking` (the default), `io`, `virtual` (JDK 21 and later), an executor you configure under `micronaut.executors`, or `none` to run on the thread that receives the operation. An unknown name fails the startup with `[unknown-executor]`. See <<execution,Execution>>.
+
+== Errors
+
+`micronaut.graphql.tools.errors.details` (default `false`) sends the message and the class of an exception that has no mapper to the client, and `micronaut.graphql.tools.errors.stack-traces` (default `false`) adds the stack trace to its log entry. See <<errors,Errors>>.
 
 == Precedence
 

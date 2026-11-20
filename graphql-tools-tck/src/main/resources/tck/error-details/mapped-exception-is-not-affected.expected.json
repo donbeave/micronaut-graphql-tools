@@ -1,0 +1,24 @@
+{
+  "data": {
+    "stockMissing": null
+  },
+  "errors": [
+    {
+      "message": "no stock for item 7",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "stockMissing"
+      ],
+      "extensions": {
+        "code": "OUT_OF_STOCK",
+        "id": 7,
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

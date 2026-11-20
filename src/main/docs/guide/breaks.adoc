@@ -41,3 +41,4 @@ Issue #15 (BC-19, resolver parameters bound by name): its runtime half is listed
 Not tagged yet. Entries for a change that is on `master` are listed here; the fix is on the migration page, entries for 1.0.0-M4.
 
 * #49 (BC-35): resolvers run on the blocking executor by default, not on the Netty event loop; `micronaut.graphql.tools.execution.executor: none` keeps the old behaviour. See the migration page, entries for 1.0.0-M4.
+* #32 (BC-37): the message of an unhandled exception is no longer sent to the client; the error is `Internal server error` with `extensions.code` `INTERNAL_ERROR`. Add a `GraphQLExceptionMapper` for the exceptions to show, or set `micronaut.graphql.tools.errors.details: true` in development. See the migration page, entries for 1.0.0-M4.

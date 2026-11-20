@@ -19,6 +19,7 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
 import graphql.GraphQL;
+import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import io.micronaut.configuration.graphql.DefaultGraphQLExecutionInputCustomizer;
 import io.micronaut.configuration.graphql.DefaultGraphQLInvocation;
@@ -35,6 +36,7 @@ import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.propagation.PropagatedContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.ExecutionConfiguration;
 import io.micronaut.graphql.tools.internal.LibraryBeanSelection;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
@@ -92,10 +94,14 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     @Nullable
     private final ExecutorService executor;
     private final String executorName;
+    @Nullable
+    private final GraphQLErrorsCustomizer[] errorsCustomizers;
 
     LibraryGraphQLInvocation(GraphQL graphQL, GraphQLExecutionInputCustomizer customizer, GraphQLToolsConfiguration configuration,
                              ExecutorSelector executorSelector, BeanContext beanContext,
-                             BeanProvider<DataLoaderRegistry> dataLoaderRegistry) {
+                             BeanProvider<DataLoaderRegistry> dataLoaderRegistry,
+                             List<GraphQLErrorsCustomizer> errorsCustomizers) {
+        this.errorsCustomizers = errorsCustomizers.isEmpty() ? null : errorsCustomizers.toArray(new GraphQLErrorsCustomizer[0]);
         this.graphQL = graphQL;
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
         this.dataLoaderRegistry = dataLoaderRegistry.isPresent() ? dataLoaderRegistry : null;
@@ -144,7 +150,28 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 execution.reject(e);
             }
         }
-        return Mono.fromFuture(execution.result);
+        return errorsCustomizers == null ? Mono.fromFuture(execution.result) : Mono.fromFuture(execution.result).map(this::customizeErrors);
+    }
+
+    private ExecutionResult customizeErrors(ExecutionResult executionResult) {
+        List<GraphQLError> errors = executionResult.getErrors();
+        if (errors == null || errors.isEmpty()) {
+            return executionResult;
+        }
+        List<GraphQLError> current = errors;
+        for (GraphQLErrorsCustomizer customizer : errorsCustomizers) {
+            try {
+                List<GraphQLError> customized = customizer.customize(current);
+                if (customized == null) {
+                    throw new IllegalStateException("returned null instead of a list of errors");
+                }
+                current = customized;
+            } catch (RuntimeException e) {
+                LOG.error("The GraphQLErrorsCustomizer {} failed; the errors are sent as the previous customizer left them",
+                        customizer.getClass().getName(), e);
+            }
+        }
+        return current == errors ? executionResult : ExecutionResultImpl.newExecutionResult().from(executionResult).errors(current).build();
     }
 
     private static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {

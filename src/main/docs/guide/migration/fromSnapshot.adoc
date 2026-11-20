@@ -46,6 +46,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-33 inherited type resolver contracts (#34) | A bean that is a type resolver only through an inherited `@GraphQLTypeResolver` (a class that implements an annotated interface) needs the processor on the compiler path: the visitor records its contracts, and the startup no longer reads class annotations by reflection. Without it the startup fails with `[type-resolver-contracts-not-found]`. | Add `micronaut-graphql-tools-processor` to `annotationProcessor`, `ksp` or `kapt`, or `compileOnly` (Groovy); `micronaut.graphql.tools.processor.checks=false` keeps the checks off and still records the contracts. A bean annotated directly needs nothing.
 | BC-34 resolver stereotypes carry no bean (#73) | A class that carries `@GraphQLRootResolver` or `@GraphQLTypeResolver`, extends an annotated class or implements an annotated interface is a bean only when it has a scope annotation of its own. | Annotate each resolver class with `@Singleton`; see <<resolverContracts,Resolver Contracts>>.
 | BC-35 resolvers run on the blocking executor (#49) | Every operation hops once to Micronaut's blocking executor before graphql-java runs, so parsing, validation, the customizer and every synchronous resolver run on a virtual thread (JDK 21 and later) or an `io` pool thread (JDK 17), not on the Netty event loop. A resolver that relied on the event loop thread, or on a thread local set there, sees another thread. The transport's own invocation is replaced: an application with its own `GraphQLInvocation` needs `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary`, and the library then steps aside. | Nothing for a resolver that does not depend on its thread; it can now block. To keep the old behaviour set `micronaut.graphql.tools.execution.executor: none`. Choose another executor with its name.
+| BC-37 unhandled exceptions are hidden (#32) | The message of an exception that a resolver throws is no longer sent to the client: the error is `Internal server error` with `extensions.code` `INTERNAL_ERROR`. Before, graphql-java's handler sent `Exception while fetching data (/path) : <message>`, and logged each error at WARN with a stack trace; now one ERROR line without a stack trace is logged. A client that matched on that message text, or a test that asserts it, fails. | Add a `GraphQLExceptionMapper` bean for each exception whose message the client may see, throw a `GraphQLError` exception, or turn on `micronaut.graphql.tools.errors.details` in a development environment. A `DataFetcherExceptionHandler` of your own set in a `GraphQLBuilderCustomizer` keeps working.
 |===
 
 == Entries for 1.0.0-M1
@@ -838,3 +839,36 @@ micronaut:
 ----
 
 See the Execution page for the executors, the order of the steps and the rejection response.
+
+=== BC-37: unhandled exceptions are hidden from the client (#32)
+
+graphql-java's default handler put the message of every exception into the error: `Exception while fetching data (/stockBoom) : secret detail`. That leaks internals (a SQL fragment, a host name, a constraint name) to any client. The library now installs its own handler. An exception that no mapper handles and that is no `GraphQLError` gets the message `Internal server error` and `extensions.code` `INTERNAL_ERROR`; its message and class go to the log, once, at ERROR and without a stack trace.
+
+What breaks: a client or a test that matched the old message text, and a log alert on the old WARN entries. The path, the locations and the data of the other fields are unchanged.
+
+Status: approved, opt-out for development with `micronaut.graphql.tools.errors.details`, which sends the message and the class. There is no setting that restores the old text format.
+
+[source,yaml]
+----
+# Before: the message of every exception reached the client. To see it again in development:
+micronaut:
+  graphql:
+    tools:
+      errors:
+        details: true
+----
+
+For production, map the exceptions whose message is meant for the client:
+
+[source,java]
+----
+@Singleton
+class OutOfStockMapper implements GraphQLExceptionMapper<OutOfStockException> {
+    @Override
+    public GraphQLError map(OutOfStockException exception, GraphQLExceptionContext context) {
+        return context.error(exception.getMessage(), Map.of("code", "OUT_OF_STOCK"));
+    }
+}
+----
+
+See the Errors page for the mappers, their order, the details setting and the customizers of the final error list.

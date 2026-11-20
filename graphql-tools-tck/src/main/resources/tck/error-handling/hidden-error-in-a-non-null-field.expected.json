@@ -1,0 +1,22 @@
+{
+  "data": null,
+  "errors": [
+    {
+      "message": "Internal server error",
+      "locations": [
+        {
+          "line": 3,
+          "column": 3
+        }
+      ],
+      "path": [
+        "stockBoomNonNull"
+      ],
+      "extensions": {
+        "code": "INTERNAL_ERROR",
+        "service": "catalog",
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

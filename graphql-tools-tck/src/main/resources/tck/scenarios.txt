@@ -12,3 +12,5 @@ input-errors
 execution-thread
 execution-thread-none
 async-context
+error-handling
+error-details
