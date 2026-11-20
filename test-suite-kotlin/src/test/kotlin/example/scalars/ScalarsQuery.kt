@@ -15,6 +15,7 @@
  */
 package example.scalars
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import java.net.URL
@@ -25,6 +26,7 @@ import java.util.UUID
 
 // tag::resolver[]
 @Requires(env = [SCALARS_DEFAULTS, SCALARS_RENAMED])
+@Singleton
 @GraphQLRootResolver
 open class ScalarsQuery {
 

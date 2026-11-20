@@ -84,6 +84,7 @@ class VolumeLoader implements MappedBatchLoader<String, List<Volume>> {
 // end::loader[]
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'data-loader')
 class DataLoaderQueries {
@@ -106,6 +107,7 @@ class DataLoaderQueries {
 @Requires(property = 'tck.scenario', value = 'data-loader')
 // tag::typed-parameter[]
 @CompileStatic
+@Singleton
 @GraphQLTypeResolver(Author)
 class AuthorResolver {
 

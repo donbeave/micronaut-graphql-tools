@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.scalar
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -164,6 +165,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Measurement measurement() {
@@ -208,6 +210,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_MISMATCH)
+    @Singleton
     @GraphQLRootResolver
     static class MismatchQuery {
         Long ratio() {

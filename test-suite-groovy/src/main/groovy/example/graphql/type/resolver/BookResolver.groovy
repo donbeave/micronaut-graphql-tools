@@ -15,6 +15,7 @@
  */
 package example.graphql.type.resolver
 
+import jakarta.inject.Singleton
 import example.ElapsedTime
 import example.data.Book
 import example.data.BookSeller
@@ -25,6 +26,7 @@ import org.dataloader.DataLoader
 import java.util.concurrent.CompletionStage
 
 @CompileStatic
+@Singleton
 @GraphQLTypeResolver(Book)
 class BookResolver {
 

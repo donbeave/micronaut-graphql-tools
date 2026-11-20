@@ -144,6 +144,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '(\\.noResolver)?')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         List<Section> sections() {
@@ -174,6 +175,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Section.class)
     static class SectionResolver {
         String summary(Section section) {

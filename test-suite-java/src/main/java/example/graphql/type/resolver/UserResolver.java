@@ -15,6 +15,7 @@
  */
 package example.graphql.type.resolver;
 
+import jakarta.inject.Singleton;
 import example.ElapsedTime;
 import example.data.Book;
 import example.data.User;
@@ -23,6 +24,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 
 import java.util.List;
 
+@Singleton
 @GraphQLTypeResolver(User.class)
 public class UserResolver {
 

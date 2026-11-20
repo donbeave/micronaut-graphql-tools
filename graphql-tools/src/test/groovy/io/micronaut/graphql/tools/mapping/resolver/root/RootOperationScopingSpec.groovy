@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.root
 
+import jakarta.inject.Singleton
 import graphql.ExecutionResult
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -76,6 +77,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(scoped|twoCoordinates|mixed)')
+    @Singleton
     @GraphQLRootResolver
     static class StatusQuery {
         @GraphQLSchemaCoordinate("Query.status")
@@ -85,6 +87,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(scoped|twoCoordinates)')
+    @Singleton
     @GraphQLRootResolver
     static class StatusMutation {
         @GraphQLSchemaCoordinate("Mutation.status")
@@ -94,6 +97,7 @@ type Subscription {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(scoped|twoCoordinates)')
+    @Singleton
     @GraphQLRootResolver
     static class StatusSubscription {
         @GraphQLSchemaCoordinate("Subscription.status")
@@ -129,6 +133,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".unscoped")
+    @Singleton
     @GraphQLRootResolver
     static class PingResolver {
         String ping() {
@@ -153,6 +158,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".queryOnly")
+    @Singleton
     @GraphQLRootResolver
     static class QueryOnlyStatus {
         @GraphQLSchemaCoordinate("Query.status")
@@ -189,6 +195,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(twoBeans|mixed)')
+    @Singleton
     @GraphQLRootResolver
     static class FirstStatusQuery {
         String status(String id) {
@@ -197,6 +204,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".twoBeans")
+    @Singleton
     @GraphQLRootResolver
     static class SecondStatusQuery {
         String status(String id) {
@@ -224,6 +232,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".twoCoordinates")
+    @Singleton
     @GraphQLRootResolver
     static class DuplicateStatusQuery {
         @GraphQLSchemaCoordinate("Query.status")

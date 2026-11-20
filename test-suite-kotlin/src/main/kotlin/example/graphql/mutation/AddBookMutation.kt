@@ -15,6 +15,7 @@
  */
 package example.graphql.mutation
 
+import jakarta.inject.Singleton
 import example.ElapsedTime
 import example.data.AuthenticationService
 import example.data.BookRepository
@@ -26,6 +27,7 @@ import example.graphql.type.ValidationError
 import example.graphql.type.ValidationErrorCode
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
+@Singleton
 @GraphQLRootResolver
 open class AddBookMutation(
     private val authenticationService: AuthenticationService,

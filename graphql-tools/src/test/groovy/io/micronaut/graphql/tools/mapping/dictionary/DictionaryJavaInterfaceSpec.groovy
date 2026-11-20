@@ -319,6 +319,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     }
 
     @Requires(property = 'spec.name', value = UNION_MEMBER)
+    @Singleton
     @GraphQLRootResolver
     static class UnionMemberQuery {
         SearchResult search(boolean book) {
@@ -356,6 +357,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     }
 
     @Requires(property = 'spec.name', value = INTERFACE_IMPLEMENTATION)
+    @Singleton
     @GraphQLRootResolver
     static class InterfaceImplementationQuery {
         List<ShelfEntry> shelf() {
@@ -376,6 +378,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     }
 
     @Requires(property = 'spec.name', value = FIELD_IMPLEMENTATION)
+    @Singleton
     @GraphQLRootResolver
     static class FieldImplementationQuery {
         BookModel book() {
@@ -394,6 +397,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     }
 
     @Requires(property = 'spec.name', value = FIELD_INTERFACE)
+    @Singleton
     @GraphQLRootResolver
     static class FieldInterfaceQuery {
         BookGraph book() {
@@ -412,6 +416,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     }
 
     @Requires(property = 'spec.name', value = BOTH_FIELDS)
+    @Singleton
     @GraphQLRootResolver
     static class BothFieldsQuery {
         BookGraph book() {
@@ -424,6 +429,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     }
 
     @Requires(property = 'spec.name', pattern = 'DictionaryJavaInterfaceSpec\\.(annotatedImplementation|implementingClass)')
+    @Singleton
     @GraphQLRootResolver
     static class BookOrNovelQuery {
         SearchResult search(boolean book) {
@@ -456,6 +462,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     }
 
     @Requires(property = 'spec.name', value = SUBCLASS)
+    @Singleton
     @GraphQLRootResolver
     static class SubclassQuery {
         EssayResult essay(@GraphQLArgument('long') boolean isLong) {

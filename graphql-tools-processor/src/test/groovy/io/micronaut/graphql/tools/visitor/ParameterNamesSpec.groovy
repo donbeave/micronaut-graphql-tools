@@ -47,6 +47,7 @@ public abstract class Base {
 
     private static final String QUERY = '''
 package example;
+@jakarta.inject.Singleton
 @io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 public class Query extends base.Base {
 }
@@ -54,6 +55,7 @@ public class Query extends base.Base {
 
     private static final String OWN = '''
 package example;
+@jakarta.inject.Singleton
 @io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 public class Query {
     public String page(Integer offset, Integer first) { return "first=" + first + " offset=" + offset; }

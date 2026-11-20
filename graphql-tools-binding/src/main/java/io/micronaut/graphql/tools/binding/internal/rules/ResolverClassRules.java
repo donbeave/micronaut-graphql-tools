@@ -450,6 +450,7 @@ public final class ResolverClassRules {
         Map<String, String> declared = declaredCoordinates(bindable);
         boolean root = resolver.annotations().has(AnnotationNames.ROOT_RESOLVER);
         Set<String> rootTypes = schema.rootTypeNames();
+        Set<String> operationTypes = schema.rootTypeNames(resolver.markers().operations());
 
         List<MethodVerdict> methods = new ArrayList<>();
         for (JMethod method : bindable) {
@@ -464,7 +465,7 @@ public final class ResolverClassRules {
                 }
             } else if (root) {
                 List<String> names = FieldNames.ofResolverMethod(method.name(), accessorPrefixes);
-                new TreeSet<>(rootTypes).forEach(type -> names.forEach(name -> {
+                new TreeSet<>(operationTypes).forEach(type -> names.forEach(name -> {
                     if (field(schema, type, name) != null) {
                         coordinates.add(type + "." + name);
                     }

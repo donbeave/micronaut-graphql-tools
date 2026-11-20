@@ -165,6 +165,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', pattern = 'EagerInitSpec(|\\.ownGraphQL)')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {

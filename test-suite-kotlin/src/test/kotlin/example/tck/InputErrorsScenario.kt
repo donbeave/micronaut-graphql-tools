@@ -76,6 +76,7 @@ class InputErrorsScalars {
         ).outputClasses(Map::class.java).inputClasses(Map::class.java).build()
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "input-errors")
 class InputErrorsQueries {

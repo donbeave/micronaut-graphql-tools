@@ -215,6 +215,7 @@ input StrictInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String ok() { 'fine' }

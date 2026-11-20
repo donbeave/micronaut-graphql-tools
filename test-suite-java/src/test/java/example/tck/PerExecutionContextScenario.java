@@ -69,6 +69,7 @@ public final class PerExecutionContextScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "per-execution-context")
     public static class ContextQueries {

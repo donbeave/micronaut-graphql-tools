@@ -54,6 +54,7 @@ class VolumeLoader : MappedBatchLoader<String, List<Volume>> {
 }
 // end::loader[]
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "data-loader")
 class DataLoaderQueries(private val volumeLoader: VolumeLoader) {
@@ -65,6 +66,7 @@ class DataLoaderQueries(private val volumeLoader: VolumeLoader) {
 
 @Requires(property = "tck.scenario", value = "data-loader")
 // tag::typed-parameter[]
+@Singleton
 @GraphQLTypeResolver(Author::class)
 class AuthorResolver {
 

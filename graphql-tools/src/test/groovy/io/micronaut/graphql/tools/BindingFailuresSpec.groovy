@@ -118,6 +118,7 @@ type Book {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Book book() {
@@ -173,6 +174,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".interface")
+    @Singleton
     @GraphQLRootResolver
     static class SectionQuery {
         List<Section> sections() {

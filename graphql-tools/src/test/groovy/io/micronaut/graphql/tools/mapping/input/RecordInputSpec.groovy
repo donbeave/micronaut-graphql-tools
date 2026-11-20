@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input
 
+import jakarta.inject.Singleton
 import graphql.ExecutionInput
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -93,6 +94,7 @@ input Order {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String plain(JavaRecordInputs.Plain input) {

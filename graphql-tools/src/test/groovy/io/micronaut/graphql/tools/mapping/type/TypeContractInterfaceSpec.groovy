@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.type
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Introspected
@@ -280,6 +281,7 @@ type Card implements Face {
     }
 
     @Requires(property = 'spec.name', value = UNANNOTATED_IMPLEMENTATIONS)
+    @Singleton
     @GraphQLRootResolver
     static class ReviewQuery {
         List<ReviewGraph> reviews() {
@@ -291,6 +293,7 @@ type Card implements Face {
     }
 
     @Requires(property = 'spec.name', value = UNANNOTATED_IMPLEMENTATIONS)
+    @Singleton
     @GraphQLTypeResolver(ReviewGraph)
     static class ReviewResolver {
         String summary(ReviewGraph review) {
@@ -319,6 +322,7 @@ type Card implements Face {
     }
 
     @Requires(property = 'spec.name', value = ANNOTATED_IMPLEMENTATIONS)
+    @Singleton
     @GraphQLRootResolver
     static class LineItemQuery {
         LineItemModel item() {
@@ -349,6 +353,7 @@ type Card implements Face {
     }
 
     @Requires(property = 'spec.name', value = INTROSPECTED_CONTRACT)
+    @Singleton
     @GraphQLRootResolver
     static class TagQuery {
         List<TagGraph> tags() {
@@ -368,6 +373,7 @@ type Card implements Face {
     }
 
     @Requires(property = 'spec.name', value = IMPLEMENTATION_ONLY_GETTER)
+    @Singleton
     @GraphQLRootResolver
     static class ArticleQuery {
         ArticleGraph article() {
@@ -389,6 +395,7 @@ type Card implements Face {
     }
 
     @Requires(property = 'spec.name', value = INTERFACE_FIELD_ONLY_ON_IMPLEMENTATION)
+    @Singleton
     @GraphQLRootResolver
     static class MemoQuery {
         List<EntryGraph> entries() {
@@ -425,6 +432,7 @@ type Card implements Face {
     }
 
     @Requires(property = 'spec.name', value = FIELD_ORDER)
+    @Singleton
     @GraphQLRootResolver
     static class CardQuery {
         CardModel featured() {
@@ -457,6 +465,7 @@ type Card implements Face {
     }
 
     @Requires(property = 'spec.name', value = NO_CONTRACT_INTROSPECTION)
+    @Singleton
     @GraphQLRootResolver
     static class ChapterQuery {
         ChapterGraph chapter() {

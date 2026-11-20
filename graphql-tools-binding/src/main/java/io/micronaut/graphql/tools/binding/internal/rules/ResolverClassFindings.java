@@ -100,6 +100,7 @@ public final class ResolverClassFindings {
         bindable.forEach(it -> bySignature.put(it.signature(), it));
         Map<String, String> declared = ResolverClassRules.declaredCoordinates(bindable);
         Set<String> rootTypes = schema.rootTypeNames();
+        Set<String> operationTypes = schema.rootTypeNames(resolver.markers().operations());
 
         EnumSet<ResolverKind> kinds = EnumSet.noneOf(ResolverKind.class);
         if (root) {
@@ -177,7 +178,7 @@ public final class ResolverClassFindings {
                     }
                     unbound = contracts.size() == 1 && names.stream().noneMatch(objectFields::contains);
                 } else {
-                    unbound = names.stream().noneMatch(name -> rootTypes.stream()
+                    unbound = names.stream().noneMatch(name -> operationTypes.stream()
                             .anyMatch(rootType -> fieldDefinition(schema, rootType, name) != null));
                 }
                 if (unbound) {
@@ -233,6 +234,11 @@ public final class ResolverClassFindings {
         }
         if (resolver.annotations().has(AnnotationNames.TYPE_RESOLVER)) {
             contracts.addAll(resolver.annotations().classValues(AnnotationNames.TYPE_RESOLVER, "value"));
+        }
+        // the marker TypeResolver<T> names its source type by its type argument, and the annotation on the marker has none
+        contracts.remove("void");
+        if (resolver.markers().sourceType() != null) {
+            contracts.add(resolver.markers().sourceType());
         }
         return contracts;
     }

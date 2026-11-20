@@ -15,6 +15,7 @@
  */
 package example.graphql.query
 
+import jakarta.inject.Singleton
 import example.ElapsedTime
 import example.data.Book
 import example.data.BookRepository
@@ -24,6 +25,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.runtime.event.annotation.EventListener
 
 // tag::resolver[]
+@Singleton
 @GraphQLRootResolver
 open class AllBooksQuery(private val bookRepository: BookRepository) {
 

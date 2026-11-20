@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.precedence
 
+import jakarta.inject.Singleton
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -210,6 +211,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + '.coordinate')
+    @Singleton
     @GraphQLRootResolver
     static class CoordinateQuery {
         List<Item> items() {
@@ -218,6 +220,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + '.coordinate')
+    @Singleton
     @GraphQLTypeResolver(Item.class)
     static class CoordinateItemResolver {
         @GraphQLSchemaCoordinate("Item.price")
@@ -312,6 +315,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         List<Item> items() {
@@ -326,6 +330,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Item.class)
     static class ItemResolver {
         CompletionStage<Long> price(Item item) {
@@ -366,6 +371,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".getterOnly")
+    @Singleton
     @GraphQLRootResolver
     static class GetterOnlyQuery {
         List<Item> items() {
@@ -402,6 +408,7 @@ type Label {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".method")
+    @Singleton
     @GraphQLRootResolver
     static class LabelQuery {
         Label label() {
@@ -418,6 +425,7 @@ type Label {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".method")
+    @Singleton
     @GraphQLTypeResolver(Label.class)
     static class LabelResolver {
         String text(Label label, Boolean upper) {

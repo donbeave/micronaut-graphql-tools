@@ -64,6 +64,7 @@ import graphql.schema.DataFetchingEnvironment;
     def "a resolver method that binds no field of a root type is unbound, and the error carries a fix"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String book(String id) { return id; }
@@ -79,6 +80,7 @@ public class QueryResolver {
     def "the hatches: @GraphQLIgnore, a lifecycle method, a private method, a static method and an Object method"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String version() { return "1"; }
@@ -97,6 +99,7 @@ public class QueryResolver {
     def "a package-private method of a resolver bean is an unbound resolver method, as at startup"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String version() { return "1"; }
@@ -111,6 +114,7 @@ public class QueryResolver {
     def "a parameter that binds no argument is reported with the coordinate, the schema location and the member"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String books(int limit) { return ""; }
@@ -128,6 +132,7 @@ public class QueryResolver {
     def "the arguments are matched by name and by @GraphQLArgument, not by position"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String books(String genre, DataFetchingEnvironment environment) { return genre; }
@@ -141,16 +146,19 @@ public class QueryResolver {
     def "reordered parameters of different types are accepted; a duplicate binding and a missing parameter are rejected"() {
         when:
         def reordered = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String search(Integer limit, String term) { return term; }
 }''').compile()
         def duplicate = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String search(String term, @GraphQLArgument("term") String other) { return term; }
 }''').compile()
         def missing = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String search(String term) { return term; }
@@ -168,6 +176,7 @@ public class QueryResolver {
     def "the return type is checked against the field, after the arguments"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public CompletionStage<CompletionStage<String>> version() { return null; }
@@ -181,11 +190,13 @@ public class QueryResolver {
     def "a root method that binds fields of several operation types is reported once; a coordinate settles it"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class Operations {
     public String ping() { return ""; }
 }''').compile()
         def settled = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class Operations {
     @GraphQLSchemaCoordinate("Query.ping") public String ping() { return ""; }
@@ -200,6 +211,7 @@ public class Operations {
     def "a coordinate binds a method with another name, and its arguments are checked against the field it names"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     @GraphQLSchemaCoordinate("Query.books") public String fetch(int limit) { return ""; }
@@ -213,6 +225,7 @@ public class QueryResolver {
     def "with the accessor prefixes option a getX method binds the field x and is checked; without it nothing is reported for it"() {
         given:
         def body = '''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String getBooks(int limit) { return ""; }
@@ -232,6 +245,7 @@ public class QueryResolver {
     def "a method that no prefix could bind is unbound whether or not the prefixes are on"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String getStray() { return ""; }
@@ -244,6 +258,7 @@ public class QueryResolver {
     def "a coordinate that does not fit the schema is reported with the coordinate it declares"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     @GraphQLSchemaCoordinate("Missing.field") public String field() { return ""; }
@@ -254,14 +269,42 @@ public class QueryResolver {
         result.findings == ['[unknown-schema-coordinate] Missing.field', '[unknown-schema-coordinate] Query.nowhere']
     }
 
+    def "the contract methods include the methods a contract inherits and those of an annotated contract beside a marker contract"() {
+        when:
+        def result = compilation('''
+public interface Named {
+    String ping(String extra);
+}''', '''
+public interface QueryContract extends io.micronaut.graphql.tools.resolver.QueryResolver, Named {
+    String version();
+}''', '''
+@GraphQLRootResolver
+public interface SearchContract {
+    String search(Integer term);
+}''', '''
+@jakarta.inject.Singleton
+public class Implementation implements QueryContract, SearchContract {
+    public String ping(String extra) { return ""; }
+    public String version() { return ""; }
+    public String search(Integer term) { return ""; }
+    public String stray() { return ""; }
+}''').compile()
+
+        then:
+        // the inherited and the annotated contract methods are checked, the helper is not
+        result.findings.sort() == ['[argument-mismatch] Query.ping', '[argument-mismatch] Query.search']
+    }
+
     def "a type resolver is checked through its contract: the source parameter and the arguments"() {
         when:
         def result = compilation('''
 public class BookModel { }''', '''
+@jakarta.inject.Singleton
 @GraphQLTypeResolver(BookModel.class)
 public class BookResolver {
     @GraphQLSchemaCoordinate("Book.title") public String title(String other, Boolean upper) { return ""; }
 }''', '''
+@jakarta.inject.Singleton
 @GraphQLTypeResolver(BookModel.class)
 public class OtherResolver {
     public String title(BookModel book, Boolean upper) { return ""; }
@@ -288,6 +331,7 @@ public interface Contract {
 public abstract class BaseQuery {
     public String stray() { return ""; }
 }''', '''
+@jakarta.inject.Singleton
 public class Query extends BaseQuery {
     public String book(String id) { return id; }
 }''', '''
@@ -327,6 +371,7 @@ public class Helper implements Contract {
 public abstract class Base<T> {
     public CompletionStage<T> version() { return null; }
 }''', '''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver extends Base<CompletionStage<String>> {
 }''').compile()
@@ -338,6 +383,7 @@ public class QueryResolver extends Base<CompletionStage<String>> {
     def "a Java method whose name starts with a dollar sign is a resolver method like any other"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String $helper() { return ""; }
@@ -355,6 +401,7 @@ public class QueryResolver {
 @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 public @interface Answering { }''')
                 .source('example.IntroducedQuery', HEADER + '''
+@jakarta.inject.Singleton
 @Answering
 @GraphQLRootResolver
 public interface IntroducedQuery {
@@ -369,6 +416,7 @@ public interface IntroducedQuery {
     def "a type variable that is bound by itself is read as its bound, not followed for ever: #member"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver<T extends Comparable<T>> {
 ''' + member + '''
@@ -389,6 +437,7 @@ public class QueryResolver<T extends Comparable<T>> {
     def "an unreachable type is not a compile-time finding: reachability is whole-program, a check of the startup (#83)"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String version() { return "1"; }
@@ -437,6 +486,7 @@ public class Link {
     public void setNext(Link next) { this.next = next; }
 }''')
                 .source('example.QueryResolver', HEADER + '''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String search(Link filter) { return ""; }
@@ -450,6 +500,7 @@ public class QueryResolver {
     }
 
     static final String BOOK_QUERY = '''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public Book book(String id) { return null; }

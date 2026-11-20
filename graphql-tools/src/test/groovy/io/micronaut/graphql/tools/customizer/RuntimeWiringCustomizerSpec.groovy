@@ -375,6 +375,7 @@ scalar Long
     }
 
     @Requires(property = 'spec.name', pattern = 'RuntimeWiringCustomizerSpec.*')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {

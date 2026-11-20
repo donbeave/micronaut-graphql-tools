@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -92,6 +93,7 @@ type Draft {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Book book() {
@@ -108,6 +110,7 @@ type Draft {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class BookResolver {
         String summary(Book book) {
@@ -116,6 +119,7 @@ type Draft {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Author.class)
     static class AuthorResolver {
         @GraphQLSchemaCoordinate("Book.summary")
@@ -172,6 +176,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".scalar")
+    @Singleton
     @GraphQLRootResolver
     static class ScalarQuery {
         Mixed b() {

@@ -15,6 +15,7 @@
  */
 package example.tck;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
@@ -124,6 +125,7 @@ public final class ArgumentsScenario {
     }
     // end::nested-constructor-input[]
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "arguments")
     public static class Queries {
@@ -175,6 +177,7 @@ public final class ArgumentsScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "arguments")
     public static class Mutations {

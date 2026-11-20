@@ -15,6 +15,7 @@
  */
 package example.drift
 
+import jakarta.inject.Singleton
 import example.graphql.type.Profile
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
@@ -24,6 +25,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
  * named `count`. The compilation of this source set must fail with `[argument-mismatch] Query.searchProfile` (task
  * `driftFixtureTest`). Nothing compiles it into the application.
  */
+@Singleton
 @GraphQLRootResolver
 open class DriftedSearchProfileQuery {
 

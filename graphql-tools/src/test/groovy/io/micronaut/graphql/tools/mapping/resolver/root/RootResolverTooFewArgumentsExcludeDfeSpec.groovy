@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.root
 
+import jakarta.inject.Singleton
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -63,6 +64,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String username(DataFetchingEnvironment dfe) {

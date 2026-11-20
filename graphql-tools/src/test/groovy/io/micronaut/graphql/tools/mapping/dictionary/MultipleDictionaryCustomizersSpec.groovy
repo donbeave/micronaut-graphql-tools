@@ -126,6 +126,7 @@ type Second {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Result find(boolean first) {
@@ -134,6 +135,7 @@ type Second {
     }
 
     @Requires(property = 'spec.name', value = CONFLICTING)
+    @Singleton
     @GraphQLRootResolver
     static class ConflictingQuery {
         Result find(boolean first) {

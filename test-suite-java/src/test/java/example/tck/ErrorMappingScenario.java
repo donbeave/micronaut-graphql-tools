@@ -77,6 +77,7 @@ public final class ErrorMappingScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "error-mapping")
     public static class Queries {

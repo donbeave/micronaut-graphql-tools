@@ -14,6 +14,7 @@ This page tells you which package holds what, which packages you may import from
 |===
 |I want to |Import from
 |Mark a resolver class, a method, a parameter, an input class, or list model classes without an annotation |`io.micronaut.graphql.tools.annotation`
+|Declare a resolver contract that fixes the root operation type or the source type |`io.micronaut.graphql.tools.resolver` (`QueryResolver`, `MutationResolver`, `SubscriptionResolver`, `TypeResolver<T>`)
 |Catch a startup failure |`io.micronaut.graphql.tools.exceptions` (`SchemaBindingException`; match on its code)
 |Read an error code |`io.micronaut.graphql.tools.binding` (`BindingCode`)
 |Change a setting in code |`io.micronaut.graphql.tools.config` (`GraphQLToolsConfiguration`)
@@ -43,7 +44,8 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.input` |graphql-tools |Public API |`ArgumentValue`
 |`io.micronaut.graphql.tools.manifest` |graphql-tools |Public API |`BindingManifest`
 |`io.micronaut.graphql.tools.execution` |graphql-tools |Public API |`GraphQLContextContributor`, the read-only `GraphQLExecutionRequest` that it receives and the `GraphQLTransport` kinds
-|`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes
+|`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes, and `ResolverBeanCondition`, the bean condition behind the resolver annotations (an application never refers to it)
+|`io.micronaut.graphql.tools.resolver` |graphql-tools |Public API |The marker interfaces of resolver contracts: `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>`
 |`io.micronaut.graphql.tools.exceptions` |graphql-tools |Public API |The startup failure: `SchemaBindingException`, the one exception to catch
 |`io.micronaut.graphql.tools.internal.exceptions` |graphql-tools |Internal |The base classes of the failures and the aggregate of one binding run; the classes of each kind are in the sub-packages
 |`io.micronaut.graphql.tools.internal.exceptions.mapping` |graphql-tools |Internal |The failures of the mapping dictionary and of class and scalar mappings

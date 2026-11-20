@@ -439,6 +439,7 @@ type Stray implements Coded {
     }
 
     @Requires(property = 'spec.name', value = UNION_SUBCLASS)
+    @Singleton
     @GraphQLRootResolver
     static class PayloadQuery {
         PayloadGraph payload(String kind) {
@@ -489,6 +490,7 @@ type Stray implements Coded {
     }
 
     @Requires(property = 'spec.name', value = UNION_CONTRACT)
+    @Singleton
     @GraphQLRootResolver
     static class ResultQuery {
         List<ResultGraph> results() {
@@ -497,6 +499,7 @@ type Stray implements Coded {
     }
 
     @Requires(property = 'spec.name', value = INTERFACE_SUBCLASS_AND_CONTRACT)
+    @Singleton
     @GraphQLRootResolver
     static class TrackQuery {
         List<ResultGraph> tracks() {
@@ -542,6 +545,7 @@ type Stray implements Coded {
     }
 
     @Requires(property = 'spec.name', pattern = 'AbstractTypeAssignabilitySpec\\.(unionAmbiguous|interfaceAmbiguous)')
+    @Singleton
     @GraphQLRootResolver
     static class ItemQuery {
         ItemGraph item(boolean bundle) {
@@ -577,6 +581,7 @@ type Stray implements Coded {
     }
 
     @Requires(property = 'spec.name', value = SUBCLASS_CHAIN)
+    @Singleton
     @GraphQLRootResolver
     static class TextQuery {
         List<TextGraph> texts() {
@@ -619,6 +624,7 @@ type Stray implements Coded {
     }
 
     @Requires(property = 'spec.name', value = FIELD_ORDER)
+    @Singleton
     @GraphQLRootResolver
     static class ShelfQuery {
         VolumeModel volume() {
@@ -660,6 +666,7 @@ type Stray implements Coded {
     }
 
     @Requires(property = 'spec.name', value = UNRELATED_CONTRACT)
+    @Singleton
     @GraphQLRootResolver
     static class PayQuery {
         PayGraph pay(String kind) {
@@ -685,6 +692,7 @@ type Stray implements Coded {
     }
 
     @Requires(property = 'spec.name', pattern = 'AbstractTypeAssignabilitySpec\\.(unionStrayMember|interfaceStrayMember)')
+    @Singleton
     @GraphQLRootResolver
     static class StrayQuery {
         PayloadGraph payload(String kind) {

@@ -215,6 +215,7 @@ enum Shade {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String pick(Color color) {
@@ -243,6 +244,7 @@ enum Shade {
     }
 
     @Requires(property = 'spec.name', value = SPEC_REPLACED)
+    @Singleton
     @GraphQLRootResolver
     static class ReplacedQuery {
         String pick(Color color) {
@@ -267,6 +269,7 @@ enum Shade {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NOT_INTROSPECTED)
+    @Singleton
     @GraphQLRootResolver
     static class ShadeQuery {
         Shade shade() {

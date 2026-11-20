@@ -103,6 +103,7 @@ public final class DataLoaderScenario {
     }
     // end::loader[]
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "data-loader")
     public static class Queries {
@@ -124,6 +125,7 @@ public final class DataLoaderScenario {
 
     @Requires(property = "tck.scenario", value = "data-loader")
     // tag::typed-parameter[]
+    @Singleton
     @GraphQLTypeResolver(Author.class)
     public static class AuthorResolver {
 

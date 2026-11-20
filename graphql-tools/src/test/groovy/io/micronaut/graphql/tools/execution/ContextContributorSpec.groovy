@@ -205,6 +205,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC + '(\\.(reject|explode|none))?')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String value(String key, DataFetchingEnvironment environment) {

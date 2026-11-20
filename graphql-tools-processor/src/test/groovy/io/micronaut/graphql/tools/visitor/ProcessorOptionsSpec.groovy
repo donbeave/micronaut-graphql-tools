@@ -25,6 +25,7 @@ class ProcessorOptionsSpec extends Specification {
     static final String RESOLVER = '''
 package example;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String stray() { return ""; }

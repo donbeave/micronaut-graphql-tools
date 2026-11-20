@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
+import jakarta.inject.Singleton
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
@@ -372,6 +373,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Item item() {
@@ -380,6 +382,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_EXTENSION)
+    @Singleton
     @GraphQLRootResolver
     static class ExtensionQuery {
         String title() {

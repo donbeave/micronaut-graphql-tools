@@ -15,6 +15,7 @@
  */
 package example.deepchain;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
@@ -24,6 +25,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLType;
 public class DeepTypeChainResolvers {
 
     @Requires(env = DeepTypeChainFactory.ENVIRONMENT)
+    @Singleton
     @GraphQLRootResolver
     public static class Query {
 

@@ -65,6 +65,7 @@ class RequestProbeLoader implements BatchLoader<String, Boolean> {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'per-execution-context')
 class ContextQueries {

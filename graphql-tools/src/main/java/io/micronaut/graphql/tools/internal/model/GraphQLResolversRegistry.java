@@ -21,6 +21,7 @@ import io.micronaut.context.annotation.Infrastructure;
 import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.mapping.MappingContext;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
@@ -28,23 +29,26 @@ import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.binding.internal.meta.ResolverContracts;
 import io.micronaut.graphql.tools.binding.internal.model.JMethod;
+import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.internal.MicronautUtils;
 import io.micronaut.graphql.tools.internal.exceptions.implementation.AmbiguousTypeResolverException;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.IncorrectAnnotationException;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.MethodNotFoundException;
 import io.micronaut.graphql.tools.internal.exceptions.implementation.TypeResolverContractsNotFoundException;
+import io.micronaut.graphql.tools.resolver.MutationResolver;
+import io.micronaut.graphql.tools.resolver.QueryResolver;
+import io.micronaut.graphql.tools.resolver.SubscriptionResolver;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.qualifiers.Qualifiers;
 import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -74,6 +78,8 @@ public final class GraphQLResolversRegistry {
     private final Map<BeanDefinition<?>, List<ExecutableMethod<Object, ?>>> pendingTypeResolverMethods =
             new LinkedHashMap<>();
     private final List<BeanDefinition<?>> unreadableTypeResolverContracts = new ArrayList<>();
+    private final List<BeanDefinition<?>> unreadableRootMarkers = new ArrayList<>();
+    private final Map<BeanDefinition<?>, ResolverMarkers> markers = new HashMap<>();
     private Function<BeanDefinition<?>, Map<String, Class<?>>> typeResolverContractReader =
             GraphQLResolversRegistry::readTypeResolverContracts;
     private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
@@ -106,6 +112,16 @@ public final class GraphQLResolversRegistry {
         if (beanDefinition.isAbstract()) {
             return;
         }
+        ResolverMarkers markers = markersOf(beanDefinition);
+        if (markers.operations().isEmpty() && implementsRootMarker(getUserBeanType(beanDefinition))) {
+            if (!unreadableRootMarkers.contains(beanDefinition)) {
+                unreadableRootMarkers.add(beanDefinition);
+            }
+            return;
+        }
+        if (!markers.admits(method.getMethodName())) {
+            return;
+        }
         rootResolvers.computeIfAbsent(beanDefinition, this::newItem).addExecutableMethod(method);
     }
 
@@ -114,37 +130,62 @@ public final class GraphQLResolversRegistry {
         if (beanDefinition.isAbstract()) {
             return;
         }
-        getTypeResolverValue(beanDefinition);
+        if (declaredModel(beanDefinition) == null && typeResolverContractReader.apply(beanDefinition).isEmpty()) {
+            throw new IncorrectAnnotationException(beanDefinition.getBeanType());
+        }
+        if (!markersOf(beanDefinition).admits(method.getMethodName())) {
+            return;
+        }
 
         pendingTypeResolverMethods.computeIfAbsent(beanDefinition, it -> new ArrayList<>()).add(method);
     }
 
-    private static Class<?> getTypeResolverValue(BeanDefinition<?> beanDefinition) {
-        AnnotationClassValue<Class<?>> annotationValue = (AnnotationClassValue<Class<?>>) beanDefinition
-                .getValue(GraphQLTypeResolver.class, AnnotationMetadata.VALUE_MEMBER)
-                .orElseThrow(() -> new IncorrectAnnotationException(beanDefinition.getBeanType()));
+    // the class that @GraphQLTypeResolver names on the bean, or null when the annotation names none (the marker
+    // interface TypeResolver<T> names it by its type argument)
+    @Nullable
+    private static Class<?> declaredModel(BeanDefinition<?> beanDefinition) {
+        return beanDefinition.getValue(GraphQLTypeResolver.class, AnnotationMetadata.VALUE_MEMBER)
+                .map(it -> ((AnnotationClassValue<?>) it).getType().orElse(null))
+                .filter(it -> it != void.class)
+                .orElse(null);
+    }
 
-        return annotationValue.getType().get();
+    // what the visitor wrote for the bean: the root operations and the contract methods of its marker interfaces
+    private ResolverMarkers markersOf(BeanDefinition<?> beanDefinition) {
+        return markers.computeIfAbsent(beanDefinition, GraphQLResolversRegistry::readMarkers);
+    }
+
+    static ResolverMarkers readMarkers(BeanDefinition<?> beanDefinition) {
+        AnnotationMetadata metadata = beanDefinition.getAnnotationMetadata();
+        String[] operations = metadata.stringValues(ResolverContracts.class, "operations");
+        String[] methods = metadata.stringValues(ResolverContracts.class, "methods");
+        return new ResolverMarkers(List.of(operations), null, methods.length == 0 ? null : Set.of(methods));
+    }
+
+    private static boolean implementsRootMarker(Class<?> beanType) {
+        return QueryResolver.class.isAssignableFrom(beanType) || MutationResolver.class.isAssignableFrom(beanType)
+                || SubscriptionResolver.class.isAssignableFrom(beanType);
     }
 
     private void resolveTypeResolverMethods() {
         for (Map.Entry<BeanDefinition<?>, List<ExecutableMethod<Object, ?>>> entry
                 : pendingTypeResolverMethods.entrySet()) {
             BeanDefinition<?> beanDefinition = entry.getKey();
-            Class<?> annotatedClass = getTypeResolverValue(beanDefinition);
 
             Map<String, Class<?>> contracts = typeResolverContractReader.apply(beanDefinition);
             if (contracts.isEmpty()) {
-                // the visitor wrote no contracts: only a class that carries the annotation itself, and inherits no other
-                // one, is still a resolver; with an inherited contract the fallback would drop that contract
-                if (!beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class)
-                        || inheritsTypeResolver(getUserBeanType(beanDefinition))) {
+                // the visitor wrote no contracts: only a class that carries the annotation itself and has no supertype
+                // besides Object, so that it inherits no other contract, is still a resolver
+                Class<?> declared = declaredModel(beanDefinition);
+                if (declared == null || !beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class)
+                        || hasSupertype(getUserBeanType(beanDefinition))) {
                     unreadableTypeResolverContracts.add(beanDefinition);
                     continue;
                 }
-                contracts = Map.of(getUserBeanType(beanDefinition).getName(), annotatedClass);
+                contracts = Map.of(getUserBeanType(beanDefinition).getName(), declared);
             }
             typeResolverContracts.put(beanDefinition, contracts);
+            Class<?> annotatedClass = contracts.values().iterator().next();
 
             Set<Class<?>> modelClasses = new HashSet<>(contracts.values());
             for (ExecutableMethod<Object, ?> method : entry.getValue()) {
@@ -317,33 +358,21 @@ public final class GraphQLResolversRegistry {
     }
 
     // Runs only when the build recorded no contracts, never on a bound bean.
-    private static boolean inheritsTypeResolver(Class<?> beanType) {
-        Deque<Class<?>> types = new ArrayDeque<>();
-        addSupertypes(beanType, types);
-        Set<Class<?>> visited = new HashSet<>();
-        while (!types.isEmpty()) {
-            Class<?> type = types.poll();
-            if (!visited.add(type)) {
-                continue;
-            }
-            if (type.isAnnotationPresent(GraphQLTypeResolver.class)) {
-                return true;
-            }
-            addSupertypes(type, types);
-        }
-        return false;
-    }
-
-    private static void addSupertypes(Class<?> type, Deque<Class<?>> types) {
-        if (type.getSuperclass() != null && type.getSuperclass() != Object.class) {
-            types.add(type.getSuperclass());
-        }
-        types.addAll(List.of(type.getInterfaces()));
+    private static boolean hasSupertype(Class<?> beanType) {
+        // GroovyObject is added to every Groovy class by the compiler and is no contract
+        return beanType.getSuperclass() != Object.class || Arrays.stream(beanType.getInterfaces())
+                .anyMatch(it -> !it.getName().equals("groovy.lang.GroovyObject"));
     }
 
     public void verifyTypeResolverContracts() {
         registerIntroductionBeans();
         resolveTypeResolverMethods();
+
+        unreadableRootMarkers.stream()
+                .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))
+                .ifPresent(beanDefinition -> {
+                    throw TypeResolverContractsNotFoundException.forRootMarker(getUserBeanType(beanDefinition));
+                });
 
         unreadableTypeResolverContracts.stream()
                 .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))
@@ -432,12 +461,15 @@ public final class GraphQLResolversRegistry {
         return !rootResolvers.isEmpty();
     }
 
-    public List<BeanDefinitionAndMethod> getRootExecutableMethods(String operationTypeName, String methodName,
-                                                           MappingContext mappingContext) {
+    public List<BeanDefinitionAndMethod> getRootExecutableMethods(String operation, String operationTypeName,
+                                                           String methodName, MappingContext mappingContext) {
         List<BeanDefinitionAndMethod> all = new ArrayList<>();
 
         for (BeanDefinitionAndMethods item : rootResolvers.values()) {
-            all.addAll(findMethods(item, methodName, Set.of(operationTypeName + "." + methodName)));
+            List<String> operations = markersOf(item.getBeanDefinition()).operations();
+            if (operations.isEmpty() || operations.contains(operation)) {
+                all.addAll(findMethods(item, methodName, Set.of(operationTypeName + "." + methodName)));
+            }
         }
 
         if (!all.isEmpty()) {

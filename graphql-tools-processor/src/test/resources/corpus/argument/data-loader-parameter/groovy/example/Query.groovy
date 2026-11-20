@@ -4,7 +4,9 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.dataloader.DataLoader
 
 import java.util.concurrent.CompletionStage
+import jakarta.inject.Singleton
 
+@Singleton
 @GraphQLRootResolver
 class Query {
 

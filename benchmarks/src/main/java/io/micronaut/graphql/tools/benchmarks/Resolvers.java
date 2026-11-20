@@ -60,6 +60,7 @@ public final class Resolvers {
     }
 
     @Requires(property = "benchmarks.large", notEquals = "true")
+    @Singleton
     @GraphQLRootResolver
     public static class Query {
 
@@ -113,6 +114,7 @@ public final class Resolvers {
     }
 
     @Requires(property = "benchmarks.large", notEquals = "true")
+    @Singleton
     @GraphQLTypeResolver(Item.class)
     public static class ItemResolver {
 

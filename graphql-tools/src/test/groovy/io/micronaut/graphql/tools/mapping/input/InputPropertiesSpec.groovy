@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -239,6 +240,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_LIST_ARGUMENT)
+    @Singleton
     @GraphQLRootResolver
     static class ListArgumentQuery {
         String order(List<ItemWithoutQuantity> items) {
@@ -247,6 +249,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NESTED_LIST)
+    @Singleton
     @GraphQLRootResolver
     static class NestedListQuery {
         String basket(BasketWithoutQuantity basket) {
@@ -255,6 +258,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_ARGUMENT_VALUE)
+    @Singleton
     @GraphQLRootResolver
     static class ArgumentValueQuery {
         String basket(ArgumentValue<BasketWithoutQuantity> basket) {
@@ -263,6 +267,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_TYPE_RESOLVER)
+    @Singleton
     @GraphQLRootResolver
     static class TypeResolverQuery {
         Shop shop() {
@@ -271,6 +276,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_TYPE_RESOLVER)
+    @Singleton
     @GraphQLTypeResolver(Shop)
     static class ShopResolver {
         String order(Shop shop, List<ItemWithoutQuantity> items) {
@@ -279,6 +285,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_EXTRA)
+    @Singleton
     @GraphQLRootResolver
     static class ExtraQuery {
         String basket(ExtraBasket basket) {
@@ -292,6 +299,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_EXACT)
+    @Singleton
     @GraphQLRootResolver
     static class ExactQuery {
         String order(List<ExactItem> items) {
@@ -304,6 +312,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_READ_ONLY)
+    @Singleton
     @GraphQLRootResolver
     static class ReadOnlyQuery {
         String order(List<ReadOnlyItem> items) {
@@ -321,6 +330,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_IGNORED)
+    @Singleton
     @GraphQLRootResolver
     static class IgnoredQuery {
         String order(List<IgnoredItem> items) {

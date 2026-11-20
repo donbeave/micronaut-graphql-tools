@@ -473,6 +473,7 @@ type Query {
     // ---- the resolvers of the schema with loaders
 
     @Requires(property = 'spec.name', pattern = LOADED)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         List<Author> authors(int count) {
@@ -526,6 +527,7 @@ type Query {
     // ---- no loaders
 
     @Requires(property = 'spec.name', pattern = SPEC + '\\.(plain|registry|duplicate)')
+    @Singleton
     @GraphQLRootResolver
     static class PlainQuery {
         String hello(String prefix, DataFetchingEnvironment environment) {
@@ -605,6 +607,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC + '.unmatched')
+    @Singleton
     @GraphQLRootResolver
     static class Unmatched {
         CompletionStage<String> hello(String prefix, DataLoader<Integer, Integer> loader) {
@@ -613,6 +616,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC + '.ambiguous')
+    @Singleton
     @GraphQLRootResolver
     static class Ambiguous {
         CompletionStage<String> hello(String prefix, DataLoader<String, String> loader) {
@@ -621,6 +625,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC + '.named')
+    @Singleton
     @GraphQLRootResolver
     static class NamedQuery {
         CompletionStage<String> hello(String prefix, @Named('second') DataLoader<String, String> loader) {
@@ -629,6 +634,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC + '.untyped')
+    @Singleton
     @GraphQLRootResolver
     static class Untyped {
         CompletionStage<String> hello(String prefix, DataLoader loader) {
@@ -637,6 +643,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC + '\\.(stepaside|primary)')
+    @Singleton
     @GraphQLRootResolver
     static class SteppedAside {
         CompletionStage<String> hello(String prefix, DataLoader<String, String> loader) {

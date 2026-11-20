@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.root
 
+import jakarta.inject.Singleton
 import graphql.ExecutionResult
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -84,6 +85,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(subscription|duplicate)')
+    @Singleton
     @GraphQLRootResolver
     static class QueryTicks {
         @GraphQLSchemaCoordinate("Query.ticks")
@@ -93,6 +95,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(subscription|duplicate)')
+    @Singleton
     @GraphQLRootResolver
     static class SubscriptionTicks {
         @GraphQLSchemaCoordinate("Subscription.ticks")
@@ -117,6 +120,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".mutation")
+    @Singleton
     @GraphQLRootResolver
     static class MutationQueryTicks {
         @GraphQLSchemaCoordinate("Query.ticks")
@@ -126,6 +130,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".mutation")
+    @Singleton
     @GraphQLRootResolver
     static class MutationTicks {
         @GraphQLSchemaCoordinate("Mutation.ticks")
@@ -151,6 +156,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".duplicate")
+    @Singleton
     @GraphQLRootResolver
     static class DuplicateSubscriptionTicks {
         @GraphQLSchemaCoordinate("Subscription.ticks")

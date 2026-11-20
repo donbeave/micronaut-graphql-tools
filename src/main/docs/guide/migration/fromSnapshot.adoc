@@ -44,6 +44,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-31 role packages for the public API (#354) | The 15 public types of `io.micronaut.graphql.tools` moved to role packages: `GraphQLToolsConfiguration` to `config`; the five `*Customizer` interfaces to `customizer`; `SchemaMappingDictionary`, `GraphQLScalarMapping`, `MappingContext`, `TypeMappingContext` and `InputMappingContext` to `mapping`; `SchemaDirective` and `CustomWiring` to `directive`; `ArgumentValue` to `input`; `BindingManifest` to `manifest`. The root package holds no types. The names, members and behaviour are unchanged. | Change the imports (`io.micronaut.graphql.tools.X` becomes `io.micronaut.graphql.tools.<package>.X`), and any full class name in a configuration file or a logger setting. `@ConfigurationProperties` prefixes (`micronaut.graphql.tools.*`) are unchanged.
 | BC-32 compile-time options renamed (#291) | The build runs the visitor, not the earlier annotation processor. `micronaut.graphql.tools.sdlDir` is replaced by `micronaut.graphql.tools.processor.schema.dirs`, `micronaut.graphql.tools.processor.checks` switches the checks off, and a build that passes `sdlDir` fails with `[processor-option-removed]`. The binding manifest has no accessor file, so the member of a property is written `Class#property`. | Rename the option, and put the processor on the path of your compiler (see the Compile-Time Verification page). Regenerate a checked-in manifest.
 | BC-33 inherited type resolver contracts (#34) | A bean that is a type resolver only through an inherited `@GraphQLTypeResolver` (a class that implements an annotated interface) needs the processor on the compiler path: the visitor records its contracts, and the startup no longer reads class annotations by reflection. Without it the startup fails with `[type-resolver-contracts-not-found]`. | Add `micronaut-graphql-tools-processor` to `annotationProcessor`, `ksp` or `kapt`, or `compileOnly` (Groovy); `micronaut.graphql.tools.processor.checks=false` keeps the checks off and still records the contracts. A bean annotated directly needs nothing.
+| BC-34 resolver stereotypes carry no bean (#73) | A class that carries `@GraphQLRootResolver` or `@GraphQLTypeResolver`, extends an annotated class or implements an annotated interface is a bean only when it has a scope annotation of its own. | Annotate each resolver class with `@Singleton`; see <<resolverContracts,Resolver Contracts>>.
 | BC-35 resolvers run on the blocking executor (#49) | Every operation hops once to Micronaut's blocking executor before graphql-java runs, so parsing, validation, the customizer and every synchronous resolver run on a virtual thread (JDK 21 and later) or an `io` pool thread (JDK 17), not on the Netty event loop. A resolver that relied on the event loop thread, or on a thread local set there, sees another thread. The transport's own invocation is replaced: an application with its own `GraphQLInvocation` needs `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary`, and the library then steps aside. | Nothing for a resolver that does not depend on its thread; it can now block. To keep the old behaviour set `micronaut.graphql.tools.execution.executor: none`. Choose another executor with its name.
 | BC-36 a `DataLoaderRegistry` bean fails the startup (#20) | The library creates the `DataLoaderRegistry` of each execution itself, from `BatchLoader`, `BatchLoaderWithContext`, `MappedBatchLoader` and `MappedBatchLoaderWithContext` beans. A `DataLoaderRegistry` bean is not used: its loaders would be shared across the operations of one WebSocket connection, so the startup fails with `[data-loader-registry-bean]`. | Register each loader as a batch loader bean and read it with a typed `DataLoader<K, V>` resolver parameter, or add the loaders in a `GraphQLContextContributor`, or provide your own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)`.
 |===
@@ -117,7 +118,7 @@ Fix: run the library on Java 17 or newer. Build the full project, including `gra
 
 Fix: annotate the fake or the subclass with `@Replaces(<original>.class)`. A `@Requires(env = "test")` alone does not help: both beans are active in the test environment. To add behaviour around a resolver, use a Micronaut AOP interceptor, not a subclass bean.
 
-Status: approved, no opt-out. Pending #73 (M4): the stereotype is removed from contracts. A `@Singleton` subclass of an implementation stays a second resolver, so `@Replaces` stays the fix.
+Status: approved, no opt-out. #73 (M4, BC-34) removed the bean stereotype from the annotations, so a class that only inherits one is no bean. A `@Singleton` subclass of an implementation stays a second resolver, so `@Replaces` stays the fix.
 
 [source,java]
 ----
@@ -755,6 +756,34 @@ The startup used to read `@GraphQLTypeResolver` from the class hierarchy of each
 What breaks: a build that does not run the processor, with a bean that is a type resolver only through an inherited annotation, fails the startup with `[type-resolver-contracts-not-found]`. Before, this worked on the JVM. The message names the processor and where to add it.
 
 Fix: put `micronaut-graphql-tools-processor` on the path of the compiler as the compile-time checks section of the README shows for each tool (`annotationProcessor`, `ksp` or `kapt`, `compileOnly`), or annotate the bean class directly. A bean annotated directly binds without the processor.
+
+Status: breaking by design; no opt-out.
+
+=== BC-34: resolver stereotypes carry no bean (#73)
+
+`@GraphQLRootResolver` and `@GraphQLTypeResolver` carried the `@Bean` and `@DefaultScope(Singleton)` stereotype, so a class that carried one, or extended a class that carried one (the annotations are `@Inherited`), was a singleton bean without a scope annotation. That is what let a fake or a decorator that extends a resolver become a second resolver (BC-04). The annotations are now plain markers with `@Executable(processOnStartup = true)`, and a class is a bean only when it has a scope annotation of its own.
+
+The new marker interfaces of the package `io.micronaut.graphql.tools.resolver` (`QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>`) carry no bean stereotype either. They fix the root operation type, give the source type as a type argument, and make only the methods of a contract interface candidates for binding. See <<resolverContracts,Resolver Contracts>>.
+
+What breaks:
+
+* A resolver class that has no scope annotation is not a bean any more, so its fields are not bound and the startup fails with `[field-not-bound]` or `[method-not-found]`, and the compile-time checks skip it. A subclass of an annotated class needs one too.
+* `@GraphQLTypeResolver` has a default value, `void`, for the marker `TypeResolver<T>`. A bean that carries the annotation without a class and without a marker still fails the startup with `[incorrect-annotation]`.
+* A type resolver bean whose build did not record its contracts binds only when it carries the annotation itself and has no supertype besides `Object`. Every other one fails the startup with `[type-resolver-contracts-not-found]`, which names the processor. Before, a directly annotated bean was also checked with a reflective walk of its supertypes (`Class.isAnnotationPresent`); that read is removed, so the native image needs no reflection metadata for it.
+
+Fix: add `@Singleton` (or another scope annotation) to each resolver class, and `@Replaces(<original>.class)` to a fake or a subclass of a resolver bean:
+
+[source,java]
+----
+// before: a bean, because the annotation carried the stereotype
+@GraphQLRootResolver
+public class BookQuery { ... }
+
+// now
+@Singleton
+@GraphQLRootResolver
+public class BookQuery { ... }
+----
 
 Status: breaking by design; no opt-out.
 

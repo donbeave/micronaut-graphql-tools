@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.type
 
+import jakarta.inject.Singleton
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -69,6 +70,7 @@ type User {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         User user() {
@@ -81,6 +83,7 @@ type User {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(User.class)
     static class UserResolver {
         String username(User user, DataFetchingEnvironment dfe) {

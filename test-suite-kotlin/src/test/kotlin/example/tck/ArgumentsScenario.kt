@@ -15,6 +15,7 @@
  */
 package example.tck
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.input.ArgumentValue
@@ -70,6 +71,7 @@ data class Crate(
 )
 // end::nested-constructor-input[]
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "arguments")
 class ArgumentsQueries {
@@ -106,6 +108,7 @@ class ArgumentsQueries {
         "name=${shape.name} color=${shape.color} points=${shape.points.joinToString(";") { "${it.x},${it.y}" }} note=${shape.note}"
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "arguments")
 class ArgumentsMutations {
