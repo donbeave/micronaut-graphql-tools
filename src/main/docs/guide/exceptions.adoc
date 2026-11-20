@@ -93,8 +93,9 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`schema-definition-not-provided` |failure |yes |The schema has neither a schema definition nor a Query type.
 |`schema-invalid` |failure |yes |The schema files cannot be parsed or merged.
 |`schema-not-found` |failure |no |No schema file is found at the configured locations, or a location is invalid.
-|`unknown-executor` |failure |no |micronaut.graphql.tools.execution.executor names no executor bean, or names one that cannot run operations.
+|`unknown-executor` |failure |no |micronaut.graphql.tools.execution.executor or an @ExecuteOn names no executor bean, or names one that cannot run work.
 |`execution-context-unavailable` |failure |no |A resolver needs the execution context, and the application's GraphQLInvocation replaces the library's.
+|`execute-on-property` |failure |no |@ExecuteOn is on an accessor that is bound as a property, and a property never hops.
 |`data-loader-registry-bean` |failure |no |A DataLoaderRegistry bean exists, and the library's invocation does not use it.
 |`duplicate-data-loader` |failure |no |Two batch loader beans have the same name.
 |`data-loader-not-found` |failure |no |A DataLoader parameter of a resolver method matches no batch loader bean, or more than one.
