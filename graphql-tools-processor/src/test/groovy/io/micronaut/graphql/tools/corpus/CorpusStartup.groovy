@@ -24,6 +24,7 @@ import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException
 import io.micronaut.graphql.tools.internal.exceptions.BindingFailuresException
 import io.micronaut.graphql.tools.internal.exceptions.checks.InvalidSchemaCoordinateException
+import io.micronaut.graphql.tools.internal.exceptions.implementation.AmbiguousTypeClassException
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.internal.exceptions.checks.StrictModeException
 import io.micronaut.graphql.tools.internal.exceptions.input.UnmappedInputPropertiesException
@@ -105,6 +106,8 @@ final class CorpusStartup {
     private static List<List<String>> flatten(Throwable failure) {
         if (failure instanceof BindingFailuresException) {
             return failure.failures.collectMany { flatten(it) }
+        } else if (failure instanceof AmbiguousTypeClassException) {
+            return [[failure.code().code(), failure.typeName, '-']]
         } else if (failure instanceof AbstractMappingException) {
             SourceLocation at = failure.mappingContext.sourceLocation
             return [[failure.code().code(), failure.mappingContext.coordinate, location(at)]]

@@ -234,7 +234,7 @@ type MediaSection implements Section {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.INTERFACE_TYPE_MAPPING_NOT_PROVIDED
-        e.cause.message == """[interface-type-mapping-not-provided] Can not detect representation class for type MediaSection, implementation of Section interface. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
+        e.cause.message == """[interface-type-mapping-not-provided] Can not detect representation class for type MediaSection, implementation of Section interface. Ensure the representation class is registered via ${SchemaMappingDictionary.name}, declared with @GraphQLType(name) or named by micronaut.graphql.tools.type-class-convention.
   GraphQL coordinate: Book.sections (line 13, column 3)
   Mapped class: ${NotRegisteredSectionsResolver.name}
   Mapped method: sections(${Book.name} book)"""

@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.visitor;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
+import io.micronaut.graphql.tools.binding.internal.rules.TypeClassDerivation;
 
 import java.io.File;
 import java.nio.file.InvalidPathException;
@@ -31,7 +32,7 @@ import java.util.TreeSet;
 
 /**
  * The options of the visitor, read from the options of the compilation: {@code -A} under javac and kapt, {@code arg}
- * under KSP, system properties under the Groovy compiler. There are four, all under {@code micronaut.graphql.tools.processor.},
+ * under KSP, system properties under the Groovy compiler. There are five, all under {@code micronaut.graphql.tools.processor.},
  * a segment that no runtime key uses, so that the visitor rejects an unknown key there without failing on a runtime key that
  * happens to be a system property.
  *
@@ -41,10 +42,12 @@ import java.util.TreeSet;
  * @param checks     whether the checks run
  * @param accessorPrefixes whether a resolver method {@code getX} or {@code isX} also binds the field {@code x}, as
  *                   {@code micronaut.graphql.tools.resolver-accessor-prefixes} says at startup
+ * @param typeClassConvention the value of {@code micronaut.graphql.tools.type-class-convention} that the checks apply when
+ *                   they look for two classes that match one object type, or null for none
  * @param errors     the options that are wrong; the checks do not run when there are any
  */
 record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean checks,
-                        boolean accessorPrefixes, List<Finding> errors) {
+                        boolean accessorPrefixes, @Nullable String typeClassConvention, List<Finding> errors) {
 
     static final String PREFIX = "micronaut.graphql.tools.processor.";
 
@@ -56,17 +59,19 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
     static final String ACCESSOR_PREFIXES = PREFIX + "resolverAccessorPrefixes";
 
-    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES);
+    static final String TYPE_CLASS_CONVENTION = PREFIX + "typeClassConvention";
+
+    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, TYPE_CLASS_CONVENTION);
 
     /** The key that an earlier version of the processor read; it is an error now and names {@link #SCHEMA_DIRS}. */
     static final String REMOVED_SDL_DIR = "micronaut.graphql.tools.sdlDir";
 
     /**
-     * The keys the visitor tells the compiler it knows: the four options and the retired key. A build that keeps the retired key
+     * The keys the visitor tells the compiler it knows: the five options and the retired key. A build that keeps the retired key
      * with {@code checks=false} must not get javac's "no processor claimed the option" warning, which {@code -Werror} turns into an error.
      * The retired key is not an option: {@link #NAMES} stays the options.
      */
-    static final Set<String> ADVERTISED = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, REMOVED_SDL_DIR);
+    static final Set<String> ADVERTISED = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, TYPE_CLASS_CONVENTION, REMOVED_SDL_DIR);
 
     ProcessorOptions {
         schemaDirs = List.copyOf(schemaDirs);
@@ -114,7 +119,16 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
                         + moduleValue.trim() + "' (" + e.getReason() + ")"));
             }
         }
-        return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes, errors);
+        String convention = options.get(TYPE_CLASS_CONVENTION);
+        if (convention != null && convention.isBlank()) {
+            convention = null;
+        }
+        String conventionProblem = TypeClassDerivation.validate(convention);
+        if (conventionProblem != null) {
+            errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, TYPE_CLASS_CONVENTION + ": " + conventionProblem));
+        }
+        return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes,
+                convention == null ? null : convention.strip(), errors);
     }
 
     private static boolean flag(Map<String, String> options, String name, boolean absent, List<Finding> errors) {
