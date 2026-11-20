@@ -167,6 +167,11 @@ class ArchitectureRulesSpec extends Specification {
         new ArchCondition<JavaClass>('reflect (java.lang.Class lookups, java.lang.reflect other than Modifier, java.lang.invoke)') {
             @Override
             void check(JavaClass item, ConditionEvents events) {
+                // the dispatch class that Micronaut generates for the executable methods of a bean (here the WebSocket handler's
+                // @OnMessage): it names java.lang.reflect.Method in a signature and calls nothing reflectively
+                if (item.name.contains('\$Definition\$Exec')) {
+                    return
+                }
                 Collection<String> approved = applyAllowlist ? (REFLECTION_ALLOWLIST[item.name]?.accesses ?: []) : []
                 reflectiveAccesses(item).each { key, messages ->
                     if (!(key in approved)) {
