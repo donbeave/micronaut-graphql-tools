@@ -39,6 +39,9 @@ class FieldFetcherDecoratorSpec extends AbstractTest {
 
     static final String SPEC_NAME = 'FieldFetcherDecoratorSpec'
 
+    /** A dedicated executor: 'io' is the operation's executor on some JDK lines, and a field on that executor does not hop. */
+    static final Map EXECUTORS = ['micronaut.executors.decorated.type': 'fixed', 'micronaut.executors.decorated.nThreads': 1]
+
     static final List<FieldDescriptor> ARGUMENT_OFFERS = new CopyOnWriteArrayList<>()
     static final List<FieldDescriptor> EVERYTHING_OFFERS = new CopyOnWriteArrayList<>()
     static final List<DataFetcher<Object>> INNER_OF_ARGUMENT_DECORATOR = new CopyOnWriteArrayList<>()
@@ -66,7 +69,7 @@ type Box {
 
     void "a decorator that handles fields with arguments leaves the other fetchers as they are"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, EXECUTORS)
         def schema = getGraphQLBean().graphQLSchema
 
         expect:
@@ -80,7 +83,7 @@ type Box {
 
     void "a decorator that opts in is offered fields without arguments and properties"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, EXECUTORS)
         getGraphQLBean()
 
         expect:
@@ -94,7 +97,7 @@ type Box {
 
     void "the descriptor carries the execution kind and the field executor"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, EXECUTORS)
         getGraphQLBean()
         def hopped = ARGUMENT_OFFERS.find { it.coordinates().fieldName == 'hopped' }
         def echo = ARGUMENT_OFFERS.find { it.coordinates().fieldName == 'echo' }
@@ -108,7 +111,7 @@ type Box {
 
     void "a decorator wraps the async boundary and the executor hop, not the other way round"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, EXECUTORS)
         getGraphQLBean()
         def hopped = ARGUMENT_OFFERS.find { it.coordinates().fieldName == 'hopped' }
         DataFetcher<Object> inner = INNER_OF_ARGUMENT_DECORATOR.find { it instanceof AsyncBoundaryDataFetcher }
@@ -121,7 +124,7 @@ type Box {
 
     void "the first decorator in order is the outermost"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, EXECUTORS)
 
         when:
         def result = executeQuery('{ echo(text: "a") }')
@@ -134,7 +137,7 @@ type Box {
 
     void "decisions are made at startup and none is made per call"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, EXECUTORS)
         getGraphQLBean()
         int atStartup = DECISIONS.get()
 
@@ -217,7 +220,7 @@ type Box {
             'plain'
         }
 
-        @ExecuteOn('io')
+        @ExecuteOn('decorated')
         CompletableFuture<Box> hopped(String text) {
             CompletableFuture.completedFuture(new Box())
         }
