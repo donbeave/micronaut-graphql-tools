@@ -228,8 +228,9 @@ type Child {
         queued.execute { release.await() }
 
         when: 'the operation waits behind the blocker and the client goes away'
-        def future = Mono.from(applicationContext.getBean(GraphQLInvocation)
-                .invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)).toFuture()
+        def future = Mono.from(applicationContext.getBean(io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation)
+                .execute(new GraphQLInvocationData('{ hello }', null, [:]), GraphQLTransport.WEBSOCKET, null, null,
+                        io.micronaut.core.convert.ConvertibleValues.empty())).toFuture()
         future.cancel(true)
         release.countDown()
         queued.shutdown()
