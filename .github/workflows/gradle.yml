@@ -251,6 +251,8 @@ jobs:
         run: jactionlint --color
       - name: Check that every job is gated and every event runs the same jobs
         run: python3 .github/scripts/check-gate.py
+      - name: Test the download retry wrapper
+        run: .github/scripts/test-retry-on-download-failure.sh
 
   # The guide build (#57). The `snippet::` macro prints a warning and still succeeds when a snippet file or tag is missing in
   # one of the three suites, so the log is checked. The built guide is uploaded for reviewers; it is not published.
