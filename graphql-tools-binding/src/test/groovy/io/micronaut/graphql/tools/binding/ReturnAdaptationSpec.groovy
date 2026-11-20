@@ -19,6 +19,7 @@ import graphql.language.ListType
 import graphql.language.NonNullType
 import graphql.language.TypeName
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules
+import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict
 import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules
 import spock.lang.Specification
 
@@ -36,7 +37,7 @@ class ReturnAdaptationSpec extends Specification {
     static final nullable = new TypeName('Book')
     static final nonNull = new NonNullType(new TypeName('Book'))
     static final STRING = ref('java.lang.String')
-    static final MODEL = model(['java.util.concurrent.CompletableFuture': [STAGE], 'reactor.core.publisher.Flux': [PUBLISHER]])
+    static final MODEL = model(['java.util.concurrent.CompletableFuture': [STAGE], 'reactor.core.publisher.Flux': [PUBLISHER], 'reactor.core.publisher.Mono': [PUBLISHER]])
 
     private static adapt(declared, type = nullable, boolean fieldLevel = true, boolean subscription = false) {
         ResolverClassRules.returnAdaptation(MODEL, declared, type, fieldLevel, subscription)
@@ -70,12 +71,39 @@ class ReturnAdaptationSpec extends Specification {
         adapt(array('[Ljava.lang.String;'), nullable, true, true).failure() ==
                 WrapperRules.subscriptionNeedsPublisher('[[Ljava.lang.String;')
         adapt(array('int', true), nullable, true, true).failure() == WrapperRules.subscriptionNeedsPublisher('[I')
-        adapt(ref(PUBLISHER, STRING)).failure() == WrapperRules.publisherOutsideSubscription()
+        adapt(ref(PUBLISHER, STRING)).failure() == WrapperRules.multiValuePublisherNeedsList('Book')
     }
 
     void "an element of a list is not a field: a Publisher is a violation there even in a subscription"() {
         expect:
-        adapt(ref(PUBLISHER, STRING), nullable, false, true).failure() == WrapperRules.publisherOutsideSubscription()
+        adapt(ref(PUBLISHER, STRING), nullable, false, true).failure() == WrapperRules.publisherInList()
+    }
+
+    void "a Publisher outside the subscription type is adapted: one value for a Mono, many for the rest on a list field"() {
+        given:
+        def list = new ListType(nullable)
+        def mono = ref('reactor.core.publisher.Mono', STRING)
+
+        expect:
+        adapt(mono).reactive() == ReturnVerdict.Reactive.SINGLE
+        adapt(mono).depth() == 1
+        adapt(ref(OPTIONAL, STRING)).reactive() == ReturnVerdict.Reactive.NONE
+        adapt(ref('reactor.core.publisher.Mono', ref(OPTIONAL, STRING))).depth() == 2
+        adapt(ref('reactor.core.publisher.Flux', STRING), list).reactive() == ReturnVerdict.Reactive.MULTI
+        adapt(ref('reactor.core.publisher.Flux', STRING), list).depth() == 1
+        adapt(ref(PUBLISHER, STRING), new NonNullType(list)).reactive() == ReturnVerdict.Reactive.MULTI
+        adapt(ref('reactor.core.publisher.Mono', ref('java.util.List', STRING)), list).reactive() == ReturnVerdict.Reactive.SINGLE
+    }
+
+    void "a Publisher of many values needs a list field, and a Publisher never sits inside a CompletionStage"() {
+        expect:
+        adapt(ref('reactor.core.publisher.Flux', STRING)).failure() == WrapperRules.multiValuePublisherNeedsList('Book')
+        adapt(ref('reactor.core.publisher.Flux', STRING), nonNull).failure() ==
+                WrapperRules.multiValuePublisherNeedsList('Book!')
+        adapt(ref(STAGE, ref('reactor.core.publisher.Mono', STRING))).failure() == WrapperRules.publisherInCompletionStage()
+        adapt(ref('reactor.core.publisher.Mono')).failure() == WrapperRules.missingTypeArgument(PUBLISHER)
+        adapt(ref('reactor.core.publisher.Mono', ref('reactor.core.publisher.Mono', STRING))).failure() ==
+                WrapperRules.cannotWrap(PUBLISHER, PUBLISHER)
     }
 
     void "an Optional needs a nullable GraphQL type"() {

@@ -20,6 +20,13 @@ extend type Query {
   primitiveAbsentCount: Int
   primitiveRatio: Float
   primitiveCounts: [Int]
+
+  reactiveOne(name: String!): Greeting!
+  reactiveMany: [Greeting!]!
+  reactiveAbsent: Greeting
+  reactiveNone: [Greeting!]!
+  reactiveFailing: Greeting
+  reactiveManyFailing: [Greeting]
 }
 
 type Greeting {

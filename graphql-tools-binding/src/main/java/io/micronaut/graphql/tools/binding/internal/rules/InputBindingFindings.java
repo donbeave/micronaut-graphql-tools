@@ -509,6 +509,9 @@ public final class InputBindingFindings {
         if (!(unwrapped instanceof ListType list)) {
             return new Leaf(adapted, unwrapped);
         }
+        if (verdict.reactive() == ReturnVerdict.Reactive.MULTI) {
+            return verdict.element() == null ? null : leaf(adapted, list.getType(), verdict.element());
+        }
         if (verdict.element() == null || adapted.typeArguments().isEmpty()) {
             return null;
         }

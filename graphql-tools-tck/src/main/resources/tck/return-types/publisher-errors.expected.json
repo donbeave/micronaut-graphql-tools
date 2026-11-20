@@ -1,0 +1,17 @@
+{
+  "data": { "reactiveFailing": null, "reactiveManyFailing": null },
+  "errors": [
+    {
+      "message": "Exception while fetching data (/reactiveFailing) : reactive boom",
+      "locations": [{ "line": 2, "column": 3 }],
+      "path": ["reactiveFailing"],
+      "extensions": { "classification": "DataFetchingException" }
+    },
+    {
+      "message": "Exception while fetching data (/reactiveManyFailing) : reactive boom",
+      "locations": [{ "line": 3, "column": 3 }],
+      "path": ["reactiveManyFailing"],
+      "extensions": { "classification": "DataFetchingException" }
+    }
+  ]
+}

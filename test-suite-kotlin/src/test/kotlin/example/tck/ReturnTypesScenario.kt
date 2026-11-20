@@ -24,6 +24,8 @@ import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.util.Optional
 import java.util.OptionalDouble
 import java.util.OptionalInt
@@ -81,6 +83,21 @@ class ReturnTypesQueries {
     fun primitiveRatio(): OptionalDouble = OptionalDouble.of(0.5)
 
     fun primitiveCounts(): List<OptionalInt> = listOf(OptionalInt.of(1), OptionalInt.empty(), OptionalInt.of(3))
+
+    // tag::publisher-returns[]
+    fun reactiveOne(name: String): Mono<Greeting> = Mono.just(Greeting("hello $name"))
+
+    fun reactiveMany(): Flux<Greeting> = Flux.just(Greeting("one"), Greeting("two"))
+    // end::publisher-returns[]
+
+    fun reactiveAbsent(): Mono<Greeting> = Mono.empty()
+
+    fun reactiveNone(): Flux<Greeting> = Flux.empty()
+
+    fun reactiveFailing(): Mono<Greeting> = Mono.error(IllegalStateException("reactive boom"))
+
+    fun reactiveManyFailing(): Flux<Greeting> =
+        Flux.concat(Flux.just(Greeting("lost")), Flux.error<Greeting>(IllegalStateException("reactive boom")))
 }
 
 // GraphqlErrorBuilder.newError(environment) returns a recursive generic type that the Kotlin compiler cannot resolve against

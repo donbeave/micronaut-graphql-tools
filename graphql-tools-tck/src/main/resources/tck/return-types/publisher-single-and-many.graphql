@@ -1,0 +1,4 @@
+{
+  reactiveOne(name: "async") { message }
+  reactiveMany { message }
+}
