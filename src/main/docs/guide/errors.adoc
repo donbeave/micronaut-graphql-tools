@@ -94,18 +94,36 @@ The customizers run by order, lowest first, and each gets the list that the prev
 [[constraintViolations]]
 == Bean validation
 
-A `jakarta.validation.ConstraintViolationException` (Micronaut Validation on a resolver method or an input class) becomes one error for each violation when Jakarta Validation is on the classpath. The message is the message of the constraint, and the extensions say where it applies:
+A `jakarta.validation.ConstraintViolationException` (Micronaut Validation on a resolver method or an input class) becomes one error for each violation when Jakarta Validation is on the classpath. Add `io.micronaut.validation:micronaut-validation` and its annotation processor (`micronaut-validation-processor`) to the application, and constrain the parameters of a resolver method and the properties of an input class:
+
+snippet::example.tck.ConstraintViolationsScenario[project-base="test-suite", source="validationFixtures", tags="constrained-input", indent="0"]
+
+snippet::example.tck.ConstraintViolationsScenario[project-base="test-suite", source="validationFixtures", tags="constrained-parameter", indent="0"]
+
+A call that violates the constraint is rejected before the resolver runs. The message is the message of the constraint, and the extensions say where it applies:
 
 [source,json]
 ----
 {
   "message": "must not be blank",
-  "path": ["addBook"],
-  "extensions": { "code": "CONSTRAINT_VIOLATION", "argument": "book", "inputPath": ["title"] }
+  "path": ["checkout"],
+  "extensions": { "code": "CONSTRAINT_VIOLATION", "argument": "cart", "inputPath": ["lines", 1, "sku"] }
 }
 ----
 
-`argument` is the name of the method parameter and `inputPath` the properties inside it; `inputPath` is empty when the parameter itself violates the constraint. The mapper has the lowest precedence: your own mapper for `ConstraintViolationException` wins.
+`argument` is the name of the method parameter, and `inputPath` is the way from the parameter to the value that failed: property names, list indexes (numbers) and map keys (strings). It is the same shape as the `inputPath` of an input conversion error. The list below shows what a real validation run gives:
+
+[cols="2,2,2", options="header"]
+|===
+|The violation |`argument` |`inputPath`
+|The parameter itself, `@NotBlank String name` |`name` |`[]`
+|A property of an input, `Cart.owner` |`cart` |`["owner"]`
+|A property of a list element, `@Valid List<Line> lines` |`lines` |`[1, "sku"]`
+|A list inside an input, `Cart.lines` |`cart` |`["lines", 1, "sku"]`
+|A value of a map, `Map<String, @Positive Integer> limits` |`limits` |`["south"]`
+|===
+
+A call with several violations gives one error for each, all with the path of the field. The errors are in the order of the parameters, then of the `inputPath`, because the validator returns the violations in no fixed order. The mapper has the lowest precedence: your own mapper for `ConstraintViolationException` wins.
 
 [[executionErrors]]
 == Errors of the execution

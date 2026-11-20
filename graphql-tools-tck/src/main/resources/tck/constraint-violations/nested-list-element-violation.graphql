@@ -1,0 +1,3 @@
+{
+  checkout(cart: { owner: "o", quantity: 1, lines: [{ sku: "a", quantity: 1 }, { sku: " ", quantity: 1 }] })
+}

@@ -19,3 +19,4 @@ error-handling
 error-details
 field-decorator
 type-class-derivation
+constraint-violations
