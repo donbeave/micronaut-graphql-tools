@@ -1,0 +1,82 @@
+This page describes where a GraphQL operation runs and which thread it uses. The library owns the GraphQL invocation, so one setting decides it for HTTP and WebSocket alike.
+
+== What runs where
+
+The transport (`micronaut-graphql`) receives an operation on a Netty event loop thread. Its own invocation would run parsing, validation and every synchronous resolver there: one resolver that blocks, for example on JDBC, gRPC or `join()`, would stall that event loop and so the server.
+
+The library replaces the transport's `GraphQLInvocation`. For each operation it hops once to an executor, before graphql-java runs:
+
+* the operation is received on the event loop;
+* one task goes to the executor (`blocking` by default);
+* on that executor the library builds the `ExecutionInput`, calls your `GraphQLExecutionInputCustomizer`, and calls graphql-java, which parses and validates the query and runs every synchronous resolver.
+
+There is one thread change per operation. Fields do not hop: the library adds no task, no future and no thread-local read per field, and a trivial field costs the same as before.
+
+The `PropagatedContext` of the receiving thread (the request, and what your filters add, such as security and tracing elements) is captured once and installed in the task when the executing thread does not hold it already, so `ServerRequestContext.currentRequest()`, `@RequestScope` beans and the security service work in your resolvers.
+
+== The executor key
+
+[source,yaml]
+----
+micronaut:
+  graphql:
+    tools:
+      execution:
+        executor: blocking
+----
+
+`micronaut.graphql.tools.execution.executor` is a Micronaut executor name, or `none`. It is resolved once at startup.
+
+[cols="1,4", options="header"]
+|===
+| Value | Operations run on
+| `blocking` (the default) | Micronaut's blocking executor: virtual threads on JDK 21 and later, the `io` pool on JDK 17. Micronaut chooses; the library makes no call that needs JDK 21.
+| `io` | The `io` pool.
+| `virtual` | A virtual thread per operation. JDK 21 and later only.
+| any other name | An executor you configure under `micronaut.executors.<name>`, or an `ExecutorService` bean with that `@Named` qualifier.
+| `none` | The thread that receives the operation: the Netty event loop over HTTP and WebSocket. No hop, no extra thread change.
+|===
+
+`scheduled` is rejected: it is the executor for scheduled tasks, not for work. A name that matches no executor bean, and `virtual` on JDK 17, fail the startup with `[unknown-executor]`, which lists the executor beans that exist.
+
+The default is `blocking` because the library cannot prove that a resolver never blocks. `none` is for applications whose resolvers never block and that want to avoid the hop; it is the behaviour of the transport's own invocation. Size a bounded executor for the operations that wait on it: when it rejects the hop, the client gets a GraphQL response with the status 200, `data` of `null` and one error whose `extensions.code` is `EXECUTION_REJECTED`, and the library logs a warning.
+
+[source,yaml]
+----
+micronaut:
+  executors:
+    graphql:
+      type: fixed
+      nThreads: 32
+  graphql:
+    tools:
+      execution:
+        executor: graphql
+----
+
+The cost of the hop is measured by the `InvocationBenchmark` of the `benchmarks` module (see CONTRIBUTING.md): it reports the time and the allocation of an operation on the calling thread, with one hop to a virtual-thread executor and to a platform pool, and of the library's own invocation.
+
+== Order of the steps
+
+After the hop the library runs, in this order:
+
+. build the `ExecutionInput` from the query, the operation name and the variables, and put the library's per-execution state in its `GraphQLContext`;
+. call the application's `GraphQLExecutionInputCustomizer` (skipped when it is the transport's default one);
+. put the state back in the `GraphQLContext` when the customizer returned a fresh `ExecutionInput`;
+. run graphql-java.
+
+The customizer therefore runs on the executor and may block. A customizer that publishes its input on another thread makes the operation hop to the executor once more. The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
+
+If the application has a `DataLoaderRegistry` bean, the library still sets it on the input, as the transport did, once the operation is on the executor.
+
+== Your own invocation
+
+An application that declares its own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary` wins: the library creates no invocation, logs one INFO line at startup, and the operations run as your invocation decides. A resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`, and the message names the application's invocation.
+
+== Resolvers that continue on another thread
+
+The hop covers the synchronous part of an operation. A resolver that returns a `CompletionStage` continues on whichever thread completes it, and graphql-java resolves the children of that field there. Complete such a future on a thread of your own pool, not on a Netty event loop thread.
+
+== Breaking change
+
+Resolvers run on the blocking executor by default (BC-35). Before, they ran on the event loop. See the migration page for what to check: a resolver that relied on running on the event loop, or on a thread local that is set there, and the thread pool size.

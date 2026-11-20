@@ -1,0 +1,6 @@
+{
+  "data": {
+    "onEventLoop": false,
+    "executorTasks": 2
+  }
+}

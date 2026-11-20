@@ -9,3 +9,5 @@ enums
 error-mapping
 bean-scopes
 input-errors
+execution-thread
+execution-thread-none

@@ -196,6 +196,12 @@ public enum BindingCode {
     /** Failure: no schema file is found at the configured locations. */
     SCHEMA_NOT_FOUND("schema-not-found", false, false,
             "No schema file is found at the configured locations, or a location is invalid."),
+    /** Failure: the execution executor names no executor. */
+    UNKNOWN_EXECUTOR("unknown-executor", false, false,
+            "micronaut.graphql.tools.execution.executor names no executor bean, or names one that cannot run operations."),
+    /** Failure: a resolver needs the execution context and the application replaced the library's invocation. */
+    EXECUTION_CONTEXT_UNAVAILABLE("execution-context-unavailable", false, false,
+            "A resolver needs the execution context, and the application's GraphQLInvocation replaces the library's."),
     /** Failure: binding a field threw an exception the library does not know. */
     UNEXPECTED_BINDING_ERROR("unexpected-binding-error", false, false,
             "Binding a field failed with an unexpected exception; the cause is attached."),
