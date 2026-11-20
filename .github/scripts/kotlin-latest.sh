@@ -3,13 +3,19 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
+# A 404 from Maven Central for a metadata file that exists is transient: retry it, and name the URL when it keeps failing.
+# `--retry-all-errors` makes curl retry an HTTP error, which `--retry` alone does not for a 404.
 newest() { # group artifact
-  curl -fsSL --retry 3 "https://repo1.maven.org/maven2/${1//.//}/$2/maven-metadata.xml" |
-    grep -oE '<version>[0-9]+(\.[0-9]+)+</version>' | sed -E 's:</?version>::g' | sort -V | tail -1
+  local url="https://repo1.maven.org/maven2/${1//.//}/$2/maven-metadata.xml" metadata
+  metadata=$(curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 "$url") || {
+    echo "could not read $url" >&2
+    return 1
+  }
+  grep -oE '<version>[0-9]+(\.[0-9]+)+</version>' <<<"$metadata" | sed -E 's:</?version>::g' | sort -V | tail -1
 }
 
-kotlin=$(newest org.jetbrains.kotlin kotlin-gradle-plugin)
-ksp=$(newest com.google.devtools.ksp symbol-processing-gradle-plugin)
+kotlin=$(newest org.jetbrains.kotlin kotlin-gradle-plugin) || exit 1
+ksp=$(newest com.google.devtools.ksp symbol-processing-gradle-plugin) || exit 1
 [ -n "$kotlin" ] && [ -n "$ksp" ] || { echo "no newest Kotlin or KSP release found" >&2; exit 1; }
 # BSD sed reads `-i -E` as a backup suffix, so the edit goes through a temporary file.
 sed -E "s/(id\(\"org.jetbrains.kotlin.jvm\"\) version )\"[^\"]+\"/\1\"$kotlin\"/; s/(id\(\"com.google.devtools.ksp\"\) version )\"[^\"]+\"/\1\"$ksp\"/" build.gradle.kts > build.gradle.kts.new

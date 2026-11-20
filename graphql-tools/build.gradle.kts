@@ -14,6 +14,8 @@ dependencies {
     // Kotlin type otherwise. The versions are the ones that the Micronaut BOM manages.
     compileOnly(mn.kotlin.stdlib)
     compileOnly(mn.kotlinx.coroutines.core)
+    // The disconnect of an HTTP client cancels its execution (#429); the watcher bean is active only with the Netty server on the classpath
+    compileOnly(mn.micronaut.http.server.netty)
     // ConstraintViolationException is mapped to errors when Micronaut Validation is on the application's classpath (#32)
     compileOnly(platform(libs.micronaut.platform))
     compileOnly("jakarta.validation:jakarta.validation-api")
