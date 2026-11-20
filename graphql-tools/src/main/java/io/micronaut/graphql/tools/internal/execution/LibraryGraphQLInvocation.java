@@ -170,7 +170,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             } catch (RejectedExecutionException e) {
                 execution.reject(e);
             } catch (RuntimeException e) {
-                execution.result.completeExceptionally(e);
+                execution.completeExceptionally(e);
             }
         }
         Mono<ExecutionResult> result = Mono.fromFuture(execution);
@@ -394,7 +394,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 } catch (RejectedExecutionException e) {
                     reject(e);
                 } catch (RuntimeException e) {
-                    result.completeExceptionally(e);
+                    completeExceptionally(e);
                 }
             } else {
                 executeCustomized(customized);
