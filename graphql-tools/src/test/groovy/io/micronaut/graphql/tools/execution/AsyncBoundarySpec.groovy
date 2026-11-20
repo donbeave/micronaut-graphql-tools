@@ -44,9 +44,12 @@ import reactor.core.scheduler.NonBlocking
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.function.BiConsumer
 
 /**
  * The async boundary: a child of an async field sees the propagated context of the request and does not run on the thread
@@ -357,12 +360,41 @@ type Parent {
         }
 
         private static <T> CompletableFuture<T> later(ExecutorService executor, T value) {
-            def future = new CompletableFuture<T>()
+            def future = new AttachAwareFuture<T>()
             executor.execute {
-                Thread.sleep(30)
+                future.awaitCallerParked()
                 future.complete(value)
             }
             future
+        }
+    }
+
+    /**
+     * A future that completes only after the thread that registered the library's callback has returned from the fetch and
+     * parked, so that the callback and the continuations of graphql-java are all registered and none runs on that thread.
+     */
+    static class AttachAwareFuture<T> extends CompletableFuture<T> {
+        private final CountDownLatch attached = new CountDownLatch(1)
+        private volatile Thread caller
+
+        @Override
+        CompletableFuture<T> whenComplete(BiConsumer<? super T, ? super Throwable> action) {
+            caller = Thread.currentThread()
+            def registered = super.whenComplete(action)
+            attached.countDown()
+            registered
+        }
+
+        void awaitCallerParked() {
+            attached.await(5, TimeUnit.SECONDS)
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+            while (System.nanoTime() < deadline) {
+                def state = caller?.state
+                if (state == Thread.State.WAITING || state == Thread.State.TIMED_WAITING) {
+                    return
+                }
+                Thread.sleep(1)
+            }
         }
     }
 
