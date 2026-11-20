@@ -32,6 +32,7 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.ResolverStyle;
 import java.time.temporal.TemporalQuery;
 import java.util.Locale;
 
@@ -134,8 +135,22 @@ public final class TimeScalars {
         return TextCoercing.of(name, type, formatter(format), query, "the pattern " + format);
     }
 
+    /**
+     * A pattern is resolved strictly, so that a value such as 31/02/2026 is refused instead of clamped to the end of the month.
+     * Strict resolution needs the proleptic year {@code u}, as {@code y} (year of era) cannot resolve a date without an era, so
+     * the {@code y} letters of the pattern, outside quotes, are read as {@code u}: the same digits for every year since 1 AD.
+     */
     private static DateTimeFormatter formatter(String format) {
-        return DateTimeFormatter.ofPattern(format, Locale.ROOT);
+        StringBuilder pattern = new StringBuilder(format.length());
+        boolean quoted = false;
+        for (int i = 0; i < format.length(); i++) {
+            char c = format.charAt(i);
+            if (c == '\'') {
+                quoted = !quoted;
+            }
+            pattern.append(!quoted && c == 'y' ? 'u' : c);
+        }
+        return DateTimeFormatter.ofPattern(pattern.toString(), Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
     }
 
 }

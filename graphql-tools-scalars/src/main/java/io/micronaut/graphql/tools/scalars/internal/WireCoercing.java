@@ -140,7 +140,13 @@ public abstract class WireCoercing<T, O> implements Coercing<T, O> {
 
     @Override
     public Value<?> valueToLiteral(Object input, GraphQLContext graphQLContext, Locale locale) {
-        Object wire = serialize(input, graphQLContext, locale);
+        T value;
+        try {
+            value = read(input);
+        } catch (RuntimeException e) {
+            throw new CoercingParseValueException(scalarName + ": " + e.getMessage(), e);
+        }
+        Object wire = serialize(value, graphQLContext, locale);
         if (wire instanceof Long || wire instanceof Integer) {
             return IntValue.newIntValue(BigInteger.valueOf(((Number) wire).longValue())).build();
         }

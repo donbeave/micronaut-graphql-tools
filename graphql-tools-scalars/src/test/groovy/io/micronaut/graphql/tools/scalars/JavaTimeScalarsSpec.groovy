@@ -112,6 +112,8 @@ class JavaTimeScalarsSpec extends Specification {
         StandardScalar.LOCAL_DATE       | null            | 20261224
         StandardScalar.LOCAL_DATE       | null            | ''
         StandardScalar.LOCAL_DATE       | 'dd/MM/yyyy'    | '2026-12-24'
+        StandardScalar.LOCAL_DATE       | 'dd/MM/yyyy'    | '31/02/2026'
+        StandardScalar.YEAR_MONTH       | 'MM/yyyy'       | '13/2026'
         StandardScalar.LOCAL_TIME       | null            | '25:00:00'
         StandardScalar.LOCAL_DATE_TIME  | null            | '2026-12-24'
         StandardScalar.OFFSET_DATE_TIME | null            | '2026-12-24T10:15:30'
@@ -245,4 +247,28 @@ class JavaTimeScalarsSpec extends Specification {
         StandardScalar.LOCAL_DATE | 'not a pattern {'
     }
 
+
+    void "valueToLiteral takes the external input of parseValue and writes it in the wire format"() {
+        given:
+        def coercing = TimeScalars.coercing(scalar, scalar.defaultName(), format)
+
+        expect:
+        coercing.valueToLiteral(input, CONTEXT, Locale.ROOT).value == literal
+
+        where:
+        scalar                    | format       | input                      | literal
+        StandardScalar.LOCAL_DATE | null         | '2026-12-24'               | '2026-12-24'
+        StandardScalar.LOCAL_DATE | null         | LocalDate.of(2026, 12, 24) | '2026-12-24'
+        StandardScalar.LOCAL_DATE | 'dd/MM/yyyy' | '24/12/2026'               | '24/12/2026'
+        StandardScalar.INSTANT    | null         | '2026-12-24T10:15:30Z'     | '2026-12-24T10:15:30Z'
+    }
+
+    void "a configured date pattern is strict and reads and writes the year as written"() {
+        given:
+        def coercing = TimeScalars.coercing(StandardScalar.LOCAL_DATE, 'LocalDate', 'dd/MM/yyyy')
+
+        expect:
+        coercing.parseValue('24/12/2026', CONTEXT, Locale.ROOT) == LocalDate.of(2026, 12, 24)
+        coercing.serialize(LocalDate.of(2026, 12, 24), CONTEXT, Locale.ROOT) == '24/12/2026'
+    }
 }

@@ -142,4 +142,20 @@ type Query {
 
     }
 
+
+    void "valueToLiteral keeps the JSON types: objects, lists, booleans, numbers, strings and null"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        def literal = coercing.valueToLiteral([a: 1, b: [true, 'x', 1.5d, null], c: [d: 3L]], CONTEXT, Locale.ROOT)
+
+        then:
+        literal instanceof ObjectValue
+        def fields = literal.objectFields.collectEntries { [it.name, it.value] }
+        fields.a instanceof IntValue && fields.a.value == 1
+        fields.b instanceof ArrayValue
+        fields.b.values*.class == [BooleanValue, StringValue, FloatValue, NullValue]
+        fields.c instanceof ObjectValue
+    }
 }

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.scalars.internal.json;
 
+import graphql.GraphQLContext;
 import graphql.execution.CoercedVariables;
 import graphql.language.ArrayValue;
 import graphql.language.BooleanValue;
@@ -27,17 +28,20 @@ import graphql.language.ObjectValue;
 import graphql.language.StringValue;
 import graphql.language.Value;
 import graphql.language.VariableReference;
+import graphql.schema.CoercingParseValueException;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.scalars.internal.WireCoercing;
 import io.micronaut.json.JsonMapper;
 import io.micronaut.json.tree.JsonNode;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -70,6 +74,56 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
         } catch (IOException e) {
             throw new IllegalArgumentException("the value cannot be written as JSON", e);
         }
+    }
+
+    @Override
+    public Value<?> valueToLiteral(Object input, GraphQLContext graphQLContext, Locale locale) {
+        try {
+            return literal(isJson(input) ? input : write(input));
+        } catch (RuntimeException e) {
+            throw new CoercingParseValueException(scalarName() + ": " + e.getMessage(), e);
+        }
+    }
+
+    private static Value<?> literal(Object value) {
+        if (value == null) {
+            return NullValue.of();
+        }
+        if (value instanceof CharSequence) {
+            return StringValue.of(value.toString());
+        }
+        if (value instanceof Boolean) {
+            return BooleanValue.of((Boolean) value);
+        }
+        if (value instanceof Integer || value instanceof Long || value instanceof Short || value instanceof Byte) {
+            return IntValue.newIntValue(BigInteger.valueOf(((Number) value).longValue())).build();
+        }
+        if (value instanceof BigInteger) {
+            return IntValue.newIntValue((BigInteger) value).build();
+        }
+        if (value instanceof BigDecimal) {
+            return FloatValue.newFloatValue((BigDecimal) value).build();
+        }
+        if (value instanceof Number) {
+            double number = ((Number) value).doubleValue();
+            if (Double.isNaN(number) || Double.isInfinite(number)) {
+                throw new IllegalArgumentException("a number that is not finite cannot be written as JSON");
+            }
+            return FloatValue.newFloatValue(BigDecimal.valueOf(number)).build();
+        }
+        if (value instanceof Map) {
+            ObjectValue.Builder object = ObjectValue.newObjectValue();
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) value).entrySet()) {
+                object.objectField(ObjectField.newObjectField().name(String.valueOf(entry.getKey()))
+                        .value(literal(entry.getValue())).build());
+            }
+            return object.build();
+        }
+        ArrayValue.Builder array = ArrayValue.newArrayValue();
+        for (Object element : (Collection<?>) value) {
+            array.value(literal(element));
+        }
+        return array.build();
     }
 
     @Override
