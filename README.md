@@ -20,6 +20,7 @@ and test it.
 | --- | --- | --- |
 | [`graphql-tools`](graphql-tools/README.md) | `:micronaut-graphql-tools` | The runtime library that applications depend on. |
 | [`graphql-tools-binding`](graphql-tools-binding/README.md) | `:micronaut-graphql-tools-binding` | The binding rules used by the runtime library. |
+| [`graphql-tools-scalars`](graphql-tools-scalars/README.md) | `:micronaut-graphql-tools-scalars` | The standard scalars: `java.time`, JSON and extended scalars, as beans. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
@@ -652,8 +653,9 @@ public class ScalarsFactory {
 - A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type
   (`Count!`), because `null` cannot be passed to it.
 
-The library ships no scalar implementations of its own beyond the built-in ones; graphql-java-extended-scalars and
-other libraries provide many. A mapping only takes effect for scalars the schema declares.
+The library itself ships no scalar implementations beyond the built-in ones. The [standard scalars](#standard-scalars) module
+registers the common ones; graphql-java-extended-scalars and other libraries provide many more. A mapping only takes
+effect for scalars the schema declares.
 
 The startup fails:
 
@@ -667,6 +669,25 @@ The startup fails:
 Values of custom scalars inside input objects reach the input class as the instances the scalar parsed. When the
 declared class is another one of the mapping's input classes, the value goes through the Micronaut `ConversionService`,
 which has the application's `TypeConverter` beans (see [Converting input values](#converting-input-values)).
+
+## Standard scalars
+
+The `micronaut-graphql-tools-scalars` module registers a `GraphQLScalarMapping` bean for the scalars that most services
+need: `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `OffsetTime`, `OffsetDateTime`, `ZonedDateTime`, `YearMonth`,
+`Year`, `Duration` and `Period` (ISO-8601 by default), `JSON` (converted with the application's `JsonMapper`, Micronaut
+Serialization in an application that uses it), and a selection of the extended scalars (`Url`, `UUID`, `Locale`,
+`Currency` and the signed `Int` and `Float` scalars). Add the dependency and declare the scalar in the schema.
+
+```
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-scalars:1.0.0-M4")
+```
+
+The module is available from `1.0.0-M4`; earlier milestones do not include it.
+
+Each scalar is configured under `micronaut.graphql.tools.scalars.<id>`: `name` renames the scalar in the schema, `format`
+changes the wire format of a `java.time` scalar (`iso`, a keyword such as `epoch-millis`, or a `DateTimeFormatter`
+pattern) and `enabled=false` turns the scalar off; `micronaut.graphql.tools.scalars.enabled=false` turns all of them off.
+The ids, the default names and formats are in the guide page on scalars.
 
 ## Arguments and input objects
 
@@ -1256,6 +1277,7 @@ To build or test against a role locally:
 |---|---|
 | Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
 | Binding rules (internal, pulled in by the library) | `io.micronaut.graphql.tools:micronaut-graphql-tools-binding` |
+| Standard scalars ([`java.time`, JSON and extended scalars](#standard-scalars)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 

@@ -1,0 +1,100 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package example.scalars
+
+import graphql.ExecutionInput
+import graphql.ExecutionResult
+import graphql.GraphQL
+import graphql.schema.GraphQLScalarType
+import graphql.schema.GraphQLSchema
+import io.micronaut.context.ApplicationContext
+import io.micronaut.json.JsonMapper
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+
+// Runs on the JVM and as a native binary (nativeTest): the standard scalars of the scalars module, from the schema to the
+// JSON of the response.
+class ScalarsTest {
+
+    private fun execute(context: ApplicationContext, query: String, variables: Map<String, Any> = emptyMap()): ExecutionResult {
+        val schema = context.getBean(GraphQLSchema::class.java)
+        return GraphQL.newGraphQL(schema).build()
+            .execute(ExecutionInput.newExecutionInput().query(query).variables(variables).build())
+    }
+
+    private fun wire(context: ApplicationContext, result: ExecutionResult): String =
+        context.getBean(JsonMapper::class.java).writeValueAsString(result.toSpecification())
+
+    // tag::round-trip[]
+    @Test
+    fun everyScalarRoundTripsWithItsDefaultFormat() {
+        ApplicationContext.run(emptyMap<String, Any>(), SCALARS_DEFAULTS).use { context ->
+            val result = execute(
+                context,
+                "query (\$t: OffsetDateTime!, \$j: JSON) {" +
+                    " bookedOn(date: \"2026-12-24\")" +
+                    " bookedAt(time: \$t)" +
+                    " elapsed(spent: \"PT1H30M\")" +
+                    " payload(data: \$j)" +
+                    " ticket(id: \"123e4567-e89b-12d3-a456-426614174000\")" +
+                    " homepage(url: \"https://example.org/a?b=c\") }",
+                mapOf("t" to "2026-12-24T10:15:30+01:00", "j" to mapOf("kind" to "x"))
+            )
+            assertTrue(result.errors.isEmpty(), result.errors.toString())
+            assertEquals(
+                "{\"data\":{\"bookedOn\":\"2026-12-25\",\"bookedAt\":\"2026-12-24T11:15:30+01:00\"," +
+                    "\"elapsed\":\"PT2H\",\"payload\":{\"kind\":\"x\"}," +
+                    "\"ticket\":\"123e4567-e89b-12d3-a456-426614174000\"," +
+                    "\"homepage\":\"https://example.org/a?b=c\"}}",
+                wire(context, result)
+            )
+        }
+    }
+    // end::round-trip[]
+
+    // tag::renamed[]
+    @Test
+    fun aConfiguredNameAndFormatChangeTheTypeThatBinds() {
+        val properties = mapOf(
+            "micronaut.graphql.tools.scalars.local-date.name" to "Date",
+            "micronaut.graphql.tools.scalars.local-date.format" to "dd/MM/yyyy"
+        )
+        ApplicationContext.run(properties, SCALARS_RENAMED).use { context ->
+            assertTrue(context.getBean(GraphQLSchema::class.java).getType("Date") is GraphQLScalarType)
+            assertNull(context.getBean(GraphQLSchema::class.java).getType("LocalDate"))
+            val result = execute(context, "{ bookedOn(date: \"24/12/2026\") }")
+            assertTrue(result.errors.isEmpty(), result.errors.toString())
+            assertEquals(mapOf("bookedOn" to "25/12/2026"), result.getData<Any>())
+        }
+    }
+    // end::renamed[]
+
+    @Test
+    fun anInvalidValueIsAnErrorThatNamesTheScalar() {
+        ApplicationContext.run(emptyMap<String, Any>(), SCALARS_DEFAULTS).use { context ->
+            val result = execute(context, "{ bookedOn(date: \"next week\") }")
+            assertFalse(result.errors.isEmpty())
+            assertTrue(result.errors[0].message.contains("LocalDate"), result.errors.toString())
+
+            val variable = execute(context, "query (\$d: Duration!) { elapsed(spent: \$d) }", mapOf("d" to "90 minutes"))
+            assertFalse(variable.errors.isEmpty())
+            assertTrue(variable.errors[0].message.contains("Duration"), variable.errors.toString())
+        }
+    }
+}
