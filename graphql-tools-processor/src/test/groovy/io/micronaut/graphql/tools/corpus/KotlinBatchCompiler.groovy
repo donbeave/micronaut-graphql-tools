@@ -98,9 +98,15 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
         return Language.KOTLIN
     }
 
-    /** The cases this backend builds: every case with Kotlin sources under KSP, the {@code lang:all} cases under kapt (the nightly run). */
+    /** The cases this backend builds: every case with Kotlin sources under KSP, the {@code lang:all} cases and the cases tagged {@code kapt:yes} under kapt (the nightly run). */
     static boolean covers(Processor processor, CorpusCase corpusCase) {
-        return corpusCase.languages().contains(Language.KOTLIN) && (processor == Processor.KSP || corpusCase.hasTag('lang:all'))
+        return corpusCase.languages().contains(Language.KOTLIN) && (processor == Processor.KSP || corpusCase.hasTag('lang:all') || corpusCase.hasTag('kapt:yes'))
+    }
+
+    /** Under kapt, {@code compile.kapt.txt} is what the case reports where the stubs hold less than KSP reads, when the case has it. */
+    @Override
+    String compileVerdictFile(CorpusCase corpusCase) {
+        return processor == Processor.KAPT && corpusCase.hasBaseExpected('compile.kapt.txt') ? 'compile.kapt.txt' : 'compile.txt'
     }
 
     static String projectName(CorpusCase corpusCase) {
@@ -182,7 +188,8 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
     private void build() {
         buildDir.toFile().deleteDir()
         Files.createDirectories(buildDir)
-        List<CorpusCase> cases = corpus.cases.findAll { covers(processor, it) }
+        String only = CorpusFixtures.only()
+        List<CorpusCase> cases = corpus.cases.findAll { covers(processor, it) && (only == null || it.name ==~ only) }
         List<String> projects = cases.collectMany { [projectName(it), checkedName(it)] }
         // `a-b/c` and `a/b-c` would share the project `a-b-c`: refuse instead of mixing two cases
         Set<String> seen = new HashSet<>()

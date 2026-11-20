@@ -113,7 +113,7 @@ final class CorpusRunner {
                         }
                     }
                 }
-                if (compile.available) {
+                if (compile.available && compilers.get(language).compileVerdictFile(corpusCase) == 'compile.txt') {
                     write(fresh, language, 'compile.txt', compile.lines().join('\n') + '\n')
                 }
                 return
@@ -144,12 +144,13 @@ final class CorpusRunner {
                 failures.add("the binding manifest differs from expected/manifest.txt:\n${diff(expectedManifest.readLines(), runtime.manifest.readLines())}".toString())
             }
         }
-        Verdict expectedCompile = corpusCase.expectedVerdict(language, 'compile.txt')
+        String compileFile = compilers.get(language).compileVerdictFile(corpusCase)
+        Verdict expectedCompile = corpusCase.expectedVerdict(language, compileFile)
         if (compile.available) {
             if (expectedCompile == null) {
-                failures.add('the compile-time backend is available but expected/compile.txt is not recorded')
+                failures.add("the compile-time backend is available but expected/${compileFile} is not recorded".toString())
             } else if (expectedCompile.lines() != compile.lines()) {
-                failures.add("${compileTimeBinder.name} verdict differs from expected/compile.txt:\n${diff(expectedCompile.lines(), compile.lines())}".toString())
+                failures.add("${compileTimeBinder.name} verdict differs from expected/${compileFile}:\n${diff(expectedCompile.lines(), compile.lines())}".toString())
             }
             failures.addAll(Parity.check(corpusCase.name, language, runtime, compile, corpus.divergences, Parity.relaxedCodes(corpusCase.config), corpus.exceptions, corpusCase.checksOff()))
         }
