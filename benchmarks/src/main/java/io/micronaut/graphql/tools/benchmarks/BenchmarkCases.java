@@ -36,6 +36,8 @@ import graphql.schema.PropertyDataFetcher;
 import graphql.schema.TypeResolver;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import io.micronaut.configuration.graphql.GraphQLInvocation;
+import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Circle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Item;
@@ -65,6 +67,8 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String UNION_RESOLUTION = "unionResolution";
     public static final String INTERFACE_RESOLUTION = "interfaceResolution";
     public static final String DIRECTIVE_WRAPPED_FETCHER = "directiveWrappedFetcher";
+    public static final String INVOCATION_OVERHEAD = "invocationOverhead";
+    public static final String INVOCATION_SLOPE = "invocationSlope";
     public static final String QUERY_1K = "query1kObjects";
     public static final String QUERY_10K = "query10kObjects";
 
@@ -129,6 +133,10 @@ public final class BenchmarkCases implements AutoCloseable {
             type Rectangle implements Figure { name: String! }
             """;
 
+    /** The sizes, in root fields, of the queries that the invocation gates compare. */
+    static final int SMALL_QUERY_FIELDS = 10;
+    static final int LARGE_QUERY_FIELDS = 1_000;
+
     @FunctionalInterface
     public interface Op {
         Object run() throws Exception;
@@ -136,6 +144,7 @@ public final class BenchmarkCases implements AutoCloseable {
 
     private final ApplicationContext context;
     private final GraphQL graphQL;
+    private final GraphQLInvocation invocation;
     private final GraphQLSchema schema;
     private final Map<String, Op> ops = new LinkedHashMap<>();
 
@@ -148,10 +157,13 @@ public final class BenchmarkCases implements AutoCloseable {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
         context = ApplicationContext.builder()
-                .properties(Map.of("graphql.graphql-ws.enabled", false, "graphql.graphiql.enabled", false))
+                .properties(Map.of("graphql.graphql-ws.enabled", false, "graphql.graphiql.enabled", false,
+                        // the invocation gates measure the calling thread, so the operation must not hop
+                        "micronaut.graphql.tools.execution.executor", "none"))
                 .singletons(registry)
                 .start();
         graphQL = context.getBean(GraphQL.class);
+        invocation = context.getBean(GraphQLInvocation.class);
         schema = graphQL.getGraphQLSchema();
 
         ops.put(PROPERTY_FETCH, fetch("Item", "name", new Item("id", "name", 1), Map.of()));
@@ -173,8 +185,22 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(DIRECTIVE_WRAPPED_FETCHER, fetch("Query", "guarded", null, Map.of()));
         ops.put(UNION_RESOLUTION, resolve(schema.getType("Shape"), new Circle(), new Square()));
         ops.put(INTERFACE_RESOLUTION, resolve(schema.getType("Figure"), new Triangle(), new Rectangle()));
+        ops.put(invokeOp(SMALL_QUERY_FIELDS), invoke(SMALL_QUERY_FIELDS));
+        ops.put(directOp(SMALL_QUERY_FIELDS), direct(SMALL_QUERY_FIELDS));
+        ops.put(invokeOp(LARGE_QUERY_FIELDS), invoke(LARGE_QUERY_FIELDS));
+        ops.put(directOp(LARGE_QUERY_FIELDS), direct(LARGE_QUERY_FIELDS));
         ops.put(QUERY_1K, query(1_000));
         ops.put(QUERY_10K, query(10_000));
+    }
+
+    /** The operation that runs a query of {@code fields} root fields through the library's invocation. */
+    static String invokeOp(int fields) {
+        return "invoke" + fields + "Fields";
+    }
+
+    /** The operation that runs the same query on the {@code GraphQL} bean directly. */
+    static String directOp(int fields) {
+        return "direct" + fields + "Fields";
     }
 
     public Op op(String name) {
@@ -242,6 +268,26 @@ public final class BenchmarkCases implements AutoCloseable {
                 return resolver.getType(environments[(next++) & 1]);
             }
         };
+    }
+
+    private static String fieldsQuery(int fields) {
+        StringBuilder query = new StringBuilder("{");
+        for (int i = 0; i < fields; i++) {
+            query.append(" f").append(i).append(": ping");
+        }
+        return query.append(" }").toString();
+    }
+
+    // the invocation runs on the calling thread (executor none), so the result future is complete when it returns; the
+    // Mono that the transport subscribes to is built and not subscribed, because its subscription is the transport's
+    private Op invoke(int fields) {
+        GraphQLInvocationData data = new GraphQLInvocationData(fieldsQuery(fields), null, Map.of());
+        return () -> invocation.invoke(data, null, null);
+    }
+
+    private Op direct(int fields) {
+        String query = fieldsQuery(fields);
+        return () -> graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build());
     }
 
     private Op query(int count) {
