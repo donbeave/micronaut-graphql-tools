@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.internal.execution;
+package io.micronaut.graphql.tools.internal.execution.disconnect;
 
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
