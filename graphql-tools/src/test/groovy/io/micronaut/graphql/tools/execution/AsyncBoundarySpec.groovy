@@ -18,7 +18,6 @@ package io.micronaut.graphql.tools.execution
 import jakarta.inject.Singleton
 import graphql.ExecutionResult
 import graphql.GraphQLContext
-import graphql.ExceptionWhileDataFetching
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.DataFetchingEnvironmentImpl
@@ -182,17 +181,16 @@ type Parent {
     }
 
     void "a failure reaches the error handling as its real type, not as a CompletionException"() {
-        given:
-        startContext(SCHEMA, SPEC_NAME)
+        given: 'the details setting shows the class that the error handling saw'
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.errors.details': true])
 
         when:
         def result = run(query)
 
         then:
         result.errors.size() == 1
-        result.errors[0] instanceof ExceptionWhileDataFetching
-        (result.errors[0] as ExceptionWhileDataFetching).exception.class == IllegalStateException
-        (result.errors[0] as ExceptionWhileDataFetching).exception.message == 'boom'
+        result.errors[0].message == 'boom'
+        result.errors[0].extensions.exceptionClass == 'java.lang.IllegalStateException'
 
         where:
         query << ['{ failing { label } }', '{ failingEventLoop { label } }']

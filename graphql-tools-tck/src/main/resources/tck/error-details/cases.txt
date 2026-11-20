@@ -1,0 +1,2 @@
+details-show-the-message-of-an-exception
+mapped-exception-is-not-affected

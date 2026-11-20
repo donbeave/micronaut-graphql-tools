@@ -92,7 +92,7 @@ type Book {
 
     void "a refreshable resolver follows the refresh, a request-scoped resolver needs a request"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.errors.details': true])
 
         when:
         def before = executeQuery('{ refreshable }').data.refreshable
