@@ -73,6 +73,10 @@ Merge with "Squash and merge" only.
 
 Renovate is configured in `.github/renovate.json`. Review its pull requests like any other: the same green `required checks` rule applies.
 
+## Dependency downloads
+
+Maven Central and the Gradle plugin portal sometimes answer HTTP 429, and Gradle 9.9.1 does not retry it, so the Gradle steps run through `.github/scripts/retry-on-download-failure.sh`, which runs the build again (up to three attempts) only when it failed on a download. The Maven samples retry 429 themselves, with more attempts than Maven's default; a failure that is not a download still fails the run at once.
+
 ## Releases
 
 Only GitHub Packages milestone releases are published: milestone versions `1.0.0-M<n>` and, later, `1.0.0` go to the Maven registry of this repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. Maven Central, GitHub Releases and snapshots stay out of scope until the Foundation contribution. The groupId stays `io.micronaut.graphql.tools`; every consumer-facing page says that the artifacts are unaffiliated milestone previews until contributed.

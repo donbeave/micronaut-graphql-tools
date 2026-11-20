@@ -45,7 +45,7 @@ jobs:
           jdk: ${{ matrix.java }}
           tools: java
       - name: Build with Gradle
-        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
@@ -93,7 +93,7 @@ jobs:
           jdk: ${{ matrix.java }}
           tools: java
       - name: Build with Gradle
-        run: ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
@@ -129,7 +129,7 @@ jobs:
           jdk: ${{ matrix.java }}
           tools: java
       - name: Build with Gradle
-        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
@@ -163,7 +163,7 @@ jobs:
           jdk: '25'
           tools: java maven
       - name: Build the samples and the Kotlin corpus
-        run: ./gradlew :test-suite-build:buildToolsTest :micronaut-graphql-tools-processor:corpusKotlin --no-daemon --continue -PgraphqlJavaLeg=default
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-build:buildToolsTest :micronaut-graphql-tools-processor:corpusKotlin --no-daemon --continue -PgraphqlJavaLeg=default
         env:
           PREDICTIVE_TEST_SELECTION: 'false'
       - name: Upload test reports
@@ -198,7 +198,7 @@ jobs:
         with:
           tools: java
       - name: Run native tests
-        run: ./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           GRAALVM_QUICK_BUILD: 'true'
           PREDICTIVE_TEST_SELECTION: 'false'
@@ -232,7 +232,7 @@ jobs:
         with:
           tools: java
       - name: Run the native smoke test
-        run: ./gradlew :test-suite-groovy:nativeSmokeTest --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-groovy:nativeSmokeTest --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           GRAALVM_QUICK_BUILD: 'true'
           PREDICTIVE_TEST_SELECTION: 'false'
@@ -271,7 +271,7 @@ jobs:
       - name: Build the guide
         run: |
           set -o pipefail
-          ./gradlew docs --no-daemon 2>&1 | tee docs.log
+          .github/scripts/retry-on-download-failure.sh ./gradlew docs --no-daemon 2>&1 | tee docs.log
       - name: Fail on a missing snippet
         run: |
           if grep -E 'NO FILE FOUND|not found in include file|include file not found|unexpected end tag|detected unclosed tag|mismatched end tag|unterminated .* block|Unresolved directive' docs.log; then
