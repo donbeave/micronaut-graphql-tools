@@ -288,6 +288,7 @@ public final class ResolverClassRules {
         TypeRef result = declared;
         int depth = 0;
         String outer = null;
+        ReturnVerdict.Reactive reactive = ReturnVerdict.Reactive.NONE;
 
         if (isAssignableTo(model, result, COMPLETION_STAGE)) {
             if (!fieldLevel) {
@@ -314,7 +315,25 @@ public final class ResolverClassRules {
             result = result.typeArguments().get(0);
             depth++;
         } else if (publisher) {
-            return ReturnVerdict.failed(WrapperRules.publisherOutsideSubscription());
+            if (!fieldLevel) {
+                return ReturnVerdict.failed(WrapperRules.publisherInList());
+            }
+            if (outer != null) {
+                return ReturnVerdict.failed(WrapperRules.publisherInCompletionStage());
+            }
+            if (untyped(result, fieldType)) {
+                return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
+            }
+            if (!isAssignableTo(model, result, WrapperRules.SINGLE_VALUE_PUBLISHER)) {
+                if (!(unwrapNonNull(fieldType) instanceof ListType)) {
+                    return ReturnVerdict.failed(WrapperRules.multiValuePublisherNeedsList(SchemaTypes.print(fieldType)));
+                }
+                return new ReturnVerdict(depth + 1, false, null, ReturnVerdict.Reactive.MULTI, null);
+            }
+            reactive = ReturnVerdict.Reactive.SINGLE;
+            outer = PUBLISHER;
+            result = result.typeArguments().get(0);
+            depth++;
         }
 
         if (isAssignableTo(model, result, DATA_FETCHER_RESULT)) {
@@ -358,7 +377,7 @@ public final class ResolverClassRules {
             }
         }
 
-        return new ReturnVerdict(depth, primitiveOptional, null, null);
+        return new ReturnVerdict(depth, primitiveOptional, null, reactive, null);
     }
 
     // a wrapper without a type argument: the raw type, whose argument the type model reports as Object. An explicit
@@ -473,12 +492,21 @@ public final class ResolverClassRules {
         for (int i = 0; i < verdict.depth(); i++) {
             adapted = adapted.typeArguments().get(0);
         }
+        if (verdict.reactive() == ReturnVerdict.Reactive.MULTI) {
+            // the type reached is the element: the publisher collects its values into the list
+            return new ReturnVerdict(verdict.depth(), false, null, verdict.reactive(),
+                    fieldReturn(model, adapted, list.getType(), false, subscription));
+        }
         if (!isAssignableTo(model, adapted, ITERABLE) && !isAssignableTo(model, adapted, ITERATOR)
                 || adapted.typeArguments().isEmpty()) {
             return verdict;
         }
-        return new ReturnVerdict(verdict.depth(), false, null,
+        return new ReturnVerdict(verdict.depth(), false, null, verdict.reactive(),
                 fieldReturn(model, adapted.typeArguments().get(0), list.getType(), false, subscription));
+    }
+
+    private static Type<?> unwrapNonNull(Type<?> type) {
+        return type instanceof NonNullType nonNull ? nonNull.getType() : type;
     }
 
     @Nullable

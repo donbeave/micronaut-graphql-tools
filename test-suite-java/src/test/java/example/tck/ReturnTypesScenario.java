@@ -23,6 +23,9 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -141,6 +144,32 @@ public final class ReturnTypesScenario {
 
         public List<OptionalInt> primitiveCounts() {
             return List.of(OptionalInt.of(1), OptionalInt.empty(), OptionalInt.of(3));
+        }
+
+        // tag::publisher-returns[]
+        public Mono<Greeting> reactiveOne(String name) {
+            return Mono.just(new Greeting("hello " + name));
+        }
+
+        public Flux<Greeting> reactiveMany() {
+            return Flux.just(new Greeting("one"), new Greeting("two"));
+        }
+        // end::publisher-returns[]
+
+        public Mono<Greeting> reactiveAbsent() {
+            return Mono.empty();
+        }
+
+        public Flux<Greeting> reactiveNone() {
+            return Flux.empty();
+        }
+
+        public Mono<Greeting> reactiveFailing() {
+            return Mono.error(new IllegalStateException("reactive boom"));
+        }
+
+        public Flux<Greeting> reactiveManyFailing() {
+            return Flux.concat(Flux.just(new Greeting("lost")), Flux.error(new IllegalStateException("reactive boom")));
         }
     }
 

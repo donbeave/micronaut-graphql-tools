@@ -1,0 +1,4 @@
+{
+  reactiveAbsent { message }
+  reactiveNone { message }
+}

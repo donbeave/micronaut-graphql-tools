@@ -116,7 +116,7 @@ type Query {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
-        e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), Publisher (subscription fields only), DataFetcherResult, Optional (nullable types only), each at most once. Fix: remove the inner ${DataFetcherResult.simpleName} or declare the wrappers in that order.
+        e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${DataFetcherResult.name} cannot wrap ${DataFetcherResult.name}. Supported wrappers, outermost first: CompletionStage (field level only), Publisher (field level only, never inside a CompletionStage), DataFetcherResult, Optional (nullable types only), each at most once. Fix: remove the inner ${DataFetcherResult.simpleName} or declare the wrappers in that order.
   GraphQL coordinate: Query.greeting (line 7, column 3)
   Mapped class: ${NestedQuery.name}
   Mapped method: greeting()"""
