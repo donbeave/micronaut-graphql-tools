@@ -120,6 +120,7 @@ public final class AbstractTypesScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "abstract-types")
     public static class Queries {

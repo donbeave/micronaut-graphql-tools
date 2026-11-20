@@ -100,6 +100,7 @@ type User implements Node {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(coordinate|plain)')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Node node() {
@@ -117,6 +118,7 @@ type User implements Node {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + '.coordinate')
+    @Singleton
     @GraphQLTypeResolver(Node.class)
     static class CoordinateNodeResolver {
         @GraphQLSchemaCoordinate("Node.id")
@@ -126,6 +128,7 @@ type User implements Node {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + '.plain')
+    @Singleton
     @GraphQLTypeResolver(Node.class)
     static class PlainNodeResolver {
         String id(Node node) {

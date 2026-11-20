@@ -15,11 +15,13 @@
  */
 package io.micronaut.graphql.tools.mapping.input;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLArgument;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 @Requires(property = "spec.name", value = "ArgumentBindingSpecJava")
+@Singleton
 @GraphQLRootResolver
 public class JavaArgumentBindingQuery {
 

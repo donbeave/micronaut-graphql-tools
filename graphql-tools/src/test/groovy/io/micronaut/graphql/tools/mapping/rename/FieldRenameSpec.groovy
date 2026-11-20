@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.rename
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -54,6 +55,7 @@ type Parcel {
 """
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(members|clash|ignored)')
+    @Singleton
     @GraphQLRootResolver
     static class ParcelQuery {
         Parcel parcel() {
@@ -125,6 +127,7 @@ type Slip {
 """
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".clash")
+    @Singleton
     @GraphQLRootResolver
     static class ClashQuery {
         ClashSlip slip() {
@@ -143,6 +146,7 @@ type Slip {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".twoRenamed")
+    @Singleton
     @GraphQLRootResolver
     static class TwoRenamedQuery {
         TwoRenamedSlip slip() {
@@ -164,6 +168,7 @@ type Slip {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".renamedAway")
+    @Singleton
     @GraphQLRootResolver
     static class RenamedAwayQuery {
         RenamedAwaySlip slip() {
@@ -178,6 +183,7 @@ type Slip {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".ignored")
+    @Singleton
     @GraphQLRootResolver
     static class IgnoredQuery {
         IgnoredSlip slip() {
@@ -252,6 +258,7 @@ type Slip {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".precedence")
+    @Singleton
     @GraphQLRootResolver
     static class PrecedenceQuery {
         PrecedenceSlip slip() {
@@ -268,6 +275,7 @@ type Slip {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".precedence")
+    @Singleton
     @GraphQLTypeResolver(PrecedenceSlip.class)
     static class PrecedenceSlipResolver {
         String title(PrecedenceSlip slip) {
@@ -312,6 +320,7 @@ type Query {
 """
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".aliases")
+    @Singleton
     @GraphQLRootResolver
     static class AliasQuery {
         String getFoo() {
@@ -332,6 +341,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(coordinates|duplicateCoordinate)')
+    @Singleton
     @GraphQLRootResolver
     static class CoordinateQuery {
         @GraphQLSchemaCoordinate("Query.parcel")
@@ -351,6 +361,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".coordinates")
+    @Singleton
     @GraphQLTypeResolver(CoordinateParcel.class)
     static class CoordinateParcelResolver {
         @GraphQLSchemaCoordinate("Parcel.id")
@@ -385,6 +396,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".duplicateCoordinate")
+    @Singleton
     @GraphQLTypeResolver(CoordinateParcel.class)
     static class DuplicateCoordinateResolver {
         @GraphQLSchemaCoordinate("Parcel.class")
@@ -444,6 +456,7 @@ type Parcel {
 """
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(prefixes|prefixesOff|prefixClash)')
+    @Singleton
     @GraphQLRootResolver
     static class PrefixQuery {
         String getPing() {
@@ -460,6 +473,7 @@ type Parcel {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(prefixes|prefixesOff)')
+    @Singleton
     @GraphQLTypeResolver(PrefixParcel.class)
     static class PrefixParcelResolver {
         String getAuthor(PrefixParcel parcel) {
@@ -472,6 +486,7 @@ type Parcel {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".prefixClash")
+    @Singleton
     @GraphQLTypeResolver(PrefixParcel.class)
     static class PrefixClashResolver {
         String author(PrefixParcel parcel) {

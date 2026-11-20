@@ -15,6 +15,7 @@
  */
 package example.tck
 
+import jakarta.inject.Singleton
 import graphql.GraphqlErrorBuilder
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
@@ -65,6 +66,7 @@ class Scalars {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'return-types')
 class ReturnTypesQueries {

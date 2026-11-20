@@ -15,6 +15,7 @@
  */
 package example.tck
 
+import jakarta.inject.Singleton
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
@@ -114,6 +115,7 @@ class Crate {
 // end::nested-constructor-input[]
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'arguments')
 class ArgumentsQueries {
@@ -163,6 +165,7 @@ class ArgumentsQueries {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'arguments')
 class ArgumentsMutations {

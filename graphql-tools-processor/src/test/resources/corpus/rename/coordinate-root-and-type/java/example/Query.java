@@ -1,8 +1,10 @@
 package example;
 
+import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 
+@Singleton
 @GraphQLRootResolver
 public class Query {
 

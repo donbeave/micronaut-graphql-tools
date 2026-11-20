@@ -126,6 +126,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', pattern = SPEC_NAME + '.*')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Book book(String id) {
@@ -140,6 +141,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class BookResolver {
         List<Section> sections(Book book) {
@@ -213,6 +215,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".wrongJavaType")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class ConcreteSectionsResolver {
         List<TextSection> sections(Book book) {
@@ -238,6 +241,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".notRegistered")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class NotRegisteredSectionsResolver {
         List<Section> sections(Book book) {
@@ -272,6 +276,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".implementationMissingField")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class UntitledSectionsResolver {
         List<IdentifiedSection> sections(Book book) {
@@ -342,6 +347,7 @@ type MediaSection implements Section {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".sdlMissingField")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class SdlMissingFieldResolver {
         List<Section> sections(Book book) {

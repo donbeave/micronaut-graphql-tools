@@ -41,7 +41,7 @@ type Book {
 +
 snippet::example.graphql.GraphQLFactory[project-base="test-suite", source="main", tags="registry", indent="0"]
 
-4. Add a root resolver. The method name is the field name in the schema, and the class is bound by `@GraphQLRootResolver`. The resolver reads from a `BookRepository` that returns `Book` objects with an `id` and a `title`; they are classes of the example application, so replace them with your own data source and model. `@ElapsedTime` is a timing aspect of the example application; leave it out:
+4. Add a root resolver. The method name is the field name in the schema, and the class is bound by `@GraphQLRootResolver`. The annotation carries no bean stereotype, so the class also needs a scope annotation such as `@Singleton`. The resolver reads from a `BookRepository` that returns `Book` objects with an `id` and a `title`; they are classes of the example application, so replace them with your own data source and model. `@ElapsedTime` is a timing aspect of the example application; leave it out:
 +
 snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="main", tags="resolver", indent="0"]
 
@@ -49,11 +49,13 @@ snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="
 
 The library provides these annotations (package `io.micronaut.graphql.tools.annotation`):
 
-* `@GraphQLRootResolver` defines a root-level resolver, a GraphQL entry point such as a query or mutation.
+* `@GraphQLRootResolver` defines a root-level resolver, a GraphQL entry point such as a query or mutation. Like `@GraphQLTypeResolver`, it makes no bean: the class needs `@Singleton` or another scope annotation.
 * `@GraphQLType` maps a Java class to a GraphQL type.
 * `@GraphQLTypeResolver` specifies a resolver for a field of a specific GraphQL type, to map nested or complex fields.
 * `@GraphQLInput` defines a GraphQL input type, structured input data for mutations or queries.
 * `@GraphQLField` marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field. `@GraphQLField("name")` on a method or a property binds the field of that name (see <<renaming,Binding a field to a differently named member>>).
 * `@GraphQLSchemaCoordinate("Type.field")` names the field a resolver method binds; it is meant for resolver contracts (interfaces).
+
+The marker interfaces `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` (package `io.micronaut.graphql.tools.resolver`) declare resolver contracts without an annotation; see <<resolverContracts,Resolver Contracts>>.
 
 GraphQL enums map to Java enums annotated with `@Introspected`, and unions and interfaces to Java interfaces, without an annotation of their own.

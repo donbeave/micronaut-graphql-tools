@@ -100,6 +100,7 @@ class InputErrorsScalars {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'input-errors')
 class InputErrorsQueries {

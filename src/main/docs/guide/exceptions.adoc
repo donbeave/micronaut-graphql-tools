@@ -75,7 +75,7 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`ambiguous-type-mapping` |failure |no |The SchemaMappingDictionary maps object types so that one Java object matches several.
 |`ambiguous-abstract-type` |failure |no |Objects of one class cannot be resolved to one object type of a union or interface.
 |`ambiguous-type-resolver` |failure |no |A bean inherits the type resolver annotation for several classes.
-|`type-resolver-contracts-not-found` |failure |no |A bean is a type resolver only through an inherited annotation, or carries the annotation and inherits another contract, and the build did not record its contracts (the processor is not on the path of the compiler).
+|`type-resolver-contracts-not-found` |failure |no |A bean is a type resolver only through an inherited annotation or the marker TypeResolver<T>, carries the annotation and has a supertype, or implements QueryResolver, MutationResolver or SubscriptionResolver, and the build did not record what the markers mean (the processor is not on the path of the compiler).
 |`incorrect-annotation` |failure |no |A library annotation is used where it has no meaning.
 |`missing-enum-values` |failure |no |A schema enum value has no constant in the Java enum.
 |`scalar-mapping-not-provided` |failure |no |A custom scalar of the schema has no GraphQLScalarMapping.

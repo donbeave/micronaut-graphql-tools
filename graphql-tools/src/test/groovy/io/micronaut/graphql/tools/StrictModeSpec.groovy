@@ -163,6 +163,7 @@ enum Color {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Item item() {
@@ -186,6 +187,7 @@ enum Color {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Item.class)
     static class ItemResolver {
         String legacyName(Item item) {
@@ -223,6 +225,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".coordinates")
+    @Singleton
     @GraphQLRootResolver
     static class LabelQuery {
         @GraphQLSchemaCoordinate("Query.label")
@@ -262,6 +265,7 @@ type Draft {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".unreachable")
+    @Singleton
     @GraphQLRootResolver
     static class DraftQuery {
         String label() {
@@ -275,6 +279,7 @@ type Draft {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".unreachable")
+    @Singleton
     @GraphQLTypeResolver(Draft.class)
     static class DraftResolver {
         @GraphQLSchemaCoordinate("Draft.note")
@@ -310,6 +315,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".shadowed")
+    @Singleton
     @GraphQLRootResolver
     static class ShadowedQuery {
         Item item() {
@@ -318,6 +324,7 @@ type Item {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".shadowed")
+    @Singleton
     @GraphQLTypeResolver(Item.class)
     static class ShadowingResolver {
         String name(Item item) {
@@ -421,6 +428,7 @@ input Filter {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".valueTypes")
+    @Singleton
     @GraphQLRootResolver
     static class ValueTypesQuery {
         String label() {
@@ -480,6 +488,7 @@ type Note {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".plainInterface")
+    @Singleton
     @GraphQLRootResolver
     static class PlainNoteQuery {
         PlainNote note() {
@@ -496,6 +505,7 @@ type Note {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".introspectedInterface")
+    @Singleton
     @GraphQLRootResolver
     static class IntrospectedNoteQuery {
         IntrospectedNote note() {
@@ -552,6 +562,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".directives")
+    @Singleton
     @GraphQLRootResolver
     static class DirectiveQuery {
         String label() {
@@ -580,6 +591,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".objectMethods")
+    @Singleton
     @GraphQLRootResolver
     static class ObjectMethodsQuery {
         String label() {
@@ -646,6 +658,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".sharedRoot")
+    @Singleton
     @GraphQLRootResolver
     static class SharedPing {
         String ping() {
@@ -764,6 +777,7 @@ input Nested {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".transitive")
+    @Singleton
     @GraphQLRootResolver
     static class TransitiveQuery {
         String label() {

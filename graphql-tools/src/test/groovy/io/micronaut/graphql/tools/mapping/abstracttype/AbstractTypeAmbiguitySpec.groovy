@@ -173,6 +173,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
     }
 
     @Requires(property = 'spec.name', value = UNION)
+    @Singleton
     @GraphQLRootResolver
     static class UnionQuery {
         Wrapped wrapped() {
@@ -181,6 +182,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
     }
 
     @Requires(property = 'spec.name', value = INTERFACE)
+    @Singleton
     @GraphQLRootResolver
     static class InterfaceQuery {
         Wrapped wrapped() {
@@ -201,6 +203,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
     }
 
     @Requires(property = 'spec.name', value = EXACT)
+    @Singleton
     @GraphQLRootResolver
     static class ExactQuery {
         Wrapped wrapped() {
@@ -221,6 +224,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
     }
 
     @Requires(property = 'spec.name', value = CHAIN)
+    @Singleton
     @GraphQLRootResolver
     static class ChainQuery {
         Wrapper note() {

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.extension
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -95,6 +96,7 @@ extend type Book {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Book book() {
@@ -118,6 +120,7 @@ extend type Book {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Book)
     static class BookResolver {
         String author(Book book) {

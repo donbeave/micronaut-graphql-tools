@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.returntype
 
+import jakarta.inject.Singleton
 import graphql.GraphqlErrorBuilder
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
@@ -207,6 +208,7 @@ input FilterInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         DataFetcherResult<Item> item() {
@@ -234,6 +236,7 @@ input FilterInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Item)
     static class ItemResolver {
         String label(Item item, DataFetchingEnvironment env) {
@@ -251,6 +254,7 @@ input FilterInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_NESTED)
+    @Singleton
     @GraphQLRootResolver
     static class NestedQuery {
         DataFetcherResult<DataFetcherResult<String>> greeting() {
@@ -259,6 +263,7 @@ input FilterInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_LIST_FUTURE)
+    @Singleton
     @GraphQLRootResolver
     static class ListFutureQuery {
         List<CompletionStage<String>> names() {
@@ -267,6 +272,7 @@ input FilterInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_INPUT)
+    @Singleton
     @GraphQLRootResolver
     static class InputQuery {
         String search(DataFetcherResult<FilterInput> filter) {
@@ -280,6 +286,7 @@ input FilterInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_RAW)
+    @Singleton
     @GraphQLRootResolver
     static class RawQuery {
         DataFetcherResult greeting() {

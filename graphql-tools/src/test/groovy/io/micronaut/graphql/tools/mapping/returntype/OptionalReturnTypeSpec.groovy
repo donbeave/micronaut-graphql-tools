@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.returntype
 
+import jakarta.inject.Singleton
 import graphql.execution.DataFetcherResult
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -194,6 +195,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Optional<String> present() {
@@ -231,6 +233,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_NON_NULL)
+    @Singleton
     @GraphQLRootResolver
     static class NonNullQuery {
         Optional<String> name() {
@@ -239,6 +242,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_NON_NULL_PROPERTY)
+    @Singleton
     @GraphQLRootResolver
     static class NonNullPropertyQuery {
         Holder holder() {
@@ -254,6 +258,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_NON_NULL_ELEMENT)
+    @Singleton
     @GraphQLRootResolver
     static class NonNullElementQuery {
         List<Optional<String>> names() {
@@ -262,6 +267,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_WRONG_ORDER)
+    @Singleton
     @GraphQLRootResolver
     static class WrongOrderQuery {
         Optional<DataFetcherResult<String>> name() {

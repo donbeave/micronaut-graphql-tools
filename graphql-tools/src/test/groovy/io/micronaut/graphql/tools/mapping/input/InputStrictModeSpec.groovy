@@ -278,6 +278,7 @@ input PointInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_PRIMITIVE_ARGUMENT)
+    @Singleton
     @GraphQLRootResolver
     static class PrimitiveArgumentQuery {
         String repeat(String text, int times) {
@@ -286,6 +287,7 @@ input PointInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NON_NULL_PRIMITIVE)
+    @Singleton
     @GraphQLRootResolver
     static class NonNullPrimitiveQuery {
         String repeat(String text, int times) {
@@ -294,6 +296,7 @@ input PointInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_PRIMITIVE_PROPERTY)
+    @Singleton
     @GraphQLRootResolver
     static class PrimitivePropertyQuery {
         String order(LineInput line) {
@@ -308,6 +311,7 @@ input PointInput {
     }
 
     @Requires(property = 'spec.name', pattern = 'InputStrictModeSpec(TypeConverter|Immutable)')
+    @Singleton
     @GraphQLRootResolver
     static class DistanceQuery {
         Double distance(Point point) {

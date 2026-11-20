@@ -53,6 +53,26 @@ public final class TypeResolverContractsNotFoundException extends SchemaBindingE
         this.beanType = beanType;
     }
 
+    private TypeResolverContractsNotFoundException(Class<?> beanType, String message) {
+        super(BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND, message);
+
+        this.beanType = beanType;
+    }
+
+    /**
+     * @param beanType a bean that implements QueryResolver, MutationResolver or SubscriptionResolver
+     * @return the failure for a bean whose root operation the build did not record
+     */
+    public static TypeResolverContractsNotFoundException forRootMarker(Class<?> beanType) {
+        return new TypeResolverContractsNotFoundException(beanType, "The bean " + beanType.getName() + " implements a "
+                + "root resolver marker interface (QueryResolver, MutationResolver or SubscriptionResolver), but the build did "
+                + "not record its operation. Add micronaut-graphql-tools-processor to the path that your compiler reads "
+                + "Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for "
+                + "Groovy; the compile-time checks section of the README shows the setting of each tool, and "
+                + "micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the "
+                + "operation).");
+    }
+
     public Class<?> getBeanType() {
         return beanType;
     }

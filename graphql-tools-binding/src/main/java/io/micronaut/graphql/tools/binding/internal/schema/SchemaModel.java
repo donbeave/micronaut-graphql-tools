@@ -78,6 +78,24 @@ public record SchemaModel(TypeDefinitionRegistry registry, Map<String, String> r
     }
 
     /**
+     * @param operations operations ({@code query}, {@code mutation}, {@code subscription}); empty for all of them
+     * @return the names of the root types of those operations
+     */
+    public Set<String> rootTypeNames(java.util.Collection<String> operations) {
+        if (operations.isEmpty()) {
+            return rootTypeNames();
+        }
+        Set<String> names = new TreeSet<>();
+        for (String operation : operations) {
+            String name = rootTypes.get(operation);
+            if (name != null) {
+                names.add(name);
+            }
+        }
+        return names;
+    }
+
+    /**
      * @return the name of the subscription type, when the schema has one
      */
     public Optional<String> subscriptionType() {

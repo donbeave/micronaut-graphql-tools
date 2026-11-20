@@ -16,9 +16,11 @@
 package io.micronaut.graphql.tools.mapping.resolver.introduction;
 
 import io.micronaut.context.annotation.Requires;
+import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate;
 
+@Singleton
 @Answering
 @GraphQLRootResolver
 @Requires(property = "spec.name", value = "IntroductionCoordinateSpec")

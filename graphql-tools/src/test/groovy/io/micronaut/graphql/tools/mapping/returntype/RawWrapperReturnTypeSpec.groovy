@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.returntype
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -84,6 +85,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_OPTIONAL)
+    @Singleton
     @GraphQLRootResolver
     static class OptionalQuery {
         Optional value() {
@@ -92,6 +94,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_STAGE)
+    @Singleton
     @GraphQLRootResolver
     static class StageQuery {
         CompletionStage value() {

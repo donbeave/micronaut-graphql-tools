@@ -45,6 +45,7 @@ class DeepTypeChainSchema : TypeDefinitionRegistryCustomizer {
     }
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(env = [DEEP_TYPE_CHAIN_ENVIRONMENT])
 class DeepTypeChainQuery {

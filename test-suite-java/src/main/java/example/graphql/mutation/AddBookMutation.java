@@ -15,6 +15,7 @@
  */
 package example.graphql.mutation;
 
+import jakarta.inject.Singleton;
 import example.ElapsedTime;
 import example.data.AuthenticationService;
 import example.data.Book;
@@ -30,6 +31,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import java.util.Optional;
 
+@Singleton
 @GraphQLRootResolver
 public class AddBookMutation {
 

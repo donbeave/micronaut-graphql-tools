@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.internal.model
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.beans.BeanIntrospector
@@ -197,6 +198,7 @@ enum Genre { FICTION }
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
 
@@ -215,6 +217,7 @@ enum Genre { FICTION }
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Book)
     static class BookResolver {
         String title(Book book) {

@@ -43,6 +43,15 @@ public final class AnnotationNames {
     /** {@code @GraphQLField}. */
     public static final String FIELD = PACKAGE + "GraphQLField";
 
+    /** {@code QueryResolver}, the marker interface of a root resolver of the query type. */
+    public static final String QUERY_RESOLVER = "io.micronaut.graphql.tools.resolver.QueryResolver";
+    /** {@code MutationResolver}, the marker interface of a root resolver of the mutation type. */
+    public static final String MUTATION_RESOLVER = "io.micronaut.graphql.tools.resolver.MutationResolver";
+    /** {@code SubscriptionResolver}, the marker interface of a root resolver of the subscription type. */
+    public static final String SUBSCRIPTION_RESOLVER = "io.micronaut.graphql.tools.resolver.SubscriptionResolver";
+    /** {@code TypeResolver}, the marker interface of a type resolver whose source type is its type argument. */
+    public static final String TYPE_RESOLVER_MARKER = "io.micronaut.graphql.tools.resolver.TypeResolver";
+
     private AnnotationNames() {
     }
 }

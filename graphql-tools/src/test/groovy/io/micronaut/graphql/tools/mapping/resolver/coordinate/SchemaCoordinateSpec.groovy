@@ -222,6 +222,7 @@ type Author {
 """
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".typeMappedElsewhere")
+    @Singleton
     @GraphQLRootResolver
     static class AuthorQuery {
         Book book(String id) {
@@ -234,6 +235,7 @@ type Author {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".typeMappedElsewhere")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class PlainBookResolver {
         String summary(Book book) {
@@ -242,6 +244,7 @@ type Author {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".typeMappedElsewhere")
+    @Singleton
     @GraphQLTypeResolver(Author.class)
     static class AuthorResolver {
         @GraphQLSchemaCoordinate("Book.summary")
@@ -293,6 +296,7 @@ type Draft {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".unreachable")
+    @Singleton
     @GraphQLRootResolver
     static class DraftQuery {
         Book book(String id) {
@@ -301,6 +305,7 @@ type Draft {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".unreachable")
+    @Singleton
     @GraphQLTypeResolver(Draft.class)
     static class DraftResolver {
         @GraphQLSchemaCoordinate("Draft.note")
@@ -346,6 +351,7 @@ type Author {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".severalContracts")
+    @Singleton
     @GraphQLRootResolver
     static class SeveralContractsQuery {
         BookWithAuthor book(String id) {
@@ -426,6 +432,7 @@ type Novel {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".keyed")
+    @Singleton
     @GraphQLRootResolver
     static class KeyedQuery {
         Book book() {
@@ -438,6 +445,7 @@ type Novel {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".keyed")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class BookSummaryResolver {
         @GraphQLSchemaCoordinate("Book.summary")
@@ -447,6 +455,7 @@ type Novel {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".keyed")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class NovelSummaryResolver {
         @GraphQLSchemaCoordinate("Novel.summary")

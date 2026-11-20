@@ -1,7 +1,9 @@
 package example;
 
+import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 
+@Singleton
 @GraphQLTypeResolver(Parcel.class)
 public class ParcelResolver {
 

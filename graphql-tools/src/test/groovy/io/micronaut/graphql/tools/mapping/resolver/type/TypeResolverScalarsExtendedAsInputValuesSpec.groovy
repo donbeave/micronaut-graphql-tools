@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.type
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLInput
@@ -119,6 +120,7 @@ input HelloInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Test test() {
@@ -131,6 +133,7 @@ input HelloInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Test.class)
     static class TestResolver {
         String hello(Test test, HelloInput input) {

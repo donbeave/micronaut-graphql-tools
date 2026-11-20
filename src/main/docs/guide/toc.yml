@@ -6,6 +6,7 @@ languageSupport: Language Support
 why: Why This Library
 schema: Schema
 binding: Binding
+resolverContracts: Resolver Contracts
 typeSystem: Type System
 inputs: Inputs
 scalars: Scalars

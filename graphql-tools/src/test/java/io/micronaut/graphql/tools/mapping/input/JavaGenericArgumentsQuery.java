@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
@@ -23,6 +24,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Requires(property = "spec.name", value = "InputGenericArgumentsSpecJava")
+@Singleton
 @GraphQLRootResolver
 public class JavaGenericArgumentsQuery {
 

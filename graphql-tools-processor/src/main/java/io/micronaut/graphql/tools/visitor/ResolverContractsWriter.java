@@ -19,6 +19,7 @@ import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
+import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers;
 import io.micronaut.inject.ast.ClassElement;
 
 import java.util.ArrayDeque;
@@ -30,9 +31,9 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * Writes the contracts that a type resolver class inherits into its annotation metadata, as
- * {@code @ResolverContracts}, so that the startup reads them from the bean definition and never looks at the class
- * hierarchy by reflection. A contract is a type of the hierarchy, the class itself included, that declares
+ * Writes what a resolver class inherits into its annotation metadata, as {@code @ResolverContracts}: the contracts of a
+ * type resolver, the root operations of its marker interfaces and the methods that implement a contract interface. The
+ * startup reads them from the bean definition and never looks at the class hierarchy by reflection. A contract is a type of the hierarchy, the class itself included, that declares
  * {@code @GraphQLTypeResolver}; it is recorded with the model class of that annotation, in the order of the binary name of
  * the contract.
  */
@@ -45,10 +46,11 @@ final class ResolverContractsWriter {
 
     /**
      * @param element a class
-     * @return whether the class is a bean that is a type resolver, directly or through a supertype
+     * @return whether the class is a bean that is a resolver, directly or through a supertype
      */
     static boolean applies(ClassElement element) {
-        return element.hasStereotype(AnnotationNames.TYPE_RESOLVER) && ElementTypeModel.isBeanClass(element);
+        return (element.hasStereotype(AnnotationNames.TYPE_RESOLVER) || element.hasStereotype(AnnotationNames.ROOT_RESOLVER))
+                && ElementTypeModel.isBeanClass(element);
     }
 
     /**
@@ -75,19 +77,28 @@ final class ResolverContractsWriter {
             type.getSuperType().ifPresent(types::add);
             types.addAll(type.getInterfaces());
         }
-        if (contracts.isEmpty()) {
+        // the marker TypeResolver<T> names its source type by its type argument
+        ResolverMarkers markers = MarkerAnalysis.of(element);
+        if (markers.sourceType() != null) {
+            contracts.put(AnnotationNames.TYPE_RESOLVER_MARKER, markers.sourceType());
+        }
+        Set<String> methods = markers.contractMethods() == null ? Set.of() : markers.contractMethods();
+        if (contracts.isEmpty() && markers.operations().isEmpty() && methods.isEmpty()) {
             return;
         }
         List<AnnotationClassValue<?>> models = new ArrayList<>();
         contracts.values().forEach(model -> models.add(new AnnotationClassValue<>(model)));
         element.annotate(CONTRACTS, builder -> builder
                 .member("value", models.toArray(new AnnotationClassValue<?>[0]))
-                .member("declaredBy", contracts.keySet().toArray(new String[0])));
+                .member("declaredBy", contracts.keySet().toArray(new String[0]))
+                .member("operations", markers.operations().toArray(new String[0]))
+                .member("methods", methods.toArray(new String[0])));
     }
 
     @Nullable
     private static String modelClass(AnnotationValue<?> annotation) {
         AnnotationClassValue<?>[] values = annotation.annotationClassValues("value");
-        return values.length == 0 ? null : values[0].getName();
+        // the annotation on the marker TypeResolver has no source type: its value is the default, void
+        return values.length == 0 || values[0].getName().equals("void") ? null : values[0].getName();
     }
 }

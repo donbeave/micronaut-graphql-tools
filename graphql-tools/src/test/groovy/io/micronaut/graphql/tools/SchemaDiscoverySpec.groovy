@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
+import jakarta.inject.Singleton
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -305,6 +306,7 @@ class SchemaDiscoverySpec extends Specification {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {

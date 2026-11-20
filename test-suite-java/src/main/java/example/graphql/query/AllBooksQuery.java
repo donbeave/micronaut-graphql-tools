@@ -15,6 +15,7 @@
  */
 package example.graphql.query;
 
+import jakarta.inject.Singleton;
 import example.ElapsedTime;
 import example.data.Book;
 import example.data.BookRepository;
@@ -23,6 +24,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import java.util.List;
 
 // tag::resolver[]
+@Singleton
 @GraphQLRootResolver
 public class AllBooksQuery {
 

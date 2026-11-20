@@ -15,6 +15,7 @@
  */
 package example.tck
 
+import jakarta.inject.Singleton
 import graphql.ErrorClassification
 import graphql.ErrorType
 import graphql.GraphQLError
@@ -44,6 +45,7 @@ class Scalars {
     val big: Double? get() = null
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "return-types")
 class ReturnTypesQueries {

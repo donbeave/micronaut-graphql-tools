@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.returntype
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -146,6 +147,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         OptionalInt count() {
@@ -178,6 +180,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_NON_NULL)
+    @Singleton
     @GraphQLRootResolver
     static class NonNullQuery {
         OptionalInt count() {
@@ -186,6 +189,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_NON_NULL_ELEMENT)
+    @Singleton
     @GraphQLRootResolver
     static class NonNullElementQuery {
         List<OptionalInt> counts() {
@@ -194,6 +198,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_WRONG_CLASS)
+    @Singleton
     @GraphQLRootResolver
     static class WrongClassQuery {
         OptionalLong count() {

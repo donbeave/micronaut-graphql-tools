@@ -15,11 +15,13 @@
  */
 package example.books;
 
+import jakarta.inject.Singleton;
 import example.model.Book;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import java.util.List;
 
+@Singleton
 @GraphQLRootResolver
 public class BookQuery {
 

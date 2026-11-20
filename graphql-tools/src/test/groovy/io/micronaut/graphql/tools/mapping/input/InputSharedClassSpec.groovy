@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -107,6 +108,7 @@ input CreateInput { name: String! }
     }
 
     @Requires(property = 'spec.name', pattern = 'InputSharedClassSpec(Shared|Uncovered)')
+    @Singleton
     @GraphQLRootResolver
     static class Resolver {
         String ping() { 'pong' }
@@ -117,6 +119,7 @@ input CreateInput { name: String! }
     }
 
     @Requires(property = 'spec.name', value = SPEC_EXCLUDED)
+    @Singleton
     @GraphQLRootResolver
     static class ExcludedResolver {
         String ping() { 'pong' }

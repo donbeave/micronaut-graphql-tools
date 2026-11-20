@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.root
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
@@ -86,6 +87,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query1 {
         String test1() {
@@ -94,6 +96,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query2 {
         String test2() {
@@ -102,6 +105,7 @@ type Mutation {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Mutation {
     }

@@ -327,6 +327,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String weigh(WeightInput item, Float extra, float exact) {
@@ -357,6 +358,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NULL_PRIMITIVE)
+    @Singleton
     @GraphQLRootResolver
     static class NullPrimitiveQuery {
         String count(CountInput input) {
@@ -365,6 +367,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_WIDENED)
+    @Singleton
     @GraphQLRootResolver
     static class WidenedQuery {
         String widened(WidenedInput input) {
@@ -373,6 +376,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_BROKEN)
+    @Singleton
     @GraphQLRootResolver
     static class BrokenQuery {
         String first(BrokenInput input) {
@@ -385,6 +389,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_BROKEN_FIELD)
+    @Singleton
     @GraphQLRootResolver
     static class BrokenFieldQuery {
         String first(MissingPropertyInput input) {
@@ -397,6 +402,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_UNMAPPED_WRAPPER)
+    @Singleton
     @GraphQLRootResolver
     static class UnmappedWrapperQuery {
         String labelled(UnmappedWrapperInput input) {
@@ -405,6 +411,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_DECK)
+    @Singleton
     @GraphQLRootResolver
     static class DeckQuery {
         String deck(ArrayDeque<Integer> cards) {

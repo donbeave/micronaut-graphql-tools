@@ -93,6 +93,7 @@ enum AccessErrorCode { DENIED }
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         AuthorError authorError(boolean access) {
@@ -227,6 +228,7 @@ enum AccessErrorCode { DENIED }
     }
 
     @Requires(property = 'spec.name', value = UNIONS_SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class UnionsQuery {
         ShelfPayload shelfPayload() {
@@ -250,6 +252,7 @@ enum AccessErrorCode { DENIED }
     }
 
     @Requires(property = 'spec.name', value = UNIONS_SPEC_NAME + ".unknown")
+    @Singleton
     @GraphQLRootResolver
     static class UnknownErrorQuery {
         ShelfPayload shelfPayload() {

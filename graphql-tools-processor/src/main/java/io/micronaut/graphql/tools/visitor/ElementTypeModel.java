@@ -26,6 +26,7 @@ import io.micronaut.graphql.tools.binding.internal.model.JMethod;
 import io.micronaut.graphql.tools.binding.internal.model.JParameter;
 import io.micronaut.graphql.tools.binding.internal.model.JProperty;
 import io.micronaut.graphql.tools.binding.internal.model.Nullability;
+import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers;
 import io.micronaut.graphql.tools.binding.internal.model.TypeModel;
 import io.micronaut.graphql.tools.binding.internal.model.TypeRef;
 import io.micronaut.inject.ast.ClassElement;
@@ -113,27 +114,19 @@ final class ElementTypeModel implements TypeModel {
     /**
      * @param element a resolver class, or an introduction interface that is a resolver bean
      * @return whether the class is one the visitor checks: a concrete class that is a bean, or an introduction advice
-     * interface, whose methods are all abstract and whose generated bean is concrete. A concrete class is a bean when a
-     * bean-defining annotation is declared on it, or a superclass carries a resolver annotation ({@code @Inherited}); the
-     * annotation of an interface does not make an implementation a bean, so a class that only implements an annotated
-     * interface is not one the startup ever sees.
+     * interface with a scope annotation of its own, whose methods are all abstract and whose generated bean is concrete. A concrete class is a bean when a
+     * bean-defining annotation is declared on it. The resolver annotations and the marker interfaces carry no bean
+     * stereotype, so a class that only carries one, or inherits one, is not one the startup ever sees.
      */
     static boolean isBeanClass(ClassElement element) {
         if (element.isInterface()) {
-            return element.hasStereotype(INTRODUCTION);
+            return element.hasStereotype(INTRODUCTION) && BEAN_DEFINING.stream().anyMatch(element::hasDeclaredStereotype);
         }
         if (element.isAbstract() || element.isEnum() || element.isRecord()) {
             return false;
         }
         if (BEAN_DEFINING.stream().anyMatch(element::hasDeclaredStereotype)) {
             return true;
-        }
-        for (ClassElement parent = element.getSuperType().orElse(null); parent != null;
-             parent = parent.getSuperType().orElse(null)) {
-            if (parent.hasDeclaredAnnotation(AnnotationNames.ROOT_RESOLVER)
-                    || parent.hasDeclaredAnnotation(AnnotationNames.TYPE_RESOLVER)) {
-                return true;
-            }
         }
         return false;
     }
@@ -276,6 +269,8 @@ final class ElementTypeModel implements TypeModel {
         @Nullable
         private List<JMethod> bindable;
         @Nullable
+        private ResolverMarkers markers;
+        @Nullable
         private List<PropertyElement> beanProperties;
 
         ElementClass(ClassElement element) {
@@ -311,11 +306,20 @@ final class ElementTypeModel implements TypeModel {
         }
 
         @Override
+        public ResolverMarkers markers() {
+            if (markers == null) {
+                markers = MarkerAnalysis.of(element);
+            }
+            return markers;
+        }
+
+        @Override
         public List<JMethod> bindableMethods() {
             if (bindable == null) {
                 List<JMethod> result = new ArrayList<>();
+                ResolverMarkers fixed = markers();
                 for (MethodElement method : element.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance())) {
-                    if (isBindable(method)) {
+                    if (isBindable(method) && fixed.admits(method.getName())) {
                         ElementMethod adapted = new ElementMethod(method);
                         methods.put(adapted.signature(), method);
                         result.add(adapted);

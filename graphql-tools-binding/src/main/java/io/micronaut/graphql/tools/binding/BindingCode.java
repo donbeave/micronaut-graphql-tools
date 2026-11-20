@@ -140,7 +140,7 @@ public enum BindingCode {
             "A bean inherits the type resolver annotation for several classes."),
     /** Failure: a type resolver bean has no contract. */
     TYPE_RESOLVER_CONTRACTS_NOT_FOUND("type-resolver-contracts-not-found", false, false,
-            "A bean is a type resolver only through an inherited annotation, or carries the annotation and inherits another contract, and the build did not record its contracts (the processor is not on the path of the compiler)."),
+            "A bean is a type resolver only through an inherited annotation or the marker TypeResolver<T>, carries the annotation and has a supertype, or implements QueryResolver, MutationResolver or SubscriptionResolver, and the build did not record what the markers mean (the processor is not on the path of the compiler)."),
     /** Failure: an annotation is used wrongly. */
     INCORRECT_ANNOTATION("incorrect-annotation", false, false,
             "A library annotation is used where it has no meaning."),

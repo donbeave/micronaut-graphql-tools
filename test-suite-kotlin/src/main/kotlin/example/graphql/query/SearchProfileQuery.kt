@@ -15,11 +15,13 @@
  */
 package example.graphql.query
 
+import jakarta.inject.Singleton
 import example.ElapsedTime
 import example.data.UserRepository
 import example.graphql.type.Profile
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
+@Singleton
 @GraphQLRootResolver
 open class SearchProfileQuery(private val userRepository: UserRepository) {
 

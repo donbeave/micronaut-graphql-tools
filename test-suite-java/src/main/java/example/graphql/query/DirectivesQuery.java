@@ -15,8 +15,10 @@
  */
 package example.graphql.query;
 
+import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
+@Singleton
 @GraphQLRootResolver
 public class DirectivesQuery {
 
