@@ -754,7 +754,7 @@ public final class GraphQLRuntimeWiringGenerator {
                     : abstractTypeWiring.getImplementations(interfaceTypeDefinition)) {
                 members.add(() -> {
                     Class<?> clazz = Optional
-                            .ofNullable(abstractTypeWiring.findClass(implementation, mappingContext))
+                            .ofNullable(abstractTypeWiring.findClass(implementation, targetClass, mappingContext))
                             .orElseThrow(() -> new InterfaceTypeMappingNotProvidedException(
                                     mappingContext, implementation.getName(), interfaceTypeDefinition.getName()
                             ));
