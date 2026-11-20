@@ -1,0 +1,39 @@
+The binding reads the classes behind your object types through their bean introspection, which Micronaut generates at compile time. It does not use reflection or a scan of the classpath at startup, so a class has to be introspected before the startup binds it. A class you write yourself gets one from `@GraphQLType`. This page is about the classes that cannot carry an annotation: classes that a generator writes, and classes of another module or a library.
+
+== Model classes without an annotation
+
+`@GraphQLModels` on any class of the module that compiles your resolvers lists the classes, and the packages, to introspect. The annotation is `@Introspected(classes = ...)` for the GraphQL binding, so the compiler generates one introspection for each listed class, and nothing else in the model classes changes. A class that a field returns, or that a property of a listed class returns, binds as one of your own:
+
+snippet::example.models.ExternalModelFixtures[project-base="test-suite", source="test", tags="listed-classes", indent="0"]
+
+snippet::example.models.ExternalModelFixtures[project-base="test-suite", source="test", tags="resolver", indent="0"]
+
+List a whole package when a generator owns it and its classes change from one build to the next. Micronaut scans a package for the classes that carry one of the annotations you name in `includedAnnotations`, so name the marker that the generator puts on every class it writes:
+
+snippet::example.models.ExternalModelFixtures[project-base="test-suite", source="test", tags="listed-package", indent="0"]
+
+The rules:
+
+* Give `classes` and `packages` in separate annotations: Micronaut's `@Introspected` generates only one of the two for one annotation, and the compile-time check warns about the combination. The annotation can be declared on several classes of the module, and they add up.
+* A listed package needs `includedAnnotations`, and covers the public classes of that package that carry one of them, not those of its subpackages. The compilation fails with Micronaut's own message when `packages` has no `includedAnnotations`. The compile-time check applies the same rule, so a class of the package without the marker still gets the warning below.
+* Micronaut's package scan does not see a Groovy class that is compiled in the same compilation as the annotation, so list such Groovy classes in `classes`. Groovy classes of another source set, module or jar are found through `packages` like any other class.
+* The compile-time warning is a check of the classes it sees in one compilation. An incremental build that changes only the class carrying `@GraphQLModels` may not revisit an unchanged resolver, so a clean build is the complete check; the startup fails for a class that nothing introspects in either case.
+* A class that a listed class reaches through a property needs its own entry: the annotation lists classes, it does not follow property types.
+* The introspections are generated into the module that declares the annotation, and the classes they describe are not changed. `classes` and `packages` are the members of Micronaut's `@Introspected` under the same names, so the compiler options and the incremental behavior are those of `@Introspected`.
+* An annotation that lists no class and no package introspects nothing, and the compile-time check warns about it.
+* Where the class comes from does not matter: another source set, another module or a jar on the compile classpath. The listed class has to be public and visible from the module.
+* The startup does no scan for models. It asks for the introspection of the classes the schema binds, as it does for a class you annotated yourself, so listing a package costs compile time and nothing at runtime. A change to a model class recompiles the module that lists it, and only that module.
+* On a native image the generated introspections are the only metadata that these classes need: there is nothing to add to `reflect-config.json`.
+
+== When a class is not introspected
+
+The startup fails with `[class-not-introspected]` when a class that backs an object type has no introspection. The message names the class, the coordinate of the field that reaches it and the member that returns it, so for a root field that returns a class nothing lists:
+
+----
+[class-not-introspected] The class example.external.unlisted.Unlisted is not introspected. Ensure the class is annotated with io.micronaut.graphql.tools.annotation.GraphQLType. A class that cannot carry it, such as a generated or external one, is listed (or its package) in @GraphQLModels.
+  GraphQL coordinate: Query.unlisted
+----
+
+For a class that a listed class reaches, the coordinate is the field of the listed class that returns it (`Holder.inner`).
+
+The compile-time check reports the same finding for the class that a resolver method returns, with the same code and the coordinate of the field. It is a warning, not an error, for the reason that applies to every `class-not-introspected` finding: another module, a dependency or a `@GraphQLModels` of a class that the compiler has not visited yet can introspect the class, and a compile error must also be a startup failure. A `@GraphQLModels` of the same compilation clears the warning wherever it is declared. A build that turns compiler warnings into errors (`-Werror`) fails on it, and the startup fails in any case. See <<compileTime,Compile-Time Verification>> for the checks.

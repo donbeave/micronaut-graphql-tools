@@ -13,7 +13,7 @@ This page tells you which package holds what, which packages you may import from
 [cols="4,5", options="header"]
 |===
 |I want to |Import from
-|Mark a resolver class, a method, a parameter or an input class |`io.micronaut.graphql.tools.annotation`
+|Mark a resolver class, a method, a parameter, an input class, or list model classes without an annotation |`io.micronaut.graphql.tools.annotation`
 |Catch a startup failure |`io.micronaut.graphql.tools.exceptions` (`SchemaBindingException`; match on its code)
 |Read an error code |`io.micronaut.graphql.tools.binding` (`BindingCode`)
 |Change a setting in code |`io.micronaut.graphql.tools.config` (`GraphQLToolsConfiguration`)
