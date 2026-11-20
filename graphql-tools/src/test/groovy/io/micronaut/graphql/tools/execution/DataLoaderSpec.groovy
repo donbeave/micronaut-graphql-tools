@@ -31,6 +31,7 @@ import io.micronaut.configuration.graphql.GraphQLInvocation
 import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
@@ -376,6 +377,18 @@ type Author {
         cause.message.contains('Query.hello')
     }
 
+    void "a DataLoader parameter fails the startup with execution-context-unavailable when the application invocation is primary"() {
+        when:
+        startContext(SCHEMA2, SPEC + '.primary', ['micronaut.graphql.tools.eager-init': true])
+
+        then:
+        def e = thrown(Exception)
+        def cause = causeOfType(e, SchemaBindingException)
+        cause.code() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
+        cause.message.contains('a DataLoader')
+        cause.message.contains('PrimaryInvocation')
+    }
+
     @Language('GraphQL')
     static final String SCHEMA2 = """
 schema {
@@ -571,7 +584,7 @@ type Query {
         }
     }
 
-    @Requires(property = 'spec.name', pattern = SPEC + '\\.(unmatched|ambiguous|named|untyped|stepaside)')
+    @Requires(property = 'spec.name', pattern = SPEC + '\\.(unmatched|ambiguous|named|untyped|stepaside|primary)')
     @Singleton
     @Named('first')
     static class First implements MappedBatchLoader<String, String> {
@@ -623,7 +636,7 @@ type Query {
         }
     }
 
-    @Requires(property = 'spec.name', value = SPEC + '.stepaside')
+    @Requires(property = 'spec.name', pattern = SPEC + '\\.(stepaside|primary)')
     @GraphQLRootResolver
     static class SteppedAside {
         CompletionStage<String> hello(String prefix, DataLoader<String, String> loader) {
@@ -635,6 +648,16 @@ type Query {
     @Singleton
     @Replaces(DefaultGraphQLInvocation)
     static class OwnInvocation implements GraphQLInvocation {
+        @Override
+        Publisher<ExecutionResult> invoke(GraphQLInvocationData invocationData, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
+            Mono.empty()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC + '.primary')
+    @Singleton
+    @Primary
+    static class PrimaryInvocation implements GraphQLInvocation {
         @Override
         Publisher<ExecutionResult> invoke(GraphQLInvocationData invocationData, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
             Mono.empty()
