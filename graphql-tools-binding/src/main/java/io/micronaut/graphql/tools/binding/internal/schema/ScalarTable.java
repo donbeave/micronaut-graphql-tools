@@ -44,6 +44,8 @@ import static java.util.Collections.unmodifiableSet;
 @Internal
 public final class ScalarTable {
 
+    private static final String GSTRING = "groovy.lang.GString";
+
     private static final Map<String, Set<Class<?>>> SYSTEM_TYPES = new HashMap<>();
 
     // https://www.graphql-java.com/documentation/scalars
@@ -95,6 +97,23 @@ public final class ScalarTable {
     public static boolean isGraphQlBuiltInType(@NonNull String typeName) {
         ArgumentUtils.requireNonNull("typeName", typeName);
         return SYSTEM_TYPES.containsKey(typeName);
+    }
+
+    /**
+     * Whether a field of the scalar may declare {@code returnClass} as its Java type.
+     *
+     * <p>A field of {@code String} may declare Groovy's {@code GString}: graphql-java's {@code String} scalar serializes it with
+     * {@code toString()}, so the library adds no conversion step. It is matched by name, so the library has no Groovy
+     * dependency. {@code ID} does not take it: graphql-java's {@code ID} scalar rejects every class but a few.</p>
+     *
+     * @param typeName    the name of a built-in scalar
+     * @param returnClass the declared Java type of the field
+     * @return whether the class is accepted
+     */
+    public static boolean acceptsReturnClass(@NonNull String typeName, @NonNull Class<?> returnClass) {
+        Set<Class<?>> supported = SYSTEM_TYPES.get(typeName);
+        return supported != null && (supported.contains(returnClass)
+                || "String".equals(typeName) && GSTRING.equals(returnClass.getName()));
     }
 
     public static boolean isJavaBuiltInClass(@NonNull Class<?> clazz) {
