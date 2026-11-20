@@ -74,7 +74,18 @@ final class ModelCoverage {
      */
     @Nullable
     Missed missedIn(String sentence) {
-        return missed.stream().filter(it -> sentence.contains(it.name())).findFirst().orElse(null);
+        return missed.stream().filter(it -> names(sentence, it.name())).findFirst().orElse(null);
+    }
+
+    // the whole class name: the next character must not continue a name, so Book is not found in BookDetails or Book$Inner
+    private static boolean names(String sentence, String name) {
+        for (int at = sentence.indexOf(name); at >= 0; at = sentence.indexOf(name, at + 1)) {
+            int end = at + name.length();
+            if (end == sentence.length() || !Character.isJavaIdentifierPart(sentence.charAt(end))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private record PackageEntry(String name, Set<String> markers) {

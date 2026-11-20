@@ -91,7 +91,6 @@ public final class InputBindingFindings {
     private final InputClassCoverage coverage = new InputClassCoverage();
     private final Map<String, String> coverageMembers = new HashMap<>();
     private boolean halted;
-    private boolean objectHalted;
 
     /**
      * @param schema the schema
@@ -173,17 +172,14 @@ public final class InputBindingFindings {
     // the startup reads the bean introspection of the class that backs an object type, and names the field that reaches it
     @Nullable
     private Halt objectType(Site site, ObjectTypeDefinition definition, TypeRef declared) {
-        // the startup stops at the first class it cannot read, so the fields after it are its to report
-        if (objectHalted || declared.array() || declared.primitive() || isPlatformClass(declared.rawName())) {
+        if (declared.array() || declared.primitive() || isPlatformClass(declared.rawName())) {
             return null;
         }
         JClass objectClass = model.resolve(declared);
-        if (objectClass.kind() != JClass.Kind.CLASS && objectClass.kind() != JClass.Kind.ABSTRACT_CLASS
-                && objectClass.kind() != JClass.Kind.RECORD
+        if (objectClass.kind() == JClass.Kind.INTERFACE
                 || objectClass.introspected()) {
             return null;
         }
-        objectHalted = true;
         return failed(site, BindingCode.CLASS_NOT_INTROSPECTED,
                 "the class " + objectClass.name() + " that backs " + definition.getName() + " is not introspected",
                 "annotate the class with @GraphQLType, or list it or its package in @GraphQLModels on a class of this module");

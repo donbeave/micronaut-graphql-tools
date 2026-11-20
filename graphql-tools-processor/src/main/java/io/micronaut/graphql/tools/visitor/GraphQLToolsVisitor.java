@@ -36,6 +36,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -163,8 +164,11 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         if (current == null) {
             return;
         }
+        // the startup stops at the first class of a resolver that nothing introspects, so a class that a later
+        // @GraphQLModels covers gives the next one its turn, and only the first class left over is reported
+        Set<Integer> reported = new HashSet<>();
         for (Pending pending : current.pending) {
-            if (pending.missed == null || !current.coverage.covers(pending.missed)) {
+            if (pending.missed == null || !current.coverage.covers(pending.missed) && reported.add(pending.group)) {
                 current.warnings++;
                 // no element: a class element of an earlier round is not valid any more under KSP
                 context.warn(FindingRenderer.render(unproven(pending.finding)), null);
@@ -226,7 +230,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             if (UNPROVEN.equals(finding.code())) {
                 // a @GraphQLModels of this compilation that is visited after this class can still cover the class, so the
                 // warning is made when the compilation finishes; the walk stopped at the class it names
-                current.pending.add(new Pending(finding, current.coverage.missedIn(finding.sentence())));
+                current.pending.add(new Pending(current.checked, finding, current.coverage.missedIn(finding.sentence())));
             } else {
                 current.findings++;
                 MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());
@@ -266,7 +270,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         context.fail(FindingRenderer.render(finding), element);
     }
 
-    private record Pending(Finding finding, @Nullable ModelCoverage.Missed missed) {
+    private record Pending(int group, Finding finding, @Nullable ModelCoverage.Missed missed) {
     }
 
     /** The state of one compilation: the options, the schema, the model and the counts of the note. */
