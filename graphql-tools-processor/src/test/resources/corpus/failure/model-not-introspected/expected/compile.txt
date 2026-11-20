@@ -1,1 +1,1 @@
-ok
+warning class-not-introspected Query.book schema.graphqls:6:3

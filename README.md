@@ -101,6 +101,7 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLType` Maps a Java class to a GraphQL type.
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
+- `@GraphQLModels(classes, packages)` On any class of the module that compiles the resolvers: generates the bean introspections of model classes that carry no annotation (generated classes, classes of another module or library), see the guide page Model Classes.
 - `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field. `@GraphQLField("name")` on a method or a property binds the field of that name, see [Binding a field to a differently named member](#binding-a-field-to-a-differently-named-member).
 - `@GraphQLIgnore` Marks a method, a property or an enum constant that binds no field, so that strict mode does not report it, see [Escape hatches](#escape-hatches).
 - `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
