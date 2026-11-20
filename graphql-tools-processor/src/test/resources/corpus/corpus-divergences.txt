@@ -8,5 +8,3 @@ wrapper/optional-non-null all unsupported-return-type Book.title
 # The first parameter of a type resolver method is not compared with the type of its resolver at compile time yet.
 failure/type-resolver-source-parameter java invalid-source-parameter Book.author
 
-# A package-private method of a resolver bean is not seen as a resolver method by the visitor, and the startup reports it.
-strict/package-private-method java unbound-resolver-method example.BookQuery#internal()

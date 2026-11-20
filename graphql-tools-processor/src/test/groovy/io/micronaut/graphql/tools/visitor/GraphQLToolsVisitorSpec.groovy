@@ -76,7 +76,7 @@ public class QueryResolver {
         result.errorFor('[unbound-resolver-method]').getMessage(Locale.ROOT).contains('fix: ')
     }
 
-    def "the hatches: @GraphQLIgnore, a lifecycle method, a non-public method, a static method and an Object method"() {
+    def "the hatches: @GraphQLIgnore, a lifecycle method, a private method, a static method and an Object method"() {
         when:
         def result = compilation('''
 @GraphQLRootResolver
@@ -84,7 +84,7 @@ public class QueryResolver {
     public String version() { return "1"; }
     @GraphQLIgnore public String helper() { return ""; }
     @jakarta.annotation.PreDestroy public void close() { }
-    String packagePrivate() { return ""; }
+    private String hidden() { return ""; }
     public static String util() { return ""; }
     @Override public String toString() { return "q"; }
 }''').compile()
@@ -92,6 +92,20 @@ public class QueryResolver {
         then:
         result.success
         result.findings == []
+    }
+
+    def "a package-private method of a resolver bean is an unbound resolver method, as at startup"() {
+        when:
+        def result = compilation('''
+@GraphQLRootResolver
+public class QueryResolver {
+    public String version() { return "1"; }
+    String packagePrivate() { return ""; }
+}''').compile()
+
+        then:
+        !result.success
+        result.findings == ['[unbound-resolver-method] example.QueryResolver#packagePrivate()']
     }
 
     def "a parameter that binds no argument is reported with the coordinate, the schema location and the member"() {
