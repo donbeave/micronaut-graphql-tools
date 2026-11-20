@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.internal.ws;
 
 import graphql.ExecutionResult;
+import graphql.ExecutionResultImpl;
 import graphql.GraphQLError;
 import io.micronaut.configuration.graphql.GraphQLConfiguration;
 import io.micronaut.configuration.graphql.GraphQLInvocation;
@@ -33,6 +34,7 @@ import io.micronaut.core.util.StringUtils;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
+import io.micronaut.graphql.tools.internal.execution.SubscriptionFailure;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionResult;
@@ -272,6 +274,8 @@ public class LibraryGraphQLWsHandler {
                 .concatMap(result -> result(session, id, result, failed))
                 .then(Mono.defer(() -> failed.get() ? Mono.empty() : send(session, Map.of("id", id, "type", "complete"))));
         handle.update(operation
+                .onErrorResume(SubscriptionFailure.class, failure -> send(session, error(id,
+                        customizeErrors(failure.errors()).stream().map(GraphQLError::toSpecification).toList())))
                 .onErrorResume(failure -> {
                     LOG.warn("The operation '{}' of a WebSocket connection failed: {}", id, failure.toString());
                     return send(session, error(id, List.of(Map.of("message", GENERIC_FAILURE))));
@@ -292,6 +296,10 @@ public class LibraryGraphQLWsHandler {
     /** The outer result went through the errors customizers of the library's invocation; each event is a response of its own. */
     private ExecutionResult customizeErrors(ExecutionResult result) {
         return invocation instanceof LibraryGraphQLInvocation library ? library.customizeErrors(result) : result;
+    }
+
+    private List<GraphQLError> customizeErrors(List<GraphQLError> errors) {
+        return customizeErrors(ExecutionResultImpl.newExecutionResult().errors(errors).build()).getErrors();
     }
 
     private static Flux<ExecutionResult> asResults(Publisher<?> events) {

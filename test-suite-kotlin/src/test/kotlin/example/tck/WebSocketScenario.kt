@@ -15,11 +15,16 @@
  */
 package example.tck
 
+import graphql.GraphQLError
+import graphql.GraphqlErrorBuilder
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
+import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer
+import io.micronaut.graphql.tools.error.GraphQLExceptionContext
+import io.micronaut.graphql.tools.error.GraphQLExceptionMapper
 import io.micronaut.graphql.tools.internal.execution.ExecutionState
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest
@@ -56,6 +61,27 @@ class CancelledStreams {
     val count = AtomicInteger()
 }
 
+class TickFailure : RuntimeException("secret internal detail")
+
+@Singleton
+@Requires(property = "tck.scenario", value = "websocket")
+class TickFailureMapper : GraphQLExceptionMapper<TickFailure> {
+
+    override fun map(exception: TickFailure, context: GraphQLExceptionContext): GraphQLError =
+        context.error("tick failed", mapOf("code" to "TICK_FAILED"))
+}
+
+@Singleton
+@Requires(property = "tck.scenario", value = "websocket")
+class StreamCustomizer : GraphQLErrorsCustomizer {
+
+    override fun customize(errors: List<GraphQLError>): List<GraphQLError> = errors.map { error ->
+        GraphqlErrorBuilder.newError()
+            .message(error.message).path(error.path).locations(error.locations)
+            .errorType(error.errorType).extensions((error.extensions ?: emptyMap()) + ("stream" to "customized")).build()
+    }
+}
+
 @GraphQLType
 class Tick(val number: Int, val sourceNonBlocking: Boolean)
 
@@ -80,6 +106,12 @@ class WebSocketQueries(private val cancelled: CancelledStreams) {
 @Requires(property = "tck.scenario", value = "websocket")
 class WebSocketSubscriptions(private val cancelled: CancelledStreams) {
 
+    fun failing(): Flux<Tick> = Flux.error(IllegalStateException("secret internal detail"))
+
+    fun failingMapped(): Flux<Tick> = Flux.error(TickFailure())
+
+    fun brokenEvent(): Flux<Tick> = Flux.just(Tick(1, true))
+
     // tag::ws-subscription[]
     fun ticks(count: Int): Flux<Tick> =
         // the timer of Reactor emits on a thread that declares itself an event-loop thread
@@ -100,6 +132,8 @@ class WebSocketSubscriptions(private val cancelled: CancelledStreams) {
 class TickFields {
 
     fun onEventLoop(tick: Tick): Boolean = Thread.currentThread() is NonBlocking
+
+    fun broken(tick: Tick): String? = throw IllegalStateException("secret internal detail")
 
     fun requestHeader(tick: Tick): String? =
         ServerRequestContext.currentRequest<Any>().map { it.headers.get("X-Tck") }.orElse(null)

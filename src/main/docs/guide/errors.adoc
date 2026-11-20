@@ -91,6 +91,16 @@ snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="te
 
 The customizers run by order, lowest first, and each gets the list that the previous one returned. They run once for each response that has an error, and never for a successful response. A customizer that throws is logged at ERROR and skipped. Errors are immutable: build a new one, copying the message, the path and the locations as above.
 
+[[subscriptionErrors]]
+== Errors of a subscription
+
+A subscription reaches the client over the `graphql-transport-ws` WebSocket (see the Subscriptions page), and its errors take the same route as the errors of a query:
+
+* An error of one event, such as a field of the event that fails, is part of the `next` message of that event. The exception goes through the mappers and the default handler, and the `GraphQLErrorsCustomizer` beans change the errors of each event that has any, so every event is a response of its own.
+* A publisher that signals an error ends the operation with an `error` message. The exception goes through the mappers and the default handler as if the subscription field had thrown it: a mapped exception sends the mapped errors, a `GraphQLError` is sent as it is, and any other exception sends the generic `INTERNAL_ERROR` error without its message (or with it when `micronaut.graphql.tools.errors.details` is on). The customizers see these errors too.
+* The error handling of a publisher is the library's: a `DataFetcherExceptionHandler` that a `GraphQLBuilderCustomizer` installs does not see an error that the publisher signals.
+* The library has no server-sent events transport, so there is no such path to route.
+
 [[constraintViolations]]
 == Bean validation
 
