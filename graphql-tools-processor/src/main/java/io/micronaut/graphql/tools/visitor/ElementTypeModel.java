@@ -327,7 +327,8 @@ final class ElementTypeModel implements TypeModel {
         }
 
         private boolean isBindable(MethodElement method) {
-            if (!method.isPublic() || method.isStatic() || method.isSynthetic()) {
+            // the startup binds the executable methods of the bean, which are the non-private ones
+            if (method.isPrivate() || method.isStatic() || method.isSynthetic()) {
                 return false;
             }
             String name = method.getName();
