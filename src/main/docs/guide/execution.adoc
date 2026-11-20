@@ -121,6 +121,10 @@ The library reads the annotation from the bean metadata once at startup and look
 
 The cost of a hop is one task and one future for the annotated field only. The `InvocationBenchmark` of the `benchmarks` module reports the hop; see CONTRIBUTING.md.
 
+== Cancellation
+
+An execution can be cancelled: a WebSocket `complete` and the close of the connection do it (see <<subscriptions,Subscriptions>>). The library then stops starting new work for it: a hop task that has not started is skipped and the operation ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, the continuation of an async field that completes afterwards is aborted, and the stream of a subscription is cancelled. Synchronous code that is running is never interrupted.
+
 [[fieldDecorators]]
 == Decorate the fetchers of selected fields
 
