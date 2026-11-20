@@ -23,6 +23,7 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.input.ArgumentValue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +46,7 @@ public final class InputObjectConverter implements ValueConverter {
     private final Object[] constructorDefaults;
     private final Slot[] constructorSlots;
     private final Slot[] propertySlots;
+    private final Slot[] nullableConstructorSlots;
 
     private InputObjectConverter(Builder builder) {
         this.introspection = builder.introspection;
@@ -55,6 +57,7 @@ public final class InputObjectConverter implements ValueConverter {
             constructorDefaults[i] = defaultValue(arguments[i].getType());
         }
         this.constructorSlots = builder.pending.stream().filter(it -> it.index >= 0).toArray(Slot[]::new);
+        this.nullableConstructorSlots = Arrays.stream(constructorSlots).filter(Slot::nullable).toArray(Slot[]::new);
         this.propertySlots = builder.pending.stream().filter(it -> it.index < 0).toArray(Slot[]::new);
     }
 
@@ -88,6 +91,9 @@ public final class InputObjectConverter implements ValueConverter {
                 }
             }
             bean = introspection.instantiate(false, arguments);
+            if (nullableConstructorSlots.length != 0) {
+                bean = restoreExplicitNulls(bean, map);
+            }
         }
         for (Slot slot : propertySlots) {
             Object converted = slot.read(map);
@@ -96,6 +102,20 @@ public final class InputObjectConverter implements ValueConverter {
             }
         }
         return bean;
+    }
+
+    /**
+     * The introspected constructor of a Kotlin class applies the default argument for a {@code null}, so a field that the
+     * client sent as {@code null} reached the bean as its default. The bean is rebuilt with {@code null} for such a field.
+     */
+    private Object restoreExplicitNulls(Object bean, Map<?, ?> map) {
+        Object result = bean;
+        for (Slot slot : nullableConstructorSlots) {
+            if (map.get(slot.name) == null && map.containsKey(slot.name) && slot.property.get(result) != null) {
+                result = slot.property.withValue(result, null);
+            }
+        }
+        return result;
     }
 
     @Nullable
@@ -158,8 +178,10 @@ public final class InputObjectConverter implements ValueConverter {
                 }
             }
             Class<?> target = index >= 0 ? constructorArguments[index].getType() : property.getType();
+            boolean nullable = index >= 0 && !argumentValue && !target.isPrimitive()
+                    && constructorArguments[index].isNullable();
             pending.add(new Slot(name, property, converter == ValueConverters.IDENTITY ? null : converter,
-                    argumentValue, target.isPrimitive(), index));
+                    argumentValue, target.isPrimitive(), nullable, index));
         }
 
         /**
@@ -171,7 +193,7 @@ public final class InputObjectConverter implements ValueConverter {
     }
 
     private record Slot(String name, BeanProperty<Object, Object> property, @Nullable ValueConverter converter,
-                        boolean argumentValue, boolean primitive, int index) {
+                        boolean argumentValue, boolean primitive, boolean nullable, int index) {
 
         Object read(Map<?, ?> map) {
             Object raw = map.get(name);
