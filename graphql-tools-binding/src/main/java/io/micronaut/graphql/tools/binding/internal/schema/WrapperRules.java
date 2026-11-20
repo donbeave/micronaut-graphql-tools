@@ -24,6 +24,12 @@ import io.micronaut.core.annotation.Internal;
 @Internal
 public final class WrapperRules {
 
+    /**
+     * The binary name of the publisher type that emits at most one value ({@code Mono}); every other
+     * {@code Publisher} may emit many.
+     */
+    public static final String SINGLE_VALUE_PUBLISHER = "reactor.core.publisher.Mono";
+
     private static final String COMPLETION_STAGE = "java.util.concurrent.CompletionStage";
     private static final String PUBLISHER = "org.reactivestreams.Publisher";
     private static final String OPTIONAL = "java.util.Optional";
@@ -51,11 +57,37 @@ public final class WrapperRules {
     }
 
     /**
-     * @return the sentence for a {@code Publisher} outside the subscription type
+     * @return the sentence for a {@code Publisher} that a bean property holds
      */
-    public static String publisherOutsideSubscription() {
-        return PUBLISHER + " is only allowed on fields of the subscription type. Fix: "
-                + "return a CompletionStage instead (for example Mono#toFuture()).";
+    public static String publisherOnProperty() {
+        return PUBLISHER + " is only adapted from a method. Fix: return it from a resolver method, which subscribes "
+                + "to it for each call, instead of exposing it as a property.";
+    }
+
+    /**
+     * @return the sentence for a {@code Publisher} that is the element of a list
+     */
+    public static String publisherInList() {
+        return PUBLISHER + " is not allowed inside a list. Fix: return Flux<T> (or Mono<List<T>>) for the list field "
+                + "itself, or resolve the elements first.";
+    }
+
+    /**
+     * @return the sentence for a {@code Publisher} inside a {@code CompletionStage} outside the subscription type
+     */
+    public static String publisherInCompletionStage() {
+        return PUBLISHER + " is not allowed inside a CompletionStage on a field outside the subscription type. Fix: "
+                + "return the Publisher itself (Mono<T> or Flux<T>), it is adapted for you, or return CompletionStage<T>.";
+    }
+
+    /**
+     * @param graphQlType the printed GraphQL type of the field
+     * @return the sentence for a {@code Publisher} of many values on a field that is not a list
+     */
+    public static String multiValuePublisherNeedsList(String graphQlType) {
+        return PUBLISHER + " of many values is only allowed on a list field outside the subscription type, the field "
+                + "type is " + graphQlType + ". Fix: return Mono<T> for a single value, or make the GraphQL field a "
+                + "list.";
     }
 
     /**
@@ -98,7 +130,7 @@ public final class WrapperRules {
     public static String cannotWrap(String outer, String wrapper) {
         String simple = simpleName(wrapper);
         return outer + " cannot wrap " + wrapper + ". Supported wrappers, outermost first: CompletionStage "
-                + "(field level only), Publisher (subscription fields only), DataFetcherResult, Optional "
+                + "(field level only), Publisher (field level only, never inside a CompletionStage), DataFetcherResult, Optional "
                 + "(nullable types only), each at most once. Fix: remove the inner " + simple
                 + " or declare the wrappers in that order.";
     }

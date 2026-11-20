@@ -86,7 +86,7 @@ To add a scenario:
 
 The fixtures serve a plain `DataLoaderRegistry` in every scenario except the ones that set `tck.registry=per-request` (`data-loader`). The example's registry is request scoped, and a request-scoped bean has no request on the thread that completes a `CompletionStage`: the call fails with `No request present` (the per-execution context and lazy DataLoader registry of #44 and #20 are the fix, and this scenario setting goes away with them).
 
-Out of scope here: HTTP transport details and WebSocket scenarios (#50), subscriptions (a `Publisher` return type is allowed on subscription fields only), and per-request context propagation.
+Out of scope here: HTTP transport details and WebSocket scenarios (#50), subscriptions (a `Publisher` return type is the event stream on subscription fields, and is adapted to a `CompletionStage` on other fields), and per-request context propagation.
 
 ## Dependencies
 

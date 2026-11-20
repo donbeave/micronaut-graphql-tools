@@ -1,0 +1,6 @@
+{
+  "data": {
+    "reactiveOne": { "message": "hello async" },
+    "reactiveMany": [{ "message": "one" }, { "message": "two" }]
+  }
+}

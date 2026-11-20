@@ -1,1 +1,25 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+NOTE: The rest of this page is pending. It will be written with the user guide (epic #97). This part covers the return types of resolvers.
+
+== Return types
+
+A resolver method returns the Java type that matches the GraphQL type of its field, optionally in the wrappers below. They are peeled in this order, each at most once, and the startup (and, with the processor, the build) fails with `[unsupported-return-type]` for any other shape:
+
+. `CompletionStage<T>`, at the field itself and never inside a list;
+. `Publisher<T>`: the stream of a field of the subscription type, and the reactive value of every other field (below);
+. `DataFetcherResult<T>`, to return data with errors or a local context;
+. `Optional<T>`, `OptionalInt`, `OptionalLong` and `OptionalDouble`, for a nullable GraphQL type only (an empty one becomes `null`).
+
+=== Reactive return types
+
+A method of a Query, Mutation or type field can return a `Publisher` instead of calling `toFuture()` itself. The library subscribes to it once for each call and hands graphql-java a `CompletionStage`. The decision is made once for each field at startup, from the declared return type, so a field that does not return a `Publisher` costs nothing extra. The library has no dependency on a reactive library: `Publisher` is the Reactive Streams interface, and the code below uses Project Reactor, which your application brings (for example with `micronaut-reactor`).
+
+snippet::example.tck.ReturnTypesScenario[project-base="test-suite", source="test", tags="publisher-returns", indent="0"]
+
+* A single-value publisher (`Mono`) gives the value of the field. An empty `Mono` is `null`.
+* A publisher of many values (`Flux`, an RxJava `Flowable` or a plain `Publisher`) needs a list field. The values are collected into the list, in order. An empty `Flux` is an empty list.
+* An error signal is an error of that field, like an exception thrown by the method or a failed `CompletionStage`: the field is `null` (or the nearest nullable parent, for a non-null field) and the rest of the response is unchanged.
+* A `Mono` can be wrapped in `DataFetcherResult` or `Optional` inside, as `Mono<Optional<T>>`. For a `Flux`, the wrappers apply to each element: `Flux<DataFetcherResult<T>>`.
+* A `Flux` on a field that is not a list fails the startup, as does a `Publisher` inside a `CompletionStage`, inside a list, or on a bean property (a property is read, not invoked). `Single`, `Maybe` and `Observable` of RxJava are not `Publisher`; convert them with `toFlowable()` first.
+* A field of the subscription type is different: its `Publisher` is the stream of events and is not collected.
+
+The adapted future completes on the thread that signals the publisher. The adaptation itself neither captures nor restores a propagated context: that belongs to the execution model of the library, and a reactive library that propagates the context on its own (as `micronaut-reactor` does) keeps doing so.
