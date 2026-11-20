@@ -147,5 +147,5 @@ leg), `ParitySpec` (the soundness and completeness rules and the exception list)
   Gradle TestKit build with two subprojects per case (the unchecked one is started, the checked one runs `kspKotlin` with the schema
   of the case, and its `e: [ksp] [code] coordinate` lines are compared with `expected/compile.txt`). It needs the network and is not
   part of `check` or `build`; the CI job `build tools` runs it on every pull request, and the canary workflow runs it under kapt
-  (`-Pcorpus.kotlin.processor=kapt`, the `lang:all` cases) every night. Its budget is 3 minutes on JDK 25.
+  (`-Pcorpus.kotlin.processor=kapt`, the `lang:all` cases) every night. Its budget is 8 minutes on JDK 25 (`corpus.kotlin.budget-seconds`, 480 s by default).
   `-Pcorpus.update` with it rewrites the Kotlin expectations.
