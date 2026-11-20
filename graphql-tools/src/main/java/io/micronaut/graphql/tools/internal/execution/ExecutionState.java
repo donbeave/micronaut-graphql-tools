@@ -55,6 +55,11 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     private final Executor requestExecutor;
     private volatile boolean cancelled;
     @Nullable
+    private DisconnectWatcher disconnectWatcher;
+    private boolean watching;
+    @Nullable
+    private Runnable unwatch;
+    @Nullable
     private final String customizer;
     private ExecutionInput executionInput;
 
@@ -148,7 +153,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     }
 
     /**
-     * Marks the execution cancelled: its client went away (a WebSocket {@code complete} or close). Cancellation is
+     * Marks the execution cancelled: its client went away (an HTTP disconnect, a WebSocket {@code complete} or close). Cancellation is
      * cooperative: a hop task that has not started is skipped, a later async boundary completes with an abort and a
      * stream is cancelled, but synchronous code that is running is never interrupted.
      */
@@ -161,6 +166,46 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      */
     public boolean isCancelled() {
         return cancelled;
+    }
+
+    void disconnectWatcher(DisconnectWatcher watcher) {
+        this.disconnectWatcher = watcher;
+    }
+
+    /**
+     * Called when a field returned a stage that is still pending, which is the time the operation waits and the client can
+     * go away. The first call starts to watch the connection of the request, when there is a watcher; a synchronous
+     * operation never pays for it.
+     */
+    void awaitingResult() {
+        if (disconnectWatcher == null) {
+            return;
+        }
+        synchronized (this) {
+            if (watching || cancelled || disconnectWatcher == null) {
+                return;
+            }
+            watching = true;
+            unwatch = disconnectWatcher.watch(request, this::cancel);
+        }
+    }
+
+    /**
+     * Called when the execution has its result: the connection is not watched any more.
+     */
+    void finished() {
+        if (disconnectWatcher == null) {
+            return;
+        }
+        Runnable stop;
+        synchronized (this) {
+            stop = unwatch;
+            unwatch = null;
+            disconnectWatcher = null;
+        }
+        if (stop != null) {
+            stop.run();
+        }
     }
 
     @Override

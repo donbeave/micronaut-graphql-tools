@@ -123,7 +123,18 @@ The cost of a hop is one task and one future for the annotated field only. The `
 
 == Cancellation
 
-An execution can be cancelled: a WebSocket `complete` and the close of the connection do it (see <<subscriptions,Subscriptions>>). The library then stops starting new work for it: a hop task that has not started is skipped and the operation ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, the continuation of an async field that completes afterwards is aborted, and the stream of a subscription is cancelled. Synchronous code that is running is never interrupted.
+An execution is cancelled when its client goes away: an HTTP client that closes its connection, a WebSocket `complete` and the close of a WebSocket connection (see <<subscriptions,Subscriptions>>). Cancellation is cooperative, and it does not depend on the graphql-java version. The library stops starting new work for the execution, and never interrupts code that is running, because interrupting a thread inside a JDBC driver can break the connection:
+
+* A hop task that is still queued, the one of the operation or the one of an `@ExecuteOn` field, is skipped. The operation then ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, which goes through the default error handling and the `GraphQLErrorsCustomizer` beans like any other error of the execution (see <<errors,Errors>>). Nobody reads that response over HTTP, because the client is gone.
+* The continuation of an async field that completes afterwards is aborted with graphql-java's `AbortExecutionException`: the children of the field, and every later async field, do not run.
+* The stream of a subscription is cancelled upstream.
+* A synchronous resolver that is already running finishes.
+
+The example has a slow async field, and a child field of its result that counts its runs. A client that closes the connection while the first field is pending leaves the count unchanged:
+
+snippet::example.tck.DisconnectScenario[project-base="test-suite", source="test", tags="disconnect-slow-field", indent="0"]
+
+An HTTP disconnect is noticed on the Netty server: Micronaut does not cancel the response of a request that is still being answered when the connection closes, so the library watches the connection itself, and only from the moment a field returns a stage that is still pending. An operation that has only synchronous fields registers nothing and pays nothing. A client over HTTP/2 that resets a stream but keeps the connection open is not noticed, and neither is a server other than Netty: the operation then runs to its end.
 
 [[fieldDecorators]]
 == Decorate the fetchers of selected fields

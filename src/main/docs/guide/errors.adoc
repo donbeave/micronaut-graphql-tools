@@ -116,7 +116,7 @@ These errors are about the operation, not about a field. Match on `extensions.co
 |===
 |Code |When
 |`EXECUTION_REJECTED` |The executor that runs operations rejected the operation, for example a bounded pool that is full. The response has the status 200, `data` of `null`, and this one error. The library logs a warning. See <<execution,Execution>>.
-|`EXECUTION_CANCELLED` |The operation was cancelled before it started, because the client had gone away or the operation timed out. The code is reserved for the cancellation of an execution (#429) and is documented here so that clients can already handle it.
+|`EXECUTION_CANCELLED` |The execution was cancelled before its hop task started, because the client had gone away (an HTTP disconnect, a WebSocket `complete` or close). The response has `data` of `null` and this one error, and goes through the default error handling and the `GraphQLErrorsCustomizer` beans. See <<execution,Execution>>.
 |`INTERNAL_ERROR` |The generic error of an exception that no mapper handled, or of a failure of a context contributor.
 |===
 
