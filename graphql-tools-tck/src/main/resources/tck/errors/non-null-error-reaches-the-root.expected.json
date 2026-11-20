@@ -2,10 +2,10 @@
   "data": null,
   "errors": [
     {
-      "message": "Exception while fetching data (/nestedNonNull/broken) : boom",
+      "message": "Internal server error",
       "locations": [{ "line": 3, "column": 5 }],
       "path": ["nestedNonNull", "broken"],
-      "extensions": { "classification": "DataFetchingException" }
+      "extensions": { "code": "INTERNAL_ERROR", "classification": "DataFetchingException" }
     }
   ]
 }

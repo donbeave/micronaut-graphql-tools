@@ -161,7 +161,7 @@ type Holder {
 
     void "an error signal of a Mono or a Flux is an error of the field, the rest of the response stays"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.errors.details': true])
 
         when:
         ExecutionResult result = executeQuery('{ plain failing { name } failingMany { name } }')

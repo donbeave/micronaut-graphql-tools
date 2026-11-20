@@ -67,7 +67,7 @@ type Query {
 
     void "an error of an RxJava type is an error of the field"() {
         given:
-        startContext(SCHEMA, SPEC_NAME)
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.errors.details': true])
 
         when:
         ExecutionResult result = executeQuery('{ rx3Failing }')

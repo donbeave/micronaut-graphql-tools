@@ -85,7 +85,11 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
         }
     }
 
-    static Throwable unwrap(Throwable failure) {
+    /**
+     * @param failure what a stage completed with
+     * @return the failure without the {@link CompletionException} and {@link ExecutionException} layers around it
+     */
+    public static Throwable unwrap(Throwable failure) {
         Throwable result = failure;
         while ((result instanceof CompletionException || result instanceof ExecutionException) && result.getCause() != null) {
             result = result.getCause();
