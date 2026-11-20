@@ -76,7 +76,7 @@ public final class WrapperRules {
      */
     public static String suspendOnSubscription() {
         return "a Kotlin suspend function cannot be a field of the subscription type, which streams. Fix: return "
-                + "Publisher<T> or Flow<T> without suspend.";
+                + "a Publisher<T> without suspend.";
     }
 
     /**
