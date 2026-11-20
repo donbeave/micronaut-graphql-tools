@@ -169,6 +169,8 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 executor.execute(execution);
             } catch (RejectedExecutionException e) {
                 execution.reject(e);
+            } catch (RuntimeException e) {
+                execution.completeExceptionally(e);
             }
         }
         Mono<ExecutionResult> result = Mono.fromFuture(execution);
@@ -208,6 +210,9 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                     throw new IllegalStateException("returned null instead of a list of errors");
                 }
                 current = customized;
+                if (current.isEmpty()) {
+                    break;
+                }
             } catch (RuntimeException e) {
                 LOG.error("The GraphQLErrorsCustomizer {} failed; the errors are sent as the previous customizer left them",
                         customizer.getClass().getName(), e);
@@ -388,6 +393,8 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                     executor.execute(() -> inContext(() -> executeCustomized(customized)));
                 } catch (RejectedExecutionException e) {
                     reject(e);
+                } catch (RuntimeException e) {
+                    completeExceptionally(e);
                 }
             } else {
                 executeCustomized(customized);

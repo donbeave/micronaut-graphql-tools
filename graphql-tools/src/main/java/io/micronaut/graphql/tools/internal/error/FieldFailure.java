@@ -23,6 +23,7 @@ import graphql.execution.ResultPath;
 import graphql.language.SourceLocation;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.error.GraphQLExceptionContext;
 
 import java.util.Map;
@@ -46,6 +47,7 @@ record FieldFailure(DataFetcherExceptionHandlerParameters parameters) implements
     }
 
     @Override
+    @Nullable
     public SourceLocation getSourceLocation() {
         return parameters.getSourceLocation();
     }
@@ -57,10 +59,13 @@ record FieldFailure(DataFetcherExceptionHandlerParameters parameters) implements
 
     @Override
     public GraphqlErrorBuilder<?> newError() {
-        return GraphqlErrorBuilder.newError()
+        GraphqlErrorBuilder<?> builder = GraphqlErrorBuilder.newError()
                 .path(parameters.getPath())
-                .location(parameters.getSourceLocation())
                 .errorType(ErrorType.DataFetchingException);
+        if (parameters.getSourceLocation() != null) {
+            builder.location(parameters.getSourceLocation());
+        }
+        return builder;
     }
 
 }

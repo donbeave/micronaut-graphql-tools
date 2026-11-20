@@ -211,6 +211,7 @@ public final class GraphQLRuntimeWiringGenerator {
 
     private final DictionaryValidator dictionaryValidator;
     private final DeclaringInterfaces interfaceIndex;
+    private final Set<String> boundUnreturnedInterfaces = new HashSet<>();
 
     private final UnreachableTypeChecks unreachableTypeChecks;
 
@@ -407,7 +408,9 @@ public final class GraphQLRuntimeWiringGenerator {
             checks.unboundEnumConstants(processed, typeDefinitionRegistry, typeModel);
         }
         if (checks.enabled(BindingCode.UNUSED_DICTIONARY_ENTRY)) {
-            checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processed.keySet(), allowedTypes);
+            Set<String> usedTypes = new HashSet<>(processed.keySet());
+            usedTypes.addAll(boundUnreturnedInterfaces);
+            checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), usedTypes, allowedTypes);
         }
         if (checks.enabled(BindingCode.INTERFACE_READ_THROUGH_IMPLEMENTATION)) {
             checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
@@ -1085,6 +1088,7 @@ public final class GraphQLRuntimeWiringGenerator {
         bindings.resolverBindings().forEach((method, coordinates) ->
                 resolverBindings.computeIfAbsent(method, it -> new TreeSet<>()).addAll(coordinates));
         bindingFailures.addAll(bindings.failures());
+        boundUnreturnedInterfaces.addAll(bindings.boundUnreturned());
         ambiguities = ambiguityLog.snapshot().plus(bindings.ambiguities());
     }
 
@@ -1299,6 +1303,11 @@ public final class GraphQLRuntimeWiringGenerator {
                                                       TypeMappingContext mappingContext) {
             return GraphQLRuntimeWiringGenerator.this.methodNotFound(objectTypeName, sourceClass, fieldName,
                     mappingContext);
+        }
+
+        @Override
+        public Class<?> findInterfaceClass(InterfaceTypeDefinition interfaceType, TypeMappingContext mappingContext) {
+            return abstractTypeWiring.findInterfaceClass(interfaceType, mappingContext);
         }
 
         @Override

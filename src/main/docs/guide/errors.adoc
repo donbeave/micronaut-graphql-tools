@@ -5,7 +5,7 @@ A resolver that throws does not fail the response. The field becomes `null`, one
 The library installs its own `DataFetcherExceptionHandler` when it builds the `GraphQL` bean. It treats the exception that a resolver threw as follows. A `CompletionException` or `ExecutionException` around it is removed first, so a failure of a `CompletionStage` or a `Mono` is handled as the exception you threw.
 
 . A mapper bean for the exception type returns the error: see <<exceptionMappers,Exception mappers>>.
-. An exception that is a `graphql.GraphQLError` (for example `GraphqlErrorException`) is the error as it is: your message, your extensions. The path and the location of the field are added when it has none.
+. An exception that is a `graphql.GraphQLError` (for example `GraphqlErrorException`) is the error as it is: your message, your extensions. The path and the location of the field are added when it has none: a missing path or location list and an empty one count the same, and an error that has a path or a location keeps it.
 . Any other exception gets the generic error, and its message never reaches the client:
 
 [source,json]
@@ -28,7 +28,7 @@ The same rules apply to every transport, and the exception handler runs only whe
 [[exceptionMappers]]
 == Exception mappers
 
-An exception mapper is a bean that implements `GraphQLExceptionMapper<E>`. It is registered for `E` and its subclasses, and it chooses the message and the extensions of the error. The context gives the error the path and the location of the field.
+An exception mapper is a bean that implements `GraphQLExceptionMapper<E>`. It is registered for `E` and its subclasses, and it chooses the message and the extensions of the error. The context gives the error the path and the location of the field. `getSourceLocation()` is `null` when graphql-java has no location for the field; the error then has no entry in `locations`, and never a `null` one.
 
 snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="test", tags="mapper", indent="0"]
 
@@ -89,7 +89,7 @@ A `GraphQLErrorsCustomizer` bean changes the list of errors of a response after 
 
 snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="test", tags="customizer", indent="0"]
 
-The customizers run by order, lowest first, and each gets the list that the previous one returned. They run once for each response that has an error, and never for a successful response. A customizer that throws is logged at ERROR and skipped. Errors are immutable: build a new one, copying the message, the path and the locations as above.
+The customizers run by order, lowest first, and each gets the list that the previous one returned. They run once for each response that has an error, and never for a successful response. A customizer that throws is logged at ERROR and skipped. A customizer that returns an empty list ends the chain: no later customizer is called, and the response has no `errors` key (a response with `data` only). Errors are immutable: build a new one, copying the message, the path and the locations as above.
 
 [[constraintViolations]]
 == Bean validation
