@@ -260,7 +260,7 @@ public class LibraryGraphQLWsHandler {
 
         Disposable.Swap handle = Disposables.swap();
         if (!state.register(id, handle)) {
-            session.close(new CloseReason(4409, "Subscriber for " + id + " already exists."));
+            session.close(new CloseReason(4409, "Subscriber for this operation id already exists."));
             return;
         }
         AtomicBoolean failed = new AtomicBoolean();
