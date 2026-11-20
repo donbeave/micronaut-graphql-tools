@@ -153,7 +153,11 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
             return integer(((IntValue) literal).getValue());
         }
         if (literal instanceof FloatValue) {
-            return ((FloatValue) literal).getValue().doubleValue();
+            double number = ((FloatValue) literal).getValue().doubleValue();
+            if (Double.isInfinite(number)) {
+                throw new IllegalArgumentException("a number out of the range of a JSON number");
+            }
+            return number;
         }
         if (literal instanceof VariableReference) {
             return variables.get(((VariableReference) literal).getName());

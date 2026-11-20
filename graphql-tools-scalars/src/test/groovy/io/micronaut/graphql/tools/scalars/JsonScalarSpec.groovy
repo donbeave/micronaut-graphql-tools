@@ -26,6 +26,7 @@ import graphql.language.ObjectField
 import graphql.language.ObjectValue
 import graphql.language.StringValue
 import graphql.language.VariableReference
+import graphql.schema.CoercingParseLiteralException
 import graphql.schema.CoercingSerializeException
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -171,5 +172,16 @@ type Query {
 
         where:
         value << [Double.NaN, Double.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY]
+    }
+
+    void "a float literal outside the range of a double is refused instead of read as infinity"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        coercing.parseLiteral(FloatValue.newFloatValue(new BigDecimal('1e10000')).build(), CoercedVariables.emptyVariables(), CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseLiteralException)
     }
 }
