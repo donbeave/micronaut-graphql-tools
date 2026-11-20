@@ -60,9 +60,9 @@ class RequestProbeLoader : BatchLoader<String, Boolean> {
 @Requires(property = "tck.scenario", value = "per-execution-context")
 class ContextQueries {
 
-    fun contributed(environment: DataFetchingEnvironment): String = environment.graphQlContext.get<String>("tck.value")
+    fun contributed(environment: DataFetchingEnvironment): String = environment.graphQlContext.get<String>("tck.value")!!
 
-    fun executionNumber(environment: DataFetchingEnvironment): Int = environment.graphQlContext.get<Int>("tck.execution")
+    fun executionNumber(environment: DataFetchingEnvironment): Int = environment.graphQlContext.get<Int>("tck.execution")!!
 
     fun loadersCreated(environment: DataFetchingEnvironment): List<String> = environment.dataLoaderRegistry.keys.sorted()
 
