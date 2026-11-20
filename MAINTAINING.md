@@ -75,7 +75,7 @@ Renovate is configured in `.github/renovate.json`. Review its pull requests like
 
 ## Dependency downloads
 
-Maven Central and the Gradle plugin portal sometimes answer HTTP 429, and Gradle 9.9.1 does not retry it, so the Gradle steps run through `.github/scripts/retry-on-download-failure.sh`, which runs the build again (up to three attempts) only when it failed on a download. The Maven samples retry 429 themselves, with more attempts than Maven's default; a failure that is not a download still fails the run at once.
+Maven Central and the Gradle plugin portal sometimes answer HTTP 429. Gradle retries that a few times within a fraction of a second, so `gradle.properties` raises the retry count and backoff, and the Gradle steps of `gradle.yml` and the read-only steps of `canary.yml` and the `verify` job of `release.yml` run through `.github/scripts/retry-on-download-failure.sh`. It runs the build again (up to three attempts, none after 15 minutes) only when the output shows a download failure, keeps the exit code and output of the last attempt, and never retries a test or compile failure. The publish step of `release.yml` is not wrapped: a publish is never retried automatically. The Maven samples retry 429 themselves, with more attempts than Maven's default.
 
 ## Releases
 

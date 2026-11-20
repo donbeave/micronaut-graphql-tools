@@ -95,7 +95,7 @@ jobs:
           cache: false
       - name: Build with Gradle
         working-directory: source
-        run: ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=default -PprojectVersion="$TAG"
+        run: $GITHUB_WORKSPACE/.github/scripts/retry-on-download-failure.sh ./gradlew build --no-daemon --continue -PgraphqlJavaLeg=default -PprojectVersion="$TAG"
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           PREDICTIVE_TEST_SELECTION: 'false'
