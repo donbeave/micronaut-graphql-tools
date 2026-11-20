@@ -35,6 +35,7 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.TypeRuntimeWiring;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.BeanContext;
 import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationMetadataProvider;
@@ -105,6 +106,8 @@ import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.UnsupportedReturnTypeException;
 import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.internal.execution.FieldExecutionPlanner;
+import io.micronaut.graphql.tools.internal.execution.SuspendInvoker;
+import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
 import io.micronaut.graphql.tools.internal.resolver.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.MicronautPropertyDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.ResolverInstances;
@@ -434,20 +437,44 @@ public final class GraphQLRuntimeWiringGenerator {
                 getExecutableMethodFullName(executable)
         );
 
+        SuspendInvoker suspendInvoker = suspendInvoker(executable, mappingContext);
+
         List<ArgumentDefinition> argumentDefinitions = argumentPlanner.plan(executable, sourceClass,
                 mappingContext);
 
         ReturnVerdict verdict = processFieldReturnType(returnType.asArgument(),
-                mappingContext.getFieldDefinition().getType(), mappingContext, true, isSingleResult(executable));
+                mappingContext.getFieldDefinition().getType(), mappingContext, true, isSingleResult(executable),
+                suspendInvoker != null);
 
         // decided once per field here: a field that is not async and has no @ExecuteOn keeps the plain method fetcher and allocates nothing more
         Executor fieldExecutor = fieldExecutors.forMethod(executable.getAnnotationMetadata(), owner, mappingContext);
-        DataFetcher<Object> fetcher = new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance);
+        DataFetcher<Object> fetcher = new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance,
+                suspendInvoker);
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
                 FieldExecutionPlanner.plan(fetcher, verdict, mappingContext.getGraphQlObjectType().equals(subscriptionTypeName),
                         applicationContext.getConversionService(), fieldExecutor)
         );
+    }
+
+    /**
+     * @return the invoker of a Kotlin {@code suspend} method, null for any other method
+     * @throws ExecutionSetupException with code {@code suspend-without-coroutines} when the invoker does not exist
+     */
+    @Nullable
+    private SuspendInvoker suspendInvoker(Executable<Object, ?> executable, TypeMappingContext mappingContext) {
+        return suspendInvoker(applicationContext, executable,
+                mappingContext.getGraphQlObjectType() + "." + mappingContext.getGraphQlField());
+    }
+
+    static SuspendInvoker suspendInvoker(BeanContext context, Executable<Object, ?> executable, String coordinate) {
+        if (!(executable instanceof ExecutableMethod<?, ?> method && method.isSuspend())) {
+            return null;
+        }
+        return context.findBean(SuspendInvoker.class).orElseThrow(() -> new ExecutionSetupException(
+                BindingCode.SUSPEND_WITHOUT_COROUTINES, "The field " + coordinate + " binds the Kotlin suspend function "
+                + getExecutableMethodFullName(executable) + ", which needs kotlinx-coroutines-core on the classpath, and it "
+                + "is not there. Fix: add org.jetbrains.kotlinx:kotlinx-coroutines-core to the dependencies of the application."));
     }
 
     private static boolean isSingleResult(AnnotationMetadataProvider method) {
@@ -456,17 +483,17 @@ public final class GraphQLRuntimeWiringGenerator {
 
     private void processFieldReturnType(Argument<?> argument, Type<?> graphQlType, TypeMappingContext mappingContext) {
         // a property is read, never invoked: a Publisher can only be adapted from a method
-        if (processFieldReturnType(argument, graphQlType, mappingContext, true, false).reactive() != ReturnVerdict.Reactive.NONE) {
+        if (processFieldReturnType(argument, graphQlType, mappingContext, true, false, false).reactive() != ReturnVerdict.Reactive.NONE) {
             throw new UnsupportedReturnTypeException(mappingContext, WrapperRules.publisherOnProperty());
         }
     }
 
     private ReturnVerdict processFieldReturnType(Argument<?> argument, Type<?> graphQlType,
                                                  TypeMappingContext mappingContext, boolean fieldLevel,
-                                                 boolean singleResult) {
+                                                 boolean singleResult, boolean suspend) {
         boolean subscription = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
         ReturnVerdict verdict = ReturnTypes.adaptation(typeModel, typeDefinitionRegistry, argument, graphQlType, fieldLevel, subscription,
-                singleResult, mappingContext);
+                singleResult, suspend, mappingContext);
         if (verdict.reactive() == ReturnVerdict.Reactive.VALUELESS) {
             // the field is null: no value type to check against the schema
             return verdict;
@@ -490,7 +517,7 @@ public final class GraphQLRuntimeWiringGenerator {
             Type<?> listFieldType = (listType).getType();
             Argument<?> listArgument = argument.getFirstTypeVariable().get();
 
-            processFieldReturnType(listArgument, listFieldType, mappingContext, false, false);
+            processFieldReturnType(listArgument, listFieldType, mappingContext, false, false, false);
             return verdict;
         }
 

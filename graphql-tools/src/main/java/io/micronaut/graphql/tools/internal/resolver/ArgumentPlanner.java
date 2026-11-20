@@ -37,7 +37,9 @@ import io.micronaut.graphql.tools.internal.execution.ExecutionContextAvailabilit
 import io.micronaut.graphql.tools.internal.input.InputTypeBinder;
 import io.micronaut.graphql.tools.internal.input.ValueConverter;
 import io.micronaut.graphql.tools.internal.model.RuntimeTypeModel;
+import io.micronaut.inject.ExecutableMethod;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static io.micronaut.graphql.tools.internal.GraphQLUtils.getTypeName;
@@ -63,6 +65,10 @@ public final class ArgumentPlanner {
     public List<ArgumentDefinition> plan(Executable<?, ?> executable, @Nullable Class<?> sourceClass,
                                   TypeMappingContext mappingContext) {
         Argument<?>[] arguments = executable.getArguments();
+        if (executable instanceof ExecutableMethod<?, ?> method && method.isSuspend()) {
+            // the continuation is not a parameter of the resolver: the invocation supplies it
+            arguments = Arrays.copyOf(arguments, arguments.length - 1);
+        }
         List<InputValueDefinition> inputs = mappingContext.getFieldDefinition().getInputValueDefinitions();
         String sourceType = sourceClass == null ? null : sourceClass.getName();
         ArgumentVerdict verdict = ResolverClassRules.arguments(sourceType, typeModel.parameters(arguments),

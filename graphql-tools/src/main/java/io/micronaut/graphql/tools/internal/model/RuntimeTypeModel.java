@@ -401,7 +401,13 @@ public final class RuntimeTypeModel implements TypeModel {
 
         @Override
         public List<JParameter> parameters() {
-            return Arrays.stream(method.getArguments()).<JParameter>map(RuntimeParameter::new).toList();
+            return Arrays.stream(declaredArguments()).<JParameter>map(RuntimeParameter::new).toList();
+        }
+
+        // the continuation of a suspend method is not a parameter of the resolver
+        private Argument<?>[] declaredArguments() {
+            Argument<?>[] arguments = method.getArguments();
+            return method.isSuspend() ? Arrays.copyOf(arguments, arguments.length - 1) : arguments;
         }
 
         @Override
@@ -422,7 +428,7 @@ public final class RuntimeTypeModel implements TypeModel {
         @Override
         public String signature() {
             return method.getDeclaringType().getName() + "#" + method.getMethodName()
-                    + Arrays.stream(method.getArgumentTypes()).map(Class::getName)
+                    + Arrays.stream(declaredArguments()).map(it -> it.getType().getName())
                     .collect(Collectors.joining(",", "(", ")"));
         }
     }
