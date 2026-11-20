@@ -44,7 +44,7 @@ final class ModelCoverage {
     /**
      * @param binaryName  the binary name of a class
      * @param annotations the binary names of the annotations of the class
-     * @param scanned     whether Micronaut scans the class for a listed package; it does not for a Groovy class or a class that is not public
+     * @param scanned     whether Micronaut scans the class for a listed package; it does not for a class that is not public
      * @return whether a {@code @GraphQLModels} of this compilation lists the class, or lists its package and an annotation
      * that the class carries
      */
@@ -77,11 +77,12 @@ final class ModelCoverage {
         return missed.stream().filter(it -> names(sentence, it.name())).findFirst().orElse(null);
     }
 
-    // the whole class name: the next character must not continue a name, so Book is not found in BookDetails or Book$Inner
+    // the whole class name: the characters around it must not continue a name, so Book is not found in BookDetails or Book$Inner
     private static boolean names(String sentence, String name) {
         for (int at = sentence.indexOf(name); at >= 0; at = sentence.indexOf(name, at + 1)) {
             int end = at + name.length();
-            if (end == sentence.length() || !Character.isJavaIdentifierPart(sentence.charAt(end))) {
+            boolean starts = at == 0 || !Character.isJavaIdentifierPart(sentence.charAt(at - 1)) && sentence.charAt(at - 1) != '.';
+            if (starts && (end == sentence.length() || !Character.isJavaIdentifierPart(sentence.charAt(end)))) {
                 return true;
             }
         }

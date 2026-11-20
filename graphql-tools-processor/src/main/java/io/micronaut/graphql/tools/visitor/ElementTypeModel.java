@@ -390,7 +390,7 @@ final class ElementTypeModel implements TypeModel {
             boolean own = element.hasDeclaredAnnotation(INTROSPECTED) || element.getAnnotationNamesByStereotype(INTROSPECTED)
                     .stream().anyMatch(it -> !it.equals(MODELS));
             return own || coverage.covers(element.getName(), element.getAnnotationNames(),
-                    element.isPublic() && !element.isAssignable("groovy.lang.GroovyObject"));
+                    element.isPublic());
         }
 
         @Override
