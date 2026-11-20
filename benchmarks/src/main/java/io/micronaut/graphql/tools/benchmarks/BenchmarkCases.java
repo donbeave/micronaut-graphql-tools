@@ -57,6 +57,7 @@ import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
 
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -245,7 +246,7 @@ public final class BenchmarkCases implements AutoCloseable {
                 "2026-12-24"));
         ops.put(INSTANT_COERCION, coercion(TimeScalars.coercing(StandardScalar.INSTANT, "Instant", null),
                 "2026-12-24T10:15:30Z"));
-        ops.put(JSON_COERCION, coercion(new JsonCoercing("JSON", () -> null), Map.of("kind", "x")));
+        ops.put(JSON_COERCION, coercion(new JsonCoercing("JSON", () -> null), jsonValue()));
         ops.put(ENUM_ARGUMENT, fetch("Query", "enumArg", null, Map.of("color", coercedEnum("Color", "GREEN"))));
         ops.put(INPUT_OBJECT_ARGUMENT, fetch("Query", "input", null, Map.of("input", point("a", 1, 2))));
         ops.put(LIST_OF_INPUTS_ARGUMENT, fetch("Query", "inputs", null,
@@ -311,6 +312,14 @@ public final class BenchmarkCases implements AutoCloseable {
 
     // What a request does with the scalar: parse the variable, then write the value that a resolver returns from it
     @SuppressWarnings("unchecked")
+    private static Map<String, Object> jsonValue() {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("kind", "x");
+        value.put("tags", new ArrayList<>(List.of("a", "b")));
+        value.put("ratio", 2.5d);
+        return value;
+    }
+
     private static Op coercion(Coercing<?, ?> scalar, Object input) {
         Coercing<Object, Object> coercing = (Coercing<Object, Object>) scalar;
         GraphQLContext graphQLContext = GraphQLContext.getDefault();

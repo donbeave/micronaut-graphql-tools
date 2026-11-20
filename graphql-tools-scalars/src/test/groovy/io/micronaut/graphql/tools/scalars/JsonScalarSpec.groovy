@@ -28,12 +28,19 @@ import graphql.language.ObjectValue
 import graphql.language.StringValue
 import graphql.language.VariableReference
 import graphql.schema.CoercingParseLiteralException
+import graphql.schema.CoercingParseValueException
 import graphql.schema.CoercingSerializeException
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.scalars.internal.json.JsonCoercing
 import io.micronaut.json.JsonMapper
 import org.intellij.lang.annotations.Language
+
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.DoubleAdder
+import java.util.concurrent.atomic.LongAccumulator
+import java.util.concurrent.atomic.LongAdder
 
 import static io.micronaut.graphql.tools.scalars.JsonFixtures.Reading
 
@@ -186,4 +193,282 @@ type Query {
         then:
         thrown(CoercingParseLiteralException)
     }
+    void "a number that is not finite nested in a map or a list is a serialize error"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        coercing.serialize(value, CONTEXT, Locale.ROOT)
+
+        then:
+        def e = thrown(CoercingSerializeException)
+        e.message.contains('not finite')
+
+        where:
+        value << [
+                [a: Double.NaN],
+                [a: [1, [b: Double.POSITIVE_INFINITY]]],
+                [1, Float.NEGATIVE_INFINITY],
+                [[2, [Float.NaN]]],
+                [a: [b: [c: [Double.NaN]]]],
+        ]
+    }
+
+    void "a nested finite number is serialized as it is"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def value = [a: [1, 2.5d, [b: 3f, c: new BigDecimal('1e-10000')]]]
+
+        expect:
+        coercing.serialize(value, CONTEXT, Locale.ROOT).is(value)
+    }
+
+    void "a number that is not finite nested in a variable value is a parse error"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        coercing.parseValue(value, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+
+        where:
+        value << [
+                Double.NaN,
+                [a: Double.POSITIVE_INFINITY],
+                [1, [b: Float.NaN]],
+                [a: [[Double.NEGATIVE_INFINITY]]],
+        ]
+    }
+
+    void "a nested number that is not finite cannot become a literal"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        coercing.valueToLiteral([a: [1, Double.NaN]], CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+    }
+
+    void "a float literal that underflows to zero is refused, in a literal and in a nested literal"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def number = FloatValue.newFloatValue(new BigDecimal(text)).build()
+
+        when:
+        coercing.parseLiteral(number, CoercedVariables.emptyVariables(), CONTEXT, Locale.ROOT)
+        coercing.parseLiteral(ArrayValue.newArrayValue().value(number).build(), CoercedVariables.emptyVariables(), CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseLiteralException)
+
+        where:
+        text << ['1e-10000', '-1e-10000', '2.4e-324', '-2.4e-324', '1e-400']
+    }
+
+    void "a float literal that is zero or reaches the smallest subnormal double is accepted"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        expect:
+        coercing.parseLiteral(FloatValue.newFloatValue(new BigDecimal(text)).build(), CoercedVariables.emptyVariables(), CONTEXT, Locale.ROOT) == expected
+
+        where:
+        text        | expected
+        '0.0'       | 0.0d
+        '0e5'       | 0.0d
+        '0e-10000'  | 0.0d
+        '2.5e-324'  | Double.MIN_VALUE
+        '4.9e-324'  | Double.MIN_VALUE
+        '1e-323'    | 1e-323d
+        '2.5'       | 2.5d
+    }
+
+    void "a variable that underflows to zero or overflows is refused, also when nested"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        coercing.parseValue(value, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+
+        where:
+        value << [
+                new BigDecimal('1e-10000'),
+                [a: new BigDecimal('2.4e-324')],
+                [[new BigDecimal('-1e-10000')]],
+                new BigDecimal('1e10000'),
+        ]
+    }
+
+    void "a variable that is zero or the smallest subnormal double is accepted"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        expect:
+        coercing.parseValue(value, CONTEXT, Locale.ROOT).is(value)
+
+        where:
+        value << [new BigDecimal('0.0'), new BigDecimal('0e5'), [a: new BigDecimal('2.5e-324')], 4.9e-324d, 1.5d, 'x']
+    }
+
+    void "valueToLiteral keeps each integral Number type exact, also beyond 2^53"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        def literal = coercing.valueToLiteral(value, CONTEXT, Locale.ROOT)
+
+        then:
+        literal instanceof IntValue
+        literal.value == expected
+
+        where:
+        value                                      | expected
+        new AtomicLong(Long.MAX_VALUE)             | BigInteger.valueOf(Long.MAX_VALUE)
+        new AtomicLong(9007199254740993L)          | BigInteger.valueOf(9007199254740993L)
+        new AtomicLong(Long.MIN_VALUE)             | BigInteger.valueOf(Long.MIN_VALUE)
+        new AtomicInteger(Integer.MAX_VALUE)       | BigInteger.valueOf(Integer.MAX_VALUE)
+        new LongAdder() { { add(9007199254740993L) } } | BigInteger.valueOf(9007199254740993L)
+        Long.MAX_VALUE                             | BigInteger.valueOf(Long.MAX_VALUE)
+        Integer.MIN_VALUE                          | BigInteger.valueOf(Integer.MIN_VALUE)
+        (short) 7                                  | BigInteger.valueOf(7)
+        (byte) -3                                  | BigInteger.valueOf(-3)
+        new BigInteger('123456789012345678901234567890') | new BigInteger('123456789012345678901234567890')
+    }
+
+    void "valueToLiteral keeps a LongAccumulator exact and the floating types on the double path"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def accumulator = new LongAccumulator({ a, b -> a + b }, 0L)
+        accumulator.accumulate(Long.MAX_VALUE)
+        def doubles = new DoubleAdder()
+        doubles.add(1.5d)
+
+        expect:
+        coercing.valueToLiteral(accumulator, CONTEXT, Locale.ROOT).value == BigInteger.valueOf(Long.MAX_VALUE)
+        coercing.valueToLiteral(doubles, CONTEXT, Locale.ROOT).value == new BigDecimal('1.5')
+        coercing.valueToLiteral(2.5d, CONTEXT, Locale.ROOT).value == new BigDecimal('2.5')
+        coercing.valueToLiteral(new BigDecimal('1.25'), CONTEXT, Locale.ROOT).value == new BigDecimal('1.25')
+    }
+
+    void "valueToLiteral writes an unknown Number exactly through its decimal text, or refuses it"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        def literal = coercing.valueToLiteral(new Fraction('12345678901234567890.5'), CONTEXT, Locale.ROOT)
+
+        then:
+        literal instanceof FloatValue
+        literal.value == new BigDecimal('12345678901234567890.5')
+
+        when:
+        coercing.valueToLiteral(new Fraction('one half'), CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+    }
+
+    void "a concurrent floating number that is not finite is refused on every path"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def adder = new DoubleAdder()
+        adder.add(Double.POSITIVE_INFINITY)
+
+        when:
+        coercing.serialize([a: [adder]], CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingSerializeException)
+
+        when:
+        coercing.parseValue([a: [adder]], CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+    }
+
+    void "a decimal out of range is refused when a value becomes a literal"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        coercing.valueToLiteral(value, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+
+        where:
+        value << [new BigDecimal('1e-10000'), [a: [new BigDecimal('1e10000')]]]
+    }
+
+    void "a decimal out of range behind a variable reference in a literal is refused"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def literal = ObjectValue.newObjectValue()
+                .objectField(ObjectField.newObjectField().name('amount').value(new VariableReference('v')).build()).build()
+
+        when:
+        coercing.parseLiteral(literal, CoercedVariables.of([v: new BigDecimal('1e-10000')]), CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseLiteralException)
+    }
+
+    void "a container that contains itself is an error, not a stack overflow"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        List cycle = []
+        cycle << cycle
+
+        when:
+        coercing.serialize(cycle, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingSerializeException)
+
+        when:
+        coercing.parseValue(cycle, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+    }
+
+    void "an unknown number outside the range of a double keeps its exact decimal text"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        expect:
+        coercing.valueToLiteral(new Fraction('1e10000'), CONTEXT, Locale.ROOT).value == new BigDecimal('1e10000')
+    }
+
+    static class Fraction extends Number {
+
+        private final String text
+
+        Fraction(String text) { this.text = text }
+
+        @Override
+        int intValue() { 0 }
+
+        @Override
+        long longValue() { 0L }
+
+        @Override
+        float floatValue() { 0f }
+
+        @Override
+        double doubleValue() { 0.5d }
+
+        @Override
+        String toString() { text }
+
+    }
+
 }

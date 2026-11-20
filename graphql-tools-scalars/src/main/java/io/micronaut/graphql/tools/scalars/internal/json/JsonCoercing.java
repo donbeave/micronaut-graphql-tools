@@ -43,6 +43,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.DoubleAccumulator;
+import java.util.concurrent.atomic.DoubleAdder;
+import java.util.concurrent.atomic.LongAccumulator;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.RandomAccess;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 /**
@@ -52,6 +60,14 @@ import java.util.function.Supplier;
  */
 @Internal
 public final class JsonCoercing extends WireCoercing<Object, Object> {
+
+    private static final String NOT_FINITE = "a number that is not finite cannot be written as JSON";
+
+    private static final String NESTED = "a value nested too deeply or containing itself cannot be written as JSON";
+
+    private static final BiConsumer<Object, Object> OUTPUT_ENTRY = (key, element) -> checkOutput(element);
+
+    private static final BiConsumer<Object, Object> INPUT_ENTRY = (key, element) -> checkInput(element);
 
     private final Supplier<JsonMapper> mapper;
 
@@ -66,24 +82,98 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
 
     @Override
     protected Object write(Object value) {
-        if (isJson(value)) {
-            if (value instanceof Double && !Double.isFinite((Double) value)
-                    || value instanceof Float && !Float.isFinite((Float) value)) {
-                throw new IllegalArgumentException("a number that is not finite cannot be written as JSON");
-            }
-            return value;
-        }
         try {
-            return toJava(mapper.get().writeValueToTree(value));
+            if (isJson(value)) {
+                checkOutput(value);
+                return value;
+            }
+            Object converted = toJava(mapper.get().writeValueToTree(value));
+            checkOutput(converted);
+            return converted;
         } catch (IOException e) {
             throw new IllegalArgumentException("the value cannot be written as JSON", e);
+        } catch (StackOverflowError e) {
+            throw new IllegalArgumentException(NESTED, e);
         }
+    }
+
+    private static void checkOutput(Object value) {
+        if (value instanceof Double) {
+            if (!Double.isFinite((Double) value)) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+        } else if (value instanceof Float) {
+            if (!Float.isFinite((Float) value)) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+        } else if (value instanceof DoubleAdder || value instanceof DoubleAccumulator) {
+            if (!Double.isFinite(((Number) value).doubleValue())) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+        } else if (value instanceof Map) {
+            ((Map<?, ?>) value).forEach((BiConsumer<Object, Object>) OUTPUT_ENTRY);
+        } else if (value instanceof List && value instanceof RandomAccess) {
+            List<?> list = (List<?>) value;
+            for (int i = 0, size = list.size(); i < size; i++) {
+                checkOutput(list.get(i));
+            }
+        } else if (value instanceof Collection) {
+            for (Object element : (Collection<?>) value) {
+                checkOutput(element);
+            }
+        }
+    }
+
+    private static void checkInput(Object value) {
+        if (value instanceof Double) {
+            if (!Double.isFinite((Double) value)) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+        } else if (value instanceof Float) {
+            if (!Float.isFinite((Float) value)) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+        } else if (value instanceof DoubleAdder || value instanceof DoubleAccumulator) {
+            if (!Double.isFinite(((Number) value).doubleValue())) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+        } else if (value instanceof BigDecimal) {
+            checkDecimal((BigDecimal) value);
+        } else if (value instanceof Map) {
+            ((Map<?, ?>) value).forEach((BiConsumer<Object, Object>) INPUT_ENTRY);
+        } else if (value instanceof List && value instanceof RandomAccess) {
+            List<?> list = (List<?>) value;
+            for (int i = 0, size = list.size(); i < size; i++) {
+                checkInput(list.get(i));
+            }
+        } else if (value instanceof Collection) {
+            for (Object element : (Collection<?>) value) {
+                checkInput(element);
+            }
+        }
+    }
+
+    private static double checkDecimal(BigDecimal decimal) {
+        double number = decimal.doubleValue();
+        if (Double.isInfinite(number)) {
+            throw new IllegalArgumentException("a number out of the range of a JSON number");
+        }
+        if (number == 0.0d && decimal.signum() != 0) {
+            throw new IllegalArgumentException("a number too close to zero for a JSON number");
+        }
+        return number;
     }
 
     @Override
     public Value<?> valueToLiteral(Object input, GraphQLContext graphQLContext, Locale locale) {
         try {
-            return literal(isJson(input) ? input : write(input));
+            if (isJson(input)) {
+                checkInput(input);
+                return literal(input);
+            }
+            return literal(write(input));
+        } catch (StackOverflowError e) {
+            throw new CoercingParseValueException(scalarName() + ": " + NESTED, e);
         } catch (RuntimeException e) {
             throw new CoercingParseValueException(scalarName() + ": " + e.getMessage(), e);
         }
@@ -108,12 +198,12 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
         if (value instanceof BigDecimal) {
             return FloatValue.newFloatValue((BigDecimal) value).build();
         }
+        if (value instanceof AtomicInteger || value instanceof AtomicLong || value instanceof LongAdder
+                || value instanceof LongAccumulator) {
+            return IntValue.newIntValue(BigInteger.valueOf(((Number) value).longValue())).build();
+        }
         if (value instanceof Number) {
-            double number = ((Number) value).doubleValue();
-            if (Double.isNaN(number) || Double.isInfinite(number)) {
-                throw new IllegalArgumentException("a number that is not finite cannot be written as JSON");
-            }
-            return FloatValue.newFloatValue(BigDecimal.valueOf(number)).build();
+            return number((Number) value);
         }
         if (value instanceof Map) {
             ObjectValue.Builder object = ObjectValue.newObjectValue();
@@ -130,8 +220,30 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
         return array.build();
     }
 
+    private static Value<?> number(Number value) {
+        if (value instanceof Float || value instanceof Double || value instanceof DoubleAdder
+                || value instanceof DoubleAccumulator) {
+            double number = value.doubleValue();
+            if (!Double.isFinite(number)) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+            return FloatValue.newFloatValue(BigDecimal.valueOf(number)).build();
+        }
+        try {
+            return FloatValue.newFloatValue(new BigDecimal(value.toString())).build();
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("a number of the kind " + value.getClass().getName()
+                    + " has no exact decimal form", e);
+        }
+    }
+
     @Override
     protected Object read(Object input) {
+        try {
+            checkInput(input);
+        } catch (StackOverflowError e) {
+            throw new IllegalArgumentException(NESTED, e);
+        }
         return input;
     }
 
@@ -153,14 +265,12 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
             return integer(((IntValue) literal).getValue());
         }
         if (literal instanceof FloatValue) {
-            double number = ((FloatValue) literal).getValue().doubleValue();
-            if (Double.isInfinite(number)) {
-                throw new IllegalArgumentException("a number out of the range of a JSON number");
-            }
-            return number;
+            return checkDecimal(((FloatValue) literal).getValue());
         }
         if (literal instanceof VariableReference) {
-            return variables.get(((VariableReference) literal).getName());
+            Object variable = variables.get(((VariableReference) literal).getName());
+            checkInput(variable);
+            return variable;
         }
         if (literal instanceof ArrayValue) {
             List<Object> list = new ArrayList<>();

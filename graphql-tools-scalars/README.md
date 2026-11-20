@@ -20,6 +20,9 @@ A scalar has a configurable name and, for `java.time`, a configurable wire forma
   for each scalar. A value that a scalar cannot use fails the startup with a message that names the key.
 - The JSON scalar converts a value that is not JSON yet with the application's `JsonMapper` (Micronaut Serialization in an
   application that uses it). The module uses no Jackson and brings no JSON implementation.
+  It rejects a number that is not finite (NaN, infinity) at any depth of a map or a list, in output and in variables, and a
+  float that is not zero but underflows to zero as a `double` (for example `1e-10000`). It writes an integral `Number`
+  (`AtomicLong`, `LongAdder` and the like) as an exact integer literal; an unknown `Number` goes through its decimal text.
 
 Not in this module: the scalar SPI (`GraphQLScalarMapping`) and the binding of scalars to Java types. Those are in
 `graphql-tools`.
