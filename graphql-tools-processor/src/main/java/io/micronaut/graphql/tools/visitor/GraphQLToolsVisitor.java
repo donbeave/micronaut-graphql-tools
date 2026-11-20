@@ -144,6 +144,9 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         List<String> classes = Arrays.stream(annotation.annotationClassValues("classes")).map(AnnotationClassValue::getName).toList();
         List<String> packages = List.of(annotation.stringValues("packages"));
         if (classes.isEmpty() && packages.isEmpty()) {
+            if (!current.options.checks()) {
+                return;
+            }
             context.warn(TAG + "@GraphQLModels on " + element.getName() + " lists no class and no package, "
                     + "so it makes no class introspected; list the classes, or the packages with includedAnnotations", element);
             return;
@@ -223,7 +226,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             if (UNPROVEN.equals(finding.code())) {
                 // a @GraphQLModels of this compilation that is visited after this class can still cover the class, so the
                 // warning is made when the compilation finishes; the walk stopped at the class it names
-                current.pending.add(new Pending(finding, current.coverage.lastMissed()));
+                current.pending.add(new Pending(finding, current.coverage.missedIn(finding.sentence())));
             } else {
                 current.findings++;
                 MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());

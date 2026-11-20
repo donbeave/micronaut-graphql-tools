@@ -32,8 +32,7 @@ final class ModelCoverage {
 
     private final Set<String> classes = new HashSet<>();
     private final List<PackageEntry> packages = new ArrayList<>();
-    @Nullable
-    private Missed lastMissed;
+    private final List<Missed> missed = new ArrayList<>();
 
     void add(Iterable<String> classNames, Iterable<String> packageNames, Iterable<String> markerNames) {
         classNames.forEach(classes::add);
@@ -45,7 +44,7 @@ final class ModelCoverage {
     /**
      * @param binaryName  the binary name of a class
      * @param annotations the binary names of the annotations of the class
-     * @param scanned     whether Micronaut scans the class for a listed package; it does not for a Groovy class
+     * @param scanned     whether Micronaut scans the class for a listed package; it does not for a Groovy class or a class that is not public
      * @return whether a {@code @GraphQLModels} of this compilation lists the class, or lists its package and an annotation
      * that the class carries
      */
@@ -56,7 +55,7 @@ final class ModelCoverage {
                 && it.markers.stream().anyMatch(annotations::contains))) {
             return true;
         }
-        lastMissed = new Missed(binaryName, annotations, scanned);
+        missed.add(new Missed(binaryName, annotations, scanned));
         return false;
     }
 
@@ -65,15 +64,17 @@ final class ModelCoverage {
     }
 
     void resetMissed() {
-        lastMissed = null;
+        missed.clear();
     }
 
     /**
-     * @return the class that the last judgement since {@link #resetMissed()} found not covered, or {@code null}
+     * @param sentence the sentence of a finding
+     * @return the class that a judgement since {@link #resetMissed()} found not covered and that the sentence names, or
+     * {@code null}
      */
     @Nullable
-    Missed lastMissed() {
-        return lastMissed;
+    Missed missedIn(String sentence) {
+        return missed.stream().filter(it -> sentence.contains(it.name())).findFirst().orElse(null);
     }
 
     private record PackageEntry(String name, Set<String> markers) {

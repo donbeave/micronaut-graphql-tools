@@ -63,6 +63,7 @@ final class ElementTypeModel implements TypeModel {
 
     private static final String INTRODUCTION = "io.micronaut.aop.Introduction";
     private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
+    private static final String MODELS = "io.micronaut.graphql.tools.annotation.GraphQLModels";
 
     // what makes a class a bean by its own declaration, as the startup's bean set sees it
     private static final Set<String> BEAN_DEFINING = Set.of("jakarta.inject.Singleton", "jakarta.inject.Scope",
@@ -384,8 +385,11 @@ final class ElementTypeModel implements TypeModel {
         // not visible from this one
         @Override
         public boolean introspected() {
-            return element.hasStereotype(INTROSPECTED) || coverage.covers(element.getName(), element.getAnnotationNames(),
-                    !element.isAssignable("groovy.lang.GroovyObject"));
+            // @GraphQLModels carries @Introspected for the classes it lists, not for the class it is declared on
+            boolean own = element.hasDeclaredAnnotation(INTROSPECTED) || element.getAnnotationNamesByStereotype(INTROSPECTED)
+                    .stream().anyMatch(it -> !it.equals(MODELS));
+            return own || coverage.covers(element.getName(), element.getAnnotationNames(),
+                    element.isPublic() && !element.isAssignable("groovy.lang.GroovyObject"));
         }
 
         @Override

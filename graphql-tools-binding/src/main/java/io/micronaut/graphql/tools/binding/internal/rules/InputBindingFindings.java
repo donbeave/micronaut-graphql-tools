@@ -178,7 +178,8 @@ public final class InputBindingFindings {
             return null;
         }
         JClass objectClass = model.resolve(declared);
-        if (objectClass.kind() != JClass.Kind.CLASS && objectClass.kind() != JClass.Kind.RECORD
+        if (objectClass.kind() != JClass.Kind.CLASS && objectClass.kind() != JClass.Kind.ABSTRACT_CLASS
+                && objectClass.kind() != JClass.Kind.RECORD
                 || objectClass.introspected()) {
             return null;
         }
