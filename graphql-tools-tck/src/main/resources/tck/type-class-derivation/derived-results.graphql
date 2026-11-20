@@ -1,0 +1,8 @@
+{
+  derivedResults {
+    __typename
+    ... on DerivedBook { title }
+    ... on DerivedMagazine { issue }
+    ... on DerivedPoster { caption }
+  }
+}
