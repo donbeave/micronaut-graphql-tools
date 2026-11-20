@@ -12,3 +12,4 @@ input-errors
 execution-thread
 execution-thread-none
 async-context
+websocket

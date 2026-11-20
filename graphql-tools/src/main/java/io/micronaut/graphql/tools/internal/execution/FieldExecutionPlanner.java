@@ -67,8 +67,11 @@ public final class FieldExecutionPlanner {
      */
     public static DataFetcher<Object> plan(DataFetcher<Object> method, ReturnVerdict verdict, boolean subscriptionField,
                                            ConversionService conversionService) {
+        if (subscriptionField) {
+            return new StreamDataFetcher(method, conversionService);
+        }
         DataFetcher<Object> adapted = verdict.reactive() == ReturnVerdict.Reactive.NONE ? method
                 : new PublisherAdaptingDataFetcher(method, verdict.reactive() == ReturnVerdict.Reactive.MULTI, conversionService);
-        return kind(verdict, subscriptionField) == Kind.ASYNC ? new AsyncBoundaryDataFetcher(adapted) : adapted;
+        return verdict.async() ? new AsyncBoundaryDataFetcher(adapted) : adapted;
     }
 }

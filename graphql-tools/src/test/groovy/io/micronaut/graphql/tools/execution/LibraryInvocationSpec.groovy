@@ -220,6 +220,26 @@ type Child {
         warningLogger().detachAppender(appender)
     }
 
+    void "cancelling the result of an execution that is still queued skips its hop task"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.execution.executor': 'queued'])
+        ExecutorService queued = applicationContext.getBean(ExecutorService, io.micronaut.inject.qualifiers.Qualifiers.byName('queued'))
+        def release = new java.util.concurrent.CountDownLatch(1)
+        queued.execute { release.await() }
+
+        when: 'the operation waits behind the blocker and the client goes away'
+        def future = Mono.from(applicationContext.getBean(GraphQLInvocation)
+                .invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)).toFuture()
+        future.cancel(true)
+        release.countDown()
+        queued.shutdown()
+        queued.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)
+
+        then: 'no resolver ran'
+        RESOLVER_THREADS.isEmpty()
+        future.isCancelled()
+    }
+
     void "an unknown executor fails the startup with unknown-executor and lists the executor beans"() {
         when:
         startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.eager-init': true,
@@ -444,6 +464,13 @@ type Child {
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Factory
     static class Executors0 {
+        @Bean
+        @Singleton
+        @Named('queued')
+        ExecutorService queued() {
+            Executors.newSingleThreadExecutor()
+        }
+
         @Bean
         @Singleton
         @Named('rejecting')

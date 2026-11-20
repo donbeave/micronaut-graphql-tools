@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
+import graphql.execution.AbortExecutionException;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
@@ -144,7 +145,9 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
         }
 
         private void finish(Object value, Throwable failure) {
-            if (failure != null) {
+            if (state.isCancelled()) {
+                completeExceptionally(new AbortExecutionException("The execution was cancelled"));
+            } else if (failure != null) {
                 completeExceptionally(unwrap(failure));
             } else {
                 complete(value);

@@ -93,6 +93,10 @@ A few rules:
 * The cost of an async field that completes on another thread is one small object (the future that the library returns) and its callback, and nothing for a future that is already done. A field that returns `Object` and a `CompletionStage` at runtime is a synchronous field for the library: graphql-java still waits for it, but its children get neither the context nor the move off the event loop. Declare the stage in the return type.
 * When graphql-java cancels the future of the field (a timeout, for example), the library cancels the source future, and the adapter of a publisher cancels its subscription. `@ExecuteOn` is not part of this boundary.
 
+== Cancellation
+
+An execution can be cancelled: a WebSocket `complete` and the close of the connection do it (see <<subscriptions,Subscriptions>>). The library then stops starting new work for it: a hop task that has not started is skipped and the operation ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, the continuation of an async field that completes afterwards is aborted, and the stream of a subscription is cancelled. Synchronous code that is running is never interrupted.
+
 == Breaking change
 
 Resolvers run on the blocking executor by default (BC-35). Before, they ran on the event loop. See the migration page for what to check: a resolver that relied on running on the event loop, or on a thread local that is set there, and the thread pool size.

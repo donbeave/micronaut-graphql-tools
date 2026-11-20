@@ -49,6 +49,7 @@ public final class ExecutionState {
     private final ConvertibleValues<Object> connectionAttributes;
     @Nullable
     private final Executor requestExecutor;
+    private volatile boolean cancelled;
 
     /**
      * Public for the benchmarks of this repository, which build an execution without the invocation; the library's
@@ -136,6 +137,22 @@ public final class ExecutionState {
      */
     public ConvertibleValues<Object> connectionAttributes() {
         return connectionAttributes;
+    }
+
+    /**
+     * Marks the execution cancelled: its client went away (a WebSocket {@code complete} or close). Cancellation is
+     * cooperative: a hop task that has not started is skipped, a later async boundary completes with an abort and a
+     * stream is cancelled, but synchronous code that is running is never interrupted.
+     */
+    public void cancel() {
+        cancelled = true;
+    }
+
+    /**
+     * @return whether {@link #cancel()} was called
+     */
+    public boolean isCancelled() {
+        return cancelled;
     }
 
 }

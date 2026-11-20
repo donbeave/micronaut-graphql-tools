@@ -54,6 +54,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.BiConsumer;
@@ -144,7 +145,17 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 execution.reject(e);
             }
         }
-        return Mono.fromFuture(execution.result);
+        Mono<ExecutionResult> result = Mono.fromFuture(execution.result);
+        // HTTP pays nothing: its disconnect and timeout handling is a separate change, and a cancel hook allocates for each request
+        return transport == ExecutionTransport.HTTP ? result : result.doOnCancel(execution.state::cancel);
+    }
+
+    /**
+     * @return the executor that runs the operations, or null when they run on the calling thread ({@code none})
+     */
+    @Nullable
+    public Executor executor() {
+        return executor;
     }
 
     private static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {
@@ -183,6 +194,16 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 .build();
     }
 
+    private static ExecutionResult cancelled() {
+        return ExecutionResultImpl.newExecutionResult()
+                .data(null)
+                .addError(GraphqlErrorBuilder.newError()
+                        .message("The operation was cancelled before it started.")
+                        .extensions(Map.of("code", "EXECUTION_CANCELLED"))
+                        .build())
+                .build();
+    }
+
     /** One operation: the task of the hop, and the receiver of graphql-java's result. */
     private final class Execution implements Runnable, BiConsumer<ExecutionResult, Throwable> {
 
@@ -198,6 +219,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
         @Override
         public void run() {
+            if (state.isCancelled()) {
+                result.complete(cancelled());
+                return;
+            }
             inContext(this::start);
         }
 
