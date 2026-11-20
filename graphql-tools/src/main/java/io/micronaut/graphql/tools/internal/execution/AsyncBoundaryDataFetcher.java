@@ -66,13 +66,23 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
         if (state == null) {
             return result;
         }
-        if (result instanceof CompletableFuture<?> future && future.isDone() && !future.isCompletedExceptionally()
+        if (result instanceof CompletableFuture<?> future && doneWithoutFailure(future)
                 && PropagatedContext.getOrEmpty() == state.propagatedContext()) {
             return result;
         }
         Boundary boundary = new Boundary(state, stage);
         stage.whenComplete(boundary);
         return boundary;
+    }
+
+    // CompletableFuture.completedStage, failedStage and minimalCompletionStage return a CompletableFuture that refuses to be
+    // inspected: such a stage is not done as far as the fast path knows, and the boundary completes from its callback
+    private static boolean doneWithoutFailure(CompletableFuture<?> future) {
+        try {
+            return future.isDone() && !future.isCompletedExceptionally();
+        } catch (UnsupportedOperationException e) {
+            return false;
+        }
     }
 
     static Throwable unwrap(Throwable failure) {
@@ -99,7 +109,11 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
         public boolean cancel(boolean mayInterruptIfRunning) {
             boolean cancelled = super.cancel(mayInterruptIfRunning);
             if (cancelled && source instanceof CompletableFuture<?> future) {
-                future.cancel(mayInterruptIfRunning);
+                try {
+                    future.cancel(mayInterruptIfRunning);
+                } catch (UnsupportedOperationException e) {
+                    // a minimal stage cannot be cancelled: there is nothing to cancel
+                }
             }
             return cancelled;
         }

@@ -267,6 +267,36 @@ type Parent {
         new AsyncBoundaryDataFetcher({ pending } as DataFetcher).get(bare).is(pending)
     }
 
+    void "a minimal stage, which refuses to be inspected, is completed through its callback"() {
+        given:
+        def captured = PropagatedContext.getOrEmpty().plus(new MarkerElement('x'))
+        def state = new ExecutionState(captured, ExecutionTransport.HTTP, null, null, ConvertibleValues.empty(), null)
+        def context = GraphQLContext.newContext().build()
+        state.storeIn(context)
+        def environment = DataFetchingEnvironmentImpl.newDataFetchingEnvironment().graphQLContext(context).build()
+        def completed = CompletableFuture.completedStage('value')
+        def failed = CompletableFuture.failedStage(new IllegalStateException('inner'))
+
+        when:
+        def inContext = captured.propagate()
+        def ok
+        def bad
+        try {
+            ok = new AsyncBoundaryDataFetcher({ completed } as DataFetcher).get(environment)
+            bad = new AsyncBoundaryDataFetcher({ failed } as DataFetcher).get(environment)
+        } finally {
+            inContext.close()
+        }
+
+        then:
+        ok.get() == 'value'
+        bad.handle { v, e -> e }.get().class == IllegalStateException
+        when:
+        ok.cancel(true)
+        then:
+        noExceptionThrown()
+    }
+
     void "cancelling the future of the boundary cancels the source"() {
         given:
         def state = new ExecutionState(PropagatedContext.getOrEmpty(), ExecutionTransport.HTTP, null, null, ConvertibleValues.empty(), null)
