@@ -1,0 +1,63 @@
+This page describes what is specific to Groovy. Everything else in this guide applies to Groovy classes as it does to Java and Kotlin ones, and every example here is taken from the compiled Groovy suite of the repository (`test-suite-groovy`).
+
+== Properties
+
+A property that Groovy generates is a getter, and, when it is not `final`, a setter. The library binds it as it binds a Java getter or setter: a model field reads the getter, and an input field is set through the setter. The `boolean` property `active` is read through `isActive` or `getActive`, whichever the class has.
+
+:groovy-sources: {sourcedir}/test-suite-groovy/src/test/groovy
+
+[source,groovy]
+----
+include::{groovy-sources}/example/language/GroovyFixtures.groovy[tags=model]
+----
+
+[source,groovy]
+----
+include::{groovy-sources}/example/language/GroovyFixtures.groovy[tags=input]
+----
+
+An input class is instantiated through its introspected constructor, then the remaining input fields are set through their setters. Groovy transformations such as `@TupleConstructor` and `@Immutable` add their constructor after Micronaut has built the introspection, so the class would be instantiated without arguments. For a constructor-only input, write the constructor yourself:
+
+[source,groovy]
+----
+include::{groovy-sources}/example/language/GroovyFixtures.groovy[tags=constructor-input]
+----
+
+== GString
+
+A field of the GraphQL type `String` accepts `GString` as its Java type. A `GString` result is serialized as a string, and so is the value of a `CompletionStage<GString>`:
+
+[source,groovy]
+----
+include::{groovy-sources}/example/language/GroovyFixtures.groovy[tags=resolver]
+----
+
+The library adds no conversion step for this: graphql-java's `String` scalar calls `toString()` on the value when it serializes it, so a field that never returns a `GString` pays nothing, and a `GString` is converted once, when its field is serialized. An async result is serialized by the same scalar after the async boundary completes the field, so there is no second wrapper around the future. Nothing is chosen at run time, and the library makes no dynamic call.
+
+Two limits:
+
+* The GraphQL `ID` type does not accept `GString`; declare `String`, or call `toString()`.
+* A field declared `Object` is not accepted for any scalar. Declare `String` or `GString`.
+
+Arguments are never `GString`: graphql-java passes `String` values, so a resolver parameter is declared `String`.
+
+== Sealed types
+
+A Groovy 4 `sealed` interface can be the Java type of a union or an interface. The library resolves the concrete type of a value from its class, so the permitted subclasses are an ordinary set of classes that you register for the schema types with the `SchemaMappingDictionary`, as for Java classes:
+
+[source,groovy]
+----
+include::{groovy-sources}/example/language/GroovyFixtures.groovy[tags=sealed]
+----
+
+== Async and executors
+
+`@ExecuteOn` on a Groovy bean runs the resolver on the named executor, and a `CompletionStage` return is an async field, exactly as for a Java bean (see the Execution page).
+
+== Native image
+
+Groovy's dynamic features are not native-friendly, so Groovy is covered on the JVM: Spock cannot run in a native image, and the Groovy suite runs on the JVM. The Groovy example application is built as a native executable and smoke-tested by `./gradlew :test-suite-groovy:nativeSmokeTest`. Compile with `@CompileStatic` and without `indy` to keep a Groovy application native-friendly.
+
+== Compile-time checks
+
+The Groovy compiler loads the checks of `graphql-tools-processor` from `compileOnly`; see the Compile-Time Verification page.

@@ -3,6 +3,7 @@ introduction:
 quickStart:
   title: Quick Start
 languageSupport: Language Support
+groovy: Groovy
 why: Why This Library
 schema: Schema
 binding: Binding

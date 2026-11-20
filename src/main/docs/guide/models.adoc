@@ -37,3 +37,7 @@ The startup fails with `[class-not-introspected]` when a class that backs an obj
 For a class that a listed class reaches, the coordinate is the field of the listed class that returns it (`Holder.inner`).
 
 The compile-time check reports the same finding for the class that a resolver method returns, with the same code and the coordinate of the field. It is a warning, not an error, for the reason that applies to every `class-not-introspected` finding: another module, a dependency or a `@GraphQLModels` of a class that the compiler has not visited yet can introspect the class, and a compile error must also be a startup failure. A `@GraphQLModels` of the same compilation clears the warning wherever it is declared. A build that turns compiler warnings into errors (`-Werror`) fails on it, and the startup fails in any case. See <<compileTime,Compile-Time Verification>> for the checks.
+
+== Kotlin data classes
+
+A Kotlin data class that carries `@GraphQLType` is a model like any other class: its properties are read through the introspection, with no other annotation. See <<languageSupport,Language Support>> for data classes as input classes and the handling of default arguments.

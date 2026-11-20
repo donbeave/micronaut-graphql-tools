@@ -58,6 +58,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.BiConsumer;
@@ -162,10 +163,32 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 execution.reject(e);
             }
         }
-        return errorsCustomizers == null ? Mono.fromFuture(execution.result) : Mono.fromFuture(execution.result).map(this::customizeErrors);
+        Mono<ExecutionResult> result = Mono.fromFuture(execution.result);
+        if (errorsCustomizers != null) {
+            result = result.map(this::customizeErrors);
+        }
+        // HTTP pays nothing: its disconnect and timeout handling is a separate change, and a cancel hook allocates for each request
+        return transport == GraphQLTransport.HTTP ? result : result.doOnCancel(execution.state::cancel);
     }
 
-    private ExecutionResult customizeErrors(ExecutionResult executionResult) {
+    /**
+     * @return the executor that runs the operations, or null when they run on the calling thread ({@code none})
+     */
+    @Nullable
+    public Executor executor() {
+        return executor;
+    }
+
+    /**
+     * Applies the {@link GraphQLErrorsCustomizer} beans to one result; a subscription event is a response of its own.
+     *
+     * @param executionResult the result
+     * @return the result, with the customized errors when there are customizers and the result has errors
+     */
+    public ExecutionResult customizeErrors(ExecutionResult executionResult) {
+        if (errorsCustomizers == null) {
+            return executionResult;
+        }
         List<GraphQLError> errors = executionResult.getErrors();
         if (errors == null || errors.isEmpty()) {
             return executionResult;
@@ -186,7 +209,13 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         return current == errors ? executionResult : ExecutionResultImpl.newExecutionResult().from(executionResult).errors(current).build();
     }
 
-    static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {
+    /**
+     * @param name        the executor name from the configuration
+     * @param selector    finds the executor
+     * @param beanContext the bean context
+     * @return the executor, or null for {@code none}; fails startup for a name that is unknown or reserved
+     */
+    public static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {
         if (name.equals(ExecutionConfiguration.NO_EXECUTOR)) {
             return null;
         }
@@ -254,6 +283,16 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 .build();
     }
 
+    private static ExecutionResult cancelled() {
+        return ExecutionResultImpl.newExecutionResult()
+                .data(null)
+                .addError(GraphqlErrorBuilder.newError()
+                        .message("The operation was cancelled before it started.")
+                        .extensions(Map.of("code", "EXECUTION_CANCELLED"))
+                        .build())
+                .build();
+    }
+
     /** One operation: the task of the hop, and the receiver of graphql-java's result. */
     private final class Execution implements Runnable, BiConsumer<ExecutionResult, Throwable> {
 
@@ -269,6 +308,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
         @Override
         public void run() {
+            if (state.isCancelled()) {
+                result.complete(cancelled());
+                return;
+            }
             inContext(this::start);
         }
 

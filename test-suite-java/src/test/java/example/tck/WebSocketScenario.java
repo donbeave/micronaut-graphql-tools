@@ -1,0 +1,156 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package example.tck;
+
+import graphql.schema.DataFetchingEnvironment;
+import io.micronaut.context.annotation.Requires;
+import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+import io.micronaut.graphql.tools.annotation.GraphQLType;
+import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+import io.micronaut.graphql.tools.internal.execution.ExecutionState;
+import io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor;
+import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest;
+import io.micronaut.graphql.tools.websocket.GraphQLConnectionResult;
+import io.micronaut.http.context.ServerRequestContext;
+import jakarta.inject.Singleton;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.NonBlocking;
+
+import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * The fixtures of the TCK scenario {@code websocket}: a connection interceptor that accepts a token, a subscription whose
+ * events come from a thread that declares itself an event-loop thread, and a counter of the streams that were cancelled.
+ */
+public final class WebSocketScenario {
+
+    static final String SCENARIO = "websocket";
+
+    private WebSocketScenario() {
+    }
+
+    // tag::ws-interceptor[]
+    /** Accepts a connection whose {@code connection_init} payload carries the token, and rejects every other. */
+    @Singleton
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class TokenInterceptor implements GraphQLConnectionInterceptor {
+
+        @Override
+        public GraphQLConnectionResult intercept(GraphQLConnectionRequest request) {
+            if ("secret".equals(request.payload().get("token"))) {
+                return GraphQLConnectionResult.accept(Map.of("user", "alice"));
+            }
+            return GraphQLConnectionResult.reject();
+        }
+    }
+    // end::ws-interceptor[]
+
+    @Singleton
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class CancelledStreams {
+
+        final AtomicInteger count = new AtomicInteger();
+    }
+
+    @GraphQLType
+    public static class Tick {
+
+        final int number;
+        final boolean sourceNonBlocking;
+
+        Tick(int number, boolean sourceNonBlocking) {
+            this.number = number;
+            this.sourceNonBlocking = sourceNonBlocking;
+        }
+    }
+
+    @Singleton
+    @GraphQLRootResolver
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class Queries {
+
+        private final CancelledStreams cancelled;
+
+        public Queries(CancelledStreams cancelled) {
+            this.cancelled = cancelled;
+        }
+
+        public boolean onEventLoop() throws InterruptedException {
+            TimeUnit.MILLISECONDS.sleep(50);
+            return Thread.currentThread() instanceof NonBlocking;
+        }
+
+        public String connectionUser(DataFetchingEnvironment environment) {
+            return ExecutionState.of(environment.getGraphQlContext()).connectionAttributes().get("user", String.class).orElse(null);
+        }
+
+        public int cancelledStreams() {
+            return cancelled.count.get();
+        }
+    }
+
+    @Singleton
+    @GraphQLRootResolver
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class Subscriptions {
+
+        private final CancelledStreams cancelled;
+
+        public Subscriptions(CancelledStreams cancelled) {
+            this.cancelled = cancelled;
+        }
+
+        // tag::ws-subscription[]
+        public Flux<Tick> ticks(int count) {
+            // the timer of Reactor emits on a thread that declares itself an event-loop thread
+            return Flux.interval(Duration.ofMillis(10))
+                    .take(count)
+                    .map(number -> new Tick(number.intValue(), Thread.currentThread() instanceof NonBlocking));
+        }
+        // end::ws-subscription[]
+
+        public Flux<Tick> endless() {
+            return Flux.interval(Duration.ofMillis(20))
+                    .map(number -> new Tick(number.intValue(), true))
+                    .doOnCancel(cancelled.count::incrementAndGet);
+        }
+    }
+
+    @Singleton
+    @GraphQLTypeResolver(Tick.class)
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class TickFields {
+
+        public int number(Tick tick) {
+            return tick.number;
+        }
+
+        public boolean sourceNonBlocking(Tick tick) {
+            return tick.sourceNonBlocking;
+        }
+
+        public boolean onEventLoop(Tick tick) {
+            return Thread.currentThread() instanceof NonBlocking;
+        }
+
+        public String requestHeader(Tick tick) {
+            return ServerRequestContext.currentRequest().map(request -> request.getHeaders().get("X-Tck")).orElse(null);
+        }
+    }
+}

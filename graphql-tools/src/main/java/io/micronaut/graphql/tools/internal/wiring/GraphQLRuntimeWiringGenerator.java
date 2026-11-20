@@ -141,6 +141,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static io.micronaut.core.util.ArgumentUtils.requireNonNull;
+import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.acceptsReturnClass;
 import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.getSupportedClasses;
 import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isGraphQlBuiltInType;
 import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isJavaBuiltInClass;
@@ -549,7 +550,7 @@ public final class GraphQLRuntimeWiringGenerator {
             manifestRecorder.scalar(typeName.getName());
             Set<Class<?>> supportedClasses = getSupportedClasses(getTypeName(graphQlType));
 
-            if (!supportedClasses.contains(returnClass)) {
+            if (!acceptsReturnClass(typeName.getName(), returnClass)) {
                 throw IncorrectClassMappingException.forField(mappingContext, returnClass, supportedClasses);
             }
         } else {

@@ -1,0 +1,29 @@
+# Extends the Query of the example schema that every suite serves; the names below must not clash with it.
+extend type Query {
+  # sleeps, so a resolver that blocks the event loop would show: says whether it runs on an event loop thread
+  onEventLoop: Boolean!
+  # the attribute "user" that the connection interceptor accepted the connection with
+  connectionUser: String
+  # how many streams were cancelled
+  cancelledStreams: Int!
+}
+
+# The example schema has a schema definition, which does not name a subscription type.
+extend schema {
+  subscription: Subscription
+}
+
+type Subscription {
+  # emits count ticks, from a thread that declares itself an event loop thread
+  ticks(count: Int!): Tick!
+  # never completes: it ends when the client completes it or closes the connection
+  endless: Tick!
+}
+
+# The fields of an event say where and in what context it is resolved.
+type Tick {
+  number: Int!
+  sourceNonBlocking: Boolean!
+  onEventLoop: Boolean!
+  requestHeader: String
+}
