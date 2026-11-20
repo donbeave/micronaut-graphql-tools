@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.visitor;
 
+import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
@@ -34,6 +35,8 @@ import io.micronaut.inject.visitor.VisitorContext;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -65,7 +68,8 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
 
     @Override
     public @NonNull Set<String> getSupportedAnnotationNames() {
-        return Set.of(AnnotationNames.ROOT_RESOLVER, AnnotationNames.TYPE_RESOLVER, AnnotationNames.SCHEMA_COORDINATE);
+        return Set.of(AnnotationNames.ROOT_RESOLVER, AnnotationNames.TYPE_RESOLVER, AnnotationNames.SCHEMA_COORDINATE,
+                AnnotationNames.MODELS);
     }
 
     @Override
@@ -107,6 +111,9 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             ResolverContractsWriter.write(element);
         }
         Compilation current = compilation;
+        if (current != null && element.hasDeclaredAnnotation(AnnotationNames.MODELS)) {
+            recordModels(current, element, context);
+        }
         if (current == null || current.failed || !current.options.checks()
                 || !isResolver(element) && !hasCoordinateMethod(element) || !ElementTypeModel.isBeanClass(element)) {
             return;
@@ -127,10 +134,41 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
     }
 
+    // the classes that @GraphQLModels lists make the compile-time check see them as introspected; an annotation that lists
+    // nothing generates nothing, which is most likely a mistake
+    private static void recordModels(Compilation current, ClassElement element, VisitorContext context) {
+        var annotation = element.getAnnotationMetadata().findAnnotation(AnnotationNames.MODELS).orElse(null);
+        if (annotation == null) {
+            return;
+        }
+        List<String> classes = Arrays.stream(annotation.annotationClassValues("classes")).map(AnnotationClassValue::getName).toList();
+        List<String> packages = List.of(annotation.stringValues("packages"));
+        if (classes.isEmpty() && packages.isEmpty()) {
+            context.warn(TAG + "@GraphQLModels on " + element.getName() + " lists no class and no package, "
+                    + "so it makes no class introspected; list the classes, or the packages with includedAnnotations", element);
+            return;
+        }
+        // the classes the annotation lists, and the classes of its packages that carry one of the annotations it names
+        List<String> markers = Arrays.stream(annotation.annotationClassValues("includedAnnotations"))
+                .map(AnnotationClassValue::getName).toList();
+        current.coverage.add(classes, packages, markers);
+    }
+
     @Override
     public void finish(VisitorContext context) {
         Compilation current = compilation;
-        if (current == null || current.noted) {
+        if (current == null) {
+            return;
+        }
+        for (Pending pending : current.pending) {
+            if (pending.missed == null || !current.coverage.covers(pending.missed)) {
+                current.warnings++;
+                // no element: a class element of an earlier round is not valid any more under KSP
+                context.warn(FindingRenderer.render(unproven(pending.finding)), null);
+            }
+        }
+        current.pending.clear();
+        if (current.noted) {
             return;
         }
         if (!current.options.checks() && current.options.errors().isEmpty()) {
@@ -178,17 +216,18 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
         current.checked++;
         ElementTypeModel model = current.model;
+        current.coverage.resetMissed();
         List<Finding> findings = ResolverClassFindings.check(schema.get(), model, model.of(element),
                 current.options.accessorPrefixes());
         for (Finding finding : findings) {
-            MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());
-            Element at = method != null && element.equals(method.getDeclaringType()) ? method : element;
             if (UNPROVEN.equals(finding.code())) {
-                current.warnings++;
-                context.warn(FindingRenderer.render(unproven(finding)), at);
+                // a @GraphQLModels of this compilation that is visited after this class can still cover the class, so the
+                // warning is made when the compilation finishes; the walk stopped at the class it names
+                current.pending.add(new Pending(finding, current.coverage.lastMissed()));
             } else {
                 current.findings++;
-                report(context, finding, at);
+                MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());
+                report(context, finding, method != null && element.equals(method.getDeclaringType()) ? method : element);
             }
         }
     }
@@ -224,12 +263,18 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         context.fail(FindingRenderer.render(finding), element);
     }
 
+    private record Pending(Finding finding, @Nullable ModelCoverage.Missed missed) {
+    }
+
     /** The state of one compilation: the options, the schema, the model and the counts of the note. */
     private static final class Compilation {
 
         final ProcessorOptions options;
         final CheckedSchema schema;
-        final ElementTypeModel model = new ElementTypeModel();
+        final ModelCoverage coverage = new ModelCoverage();
+        final ElementTypeModel model = new ElementTypeModel(coverage);
+        // the warnings that a @GraphQLModels visited later can still remove
+        final List<Pending> pending = new ArrayList<>();
         @Nullable Path foreignOutput;
         boolean failed;
         boolean noted;

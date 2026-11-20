@@ -79,9 +79,14 @@ final class ElementTypeModel implements TypeModel {
     private static final Set<String> GROOVY_OBJECT = Set.of("getMetaClass", "setMetaClass", "getProperty", "setProperty",
             "invokeMethod");
 
+    private final ModelCoverage coverage;
     private final Map<String, ClassElement> reachable = new HashMap<>();
     private final Map<String, ElementClass> classes = new HashMap<>();
     private final Map<String, MethodElement> methods = new HashMap<>();
+
+    ElementTypeModel(ModelCoverage coverage) {
+        this.coverage = coverage;
+    }
 
     /**
      * @param element a class element that the visitor was given
@@ -374,11 +379,12 @@ final class ElementTypeModel implements TypeModel {
                     .toList();
         }
 
-        // a class has an introspection when it is annotated with @Introspected or an annotation that carries it; the
-        // classes that another class lists in @Introspected(classes) are not visible from this one
+        // a class has an introspection when it is annotated with @Introspected or an annotation that carries it, or a
+        // @GraphQLModels of this compilation lists it; the classes that @Introspected(classes) on another class lists are
+        // not visible from this one
         @Override
         public boolean introspected() {
-            return element.hasStereotype(INTROSPECTED);
+            return element.hasStereotype(INTROSPECTED) || coverage.covers(element.getName(), element.getAnnotationNames());
         }
 
         @Override

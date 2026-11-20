@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.internal.exceptions.mapping;
 
 import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.annotation.GraphQLType;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.mapping.MappingContext;
 
@@ -30,9 +31,12 @@ public final class ClassNotIntrospectedException extends AbstractMappingExceptio
                                          Class<?> annotationClass) {
         super(BindingCode.CLASS_NOT_INTROSPECTED,
                 String.format(
-                        "The class %s is not introspected. Ensure the class is annotated with %s.",
+                        "The class %s is not introspected. Ensure the class is annotated with %s.%s",
                         returningType.getName(),
-                        annotationClass.getName()
+                        annotationClass.getName(),
+                        annotationClass == GraphQLType.class
+                                ? " A class that cannot carry it, such as a generated or external one, is listed (or its package) in @GraphQLModels."
+                                : ""
                 ),
                 mappingContext
         );
