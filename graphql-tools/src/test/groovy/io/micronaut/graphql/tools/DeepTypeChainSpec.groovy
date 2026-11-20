@@ -64,7 +64,7 @@ class DeepTypeChainSpec extends AbstractTest {
         def generator = new GraphQLRuntimeWiringGenerator(applicationContext, new GraphQLBeanIntrospectionRegistry(),
                 applicationContext.getBean(GraphQLResolversRegistry), TypeExtensions.merge(registry),
                 new SchemaMappingDictionary(), applicationContext.getBean(GraphQLToolsConfiguration),
-                TypeExtensions.objectExtensionFields(registry))
+                TypeExtensions.objectExtensionFields(registry), [])
 
         when:
         generator.generate([])
