@@ -99,6 +99,7 @@ public class QueryResolver {
     def "a package-private method of a resolver bean is an unbound resolver method, as at startup"() {
         when:
         def result = compilation('''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public String version() { return "1"; }
@@ -473,6 +474,7 @@ public class QueryResolver {
     }
 
     static final String BOOK_QUERY = '''
+@jakarta.inject.Singleton
 @GraphQLRootResolver
 public class QueryResolver {
     public Book book(String id) { return null; }
