@@ -71,6 +71,13 @@ file without parameter names, is `ParameterNamesSpec` (a class file cannot be a 
    (field not bound, reachability, ambiguity, the dictionary, customizers) is not a gap: the compile side cannot see it, and
    the case records `compile.txt` as `ok`.
 
+A Kotlin `internal` method compiles to the JVM name `name$<module>`. The visitor reports that JVM name, exactly as the startup does, so
+the soundness rule compares one name (option (b) of #439: the product keeps one name, and the harness gives the two subprojects of a Kotlin
+case, the checked and the unchecked one, the same module name, the project name of the case, in `KotlinBatchCompiler`). A coordinate in a
+`compile.txt` or `runtime.txt` therefore carries the module of its case, as in `strict/kotlin-internal-method`. No normalizing rule strips the
+suffix, so a real difference between the two sides still shows. An internal method never binds a field by its Kotlin name, because the name
+it carries is another one.
+
 A compile line that starts with `warning ` is a warning of the compiler, not an error: the build passes. A check that cannot
 prove its fact from one class reports it so (`class-not-introspected`: another class can make a class introspected with
 `@Introspected(classes)` or `(packages)`, and so can a dependency, which a visitor that looks at one class cannot see). A warning is
