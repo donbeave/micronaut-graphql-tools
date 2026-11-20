@@ -10,6 +10,8 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    // The standard scalars: java.time, JSON and the extended scalars (#46)
+    implementation(projects.micronautGraphqlToolsScalars)
     // the compile-time checks (#291): the Groovy compiler loads the visitor from its compile classpath
     compileOnly(projects.micronautGraphqlToolsProcessor)
     // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.

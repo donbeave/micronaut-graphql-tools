@@ -5,12 +5,12 @@ Gradle project `:micronaut-graphql-tools-bom`, folder `graphql-tools-bom/`. It h
 ## Purpose
 
 The bill of materials (BOM) for the published artifacts. It pins one version of each artifact, so that an application
-that imports the BOM uses matching versions of the library, the binding module and the compile-time processor.
+that imports the BOM uses matching versions of the library, the binding module, the standard scalars module and the compile-time processor.
 
 ## Responsibility
 
-- Manage the versions of `micronaut-graphql-tools`, `micronaut-graphql-tools-binding` and `micronaut-graphql-tools-processor`
-  (the generated POM lists these three in `dependencyManagement`).
+- Manage the versions of `micronaut-graphql-tools`, `micronaut-graphql-tools-binding`, `micronaut-graphql-tools-processor`
+  and `micronaut-graphql-tools-scalars` (the generated POM lists these four in `dependencyManagement`).
 - Nothing else: no code, no dependencies of its own. The build applies the Micronaut BOM convention
   (`io.micronaut.build.internal.bom`) from `micronaut-build`.
 
@@ -20,14 +20,14 @@ Library users who want one version for all the artifacts.
 
 ## Public and internal
 
-The BOM is public. It lists the three artifacts above; the test suites, the benchmarks and `graphql-tools-tck` are not
+The BOM is public. It lists the four artifacts above; the test suites, the benchmarks and `graphql-tools-tck` are not
 in it.
 
 ## Relation to other modules
 
 - Depends on nothing in this repository.
 - Its version is the `projectVersion` in `gradle.properties`.
-- The modules it manages are `graphql-tools`, `graphql-tools-binding` and `graphql-tools-processor`.
+- The modules it manages are `graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor` and `graphql-tools-scalars`.
 
 ## Build and test
 

@@ -24,7 +24,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | graphql-java floor leg | `./gradlew build -PgraphqlJavaLeg=floor` | Any change that touches graphql-java use (JDK 25) |
 | graphql-java ceiling leg | `./gradlew build -PgraphqlJavaLeg=ceiling` | Same (JDK 25) |
 | Binary compatibility | `./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default` | Changes to main code (JDK 25) |
-| Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check` | Changes to the library, binding or processor module (JDK 17) |
+| Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check` | Changes to the library, binding, processor or scalars module (JDK 17) |
 | Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
 | Drift fixtures of the suites | `./gradlew :test-suite-java:driftFixtureTest :test-suite-kotlin:driftFixtureTest :test-suite-groovy:driftFixtureTest` | Changes to the processor or its registration (part of `check`; each runs a build of its own, `--no-daemon`) |
 | Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
@@ -75,7 +75,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 - **No references outside the repository.** Do not link to or cite planning notes, or files and repositories outside this
   one. Exceptions: the licence header in `config/HEADER`, and the links the guides already use (DCO, mise, Conventional
   Commits, Checkstyle).
-- **Java 17 target.** Library modules (`graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`) compile with `--release 17` (set in `buildSrc`). Do not use newer Java language or API features in library code.
+- **Java 17 target.** Library modules (`graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`) compile with `--release 17` (set in `buildSrc`). Do not use newer Java language or API features in library code.
 
 ## Pull requests
 

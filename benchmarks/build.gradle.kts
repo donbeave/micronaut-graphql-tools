@@ -15,6 +15,8 @@ java {
 dependencies {
     implementation(platform(libs.micronaut.platform))
     implementation(projects.micronautGraphqlTools)
+    // the coercions of the standard scalars (#46) are benchmarked next to the argument conversion
+    implementation(projects.micronautGraphqlToolsScalars)
     implementation(mn.micronaut.inject)
     annotationProcessor(mn.micronaut.inject.java)
     runtimeOnly("ch.qos.logback:logback-classic")

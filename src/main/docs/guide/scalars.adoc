@@ -1,6 +1,96 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`, `BigDecimal` and `BigInteger` are built in. Any other scalar of the schema needs a `GraphQLScalarMapping` bean: wrap a `GraphQLScalarType` with `GraphQLScalarMapping.of(scalarType, JavaClass.class)`, or use `GraphQLScalarMapping.builder(scalarType)` for different output and input classes. A bare `GraphQLScalarType` bean is not registered on its own. When a scalar has no mapping but a bare `GraphQLScalarType` bean with its name exists, the startup error names that bean and this fix.
 
-A `GraphQLScalarType` bean is not registered on its own. Each custom scalar of the schema needs a `GraphQLScalarMapping`
-bean: wrap the scalar type with `GraphQLScalarMapping.of(scalarType, JavaClass.class)`, or use
-`GraphQLScalarMapping.builder(scalarType)` for different output and input classes. When a scalar has no mapping but a bare
-`GraphQLScalarType` bean with its name exists, the startup error names that bean and this fix.
+The `micronaut-graphql-tools-scalars` module registers the scalars that most services need, so that a service does not write them again: the `java.time` types, JSON and a selection of the extended scalars. A schema only has to declare `scalar LocalDate`; the mapping is there.
+
+== The module
+
+The module is available from 1.0.0-M4; earlier milestones do not include it. Add it next to the library:
+
+[source,groovy]
+----
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-scalars:1.0.0-M4")
+----
+
+The module registers one `GraphQLScalarMapping` bean for each scalar of the table below. A mapping only takes effect for a scalar that the schema declares: a schema that does not declare `Duration` never uses the `Duration` mapping. The beans are discovered at compile time like any other Micronaut bean, so the module needs no reflection and works in a native image.
+
+snippet::example.scalars.ScalarsFixtures[project-base="test-suite", source="test", tags="schema", indent="0"]
+
+snippet::example.scalars.ScalarsQuery[project-base="test-suite", source="test", tags="resolver", indent="0"]
+
+snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="round-trip", indent="0"]
+
+== The scalars and their formats
+
+The id is the key of the scalar in the configuration. The name is the default name in the schema, and the Java class is the class of a field, an argument or an input object field of this scalar.
+
+[cols="2,2,3,3", options="header"]
+|===
+| Id | Name | Java class | Default wire format and other formats
+| `instant` | `Instant` | `java.time.Instant` | `iso`: `2026-12-24T10:15:30Z`. Also `epoch-seconds` and `epoch-millis` (a whole number), or a pattern (read and written in UTC).
+| `local-date` | `LocalDate` | `java.time.LocalDate` | `iso`: `2026-12-24`. Or a pattern, such as `dd/MM/yyyy`.
+| `local-time` | `LocalTime` | `java.time.LocalTime` | `iso`: `10:15:30`. Or a pattern.
+| `local-date-time` | `LocalDateTime` | `java.time.LocalDateTime` | `iso`: `2026-12-24T10:15:30`. Or a pattern.
+| `offset-time` | `OffsetTime` | `java.time.OffsetTime` | `iso`: `10:15:30+01:00`. Or a pattern.
+| `offset-date-time` | `OffsetDateTime` | `java.time.OffsetDateTime` | `iso`: `2026-12-24T10:15:30+01:00`. Or a pattern.
+| `zoned-date-time` | `ZonedDateTime` | `java.time.ZonedDateTime` | `iso`: `2026-12-24T10:15:30+01:00[Europe/Paris]`. Or a pattern.
+| `year-month` | `YearMonth` | `java.time.YearMonth` | `iso`: `2026-12`. Or a pattern, such as `MM/yyyy`.
+| `year` | `Year` | `java.time.Year` | `iso`: `2026`. Or a pattern.
+| `duration` | `Duration` | `java.time.Duration` | `iso`: `PT1H30M`. Also `seconds` and `millis` (a whole number; `seconds` drops the fraction of a second).
+| `period` | `Period` | `java.time.Period` | `iso` only: `P1Y2M3D`.
+| `json` | `JSON` | `java.lang.Object` | Any JSON value. Arguments are a `Map`, a `List`, a string, a number or a boolean.
+| `url` | `Url` | `java.net.URL` | A URL string.
+| `uuid` | `UUID` | `java.util.UUID` | A UUID string.
+| `locale` | `Locale` | `java.util.Locale` | A language tag, such as `en-US`.
+| `currency` | `Currency` | `java.util.Currency` | An ISO 4217 code, such as `EUR`.
+| `positive-int` | `PositiveInt` | `java.lang.Integer` | An `Int` greater than zero.
+| `negative-int` | `NegativeInt` | `java.lang.Integer` | An `Int` less than zero.
+| `non-positive-int` | `NonPositiveInt` | `java.lang.Integer` | An `Int` of zero or less.
+| `non-negative-int` | `NonNegativeInt` | `java.lang.Integer` | An `Int` of zero or more.
+| `positive-float` | `PositiveFloat` | `java.lang.Double` | A `Float` greater than zero.
+| `negative-float` | `NegativeFloat` | `java.lang.Double` | A `Float` less than zero.
+| `non-positive-float` | `NonPositiveFloat` | `java.lang.Double` | A `Float` of zero or less.
+| `non-negative-float` | `NonNegativeFloat` | `java.lang.Double` | A `Float` of zero or more.
+|===
+
+`StandardScalar` (package `io.micronaut.graphql.tools.scalars`) lists the same ids, names and classes in code.
+
+`Long`, `Short`, `BigDecimal` and `BigInteger` are built in and are not part of the table.
+
+The `java.time` scalars write a string (or a count for the epoch and duration keywords) and read it back. A value that does not parse is a GraphQL error that names the scalar and the expected format, in the phase it happened: a bad literal fails the validation of the query, a bad variable fails the coercion of the variables, and a bad value that a resolver returns fails that field.
+
+The `JSON` scalar passes a string, a number, a boolean, a `Map` or a collection on as it is. Any other value, such as a `@Serdeable` record, is converted into maps, lists and primitives with the application's `JsonMapper`. In an application that uses Micronaut Serialization that is the Serde mapper, so the value is written the way Serde writes it (with its inclusion rules, which leave out nulls and empty collections by default). The module depends on the JSON API only: it brings neither Jackson nor a Serde implementation, and the application picks the stack.
+
+== Configuring a scalar
+
+All keys are under `micronaut.graphql.tools.scalars`.
+
+[cols="3,2,4", options="header"]
+|===
+| Key | Default | Meaning
+| `enabled` | `true` | `false` turns every scalar of the module off. The module then registers no mapping.
+| `<id>.enabled` | `true` | `false` turns one scalar off, for example when the application registers its own mapping with the same name.
+| `<id>.name` | the name in the table | The name of the scalar in the schema. A schema that declares the scalar under this name binds; one that still uses the default name fails the startup with `[scalar-mapping-not-provided]`.
+| `<id>.format` | `iso` | The wire format of a `java.time` scalar: `iso`, a keyword of the scalar (`epoch-seconds`, `epoch-millis`, `seconds`, `millis`), or a `java.time.format.DateTimeFormatter` pattern. The pattern is read with `Locale.ROOT`.
+|===
+
+snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="renamed", indent="0"]
+
+A value that a scalar cannot use fails the startup with a message that names the key: a name that is not a GraphQL name, a pattern that `DateTimeFormatter` rejects, a `format` for a scalar that has one format only (`period`, `json` and the extended scalars), or an empty value.
+
+== Your own scalars
+
+The module does not change how a custom scalar is mapped. A scalar that is not in the table is mapped with a `GraphQLScalarMapping` bean as before, and a scalar that the module registers can be replaced by turning it off (`<id>.enabled`) and registering a mapping with the same name. Two mappings with one name fail the startup with `[invalid-scalar-mapping]`.
+
+* **Output classes** are the classes the scalar's `serialize` accepts. A field of the scalar type may be backed by one of them or a subclass.
+* **Input classes** are the classes an argument or an input object field of the scalar type may be declared as, exactly one of them. They are normally the classes that `parseValue` and `parseLiteral` produce; a parsed value that is not an instance of the declared class is converted by the Micronaut `ConversionService`.
+* A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type (`Count!`), because `null` cannot be passed to it.
+
+The startup fails:
+
+* with `[scalar-mapping-not-provided]` when a field, argument or input field uses a scalar that has no mapping; the message names the coordinate;
+* with `[incorrect-class-mapping]` when the Java type is not one of the mapping's classes, when the mapping declares no classes for that side, or when a primitive stands for a nullable input;
+* with `[invalid-scalar-mapping]` when two mappings have the same scalar name, or a mapping names a built-in scalar.
+
+== Performance
+
+Coercion allocates the result and nothing more in the common cases. `yyyy-MM-dd` is read without a formatter and an ISO instant (`yyyy-MM-ddTHH:mm:ss[.fraction]Z`) is read and written without one; anything else goes to `DateTimeFormatter`, which allocates its parse state. The `JSON` scalar returns a value that is JSON already as the same object, so it allocates nothing. The allocation gate of the benchmarks module records the bytes of one parse and one write for a `LocalDate` (136 B: the date and the string, written by `LocalDate.toString`), an `Instant` (144 B: the instant, the characters and the string) and a `JSON` value (0 B), and `FetcherBenchmark` has the same three cases next to the argument conversion cases (see <<performance,Performance>>).

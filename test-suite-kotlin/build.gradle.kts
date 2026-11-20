@@ -11,6 +11,8 @@ repositories {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    // The standard scalars: java.time, JSON and the extended scalars (#46)
+    implementation(projects.micronautGraphqlToolsScalars)
     // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.
     runtimeOnly(mn.micronaut.jackson.databind)
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")

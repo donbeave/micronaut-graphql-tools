@@ -16,12 +16,14 @@
 package io.micronaut.graphql.tools.benchmarks;
 
 import graphql.ExecutionInput;
+import graphql.GraphQLContext;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.TypeResolutionEnvironment;
 import graphql.execution.MergedField;
 import graphql.execution.TypeResolutionParameters;
 import graphql.language.Field;
+import graphql.schema.Coercing;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.DataFetchingEnvironmentImpl;
@@ -45,9 +47,13 @@ import io.micronaut.graphql.tools.benchmarks.Fixtures.PlainItem;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Rectangle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Square;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Triangle;
+import io.micronaut.graphql.tools.scalars.StandardScalar;
+import io.micronaut.graphql.tools.scalars.internal.json.JsonCoercing;
+import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public final class BenchmarkCases implements AutoCloseable {
@@ -58,6 +64,9 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String TYPE_RESOLVER_METHOD = "typeResolverMethod";
     public static final String TYPE_RESOLVER_METHOD_ARGUMENT = "typeResolverMethodWithArgument";
     public static final String SCALAR_ARGUMENT = "scalarArgument";
+    public static final String LOCAL_DATE_COERCION = "localDateCoercion";
+    public static final String INSTANT_COERCION = "instantCoercion";
+    public static final String JSON_COERCION = "jsonCoercion";
     public static final String ENUM_ARGUMENT = "enumArgument";
     public static final String INPUT_OBJECT_ARGUMENT = "inputObjectArgument";
     public static final String LIST_OF_INPUTS_ARGUMENT = "listOfInputsArgument";
@@ -158,6 +167,9 @@ public final class BenchmarkCases implements AutoCloseable {
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
         context = ApplicationContext.builder()
                 .properties(Map.of("graphql.graphql-ws.enabled", false, "graphql.graphiql.enabled", false,
+                        // the scalars module is on the classpath for the coercion cases below; its beans would only add to the
+                        // start-up of every other case
+                        "micronaut.graphql.tools.scalars.enabled", false,
                         // the invocation gates measure the calling thread, so the operation must not hop
                         "micronaut.graphql.tools.execution.executor", "none"))
                 .singletons(registry)
@@ -173,6 +185,11 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(TYPE_RESOLVER_METHOD_ARGUMENT,
                 fetch("Item", "labelWithArgument", new Item("id", "name", 1), Map.of("n", 3)));
         ops.put(SCALAR_ARGUMENT, fetch("Query", "scalar", null, Map.of("n", 42)));
+        ops.put(LOCAL_DATE_COERCION, coercion(TimeScalars.coercing(StandardScalar.LOCAL_DATE, "LocalDate", null),
+                "2026-12-24"));
+        ops.put(INSTANT_COERCION, coercion(TimeScalars.coercing(StandardScalar.INSTANT, "Instant", null),
+                "2026-12-24T10:15:30Z"));
+        ops.put(JSON_COERCION, coercion(new JsonCoercing("JSON", () -> null), Map.of("kind", "x")));
         ops.put(ENUM_ARGUMENT, fetch("Query", "enumArg", null, Map.of("color", coercedEnum("Color", "GREEN"))));
         ops.put(INPUT_OBJECT_ARGUMENT, fetch("Query", "input", null, Map.of("input", point("a", 1, 2))));
         ops.put(LIST_OF_INPUTS_ARGUMENT, fetch("Query", "inputs", null,
@@ -230,6 +247,15 @@ public final class BenchmarkCases implements AutoCloseable {
                 definition);
         DataFetchingEnvironment environment = environment(parent, definition, source, arguments);
         return () -> fetcher.get(environment);
+    }
+
+    // What a request does with the scalar: parse the variable, then write the value that a resolver returns from it
+    @SuppressWarnings("unchecked")
+    private static Op coercion(Coercing<?, ?> scalar, Object input) {
+        Coercing<Object, Object> coercing = (Coercing<Object, Object>) scalar;
+        GraphQLContext graphQLContext = GraphQLContext.getDefault();
+        Locale locale = Locale.ROOT;
+        return () -> coercing.serialize(coercing.parseValue(input, graphQLContext, locale), graphQLContext, locale);
     }
 
     private Op graphqlJavaPropertyFetch() {

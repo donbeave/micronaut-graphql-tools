@@ -20,6 +20,7 @@ This page tells you which package holds what, which packages you may import from
 |Change a setting in code |`io.micronaut.graphql.tools.config` (`GraphQLToolsConfiguration`)
 |Change the `GraphQL` builder, the schema, the runtime wiring or the type registry |`io.micronaut.graphql.tools.customizer` (the `*Customizer` interfaces)
 |Map a custom scalar, or a union member to a Java type |`io.micronaut.graphql.tools.mapping` (`GraphQLScalarMapping`, `SchemaMappingDictionary`)
+|Use the standard scalars (`java.time`, JSON, extended scalars) |`io.micronaut.graphql.tools.scalars` (`StandardScalar`; the module `graphql-tools-scalars`)
 |Tell an omitted argument from an explicit `null` |`io.micronaut.graphql.tools.input` (`ArgumentValue`)
 |Wire a directive |`io.micronaut.graphql.tools.directive` (`SchemaDirective`)
 |Read what the schema is bound to |`io.micronaut.graphql.tools.manifest` (`BindingManifest`)
@@ -29,7 +30,7 @@ Do not import any type annotated `@Internal`, and nothing from a package named `
 
 == Current layout
 
-This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
 
 [cols="5,2,2,6", options="header"]
 |===
@@ -70,6 +71,10 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.binding.internal.plan` |graphql-tools-binding |Internal |The binding plan and the bean model
 |`io.micronaut.graphql.tools.binding.internal.rules` |graphql-tools-binding |Internal |The per-class rules and their verdicts
 |`io.micronaut.graphql.tools.binding.internal.schema` |graphql-tools-binding |Internal |Reading the schema files and the schema model
+|`io.micronaut.graphql.tools.scalars` |graphql-tools-scalars |Public API |`StandardScalar`, the ids, default names and Java classes of the standard scalars
+|`io.micronaut.graphql.tools.scalars.internal` |graphql-tools-scalars |Internal |The factory that registers a mapping for each scalar, the reader of the configuration and the shared coercion
+|`io.micronaut.graphql.tools.scalars.internal.json` |graphql-tools-scalars |Internal |The JSON scalar
+|`io.micronaut.graphql.tools.scalars.internal.time` |graphql-tools-scalars |Internal |The `java.time` scalars and the builder that picks one from its format
 |`io.micronaut.graphql.tools.visitor` |graphql-tools-processor |Compiler plug-in |The compile-time `TypeElementVisitor`, loaded by the compiler and never imported
 |`io.micronaut.graphql.tools.tck` |graphql-tools-tck |Test helper |The TCK runner; not published
 |===
