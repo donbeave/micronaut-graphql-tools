@@ -25,6 +25,7 @@ import io.micronaut.core.annotation.Internal;
 public final class AnnotationNames {
 
     private static final String PACKAGE = "io.micronaut.graphql.tools.annotation.";
+    private static final String RESOLVERS = "io.micronaut.graphql.tools.resolver.";
 
     /** {@code @GraphQLIgnore}. */
     public static final String IGNORE = PACKAGE + "GraphQLIgnore";
@@ -44,13 +45,13 @@ public final class AnnotationNames {
     public static final String FIELD = PACKAGE + "GraphQLField";
 
     /** {@code QueryResolver}, the marker interface of a root resolver of the query type. */
-    public static final String QUERY_RESOLVER = "io.micronaut.graphql.tools.resolver.QueryResolver";
+    public static final String QUERY_RESOLVER = RESOLVERS + "QueryResolver";
     /** {@code MutationResolver}, the marker interface of a root resolver of the mutation type. */
-    public static final String MUTATION_RESOLVER = "io.micronaut.graphql.tools.resolver.MutationResolver";
+    public static final String MUTATION_RESOLVER = RESOLVERS + "MutationResolver";
     /** {@code SubscriptionResolver}, the marker interface of a root resolver of the subscription type. */
-    public static final String SUBSCRIPTION_RESOLVER = "io.micronaut.graphql.tools.resolver.SubscriptionResolver";
+    public static final String SUBSCRIPTION_RESOLVER = RESOLVERS + "SubscriptionResolver";
     /** {@code TypeResolver}, the marker interface of a type resolver whose source type is its type argument. */
-    public static final String TYPE_RESOLVER_MARKER = "io.micronaut.graphql.tools.resolver.TypeResolver";
+    public static final String TYPE_RESOLVER_MARKER = RESOLVERS + "TypeResolver";
 
     private AnnotationNames() {
     }

@@ -101,7 +101,7 @@ final class MarkerAnalysis {
                     }
                 }
             }
-            if (type != element && type.getName().equals(AnnotationNames.TYPE_RESOLVER_MARKER) == false
+            if (type != element && !type.getName().equals(AnnotationNames.TYPE_RESOLVER_MARKER)
                     && type.isAssignable(AnnotationNames.TYPE_RESOLVER_MARKER)) {
                 // a generic supertype that gives its own type argument to the marker: Base<T> implements TypeResolver<T>
                 for (ClassElement argument : type.getTypeArguments(AnnotationNames.TYPE_RESOLVER_MARKER).values()) {

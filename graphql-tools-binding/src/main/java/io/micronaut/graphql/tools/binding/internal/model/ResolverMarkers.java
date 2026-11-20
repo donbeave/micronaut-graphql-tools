@@ -28,7 +28,7 @@ import java.util.Set;
  *
  * @param operations      the root operations ({@code query}, {@code mutation}, {@code subscription}) that the markers of
  *                        the class name, sorted; empty when no marker names one, which leaves every root type open
- * @param sourceType      the binary name of the type argument of {@code TypeResolver<T>}, or {@code null}
+ * @param sourceType      the binary name of the type argument of the marker {@code TypeResolver}, or {@code null}
  * @param contractMethods the names of the methods of the class that implement a method of a contract interface (an
  *                        interface that extends a marker); {@code null} when the class implements no contract interface
  *                        that declares a method, so every public method is a candidate
