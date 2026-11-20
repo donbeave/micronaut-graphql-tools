@@ -136,6 +136,28 @@ snippet::example.tck.FieldDecoratorScenario[project-base="test-suite", source="t
 * Directive wirings (`SchemaDirective`) are applied when graphql-java builds the schema, after the decorators, so they wrap the decorated fetcher.
 * A decorator is a bean found at compile time, so it works in a native image. A decorator that returns `null` fails the startup.
 
+== Kotlin suspend resolvers
+
+A Kotlin `suspend` function is a resolver method like any other, as a query, a mutation or a type resolver method. This is Kotlin only: Java and Groovy have no `suspend`, so unlike the other examples of this guide, the example below exists in the Kotlin suite only. The continuation is not a parameter of the resolver: the field's arguments are the function's parameters, and its declared type is the type of the field. The library decides this once for each field at startup, and the field is an async field (see above), so its children get the propagated context and leave the event loop.
+
+:suspend-sources: {sourcedir}/test-suite-kotlin/src/test/kotlin
+
+[source,kotlin]
+----
+include::{suspend-sources}/example/suspend/SuspendFixtures.kt[tags=suspend-resolvers]
+----
+
+How the coroutine runs:
+
+* It starts on the thread that resolves the field, which is a thread of the request executor, inside the propagated context of the request. A function that never suspends is done when the call returns, at no cost beyond the call.
+* The library gives the coroutine a context with the propagated context of the request, the contexts of the `HttpCoroutineContextFactory` beans (the same ones that Micronaut gives a `suspend` controller method), a job of its own and `Dispatchers.Unconfined`. The unconfined dispatcher moves no work to another thread. It makes the coroutine install the propagated context on whichever thread resumes it, so `PropagatedContext` values are visible after `delay`, and inside `withContext(Dispatchers.IO)`, where the context element also reaches the IO thread.
+* The coroutine resumes where its suspension point resumes. When it finishes on an event loop thread, the async boundary completes the field on the request executor, as for any async field.
+* An exception that the function throws becomes an error of the field, as the exception that you threw. Cancelling the field's future, which graphql-java does on a timeout, cancels the job, so the coroutine ends with a `CancellationException` at its next suspension point.
+* A `suspend` function declares the type of its value. It cannot return a `CompletionStage` or a `Publisher` as well, and it cannot be a field of the subscription type: both fail at compile time and at startup with `[unsupported-return-type]`. Return a `Publisher` without `suspend` for a subscription.
+* A function with a wrong number of parameters fails with `[argument-mismatch]`, at compile time and at startup, and the continuation is not counted.
+
+The support needs `org.jetbrains.kotlinx:kotlinx-coroutines-core` on the classpath of the application. The library does not depend on it: its support for `suspend` is a bean that exists only when the Kotlin and coroutines classes are present, so an application without Kotlin (and its native image) never links a Kotlin type. Binding a `suspend` function without kotlinx-coroutines-core fails the startup with `[suspend-without-coroutines]` and the dependency to add. A `suspend` function on a model class (a member of an introspected `@GraphQLType` class) is not supported: put it in a type resolver.
+
 == Breaking change
 
 Resolvers run on the blocking executor by default (BC-35). Before, they ran on the event loop. See the migration page for what to check: a resolver that relied on running on the event loop, or on a thread local that is set there, and the thread pool size.
