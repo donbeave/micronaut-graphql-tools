@@ -45,8 +45,8 @@ class ReturnAdaptationSpec extends Specification {
     static final REGISTRY = new SchemaParser().parse('scalar JSON\ntype Book { title: String }')
 
     private static adapt(declared, type = nullable, boolean fieldLevel = true, boolean subscription = false,
-                         boolean singleResult = false) {
-        ResolverClassRules.returnAdaptation(MODEL, REGISTRY, declared, type, fieldLevel, subscription, singleResult)
+                         boolean singleResult = false, boolean suspend = false) {
+        ResolverClassRules.returnAdaptation(MODEL, REGISTRY, declared, type, fieldLevel, subscription, singleResult, suspend)
     }
 
     void "a type without a wrapper is adapted to itself"() {
@@ -210,5 +210,22 @@ class ReturnAdaptationSpec extends Specification {
         !ResolverClassRules.nullablePrimitive(primitive('int'), true)
         !ResolverClassRules.nullablePrimitive(array('int', true), false)
         !ResolverClassRules.nullablePrimitive(ref('java.lang.Integer'), false)
+    }
+
+    void "a suspend function is an async field that wraps nothing"() {
+        expect:
+        adapt(STRING, nullable, true, false, false, true).failure() == null
+        adapt(STRING, nullable, true, false, false, true).async()
+        adapt(STRING, nullable, true, false, false, true).depth() == 0
+        adapt(ref(OPTIONAL, STRING), nullable, true, false, false, true).depth() == 1
+        !adapt(STRING).async()
+    }
+
+    void "a suspend function cannot also return a stage or a publisher, or be a subscription field"() {
+        expect:
+        adapt(ref(STAGE, STRING), nullable, true, false, false, true).failure() == WrapperRules.suspendWithAsyncReturn(STAGE)
+        adapt(ref('reactor.core.publisher.Mono', STRING), nullable, true, false, false, true).failure() ==
+                WrapperRules.suspendWithAsyncReturn('reactor.core.publisher.Mono')
+        adapt(ref('reactor.core.publisher.Flux', STRING), nullable, true, true, false, true).failure() == WrapperRules.suspendOnSubscription()
     }
 }

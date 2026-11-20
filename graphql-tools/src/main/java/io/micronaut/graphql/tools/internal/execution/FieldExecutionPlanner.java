@@ -41,7 +41,7 @@ public final class FieldExecutionPlanner {
         TRIVIAL,
         /** A method with a plain return: runs on the thread that resolves its parent. */
         SYNC,
-        /** A method that returns a {@code CompletionStage} or a publisher: passes through the async boundary. */
+        /** A method that returns a {@code CompletionStage} or a publisher, or is a Kotlin {@code suspend} function: passes through the async boundary. */
         ASYNC,
         /** A root field of the subscription type, which streams. */
         STREAM

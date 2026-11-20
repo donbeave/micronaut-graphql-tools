@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.internal;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
+import io.micronaut.inject.ExecutableMethod;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -37,7 +38,12 @@ public final class JavaTypeNames {
     }
 
     public static String parameters(Executable<?, ?> executable) {
-        return Arrays.stream(executable.getArguments()).map(JavaTypeNames::of)
+        Argument<?>[] arguments = executable.getArguments();
+        // the continuation of a Kotlin suspend method is not in its source signature
+        if (executable instanceof ExecutableMethod<?, ?> method && method.isSuspend()) {
+            arguments = Arrays.copyOf(arguments, arguments.length - 1);
+        }
+        return Arrays.stream(arguments).map(JavaTypeNames::of)
                 .collect(Collectors.joining(", ", "(", ")"));
     }
 
