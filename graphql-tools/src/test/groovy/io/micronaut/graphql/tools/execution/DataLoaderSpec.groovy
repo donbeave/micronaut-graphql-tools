@@ -256,7 +256,7 @@ type Author {
         futures[0].get(5, TimeUnit.SECONDS) == 'book-a'
         futures[1].get(5, TimeUnit.SECONDS) == 'context-2'
         futures[2].get(5, TimeUnit.SECONDS) == 3d
-        !futures[3].isCompletedExceptionally() || true
+        futures[3].get(5, TimeUnit.SECONDS) == 4f
         registry.keys.sort() == ['bookLoader', 'contextual', 'nameLoader', 'unusedLoader']
         registry.getDataLoader('unknown') == null
     }
@@ -466,7 +466,7 @@ type Query {
     static class UnusedLoader implements MappedBatchLoaderWithContext<Float, Float> {
         @Override
         CompletionStage<Map<Float, Float>> load(Set<Float> keys, BatchLoaderEnvironment environment) {
-            CompletableFuture.completedFuture([:] as Map<Float, Float>)
+            CompletableFuture.completedFuture(keys.collectEntries { [(it): it] } as Map<Float, Float>)
         }
     }
 
