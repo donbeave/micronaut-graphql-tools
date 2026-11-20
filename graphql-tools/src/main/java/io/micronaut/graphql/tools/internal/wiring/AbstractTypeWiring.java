@@ -60,17 +60,30 @@ public final class AbstractTypeWiring {
     private final GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry;
     private final BindingManifestRecorder manifestRecorder;
     private final RuntimeWiring.Builder runtimeWiringBuilder;
+    private final TypeClasses typeClasses;
     private final List<AbstractTypeResolver> abstractTypeResolvers = new ArrayList<>();
     private Map<String, List<ObjectTypeDefinition>> implementations;
 
     AbstractTypeWiring(TypeDefinitionRegistry typeDefinitionRegistry, SchemaMappingDictionary schemaMappingDictionary,
                        GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry,
-                       BindingManifestRecorder manifestRecorder, RuntimeWiring.Builder runtimeWiringBuilder) {
+                       BindingManifestRecorder manifestRecorder, RuntimeWiring.Builder runtimeWiringBuilder,
+                       @Nullable String typeClassConvention) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.schemaMappingDictionary = schemaMappingDictionary;
         this.graphQLBeanIntrospectionRegistry = graphQLBeanIntrospectionRegistry;
         this.manifestRecorder = manifestRecorder;
         this.runtimeWiringBuilder = runtimeWiringBuilder;
+        this.typeClasses = new TypeClasses(schemaMappingDictionary, graphQLBeanIntrospectionRegistry, typeClassConvention);
+    }
+
+    /**
+     * @param objectType     an object type that a union or an interface has as a member
+     * @param mappingContext where a failure is reported
+     * @return its class: the dictionary entry, else the derived class, else {@code null}
+     */
+    @Nullable
+    Class<?> findClass(ObjectTypeDefinition objectType, TypeMappingContext mappingContext) {
+        return typeClasses.find(objectType, mappingContext);
     }
 
     void wireUnion(UnionTypeDefinition unionTypeDefinition, Class<?> targetClass, TypeMappingContext mappingContext,
@@ -86,7 +99,7 @@ public final class AbstractTypeWiring {
 
                 if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
                     Class<?> clazz = Optional
-                            .ofNullable(schemaMappingDictionary.getTypes().get(typeDefinition.getName()))
+                            .ofNullable(typeClasses.find(objectTypeDefinition, mappingContext))
                             .orElseThrow(() -> new UnionTypeMappingNotProvidedException(
                                     mappingContext, typeName.getName(), unionTypeDefinition.getName()
                             ));

@@ -31,7 +31,8 @@ public final class UnionTypeMappingNotProvidedException extends AbstractMappingE
         super(BindingCode.UNION_TYPE_MAPPING_NOT_PROVIDED,
                 String.format(
                         "Can not detect representation class for type %s, member of %s union. " +
-                                "Ensure the representation class is registered via %s.",
+                                "Ensure the representation class is registered via %s, declared with @GraphQLType(name) "
+                                + "or named by micronaut.graphql.tools.type-class-convention.",
                         objectType,
                         unionType,
                         SchemaMappingDictionary.class.getName()

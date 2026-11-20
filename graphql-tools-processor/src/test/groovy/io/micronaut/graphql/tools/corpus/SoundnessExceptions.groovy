@@ -43,6 +43,7 @@ final class SoundnessExceptions {
             'runtime-exception-first'     : 'binding the field throws before the argument rule runs (a resolver bean that cannot be created): the startup reports that exception',
             'other-class-binding-failure' : 'a binding failure of another resolver class stops the startup before the strict checks of this class run',
             'conflicting-class-mapping'   : 'two resolver classes bind one input type or enum to different Java classes: the startup reports the conflict before the strict checks',
+            'dictionary-entry-wins'       : 'a SchemaMappingDictionary entry names the class of an object type that two classes also match by name: the startup lets the entry win, and the compile-time check cannot see the dictionary',
     ].asImmutable()
 
     static final class Entry {
