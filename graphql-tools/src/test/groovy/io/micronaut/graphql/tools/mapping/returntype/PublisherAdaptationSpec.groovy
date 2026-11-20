@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.returntype
 
+import jakarta.inject.Singleton
 import graphql.ExecutionResult
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -213,6 +214,7 @@ type Holder {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Mono<Item> one(int id) {
@@ -258,6 +260,7 @@ type Holder {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Mutation {
         Mono<Item> rename(String name) {
@@ -270,6 +273,7 @@ type Holder {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Item)
     static class ItemResolver {
         Mono<String> label(Item item) {
@@ -291,6 +295,7 @@ type Holder {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_PROPERTY)
+    @Singleton
     @GraphQLRootResolver
     static class HolderQuery {
         Holder holder() {
