@@ -324,10 +324,13 @@ public final class ResolverClassRules {
             if (outer != null) {
                 return ReturnVerdict.failed(WrapperRules.publisherInCompletionStage());
             }
-            if (untyped(registry, result, fieldType)) {
+            boolean multiValue = !isAssignableTo(model, result, WrapperRules.SINGLE_VALUE_PUBLISHER);
+            // a multi-value publisher emits the elements of the list, so its argument is judged against the element type
+            Type<?> emitted = multiValue && unwrapNonNull(fieldType) instanceof ListType list ? list.getType() : fieldType;
+            if (untyped(registry, result, emitted)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
             }
-            if (!isAssignableTo(model, result, WrapperRules.SINGLE_VALUE_PUBLISHER)) {
+            if (multiValue) {
                 if (!(unwrapNonNull(fieldType) instanceof ListType)) {
                     return ReturnVerdict.failed(WrapperRules.multiValuePublisherNeedsList(SchemaTypes.print(fieldType)));
                 }

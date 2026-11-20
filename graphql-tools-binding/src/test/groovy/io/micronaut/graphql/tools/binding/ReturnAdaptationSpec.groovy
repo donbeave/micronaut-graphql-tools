@@ -140,6 +140,9 @@ class ReturnAdaptationSpec extends Specification {
         adapt(ref(STAGE, ref('java.lang.Object')), new NonNullType(new ListType(nonNull))).failure() ==
                 WrapperRules.missingTypeArgument(STAGE)
         adapt(ref(OPTIONAL, ref('java.lang.Object')), new TypeName('JSON')).failure() == null
+        adapt(ref('reactor.core.publisher.Flux', ref('java.lang.Object')), new ListType(new TypeName('JSON'))).failure() == null
+        adapt(ref('reactor.core.publisher.Flux', ref('java.lang.Object')), new ListType(new TypeName('Book'))).failure() ==
+                WrapperRules.missingTypeArgument(PUBLISHER)
         adapt(ref(OPTIONAL, ref('java.lang.Object')), new TypeName('String')).failure() ==
                 WrapperRules.missingTypeArgument(OPTIONAL)
     }
