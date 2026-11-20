@@ -183,6 +183,22 @@ JVM per sample; the jar leaves `BindingBenchmark` and `RetainedHeapBenchmark` ou
 generates the 1,600-field schema only). None has an allocation gate: a whole context start is not a path the library owns. A gain is claimed
 only with a figure from these benchmarks.
 
+`InvocationBenchmark` measures the executor hop of the execution model on plain graphql-java, with no library code: one
+operation over a root object (`query=root`) or over 1,000 objects (`query=items1000`), each object with ten property
+fields and one method field. `mode=direct` runs `executeAsync` on the calling thread (the executor `none`),
+`hopVirtual` and `hopPlatform` submit the whole execution to a virtual-thread executor or to a fixed platform pool and wait
+(one hop per request), and `perFieldHop` wraps every method fetcher in `supplyAsync` on the virtual-thread executor (one hop per
+method field; property fields never hop). Read the figure as the difference to `direct` for the same query: the time per
+operation includes the calling thread waiting for the executor, and `gc.alloc.rate.norm` counts the allocation of every
+thread, because the profiler sees the whole JVM (the allocation gate sees the calling thread only, which is why nothing here is gated).
+`AsyncBoundaryBenchmark` prototypes the async boundary: a field returns a `CompletionStage` that completes on the calling thread
+(`completion=sameThread`), on a pool thread or on a thread that implements Reactor's `NonBlocking` marker, with the
+prototype boundary off or on. With it on, a field that completes on a `NonBlocking` thread completes its future on the request
+executor, so its children leave the event loop. Before each trial both benchmarks run the operation once with a
+`ThreadChanges` counter and fail when the counted hops differ from the expected ones (none for `direct`, one for the `hop`
+modes, one per method field for `perFieldHop`), so the number of hops is asserted, not assumed. The counter is not
+attached to the measured operations. `jmhSmokeTest` runs every case.
+
 Two checks run on every `./gradlew check`:
 
 - `:benchmarks:jmhSmokeTest` runs every JMH benchmark once in the test JVM (no fork, single shot), so the benchmarks
