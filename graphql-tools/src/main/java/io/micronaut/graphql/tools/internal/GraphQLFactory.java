@@ -35,6 +35,7 @@ import io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer;
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
 import io.micronaut.graphql.tools.directive.SchemaDirective;
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
@@ -86,7 +87,8 @@ public final class GraphQLFactory {
                                        List<GraphQLSchemaCustomizer> graphQLSchemaCustomizers,
                                        List<BeanRegistration<SchemaDirectiveWiring>> directiveWirings,
                                        List<BeanRegistration<SchemaDirective>> schemaDirectives,
-                                       BindingManifestHolder bindingManifestHolder) {
+                                       BindingManifestHolder bindingManifestHolder,
+                                       List<FieldFetcherDecorator> fieldFetcherDecorators) {
         SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
         schemaMappingDictionaryCustomizers.forEach(customizer -> customizer.customize(schemaMappingDictionary));
 
@@ -101,7 +103,8 @@ public final class GraphQLFactory {
                 TypeExtensions.merge(registry),
                 schemaMappingDictionary,
                 configuration,
-                TypeExtensions.objectExtensionFields(registry)
+                TypeExtensions.objectExtensionFields(registry),
+                fieldFetcherDecorators
         );
 
         List<RuntimeWiringCustomizer> customizers = new ArrayList<>();

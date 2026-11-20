@@ -25,6 +25,8 @@ import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.directive.SchemaDirective;
+import io.micronaut.graphql.tools.execution.FieldDescriptor;
+import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
 import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
@@ -172,6 +174,28 @@ public final class Resolvers {
         @Singleton
         SchemaDirective guard() {
             return SchemaDirective.named("guard", new PassThrough());
+        }
+
+        /** A decorator that is offered every field and selects none: the fetchers must stay as they are. */
+        @Bean
+        @Singleton
+        FieldFetcherDecorator unselective() {
+            return new FieldFetcherDecorator() {
+                @Override
+                public boolean decoratesFieldsWithoutArguments() {
+                    return true;
+                }
+
+                @Override
+                public boolean decoratesTrivialFields() {
+                    return true;
+                }
+
+                @Override
+                public DataFetcher<Object> decorate(FieldDescriptor field, DataFetcher<Object> fetcher) {
+                    return fetcher;
+                }
+            };
         }
     }
 
