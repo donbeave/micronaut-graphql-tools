@@ -24,6 +24,9 @@ import io.micronaut.core.annotation.Internal;
 @Internal
 public final class AnnotationNames {
 
+    /** Micronaut's marker for a method whose {@code Publisher} return emits at most one value. */
+    public static final String SINGLE_RESULT = "io.micronaut.core.async.annotation.SingleResult";
+
     private static final String PACKAGE = "io.micronaut.graphql.tools.annotation.";
     private static final String RESOLVERS = "io.micronaut.graphql.tools.resolver.";
 

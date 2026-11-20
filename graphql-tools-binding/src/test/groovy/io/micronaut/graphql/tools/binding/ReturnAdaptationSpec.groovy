@@ -38,12 +38,15 @@ class ReturnAdaptationSpec extends Specification {
     static final nullable = new TypeName('Book')
     static final nonNull = new NonNullType(new TypeName('Book'))
     static final STRING = ref('java.lang.String')
-    static final MODEL = model(['java.util.concurrent.CompletableFuture': [STAGE], 'reactor.core.publisher.Flux': [PUBLISHER], 'reactor.core.publisher.Mono': [PUBLISHER]])
+    static final MODEL = model(['java.util.concurrent.CompletableFuture': [STAGE], 'reactor.core.publisher.Flux': [PUBLISHER], 'reactor.core.publisher.Mono': [PUBLISHER],
+            'io.reactivex.rxjava3.core.Single': [], 'io.reactivex.Maybe': [], 'io.reactivex.rxjava3.core.Completable': [],
+            'io.micronaut.core.async.publisher.CompletableFuturePublisher': [PUBLISHER]])
 
     static final REGISTRY = new SchemaParser().parse('scalar JSON\ntype Book { title: String }')
 
-    private static adapt(declared, type = nullable, boolean fieldLevel = true, boolean subscription = false) {
-        ResolverClassRules.returnAdaptation(MODEL, REGISTRY, declared, type, fieldLevel, subscription)
+    private static adapt(declared, type = nullable, boolean fieldLevel = true, boolean subscription = false,
+                         boolean singleResult = false) {
+        ResolverClassRules.returnAdaptation(MODEL, REGISTRY, declared, type, fieldLevel, subscription, singleResult)
     }
 
     void "a type without a wrapper is adapted to itself"() {
@@ -96,6 +99,46 @@ class ReturnAdaptationSpec extends Specification {
         adapt(ref('reactor.core.publisher.Flux', STRING), list).depth() == 1
         adapt(ref(PUBLISHER, STRING), new NonNullType(list)).reactive() == ReturnVerdict.Reactive.MULTI
         adapt(ref('reactor.core.publisher.Mono', ref('java.util.List', STRING)), list).reactive() == ReturnVerdict.Reactive.SINGLE
+    }
+
+    void "the single-value types are named once: Mono, the RxJava types, CompletableFuturePublisher and a @SingleResult method"() {
+        given:
+        def list = new ListType(nullable)
+
+        expect:
+        adapt(ref('io.reactivex.rxjava3.core.Single', STRING)).reactive() == ReturnVerdict.Reactive.SINGLE
+        adapt(ref('io.reactivex.Maybe', STRING)).reactive() == ReturnVerdict.Reactive.SINGLE
+        adapt(ref('io.micronaut.core.async.publisher.CompletableFuturePublisher', STRING)).reactive() == ReturnVerdict.Reactive.SINGLE
+        adapt(ref('io.micronaut.core.async.publisher.CompletableFuturePublisher', STRING), list).depth() == 1
+        // a Completable emits no value and has no type argument: nothing is unwrapped
+        adapt(ref('io.reactivex.rxjava3.core.Completable')).failure() == null
+        adapt(ref('io.reactivex.rxjava3.core.Completable')).reactive() == ReturnVerdict.Reactive.VALUELESS
+        adapt(ref('io.reactivex.rxjava3.core.Completable')).depth() == 0
+        adapt(ref('io.reactivex.rxjava3.core.Completable')).async()
+        adapt(ref(PUBLISHER, STRING), nullable, true, false, true).reactive() == ReturnVerdict.Reactive.SINGLE
+        adapt(ref('reactor.core.publisher.Flux', STRING), list, true, false, true).reactive() == ReturnVerdict.Reactive.SINGLE
+        adapt(ref(PUBLISHER, STRING), list).reactive() == ReturnVerdict.Reactive.MULTI
+        // an RxJava type is never a stream, and never an element of a list
+        adapt(ref('io.reactivex.rxjava3.core.Single', STRING), nullable, true, true).failure() ==
+                WrapperRules.subscriptionNeedsPublisher('io.reactivex.rxjava3.core.Single')
+        adapt(ref('io.reactivex.rxjava3.core.Single', STRING), nullable, false).failure() == WrapperRules.publisherInList()
+    }
+
+    void "a field is async when it returns a CompletionStage or a publisher outside the subscription type"() {
+        given:
+        def list = new ListType(nullable)
+
+        expect:
+        adapt(ref(STAGE, STRING)).async()
+        adapt(ref('java.util.concurrent.CompletableFuture', ref(RESULT, STRING))).async()
+        adapt(ref('reactor.core.publisher.Mono', STRING)).async()
+        adapt(ref('reactor.core.publisher.Flux', STRING), list).async()
+        adapt(ref('io.reactivex.rxjava3.core.Single', STRING)).async()
+        !adapt(STRING).async()
+        !adapt(ref(OPTIONAL, STRING)).async()
+        !adapt(ref(RESULT, STRING)).async()
+        !adapt(ref(PUBLISHER, STRING), nullable, true, true).async()
+        !adapt(ref(STAGE, ref(PUBLISHER, STRING)), nullable, true, true).async()
     }
 
     void "a Publisher of many values needs a list field, and a Publisher never sits inside a CompletionStage"() {

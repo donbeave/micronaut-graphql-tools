@@ -521,7 +521,7 @@ public final class InputBindingFindings {
      */
     @Nullable
     public static Leaf leaf(TypeRef declared, Type<?> fieldType, ReturnVerdict verdict) {
-        if (verdict.failure() != null || verdict.primitiveOptional()) {
+        if (verdict.failure() != null || verdict.primitiveOptional() || verdict.reactive() == ReturnVerdict.Reactive.VALUELESS) {
             return null;
         }
         TypeRef adapted = declared;

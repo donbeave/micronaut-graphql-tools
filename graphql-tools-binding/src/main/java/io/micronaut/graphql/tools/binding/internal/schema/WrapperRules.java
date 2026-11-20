@@ -17,6 +17,8 @@ package io.micronaut.graphql.tools.binding.internal.schema;
 
 import io.micronaut.core.annotation.Internal;
 
+import java.util.List;
+
 /**
  * The rules of the return type wrappers, as the sentences that name a violation. The wrapper order and the wording live
  * here once; the caller decides what a violation throws or reports.
@@ -25,10 +27,23 @@ import io.micronaut.core.annotation.Internal;
 public final class WrapperRules {
 
     /**
-     * The binary name of the publisher type that emits at most one value ({@code Mono}); every other
-     * {@code Publisher} may emit many.
+     * The binary names of the types that emit at most one value, so a field that returns one gets that value, or
+     * {@code null} when it is empty: Reactor's {@code Mono}, the RxJava 3 and RxJava 2 {@code Single}, {@code Maybe} and
+     * {@code Completable} (which carry no {@code Publisher} type of their own) and Micronaut's
+     * {@code CompletableFuturePublisher}. A subtype of one of them is single-value too. Every other {@code Publisher}
+     * may emit many, unless the method is annotated with {@code @SingleResult}.
      */
-    public static final String SINGLE_VALUE_PUBLISHER = "reactor.core.publisher.Mono";
+    public static final List<String> SINGLE_VALUE_TYPES = List.of(
+            "reactor.core.publisher.Mono",
+            "io.reactivex.rxjava3.core.Single", "io.reactivex.rxjava3.core.Maybe", "io.reactivex.rxjava3.core.Completable",
+            "io.reactivex.Single", "io.reactivex.Maybe", "io.reactivex.Completable",
+            "io.micronaut.core.async.publisher.CompletableFuturePublisher");
+
+    /**
+     * The binary names of the single-value types that carry no value and so have no type argument.
+     */
+    public static final List<String> VALUELESS_TYPES = List.of("io.reactivex.rxjava3.core.Completable",
+            "io.reactivex.Completable");
 
     private static final String COMPLETION_STAGE = "java.util.concurrent.CompletionStage";
     private static final String PUBLISHER = "org.reactivestreams.Publisher";

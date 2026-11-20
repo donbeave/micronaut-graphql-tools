@@ -18,6 +18,8 @@ package io.micronaut.graphql.tools.internal.resolver;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.async.publisher.Publishers;
+import io.micronaut.core.convert.ConversionService;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -37,27 +39,36 @@ public final class PublisherAdaptingDataFetcher implements DataFetcher<Object> {
 
     private final DataFetcher<Object> delegate;
     private final boolean many;
+    private final ConversionService conversionService;
 
     /**
-     * @param delegate the fetcher that invokes the resolver method
-     * @param many     whether the publisher emits many values, which are collected into a list; otherwise it emits one
-     *                 value or none
+     * @param delegate          the fetcher that invokes the resolver method
+     * @param many              whether the publisher emits many values, which are collected into a list; otherwise it
+     *                          emits one value or none
+     * @param conversionService converts a single-value reactive type that is not a {@code Publisher} (an RxJava
+     *                          {@code Single}, {@code Maybe} or {@code Completable}) to one
      */
-    public PublisherAdaptingDataFetcher(DataFetcher<Object> delegate, boolean many) {
+    public PublisherAdaptingDataFetcher(DataFetcher<Object> delegate, boolean many, ConversionService conversionService) {
         this.delegate = delegate;
         this.many = many;
+        this.conversionService = conversionService;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public Object get(DataFetchingEnvironment environment) throws Exception {
         Object result = delegate.get(environment);
-        if (!(result instanceof Publisher<?> publisher)) {
+        Publisher<Object> publisher;
+        if (result instanceof Publisher<?> direct) {
+            publisher = (Publisher<Object>) direct;
+        } else if (result != null && Publishers.isConvertibleToPublisher(result.getClass())) {
+            publisher = Publishers.convertPublisher(conversionService, result, Publisher.class);
+        } else {
             // null, or a DataFetcherResult for an argument that did not convert
             return result;
         }
         Collector subscriber = new Collector(many);
-        ((Publisher<Object>) publisher).subscribe(subscriber);
+        publisher.subscribe(subscriber);
         return subscriber;
     }
 

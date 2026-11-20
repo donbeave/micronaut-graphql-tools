@@ -29,12 +29,15 @@ import io.micronaut.core.annotation.Nullable;
  * @param failure           the sentence for the first violation, or {@code null} when the wrappers are valid
  * @param reactive          how a {@code Publisher} on a field outside the subscription type is adapted to a
  *                          {@code CompletionStage}: {@link Reactive#NONE} for every other return type
+ * @param async             whether the method returns its value later, as a {@code CompletionStage} or as a publisher
+ *                          that is adapted to one, on a field outside the subscription type: the field is then
+ *                          executed through the async boundary
  * @param element           for a list field, the verdict for the element type, which the runtime checks one level
  *                          down with {@code fieldLevel} false; {@code null} otherwise
  */
 @Internal
 public record ReturnVerdict(int depth, boolean primitiveOptional, @Nullable String failure, Reactive reactive,
-                            @Nullable ReturnVerdict element) {
+                            boolean async, @Nullable ReturnVerdict element) {
 
     /**
      * How a {@code Publisher} that a field outside the subscription type returns is adapted, decided once per field.
@@ -45,11 +48,13 @@ public record ReturnVerdict(int depth, boolean primitiveOptional, @Nullable Stri
         /** A publisher of one value ({@code Mono}): the value, or {@code null} when it is empty. */
         SINGLE,
         /** A publisher of many values ({@code Flux}) on a list field: the values collected into a list. */
-        MULTI
+        MULTI,
+        /** A single-value type that emits no value ({@code Completable}): the field is {@code null}, nothing is unwrapped. */
+        VALUELESS
     }
 
     static ReturnVerdict failed(String failure) {
-        return new ReturnVerdict(0, false, failure, Reactive.NONE, null);
+        return new ReturnVerdict(0, false, failure, Reactive.NONE, false, null);
     }
 
     /**

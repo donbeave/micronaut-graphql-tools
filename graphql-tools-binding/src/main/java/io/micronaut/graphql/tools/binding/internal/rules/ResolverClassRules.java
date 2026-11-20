@@ -284,13 +284,17 @@ public final class ResolverClassRules {
      * @param fieldType    the type of the field, or the element type of a list at a deeper level
      * @param fieldLevel   whether this is the type of the field itself, not an element of a list
      * @param subscription whether the field belongs to the subscription type
+     * @param singleResult whether the method is annotated with {@code @SingleResult}, which makes any {@code Publisher}
+     *                     it returns a publisher of one value
      * @return the verdict
      */
     public static ReturnVerdict returnAdaptation(TypeModel model, TypeDefinitionRegistry registry, TypeRef declared,
-                                                 Type<?> fieldType, boolean fieldLevel, boolean subscription) {
+                                                 Type<?> fieldType, boolean fieldLevel, boolean subscription,
+                                                 boolean singleResult) {
         TypeRef result = declared;
         int depth = 0;
         String outer = null;
+        boolean stage = false;
         ReturnVerdict.Reactive reactive = ReturnVerdict.Reactive.NONE;
 
         if (isAssignableTo(model, result, COMPLETION_STAGE)) {
@@ -298,6 +302,7 @@ public final class ResolverClassRules {
                 return ReturnVerdict.failed(WrapperRules.completionStageInList());
             }
             outer = COMPLETION_STAGE;
+            stage = true;
             if (untyped(registry, result, fieldType)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(COMPLETION_STAGE));
             }
@@ -305,7 +310,9 @@ public final class ResolverClassRules {
             depth++;
         }
 
-        boolean publisher = isAssignableTo(model, result, PUBLISHER);
+        boolean singleValueType = isSingleValueType(model, result);
+        // the RxJava types are not Publishers, they are adapted to one; on a subscription field only a Publisher streams
+        boolean publisher = isAssignableTo(model, result, PUBLISHER) || singleValueType && !(fieldLevel && subscription);
 
         if (fieldLevel && subscription) {
             if (!publisher) {
@@ -324,17 +331,22 @@ public final class ResolverClassRules {
             if (outer != null) {
                 return ReturnVerdict.failed(WrapperRules.publisherInCompletionStage());
             }
-            boolean multiValue = !isAssignableTo(model, result, WrapperRules.SINGLE_VALUE_PUBLISHER);
+            boolean valueless = singleValueType && isAnyOf(model, result, WrapperRules.VALUELESS_TYPES);
+            boolean multiValue = !singleValueType && !singleResult;
             // a multi-value publisher emits the elements of the list, so its argument is judged against the element type
             Type<?> emitted = multiValue && unwrapNonNull(fieldType) instanceof ListType list ? list.getType() : fieldType;
-            if (untyped(registry, result, emitted)) {
+            if (!valueless && untyped(registry, result, emitted)) {
                 return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
             }
             if (multiValue) {
                 if (!(unwrapNonNull(fieldType) instanceof ListType)) {
                     return ReturnVerdict.failed(WrapperRules.multiValuePublisherNeedsList(SchemaTypes.print(fieldType)));
                 }
-                return new ReturnVerdict(depth + 1, false, null, ReturnVerdict.Reactive.MULTI, null);
+                return new ReturnVerdict(depth + 1, false, null, ReturnVerdict.Reactive.MULTI, true, null);
+            }
+            if (valueless) {
+                // a Completable emits no value and has no type argument: the field is null, there is nothing to unwrap or bind
+                return new ReturnVerdict(depth, false, null, ReturnVerdict.Reactive.VALUELESS, !subscription, null);
             }
             reactive = ReturnVerdict.Reactive.SINGLE;
             outer = PUBLISHER;
@@ -383,7 +395,21 @@ public final class ResolverClassRules {
             }
         }
 
-        return new ReturnVerdict(depth, primitiveOptional, null, reactive, null);
+        return new ReturnVerdict(depth, primitiveOptional, null, reactive,
+                !subscription && (stage || reactive != ReturnVerdict.Reactive.NONE), null);
+    }
+
+    private static boolean isSingleValueType(TypeModel model, TypeRef type) {
+        return isAnyOf(model, type, WrapperRules.SINGLE_VALUE_TYPES);
+    }
+
+    private static boolean isAnyOf(TypeModel model, TypeRef type, java.util.List<String> binaryNames) {
+        for (String name : binaryNames) {
+            if (isAssignableTo(model, type, name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // a wrapper without a type argument: the raw type, whose argument the type model reports as Object. An explicit
@@ -479,7 +505,8 @@ public final class ResolverClassRules {
                 boolean subscription = schema.subscriptionType().filter(typeName::equals).isPresent();
                 fields.add(new FieldVerdict(coordinate,
                         arguments(rootField ? null : sourceType, method.parameters(), argumentNames),
-                        fieldReturn(model, schema.registry(), method.genericReturnType(), field.getType(), true, subscription)));
+                        fieldReturn(model, schema.registry(), method.genericReturnType(), field.getType(), true, subscription,
+                                method.annotations().has(AnnotationNames.SINGLE_RESULT))));
             }
             methods.add(new MethodVerdict(method.signature(), coordinates, fields));
         }
@@ -492,10 +519,13 @@ public final class ResolverClassRules {
      * false, down to the innermost element.
      */
     private static ReturnVerdict fieldReturn(TypeModel model, TypeDefinitionRegistry registry, TypeRef declared,
-                                             Type<?> fieldType, boolean fieldLevel, boolean subscription) {
-        ReturnVerdict verdict = returnAdaptation(model, registry, declared, fieldType, fieldLevel, subscription);
+                                             Type<?> fieldType, boolean fieldLevel, boolean subscription,
+                                             boolean singleResult) {
+        ReturnVerdict verdict = returnAdaptation(model, registry, declared, fieldType, fieldLevel, subscription,
+                singleResult);
         Type<?> unwrapped = fieldType instanceof NonNullType nonNull ? nonNull.getType() : fieldType;
-        if (verdict.failure() != null || verdict.primitiveOptional() || !(unwrapped instanceof ListType list)) {
+        if (verdict.failure() != null || verdict.primitiveOptional() || verdict.reactive() == ReturnVerdict.Reactive.VALUELESS
+                || !(unwrapped instanceof ListType list)) {
             return verdict;
         }
         TypeRef adapted = declared;
@@ -504,15 +534,15 @@ public final class ResolverClassRules {
         }
         if (verdict.reactive() == ReturnVerdict.Reactive.MULTI) {
             // the type reached is the element: the publisher collects its values into the list
-            return new ReturnVerdict(verdict.depth(), false, null, verdict.reactive(),
-                    fieldReturn(model, registry, adapted, list.getType(), false, subscription));
+            return new ReturnVerdict(verdict.depth(), false, null, verdict.reactive(), verdict.async(),
+                    fieldReturn(model, registry, adapted, list.getType(), false, subscription, false));
         }
         if (!isAssignableTo(model, adapted, ITERABLE) && !isAssignableTo(model, adapted, ITERATOR)
                 || adapted.typeArguments().isEmpty()) {
             return verdict;
         }
-        return new ReturnVerdict(verdict.depth(), false, null, verdict.reactive(),
-                fieldReturn(model, registry, adapted.typeArguments().get(0), list.getType(), false, subscription));
+        return new ReturnVerdict(verdict.depth(), false, null, verdict.reactive(), verdict.async(),
+                fieldReturn(model, registry, adapted.typeArguments().get(0), list.getType(), false, subscription, false));
     }
 
     private static Type<?> unwrapNonNull(Type<?> type) {
