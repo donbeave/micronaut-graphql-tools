@@ -188,8 +188,8 @@ public enum BindingCode {
     UNWRAPPED_DIRECTIVE_WIRING("unwrapped-directive-wiring", false, false,
             "A SchemaDirectiveWiring bean is not wrapped by a SchemaDirective."),
     /** Failure: the schema has no schema definition. */
-    SCHEMA_DEFINITION_NOT_PROVIDED("schema-definition-not-provided", false, false,
-            "No schema definition is configured."),
+    SCHEMA_DEFINITION_NOT_PROVIDED("schema-definition-not-provided", false, true,
+            "The schema has neither a schema definition nor a Query type."),
     /** Failure: the schema cannot be loaded or merged. */
     SCHEMA_INVALID("schema-invalid", false, true,
             "The schema files cannot be parsed or merged."),

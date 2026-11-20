@@ -127,8 +127,8 @@ final class CheckedSchema {
             TypeDefinitionRegistry merged = TypeExtensions.merge(loaded.registry());
             model = SchemaModel.load(merged).orElse(null);
             if (model == null) {
-                problem(BindingCode.SCHEMA_INVALID, "the schema in " + directories + " has no root operation type: define a "
-                        + "Query type or a schema block", null);
+                problem(BindingCode.SCHEMA_DEFINITION_NOT_PROVIDED, "the schema in " + directories + " has no schema definition "
+                        + "and no object type named Query: define a Query type or a schema block", null);
             }
         } catch (SchemaSourceException e) {
             problem(BindingCode.SCHEMA_INVALID, e.getMessage(), null);
