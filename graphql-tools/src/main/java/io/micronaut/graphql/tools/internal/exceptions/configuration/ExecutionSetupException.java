@@ -20,10 +20,11 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 
 /**
- * The execution of operations cannot be set up at startup: the executor key names no usable executor
- * ({@link BindingCode#UNKNOWN_EXECUTOR}), or a resolver needs the execution context while the application's
- * {@code GraphQLInvocation} replaces the library's ({@link BindingCode#EXECUTION_CONTEXT_UNAVAILABLE}), or a Kotlin {@code suspend} resolver is bound without
- * kotlinx-coroutines-core ({@link BindingCode#SUSPEND_WITHOUT_COROUTINES}). The message
+ * The execution cannot be set up at startup: the executor key or an {@code @ExecuteOn} names no usable executor
+ * ({@link BindingCode#UNKNOWN_EXECUTOR}), an {@code @ExecuteOn} is on a property ({@link BindingCode#EXECUTE_ON_PROPERTY}),
+ * a resolver needs the execution context while the application's
+ * {@code GraphQLInvocation} replaces the library's ({@link BindingCode#EXECUTION_CONTEXT_UNAVAILABLE}), or a Kotlin
+ * {@code suspend} resolver is bound without kotlinx-coroutines-core ({@link BindingCode#SUSPEND_WITHOUT_COROUTINES}). The message
  * names the cause and the way out.
  */
 @Internal

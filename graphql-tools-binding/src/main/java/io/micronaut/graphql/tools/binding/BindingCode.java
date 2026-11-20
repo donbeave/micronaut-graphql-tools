@@ -196,12 +196,15 @@ public enum BindingCode {
     /** Failure: no schema file is found at the configured locations. */
     SCHEMA_NOT_FOUND("schema-not-found", false, false,
             "No schema file is found at the configured locations, or a location is invalid."),
-    /** Failure: the execution executor names no executor. */
+    /** Failure: the execution executor or an {@code @ExecuteOn} names no executor. */
     UNKNOWN_EXECUTOR("unknown-executor", false, false,
-            "micronaut.graphql.tools.execution.executor names no executor bean, or names one that cannot run operations."),
+            "micronaut.graphql.tools.execution.executor or an @ExecuteOn names no executor bean, or names one that cannot run work."),
     /** Failure: a resolver needs the execution context and the application replaced the library's invocation. */
     EXECUTION_CONTEXT_UNAVAILABLE("execution-context-unavailable", false, false,
             "A resolver needs the execution context, and the application's GraphQLInvocation replaces the library's."),
+    /** Failure: {@code @ExecuteOn} on an accessor that is bound as a property. */
+    EXECUTE_ON_PROPERTY("execute-on-property", false, false,
+            "@ExecuteOn is on an accessor that is bound as a property, and a property never hops."),
     /** Failure: the application has a DataLoaderRegistry bean, which the library's invocation does not use. */
     DATA_LOADER_REGISTRY_BEAN("data-loader-registry-bean", false, false,
             "A DataLoaderRegistry bean exists, and the library's invocation does not use it."),

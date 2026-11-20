@@ -10,7 +10,7 @@ The library replaces the transport's `GraphQLInvocation`. For each operation it 
 * one task goes to the executor (`blocking` by default);
 * on that executor the library builds the `ExecutionInput`, calls your `GraphQLExecutionInputCustomizer`, and calls graphql-java, which parses and validates the query and runs every synchronous resolver.
 
-There is one thread change per operation. Fields do not hop: the library adds no task, no future and no thread-local read per field, and a trivial field costs the same as before.
+There is one thread change per operation. A field hops only when you annotate it with `@ExecuteOn` (see <<executeOn,@ExecuteOn per field>>): the library adds no task, no future and no thread-local read per field, and a trivial field costs the same as before.
 
 The `PropagatedContext` of the receiving thread (the request, and what your filters add, such as security and tracing elements) is captured once and installed in the task when the executing thread does not hold it already, so `ServerRequestContext.currentRequest()`, `@RequestScope` beans and the security service work in your resolvers.
 
@@ -92,7 +92,34 @@ A few rules:
 * An exception that fails the future reaches the error handling as the exception that you threw: `CompletionException` and `ExecutionException` are unwrapped first.
 * A future that is already done, without a failure, when the method returns is used as it is, with no cost.
 * The cost of an async field that completes on another thread is one small object (the future that the library returns) and its callback, and nothing for a future that is already done. A field that returns `Object` and a `CompletionStage` at runtime is a synchronous field for the library: graphql-java still waits for it, but its children get neither the context nor the move off the event loop. Declare the stage in the return type.
-* When graphql-java cancels the future of the field (a timeout, for example), the library cancels the source future, and the adapter of a publisher cancels its subscription. `@ExecuteOn` is not part of this boundary.
+* When graphql-java cancels the future of the field (a timeout, for example), the library cancels the source future, and the adapter of a publisher cancels its subscription.
+
+[[executeOn]]
+== @ExecuteOn per field
+
+Most resolvers run on the executor of the operation. A few need another one, for example a bounded pool for a slow backend, or a dedicated pool for blocking JDBC. Micronaut's own `@ExecuteOn("<executor>")` says so; the library has no annotation of its own. Put it on:
+
+* a resolver method, or a resolver class (the method inherits it, and a method's own value wins);
+* a `@GraphQLField` method of a model class, or on the model class (it applies to the methods that bind a field).
+
+snippet::example.tck.ExecuteOnScenario[project-base="test-suite", source="test", tags="execute-on-method", indent="0"]
+
+snippet::example.tck.ExecuteOnScenario[project-base="test-suite", source="test", tags="execute-on-class", indent="0"]
+
+snippet::example.tck.ExecuteOnScenario[project-base="test-suite", source="test", tags="execute-on-model", indent="0"]
+
+The library reads the annotation from the bean metadata once at startup and looks the executor up by name through Micronaut's `ExecutorSelector`, which is a bean lookup: there is no reflection and no annotation read per request, also in a native image. What it does:
+
+* A field hops only when its executor is not the executor of the operation. `@ExecuteOn("blocking")` on a field of an operation that already runs on `blocking` costs nothing, and the same holds for any executor that `micronaut.graphql.tools.execution.executor` names. With `executor: none`, or when your own `GraphQLInvocation` runs the operation, every annotated field hops.
+* A field without `@ExecuteOn` keeps the fetcher it had: no wrapper, no extra task, no allocation.
+* On an async method the method body runs on the named executor: `@ExecuteOn("pool") CompletionStage<Book> book()` calls `book()` on `pool` and then follows the returned stage.
+* A field that hops completes its future on that executor, and its synchronous children continue there. Size the executor for the field and for its children; a child that is not annotated does not hop back. The propagated context of the operation is installed in the hop.
+* When the executor rejects the task, the field fails with the `RejectedExecutionException`.
+* A bean property never hops. `@ExecuteOn` on an accessor that binds a field as a property fails the startup with `[execute-on-property]`: make the accessor a `@GraphQLField` method, or move the field to a type resolver and put the annotation there. `@ExecuteOn` on a model class does not fail for its properties: it applies to the methods only.
+* A name that matches no executor bean, and `scheduled`, fail the startup with `[unknown-executor]`, which lists the executor beans that exist. It is the same code as for the `executor` key.
+* `@Blocking` and `@NonBlocking` have no effect: the library does not read them. Use `@ExecuteOn`.
+
+The cost of a hop is one task and one future for the annotated field only. The `InvocationBenchmark` of the `benchmarks` module reports the hop; see CONTRIBUTING.md.
 
 == Kotlin suspend resolvers
 

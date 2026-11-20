@@ -37,6 +37,7 @@ import graphql.schema.idl.TypeRuntimeWiring;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.exceptions.ConfigurationException;
+import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationMetadataProvider;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Introspected;
@@ -49,7 +50,10 @@ import io.micronaut.core.beans.EnumBeanIntrospection;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.type.ReturnType;
+import io.micronaut.graphql.tools.internal.exceptions.resolver.ExecuteOnException;
+import io.micronaut.graphql.tools.internal.execution.FieldExecutors;
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
+import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.mapping.MappingContext;
 import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
@@ -124,6 +128,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -219,6 +224,8 @@ public final class GraphQLRuntimeWiringGenerator {
 
     private final ArgumentPlanner argumentPlanner;
 
+    private final FieldExecutors fieldExecutors;
+
     private final AbstractTypeWiring abstractTypeWiring;
 
     @Nullable
@@ -265,6 +272,7 @@ public final class GraphQLRuntimeWiringGenerator {
         this.inputTypeBinder = new InputTypeBinder(typeDefinitionRegistry, scalarMappings, configuration,
                 checkPolicy, manifestRecorder, typeModel, applicationContext, new InputCallbacks());
         this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel, applicationContext);
+        this.fieldExecutors = new FieldExecutors(applicationContext, configuration);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,
                 graphQLBeanIntrospectionRegistry, manifestRecorder, rootRuntimeWiringBuilder);
@@ -422,7 +430,7 @@ public final class GraphQLRuntimeWiringGenerator {
     void processExecutableMethod(Executable<Object, ?> executable, ReturnType<?> returnType,
                                  @Nullable Class<?> sourceClass, @Nullable Object instance,
                                  TypeRuntimeWiring.Builder typeRuntimeWiringBuilder,
-                                 TypeMappingContext mappingContext) {
+                                 TypeMappingContext mappingContext, @Nullable AnnotationMetadata owner) {
         mappingContext = TypeMappingContext.forField(
                 mappingContext,
                 executable.getDeclaringType(),
@@ -438,13 +446,14 @@ public final class GraphQLRuntimeWiringGenerator {
                 mappingContext.getFieldDefinition().getType(), mappingContext, true, isSingleResult(executable),
                 suspendInvoker != null);
 
-        // decided once per field here: a field that is not async keeps the plain method fetcher and allocates nothing more
+        // decided once per field here: a field that is not async and has no @ExecuteOn keeps the plain method fetcher and allocates nothing more
+        Executor fieldExecutor = fieldExecutors.forMethod(executable.getAnnotationMetadata(), owner, mappingContext);
         DataFetcher<Object> fetcher = new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance,
                 suspendInvoker);
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
                 FieldExecutionPlanner.plan(fetcher, verdict, mappingContext.getGraphQlObjectType().equals(subscriptionTypeName),
-                        applicationContext.getConversionService())
+                        applicationContext.getConversionService(), fieldExecutor)
         );
     }
 
@@ -600,7 +609,8 @@ public final class GraphQLRuntimeWiringGenerator {
                 null,
                 ResolverInstances.of(applicationContext, beanDefinitionAndMethod.getBeanDefinition()),
                 typeRuntimeWiringBuilder,
-                mappingContext
+                mappingContext,
+                null
         );
 
         rootMethodBindings.computeIfAbsent(executable, it -> new TreeSet<>())
@@ -943,6 +953,12 @@ public final class GraphQLRuntimeWiringGenerator {
 
             argumentPlanner.checkArgumentCount(beanProperty, mappingContext);
 
+            if (beanProperty.getAnnotationMetadata().hasDeclaredAnnotation(ExecuteOn.class)) {
+                throw new ExecuteOnException(BindingCode.EXECUTE_ON_PROPERTY, "@ExecuteOn is on an accessor that binds this field "
+                        + "as a property, and a property is read, never run on another executor. Fix: make it a @GraphQLField "
+                        + "method, or move the field to a type resolver, and put @ExecuteOn there.", mappingContext);
+            }
+
             typeRuntimeWiringBuilder.dataFetcher(fieldDefinition.getName(), new MicronautPropertyDataFetcher(beanProperty));
 
             processFieldReturnType(beanProperty.asArgument(), fieldDefinition.getType(), mappingContext);
@@ -965,7 +981,8 @@ public final class GraphQLRuntimeWiringGenerator {
                 null,
                 null,
                 typeRuntimeWiringBuilder,
-                mappingContext
+                mappingContext,
+                beanIntrospection.getAnnotationMetadata()
         );
 
         if (manifestRecorder.isRecording()) {
@@ -1002,7 +1019,8 @@ public final class GraphQLRuntimeWiringGenerator {
                 sourceClass,
                 ResolverInstances.of(applicationContext, beanDefinitionAndMethod.getBeanDefinition()),
                 typeRuntimeWiringBuilder,
-                mappingContext
+                mappingContext,
+                null
         );
 
         if (manifestRecorder.isRecording()) {
@@ -1238,7 +1256,8 @@ public final class GraphQLRuntimeWiringGenerator {
                     method.interfaceClass(),
                     ResolverInstances.of(applicationContext, method.method().getBeanDefinition()),
                     objectTypeWirings.get(field.objectTypeDefinition().getName()),
-                    field.mappingContext()
+                    field.mappingContext(),
+                    null
             );
 
             if (manifestRecorder.isRecording()) {
