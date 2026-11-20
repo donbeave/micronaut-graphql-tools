@@ -442,7 +442,7 @@ public final class GraphQLRuntimeWiringGenerator {
     }
 
     private static boolean isSingleResult(AnnotationMetadataProvider method) {
-        return method.getAnnotationMetadata().hasAnnotation(AnnotationNames.SINGLE_RESULT);
+        return method.getAnnotationMetadata().hasStereotype(AnnotationNames.SINGLE_RESULT);
     }
 
     private void processFieldReturnType(Argument<?> argument, Type<?> graphQlType, TypeMappingContext mappingContext) {
