@@ -17,7 +17,7 @@
  * The annotations an application puts on its resolver classes, methods, parameters and input classes: for example
  * {@link io.micronaut.graphql.tools.annotation.GraphQLRootResolver}, {@link io.micronaut.graphql.tools.annotation.GraphQLTypeResolver},
  * {@link io.micronaut.graphql.tools.annotation.GraphQLInput}, {@link io.micronaut.graphql.tools.annotation.GraphQLField},
- * {@link io.micronaut.graphql.tools.annotation.GraphQLArgument}, {@link io.micronaut.graphql.tools.annotation.GraphQLIgnore},
+ * {@link io.micronaut.graphql.tools.annotation.GraphQLArgument}, {@link io.micronaut.graphql.tools.annotation.GraphQLContextValue}, {@link io.micronaut.graphql.tools.annotation.GraphQLIgnore},
  * {@link io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate} and {@link io.micronaut.graphql.tools.annotation.GraphQLType}.
  *
  * <p><b>Audience.</b> Public API. Application code imports the annotations of this package. The one other type,

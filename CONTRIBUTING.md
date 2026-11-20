@@ -220,7 +220,7 @@ Two checks run on every `./gradlew check`:
   fields minus the one at 10 fields, which must stay within 0.5 B of its baseline of 0. `loaderOverhead` is the bytes that a
   request allocates in an application with 50 batch loader beans that it does not use, minus those with one (`benchmarks.loaders`
   selects the beans of `Loaders`): a registered but unused loader costs nothing, so the gate allows 0.5 B for each of the 49 and
-  its baseline is 0.
+  its baseline is 0. `injectedParameters` and `injectedStateParameters` gate a field with four and with three injected parameters (context, locale, context value, environment; request, optional response, principal): each allocates the argument array and nothing else (32 B).
 
 To measure, run `./gradlew :benchmarks:jmh` (two forks, the `gc` profiler; the allocation figure is
 `gc.alloc.rate.norm` in bytes per operation) or `./gradlew :benchmarks:jmh -Pjmh.profile=quick` for a short run. Narrow

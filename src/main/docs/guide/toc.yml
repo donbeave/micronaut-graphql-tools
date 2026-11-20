@@ -11,6 +11,7 @@ resolverContracts: Resolver Contracts
 typeSystem: Type System
 models: Model Classes
 inputs: Inputs
+resolverParameters: Resolver Parameters
 scalars: Scalars
 directives: Directives
 dataLoaders: Data Loaders

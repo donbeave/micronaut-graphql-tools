@@ -138,7 +138,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      * @return the HTTP response, or null when the transport has none (WebSocket)
      */
     @Nullable
-    MutableHttpResponse<?> response() {
+    public MutableHttpResponse<?> response() {
         return response;
     }
 

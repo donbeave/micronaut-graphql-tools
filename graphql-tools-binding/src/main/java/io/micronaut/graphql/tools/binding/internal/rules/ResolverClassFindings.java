@@ -33,6 +33,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.CountMi
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.DuplicateParameter;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.InvalidSource;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.ParameterWithoutArgument;
+import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.UnsatisfiableParameter;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.UntypedDataLoader;
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.FieldVerdict;
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.MethodVerdict;
@@ -309,6 +310,13 @@ public final class ResolverClassFindings {
                     "the parameter " + method.parameters().get(untyped.parameter()).name() + " is a DataLoader without "
                             + "its key and value types",
                     schema, coordinate, "declare it as DataLoader<K, V>, with the key and value types of the loader bean"));
+            return false;
+        }
+        if (failure instanceof UnsatisfiableParameter unsatisfiable) {
+            failures.add(finding(resolver, method, BindingCode.ARGUMENT_MISMATCH, coordinate,
+                    "the parameter " + method.parameters().get(unsatisfiable.parameter()).name() + " cannot be injected: "
+                            + unsatisfiable.reason(),
+                    schema, coordinate, null));
             return false;
         }
         if (failure instanceof InvalidSource invalid) {
