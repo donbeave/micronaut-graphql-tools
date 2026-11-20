@@ -16,8 +16,10 @@
 package example
 
 import groovy.transform.CompileStatic
+import io.micronaut.graphql.tools.annotation.GraphQLType
 
 @CompileStatic
+@GraphQLType
 class Book {
 
     final String id
