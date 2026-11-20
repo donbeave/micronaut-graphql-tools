@@ -23,22 +23,30 @@ import io.micronaut.context.event.StartupEvent;
 import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 
-/** Binds the schema at startup, so a binding failure stops the application before the first request. */
+/**
+ * Binds the schema and sets up the library's invocation at startup, so a binding failure or an unknown executor stops the
+ * application before the first request.
+ */
 @Internal
 @Singleton
 @Requires(property = GraphQLToolsConfiguration.PREFIX + ".eager-init", notEquals = "false")
 public final class EagerBinding implements ApplicationEventListener<StartupEvent> {
 
     private final BeanProvider<GraphQLSchema> schema;
+    private final BeanProvider<LibraryGraphQLInvocation> invocation;
 
-    EagerBinding(BeanProvider<GraphQLSchema> schema) {
+    EagerBinding(BeanProvider<GraphQLSchema> schema, BeanProvider<LibraryGraphQLInvocation> invocation) {
         this.schema = schema;
+        this.invocation = invocation;
     }
 
     @Override
     public void onApplicationEvent(StartupEvent event) {
         schema.get();
+        // an executor key that names no executor fails the startup too
+        invocation.ifPresent(bean -> { });
     }
 
 }
