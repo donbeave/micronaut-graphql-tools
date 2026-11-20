@@ -63,6 +63,8 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
 
     private static final String NOT_FINITE = "a number that is not finite cannot be written as JSON";
 
+    private static final String NESTED = "a value nested too deeply or containing itself cannot be written as JSON";
+
     private static final BiConsumer<Object, Object> OUTPUT_ENTRY = (key, element) -> checkOutput(element);
 
     private static final BiConsumer<Object, Object> INPUT_ENTRY = (key, element) -> checkInput(element);
@@ -80,16 +82,18 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
 
     @Override
     protected Object write(Object value) {
-        if (isJson(value)) {
-            checkOutput(value);
-            return value;
-        }
         try {
+            if (isJson(value)) {
+                checkOutput(value);
+                return value;
+            }
             Object converted = toJava(mapper.get().writeValueToTree(value));
             checkOutput(converted);
             return converted;
         } catch (IOException e) {
             throw new IllegalArgumentException("the value cannot be written as JSON", e);
+        } catch (StackOverflowError e) {
+            throw new IllegalArgumentException(NESTED, e);
         }
     }
 
@@ -100,6 +104,10 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
             }
         } else if (value instanceof Float) {
             if (!Float.isFinite((Float) value)) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+        } else if (value instanceof DoubleAdder || value instanceof DoubleAccumulator) {
+            if (!Double.isFinite(((Number) value).doubleValue())) {
                 throw new IllegalArgumentException(NOT_FINITE);
             }
         } else if (value instanceof Map) {
@@ -123,6 +131,10 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
             }
         } else if (value instanceof Float) {
             if (!Float.isFinite((Float) value)) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
+        } else if (value instanceof DoubleAdder || value instanceof DoubleAccumulator) {
+            if (!Double.isFinite(((Number) value).doubleValue())) {
                 throw new IllegalArgumentException(NOT_FINITE);
             }
         } else if (value instanceof BigDecimal) {
@@ -155,7 +167,13 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
     @Override
     public Value<?> valueToLiteral(Object input, GraphQLContext graphQLContext, Locale locale) {
         try {
-            return literal(isJson(input) ? input : write(input));
+            if (isJson(input)) {
+                checkInput(input);
+                return literal(input);
+            }
+            return literal(write(input));
+        } catch (StackOverflowError e) {
+            throw new CoercingParseValueException(scalarName() + ": " + NESTED, e);
         } catch (RuntimeException e) {
             throw new CoercingParseValueException(scalarName() + ": " + e.getMessage(), e);
         }
@@ -203,12 +221,12 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
     }
 
     private static Value<?> number(Number value) {
-        double number = value.doubleValue();
-        if (Double.isNaN(number) || Double.isInfinite(number)) {
-            throw new IllegalArgumentException(NOT_FINITE);
-        }
         if (value instanceof Float || value instanceof Double || value instanceof DoubleAdder
                 || value instanceof DoubleAccumulator) {
+            double number = value.doubleValue();
+            if (!Double.isFinite(number)) {
+                throw new IllegalArgumentException(NOT_FINITE);
+            }
             return FloatValue.newFloatValue(BigDecimal.valueOf(number)).build();
         }
         try {
@@ -221,7 +239,11 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
 
     @Override
     protected Object read(Object input) {
-        checkInput(input);
+        try {
+            checkInput(input);
+        } catch (StackOverflowError e) {
+            throw new IllegalArgumentException(NESTED, e);
+        }
         return input;
     }
 
@@ -246,7 +268,9 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
             return checkDecimal(((FloatValue) literal).getValue());
         }
         if (literal instanceof VariableReference) {
-            return variables.get(((VariableReference) literal).getName());
+            Object variable = variables.get(((VariableReference) literal).getName());
+            checkInput(variable);
+            return variable;
         }
         if (literal instanceof ArrayValue) {
             List<Object> list = new ArrayList<>();

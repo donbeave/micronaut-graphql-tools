@@ -375,6 +375,79 @@ type Query {
         thrown(CoercingParseValueException)
     }
 
+    void "a concurrent floating number that is not finite is refused on every path"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def adder = new DoubleAdder()
+        adder.add(Double.POSITIVE_INFINITY)
+
+        when:
+        coercing.serialize([a: [adder]], CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingSerializeException)
+
+        when:
+        coercing.parseValue([a: [adder]], CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+    }
+
+    void "a decimal out of range is refused when a value becomes a literal"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        when:
+        coercing.valueToLiteral(value, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+
+        where:
+        value << [new BigDecimal('1e-10000'), [a: [new BigDecimal('1e10000')]]]
+    }
+
+    void "a decimal out of range behind a variable reference in a literal is refused"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def literal = ObjectValue.newObjectValue()
+                .objectField(ObjectField.newObjectField().name('amount').value(new VariableReference('v')).build()).build()
+
+        when:
+        coercing.parseLiteral(literal, CoercedVariables.of([v: new BigDecimal('1e-10000')]), CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseLiteralException)
+    }
+
+    void "a container that contains itself is an error, not a stack overflow"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        List cycle = []
+        cycle << cycle
+
+        when:
+        coercing.serialize(cycle, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingSerializeException)
+
+        when:
+        coercing.parseValue(cycle, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+    }
+
+    void "an unknown number outside the range of a double keeps its exact decimal text"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+
+        expect:
+        coercing.valueToLiteral(new Fraction('1e10000'), CONTEXT, Locale.ROOT).value == new BigDecimal('1e10000')
+    }
+
     static class Fraction extends Number {
 
         private final String text
