@@ -7,7 +7,7 @@ Required versus canary:
 
 == Consuming milestone previews
 
-Milestone versions (`1.0.0-M1`, `1.0.0-M2`, ...) and, later, `1.0.0` are published to the GitHub Packages Maven registry of the repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`, with the Maven coordinates `io.micronaut.graphql.tools:micronaut-graphql-tools`, `micronaut-graphql-tools-processor`, `micronaut-graphql-tools-bom`, `micronaut-graphql-tools-binding` (from `1.0.0-M3`) and `micronaut-graphql-tools-scalars` (from `1.0.0-M4`). They are milestone previews from the repository: they are not affiliated with, and not published by, the Micronaut Foundation, and nothing is on Maven Central. There are no snapshots, and a published version is never replaced.
+Milestone versions (`1.0.0-M1`, `1.0.0-M2`, ...) and, later, `1.0.0` are published to the GitHub Packages Maven registry of the repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`, with the Maven coordinates `io.micronaut.graphql.tools:micronaut-graphql-tools`, `micronaut-graphql-tools-processor`, `micronaut-graphql-tools-bom`, `micronaut-graphql-tools-binding` (from `1.0.0-M3`), and `micronaut-graphql-tools-scalars` and `micronaut-graphql-tools-observability` (from `1.0.0-M4`). They are milestone previews from the repository: they are not affiliated with, and not published by, the Micronaut Foundation, and nothing is on Maven Central. There are no snapshots, and a published version is never replaced.
 
 GitHub Packages requires authentication to download, also for public packages. Create a personal access token (classic) with the `read:packages` scope, and hand it to the build:
 

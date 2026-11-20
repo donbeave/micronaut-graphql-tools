@@ -184,5 +184,6 @@ jobs:
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-processor:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-binding:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-scalars:${TAG}"
+            echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-observability:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-bom:${TAG}"
           } >> "$GITHUB_STEP_SUMMARY"
