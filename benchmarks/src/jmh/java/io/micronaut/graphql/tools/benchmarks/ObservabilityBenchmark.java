@@ -31,14 +31,15 @@ import java.util.concurrent.TimeUnit;
  * The cost of the observability module on a request of {@code rootFields} root fields: with no instrumentation ({@code none}), with
  * one that implements no hook ({@code empty}: what graphql-java charges for any instrumentation) and with the module's beans on
  * and no field selected for a span ({@code observed}). {@code observed} and {@code empty} should differ by a constant (the
- * timer, the request span), not by a cost that grows with {@code fields}.
+ * timer, the request span), not by a cost that grows with {@code fields}. In {@code selected} every root field is selected for a
+ * span by the field decorator: the difference to {@code observed}, divided by {@code rootFields}, is the cost of one span.
  */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 public class ObservabilityBenchmark {
 
-    @Param({"none", "empty", "observed"})
+    @Param({"none", "empty", "observed", "selected"})
     public String mode;
 
     @Param({"10", "1000"})
@@ -52,6 +53,7 @@ public class ObservabilityBenchmark {
         cases = new BenchmarkCases(0, switch (mode) {
             case "none" -> BenchmarkCases.Instrumented.NONE;
             case "empty" -> BenchmarkCases.Instrumented.EMPTY;
+            case "selected" -> BenchmarkCases.Instrumented.OBSERVABILITY_SELECTED;
             default -> BenchmarkCases.Instrumented.OBSERVABILITY;
         });
         op = cases.op(BenchmarkCases.invokeOp(rootFields));

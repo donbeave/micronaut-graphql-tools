@@ -23,6 +23,7 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
+import io.micronaut.inject.AdvisedBeanType;
 import io.micronaut.inject.BeanDefinition;
 import jakarta.inject.Singleton;
 import org.dataloader.BatchLoader;
@@ -73,7 +74,7 @@ public final class DataLoaderTable {
             Entry other = names.putIfAbsent(entry.name(), entry);
             if (other != null) {
                 throw new ExecutionSetupException(BindingCode.DUPLICATE_DATA_LOADER, "Two batch loader beans are named '" + entry.name()
-                        + "': " + other.definition().getBeanType().getName() + " and " + definition.getBeanType().getName()
+                        + "': " + declaredType(other.definition()).getName() + " and " + declaredType(definition).getName()
                         + ". The name is the @Named qualifier of the bean, or else the simple class name with a lower-case first "
                         + "letter. Fix: give one of them a different @Named qualifier.");
             }
@@ -177,8 +178,13 @@ public final class DataLoaderTable {
         if (named != null && !named.isEmpty()) {
             return named;
         }
-        String simple = definition.getBeanType().getSimpleName();
+        String simple = declaredType(definition).getSimpleName();
         return Character.toLowerCase(simple.charAt(0)) + simple.substring(1);
+    }
+
+    /** @return the class the application wrote: the type that an AOP advice (for example {@code @NewSpan}) subclasses is not its name */
+    private static Class<?> declaredType(BeanDefinition<?> definition) {
+        return definition instanceof AdvisedBeanType<?> advised ? advised.getInterceptedType() : definition.getBeanType();
     }
 
     /** The batch loader interface that a bean implements. */

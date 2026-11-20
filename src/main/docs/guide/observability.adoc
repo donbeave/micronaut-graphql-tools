@@ -1,8 +1,8 @@
-The `micronaut-graphql-tools-observability` module records metrics with Micrometer and traces with OpenTelemetry. This page describes what it records, how to select the fields that get a span, and what it costs. The module is available from 1.0.0-M4.
+The `micronaut-graphql-tools-observability` module records metrics with Micrometer and traces with OpenTelemetry, the way the Micronaut Micrometer and Micronaut Tracing modules do. This page describes what it records, the conventions it follows, how to select the fields that get a span, how to time and trace your own resolvers, and what it costs. The module is available from 1.0.0-M4.
 
 == The module
 
-Add the module, and the libraries you use:
+Add the module, and the Micronaut integrations you use:
 
 [source,groovy]
 ----
@@ -11,9 +11,14 @@ implementation("io.micronaut.micrometer:micronaut-micrometer-core")
 implementation("io.micronaut.tracing:micronaut-tracing-opentelemetry")
 ----
 
-Micrometer and OpenTelemetry are optional: the module has neither as a dependency, and each half works on its own. The metrics need a `MeterRegistry` bean, and the tracing needs an `OpenTelemetry` bean. With neither bean the module creates no instrumentation, and the library installs none. The tests use these two beans:
+The module has neither as a dependency, and each half works on its own. The metrics need a `MeterRegistry` bean, which Micronaut Micrometer provides. The tracing needs an `OpenTelemetry` bean, which Micronaut Tracing provides from the `otel.*` properties and exports to the `SpanProcessor` beans of the application. With neither bean the module creates no instrumentation, and the library installs none. The tests use a meter registry, and a span processor that exports to memory:
 
 snippet::example.observability.ObservabilityFixtures[project-base="test-suite", source="test", tags="beans", indent="0"]
+
+Both halves follow the conventions of the Micronaut module that provides their library:
+
+* Metrics are a Micronaut metrics binder named `graphql`. They obey `micronaut.metrics.enabled` and `micronaut.metrics.binders.graphql.enabled`, as the binders of Micronaut Micrometer do.
+* Traces use the OpenTelemetry `Instrumenter` API, as the HTTP, Kafka and gRPC integrations of Micronaut Tracing do. They obey `micronaut.otel.enabled`, and the keys under `micronaut.graphql.tools.tracing`.
 
 == Instrumentation beans
 
@@ -28,13 +33,13 @@ The request timer is `graphql.request`, from the start of the execution to its r
 [cols="2,5", options="header"]
 |===
 | Tag | Value
-| `operation` | The operation name, from the operation of the document or from the request. A request without a name is `anonymous`. A client chooses the name, so the module keeps at most `micronaut.graphql.tools.observability.metrics.max-operations` distinct names (default 100); every name beyond the cap is `other`. The cap is exact under concurrent requests.
+| `operation` | The operation name, from the operation of the document or from the request. A request without a name is `anonymous`. A client chooses the name, so the module keeps at most `micronaut.metrics.binders.graphql.max-operations` distinct names (default 100); every name beyond the cap is `other`. The cap is exact under concurrent requests.
 | `outcome` | `success`, or `error` when the execution failed or its result has an error.
 |===
 
 snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="metrics", indent="0"]
 
-A field has no timer of its own. The meter names, the tags and the span attributes are constants in `GraphQLObservability`.
+A field has no timer of its own: see <<resolverTimers>> for how to time one. The meter names and tags are constants in `GraphQLObservability`.
 
 A subscription is timed until its stream is set up, not until it completes.
 
@@ -44,46 +49,95 @@ A subscription is timed until its stream is set up, not until it completes.
 
 == Tracing
 
-Each request is one span, named `query <operation>`, `mutation <operation>` or `subscription <operation>` (just the type for an anonymous operation). It is a child of the span that is current when the execution begins, for example the span of the HTTP request, and has the attributes `graphql.operation.name` and `graphql.operation.type`. Its status is `ERROR` when the execution failed or its result has an error.
+Each request is one span, started with an OpenTelemetry `Instrumenter` in the instrumentation scope `io.micronaut.graphql.tools`, with the kind `INTERNAL`. It is a child of the span that is current when the execution begins: the span of the HTTP request when the application has the HTTP server integration of Micronaut Tracing (`micronaut-tracing-opentelemetry-http`).
+
+The span and its attributes follow the OpenTelemetry semantic conventions for GraphQL:
+
+[cols="2,5", options="header"]
+|===
+| Name | Value
+| Span name | The operation type: `query`, `mutation` or `subscription`. The name of the operation is part of the span name only when `micronaut.graphql.tools.tracing.add-operation-name-to-span-name` is `true`, which gives `query GetUser`: a client chooses the operation name, so the default keeps it out of the span name, whose values should be few. A request that never reaches an operation (it does not parse or validate) is named `GraphQL Operation`.
+| `graphql.operation.type` | `query`, `mutation` or `subscription`. Absent when the request never reaches an operation.
+| `graphql.operation.name` | The name of the operation. Absent for an anonymous operation.
+| Status | `ERROR` when the execution failed or its result has an error. Each GraphQL error of the result is recorded as an `exception` event with `exception.type` (the error classification) and `exception.message`.
+|===
+
+The module does not record the query text (`graphql.document`): it can hold values that must not reach a trace backend.
+
+=== The request span is current
+
+The request span is current on the thread that runs the operation and in the propagated context of the execution, the Micronaut `PropagatedContext` that the library restores after an async field. A span that your code starts while it resolves a field is a child of the request span, and so is an HTTP client call or a JDBC call. That holds for a resolver that runs after a `CompletionStage` completes, and for a batch loader that runs when the DataLoader dispatches. A method annotated with `@NewSpan` is the usual way to start one, see <<resolverSpans>>.
 
 === Fields
 
-No field has a span unless you select it. `micronaut.graphql.tools.observability.tracing.fields` is a list of `Type.field` and `Type.*` entries, naming fields of object types:
+No field has a span unless you select it. `micronaut.graphql.tools.tracing.fields` is a list of `Type.field` and `Type.*` entries, naming fields of object types:
 
 [source,yaml]
 ----
 micronaut:
   graphql:
     tools:
-      observability:
-        tracing:
-          fields:
-            - Query.searchProfile
-            - Mutation.*
+      tracing:
+        fields:
+          - Query.searchProfile
+          - Mutation.*
 ----
 
-The selection is applied once, at startup, as a `GraphQLSchemaCustomizer`: the data fetcher of a selected field is replaced by one that runs it inside a span named `Type.field`, a child of the request span, current while the fetcher runs and ended when the value is there (for a field that returns a future, when the future completes). Every other field keeps the fetcher the library bound, so an unselected field costs nothing. Two kinds of field never get a span, even when selected, because a span there would only measure noise or nothing:
+The selection is a `FieldFetcherDecorator`, which the library asks once for each field at startup, never per request. The decorator wraps the fetcher of a selected field in a span named `Type.field`, a child of the request span, current while the fetcher runs and ended when the value is there (for a field that returns a future, when the future completes). It records the attributes `graphql.field.name` and `graphql.field.path`, the names that the OpenTelemetry GraphQL instrumentation uses. A field that the selection excludes gets back the very fetcher it was offered: it has no span and no instrumenter call, and costs nothing. Two kinds of field never get a span, even when selected, because a span there would only measure noise or nothing:
 
-* A property read (a field the library serves from a property of its Java type): it is a trivial fetcher, and a span would cost more than the read.
+* A property read (a field the library serves from a property of its Java type): it is a trivial fetcher, and the library does not offer it to the decorator.
 * A field of the subscription type, whose value is a stream.
 
-An entry that names no type or no field fails the startup with a message that names the key.
+An entry that names no type or no field fails the startup with a message that names the key `micronaut.graphql.tools.tracing.fields`.
 
 snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="tracing", indent="0"]
 
+The span name of the request, and the choice to name the operation, are tested like this:
+
+snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="span-name", indent="0"]
+
+[[resolverSpans]]
+=== Spans for your own resolvers
+
+The module does not need a span for each resolver of its own: a resolver is a Micronaut bean, and Micronaut Tracing gives a bean method a span with an annotation. `@NewSpan` starts a span for a call, `@ContinueSpan` adds to the span that is current (the field span, when you selected the field, else the request span), and `@SpanTag` puts an argument on the span as an attribute. All three are in `io.micronaut.tracing.annotation`, and they need `micronaut-tracing-opentelemetry` on the runtime classpath. Because the request span is current, the span of an annotated resolver method is a child of it, and a span that it starts is a child of its own.
+
+snippet::example.observability.ObservedQuery[project-base="test-suite", source="test", tags="newspan", indent="0"]
+
+The span is named after the class and the method, `ObservedQuery.observedTraced#observed.work` for the first one above: the value of the annotation comes after the `#`.
+
+snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="new-span", indent="0"]
+
+The annotation needs no support from this library, and it works on a resolver of every language the library supports. A Kotlin class and its methods are `open` (the `allopen` plugin that the Micronaut Gradle plugin applies opens a `@Singleton`). A Groovy class needs the Micronaut AST transform, which `micronaut-inject-groovy` provides. A method that the application does not own, or that you want to trace without an annotation, is a candidate for `micronaut.graphql.tools.tracing.fields` instead.
+
+[[resolverTimers]]
+=== Timers for your own resolvers
+
+The library records no timer for a field. A timer for a resolver is `@Timed` (`io.micrometer.core.annotation.Timed`), which Micronaut Micrometer handles for any bean method. It needs the processor `micronaut-micrometer-annotation` in the annotation processor path (in the `ksp` configuration for Kotlin, and on the compile classpath for Groovy), and a `MeterRegistry` bean.
+
+snippet::example.observability.ObservedQuery[project-base="test-suite", source="test", tags="timed", indent="0"]
+
+snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="timed-resolver", indent="0"]
+
+=== Why the module has its own instrumentation
+
+OpenTelemetry publishes `opentelemetry-graphql-java` (`GraphQLTelemetry`), an alpha artifact, which also instruments graphql-java. The module does not use it. It overrides `instrumentDataFetcher`, so graphql-java wraps every field of every request in a lambda that keeps the context current, even when no field span is wanted, which gives up the per-field cost guarantee of <<cost>>. It has no way to select fields, and it is not a stable API.
+
+[[cost]]
 == Cost
 
 With the module on and no field selected, a request adds a constant cost (a timer, a span and a small state object), and no cost per field: the instrumentation implements no field hook, and no data fetcher is replaced. The allocation gate of the benchmarks (`observedInvocationSlope`) keeps this: the bytes per field of a request with the module on equal those of the same request with an `Instrumentation` bean that implements no hook, on every graphql-java leg. One thing is graphql-java's, not the module's: graphql-java 21 chains any `Instrumentation` with its own, and that chain allocates for each field (about 550 bytes) whatever the instrumentation does. graphql-java 22 and later do not. If a request of many fields matters more to you than the metrics, stay on graphql-java 22 or later.
+
+A selected field pays for its span: one `Instrumenter` call, a propagated-context scope and a few allocations for each call. The `benchmarks` module measures it next to the cost of a decorator that does nothing.
 
 == Configuration
 
 [cols="3,2,5", options="header"]
 |===
 | Key | Default | Meaning
-| `micronaut.graphql.tools.observability.enabled` | `true` | Turns the whole module off.
-| `micronaut.graphql.tools.observability.metrics.enabled` | `true` | Turns the metrics off.
-| `micronaut.graphql.tools.observability.metrics.max-operations` | `100` | The most distinct operation names the timer is tagged with.
-| `micronaut.graphql.tools.observability.tracing.enabled` | `true` | Turns the tracing off.
-| `micronaut.graphql.tools.observability.tracing.fields` | empty | The fields that get a span, as `Type.field` or `Type.*`.
+| `micronaut.metrics.binders.graphql.enabled` | `true` | Turns the GraphQL metrics off. `micronaut.metrics.enabled=false` turns them off too, with the rest of the Micronaut metrics.
+| `micronaut.metrics.binders.graphql.max-operations` | `100` | The most distinct operation names the timer is tagged with.
+| `micronaut.graphql.tools.tracing.enabled` | `true` | Turns the tracing off. `micronaut.otel.enabled=false` turns it off too, with the rest of Micronaut Tracing.
+| `micronaut.graphql.tools.tracing.fields` | empty | The fields that get a span, as `Type.field` or `Type.*`.
+| `micronaut.graphql.tools.tracing.add-operation-name-to-span-name` | `false` | Adds the operation name to the span name of a request: `query GetUser` instead of `query`.
 | `micronaut.graphql.tools.execution.data-loader-statistics` | `false` | Counts the batches of each batch loader bean, which the DataLoader meters read.
 |===

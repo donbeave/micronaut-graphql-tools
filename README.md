@@ -1264,16 +1264,19 @@ implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability
 ```
 
 - `graphql.request` is a timer of each request, tagged with `operation` (the operation name, capped at
-  `micronaut.graphql.tools.observability.metrics.max-operations`, default 100, the rest is `other`) and `outcome`
-  (`success` or `error`).
+  `micronaut.metrics.binders.graphql.max-operations`, default 100, the rest is `other`) and `outcome`
+  (`success` or `error`). `micronaut.metrics.binders.graphql.enabled` and `micronaut.metrics.enabled` switch the metrics off.
 - `graphql.dataloader.batches` and `graphql.dataloader.batch.keys` count the batches of each
   batch loader bean and the keys they loaded, tagged with `loader`, when `micronaut.graphql.tools.execution.data-loader-statistics` is `true`.
-- Each request is one span. `micronaut.graphql.tools.observability.tracing.fields` lists the fields that also get a span
-  (`Type.field` or `Type.*`); with the default empty list no field has a span, and a property read never has one.
-- `micronaut.graphql.tools.observability.enabled`, `.metrics.enabled` and `.tracing.enabled` switch the module, the metrics
-  and the tracing off.
+- Each request is one span, made with the OpenTelemetry `Instrumenter` API and named after the operation type (`query`,
+  `mutation`, `subscription`; `micronaut.graphql.tools.tracing.add-operation-name-to-span-name` adds the operation name). It has the
+  OpenTelemetry GraphQL attributes and is current in the propagated context, so a `@NewSpan` method that a resolver calls is
+  its child. `micronaut.graphql.tools.tracing.fields` lists the fields that also get a span (`Type.field` or `Type.*`); with
+  the default empty list no field has a span, and a property read never has one.
+- `micronaut.graphql.tools.tracing.enabled` and `micronaut.otel.enabled` switch the tracing off.
+- A timer or a span for one of your resolvers is `@Timed` or `@NewSpan` on the method.
 
-The guide page on observability has the details, the span layout and the cost.
+The guide page on observability has the details, the span layout, `@NewSpan` and `@Timed` on resolvers, and the cost.
 
 ## Error handling
 
