@@ -25,11 +25,12 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
   failures (the arguments, the input classes and enums they reach, the return type), then the strict checks, which the
   startup runs only after a binding that failed nowhere. It keeps its state per `start()`, looks up no class by name, asks for no project directory (it reads the class output only to compare it with `module.dir`) and
   writes no file (`VisitorArchitectureSpec`).
-- `ProcessorOptions`: the four options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
+- `ProcessorOptions`: the five options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
   separator), `micronaut.graphql.tools.processor.module.dir` (the directory of the module that sets `schema.dirs`, see
   "Resolvers in several modules"), `micronaut.graphql.tools.processor.checks` (`true` or `false`) and
   `micronaut.graphql.tools.processor.resolverAccessorPrefixes` (`true` or `false`, the runtime
-  `resolver-accessor-prefixes`; camel case because `javac` rejects a hyphen in an option name). An unknown key under
+  `resolver-accessor-prefixes`; camel case because `javac` rejects a hyphen in an option name) and
+  `micronaut.graphql.tools.processor.looseNullability` (`fail`, `warn` or `ignore`, what a Kotlin type that is stricter than the schema type is). An unknown key under
   `micronaut.graphql.tools.processor.` is an error; a runtime key that is present as a system property is not.
 - `CheckedSchema`: reads the schema once per compilation, on the first class that is checked.
 - `ElementTypeModel`: the adapter of the type model over `ClassElement` and `MethodElement`; the properties of an input class

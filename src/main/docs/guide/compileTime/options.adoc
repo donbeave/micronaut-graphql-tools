@@ -2,7 +2,7 @@
 
 [[compileTimeOptions]]
 
-The compile-time checks have four options. Every option name starts with `micronaut.graphql.tools.processor.`, and no other key under that prefix is accepted: an unknown option fails the build with `[processor-option-unknown]`, so that a typo cannot switch a check off. A value that does not parse fails with `[processor-option-invalid]`. A boolean is read as Micronaut reads booleans (`true`, `yes`, `on` and their opposites).
+The compile-time checks have five options. Every option name starts with `micronaut.graphql.tools.processor.`, and no other key under that prefix is accepted: an unknown option fails the build with `[processor-option-unknown]`, so that a typo cannot switch a check off. A value that does not parse fails with `[processor-option-invalid]`. A boolean is read as Micronaut reads booleans (`true`, `yes`, `on` and their opposites).
 
 [cols="3,1,1,6", options="header"]
 |===
@@ -11,6 +11,7 @@ The compile-time checks have four options. Every option name starts with `micron
 |`micronaut.graphql.tools.processor.checks` |`true` or `false` |`true` |`false` compiles without the checks and prints one note. The startup still checks everything. It is the escape hatch of the whole compilation.
 |`micronaut.graphql.tools.processor.module.dir` |a directory |none |The project directory of the module that sets `schema.dirs`. A module of a build with several modules sets it, so that a `schema.dirs` that an earlier module compiled in the same JVM left behind fails the build instead of being read. See <<compileTime,the multi-module rules>>.
 |`micronaut.graphql.tools.processor.resolverAccessorPrefixes` |`true` or `false` |`false` |The value of `micronaut.graphql.tools.resolver-accessor-prefixes` that the checks apply when they decide which method binds a field. Set it to the value of the application, or the checks and the startup read different names. The name is in camel case because `javac` rejects a hyphen in an option name.
+|`micronaut.graphql.tools.processor.looseNullability` |`fail`, `warn` or `ignore` |`ignore` |What the checks do with a Kotlin type that is stricter than the schema type (`kotlin-nullability-loose`): a non-null return type at a nullable field, or a nullable parameter or property at a non-null position. `warn` reports a compiler warning and `fail` a compile error. The opposite direction, `kotlin-nullability-mismatch`, is always an error. See <<compileTime,Kotlin nullability>>.
 |===
 
 The names are written with dots and camel case because `javac` accepts only dot-separated identifiers as option names.

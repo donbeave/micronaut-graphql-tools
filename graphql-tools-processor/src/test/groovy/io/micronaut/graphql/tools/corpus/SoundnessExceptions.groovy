@@ -42,6 +42,7 @@ final class SoundnessExceptions {
             'customizer-claimed-field'    : 'a RuntimeWiringCustomizer claims the field: the startup binds no method to it and judges none of its arguments',
             'runtime-exception-first'     : 'binding the field throws before the argument rule runs (a resolver bean that cannot be created): the startup reports that exception',
             'other-class-binding-failure' : 'a binding failure of another resolver class stops the startup before the strict checks of this class run',
+            'kotlin-nullability'          : 'the nullability of a Kotlin type is compile-time metadata that the startup does not read, so it reports nothing for the mismatch',
             'conflicting-class-mapping'   : 'two resolver classes bind one input type or enum to different Java classes: the startup reports the conflict before the strict checks',
     ].asImmutable()
 

@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.visitor;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
+import io.micronaut.graphql.tools.binding.internal.finding.Severity;
 
 import java.io.File;
 import java.nio.file.InvalidPathException;
@@ -31,7 +32,7 @@ import java.util.TreeSet;
 
 /**
  * The options of the visitor, read from the options of the compilation: {@code -A} under javac and kapt, {@code arg}
- * under KSP, system properties under the Groovy compiler. There are four, all under {@code micronaut.graphql.tools.processor.},
+ * under KSP, system properties under the Groovy compiler. There are five, all under {@code micronaut.graphql.tools.processor.},
  * a segment that no runtime key uses, so that the visitor rejects an unknown key there without failing on a runtime key that
  * happens to be a system property.
  *
@@ -41,10 +42,12 @@ import java.util.TreeSet;
  * @param checks     whether the checks run
  * @param accessorPrefixes whether a resolver method {@code getX} or {@code isX} also binds the field {@code x}, as
  *                   {@code micronaut.graphql.tools.resolver-accessor-prefixes} says at startup
+ * @param looseNullability what the checks do with a Kotlin type that is stricter than the schema type
+ *                   ({@code kotlin-nullability-loose}): {@code ignore} by default
  * @param errors     the options that are wrong; the checks do not run when there are any
  */
 record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean checks,
-                        boolean accessorPrefixes, List<Finding> errors) {
+                        boolean accessorPrefixes, Severity looseNullability, List<Finding> errors) {
 
     static final String PREFIX = "micronaut.graphql.tools.processor.";
 
@@ -56,17 +59,20 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
     static final String ACCESSOR_PREFIXES = PREFIX + "resolverAccessorPrefixes";
 
-    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES);
+    static final String LOOSE_NULLABILITY = PREFIX + "looseNullability";
+
+    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY);
 
     /** The key that an earlier version of the processor read; it is an error now and names {@link #SCHEMA_DIRS}. */
     static final String REMOVED_SDL_DIR = "micronaut.graphql.tools.sdlDir";
 
     /**
-     * The keys the visitor tells the compiler it knows: the four options and the retired key. A build that keeps the retired key
+     * The keys the visitor tells the compiler it knows: the five options and the retired key. A build that keeps the retired key
      * with {@code checks=false} must not get javac's "no processor claimed the option" warning, which {@code -Werror} turns into an error.
      * The retired key is not an option: {@link #NAMES} stays the options.
      */
-    static final Set<String> ADVERTISED = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, REMOVED_SDL_DIR);
+    static final Set<String> ADVERTISED = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY,
+            REMOVED_SDL_DIR);
 
     ProcessorOptions {
         schemaDirs = List.copyOf(schemaDirs);
@@ -84,6 +90,17 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
         boolean checks = flag(options, CHECKS, true, errors);
         boolean accessorPrefixes = flag(options, ACCESSOR_PREFIXES, false, errors);
+        Severity looseNullability = Severity.IGNORE;
+        String looseValue = options.get(LOOSE_NULLABILITY);
+        if (looseValue != null) {
+            Severity parsed = Severity.fromToken(looseValue);
+            if (parsed == null) {
+                errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, LOOSE_NULLABILITY + " must be fail, warn or ignore, not '"
+                        + looseValue + "'"));
+            } else {
+                looseNullability = parsed;
+            }
+        }
         // with the checks off nothing reads a schema directory, so a leftover retired key does no harm
         if (checks && options.containsKey(REMOVED_SDL_DIR)) {
             errors.add(error(BindingCode.PROCESSOR_OPTION_REMOVED, REMOVED_SDL_DIR + " was renamed to " + SCHEMA_DIRS
@@ -114,7 +131,7 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
                         + moduleValue.trim() + "' (" + e.getReason() + ")"));
             }
         }
-        return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes, errors);
+        return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes, looseNullability, errors);
     }
 
     private static boolean flag(Map<String, String> options, String name, boolean absent, List<Finding> errors) {

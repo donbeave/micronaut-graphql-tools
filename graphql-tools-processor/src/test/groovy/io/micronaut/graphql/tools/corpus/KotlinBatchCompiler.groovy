@@ -207,8 +207,9 @@ plugins {
 }
 """)
         // kapt: one JVM per compilation, so that the options of one case cannot stay in the system properties of the next (javac
-        // copies a micronaut option there and the first value stays)
-        Files.writeString(buildDir.resolve('gradle.properties'), 'kapt.workers.isolation=process\n')
+        // copies a micronaut option there and the first value stays); the daemon builds every project of the corpus in
+        // parallel and runs out of its default 512 MiB heap
+        Files.writeString(buildDir.resolve('gradle.properties'), 'kapt.workers.isolation=process\norg.gradle.jvmargs=-Xmx1g\n')
         Path registration = Files.createDirectories(buildDir.resolve('visitor-registration/META-INF/services'))
         Files.writeString(registration.resolve('io.micronaut.inject.visitor.TypeElementVisitor'), 'io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor\n')
         List<String> visitorPath = visitorPath().collect { it.replace('\\', '/') } + [buildDir.resolve('visitor-registration').toString().replace('\\', '/')]

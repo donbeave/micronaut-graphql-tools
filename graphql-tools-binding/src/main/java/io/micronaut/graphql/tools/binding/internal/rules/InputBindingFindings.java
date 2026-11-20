@@ -88,6 +88,7 @@ public final class InputBindingFindings {
     private final Map<String, Halt> inputHalts = new HashMap<>();
     private final Map<String, Finding> failures = new LinkedHashMap<>();
     private final Map<String, Finding> checks = new LinkedHashMap<>();
+    private final Map<String, Finding> nullability = new LinkedHashMap<>();
     private final InputClassCoverage coverage = new InputClassCoverage();
     private final Map<String, String> coverageMembers = new HashMap<>();
     private boolean halted;
@@ -114,6 +115,14 @@ public final class InputBindingFindings {
      */
     public List<Finding> failures() {
         return List.copyOf(failures.values());
+    }
+
+    /**
+     * @return the findings of the Kotlin nullability rule found so far, without repeats; the startup does not report
+     * them, so they are independent of the failures and the checks
+     */
+    public List<Finding> nullability() {
+        return List.copyOf(nullability.values());
     }
 
     /**
@@ -227,6 +236,7 @@ public final class InputBindingFindings {
                             + InputTypeRules.argumentValueReason(misuse, SchemaTypes.print(schemaType)),
                     null);
         }
+        nullability(site, declared, schemaType, fieldLevel);
         Type<?> unwrapped = unwrap(schemaType);
         if (unwrapped instanceof ListType list) {
             return list(site, declared, list);
@@ -485,6 +495,15 @@ public final class InputBindingFindings {
         return null;
     }
 
+    private void nullability(Site site, TypeRef declared, Type<?> schemaType, boolean fieldLevel) {
+        String what = !fieldLevel ? "list element" : site.coordinate.endsWith(":)") ? "argument" : "input field";
+        NullabilityRules.Mismatch mismatch = NullabilityRules.input(declared, schemaType, what);
+        if (mismatch != null) {
+            Finding finding = finding(site, mismatch.code(), mismatch.sentence(), mismatch.fix());
+            nullability.putIfAbsent(finding.code() + " " + finding.coordinate(), finding);
+        }
+    }
+
     private Halt notIntrospected(Site site, TypeDefinition<?> definition, JClass javaClass, String fix) {
         // the type, not the argument or field that reaches it: the startup reports the first use, which a class cannot know
         Site where = new Site(site.member, definition.getName(), definition.getSourceLocation());
@@ -493,12 +512,16 @@ public final class InputBindingFindings {
     }
 
     private Halt failed(Site site, BindingCode code, String sentence, @Nullable String fix) {
+        return new Halt(finding(site, code, sentence, fix), false);
+    }
+
+    private static Finding finding(Site site, BindingCode code, String sentence, @Nullable String fix) {
         SchemaLocation location = null;
         if (site.location != null && site.location.getLine() > 0) {
             location = new SchemaLocation(site.location.getSourceName() == null ? "schema" : site.location.getSourceName(),
                     site.location.getLine(), site.location.getColumn());
         }
-        return new Halt(new Finding(code.code(), site.coordinate, sentence, site.member, null, location, fix), false);
+        return new Finding(code.code(), site.coordinate, sentence, site.member, null, location, fix);
     }
 
     private boolean isAssignable(TypeRef type, String binaryName) {

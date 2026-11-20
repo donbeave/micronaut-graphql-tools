@@ -105,6 +105,7 @@ case under `exception/` that shows it:
 | `customizer-claimed-field` | binds no method to a field that a `RuntimeWiringCustomizer` claims (`unbound-resolver-method` with strict on, nothing with strict off) |
 | `runtime-exception-first` | binding the field throws before the argument rule (a singleton resolver that cannot be created): `unexpected-binding-error` |
 | `other-class-binding-failure` | stops at a binding failure of another class before the strict checks of this one |
+| `kotlin-nullability` | reports nothing: the nullability of a Kotlin type is compile-time metadata (`kotlin-nullability-mismatch`) |
 | `conflicting-class-mapping` | reports `mapping-conflict` when two classes bind one input type or enum to different Java classes, before the strict checks |
 
 The ceiling must equal the number of entries, so a new exception shows as a raised ceiling in the review. An entry is stale and
