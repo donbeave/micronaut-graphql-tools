@@ -1,0 +1,89 @@
+The `micronaut-graphql-tools-observability` module records metrics with Micrometer and traces with OpenTelemetry. This page describes what it records, how to select the fields that get a span, and what it costs. The module is available from 1.0.0-M4.
+
+== The module
+
+Add the module, and the libraries you use:
+
+[source,groovy]
+----
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability:1.0.0-M4")
+implementation("io.micronaut.micrometer:micronaut-micrometer-core")
+implementation("io.micronaut.tracing:micronaut-tracing-opentelemetry")
+----
+
+Micrometer and OpenTelemetry are optional: the module has neither as a dependency, and each half works on its own. The metrics need a `MeterRegistry` bean, and the tracing needs an `OpenTelemetry` bean. With neither bean the module creates no instrumentation, and the library installs none. The tests use these two beans:
+
+snippet::example.observability.ObservabilityFixtures[project-base="test-suite", source="test", tags="beans", indent="0"]
+
+== Instrumentation beans
+
+The library collects every `Instrumentation` bean and installs them before the `GraphQLBuilderCustomizer` beans run. One bean is installed as it is. Several are chained in a `ChainedInstrumentation`, lowest order first (`@Order` or `Ordered`), so the `beginExecution` of the lowest order runs first. With no `Instrumentation` bean the library sets no instrumentation, and graphql-java keeps its default. A customizer that calls `instrumentation(...)` on the builder replaces what the beans installed.
+
+The module adds one `Instrumentation` bean, whatever it records. It implements the request hooks only and nothing at field level, so an execution that it observes pays nothing for each field. The library itself uses no `Instrumentation`: an operation's fields run through the data fetchers that the binding created, and the module's spans wrap only the fields that you select.
+
+== Metrics
+
+The request timer is `graphql.request`, from the start of the execution to its result. Its tags:
+
+[cols="2,5", options="header"]
+|===
+| Tag | Value
+| `operation` | The operation name, from the operation of the document or from the request. A request without a name is `anonymous`. A client chooses the name, so the module keeps at most `micronaut.graphql.tools.observability.metrics.max-operations` distinct names (default 100); every name beyond the cap is `other`. The cap is exact under concurrent requests.
+| `outcome` | `success`, or `error` when the execution failed or its result has an error.
+|===
+
+snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="metrics", indent="0"]
+
+A field has no timer of its own. The meter names, the tags and the span attributes are constants in `GraphQLObservability`.
+
+A subscription is timed until its stream is set up, not until it completes.
+
+=== DataLoader metrics
+
+`graphql.dataloader.batches` counts the batches that the `DataLoader` of a batch loader bean dispatched, and `graphql.dataloader.batch.keys` the keys those batches loaded. Each is tagged with `loader`, the name of the batch loader bean. They are recorded when the request ends, from the counts that the library keeps for the execution (`DataLoaderBatchStatistics` in the GraphQL context). Counting adds two atomic increments to each batch, so the library counts nothing by default: set `micronaut.graphql.tools.execution.data-loader-statistics` to `true` to get these meters. Without it no DataLoader meter exists.
+
+== Tracing
+
+Each request is one span, named `query <operation>`, `mutation <operation>` or `subscription <operation>` (just the type for an anonymous operation). It is a child of the span that is current when the execution begins, for example the span of the HTTP request, and has the attributes `graphql.operation.name` and `graphql.operation.type`. Its status is `ERROR` when the execution failed or its result has an error.
+
+=== Fields
+
+No field has a span unless you select it. `micronaut.graphql.tools.observability.tracing.fields` is a list of `Type.field` and `Type.*` entries, naming fields of object types:
+
+[source,yaml]
+----
+micronaut:
+  graphql:
+    tools:
+      observability:
+        tracing:
+          fields:
+            - Query.searchProfile
+            - Mutation.*
+----
+
+The selection is applied once, at startup, as a `GraphQLSchemaCustomizer`: the data fetcher of a selected field is replaced by one that runs it inside a span named `Type.field`, a child of the request span, current while the fetcher runs and ended when the value is there (for a field that returns a future, when the future completes). Every other field keeps the fetcher the library bound, so an unselected field costs nothing. Two kinds of field never get a span, even when selected, because a span there would only measure noise or nothing:
+
+* A property read (a field the library serves from a property of its Java type): it is a trivial fetcher, and a span would cost more than the read.
+* A field of the subscription type, whose value is a stream.
+
+An entry that names no type or no field fails the startup with a message that names the key.
+
+snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="tracing", indent="0"]
+
+== Cost
+
+With the module on and no field selected, a request adds a constant cost (a timer, a span and a small state object), and no cost per field: the instrumentation implements no field hook, and no data fetcher is replaced. The allocation gate of the benchmarks (`observedInvocationSlope`) keeps this: the bytes per field of a request with the module on equal those of the same request with an `Instrumentation` bean that implements no hook, on every graphql-java leg. One thing is graphql-java's, not the module's: graphql-java 21 chains any `Instrumentation` with its own, and that chain allocates for each field (about 550 bytes) whatever the instrumentation does. graphql-java 22 and later do not. If a request of many fields matters more to you than the metrics, stay on graphql-java 22 or later.
+
+== Configuration
+
+[cols="3,2,5", options="header"]
+|===
+| Key | Default | Meaning
+| `micronaut.graphql.tools.observability.enabled` | `true` | Turns the whole module off.
+| `micronaut.graphql.tools.observability.metrics.enabled` | `true` | Turns the metrics off.
+| `micronaut.graphql.tools.observability.metrics.max-operations` | `100` | The most distinct operation names the timer is tagged with.
+| `micronaut.graphql.tools.observability.tracing.enabled` | `true` | Turns the tracing off.
+| `micronaut.graphql.tools.observability.tracing.fields` | empty | The fields that get a span, as `Type.field` or `Type.*`.
+| `micronaut.graphql.tools.execution.data-loader-statistics` | `false` | Counts the batches of each batch loader bean, which the DataLoader meters read.
+|===
