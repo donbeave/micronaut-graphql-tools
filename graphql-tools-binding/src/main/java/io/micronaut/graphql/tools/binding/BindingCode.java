@@ -132,6 +132,9 @@ public enum BindingCode {
     /** Failure: a type mapping is ambiguous. */
     AMBIGUOUS_TYPE_MAPPING("ambiguous-type-mapping", false, false,
             "The SchemaMappingDictionary maps object types so that one Java object matches several."),
+    /** Failure: several classes match one object type of a union or interface by name. */
+    AMBIGUOUS_TYPE_CLASS("ambiguous-type-class", false, true,
+            "Several classes match one object type of a union or interface by @GraphQLType(name) or the naming convention."),
     /** Failure: the members of an abstract type cannot be told apart. */
     AMBIGUOUS_ABSTRACT_TYPE("ambiguous-abstract-type", false, false,
             "Objects of one class cannot be resolved to one object type of a union or interface."),
@@ -175,6 +178,9 @@ public enum BindingCode {
     /** Failure: an allow.findings entry is malformed, or matches no finding. */
     INVALID_ALLOW_FINDINGS("invalid-allow-findings", false, false,
             "allow.findings has an entry that is not a manifest line of a check, or that matches no finding."),
+    /** Failure: the naming convention of the type classes has no single placeholder. */
+    INVALID_TYPE_CLASS_CONVENTION("invalid-type-class-convention", false, false,
+            "type-class-convention does not contain {Type} exactly once."),
     /** Failure: a checks entry names an unknown check or has an unknown severity. */
     INVALID_CHECK_SETTING("invalid-check-setting", false, false,
             "checks names a code that is not a check, or a severity that is not fail, warn or ignore."),
@@ -214,6 +220,9 @@ public enum BindingCode {
     /** Failure: a DataLoader parameter matches no batch loader bean, or several. */
     DATA_LOADER_NOT_FOUND("data-loader-not-found", false, false,
             "A DataLoader parameter of a resolver method matches no batch loader bean, or more than one."),
+    /** Failure: a Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath. */
+    SUSPEND_WITHOUT_COROUTINES("suspend-without-coroutines", false, false,
+            "A Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath."),
     /** Failure: binding a field threw an exception the library does not know. */
     UNEXPECTED_BINDING_ERROR("unexpected-binding-error", false, false,
             "Binding a field failed with an unexpected exception; the cause is attached."),

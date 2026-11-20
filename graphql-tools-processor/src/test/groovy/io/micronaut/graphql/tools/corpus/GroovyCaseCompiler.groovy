@@ -70,6 +70,10 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
         if (prefixes != null) {
             checked.put(JavaCaseCompiler.ACCESSOR_PREFIXES, prefixes)
         }
+        String convention = corpusCase.config[JavaCaseCompiler.TYPE_CLASS_CONVENTION_CONFIG]
+        if (convention != null) {
+            checked.put(JavaCaseCompiler.TYPE_CLASS_CONVENTION, convention)
+        }
         List<SourceUnit> units = corpusCase.units(Language.GROOVY)
         List<Path> dependencies = []
         List<String> errors = []

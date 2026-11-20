@@ -23,3 +23,24 @@ snippet::example.tck.ReturnTypesScenario[project-base="test-suite", source="test
 * A field of the subscription type is different: its `Publisher` is the stream of events and is not collected.
 
 The adapted future completes on the thread that signals the publisher. The adaptation itself neither captures nor restores a propagated context: that belongs to the execution model of the library, and a reactive library that propagates the context on its own (as `micronaut-reactor` does) keeps doing so.
+
+[[typeDictionary]]
+== The classes of union members and interface implementations
+
+A field that returns an object type tells the library its class through the return type. The members of a union and the object types that implement an interface are not named by any return type, so each needs a class. Three sources give it, and the first one that has an answer wins:
+
+. *The dictionary.* `SchemaMappingDictionary.registerType("Book", BookModel.class)`, from a `SchemaMappingDictionaryCustomizer` bean, always wins. It is the escape hatch for a class that no rule below finds.
+. *`@GraphQLType(name = "Book")`* on the class. The class stands for the object type of that name. The annotation is read from the bean introspection, so the build-time processor and the startup see the same declaration.
+. *The naming convention* `micronaut.graphql.tools.type-class-convention`, a pattern that holds `{Type}` once. With `{Type}Graph`, the object type `Book` is the introspected class whose simple name is `BookGraph`. A class that declares a name with `@GraphQLType(name)` is matched by that name only. There is no convention by default.
+
+snippet::example.tck.TypeClassDerivationScenario[project-base="test-suite", source="test", tags="type-classes", indent="0"]
+
+With `type-class-convention: "{Type}Graph"`, `DerivedBook` and `DerivedPoster` match `DerivedBookGraph` and `DerivedPosterGraph`, `DerivedMagazine` is declared by its annotation, and the dictionary maps `DerivedPoster` to `PosterPrint`, which wins over `DerivedPosterGraph`. The union needs no other entry.
+
+Two classes that match one object type, by the annotation, by the convention or one by each, fail the startup with `[ambiguous-type-class]` naming the type and both classes. A dictionary entry for that type ends the ambiguity, because an explicit entry always wins. A convention without `{Type}`, or with it twice, fails the startup with `[invalid-type-class-convention]`.
+
+The derivation reads the compile-time introspection metadata only, so it works in a native image and adds no reflection. It runs once for each type at startup. A request resolves the object type of a value through a cache with one entry for each runtime class, and does no lookup of a name.
+
+=== Compile-time check
+
+The processor reports `[ambiguous-type-class]` at compile time with the same rule and the same message as the startup. It sees the classes of the module that carry `@GraphQLType` or `@Introspected` (a class that only `@GraphQLModels` or a dependency introspects is not seen), the schema files of `schema.dirs`, and the processor option `micronaut.graphql.tools.processor.typeClassConvention`, which holds the value of the runtime key. The dictionary is runtime code, which a visitor cannot see, so a build reports two matching classes even when a dictionary entry ends the ambiguity at startup. Remove the annotation or rename one class, or compile with `micronaut.graphql.tools.processor.checks=false` and let the startup decide. A class of another module is a candidate at startup only.

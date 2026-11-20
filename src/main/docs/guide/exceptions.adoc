@@ -73,6 +73,7 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`union-type-mapping-not-provided` |failure |no |A member type of a union has no registered class.
 |`mapping-conflict` |failure |no |Two mappings of one schema type conflict.
 |`ambiguous-type-mapping` |failure |no |The SchemaMappingDictionary maps object types so that one Java object matches several.
+|`ambiguous-type-class` |failure |yes |Several classes match one object type of a union or interface by @GraphQLType(name) or the naming convention.
 |`ambiguous-abstract-type` |failure |no |Objects of one class cannot be resolved to one object type of a union or interface.
 |`ambiguous-type-resolver` |failure |no |A bean inherits the type resolver annotation for several classes.
 |`type-resolver-contracts-not-found` |failure |no |A bean is a type resolver only through an inherited annotation or the marker TypeResolver<T>, carries the annotation and has a supertype, or implements QueryResolver, MutationResolver or SubscriptionResolver, and the build did not record what the markers mean (the processor is not on the path of the compiler).
@@ -86,6 +87,7 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`invalid-inert-directives` |failure |no |allow.inert-directives lists a directive that is built in, undeclared or wired.
 |`invalid-schema-customizer-directives` |failure |no |allow.schema-customizer-directives lists a built-in or undeclared directive, or one it never applies to the schema definition or a directive argument.
 |`invalid-allow-findings` |failure |no |allow.findings has an entry that is not a manifest line of a check, or that matches no finding.
+|`invalid-type-class-convention` |failure |no |type-class-convention does not contain {Type} exactly once.
 |`invalid-check-setting` |failure |no |checks names a code that is not a check, or a severity that is not fail, warn or ignore.
 |`removed-configuration-key` |failure |no |A configuration key was removed; the message names its replacement.
 |`duplicate-directive-wiring` |failure |no |More than one SchemaDirective binds a wiring to the same directive.
@@ -99,6 +101,7 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`data-loader-registry-bean` |failure |no |A DataLoaderRegistry bean exists, and the library's invocation does not use it.
 |`duplicate-data-loader` |failure |no |Two batch loader beans have the same name.
 |`data-loader-not-found` |failure |no |A DataLoader parameter of a resolver method matches no batch loader bean, or more than one.
+|`suspend-without-coroutines` |failure |no |A Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath.
 |`unexpected-binding-error` |failure |no |Binding a field failed with an unexpected exception; the cause is attached.
 |`binding-failures` |failure |no |Several fields or types cannot be bound; each failure carries its own code.
 |`strict-findings` |failure |no |The strict checks found problems; each finding carries its own check code.

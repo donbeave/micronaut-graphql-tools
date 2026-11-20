@@ -29,9 +29,9 @@ import io.micronaut.core.annotation.Nullable;
  * @param failure           the sentence for the first violation, or {@code null} when the wrappers are valid
  * @param reactive          how a {@code Publisher} on a field outside the subscription type is adapted to a
  *                          {@code CompletionStage}: {@link Reactive#NONE} for every other return type
- * @param async             whether the method returns its value later, as a {@code CompletionStage} or as a publisher
- *                          that is adapted to one, on a field outside the subscription type: the field is then
- *                          executed through the async boundary
+ * @param async             whether the method returns its value later, as a {@code CompletionStage}, as a publisher
+ *                          that is adapted to one, or as a Kotlin {@code suspend} function, on a field outside the
+ *                          subscription type: the field is then executed through the async boundary
  * @param element           for a list field, the verdict for the element type, which the runtime checks one level
  *                          down with {@code fieldLevel} false; {@code null} otherwise
  */

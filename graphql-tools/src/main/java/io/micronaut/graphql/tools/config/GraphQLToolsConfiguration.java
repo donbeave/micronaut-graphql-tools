@@ -37,6 +37,7 @@ public class GraphQLToolsConfiguration {
     private List<String> resolverDirectives = Collections.emptyList();
     private boolean strict = true;
     private boolean resolverAccessorPrefixes;
+    private String typeClassConvention;
     private Map<String, String> checks = Collections.emptyMap();
     private AllowConfiguration allow = new AllowConfiguration();
     private boolean eagerInit = true;
@@ -123,6 +124,28 @@ public class GraphQLToolsConfiguration {
      */
     public void setResolverAccessorPrefixes(boolean resolverAccessorPrefixes) {
         this.resolverAccessorPrefixes = resolverAccessorPrefixes;
+    }
+
+    /**
+     * @return the naming convention that derives the class of an object type, or {@code null} for none
+     */
+    @Nullable
+    public String getTypeClassConvention() {
+        return typeClassConvention;
+    }
+
+    /**
+     * Sets the naming convention that derives the class of an object type that a union or an interface needs and the
+     * {@code SchemaMappingDictionary} does not name: the simple name of the class is the convention with {@code {Type}}
+     * replaced by the name of the object type, for example {@code {Type}Graph} for {@code BookGraph}. The class must be
+     * introspected, and a class that declares a name with {@code @GraphQLType(name)} is matched by that name only. It
+     * is decided once at startup. The compile-time checks read the processor option {@code typeClassConvention}.
+     * Default: none.
+     *
+     * @param typeClassConvention a pattern with {@code {Type}} exactly once, or {@code null}
+     */
+    public void setTypeClassConvention(@Nullable String typeClassConvention) {
+        this.typeClassConvention = typeClassConvention;
     }
 
     /**

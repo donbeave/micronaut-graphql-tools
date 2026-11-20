@@ -21,6 +21,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
+import io.micronaut.graphql.tools.binding.internal.rules.TypeClassDerivation;
 import io.micronaut.graphql.tools.internal.exceptions.mapping.ClassNotIntrospectedException;
 import io.micronaut.graphql.tools.internal.exceptions.implementation.ImplementationNotFoundException;
 import io.micronaut.graphql.tools.internal.exceptions.implementation.IncorrectImplementationException;
@@ -44,6 +45,12 @@ public final class GraphQLBeanIntrospectionRegistry {
 
     private final Map<Class<?>, Class<?>> implementationToInterface = new HashMap<>();
 
+    private final Map<Class<?>, String> declaredNames = new HashMap<>();
+
+    private List<TypeClassDerivation.Candidate> typeClassCandidates;
+
+    private final Map<String, Class<?>> candidateClasses = new HashMap<>();
+
     private boolean typeIntrospectionsLoaded = false;
 
   public   GraphQLBeanIntrospectionRegistry() {
@@ -61,6 +68,8 @@ public final class GraphQLBeanIntrospectionRegistry {
             typeIntrospections.put(introspection.getBeanType(), introspection);
 
             AnnotationValue<GraphQLType> annotationValue = introspection.getAnnotation(GraphQLType.class);
+            annotationValue.stringValue("name").filter(it -> !it.isEmpty())
+                    .ifPresent(it -> declaredNames.put(introspection.getBeanType(), it));
             Class<?> modelInterface = annotationValue.get(AnnotationMetadata.VALUE_MEMBER, Class.class).get();
 
             if (modelInterface.isInterface()) {
@@ -148,6 +157,32 @@ public final class GraphQLBeanIntrospectionRegistry {
         return BeanIntrospector.SHARED.findIntrospectedTypes(reference -> true).stream()
                 .filter(it -> !it.isInterface() && !Modifier.isAbstract(it.getModifiers()))
                 .toList();
+    }
+
+    /**
+     * @return the classes that can stand for an object type by derivation: the introspected classes that are not
+     * abstract, with the name that {@code @GraphQLType(name)} declares. Read once, from the introspection metadata
+     */
+    public synchronized List<TypeClassDerivation.Candidate> getTypeClassCandidates() {
+        if (typeClassCandidates == null) {
+            loadTypeIntrospections();
+            List<Class<?>> classes = getIntrospectedClasses();
+            classes.forEach(it -> candidateClasses.put(it.getName(), it));
+            typeClassCandidates = classes.stream()
+                    .map(it -> new TypeClassDerivation.Candidate(it.getName(), it.getSimpleName(),
+                            declaredNames.getOrDefault(it, "")))
+                    .toList();
+        }
+        return typeClassCandidates;
+    }
+
+    /**
+     * @param className the binary name of a class that {@link #getTypeClassCandidates()} returned
+     * @return the class
+     */
+    public synchronized Class<?> getCandidateClass(String className) {
+        getTypeClassCandidates();
+        return candidateClasses.get(className);
     }
 
     public Class getInterfaceClass(Class implementationClass) {
