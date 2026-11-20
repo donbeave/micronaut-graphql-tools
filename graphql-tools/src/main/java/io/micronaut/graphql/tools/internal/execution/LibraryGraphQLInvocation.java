@@ -36,6 +36,7 @@ import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.propagation.PropagatedContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.ExecutionConfiguration;
 import io.micronaut.graphql.tools.internal.LibraryBeanSelection;
 import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
@@ -101,10 +102,14 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     @Nullable
     private final ExecutorService executor;
     private final String executorName;
+    @Nullable
+    private final GraphQLErrorsCustomizer[] errorsCustomizers;
 
     LibraryGraphQLInvocation(GraphQL graphQL, GraphQLExecutionInputCustomizer customizer, GraphQLToolsConfiguration configuration,
                              ExecutorSelector executorSelector, BeanContext beanContext, DataLoaderTable loaders,
-                             List<GraphQLContextContributor> contributors) {
+                             List<GraphQLContextContributor> contributors,
+                             List<GraphQLErrorsCustomizer> errorsCustomizers) {
+        this.errorsCustomizers = errorsCustomizers.isEmpty() ? null : errorsCustomizers.toArray(new GraphQLErrorsCustomizer[0]);
         this.graphQL = graphQL;
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
         this.customizerName = this.customizer == null ? null : this.customizer.getClass().getName();
@@ -159,6 +164,9 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             }
         }
         Mono<ExecutionResult> result = Mono.fromFuture(execution.result);
+        if (errorsCustomizers != null) {
+            result = result.map(this::customizeErrors);
+        }
         // HTTP pays nothing: its disconnect and timeout handling is a separate change, and a cancel hook allocates for each request
         return transport == GraphQLTransport.HTTP ? result : result.doOnCancel(execution.state::cancel);
     }
@@ -169,6 +177,27 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     @Nullable
     public Executor executor() {
         return executor;
+    }
+
+    private ExecutionResult customizeErrors(ExecutionResult executionResult) {
+        List<GraphQLError> errors = executionResult.getErrors();
+        if (errors == null || errors.isEmpty()) {
+            return executionResult;
+        }
+        List<GraphQLError> current = errors;
+        for (GraphQLErrorsCustomizer customizer : errorsCustomizers) {
+            try {
+                List<GraphQLError> customized = customizer.customize(current);
+                if (customized == null) {
+                    throw new IllegalStateException("returned null instead of a list of errors");
+                }
+                current = customized;
+            } catch (RuntimeException e) {
+                LOG.error("The GraphQLErrorsCustomizer {} failed; the errors are sent as the previous customizer left them",
+                        customizer.getClass().getName(), e);
+            }
+        }
+        return current == errors ? executionResult : ExecutionResultImpl.newExecutionResult().from(executionResult).errors(current).build();
     }
 
     private static ExecutorService resolveExecutor(String name, ExecutorSelector selector, BeanContext beanContext) {

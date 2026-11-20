@@ -43,6 +43,7 @@ public class GraphQLToolsConfiguration {
     private SchemaConfiguration schema = new SchemaConfiguration();
     private ManifestConfiguration manifest = new ManifestConfiguration();
     private ExecutionConfiguration execution = new ExecutionConfiguration();
+    private ErrorsConfiguration errors = new ErrorsConfiguration();
 
     /**
      * @return how a field is bound when both a member of its Java type (a property or a {@code @GraphQLField} method)
@@ -228,6 +229,72 @@ public class GraphQLToolsConfiguration {
     public void setExecution(@NonNull ExecutionConfiguration execution) {
         ArgumentUtils.requireNonNull("execution", execution);
         this.execution = execution;
+    }
+
+    /**
+     * @return the options of error handling, under {@value #PREFIX}.errors
+     */
+    @NonNull
+    public ErrorsConfiguration getErrors() {
+        return errors;
+    }
+
+    /**
+     * @param errors the options of error handling
+     */
+    public void setErrors(@NonNull ErrorsConfiguration errors) {
+        ArgumentUtils.requireNonNull("errors", errors);
+        this.errors = errors;
+    }
+
+    /**
+     * Options of the handling of the exceptions that resolvers throw, under
+     * {@value GraphQLToolsConfiguration#PREFIX}{@code .errors}.
+     */
+    @ConfigurationProperties("errors")
+    public static class ErrorsConfiguration {
+
+        private boolean details;
+        private boolean stackTraces;
+
+        /**
+         * @return whether the message of an exception without a mapper is sent to the client
+         */
+        public boolean isDetails() {
+            return details;
+        }
+
+        /**
+         * Sets whether the client sees the message and the class of an exception that has no
+         * {@link io.micronaut.graphql.tools.error.GraphQLExceptionMapper} and is not a {@code GraphQLError}: the error
+         * then has the message of the exception and the extension {@code exceptionClass}. Off, the client gets the generic
+         * error {@code Internal server error} (code {@code INTERNAL_ERROR}) and the details stay in the log. Turn it
+         * on in development and test environments only, for example in {@code application-dev.yml}. Default: {@code false}.
+         *
+         * @param details whether to send the details
+         */
+        public void setDetails(boolean details) {
+            this.details = details;
+        }
+
+        /**
+         * @return whether the log entry of an exception without a mapper has the stack trace
+         */
+        public boolean isStackTraces() {
+            return stackTraces;
+        }
+
+        /**
+         * Sets whether the one log entry of an exception without a mapper (logged at ERROR by
+         * {@code io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler}) has the stack trace.
+         * Off, it has the path of the field and the exception as one line. Default: {@code false}.
+         *
+         * @param stackTraces whether to log the stack trace
+         */
+        public void setStackTraces(boolean stackTraces) {
+            this.stackTraces = stackTraces;
+        }
+
     }
 
     /**

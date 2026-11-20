@@ -1,0 +1,24 @@
+{
+  "data": {
+    "stockSoldOut": null
+  },
+  "errors": [
+    {
+      "message": "sold out",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "stockSoldOut"
+      ],
+      "extensions": {
+        "code": "SOLD_OUT",
+        "service": "catalog",
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

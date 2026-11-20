@@ -25,6 +25,7 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
 /**
@@ -54,9 +55,18 @@ public final class StreamDataFetcher implements DataFetcher<Object> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Object get(DataFetchingEnvironment environment) throws Exception {
         Object result = delegate.get(environment);
+        ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
+        if (result instanceof CompletionStage<?> stage) {
+            // CompletionStage<Publisher<T>>: graphql-java unwraps the stage later, so the publisher is wrapped when it arrives
+            return stage.thenApply(value -> wrap(value, state));
+        }
+        return wrap(result, state);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object wrap(Object result, ExecutionState state) {
         Publisher<Object> publisher;
         if (result instanceof Publisher<?> direct) {
             publisher = (Publisher<Object>) direct;
@@ -65,7 +75,6 @@ public final class StreamDataFetcher implements DataFetcher<Object> {
         } else {
             return result;
         }
-        ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
         if (state == null) {
             return publisher;
         }

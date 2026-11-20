@@ -1,0 +1,25 @@
+{
+  "data": {
+    "stock": "in stock",
+    "stockBoom": null
+  },
+  "errors": [
+    {
+      "message": "secret detail",
+      "locations": [
+        {
+          "line": 3,
+          "column": 3
+        }
+      ],
+      "path": [
+        "stockBoom"
+      ],
+      "extensions": {
+        "code": "INTERNAL_ERROR",
+        "exceptionClass": "java.lang.IllegalStateException",
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

@@ -25,9 +25,11 @@ import io.micronaut.configuration.graphql.ws.GraphQLWsHandler;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.StringUtils;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor;
@@ -36,6 +38,7 @@ import io.micronaut.graphql.tools.websocket.GraphQLConnectionResult;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.json.JsonMapper;
 import io.micronaut.scheduling.TaskScheduler;
+import io.micronaut.scheduling.executor.ExecutorSelector;
 import io.micronaut.websocket.CloseReason;
 import io.micronaut.websocket.WebSocketSession;
 import io.micronaut.websocket.annotation.OnClose;
@@ -93,6 +96,8 @@ public class LibraryGraphQLWsHandler {
     private final TaskScheduler scheduler;
     private final JsonMapper json;
     private final List<GraphQLConnectionInterceptor> interceptors;
+    @Nullable
+    private final Executor interceptorExecutor;
 
     /**
      * @param invocation   the invocation of the application: the library's own, unless the application replaced it
@@ -100,14 +105,20 @@ public class LibraryGraphQLWsHandler {
      * @param scheduler    schedules the connection initialisation timeout
      * @param json         reads and writes the messages
      * @param interceptors the connection interceptors, in order
+     * @param toolsConfiguration the library's configuration, which names the execution executor
+     * @param executorSelector   finds that executor when the application replaced the invocation
      */
     public LibraryGraphQLWsHandler(GraphQLInvocation invocation, GraphQLWsConfiguration configuration, TaskScheduler scheduler,
-                                   JsonMapper json, List<GraphQLConnectionInterceptor> interceptors) {
+                                   JsonMapper json, List<GraphQLConnectionInterceptor> interceptors,
+                                   GraphQLToolsConfiguration toolsConfiguration, ExecutorSelector executorSelector) {
         this.invocation = invocation;
         this.configuration = configuration;
         this.scheduler = scheduler;
         this.json = json;
         this.interceptors = interceptors;
+        // the interceptors may block, so they run on the execution executor whichever invocation the application uses
+        this.interceptorExecutor = invocation instanceof LibraryGraphQLInvocation library ? library.executor()
+                : executorSelector.select(toolsConfiguration.getExecution().getExecutor()).orElse(null);
     }
 
     /**
@@ -189,7 +200,7 @@ public class LibraryGraphQLWsHandler {
         }
         GraphQLConnectionRequest request = new GraphQLConnectionRequest(payload, state.upgradeRequest());
         Runnable intercept = () -> acknowledge(session, state, intercept(request));
-        Executor executor = invocation instanceof LibraryGraphQLInvocation library ? library.executor() : null;
+        Executor executor = interceptorExecutor;
         if (executor == null) {
             intercept.run();
             return;

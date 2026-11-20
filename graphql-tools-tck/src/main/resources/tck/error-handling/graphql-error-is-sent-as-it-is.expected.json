@@ -1,0 +1,24 @@
+{
+  "data": {
+    "stockRejected": null
+  },
+  "errors": [
+    {
+      "message": "Not allowed",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "stockRejected"
+      ],
+      "extensions": {
+        "reason": "policy",
+        "service": "catalog",
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

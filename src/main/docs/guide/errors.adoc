@@ -1,4 +1,145 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+A resolver that throws does not fail the response. The field becomes `null`, one error is added to `errors` with the path and the location of the field, and the other fields run as usual; a `null` in a non-null field goes to the nearest nullable parent, as the GraphQL specification says. This page tells you what the client sees for each kind of failure, how to choose it, and how to move from the `@ExceptionHandler` of other libraries.
+
+== What the client sees by default
+
+The library installs its own `DataFetcherExceptionHandler` when it builds the `GraphQL` bean. It treats the exception that a resolver threw as follows. A `CompletionException` or `ExecutionException` around it is removed first, so a failure of a `CompletionStage` or a `Mono` is handled as the exception you threw.
+
+. A mapper bean for the exception type returns the error: see <<exceptionMappers,Exception mappers>>.
+. An exception that is a `graphql.GraphQLError` (for example `GraphqlErrorException`) is the error as it is: your message, your extensions. The path and the location of the field are added when it has none.
+. Any other exception gets the generic error, and its message never reaches the client:
+
+[source,json]
+----
+{
+  "data": { "stock": "in stock", "stockBoom": null },
+  "errors": [{
+    "message": "Internal server error",
+    "locations": [{ "line": 3, "column": 3 }],
+    "path": ["stockBoom"],
+    "extensions": { "code": "INTERNAL_ERROR", "classification": "DataFetchingException" }
+  }]
+}
+----
+
+The message of the exception, and the class name, stay in the server log (see <<errorLogging,Logging>>). graphql-java's own handler sends `Exception while fetching data (/stockBoom) : secret detail` to the client, which leaks internals; see <<errorsMigration,Migrating from `@ExceptionHandler`>> for what changes.
+
+The same rules apply to every transport, and the exception handler runs only when a field fails: a successful response runs none of this code.
+
+[[exceptionMappers]]
+== Exception mappers
+
+An exception mapper is a bean that implements `GraphQLExceptionMapper<E>`. It is registered for `E` and its subclasses, and it chooses the message and the extensions of the error. The context gives the error the path and the location of the field.
+
+snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="test", tags="mapper", indent="0"]
+
+With this mapper a resolver that throws `OutOfStockException` produces:
+
+[source,json]
+----
+{
+  "data": { "stock": "in stock", "stockMissing": null },
+  "errors": [{
+    "message": "no stock for item 7",
+    "locations": [{ "line": 3, "column": 3 }],
+    "path": ["stockMissing"],
+    "extensions": { "code": "OUT_OF_STOCK", "id": 7, "classification": "DataFetchingException" }
+  }]
+}
+----
+
+* The mappers that match the exception are tried by order, lowest first: `@Order` on the class, or `io.micronaut.core.order.Ordered`. The first one that returns an error wins; a mapper that returns `null` declines and the next one is tried. Give mappers whose types overlap different orders (a mapper for a subclass gets a lower order than the one for its superclass): with the same order their sequence is not defined.
+* A mapper may return several errors with `mapAll`, for an exception that carries several failures. `map` is then the first of them.
+* A mapper that throws is logged at ERROR and skipped; the exception is then handled by the next mapper, or by the rules above.
+* The mappers are beans, found at compile time with the rest of the bean definitions, and the type of the exception is read from the declared type argument, so a mapper works in a native image without reflection configuration.
+* The mappers of an exception class are looked up once and cached for that class. A response without a failing field never looks at the mappers.
+* A mapper matches a failure of a `CompletionStage` field, a `Mono` and a `Flux`: the library removes the `CompletionException` and `ExecutionException` that the stage wraps around the failure before the handler sees it, on every graphql-java version it supports.
+* An application that provides its own `GraphQL` bean, or replaces the handler in a `GraphQLBuilderCustomizer`, takes over the handling: the mappers are used by the library's handler only.
+
+[[errorDetails]]
+== Details outside production
+
+`micronaut.graphql.tools.errors.details` (default `false`) lets the generic error carry the message of the exception and its class, for development and test environments:
+
+[source,yaml]
+----
+# application-dev.yml
+micronaut:
+  graphql:
+    tools:
+      errors:
+        details: true
+----
+
+[source,json]
+----
+{ "message": "secret detail", "extensions": { "code": "INTERNAL_ERROR", "exceptionClass": "java.lang.IllegalStateException" } }
+----
+
+It applies to the exceptions that have no mapper and are no `GraphQLError`. A mapped exception and a `GraphQLError` always show what you chose to show. Keep the setting off in production: Micronaut reads `application-<environment>.yml` for the active environments (`dev`, `test`, or your own), so the file of the environment is the place for it.
+
+[[errorLogging]]
+== Logging
+
+Each exception that is not mapped is logged once, at ERROR, by `io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler`: the path of the field and the exception on one line, with no stack trace. `micronaut.graphql.tools.errors.stack-traces: true` adds the stack trace. A mapped exception and a `GraphQLError` are expected outcomes and are logged at DEBUG only. A mapper or a customizer that throws is logged at ERROR.
+
+[[errorsCustomizer]]
+== The final list of errors
+
+A `GraphQLErrorsCustomizer` bean changes the list of errors of a response after the handler ran, whatever raised them: a resolver, a validation or syntax error, a rejected operation. Use it for what concerns every error, such as a correlation id, a translated message or dropping an error.
+
+snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="test", tags="customizer", indent="0"]
+
+The customizers run by order, lowest first, and each gets the list that the previous one returned. They run once for each response that has an error, and never for a successful response. A customizer that throws is logged at ERROR and skipped. Errors are immutable: build a new one, copying the message, the path and the locations as above.
+
+[[constraintViolations]]
+== Bean validation
+
+A `jakarta.validation.ConstraintViolationException` (Micronaut Validation on a resolver method or an input class) becomes one error for each violation when Jakarta Validation is on the classpath. The message is the message of the constraint, and the extensions say where it applies:
+
+[source,json]
+----
+{
+  "message": "must not be blank",
+  "path": ["addBook"],
+  "extensions": { "code": "CONSTRAINT_VIOLATION", "argument": "book", "inputPath": ["title"] }
+}
+----
+
+`argument` is the name of the method parameter and `inputPath` the properties inside it; `inputPath` is empty when the parameter itself violates the constraint. The mapper has the lowest precedence: your own mapper for `ConstraintViolationException` wins.
+
+[[executionErrors]]
+== Errors of the execution
+
+These errors are about the operation, not about a field. Match on `extensions.code`.
+
+[cols="1,3", options="header"]
+|===
+|Code |When
+|`EXECUTION_REJECTED` |The executor that runs operations rejected the operation, for example a bounded pool that is full. The response has the status 200, `data` of `null`, and this one error. The library logs a warning. See <<execution,Execution>>.
+|`EXECUTION_CANCELLED` |The operation was cancelled before it started, because the client had gone away or the operation timed out. The code is reserved for the cancellation of an execution (#429) and is documented here so that clients can already handle it.
+|`INTERNAL_ERROR` |The generic error of an exception that no mapper handled, or of a failure of a context contributor.
+|===
+
+A context contributor (a `GraphQLContextContributor` bean) can reject an operation: if it throws a `GraphQLError` (for example `GraphqlErrorException`), that error is the only error of the response, `data` is `null` and no resolver runs. Any other exception from a contributor is logged at ERROR, and the response has the one generic `INTERNAL_ERROR` error, without the message. The customizers of the final list see these errors too.
+
+[[errorsMigration]]
+== Migrating from `@ExceptionHandler`
+
+graphql-java-kickstart maps an exception to an error with an `@ExceptionHandler` method of a bean (and its `GraphQLErrorHandler`). The equivalent is one `GraphQLExceptionMapper` bean for each exception type.
+
+* The method of the handler that returns the error for one exception type becomes `map` of a mapper for that type. The message and the extensions you set there are what the client sees.
+* An exception that an `@ExceptionHandler` matched by its superclass is matched the same way, by the type argument. Where the handlers of the old setup relied on the order of the methods, give the mappers an `@Order`.
+* The old default sent the message of every unhandled exception to the client. The default now hides it (BC-37). To keep a message, throw a `GraphQLError` exception (a `GraphqlErrorException`) or add a mapper for the type. During the migration, turn on `micronaut.graphql.tools.errors.details` in the development environment to see the messages again.
+* A `GraphQLErrorHandler` that decorated every error (a code, a trace id) becomes a `GraphQLErrorsCustomizer`.
+* A handler that was a `DataFetcherExceptionHandler` that you registered yourself still works: set it in a `GraphQLBuilderCustomizer`, which runs after the library's handler is installed and replaces it. The mappers and the details setting then no longer apply.
+
+== Performance
+
+Nothing on the success path changes: the handler, the mappers and the customizers run when a field fails or a response has an error. The mappers that apply to an exception class are computed once for that class, so a failing field costs one cache read, the call of the mappers and the error. The customizers are skipped without a call when no bean exists.
+
+== Breaking change
+
+The message of an unhandled exception is no longer sent to the client (BC-37). Before, the response had `Exception while fetching data (/path) : <message>` and a stack trace was logged at WARN for each error. See the migration page, entries for 1.0.0-M4.
 
 == Input conversion errors
 

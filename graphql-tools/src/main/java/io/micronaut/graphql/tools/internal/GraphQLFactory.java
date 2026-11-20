@@ -40,6 +40,7 @@ import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import io.micronaut.graphql.tools.internal.checks.DirectiveWiringCheck;
+import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestHolder;
 import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry;
 import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry;
@@ -131,8 +132,10 @@ public final class GraphQLFactory {
     @Singleton
     @Primary
     @Requires(condition = LibraryBeanSelection.NoCompetingGraphQL.class)
-    public GraphQL graphQL(GraphQLSchema graphQLSchema, List<GraphQLBuilderCustomizer> graphQLBuilderCustomizers) {
-        GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema);
+    public GraphQL graphQL(GraphQLSchema graphQLSchema, List<GraphQLBuilderCustomizer> graphQLBuilderCustomizers,
+                           LibraryDataFetcherExceptionHandler exceptionHandler) {
+        GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema)
+                .defaultDataFetcherExceptionHandler(exceptionHandler);
         graphQLBuilderCustomizers.forEach(customizer -> customizer.customize(builder));
         return builder.build();
     }
