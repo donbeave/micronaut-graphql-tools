@@ -35,6 +35,8 @@ class MarkerFixtures {
 
     static final String MARKERS = 'markers'
 
+    // The same SDL as src/main/resources/markers/markers.graphqls, which the compile-time checks read with the schema of the
+    // application: the markers are checked at compile time against the fields that they bind.
     @Bean
     @Singleton
     @Requires(env = MarkerFixtures.MARKERS)

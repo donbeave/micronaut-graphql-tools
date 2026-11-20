@@ -22,7 +22,6 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ElementQuery;
 import io.micronaut.inject.ast.GenericPlaceholderElement;
 import io.micronaut.inject.ast.MethodElement;
-import io.micronaut.inject.ast.ParameterElement;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -75,27 +74,18 @@ final class MarkerAnalysis {
             type.getSuperType().ifPresent(types::add);
             types.addAll(type.getInterfaces());
         }
-        return new ResolverMarkers(List.copyOf(operations), sourceType(element), contractMethods(element, contracts));
+        return new ResolverMarkers(List.copyOf(operations), sourceType(element), contractMethods(contracts));
     }
 
     private static boolean markerBelow(ClassElement type) {
         return MARKERS.stream().anyMatch(type::isAssignable);
     }
 
+    // The type argument of the marker TypeResolver<T> as the hierarchy declares it. The class element itself is asked for its
+    // supertypes only: a question that the compiler answers for the class (isAssignable, getTypeArguments) before the visitor
+    // annotates the class makes the annotation miss the bean definition under javac and KSP.
     @Nullable
     private static String sourceType(ClassElement element) {
-        if (!element.isAssignable(AnnotationNames.TYPE_RESOLVER_MARKER)
-                && !element.getName().equals(AnnotationNames.TYPE_RESOLVER_MARKER)) {
-            return null;
-        }
-        // the type arguments that the class gives to the marker, as the compiler resolves them through the contract interfaces
-        for (ClassElement argument : element.getTypeArguments(AnnotationNames.TYPE_RESOLVER_MARKER).values()) {
-            String name = nameOf(argument);
-            if (name != null) {
-                return name;
-            }
-        }
-        // otherwise the marker as a supertype of the hierarchy, with the arguments it is declared with
         Deque<ClassElement> types = new ArrayDeque<>(List.of(element));
         Set<String> visited = new HashSet<>();
         while (!types.isEmpty()) {
@@ -105,6 +95,16 @@ final class MarkerAnalysis {
             }
             if (type.getName().equals(AnnotationNames.TYPE_RESOLVER_MARKER)) {
                 for (ClassElement argument : type.getBoundGenericTypes()) {
+                    String name = nameOf(argument);
+                    if (name != null) {
+                        return name;
+                    }
+                }
+            }
+            if (type != element && type.getName().equals(AnnotationNames.TYPE_RESOLVER_MARKER) == false
+                    && type.isAssignable(AnnotationNames.TYPE_RESOLVER_MARKER)) {
+                // a generic supertype that gives its own type argument to the marker: Base<T> implements TypeResolver<T>
+                for (ClassElement argument : type.getTypeArguments(AnnotationNames.TYPE_RESOLVER_MARKER).values()) {
                     String name = nameOf(argument);
                     if (name != null) {
                         return name;
@@ -126,42 +126,19 @@ final class MarkerAnalysis {
         return type == null || type.getName().equals("java.lang.Object") ? null : type.getName();
     }
 
-    // the methods of the class that implement a method that a contract interface declares: by name, with the same number of
-    // parameters, and the same types where the contract does not leave the type to a type variable
+    // the names of the methods that the contract interfaces declare: the class implements each of them, so these are the
+    // methods of the class that are contract methods. The methods of the class itself are not listed here: asking the class
+    // element for its methods before the visitor annotates it makes the annotation not reach the bean definition.
     @Nullable
-    private static Set<String> contractMethods(ClassElement element, List<ClassElement> contracts) {
-        List<MethodElement> declared = new ArrayList<>();
+    private static Set<String> contractMethods(List<ClassElement> contracts) {
+        Set<String> names = new TreeSet<>();
         for (ClassElement contract : contracts) {
             for (MethodElement method : contract.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance().onlyDeclared())) {
                 if (!method.isStatic() && !method.isPrivate()) {
-                    declared.add(method);
+                    names.add(method.getName());
                 }
             }
         }
-        if (declared.isEmpty()) {
-            return null;
-        }
-        Set<String> names = new TreeSet<>();
-        for (MethodElement method : element.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance())) {
-            if (method.isPublic() && declared.stream().anyMatch(it -> implementsMethod(method, it))) {
-                names.add(method.getName());
-            }
-        }
         return names.isEmpty() ? null : names;
-    }
-
-    private static boolean implementsMethod(MethodElement method, MethodElement contract) {
-        if (!method.getName().equals(contract.getName()) || method.getParameters().length != contract.getParameters().length) {
-            return false;
-        }
-        for (int i = 0; i < method.getParameters().length; i++) {
-            ParameterElement own = method.getParameters()[i];
-            ParameterElement declared = contract.getParameters()[i];
-            if (!(declared.getType() instanceof GenericPlaceholderElement)
-                    && !own.getType().getName().equals(declared.getType().getName())) {
-                return false;
-            }
-        }
-        return true;
     }
 }

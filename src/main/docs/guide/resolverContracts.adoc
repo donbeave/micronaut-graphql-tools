@@ -15,11 +15,11 @@ The root type is the one that the schema names for the operation, so a root type
 
 A contract is an interface that extends a marker and declares the methods:
 
-snippet::example.markers.MarkerFixtures[project-base="test-suite", source="test", tags="contracts", indent="0"]
+snippet::example.markers.MarkerFixtures[project-base="test-suite", source="main", tags="contracts", indent="0"]
 
 An implementation names no GraphQL annotation. It is a bean when it has a scope annotation of its own:
 
-snippet::example.markers.MarkerFixtures[project-base="test-suite", source="test", tags="implementations", indent="0"]
+snippet::example.markers.MarkerFixtures[project-base="test-suite", source="main", tags="implementations", indent="0"]
 
 == Which methods bind
 
