@@ -65,7 +65,7 @@ type ValidationError {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.UNION_TYPE_MAPPING_NOT_PROVIDED
-        e.cause.message == """[union-type-mapping-not-provided] Can not detect representation class for type ValidationError, member of PayloadError union. Ensure the representation class is registered via ${SchemaMappingDictionary.name}.
+        e.cause.message == """[union-type-mapping-not-provided] Can not detect representation class for type ValidationError, member of PayloadError union. Ensure the representation class is registered via ${SchemaMappingDictionary.name}, declared with @GraphQLType(name) or named by micronaut.graphql.tools.type-class-convention.
   GraphQL coordinate: Query.unionTest (line 7, column 3)
   Mapped class: ${Query.name}
   Mapped method: unionTest()"""

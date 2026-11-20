@@ -284,7 +284,8 @@ public final class GraphQLRuntimeWiringGenerator {
         this.fieldDecorators = new FieldFetcherDecorators(fieldDecorators);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,
-                graphQLBeanIntrospectionRegistry, manifestRecorder, rootRuntimeWiringBuilder);
+                graphQLBeanIntrospectionRegistry, manifestRecorder, rootRuntimeWiringBuilder,
+                configuration.getTypeClassConvention());
     }
 
     public BindingManifestRecorder getManifestRecorder() {
@@ -752,7 +753,7 @@ public final class GraphQLRuntimeWiringGenerator {
                     : abstractTypeWiring.getImplementations(interfaceTypeDefinition)) {
                 members.add(() -> {
                     Class<?> clazz = Optional
-                            .ofNullable(schemaMappingDictionary.getTypes().get(implementation.getName()))
+                            .ofNullable(abstractTypeWiring.findClass(implementation, mappingContext))
                             .orElseThrow(() -> new InterfaceTypeMappingNotProvidedException(
                                     mappingContext, implementation.getName(), interfaceTypeDefinition.getName()
                             ));

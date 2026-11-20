@@ -24,7 +24,7 @@ import io.micronaut.graphql.tools.binding.BindingCode
  * <ul>
  *   <li><b>Soundness.</b> Every compile error is also a startup finding with the same code and coordinate. It fails outright:
  *   a false compile error is a bug. Only the documented soundness exceptions excuse an error ({@link SoundnessExceptions}: one line
- *   per case and finding, with one of five reasons, the startup failing or binding differently on purpose). A compile-time
+ *   per case and finding, with one of six reasons, the startup failing or binding differently on purpose). A compile-time
  *   warning is not an error and is outside the rule, and so is an error of the options ({@link #COMPILE_ONLY_CODES}).</li>
  *   <li><b>Completeness.</b> A startup finding of a per-class code ({@link #PER_CLASS_CODES}) that the compile side
  *   does not report, as an error or as a warning, is a gap, and fails unless {@code corpus-divergences.txt} lists it. A startup finding of any other
