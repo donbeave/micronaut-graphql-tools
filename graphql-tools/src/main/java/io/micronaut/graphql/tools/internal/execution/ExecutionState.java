@@ -27,6 +27,7 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 
 import java.util.Optional;
+import java.util.concurrent.Executor;
 
 /**
  * What the library knows about one execution (one HTTP request, one WebSocket operation): the propagated context
@@ -51,17 +52,32 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     private final MutableHttpResponse<?> response;
     private final ConvertibleValues<Object> connectionAttributes;
     @Nullable
+    private final Executor requestExecutor;
+    @Nullable
     private final String customizer;
     private ExecutionInput executionInput;
 
-    ExecutionState(PropagatedContext propagatedContext, GraphQLTransport transport, @Nullable HttpRequest<?> request,
-                   @Nullable MutableHttpResponse<?> response, ConvertibleValues<Object> connectionAttributes,
-                   @Nullable String customizer) {
+    /**
+     * Public for the benchmarks of this repository, which build an execution without the invocation; the library's
+     * invocation is the only other caller.
+     *
+     * @param propagatedContext    the context captured when the operation arrived
+     * @param transport            how the operation arrived
+     * @param request              the request, or null
+     * @param response             the response, or null
+     * @param connectionAttributes the attributes of a WebSocket connection, else empty
+     * @param requestExecutor      the executor of the operation, or null when it runs on the calling thread
+     * @param customizer           the class name of the application's customizer, or null when there is none
+     */
+    public ExecutionState(PropagatedContext propagatedContext, GraphQLTransport transport, @Nullable HttpRequest<?> request,
+                          @Nullable MutableHttpResponse<?> response, ConvertibleValues<Object> connectionAttributes,
+                          @Nullable Executor requestExecutor, @Nullable String customizer) {
         this.propagatedContext = propagatedContext;
         this.transport = transport;
         this.request = request;
         this.response = response;
         this.connectionAttributes = connectionAttributes;
+        this.requestExecutor = requestExecutor;
         this.customizer = customizer;
     }
 
@@ -74,7 +90,10 @@ public final class ExecutionState implements GraphQLExecutionRequest {
         return context.get(KEY);
     }
 
-    void storeIn(GraphQLContext context) {
+    /**
+     * @param context the GraphQL context of the execution that this state belongs to
+     */
+    public void storeIn(GraphQLContext context) {
         context.put(KEY, this);
     }
 
@@ -87,6 +106,15 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      */
     public PropagatedContext propagatedContext() {
         return propagatedContext;
+    }
+
+    /**
+     * @return the executor the operation hopped to, which the async boundary hands the children of an async field back
+     * to when the field completes on an event-loop thread; null when the operation runs on the calling thread
+     */
+    @Nullable
+    public Executor requestExecutor() {
+        return requestExecutor;
     }
 
     @Override

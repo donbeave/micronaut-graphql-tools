@@ -146,7 +146,8 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         if (request != null && captured.find(ServerHttpRequestContext.class).isEmpty()) {
             captured = captured.plus(new ServerHttpRequestContext(request));
         }
-        Execution execution = new Execution(data, new ExecutionState(captured, transport, request, response, attributes, customizerName));
+        Execution execution = new Execution(data, new ExecutionState(captured, transport, request, response, attributes, executor,
+                customizerName));
         if (executor == null) {
             execution.run();
         } else {

@@ -15,7 +15,9 @@
  */
 package io.micronaut.graphql.tools.benchmarks;
 
+import graphql.GraphQLContext;
 import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.SchemaDirectiveWiringEnvironment;
@@ -41,6 +43,8 @@ import jakarta.inject.Singleton;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public final class Resolvers {
 
@@ -48,7 +52,17 @@ public final class Resolvers {
 
     private static final List<Item> ITEMS = items();
 
+    /** A future that is already done: what an async field returns when its value is ready. */
+    static final CompletableFuture<String> DONE = CompletableFuture.completedFuture("pong");
+
+    /** The context of an execution that the library's invocation started, which an async fetcher needs to find its state. */
+    private static volatile GraphQLContext captured;
+
     private Resolvers() {
+    }
+
+    static GraphQLContext capturedContext() {
+        return captured;
     }
 
     private static List<Item> items() {
@@ -109,6 +123,19 @@ public final class Resolvers {
         }
 
         public String guarded() {
+            return "pong";
+        }
+
+        public CompletionStage<String> asyncDone() {
+            return DONE;
+        }
+
+        public CompletionStage<String> asyncPending() {
+            return new CompletableFuture<>();
+        }
+
+        public String captured(DataFetchingEnvironment environment) {
+            captured = environment.getGraphQlContext();
             return "pong";
         }
     }

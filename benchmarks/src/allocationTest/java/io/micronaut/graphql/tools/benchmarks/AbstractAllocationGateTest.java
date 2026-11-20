@@ -35,6 +35,8 @@ abstract class AbstractAllocationGateTest {
     // a registered but unused loader costs nothing per request: at most this much for each loader beyond the first
     private static final double UNUSED_LOADER_BYTES = 0.5;
     private static final int UNUSED_LOADERS = 50;
+    // what the async boundary adds to a field whose future completes on another thread (#428)
+    private static final double ASYNC_BOUNDARY_BUDGET_BYTES = 128;
 
     private static BenchmarkCases cases;
     private static Baselines baselines;
@@ -93,6 +95,9 @@ abstract class AbstractAllocationGateTest {
             case BenchmarkCases.INVOCATION_SLOPE -> invocationOverhead(BenchmarkCases.LARGE_QUERY_FIELDS)
                     - invocationOverhead(BenchmarkCases.SMALL_QUERY_FIELDS);
             case BenchmarkCases.LOADER_OVERHEAD -> loaderOverhead();
+            // the fetcher of an async field with a pending future, less the future that the resolver itself creates
+            case BenchmarkCases.ASYNC_BOUNDARY_OTHER_THREAD -> AllocationMeter.bytesPerOperation(cases.op(name), 3_000_000, 1_000_000, 5)
+                    - AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.ASYNC_PENDING_SOURCE), 3_000_000, 1_000_000, 5);
             default -> wholeQuery
                     ? AllocationMeter.bytesPerOperation(cases.op(name), 1_000, 100, 5)
                     : AllocationMeter.bytesPerOperation(cases.op(name), 3_000_000, 1_000_000, 5);
@@ -112,6 +117,11 @@ abstract class AbstractAllocationGateTest {
             assertTrue(measured <= UNUSED_LOADER_BYTES * (UNUSED_LOADERS - 1), String.format(java.util.Locale.ROOT,
                     "50 registered but unused loader beans add %.2f B/op to a request, over %.1f B x %d.", measured,
                     UNUSED_LOADER_BYTES, UNUSED_LOADERS - 1));
+        }
+        if (name.equals(BenchmarkCases.ASYNC_BOUNDARY_OTHER_THREAD)) {
+            assertTrue(measured <= ASYNC_BOUNDARY_BUDGET_BYTES, String.format(java.util.Locale.ROOT,
+                    "The async boundary adds %.2f B/op to a field whose future completes on another thread, over its budget of "
+                            + "%.0f B/op.", measured, ASYNC_BOUNDARY_BUDGET_BYTES));
         }
         Assumptions.assumeTrue(UPDATE || !"latest".equals(LEG), "No allocation baselines are recorded for the latest leg");
         if (UPDATE) {

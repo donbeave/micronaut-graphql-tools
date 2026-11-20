@@ -74,9 +74,25 @@ The state is also the read-only `GraphQLExecutionRequest` that the context contr
 
 An application that declares its own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary` wins: the library creates no invocation, logs one INFO line at startup, and the operations run as your invocation decides. A resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`, and the message names the application's invocation.
 
-== Resolvers that continue on another thread
+== Async resolvers
 
-The hop covers the synchronous part of an operation. A resolver that returns a `CompletionStage` continues on whichever thread completes it, and graphql-java resolves the children of that field there. Complete such a future on a thread of your own pool, not on a Netty event loop thread.
+A resolver that returns a `CompletionStage` (or a `CompletableFuture`), or a reactive type that the library adapts to one (`Mono`, a `Flux` on a list field, and the single-value types of the return type page), is an async field. The library decides this once for each field at startup, from the declared return type, and wraps only those fields. A field with a plain return type, a bean property or an introspected model field keeps the fetcher it had: there is no wrapper and no extra work for it.
+
+The future of an async field can complete on any thread, and graphql-java resolves the children of the field on that thread, without the request's propagated context. The library therefore hands graphql-java a future of its own, which it completes:
+
+* inside the propagated context that the operation captured when it arrived, so that a context element (a tracing span, a logging context entry, the principal) is visible in the children of the field;
+* on the executor that runs the operation, when the source completed on a Netty event loop thread, so that a child that blocks does not stall the server. An event loop thread is recognised by the `reactor.core.scheduler.NonBlocking` marker, which Micronaut's event loop threads carry while `micronaut.netty.default-thread-factory-reactor-non-blocking` is `true` (the default). If you turn that setting off, the library can no longer tell an event loop thread from another one and keeps restoring the context but no longer moves off the thread.
+
+snippet::example.tck.AsyncContextScenario[project-base="test-suite", source="test", tags="async-returns", indent="0"]
+
+A future that completes on a thread of your own pool is not moved: its children continue on that pool, with the context restored. Size such a pool for the field and its children. With `executor: none` there is no executor to move to, so only the context is restored.
+
+A few rules:
+
+* An exception that fails the future reaches the error handling as the exception that you threw: `CompletionException` and `ExecutionException` are unwrapped first.
+* A future that is already done, without a failure, when the method returns is used as it is, with no cost.
+* The cost of an async field that completes on another thread is one small object (the future that the library returns) and its callback, and nothing for a future that is already done. A field that returns `Object` and a `CompletionStage` at runtime is a synchronous field for the library: graphql-java still waits for it, but its children get neither the context nor the move off the event loop. Declare the stage in the return type.
+* When graphql-java cancels the future of the field (a timeout, for example), the library cancels the source future, and the adapter of a publisher cancels its subscription. `@ExecuteOn` is not part of this boundary.
 
 == Breaking change
 

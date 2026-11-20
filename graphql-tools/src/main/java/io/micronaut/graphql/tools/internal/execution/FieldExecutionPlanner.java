@@ -1,0 +1,74 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.micronaut.graphql.tools.internal.execution;
+
+import graphql.schema.DataFetcher;
+import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.convert.ConversionService;
+import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
+import io.micronaut.graphql.tools.internal.resolver.PublisherAdaptingDataFetcher;
+
+/**
+ * Decides, once per field at startup, how a method field executes, and composes its fetcher. The kind comes from the
+ * same {@link ReturnVerdict} that the compile-time check reads, so the startup and the build agree. A field that is not
+ * {@link Kind#ASYNC} keeps the method fetcher it had, byte for byte: no wrapper, no thread-local read, no allocation.
+ * The composition of an async field, outermost first: the async boundary, then the adapter of a publisher, then the
+ * method fetcher.
+ */
+@Internal
+public final class FieldExecutionPlanner {
+
+    /** How a field executes. */
+    public enum Kind {
+        /** A property or an introspection read: never wrapped. */
+        TRIVIAL,
+        /** A method with a plain return: runs on the thread that resolves its parent. */
+        SYNC,
+        /** A method that returns a {@code CompletionStage} or a publisher: passes through the async boundary. */
+        ASYNC,
+        /** A root field of the subscription type, which streams. */
+        STREAM
+    }
+
+    private FieldExecutionPlanner() {
+    }
+
+    /**
+     * @param verdict           the return adaptation of the method
+     * @param subscriptionField whether the field belongs to the subscription type
+     * @return the kind of a method field
+     */
+    public static Kind kind(ReturnVerdict verdict, boolean subscriptionField) {
+        if (subscriptionField) {
+            return Kind.STREAM;
+        }
+        return verdict.async() ? Kind.ASYNC : Kind.SYNC;
+    }
+
+    /**
+     * @param method            the fetcher that invokes the method
+     * @param verdict           the return adaptation of the method
+     * @param subscriptionField whether the field belongs to the subscription type
+     * @param conversionService converts a reactive type that is not a {@code Publisher} (RxJava) to one
+     * @return the fetcher of the field
+     */
+    public static DataFetcher<Object> plan(DataFetcher<Object> method, ReturnVerdict verdict, boolean subscriptionField,
+                                           ConversionService conversionService) {
+        DataFetcher<Object> adapted = verdict.reactive() == ReturnVerdict.Reactive.NONE ? method
+                : new PublisherAdaptingDataFetcher(method, verdict.reactive() == ReturnVerdict.Reactive.MULTI, conversionService);
+        return kind(verdict, subscriptionField) == Kind.ASYNC ? new AsyncBoundaryDataFetcher(adapted) : adapted;
+    }
+}

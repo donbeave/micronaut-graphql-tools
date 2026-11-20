@@ -32,6 +32,9 @@ dependencies {
     testImplementation(platform(libs.micronaut.platform))
     testAnnotationProcessor(platform(libs.micronaut.platform))
     testImplementation("io.micronaut.serde:micronaut-serde-api")
+    // SingleValuePublisherSpec: the RxJava single-value types are adapted through Micronaut's reactive type converters (#428)
+    testImplementation("io.micronaut.rxjava3:micronaut-rxjava3")
+    testImplementation("io.micronaut.rxjava2:micronaut-rxjava2")
     testAnnotationProcessor("io.micronaut.serde:micronaut-serde-processor")
 }
 

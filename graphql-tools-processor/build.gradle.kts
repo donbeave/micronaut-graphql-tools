@@ -16,6 +16,10 @@ dependencies {
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.java)
+    // the single-value return types of the binding corpus (#428); the platform manages the versions
+    testImplementation(platform(libs.micronaut.platform))
+    testImplementation("io.reactivex.rxjava3:rxjava")
+    testImplementation("io.reactivex.rxjava2:rxjava")
     // the corpus compiles Groovy cases in process, and Micronaut's AST transformation writes their bean definitions
     testImplementation(mn.micronaut.inject.groovy)
     // the Kotlin side of the corpus compiles its cases in a batched TestKit build

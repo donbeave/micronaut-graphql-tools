@@ -56,6 +56,7 @@ import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.graphql.tools.binding.BindingCode;
+import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
 import io.micronaut.graphql.tools.binding.internal.rules.EnumTypeRules;
 import io.micronaut.graphql.tools.binding.internal.rules.PrecedenceRules;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
@@ -99,7 +100,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ReturnVerdict;
 import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.UnsupportedReturnTypeException;
 import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDataFetcher;
-import io.micronaut.graphql.tools.internal.resolver.PublisherAdaptingDataFetcher;
+import io.micronaut.graphql.tools.internal.execution.FieldExecutionPlanner;
 import io.micronaut.graphql.tools.internal.resolver.MicronautIntrospectionDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.MicronautPropertyDataFetcher;
 import io.micronaut.graphql.tools.internal.resolver.ResolverInstances;
@@ -428,30 +429,39 @@ public final class GraphQLRuntimeWiringGenerator {
         List<ArgumentDefinition> argumentDefinitions = argumentPlanner.plan(executable, sourceClass,
                 mappingContext);
 
-        ReturnVerdict.Reactive reactive = processFieldReturnType(returnType.asArgument(),
-                mappingContext.getFieldDefinition().getType(), mappingContext, true);
+        ReturnVerdict verdict = processFieldReturnType(returnType.asArgument(),
+                mappingContext.getFieldDefinition().getType(), mappingContext, true, isSingleResult(executable));
 
-        // decided once per field here: a field that is not reactive keeps the plain fetcher and allocates nothing more
+        // decided once per field here: a field that is not async keeps the plain method fetcher and allocates nothing more
         DataFetcher<Object> fetcher = new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance);
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
-                reactive == ReturnVerdict.Reactive.NONE ? fetcher
-                        : new PublisherAdaptingDataFetcher(fetcher, reactive == ReturnVerdict.Reactive.MULTI)
+                FieldExecutionPlanner.plan(fetcher, verdict, mappingContext.getGraphQlObjectType().equals(subscriptionTypeName),
+                        applicationContext.getConversionService())
         );
+    }
+
+    private static boolean isSingleResult(AnnotationMetadataProvider method) {
+        return method.getAnnotationMetadata().hasStereotype(AnnotationNames.SINGLE_RESULT);
     }
 
     private void processFieldReturnType(Argument<?> argument, Type<?> graphQlType, TypeMappingContext mappingContext) {
         // a property is read, never invoked: a Publisher can only be adapted from a method
-        if (processFieldReturnType(argument, graphQlType, mappingContext, true) != ReturnVerdict.Reactive.NONE) {
+        if (processFieldReturnType(argument, graphQlType, mappingContext, true, false).reactive() != ReturnVerdict.Reactive.NONE) {
             throw new UnsupportedReturnTypeException(mappingContext, WrapperRules.publisherOnProperty());
         }
     }
 
-    private ReturnVerdict.Reactive processFieldReturnType(Argument<?> argument, Type<?> graphQlType,
-                                                          TypeMappingContext mappingContext, boolean fieldLevel) {
+    private ReturnVerdict processFieldReturnType(Argument<?> argument, Type<?> graphQlType,
+                                                 TypeMappingContext mappingContext, boolean fieldLevel,
+                                                 boolean singleResult) {
         boolean subscription = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
         ReturnVerdict verdict = ReturnTypes.adaptation(typeModel, typeDefinitionRegistry, argument, graphQlType, fieldLevel, subscription,
-                mappingContext);
+                singleResult, mappingContext);
+        if (verdict.reactive() == ReturnVerdict.Reactive.VALUELESS) {
+            // the field is null: no value type to check against the schema
+            return verdict;
+        }
         argument = ReturnTypes.unwrap(argument, verdict);
         graphQlType = unwrapNonNullType(graphQlType);
 
@@ -471,8 +481,8 @@ public final class GraphQLRuntimeWiringGenerator {
             Type<?> listFieldType = (listType).getType();
             Argument<?> listArgument = argument.getFirstTypeVariable().get();
 
-            processFieldReturnType(listArgument, listFieldType, mappingContext, false);
-            return verdict.reactive();
+            processFieldReturnType(listArgument, listFieldType, mappingContext, false, false);
+            return verdict;
         }
 
         TypeName typeName = requireTypeName(graphQlType);
@@ -510,7 +520,7 @@ public final class GraphQLRuntimeWiringGenerator {
                 throw unsupportedTypeDefinition(typeDefinition);
             }
         }
-        return verdict.reactive();
+        return verdict;
     }
 
     private void processOperationTypeDefinition(OperationTypeDefinition operationTypeDefinition) {
@@ -573,7 +583,7 @@ public final class GraphQLRuntimeWiringGenerator {
             manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_ROOT,
                     () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
                     executable.getReturnType().asArgument(),
-                    objectTypeDefinition.getName().equals(subscriptionTypeName));
+                    objectTypeDefinition.getName().equals(subscriptionTypeName), isSingleResult(executable));
         }
     }
 
@@ -912,7 +922,7 @@ public final class GraphQLRuntimeWiringGenerator {
 
             if (manifestRecorder.isRecording()) {
                 manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_PROPERTY,
-                        () -> BindingManifestRecorder.propertyMember(beanProperty), beanProperty.asArgument(), false);
+                        () -> BindingManifestRecorder.propertyMember(beanProperty), beanProperty.asArgument(), false, false);
             }
             return;
         }
@@ -933,7 +943,8 @@ public final class GraphQLRuntimeWiringGenerator {
 
         if (manifestRecorder.isRecording()) {
             manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_PROPERTY,
-                    modelMember::manifestMember, beanMethod.getReturnType().asArgument(), false);
+                    modelMember::manifestMember, beanMethod.getReturnType().asArgument(), false,
+                    isSingleResult(beanMethod));
         }
     }
 
@@ -970,7 +981,7 @@ public final class GraphQLRuntimeWiringGenerator {
         if (manifestRecorder.isRecording()) {
             manifestRecorder.field(objectTypeDefinition, fieldDefinition, BindingManifestRecorder.KIND_RESOLVER,
                     () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
-                    executable.getReturnType().asArgument(), false);
+                    executable.getReturnType().asArgument(), false, isSingleResult(executable));
         }
     }
 
@@ -1207,7 +1218,7 @@ public final class GraphQLRuntimeWiringGenerator {
                 manifestRecorder.field(field.objectTypeDefinition(), field.fieldDefinition(),
                         BindingManifestRecorder.KIND_RESOLVER,
                         () -> BindingManifestRecorder.methodMember(executable, executable.getDeclaringType()),
-                        executable.getReturnType().asArgument(), false);
+                        executable.getReturnType().asArgument(), false, isSingleResult(executable));
             }
         }
 
