@@ -19,6 +19,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 import io.micronaut.graphql.tools.binding.internal.finding.Severity;
+import io.micronaut.graphql.tools.binding.internal.rules.TypeClassDerivation;
 
 import java.io.File;
 import java.nio.file.InvalidPathException;
@@ -44,10 +45,13 @@ import java.util.TreeSet;
  *                   {@code micronaut.graphql.tools.resolver-accessor-prefixes} says at startup
  * @param looseNullability what the checks do with a Kotlin type that is stricter than the schema type
  *                   ({@code kotlin-nullability-loose}): {@code ignore} by default
+ * @param typeClassConvention the value of {@code micronaut.graphql.tools.type-class-convention} that the checks apply when
+ *                   they look for two classes that match one object type, or null for none
  * @param errors     the options that are wrong; the checks do not run when there are any
  */
 record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean checks,
-                        boolean accessorPrefixes, Severity looseNullability, List<Finding> errors) {
+                        boolean accessorPrefixes, Severity looseNullability, @Nullable String typeClassConvention,
+                        List<Finding> errors) {
 
     static final String PREFIX = "micronaut.graphql.tools.processor.";
 
@@ -61,7 +65,10 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
     static final String LOOSE_NULLABILITY = PREFIX + "looseNullability";
 
-    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY);
+    static final String TYPE_CLASS_CONVENTION = PREFIX + "typeClassConvention";
+
+    static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY,
+            TYPE_CLASS_CONVENTION);
 
     /** The key that an earlier version of the processor read; it is an error now and names {@link #SCHEMA_DIRS}. */
     static final String REMOVED_SDL_DIR = "micronaut.graphql.tools.sdlDir";
@@ -72,7 +79,7 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
      * The retired key is not an option: {@link #NAMES} stays the options.
      */
     static final Set<String> ADVERTISED = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY,
-            REMOVED_SDL_DIR);
+            TYPE_CLASS_CONVENTION, REMOVED_SDL_DIR);
 
     ProcessorOptions {
         schemaDirs = List.copyOf(schemaDirs);
@@ -131,7 +138,16 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
                         + moduleValue.trim() + "' (" + e.getReason() + ")"));
             }
         }
-        return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes, looseNullability, errors);
+        String convention = options.get(TYPE_CLASS_CONVENTION);
+        if (convention != null && convention.isBlank()) {
+            convention = null;
+        }
+        String conventionProblem = TypeClassDerivation.validate(convention);
+        if (conventionProblem != null) {
+            errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, TYPE_CLASS_CONVENTION + ": " + conventionProblem));
+        }
+        return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes,
+                looseNullability, convention == null ? null : convention.strip(), errors);
     }
 
     private static boolean flag(Map<String, String> options, String name, boolean absent, List<Finding> errors) {

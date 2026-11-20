@@ -24,6 +24,7 @@ import io.micronaut.graphql.tools.binding.internal.finding.FindingRenderer;
 import io.micronaut.graphql.tools.binding.internal.finding.Severity;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassFindings;
+import io.micronaut.graphql.tools.binding.internal.rules.TypeClassDerivation;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.Element;
@@ -39,7 +40,9 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -65,13 +68,15 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     // would be a compile error where the startup passes, so it is a warning, and the startup decides.
     private static final String UNPROVEN = BindingCode.CLASS_NOT_INTROSPECTED.code();
 
+    private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
+
     @Nullable
     private Compilation compilation;
 
     @Override
     public @NonNull Set<String> getSupportedAnnotationNames() {
         return Set.of(AnnotationNames.ROOT_RESOLVER, AnnotationNames.TYPE_RESOLVER, AnnotationNames.SCHEMA_COORDINATE,
-                AnnotationNames.MODELS);
+                AnnotationNames.MODELS, AnnotationNames.TYPE, INTROSPECTED);
     }
 
     @Override
@@ -116,6 +121,9 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         if (current != null && element.hasDeclaredAnnotation(AnnotationNames.MODELS)) {
             recordModels(current, element, context);
         }
+        if (current != null && current.options.checks()) {
+            recordTypeClass(current, element);
+        }
         if (current == null || current.failed || !current.options.checks()
                 || !isResolver(element) && !hasCoordinateMethod(element) || !ElementTypeModel.isBeanClass(element)) {
             return;
@@ -134,6 +142,17 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
                     "report this, and compile with micronaut.graphql.tools.processor.checks=false until it is fixed"),
                     element);
         }
+    }
+
+    // a class that an object type can match by @GraphQLType(name) or the naming convention; only the names are kept, because
+    // an element of an earlier round is not valid any more under KSP
+    private static void recordTypeClass(Compilation current, ClassElement element) {
+        if (element.isInterface() || element.isAbstract() || !element.hasStereotype(INTROSPECTED)) {
+            return;
+        }
+        String declared = element.getAnnotationMetadata().stringValue(AnnotationNames.TYPE, "name").orElse("");
+        current.typeClasses.put(element.getName(),
+                new TypeClassDerivation.Candidate(element.getName(), element.getSimpleName(), declared));
     }
 
     // the classes that @GraphQLModels lists make the compile-time check see them as introspected; an annotation that lists
@@ -181,6 +200,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             }
         }
         current.pending.clear();
+        checkTypeClasses(current, context);
         if (current.noted) {
             return;
         }
@@ -195,6 +215,28 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
                     + " in " + current.schema.directories() + "; " + current.findings + " "
                     + (current.findings == 1 ? "finding" : "findings")
                     + (current.warnings == 0 ? "" : ", " + current.warnings + (current.warnings == 1 ? " warning" : " warnings")) + ".");
+        }
+    }
+
+    // two classes of this compilation that match one object type of a union or interface: the startup fails on them too,
+    // unless the dictionary maps the type, which a visitor cannot see
+    private static void checkTypeClasses(Compilation current, VisitorContext context) {
+        if (!current.options.checks() || current.failed || current.typeClasses.isEmpty()
+                || current.options.schemaDirs().isEmpty() || !current.options.errors().isEmpty()) {
+            return;
+        }
+        Optional<SchemaModel> schema = current.schema.model();
+        if (schema.isEmpty()) {
+            return;
+        }
+        List<Finding> ambiguities = TypeClassDerivation.ambiguities(schema.get().registry(),
+                current.options.typeClassConvention(), current.typeClasses.values());
+        for (Finding finding : ambiguities) {
+            if (!current.reportedTypes.add(finding.coordinate() + finding.sentence())) {
+                continue;
+            }
+            current.findings++;
+            context.fail(FindingRenderer.render(finding), null);
         }
     }
 
@@ -295,6 +337,8 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         final ProcessorOptions options;
         final CheckedSchema schema;
         final ModelCoverage coverage = new ModelCoverage();
+        final Map<String, TypeClassDerivation.Candidate> typeClasses = new LinkedHashMap<>();
+        final Set<String> reportedTypes = new HashSet<>();
         final ElementTypeModel model = new ElementTypeModel(coverage);
         // the warnings that a @GraphQLModels visited later can still remove
         final List<Pending> pending = new ArrayList<>();

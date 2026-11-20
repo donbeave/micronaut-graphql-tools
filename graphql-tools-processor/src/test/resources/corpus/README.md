@@ -107,6 +107,7 @@ case under `exception/` that shows it:
 | `other-class-binding-failure` | stops at a binding failure of another class before the strict checks of this one |
 | `kotlin-nullability` | reports nothing: the nullability of a Kotlin type is compile-time metadata (`kotlin-nullability-mismatch`) |
 | `conflicting-class-mapping` | reports `mapping-conflict` when two classes bind one input type or enum to different Java classes, before the strict checks |
+| `dictionary-entry-wins` | lets a `SchemaMappingDictionary` entry win over two classes that match one object type by name (`ambiguous-type-class`); the visitor cannot see the dictionary |
 
 The ceiling must equal the number of entries, so a new exception shows as a raised ceiling in the review. An entry is stale and
 fails when the compile side no longer reports the error or the startup reports it now, an unknown reason fails, and an exception

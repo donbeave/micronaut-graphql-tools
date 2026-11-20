@@ -44,6 +44,7 @@ final class SoundnessExceptions {
             'other-class-binding-failure' : 'a binding failure of another resolver class stops the startup before the strict checks of this class run',
             'kotlin-nullability'          : 'the nullability of a Kotlin type is compile-time metadata that the startup does not read, so it reports nothing for the mismatch',
             'conflicting-class-mapping'   : 'two resolver classes bind one input type or enum to different Java classes: the startup reports the conflict before the strict checks',
+            'dictionary-entry-wins'       : 'a SchemaMappingDictionary entry names the class of an object type that two classes also match by name: the startup lets the entry win, and the compile-time check cannot see the dictionary',
     ].asImmutable()
 
     static final class Entry {

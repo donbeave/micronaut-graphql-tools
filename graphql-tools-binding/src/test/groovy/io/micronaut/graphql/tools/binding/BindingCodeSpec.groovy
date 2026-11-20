@@ -49,6 +49,7 @@ class BindingCodeSpec extends Specification {
             'input-field-not-settable',
             'kotlin-nullability-mismatch',
             'kotlin-nullability-loose',
+            'ambiguous-type-class',
             'class-not-introspected',
             'schema-definition-not-provided',
             'schema-invalid',
