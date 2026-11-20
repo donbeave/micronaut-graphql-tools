@@ -129,6 +129,7 @@ public final class DataLoaderScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "data-loader")
     public static class Queries {
@@ -148,6 +149,7 @@ public final class DataLoaderScenario {
         }
     }
 
+    @Singleton
     @GraphQLTypeResolver(Author.class)
     @Requires(property = "tck.scenario", value = "data-loader")
     public static class AuthorResolver {

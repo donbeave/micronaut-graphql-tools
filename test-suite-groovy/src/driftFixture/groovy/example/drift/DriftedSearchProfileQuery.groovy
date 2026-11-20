@@ -15,6 +15,7 @@
  */
 package example.drift
 
+import jakarta.inject.Singleton
 import example.graphql.type.Profile
 import groovy.transform.CompileStatic
 import io.micronaut.core.annotation.Nullable
@@ -27,6 +28,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
  * {@code [argument-mismatch] Query.searchProfile} (task {@code driftFixtureTest}). Nothing compiles it into the application.
  */
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 class DriftedSearchProfileQuery {
 

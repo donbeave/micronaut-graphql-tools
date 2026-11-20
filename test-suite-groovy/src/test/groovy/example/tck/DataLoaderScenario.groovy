@@ -112,6 +112,7 @@ class VolumeRegistry {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 @Requires(property = 'tck.scenario', value = 'data-loader')
 class DataLoaderQueries {
@@ -132,6 +133,7 @@ class DataLoaderQueries {
 }
 
 @CompileStatic
+@Singleton
 @GraphQLTypeResolver(Author)
 @Requires(property = 'tck.scenario', value = 'data-loader')
 class AuthorResolver {

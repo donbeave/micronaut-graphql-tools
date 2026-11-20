@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.scalars
 
+import jakarta.inject.Singleton
 import graphql.GraphQLContext
 import graphql.execution.CoercedVariables
 import graphql.language.ArrayValue
@@ -126,6 +127,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
 

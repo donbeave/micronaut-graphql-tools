@@ -15,10 +15,12 @@
  */
 package example
 
+import jakarta.inject.Singleton
 import groovy.transform.CompileStatic
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
 @CompileStatic
+@Singleton
 @GraphQLRootResolver
 class BookQuery {
 

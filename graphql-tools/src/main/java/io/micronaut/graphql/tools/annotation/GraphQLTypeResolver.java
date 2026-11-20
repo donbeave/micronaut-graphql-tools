@@ -15,10 +15,8 @@
  */
 package io.micronaut.graphql.tools.annotation;
 
-import io.micronaut.context.annotation.Bean;
-import io.micronaut.context.annotation.DefaultScope;
 import io.micronaut.context.annotation.Executable;
-import jakarta.inject.Singleton;
+import io.micronaut.context.annotation.Requires;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -32,6 +30,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * Marks a bean whose public methods bind fields of the GraphQL object type that {@link #value()} is mapped to, by
  * method name. The first parameter of each method is the source object.
  *
+ * <p>The annotation carries no bean stereotype: the class is a bean when it has a scope annotation of its own, for example
+ * {@code @Singleton}, and one that implements an annotated interface or extends an annotated class is not a bean unless it
+ * has one. The marker interface {@code TypeResolver} names the source type by a type argument instead.</p>
+ *
  * <p>The annotation is {@link Inherited}: it may sit on an interface (for example a generated resolver contract) or a
  * superclass, and every bean implementing or extending it is a type resolver without an annotation of its own. Methods
  * that carry {@link GraphQLSchemaCoordinate} restrict and validate the binding, see there.</p>
@@ -42,11 +44,14 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Inherited
 @Retention(RUNTIME)
 @Target({ElementType.TYPE})
-@Bean
+@Requires(condition = ResolverBeanCondition.class)
 @Executable(processOnStartup = true)
-@DefaultScope(Singleton.class)
 public @interface GraphQLTypeResolver {
 
-    Class value();
+    /**
+     * @return the class that the GraphQL object type is mapped to; left out only on the marker interface
+     * {@code TypeResolver}, which names it by its type argument
+     */
+    Class value() default void.class;
 
 }

@@ -31,6 +31,7 @@ import io.micronaut.graphql.tools.binding.internal.model.JMethod;
 import io.micronaut.graphql.tools.binding.internal.model.JParameter;
 import io.micronaut.graphql.tools.binding.internal.model.JProperty;
 import io.micronaut.graphql.tools.binding.internal.model.Nullability;
+import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers;
 import io.micronaut.graphql.tools.binding.internal.model.TypeModel;
 import io.micronaut.graphql.tools.binding.internal.model.TypeRef;
 import io.micronaut.graphql.tools.internal.MicronautUtils;
@@ -261,15 +262,21 @@ public final class RuntimeTypeModel implements TypeModel {
         }
 
         @Override
+        public ResolverMarkers markers() {
+            return beanDefinition == null ? ResolverMarkers.NONE : GraphQLResolversRegistry.readMarkers(beanDefinition);
+        }
+
+        @Override
         public List<JMethod> bindableMethods() {
             if (beanDefinition == null) {
                 return List.of();
             }
             List<JMethod> result = new ArrayList<>();
+            ResolverMarkers fixed = markers();
             for (ExecutableMethod<?, ?> method : beanDefinition.getExecutableMethods()) {
                 boolean objectMethod = method.getDeclaringType() == Object.class
                         || StrictModeChecks.isObjectSignature(method.getMethodName(), method.getArgumentTypes());
-                if (!objectMethod) {
+                if (!objectMethod && fixed.admits(method.getMethodName())) {
                     result.add(new RuntimeMethod(method));
                 }
             }

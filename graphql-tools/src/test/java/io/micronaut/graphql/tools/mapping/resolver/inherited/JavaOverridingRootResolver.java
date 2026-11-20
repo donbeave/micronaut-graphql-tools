@@ -16,7 +16,9 @@
 package io.micronaut.graphql.tools.mapping.resolver.inherited;
 
 import io.micronaut.context.annotation.Requires;
+import jakarta.inject.Singleton;
 
+@Singleton
 @Requires(property = "spec.name", value = "InheritedConcreteResolverSpec")
 public class JavaOverridingRootResolver extends JavaConcreteRootResolver {
 

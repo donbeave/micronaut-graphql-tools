@@ -567,6 +567,7 @@ scalar Sc @onScalar
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_TYPE_SCHEMA)
+    @Singleton
     @GraphQLRootResolver
     static class TypeSchemaQuery {
         String r() {
@@ -575,6 +576,7 @@ scalar Sc @onScalar
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_PLACES)
+    @Singleton
     @GraphQLRootResolver
     static class PlacesQuery {
         String r() {
@@ -583,6 +585,7 @@ scalar Sc @onScalar
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_KINDS)
+    @Singleton
     @GraphQLRootResolver
     static class KindsQuery {
         String r() {
@@ -595,6 +598,7 @@ scalar Sc @onScalar
     }
 
     @Requires(property = 'spec.name', pattern = 'UnwiredDirectivesSpec(|\\.wired|\\.customizer)')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         User me() {

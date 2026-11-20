@@ -1,5 +1,6 @@
 package example;
 
+import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import java.util.List;
@@ -7,6 +8,7 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
+@Singleton
 @GraphQLRootResolver
 public class Query {
 

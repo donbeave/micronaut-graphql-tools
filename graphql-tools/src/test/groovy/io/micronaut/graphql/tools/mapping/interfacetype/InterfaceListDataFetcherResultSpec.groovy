@@ -112,6 +112,7 @@ enum BlockKind { BOOKS, BANNER }
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         Shelf shelf() {
@@ -168,6 +169,7 @@ enum BlockKind { BOOKS, BANNER }
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(BookListBlock.class)
     static class BookListBlockResolver {
         String subtitle(BookListBlock block, DataFetchingEnvironment env) {

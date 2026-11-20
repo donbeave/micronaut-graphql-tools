@@ -125,6 +125,7 @@ class Parcel {
 
 @CompileStatic
 @Requires(env = RenameFixtures.MEMBERS)
+@Singleton
 @GraphQLRootResolver
 class ParcelQuery {
 
@@ -149,6 +150,7 @@ class Slip {
 
 @CompileStatic
 @Requires(env = RenameFixtures.CLASH)
+@Singleton
 @GraphQLRootResolver
 class SlipQuery {
 
@@ -166,6 +168,7 @@ class CoordinateParcel {
 
 @CompileStatic
 @Requires(env = RenameFixtures.COORDINATES)
+@Singleton
 @GraphQLRootResolver
 class CoordinateQuery {
 
@@ -183,6 +186,7 @@ class CoordinateQuery {
 
 @CompileStatic
 @Requires(env = RenameFixtures.COORDINATES)
+@Singleton
 @GraphQLTypeResolver(CoordinateParcel)
 class CoordinateParcelResolver {
 
@@ -201,6 +205,7 @@ class PrefixParcel {
 
 @CompileStatic
 @Requires(env = RenameFixtures.PREFIXES)
+@Singleton
 @GraphQLRootResolver
 class PrefixQuery {
 
@@ -216,6 +221,7 @@ class PrefixQuery {
 
 @CompileStatic
 @Requires(env = RenameFixtures.PREFIXES)
+@Singleton
 @GraphQLTypeResolver(PrefixParcel)
 class PrefixParcelResolver {
 

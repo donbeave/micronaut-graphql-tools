@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.scalars
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -254,6 +255,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
 
@@ -290,6 +292,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = RENAMED)
+    @Singleton
     @GraphQLRootResolver
     static class RenamedQuery {
 
@@ -300,6 +303,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = MINIMAL)
+    @Singleton
     @GraphQLRootResolver
     static class MinimalQuery {
 

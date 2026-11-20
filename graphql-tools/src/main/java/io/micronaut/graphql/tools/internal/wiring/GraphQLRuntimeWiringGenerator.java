@@ -522,16 +522,16 @@ public final class GraphQLRuntimeWiringGenerator {
         rootRuntimeWiringBuilder.type(operationTypeDefinition.getTypeName().getName(), typeRuntimeWiringBuilder -> {
             for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
                 collectFailure(TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName()),
-                        () -> processRootFieldDefinition(objectTypeDefinition, fieldDefinition,
-                        typeRuntimeWiringBuilder));
+                        () -> processRootFieldDefinition(operationTypeDefinition.getName(), objectTypeDefinition,
+                        fieldDefinition, typeRuntimeWiringBuilder));
             }
 
             return typeRuntimeWiringBuilder;
         });
     }
 
-    private void processRootFieldDefinition(ObjectTypeDefinition objectTypeDefinition, FieldDefinition fieldDefinition,
-                                            TypeRuntimeWiring.Builder typeRuntimeWiringBuilder) {
+    private void processRootFieldDefinition(String operation, ObjectTypeDefinition objectTypeDefinition,
+                                            FieldDefinition fieldDefinition, TypeRuntimeWiring.Builder typeRuntimeWiringBuilder) {
         if (isClaimed(objectTypeDefinition, fieldDefinition)) {
             return;
         }
@@ -542,7 +542,7 @@ public final class GraphQLRuntimeWiringGenerator {
         List<BeanDefinitionAndMethod> beanDefinitionAndMethods;
         try {
             beanDefinitionAndMethods = graphQLResolversRegistry.getRootExecutableMethods(
-                    objectTypeDefinition.getName(), fieldDefinition.getName(), mappingContext);
+                    operation, objectTypeDefinition.getName(), fieldDefinition.getName(), mappingContext);
         } catch (MethodNotFoundException e) {
             throw hintClaimedFields(e, objectTypeDefinition.getName(), fieldDefinition.getName());
         }

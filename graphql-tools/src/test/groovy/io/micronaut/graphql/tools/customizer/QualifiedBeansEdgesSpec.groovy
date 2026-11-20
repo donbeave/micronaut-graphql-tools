@@ -283,6 +283,7 @@ type AdminQuery {
     }
 
     @Requires(property = 'spec.name', pattern = 'QualifiedBeansEdgesSpec\\..*')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {

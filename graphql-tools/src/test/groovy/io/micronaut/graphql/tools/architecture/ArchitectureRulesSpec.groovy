@@ -51,14 +51,7 @@ class ArchitectureRulesSpec extends Specification {
      * the issue that removes it. Any other reflective access in that class fails the rule, and the list may only shrink: an
      * access that no longer happens fails the spec, so delete it with the fix.
      */
-    static final Map<String, Map<String, Object>> REFLECTION_ALLOWLIST = [
-        'io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry': [
-                accesses: ['java.lang.Class.isAnnotationPresent'],
-                reason  : 'Only on the failure path, when the build recorded no contracts for a directly annotated bean: the annotation metadata of a ' +
-                        'bean definition holds one @GraphQLTypeResolver value and a plain interface has no bean definition, so the inherited ' +
-                        'annotation of a supertype is visible only through the class; it never runs for a bound bean (#72)',
-        ],
-    ]
+    static final Map<String, Map<String, Object>> REFLECTION_ALLOWLIST = [:]
 
     /** The members of java.lang.Class that look up user classes, members or annotations at run time. */
     static final Set<String> REFLECTIVE_CLASS_METHODS = [
@@ -81,11 +74,10 @@ class ArchitectureRulesSpec extends Specification {
         classes.size() > 200
     }
 
-    void "the resolvers registry reads a class annotation by reflection only in the failure-path walk"() {
+    void "the allowlist is empty and the resolvers registry reads no class annotation by reflection"() {
         expect:
-        REFLECTION_ALLOWLIST.keySet() == ['io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry'] as Set
-        reflectiveAccesses(classes.get('io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry')).keySet() ==
-                ['java.lang.Class.isAnnotationPresent'] as Set
+        REFLECTION_ALLOWLIST.isEmpty()
+        reflectiveAccesses(classes.get('io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry')).isEmpty()
     }
 
     void "no class reflects outside the allowlist"() {

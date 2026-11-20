@@ -30,6 +30,10 @@ Tagged `1.0.0-M3` and published to GitHub Packages. The breaking changes are num
 * #291 (BC-32): the build runs the visitor instead of the earlier annotation processor (its classes are deleted from `graphql-tools-processor` by #144, which changes nothing else), and the compile-time options are renamed: `micronaut.graphql.tools.processor.schema.dirs` and `micronaut.graphql.tools.processor.checks` replace `micronaut.graphql.tools.sdlDir`. See the migration page, entries for 1.0.0-M3.
 * #34 (BC-33): a bean that is a type resolver only through an inherited `@GraphQLTypeResolver` needs `micronaut-graphql-tools-processor` on the compiler path, because the startup no longer reads class annotations by reflection. See the migration page, entries for 1.0.0-M3.
 
+=== 1.0.0-M4
+
+* #73 (BC-34): `@GraphQLRootResolver` and `@GraphQLTypeResolver` no longer carry the bean stereotype, so a resolver class needs a scope annotation of its own, for example `@Singleton`; a type resolver, also one that is annotated directly, needs `micronaut-graphql-tools-processor` on the compiler path when it has a supertype besides `Object`. The marker interfaces `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` are new. See the migration page, entries for 1.0.0-M4.
+
 Issue #15 (BC-19, resolver parameters bound by name): its runtime half is listed for 1.0.0-M1; the visitor applies the same rule at compile time, and #291 registers it, so a misnamed or missing resolver parameter fails the build.
 
 == 1.0.0-M4

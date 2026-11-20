@@ -15,10 +15,12 @@
  */
 package io.micronaut.graphql.tools.ignore;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 
 @Requires(property = "spec.name", value = "IgnoreSpec")
+@Singleton
 @GraphQLTypeResolver(JavaIgnoreItem.class)
 public class JavaIgnoreItemResolver {
 

@@ -69,6 +69,7 @@ class DeepTypeChainSpec extends Specification {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(env = DeepTypeChainSpec.ENVIRONMENT)
     static class Query {

@@ -60,6 +60,7 @@ public final class ExecutionThreadScenario {
         }
     }
 
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", pattern = SCENARIOS)
     public static class Queries {

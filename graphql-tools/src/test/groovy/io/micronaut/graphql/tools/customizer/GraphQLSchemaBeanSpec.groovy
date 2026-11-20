@@ -111,6 +111,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', pattern = 'GraphQLSchemaBeanSpec(|\\.ownGraphQL|\\.ownGraphQLFromLibrarySchema)')
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String hello() {

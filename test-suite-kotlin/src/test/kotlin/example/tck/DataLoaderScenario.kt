@@ -70,6 +70,7 @@ class VolumeRegistry(private val volumeLoader: VolumeLoader) {
         DataLoaderRegistry().register(VOLUMES, DataLoaderFactory.newMappedDataLoader(volumeLoader))
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "data-loader")
 class DataLoaderQueries(private val volumeLoader: VolumeLoader) {
@@ -79,6 +80,7 @@ class DataLoaderQueries(private val volumeLoader: VolumeLoader) {
     fun loaderStats(): LoaderStats = LoaderStats(volumeLoader.batches.get(), volumeLoader.keys.get())
 }
 
+@Singleton
 @GraphQLTypeResolver(Author::class)
 @Requires(property = "tck.scenario", value = "data-loader")
 class AuthorResolver {

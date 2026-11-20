@@ -47,6 +47,7 @@ class Ticket(sequence: IdSequence) {
     val id: Int = sequence.next()
 }
 
+@Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "bean-scopes")
 class BeanScopesQueries(

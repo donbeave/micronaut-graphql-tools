@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.ignore;
 
+import jakarta.inject.Singleton;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
@@ -24,6 +25,7 @@ import io.micronaut.scheduling.annotation.Scheduled;
 import jakarta.annotation.PreDestroy;
 
 @Requires(property = "spec.name", value = "IgnoreSpec")
+@Singleton
 @GraphQLRootResolver
 public class JavaIgnoreQuery {
 

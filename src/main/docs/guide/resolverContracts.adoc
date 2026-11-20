@@ -1,0 +1,40 @@
+A resolver contract is an interface that declares the methods of a resolver, usually one contract per field or type, as a code generator emits them. The marker interfaces of the package `io.micronaut.graphql.tools.resolver` tell the library what the contract resolves, with no annotation and no class literal.
+
+== The markers
+
+[cols="3,6", options="header"]
+|===
+|Marker |What it fixes
+|`QueryResolver` |The methods bind the fields of the query type only.
+|`MutationResolver` |The methods bind the fields of the mutation type only.
+|`SubscriptionResolver` |The methods bind the fields of the subscription type only.
+|`TypeResolver<T>` |The methods bind fields of the object type that `T` is mapped to. `T` is the source type, the type of the first parameter of each method. No class literal is needed.
+|===
+
+The root type is the one that the schema names for the operation, so a root type that is not called `Query` works the same way. A method of a `MutationResolver` never binds a field of the query type, so one method name can serve a field of each operation type without an ambiguity.
+
+A contract is an interface that extends a marker and declares the methods:
+
+snippet::example.markers.MarkerFixtures[project-base="test-suite", source="main", tags="contracts", indent="0"]
+
+An implementation names no GraphQL annotation. It is a bean when it has a scope annotation of its own:
+
+snippet::example.markers.MarkerFixtures[project-base="test-suite", source="main", tags="implementations", indent="0"]
+
+== Which methods bind
+
+For a class that implements a contract interface, only the methods that implement a method of a contract are candidates for binding. A public helper of the implementation binds nothing, and it does not fail the startup or the build as an `[unbound-resolver-method]`, so no `@GraphQLIgnore` is needed on it. A contract method is matched by its name and its number of parameters, so a helper that overloads a contract method with the same number of parameters binds as well.
+
+A class that implements a marker directly, with no contract interface, binds all its public methods, as a class that carries `@GraphQLRootResolver` or `@GraphQLTypeResolver` does. A class can implement the contracts of several fields, and a type resolver can combine `TypeResolver<T>` with a `@GraphQLTypeResolver` contract of another source type.
+
+== Contracts carry no bean stereotype
+
+`@GraphQLRootResolver`, `@GraphQLTypeResolver` and the markers do not make a class a bean. A class that implements a contract, extends an annotated class or carries one of the annotations becomes a bean only when it has a scope annotation, for example `@Singleton`. A class without one is not a bean, so a fake, a decorator or a second implementation of a contract does not become a second resolver by accident. Before this change the annotations carried the bean stereotype (see BC-34 on the Breaking Changes page).
+
+A class that is a bean and implements the contract of another bean is a second resolver, and the startup fails with `[multiple-methods-found]` for the fields that both bind. A fake or a subclass of a bean carries `@Replaces(<original>.class)`: the replacement binds and the original does not. `@Requires(env = "test")` alone does not help, because both beans are active in the test environment. To add behaviour around a resolver, use a Micronaut AOP interceptor, not a subclass bean.
+
+== The processor records what a marker means
+
+The compile-time processor (`micronaut-graphql-tools-processor`) reads the markers from the class hierarchy and writes the root operations, the source type `T` and the contract methods into the annotation metadata of the implementation. The startup reads them from the bean definition and never reads a class annotation or a generic type by reflection, so a marker contract binds the same way on the JVM and in a native image. The processor writes the metadata also with `micronaut.graphql.tools.processor.checks=false`.
+
+A bean that implements a marker, and that was compiled without the processor, fails the startup with `[type-resolver-contracts-not-found]`. The message names the bean and the processor. The compile-time checks and the startup use the same rules for the markers: the checks report a class that the startup also rejects, and nothing else.

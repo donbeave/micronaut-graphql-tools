@@ -15,6 +15,7 @@
  */
 package example.authors;
 
+import jakarta.inject.Singleton;
 import example.model.Author;
 import example.model.AuthorFilter;
 import example.model.Genre;
@@ -22,6 +23,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import java.util.List;
 
+@Singleton
 @GraphQLRootResolver
 public class AuthorQuery {
 

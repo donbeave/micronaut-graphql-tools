@@ -195,10 +195,35 @@ The mapping then checks `T`. Anything else fails at startup with `[unsupported-r
 
 `@GraphQLRootResolver` and `@GraphQLTypeResolver` are inherited (`@Inherited`). They may sit on an interface, for
 example one emitted by a code generator, and a bean that implements it is a resolver without a GraphQL annotation of
-its own. The implementing class still needs a bean annotation such as `@Singleton`: the contract's annotation does not
-make the class a bean, and the compile-time checks report a contract that no bean class implements. Every bean that
-implements the contract is a resolver, so a hand-written fake or delegating adapter that implements it and is a bean is
-registered too. Micronaut AOP advice (`@Around`) on the implementation still applies.
+its own. The annotations carry no bean stereotype: a class that carries one, extends an annotated class or implements
+an annotated interface is a bean only when it has a scope annotation of its own, such as `@Singleton`. A class without
+one is not a bean, so a fake or a second implementation does not become a second resolver by accident, and the
+compile-time checks report a contract that no bean class implements. Every bean that implements the contract is a
+resolver, so a hand-written fake or delegating adapter that implements it and is a bean is registered too: annotate it
+with `@Replaces(<original>.class)` (`@Requires(env = "test")` alone does not help, because both beans are active in the
+test environment). Micronaut AOP advice (`@Around`) on the implementation still applies.
+
+**Marker interfaces.** `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` (package
+`io.micronaut.graphql.tools.resolver`) are the contracts without an annotation. `interface BookTitleResolver extends
+TypeResolver<Book>` binds to `Book` with no class literal, and the root marker fixes the operation type: the methods of
+a `MutationResolver` bind fields of the mutation type only, so one method name can serve a field of each operation type.
+Only the methods that implement a method of a contract interface bind: a public helper of the implementation binds
+nothing and does not fail strict mode. A class that implements a marker directly binds all its public methods. The
+processor records the operation, the source type and the contract methods in the annotation metadata of the
+implementation (the build needs `micronaut-graphql-tools-processor`, otherwise the startup fails with
+`[type-resolver-contracts-not-found]`). The guide page Resolver Contracts has the examples.
+
+```java
+public interface BookTitleResolver extends TypeResolver<Book> {
+    String title(Book book);
+}
+
+@Singleton
+public class BookTitles implements BookTitleResolver {
+    @Override
+    public String title(Book book) { ... }
+}
+```
 
 ```java
 @GraphQLTypeResolver(Book.class)
@@ -238,12 +263,14 @@ Methods of beans without coordinates are matched by name. The coordinate is also
 field name on two operation types binds two different methods:
 
 ```java
+@Singleton
 @GraphQLRootResolver
 public class StatusQuery {
     @GraphQLSchemaCoordinate("Query.status")
     public String status(String id) { ... }
 }
 
+@Singleton
 @GraphQLRootResolver
 public class StatusSubscription {
     @GraphQLSchemaCoordinate("Subscription.status")
@@ -372,6 +399,7 @@ bind one field (a renamed one and another, or two renamed to the same field), th
 the method is (before, the startup failed when they differed):
 
 ```java
+@Singleton
 @GraphQLTypeResolver(Parcel.class)
 public class ParcelResolver {
     @GraphQLSchemaCoordinate("Parcel.class")

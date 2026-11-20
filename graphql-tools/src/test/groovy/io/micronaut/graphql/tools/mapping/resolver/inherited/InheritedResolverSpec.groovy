@@ -208,6 +208,7 @@ type Book {
     }
 
     @Requires(property = 'spec.name', value = SUBCLASS_SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class AnnotatedQuery {
         Book book(String id) {
@@ -224,6 +225,7 @@ type Book {
     }
 
     @Requires(property = 'spec.name', value = SUBCLASS_SPEC_NAME + ".type")
+    @Singleton
     @GraphQLRootResolver
     static class TypeQuery {
         Book book(String id) {
@@ -232,6 +234,7 @@ type Book {
     }
 
     @Requires(property = 'spec.name', value = SUBCLASS_SPEC_NAME + ".type")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class AnnotatedBookResolver {
         String summary(Book book) {
@@ -311,6 +314,7 @@ type Writer {
     }
 
     @Requires(property = 'spec.name', pattern = CONTRACTS_SPEC_NAME + '.*')
+    @Singleton
     @GraphQLRootResolver
     static class ContractsQuery {
         Novel book() {
@@ -426,6 +430,7 @@ type Writer {
     }
 
     @Requires(property = 'spec.name', value = CONTRACTS_SPEC_NAME + ".mixed")
+    @Singleton
     @GraphQLTypeResolver(Novel.class)
     static class MixedResolvers implements WriterContract {
         String bookExtra(Novel novel) {
@@ -453,6 +458,7 @@ type Writer {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".direct")
+    @Singleton
     @GraphQLRootResolver
     static class DirectQuery {
         Book book(String id) {
@@ -461,6 +467,7 @@ type Writer {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME + ".direct")
+    @Singleton
     @GraphQLTypeResolver(Book.class)
     static class DirectBookResolver {
         @Counted

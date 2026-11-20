@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.mapping.input
 
+import jakarta.inject.Singleton
 import graphql.ExecutionInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
@@ -252,6 +253,7 @@ input GridInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
 
@@ -289,6 +291,7 @@ input GridInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLTypeResolver(Shop)
     static class ShopResolver {
 

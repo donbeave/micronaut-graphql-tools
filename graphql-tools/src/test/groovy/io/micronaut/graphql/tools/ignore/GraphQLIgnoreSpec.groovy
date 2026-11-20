@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.ignore
 
+import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.event.StartupEvent
 import io.micronaut.context.exceptions.BeanInstantiationException
@@ -185,6 +186,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_IGNORED_COORDINATE)
+    @Singleton
     @GraphQLRootResolver
     static class IgnoredCoordinateQuery {
         String hello() { 'hi' }
@@ -195,6 +197,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_GROOVY)
+    @Singleton
     @GraphQLRootResolver
     static class GroovyQuery {
         GroovyItem item() { new GroovyItem() }
@@ -227,6 +230,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_GROOVY)
+    @Singleton
     @GraphQLTypeResolver(GroovyItem.class)
     static class GroovyItemResolver {
         String name(GroovyItem item) { 'resolver' }
@@ -245,6 +249,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_UNBOUND)
+    @Singleton
     @GraphQLRootResolver
     static class UnboundQuery {
         JavaIgnoreItem item() { new JavaIgnoreItem() }
@@ -264,12 +269,14 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_UNBOUND)
+    @Singleton
     @GraphQLTypeResolver(JavaIgnoreItem.class)
     static class UnboundItemResolver {
         String name(JavaIgnoreItem item) { 'resolver' }
     }
 
     @Requires(property = 'spec.name', value = SPEC_IGNORED_ROOT)
+    @Singleton
     @GraphQLRootResolver
     static class IgnoredRootQuery {
         @GraphQLIgnore
@@ -277,6 +284,7 @@ type Query {
     }
 
     @Requires(property = 'spec.name', value = SPEC_IGNORED_GETTER)
+    @Singleton
     @GraphQLRootResolver
     static class IgnoredGetterQuery {
         JavaIgnoreItem item() { new JavaIgnoreItem() }

@@ -121,6 +121,7 @@ input RegistrationInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         String register(RegistrationInput input) {
@@ -130,6 +131,7 @@ input RegistrationInput {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME_READ_ONLY)
+    @Singleton
     @GraphQLRootResolver
     static class ReadOnlyQuery {
         String register(ReadOnlyRegistrationInput input) {

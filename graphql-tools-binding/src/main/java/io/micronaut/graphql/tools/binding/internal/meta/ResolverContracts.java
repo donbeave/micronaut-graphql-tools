@@ -24,9 +24,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * The contracts that a concrete type resolver class inherits. The visitor writes it into the annotation metadata of the
- * class and the runtime reads it from the bean definition, so that no reflection is needed to find a class annotation
- * of a supertype. The visitor writes it, also when the checks are off.
+ * What a concrete resolver class inherits: the contracts of a type resolver, the root operations that its marker
+ * interfaces fix and the methods that implement a contract interface. The visitor writes it into the annotation metadata of
+ * the class and the runtime reads it from the bean definition, so that no reflection is needed to find a class annotation
+ * or a generic type argument of a supertype. The visitor writes it, also when the checks are off.
  */
 @Internal
 @Documented
@@ -43,4 +44,16 @@ public @interface ResolverContracts {
      * @return the binary names of the contract types that declare each model class
      */
     String[] declaredBy() default {};
+
+    /**
+     * @return the root operations ({@code query}, {@code mutation}, {@code subscription}) that the marker interfaces of
+     * the class name; empty when no marker names one
+     */
+    String[] operations() default {};
+
+    /**
+     * @return the names of the methods of the class that implement a method of a contract interface; empty when every
+     * public method is a candidate
+     */
+    String[] methods() default {};
 }

@@ -99,6 +99,7 @@ type Podcast implements Media & Node {
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Singleton
     @GraphQLRootResolver
     static class Query {
         List<Media> media() {
