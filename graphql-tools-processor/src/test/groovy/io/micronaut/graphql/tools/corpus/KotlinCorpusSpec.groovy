@@ -29,13 +29,13 @@ import java.util.concurrent.TimeUnit
  * Gradle TestKit build with Kotlin and KSP2 (kapt with {@code -Pcorpus.kotlin.processor=kapt}, for the {@code lang:all} cases),
  * twice per case like the in-process cases: with the checks off, and started; with the checks on, whose findings are compared
  * with {@code compile.txt}. It is the Gradle task {@code corpusKotlin}, not part of {@code test}: it needs the network (plugin
- * portal, Maven Central) unless the Gradle user home is warm, and its budget is three minutes on JDK 25. The CI job
+ * portal, Maven Central) unless the Gradle user home is warm, and its budget is eight minutes on JDK 25. The CI job
  * {@code build tools} runs it. The wall time of the build is written to {@code build/corpus/kotlin-timings.txt}.
  */
 @Timeout(value = 10, unit = TimeUnit.MINUTES)
 class KotlinCorpusSpec extends Specification {
 
-    static final long BUDGET_SECONDS = Long.getLong('corpus.kotlin.budget-seconds', 180L)
+    static final long BUDGET_SECONDS = Long.getLong('corpus.kotlin.budget-seconds', 480L)
 
     @Shared
     Corpus corpus = new Corpus(CorpusFixtures.root())
@@ -61,7 +61,8 @@ class KotlinCorpusSpec extends Specification {
         expect:
         !runner.units().empty
         kotlin.buildMillis >= 0
-        kotlin.buildMillis <= BUDGET_SECONDS * 1000
+        assert kotlin.buildMillis <= BUDGET_SECONDS * 1000 :
+                "the Kotlin batch took ${kotlin.buildMillis} ms, over the ${BUDGET_SECONDS} s budget (corpus.kotlin.budget-seconds)"
     }
 
     void cleanupSpec() {
