@@ -44,6 +44,7 @@ import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.internal.BeanSelectionLogger
 import io.micronaut.graphql.tools.internal.execution.ExecutionContextAvailability
 import io.micronaut.graphql.tools.internal.execution.ExecutionState
+import io.micronaut.core.convert.value.ConvertibleValues
 import io.micronaut.graphql.tools.execution.GraphQLTransport
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
 import io.micronaut.http.HttpRequest
@@ -228,9 +229,9 @@ type Child {
         queued.execute { release.await() }
 
         when: 'the operation waits behind the blocker and the client goes away'
-        def future = Mono.from(applicationContext.getBean(io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation)
+        def future = Mono.from(applicationContext.getBean(LibraryGraphQLInvocation)
                 .execute(new GraphQLInvocationData('{ hello }', null, [:]), GraphQLTransport.WEBSOCKET, null, null,
-                        io.micronaut.core.convert.ConvertibleValues.empty())).toFuture()
+                        ConvertibleValues.empty())).toFuture()
         future.cancel(true)
         release.countDown()
         queued.shutdown()
