@@ -1,6 +1,6 @@
 # The known completeness gaps: a startup finding of a per-class code that the compile-time checks do not report. One line per
 # case, language, code and coordinate, with the reason above it. The list may only shrink; an entry that no longer diverges is stale.
-max-entries: 5
+max-entries: 4
 
 # A model reached through a return type is not checked at compile time: another module can serve a field of it.
 failure/model-not-introspected java class-not-introspected Query.book
@@ -10,5 +10,3 @@ wrapper/optional-non-null all unsupported-return-type Book.title
 # The first parameter of a type resolver method is not compared with the type of its resolver at compile time yet.
 failure/type-resolver-source-parameter java invalid-source-parameter Book.author
 
-# A package-private method of a resolver bean is not seen as a resolver method by the visitor, and the startup reports it.
-strict/package-private-method java unbound-resolver-method example.BookQuery#internal()
