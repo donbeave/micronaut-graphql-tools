@@ -84,14 +84,16 @@ public final class InputObjectConverter implements ValueConverter {
             bean = introspection.instantiate();
         } else {
             Object[] arguments = constructorDefaults.clone();
+            boolean explicitNull = false;
             for (Slot slot : constructorSlots) {
                 Object converted = slot.read(map);
                 if (converted != ABSENT) {
                     arguments[slot.index] = converted;
+                    explicitNull |= converted == null && slot.nullable;
                 }
             }
             bean = introspection.instantiate(false, arguments);
-            if (nullableConstructorSlots.length != 0) {
+            if (explicitNull) {
                 bean = restoreExplicitNulls(bean, map);
             }
         }
@@ -178,7 +180,7 @@ public final class InputObjectConverter implements ValueConverter {
                 }
             }
             Class<?> target = index >= 0 ? constructorArguments[index].getType() : property.getType();
-            boolean nullable = index >= 0 && !argumentValue && !target.isPrimitive()
+            boolean nullable = index >= 0 && !argumentValue && !target.isPrimitive() && !property.isWriteOnly()
                     && constructorArguments[index].isNullable();
             pending.add(new Slot(name, property, converter == ValueConverters.IDENTITY ? null : converter,
                     argumentValue, target.isPrimitive(), nullable, index));

@@ -48,7 +48,7 @@ snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test",
 The rules:
 
 * A field that the client leaves out is not set, so the class keeps the value it gives itself. An explicit `null` is set as `null`; for a primitive property the default stays.
-* A constructor parameter that no input field provides gets `null`, or the default of a primitive. A Kotlin default argument applies to an omitted field, and to an omitted one only: see <<languageSupport,Language Support>>.
+* A constructor parameter that no input field provides gets `null`, or the default of a primitive. A Kotlin default argument applies to an omitted field, and to an explicit `null` only for a parameter with a non-null type: see <<languageSupport,Language Support>>.
 * Every input field needs a property of the same name. The startup fails with `[field-not-bound]` for a missing one, and with `[input-field-not-settable]` for a read-only property that no constructor parameter of the same name takes.
 * A property is settable when it has a setter or a constructor parameter, as the introspection lists them. The same definition decides `[input-field-not-settable]`, the unmapped properties at startup and the compile-time check.
 * In strict mode, a settable property that no input type defines fails the startup (`[unmapped-input-property]`), naming the class and the property. A class that several input types map to, such as one DTO for a create and a rename input, is checked once: a property is unmapped only when none of those types has a field for it, so each type may cover a different subset.
