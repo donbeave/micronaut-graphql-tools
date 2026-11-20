@@ -28,7 +28,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.StringUtils;
-import io.micronaut.graphql.tools.internal.execution.ExecutionTransport;
+import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest;
@@ -269,7 +269,7 @@ public class LibraryGraphQLWsHandler {
     private Publisher<ExecutionResult> execute(GraphQLInvocationData data, WsSessionState state) {
         ConvertibleValues<Object> attributes = ConvertibleValues.of(state.attributes());
         if (invocation instanceof LibraryGraphQLInvocation library) {
-            return library.execute(data, ExecutionTransport.WEBSOCKET, state.upgradeRequest(), null, attributes);
+            return library.execute(data, GraphQLTransport.WEBSOCKET, state.upgradeRequest(), null, attributes);
         }
         return invocation.invoke(data, state.upgradeRequest(), null);
     }

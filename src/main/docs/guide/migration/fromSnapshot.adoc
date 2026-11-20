@@ -46,6 +46,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-33 inherited type resolver contracts (#34) | A bean that is a type resolver only through an inherited `@GraphQLTypeResolver` (a class that implements an annotated interface) needs the processor on the compiler path: the visitor records its contracts, and the startup no longer reads class annotations by reflection. Without it the startup fails with `[type-resolver-contracts-not-found]`. | Add `micronaut-graphql-tools-processor` to `annotationProcessor`, `ksp` or `kapt`, or `compileOnly` (Groovy); `micronaut.graphql.tools.processor.checks=false` keeps the checks off and still records the contracts. A bean annotated directly needs nothing.
 | BC-34 resolver stereotypes carry no bean (#73) | A class that carries `@GraphQLRootResolver` or `@GraphQLTypeResolver`, extends an annotated class or implements an annotated interface is a bean only when it has a scope annotation of its own. | Annotate each resolver class with `@Singleton`; see <<resolverContracts,Resolver Contracts>>.
 | BC-35 resolvers run on the blocking executor (#49) | Every operation hops once to Micronaut's blocking executor before graphql-java runs, so parsing, validation, the customizer and every synchronous resolver run on a virtual thread (JDK 21 and later) or an `io` pool thread (JDK 17), not on the Netty event loop. A resolver that relied on the event loop thread, or on a thread local set there, sees another thread. The transport's own invocation is replaced: an application with its own `GraphQLInvocation` needs `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary`, and the library then steps aside. | Nothing for a resolver that does not depend on its thread; it can now block. To keep the old behaviour set `micronaut.graphql.tools.execution.executor: none`. Choose another executor with its name.
+| BC-36 a `DataLoaderRegistry` bean fails the startup (#20) | The library creates the `DataLoaderRegistry` of each execution itself, from `BatchLoader`, `BatchLoaderWithContext`, `MappedBatchLoader` and `MappedBatchLoaderWithContext` beans. A `DataLoaderRegistry` bean is not used: its loaders would be shared across the operations of one WebSocket connection, so the startup fails with `[data-loader-registry-bean]`. | Register each loader as a batch loader bean and read it with a typed `DataLoader<K, V>` resolver parameter, or add the loaders in a `GraphQLContextContributor`, or provide your own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)`.
 |===
 
 == Entries for 1.0.0-M1
@@ -838,3 +839,35 @@ micronaut:
 ----
 
 See the Execution page for the executors, the order of the steps and the rejection response.
+
+=== BC-36: a `DataLoaderRegistry` bean fails the startup (#20)
+
+The transport took a `DataLoaderRegistry` bean for each call. A request-scoped registry was then one registry for a whole WebSocket connection, so the loader caches were shared across the operations of that connection, and the lookup failed on any thread that was not the request thread. The library now creates the registry of each execution itself. It holds no loader when it is created: a loader is created from a batch loader bean when a resolver first uses it, and is dropped with the execution.
+
+What breaks: an application with a `DataLoaderRegistry` bean fails the startup with `[data-loader-registry-bean]`, and the message carries the fix. There is no opt-out.
+
+Status: approved, no opt-out.
+
+[source,java]
+----
+// Before: a registry bean, read by name with an unchecked cast.
+@Factory
+class Loaders {
+    @RequestScope
+    DataLoaderRegistry registry(BookSellerLoader loader) {
+        return new DataLoaderRegistry().register("sellers", DataLoaderFactory.newMappedDataLoader(loader));
+    }
+}
+
+DataLoader<String, List<Seller>> loader = environment.getDataLoader("sellers");
+
+// After: the loader is a bean, and the resolver declares the type it needs.
+@Singleton
+class BookSellerLoader implements MappedBatchLoader<String, List<Seller>> { ... }
+
+CompletionStage<List<Seller>> sellers(Book book, DataLoader<String, List<Seller>> loader) {
+    return loader.load(book.getId());
+}
+----
+
+See the Data Loaders page for the naming rules, the lifecycle and the context contributors.

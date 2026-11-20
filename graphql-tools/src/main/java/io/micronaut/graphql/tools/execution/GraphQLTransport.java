@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.internal.execution;
+package io.micronaut.graphql.tools.execution;
 
-import io.micronaut.core.annotation.Internal;
-
-/** How an operation reached the invocation. */
-@Internal
-public enum ExecutionTransport {
+/**
+ * How an operation reached the library's invocation.
+ */
+public enum GraphQLTransport {
 
     /** An HTTP request to the GraphQL route. */
     HTTP,

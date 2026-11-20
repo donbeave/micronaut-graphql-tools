@@ -93,4 +93,15 @@ public final class IncorrectArgumentNameException extends AbstractMappingExcepti
         );
     }
 
+    public static IncorrectArgumentNameException untypedDataLoader(MappingContext mappingContext, String parameterName) {
+        return new IncorrectArgumentNameException(
+                String.format(
+                        "The method parameter '%s' is a DataLoader without its key and value types. Declare it as"
+                                + " DataLoader<K, V>, with the key and value types of the loader bean.",
+                        parameterName
+                ),
+                mappingContext
+        );
+    }
+
 }

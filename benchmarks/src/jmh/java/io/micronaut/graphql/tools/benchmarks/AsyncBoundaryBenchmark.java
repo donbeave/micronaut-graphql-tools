@@ -21,9 +21,9 @@ import graphql.GraphQL;
 import graphql.schema.DataFetcher;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.propagation.PropagatedContext;
+import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.execution.AsyncBoundaryDataFetcher;
 import io.micronaut.graphql.tools.internal.execution.ExecutionState;
-import io.micronaut.graphql.tools.internal.execution.ExecutionTransport;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -136,8 +136,8 @@ public class AsyncBoundaryBenchmark {
             Executor request = counter == null ? requestExecutor : counter.counting(requestExecutor);
             boolean sameThread = completionExecutor == null;
             boolean boundaryOn = boundary.equals("on");
-            state = new ExecutionState(PropagatedContext.getOrEmpty(), ExecutionTransport.HTTP, null, null,
-                    ConvertibleValues.empty(), request);
+            state = new ExecutionState(PropagatedContext.getOrEmpty(), GraphQLTransport.HTTP, null, null,
+                    ConvertibleValues.empty(), request, null);
             AsyncBoundaryDataFetcher boundaryFetcher = new AsyncBoundaryDataFetcher(env -> next);
             Map<String, HopSchema.Method> methods = Map.of("asyncRoot", env -> {
                 CompletableFuture<Object> source = new CompletableFuture<>();
