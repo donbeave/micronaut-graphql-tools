@@ -3,6 +3,7 @@ introduction:
 quickStart:
   title: Quick Start
 languageSupport: Language Support
+groovy: Groovy
 why: Why This Library
 schema: Schema
 binding: Binding
@@ -14,6 +15,7 @@ scalars: Scalars
 directives: Directives
 dataLoaders: Data Loaders
 errors: Errors
+observability: Observability
 subscriptions: Subscriptions
 context: Context
 execution: Execution

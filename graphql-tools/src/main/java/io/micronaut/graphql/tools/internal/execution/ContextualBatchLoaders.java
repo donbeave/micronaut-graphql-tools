@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.internal.execution;
 
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.propagation.PropagatedContext;
 import org.dataloader.BatchLoader;
 import org.dataloader.BatchLoaderEnvironment;
@@ -42,14 +43,15 @@ final class ContextualBatchLoaders {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    static DataLoader<?, ?> create(DataLoaderTable.Kind kind, Object bean, PropagatedContext context) {
+    static DataLoader<?, ?> create(DataLoaderTable.Kind kind, Object bean, PropagatedContext context,
+                                   @Nullable BatchCounters.Counter counter) {
         return switch (kind) {
-            case BATCH -> DataLoaderFactory.newDataLoader((BatchLoaderWithContext) new Batch((BatchLoader) bean, context));
+            case BATCH -> DataLoaderFactory.newDataLoader((BatchLoaderWithContext) new Batch((BatchLoader) bean, context, counter));
             case BATCH_WITH_CONTEXT ->
-                    DataLoaderFactory.newDataLoader((BatchLoaderWithContext) new BatchWithContext((BatchLoaderWithContext) bean, context));
-            case MAPPED -> DataLoaderFactory.newMappedDataLoader((MappedBatchLoaderWithContext) new Mapped((MappedBatchLoader) bean, context));
+                    DataLoaderFactory.newDataLoader((BatchLoaderWithContext) new BatchWithContext((BatchLoaderWithContext) bean, context, counter));
+            case MAPPED -> DataLoaderFactory.newMappedDataLoader((MappedBatchLoaderWithContext) new Mapped((MappedBatchLoader) bean, context, counter));
             case MAPPED_WITH_CONTEXT -> DataLoaderFactory.newMappedDataLoader(
-                    (MappedBatchLoaderWithContext) new MappedWithContext((MappedBatchLoaderWithContext) bean, context));
+                    (MappedBatchLoaderWithContext) new MappedWithContext((MappedBatchLoaderWithContext) bean, context, counter));
         };
     }
 
@@ -57,11 +59,14 @@ final class ContextualBatchLoaders {
         return PropagatedContext.getOrEmpty() == context;
     }
 
-    private record Batch(BatchLoader<Object, Object> delegate, PropagatedContext context)
+    private record Batch(BatchLoader<Object, Object> delegate, PropagatedContext context, @Nullable BatchCounters.Counter counter)
             implements BatchLoaderWithContext<Object, Object> {
 
         @Override
         public CompletionStage<List<Object>> load(List<Object> keys, BatchLoaderEnvironment environment) {
+            if (counter != null) {
+                counter.record(keys.size());
+            }
             if (installed(context)) {
                 return delegate.load(keys);
             }
@@ -71,11 +76,14 @@ final class ContextualBatchLoaders {
         }
     }
 
-    private record BatchWithContext(BatchLoaderWithContext<Object, Object> delegate, PropagatedContext context)
+    private record BatchWithContext(BatchLoaderWithContext<Object, Object> delegate, PropagatedContext context, @Nullable BatchCounters.Counter counter)
             implements BatchLoaderWithContext<Object, Object> {
 
         @Override
         public CompletionStage<List<Object>> load(List<Object> keys, BatchLoaderEnvironment environment) {
+            if (counter != null) {
+                counter.record(keys.size());
+            }
             if (installed(context)) {
                 return delegate.load(keys, environment);
             }
@@ -85,11 +93,14 @@ final class ContextualBatchLoaders {
         }
     }
 
-    private record Mapped(MappedBatchLoader<Object, Object> delegate, PropagatedContext context)
+    private record Mapped(MappedBatchLoader<Object, Object> delegate, PropagatedContext context, @Nullable BatchCounters.Counter counter)
             implements MappedBatchLoaderWithContext<Object, Object> {
 
         @Override
         public CompletionStage<Map<Object, Object>> load(Set<Object> keys, BatchLoaderEnvironment environment) {
+            if (counter != null) {
+                counter.record(keys.size());
+            }
             if (installed(context)) {
                 return delegate.load(keys);
             }
@@ -99,11 +110,14 @@ final class ContextualBatchLoaders {
         }
     }
 
-    private record MappedWithContext(MappedBatchLoaderWithContext<Object, Object> delegate, PropagatedContext context)
+    private record MappedWithContext(MappedBatchLoaderWithContext<Object, Object> delegate, PropagatedContext context, @Nullable BatchCounters.Counter counter)
             implements MappedBatchLoaderWithContext<Object, Object> {
 
         @Override
         public CompletionStage<Map<Object, Object>> load(Set<Object> keys, BatchLoaderEnvironment environment) {
+            if (counter != null) {
+                counter.record(keys.size());
+            }
             if (installed(context)) {
                 return delegate.load(keys, environment);
             }
