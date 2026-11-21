@@ -16,6 +16,7 @@
 package example.graphql.query
 
 import groovy.transform.CompileStatic
+import io.micronaut.graphql.tools.annotation.GraphQLArgument
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 
@@ -34,7 +35,7 @@ class ScalarsQuery {
         data
     }
 
-    Locale echoLocale(Locale tag) {
+    Locale echoLocale(@GraphQLArgument("tag") Locale tag) {
         tag
     }
 }

@@ -180,6 +180,10 @@ public final class ResolverClassRules {
      */
     @Nullable
     private static SlotKind injectable(JParameter parameter) {
+        if (parameter.annotations().has(AnnotationNames.ARGUMENT)) {
+            // an explicit @GraphQLArgument makes the parameter an argument of the field, whatever its type
+            return null;
+        }
         if (parameter.annotations().has(AnnotationNames.CONTEXT_VALUE)) {
             return SlotKind.CONTEXT_VALUE;
         }
