@@ -144,6 +144,8 @@ An execution is cancelled when its client goes away: an HTTP client that closes 
 * The stream of a subscription is cancelled upstream.
 * A synchronous resolver that is already running finishes.
 
+The `micronaut.graphql.tools.execution.timeout` key cancels an execution the same way when it runs too long (see <<protection,Protection>>).
+
 The example has a slow async field, and a child field of its result that counts its runs. A client that closes the connection while the first field is pending leaves the count unchanged:
 
 snippet::example.tck.DisconnectScenario[project-base="test-suite", source="test", tags="disconnect-slow-field", indent="0"]
