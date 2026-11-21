@@ -378,7 +378,7 @@ public class GraphQLToolsConfiguration {
         /**
          * Sets whether the library counts the batches that each batch loader bean dispatches in an execution and the keys
          * they load, which {@link io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics} reports from the GraphQL
-         * context and the observability module turns into metrics. Counting adds two atomic increments to each batch, so the
+         * context and the Micrometer module turns into metrics. Counting adds two atomic increments to each batch, so the
          * default is off. Default: {@code false}.
          *
          * @param dataLoaderStatistics whether to collect statistics

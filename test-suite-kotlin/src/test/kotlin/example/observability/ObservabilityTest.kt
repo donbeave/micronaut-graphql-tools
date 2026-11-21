@@ -18,6 +18,7 @@ package example.observability
 import graphql.ExecutionInput
 import graphql.ExecutionResult
 import graphql.GraphQL
+import graphql.execution.instrumentation.Instrumentation
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.ApplicationContext
 import io.opentelemetry.api.common.AttributeKey
@@ -27,7 +28,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-// Runs on the JVM and as a native binary (nativeTest): the request timer and the spans of the observability module.
+// Runs on the JVM and as a native binary (nativeTest): the request timer of the Micrometer module and the spans of the OpenTelemetry module.
 class ObservabilityTest {
 
     private fun execute(context: ApplicationContext, query: String, operationName: String?): ExecutionResult =
@@ -126,4 +127,25 @@ class ObservabilityTest {
             assertEquals(3, operations)
         }
     }
+
+    @Test
+    fun theLibraryHasOneInstrumentationBeanWhicheverModulesAreOn() {
+        assertEquals(1, instrumentations(emptyMap()))
+        assertEquals(1, instrumentations(mapOf("micronaut.graphql.tools.tracing.enabled" to false)))
+        assertEquals(1, instrumentations(mapOf("micronaut.metrics.binders.graphql.enabled" to false)))
+        assertEquals(
+            0,
+            instrumentations(
+                mapOf(
+                    "micronaut.graphql.tools.tracing.enabled" to false,
+                    "micronaut.metrics.binders.graphql.enabled" to false,
+                ),
+            ),
+        )
+    }
+
+    private fun instrumentations(properties: Map<String, Any>): Int =
+        ApplicationContext.run(properties, OBSERVED).use { context ->
+            context.getBeansOfType(Instrumentation::class.java).size
+        }
 }

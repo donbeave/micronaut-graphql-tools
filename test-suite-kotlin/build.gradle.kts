@@ -27,9 +27,10 @@ dependencies {
     runtimeOnly("ch.qos.logback:logback-classic")
     testImplementation("io.micronaut:micronaut-http-client")
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
-    // The observability module and the libraries its tests observe with: the Micrometer and OpenTelemetry integrations of
+    // The metrics and tracing modules and the libraries their tests observe with: the Micrometer and OpenTelemetry integrations of
     // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
-    testImplementation(projects.micronautGraphqlToolsObservability)
+    testImplementation(projects.micronautGraphqlToolsMicrometer)
+    testImplementation(projects.micronautGraphqlToolsOpentelemetry)
     testImplementation(mnMicrometer.micronaut.micrometer.core)
     testImplementation(mnTracing.micronaut.tracing.opentelemetry)
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing")

@@ -65,7 +65,9 @@ import java.util.Objects;
  *
  * <p>The {@code GraphQL} bean installs the application's {@code Instrumentation} beans: none when there is no bean, the bean
  * itself when there is one, and a {@code ChainedInstrumentation} in bean order when there are several. The
- * {@code GraphQLBuilderCustomizer} beans run after that.</p>
+ * {@code GraphQLBuilderCustomizer} beans run after that. The one bean that the library adds itself is
+ * {@code ObserverInstrumentation}, which exists when a module contributes a {@code RequestObserver} bean (the metrics and
+ * the tracing modules do), however many observers there are.</p>
  *
  * @author Alexey Zhokhov
  */

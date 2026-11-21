@@ -50,6 +50,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 
 | BC-37 unhandled exceptions are hidden (#32) | The message of an exception that a resolver throws is no longer sent to the client: the error is `Internal server error` with `extensions.code` `INTERNAL_ERROR`. Before, graphql-java's handler sent `Exception while fetching data (/path) : <message>`, and logged each error at WARN with a stack trace; now one ERROR line without a stack trace is logged. A client that matched on that message text, or a test that asserts it, fails. | Add a `GraphQLExceptionMapper` bean for each exception whose message the client may see, throw a `GraphQLError` exception, or turn on `micronaut.graphql.tools.errors.details` in a development environment. A `DataFetcherExceptionHandler` of your own set in a `GraphQLBuilderCustomizer` keeps working.
 | BC-39 observability follows the Micronaut metrics and tracing conventions (#495) | The configuration keys of the observability module moved, and the span layout changed. `micronaut.graphql.tools.observability.enabled` is removed, `.metrics.enabled` and `.metrics.max-operations` are `micronaut.metrics.binders.graphql.enabled` and `.max-operations`, and `.tracing.enabled` and `.tracing.fields` are `micronaut.graphql.tools.tracing.enabled` and `.fields`. The request span is named `query`, `mutation` or `subscription`, not `query <operation>`. A field span has `graphql.field.path` and no `graphql.field.parent`. `GraphQLObservability.PREFIX` and the four span attribute constants are removed. The request span is now current in the propagated context, so a span started in a resolver is its child, not its sibling. | Rename the keys (the old ones are ignored, with no warning). Set `micronaut.graphql.tools.tracing.add-operation-name-to-span-name: true` to keep the operation name in the span name, and change a dashboard or a test that reads `graphql.field.parent` to read `graphql.field.name` and `graphql.field.path`. Use the attribute names as strings in place of the removed constants.
+| BC-49 the observability module is split into `graphql-tools-micrometer` and `graphql-tools-opentelemetry` (#570) | `micronaut-graphql-tools-observability` does not exist: the metrics are in `micronaut-graphql-tools-micrometer` (package `io.micronaut.graphql.tools.micrometer`) and the spans in `micronaut-graphql-tools-opentelemetry`. `GraphQLObservability` is now `GraphQLMetrics`, with the same meter and tag constants. The configuration keys of BC-39 do not change. | Replace the one dependency with the module of each technology you use (the artifact was never published, so there is no relocation), and import `io.micronaut.graphql.tools.micrometer.GraphQLMetrics` where you used `GraphQLObservability`.
 |===
 
 == Entries for 1.0.0-M1
@@ -957,3 +958,28 @@ micronaut:
 ----
 
 See the observability page for the span layout, `@NewSpan` and `@Timed` on resolvers, and the configuration.
+
+=== BC-49: the observability module is split into graphql-tools-micrometer and graphql-tools-opentelemetry (#570)
+
+`observability` is not the name of a Micronaut module: the official modules are named after their technology, such as `micronaut-micrometer-core` and `micronaut-tracing-opentelemetry-http`, and none ships metrics and tracing in one artifact. The module is now two, each named after its technology:
+
+[cols="3,3", options="header"]
+|===
+| Before | Now
+| `io.micronaut.graphql.tools:micronaut-graphql-tools-observability` | `micronaut-graphql-tools-micrometer` for the metrics, `micronaut-graphql-tools-opentelemetry` for the spans
+| `io.micronaut.graphql.tools.observability.GraphQLObservability` | `io.micronaut.graphql.tools.micrometer.GraphQLMetrics`, with the same meter and tag constants
+| `:micronaut-graphql-tools-observability:check` | `:micronaut-graphql-tools-micrometer:check` and `:micronaut-graphql-tools-opentelemetry:check`
+|===
+
+The configuration keys of BC-39 stay as they are: `micronaut.metrics.binders.graphql.*` belongs to the Micrometer module and `micronaut.graphql.tools.tracing.*` to the OpenTelemetry module. The library still adds exactly one `Instrumentation` bean for both, which now lives in `graphql-tools`, so a request with both modules on costs no more per field than before. The artifact was never published, so there is no relocation POM.
+
+[source,groovy]
+----
+// Before
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability:1.0.0-M4")
+// Now: the module of each technology you use
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry:1.0.0-M4")
+----
+
+See the observability page.

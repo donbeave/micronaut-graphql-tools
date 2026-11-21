@@ -82,7 +82,7 @@ jobs:
         java: ['17']
         # the default graphql-java leg only
         graphql-java: [default]
-    # The library modules (graphql-tools, graphql-tools-binding, graphql-tools-processor, graphql-tools-scalars, graphql-tools-observability, graphql-tools-upload) compile to release 17 (see buildSrc); the test-suite-* modules
+    # The library modules (graphql-tools, graphql-tools-binding, graphql-tools-processor, graphql-tools-scalars, graphql-tools-micrometer, graphql-tools-opentelemetry, graphql-tools-upload) compile to release 17 (see buildSrc); the test-suite-* modules
     # need Java 21 and cannot run here.
     name: check library (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     timeout-minutes: 20
@@ -93,7 +93,7 @@ jobs:
           jdk: ${{ matrix.java }}
           tools: java
       - name: Build with Gradle
-        run: .github/scripts/retry-on-download-failure.sh ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-observability:check :micronaut-graphql-tools-upload:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}

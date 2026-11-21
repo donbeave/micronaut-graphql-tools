@@ -6,7 +6,7 @@ micronaut-platform = "4.10.24"
 micronaut-docs = "3.0.0"
 micronaut-test = "4.10.3"
 micronaut-graphql = "4.8.0"
-# The versions that micronaut-platform 4.10.24 manages; the catalogs of these two give the observability module its compile-only APIs
+# The versions that micronaut-platform 4.10.24 manages; the catalogs of these two give the Micrometer and OpenTelemetry modules their compile-only APIs
 micronaut-micrometer = "5.13.3"
 micronaut-tracing = "7.2.0"
 

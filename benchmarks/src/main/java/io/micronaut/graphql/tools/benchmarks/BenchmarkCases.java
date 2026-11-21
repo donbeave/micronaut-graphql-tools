@@ -91,7 +91,7 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String INVOCATION_OVERHEAD = "invocationOverhead";
     public static final String INVOCATION_SLOPE = "invocationSlope";
     public static final String LOADER_OVERHEAD = "loaderOverhead";
-    /** What the observability module adds per field to a request: the invocation slope with it on, less the one with an empty instrumentation. */
+    /** What the metrics and tracing modules add per field to a request: the invocation slope with them on, less the one with an empty instrumentation. */
     public static final String OBSERVED_INVOCATION_SLOPE = "observedInvocationSlope";
     public static final String QUERY_1K = "query1kObjects";
     public static final String QUERY_10K = "query10kObjects";
@@ -172,9 +172,9 @@ public final class BenchmarkCases implements AutoCloseable {
         NONE,
         /** One that implements no hook: what any instrumentation costs graphql-java, with nothing of ours in it. */
         EMPTY,
-        /** The observability module's, with a meter registry and the OpenTelemetry SDK of Micronaut Tracing, and no field selected for a span. */
+        /** The metrics and tracing modules', with a meter registry and the OpenTelemetry SDK of Micronaut Tracing, and no field selected for a span. */
         OBSERVABILITY,
-        /** The observability module's, with every {@code Query.ping} selected for a span by the field decorator. */
+        /** The metrics and tracing modules', with every {@code Query.ping} selected for a span by the field decorator. */
         OBSERVABILITY_SELECTED
     }
 
@@ -241,7 +241,7 @@ public final class BenchmarkCases implements AutoCloseable {
         switch (instrumented) {
             case NONE -> { }
             case EMPTY -> builder.singletons(new SimplePerformantInstrumentation());
-            // the beans of the observability module, with no field selected for a span
+            // the beans of the metrics and tracing modules, with no field selected for a span
             case OBSERVABILITY, OBSERVABILITY_SELECTED -> builder.singletons(new SimpleMeterRegistry());
         }
         context = builder
@@ -257,7 +257,7 @@ public final class BenchmarkCases implements AutoCloseable {
                     case OBSERVABILITY_SELECTED -> Map.of("micronaut.graphql.tools.tracing.fields", List.of("Query.ping"));
                     case OBSERVABILITY -> Map.<String, Object>of();
                     // Micronaut Micrometer and Micronaut Tracing are on the classpath and would create a registry and an
-                    // OpenTelemetry bean, which switches the observability module on in the cases that must have none of it
+                    // OpenTelemetry bean, which switches the metrics and tracing modules on in the cases that must have none of it
                     default -> Map.<String, Object>of("micronaut.metrics.enabled", false, "micronaut.otel.enabled", false);
                 })
                 .singletons(registry)

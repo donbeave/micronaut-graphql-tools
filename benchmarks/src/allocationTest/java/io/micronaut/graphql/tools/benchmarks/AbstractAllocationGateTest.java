@@ -87,7 +87,7 @@ abstract class AbstractAllocationGateTest {
     }
 
     /**
-     * The bytes per field that a request allocates with the observability module on and no field traced, beyond the same request
+     * The bytes per field that a request allocates with the metrics and tracing modules on and no field traced, beyond the same request
      * with an instrumentation that implements no hook: the overhead of a query of 1,000 fields minus that of 10 fields. The empty
      * instrumentation is the control, because graphql-java 21 chains any instrumentation with its own and that costs each field
      * whatever the instrumentation is. A slope of 0 B per field leaves 0.

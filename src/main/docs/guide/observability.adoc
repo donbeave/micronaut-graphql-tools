@@ -1,21 +1,23 @@
-The `micronaut-graphql-tools-observability` module records metrics with Micrometer and traces with OpenTelemetry, the way the Micronaut Micrometer and Micronaut Tracing modules do. This page describes what it records, the conventions it follows, how to select the fields that get a span, how to time and trace your own resolvers, and what it costs. The module is available from 1.0.0-M4.
+Two optional modules record what the library executes, each named after its technology: `micronaut-graphql-tools-micrometer` records request metrics with Micrometer, and `micronaut-graphql-tools-opentelemetry` records request and field spans with OpenTelemetry. They follow the way the Micronaut Micrometer and Micronaut Tracing modules work. This page describes what they record, the conventions they follow, how to select the fields that get a span, how to time and trace your own resolvers, and what they cost. Both modules are available from 1.0.0-M4.
 
-== The module
+== The modules
 
-Add the module, and the Micronaut integrations you use:
+Add the module of the technology you use, or both, and the Micronaut integration it needs:
 
 [source,groovy]
 ----
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer:1.0.0-M4")
 implementation("io.micronaut.micrometer:micronaut-micrometer-core")
+
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry:1.0.0-M4")
 implementation("io.micronaut.tracing:micronaut-tracing-opentelemetry")
 ----
 
-The module has neither as a dependency, and each half works on its own. The metrics need a `MeterRegistry` bean, which Micronaut Micrometer provides. The tracing needs an `OpenTelemetry` bean, which Micronaut Tracing provides from the `otel.*` properties and exports to the `SpanProcessor` beans of the application. With neither bean the module creates no instrumentation, and the library installs none. The tests use a meter registry, and a span processor that exports to memory:
+The modules do not depend on each other, and neither has Micrometer or OpenTelemetry as a dependency. The metrics need a `MeterRegistry` bean, which Micronaut Micrometer provides. The tracing needs an `OpenTelemetry` bean, which Micronaut Tracing provides from the `otel.*` properties and exports to the `SpanProcessor` beans of the application. With neither bean the library installs no instrumentation. The tests use a meter registry, and a span processor that exports to memory:
 
 snippet::example.observability.ObservabilityFixtures[project-base="test-suite", source="test", tags="beans", indent="0"]
 
-Both halves follow the conventions of the Micronaut module that provides their library:
+Both follow the conventions of the Micronaut module that provides their library:
 
 * Metrics are a Micronaut metrics binder named `graphql`. They obey `micronaut.metrics.enabled` and `micronaut.metrics.binders.graphql.enabled`, as the binders of Micronaut Micrometer do.
 * Traces use the OpenTelemetry `Instrumenter` API, as the HTTP, Kafka and gRPC integrations of Micronaut Tracing do. They obey `micronaut.otel.enabled`, and the keys under `micronaut.graphql.tools.tracing`.
@@ -24,9 +26,12 @@ Both halves follow the conventions of the Micronaut module that provides their l
 
 The library collects every `Instrumentation` bean and installs them before the `GraphQLBuilderCustomizer` beans run. One bean is installed as it is. Several are chained in a `ChainedInstrumentation`, lowest order first (`@Order` or `Ordered`), so the `beginExecution` of the lowest order runs first. With no `Instrumentation` bean the library sets no instrumentation, and graphql-java keeps its default. A customizer that calls `instrumentation(...)` on the builder replaces what the beans installed.
 
-The module adds one `Instrumentation` bean, whatever it records. It implements the request hooks only and nothing at field level, so an execution that it observes pays nothing for each field. The library itself uses no `Instrumentation`: an operation's fields run through the data fetchers that the binding created, and the module's spans wrap only the fields that you select.
+The library adds exactly one `Instrumentation` bean for observers, whichever modules are on the classpath. It lives in `graphql-tools` and exists only when an observer bean does: each module contributes one observer (the Micrometer module a `RequestObserver` that records the timer, the OpenTelemetry module one that starts the request span) when its technology is on the classpath and its bean (`MeterRegistry` or `OpenTelemetry`) exists. Two instrumentations in the chain would cost every field about 550 bytes on graphql-java 21, which is why the modules share one. It implements the request hooks only and nothing at field level, so an execution that it observes pays nothing for each field. The library itself uses no `Instrumentation`: an operation's fields run through the data fetchers that the binding created, and the spans of the OpenTelemetry module wrap only the fields that you select. `RequestObserver` is `@Internal`: it is not an extension point for applications, whose own `Instrumentation` beans are chained as above.
 
 == Metrics
+
+The module is `graphql-tools-micrometer`.
+
 
 The request timer is `graphql.request`, from the start of the execution to its result. Its tags:
 
@@ -39,7 +44,7 @@ The request timer is `graphql.request`, from the start of the execution to its r
 
 snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="metrics", indent="0"]
 
-A field has no timer of its own: see <<resolverTimers>> for how to time one. The meter names and tags are constants in `GraphQLObservability`.
+A field has no timer of its own: see <<resolverTimers>> for how to time one. The meter names and tags are constants in `GraphQLMetrics`.
 
 A subscription is timed until its stream is set up, not until it completes.
 
@@ -47,7 +52,19 @@ A subscription is timed until its stream is set up, not until it completes.
 
 `graphql.dataloader.batches` counts the batches that the `DataLoader` of a batch loader bean dispatched, and `graphql.dataloader.batch.keys` the keys those batches loaded. Each is tagged with `loader`, the name of the batch loader bean. They are recorded when the request ends, from the counts that the library keeps for the execution (`DataLoaderBatchStatistics` in the GraphQL context). Counting adds two atomic increments to each batch, so the library counts nothing by default: set `micronaut.graphql.tools.execution.data-loader-statistics` to `true` to get these meters. Without it no DataLoader meter exists.
 
+[[resolverTimers]]
+=== Timers for your own resolvers
+
+The library records no timer for a field. A timer for a resolver is `@Timed` (`io.micrometer.core.annotation.Timed`), which Micronaut Micrometer handles for any bean method. It needs the processor `micronaut-micrometer-annotation` in the annotation processor path (in the `ksp` configuration for Kotlin, and on the compile classpath for Groovy), and a `MeterRegistry` bean.
+
+snippet::example.observability.ObservedQuery[project-base="test-suite", source="test", tags="timed", indent="0"]
+
+snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="timed-resolver", indent="0"]
+
 == Tracing
+
+The module is `graphql-tools-opentelemetry`.
+
 
 Each request is one span, started with an OpenTelemetry `Instrumenter` in the instrumentation scope `io.micronaut.graphql.tools`, with the kind `INTERNAL`. It is a child of the span that is current when the execution begins: the span of the HTTP request when the application has the HTTP server integration of Micronaut Tracing (`micronaut-tracing-opentelemetry-http`).
 
@@ -109,25 +126,16 @@ snippet::example.observability.ObservabilityTest[project-base="test-suite", sour
 
 The annotation needs no support from this library, and it works on a resolver of every language the library supports. A Kotlin class and its methods are `open` (the `allopen` plugin that the Micronaut Gradle plugin applies opens a `@Singleton`). A Groovy class needs the Micronaut AST transform, which `micronaut-inject-groovy` provides. A method that the application does not own, or that you want to trace without an annotation, is a candidate for `micronaut.graphql.tools.tracing.fields` instead.
 
-[[resolverTimers]]
-=== Timers for your own resolvers
-
-The library records no timer for a field. A timer for a resolver is `@Timed` (`io.micrometer.core.annotation.Timed`), which Micronaut Micrometer handles for any bean method. It needs the processor `micronaut-micrometer-annotation` in the annotation processor path (in the `ksp` configuration for Kotlin, and on the compile classpath for Groovy), and a `MeterRegistry` bean.
-
-snippet::example.observability.ObservedQuery[project-base="test-suite", source="test", tags="timed", indent="0"]
-
-snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="timed-resolver", indent="0"]
-
-=== Why the module has its own instrumentation
+=== Why the module has its own instrumenter
 
 OpenTelemetry publishes `opentelemetry-graphql-java` (`GraphQLTelemetry`), an alpha artifact, which also instruments graphql-java. The module does not use it. It overrides `instrumentDataFetcher`, so graphql-java wraps every field of every request in a lambda that keeps the context current, even when no field span is wanted, which gives up the per-field cost guarantee of <<cost>>. It has no way to select fields, and it is not a stable API.
 
 [[cost]]
 == Cost
 
-With the module on and no field selected, a request adds a constant cost (a timer, a span and a small state object), and no cost per field: the instrumentation implements no field hook, and no data fetcher is replaced. The allocation gate of the benchmarks (`observedInvocationSlope`) keeps this: the bytes per field of a request with the module on equal those of the same request with an `Instrumentation` bean that implements no hook, on every graphql-java leg. One thing is graphql-java's, not the module's: graphql-java 21 chains any `Instrumentation` with its own, and that chain allocates for each field (about 550 bytes) whatever the instrumentation does. graphql-java 22 and later do not. If a request of many fields matters more to you than the metrics, stay on graphql-java 22 or later.
+With the modules on and no field selected, a request adds a constant cost (a timer, a span and a small state object), and no cost per field: the instrumentation implements no field hook, and no data fetcher is replaced. The allocation gate of the benchmarks (`observedInvocationSlope`) keeps this: the bytes per field of a request with both modules on equal those of the same request with an `Instrumentation` bean that implements no hook, on every graphql-java leg. One thing is graphql-java's, not the module's: graphql-java 21 chains any `Instrumentation` with its own, and that chain allocates for each field (about 550 bytes) whatever the instrumentation does. graphql-java 22 and later do not. If a request of many fields matters more to you than the metrics, stay on graphql-java 22 or later.
 
-A selected field pays for its span: one `Instrumenter` call, a propagated-context scope and a few allocations for each call. The `benchmarks` module measures it next to the cost of a decorator that does nothing.
+A selected field pays for its span (a cost of the OpenTelemetry module only; the field-wrapping code is in no other module): one `Instrumenter` call, a propagated-context scope and a few allocations for each call. The `benchmarks` module measures it next to the cost of a decorator that does nothing.
 
 == Configuration
 
