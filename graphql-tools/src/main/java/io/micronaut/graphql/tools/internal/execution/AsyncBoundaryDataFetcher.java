@@ -72,8 +72,14 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
             return result;
         }
         Boundary boundary = new Boundary(state, stage);
-        state.awaitingResult();
+        boolean registered = state.register(boundary);
+        if (registered) {
+            state.awaitingResult();
+        }
         stage.whenComplete(boundary);
+        if (!registered) {
+            boundary.abort();
+        }
         return boundary;
     }
 
@@ -100,7 +106,7 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
     }
 
     /** The future that graphql-java continues on, and the callback of the source. */
-    private static final class Boundary extends CompletableFuture<Object> implements BiConsumer<Object, Throwable> {
+    private static final class Boundary extends PendingStage implements BiConsumer<Object, Throwable> {
 
         private final ExecutionState state;
         private final CompletionStage<?> source;
@@ -114,14 +120,30 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
             boolean cancelled = super.cancel(mayInterruptIfRunning);
-            if (cancelled && source instanceof CompletableFuture<?> future) {
+            if (cancelled) {
+                state.unregister(this);
+                cancelSource(mayInterruptIfRunning);
+            }
+            return cancelled;
+        }
+
+        private boolean cancelSource(boolean mayInterruptIfRunning) {
+            if (source instanceof CompletableFuture<?> future) {
                 try {
-                    future.cancel(mayInterruptIfRunning);
+                    return future.cancel(mayInterruptIfRunning);
                 } catch (UnsupportedOperationException e) {
                     // a minimal stage cannot be cancelled: there is nothing to cancel
                 }
             }
-            return cancelled;
+            return false;
+        }
+
+        /** The callback of a source that this cancelled completes the stage; a source that cannot be cancelled gets the abort here. */
+        @Override
+        void abort() {
+            if (!cancelSource(true)) {
+                accept(null, null);
+            }
         }
 
         @Override
@@ -150,6 +172,7 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
         }
 
         private void finish(Object value, Throwable failure) {
+            state.unregister(this);
             if (state.isCancelled()) {
                 completeExceptionally(new AbortExecutionException("The execution was cancelled"));
             } else if (failure != null) {

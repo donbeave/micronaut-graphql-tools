@@ -132,11 +132,13 @@ The library reads the annotation from the bean metadata once at startup and look
 
 The cost of a hop is one task and one future for the annotated field only. The `InvocationBenchmark` of the `benchmarks` module reports the hop; see CONTRIBUTING.md.
 
+[[cancellation]]
 == Cancellation
 
 An execution is cancelled when its client goes away: an HTTP client that closes its connection, a WebSocket `complete` and the close of a WebSocket connection (see <<subscriptions,Subscriptions>>). Cancellation is cooperative, and it does not depend on the graphql-java version. The library stops starting new work for the execution, and never interrupts code that is running, because interrupting a thread inside a JDBC driver can break the connection:
 
 * A hop task that is still queued, the one of the operation or the one of an `@ExecuteOn` field, is skipped. The operation then ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, which goes through the default error handling and the `GraphQLErrorsCustomizer` beans like any other error of the execution (see <<errors,Errors>>). Nobody reads that response over HTTP, because the client is gone.
+* An async field that is still pending when the execution is cancelled has its source stage cancelled right away: a `CompletableFuture` that the resolver returned is cancelled, and the coroutine of a Kotlin `suspend` resolver is cancelled with it, so it ends with a `CancellationException` at its next suspension point and the code after that point does not run. Only the stages of that execution are cancelled, never those of another execution, and a stage that already completed keeps its result. A resolver that returns a stage that cannot be cancelled (a `CompletableFuture.minimalCompletionStage`, for example) is not interrupted: its field completes with an abort.
 * The continuation of an async field that completes afterwards is aborted with graphql-java's `AbortExecutionException`: the children of the field, and every later async field, do not run.
 * The stream of a subscription is cancelled upstream.
 * A synchronous resolver that is already running finishes.
@@ -178,7 +180,7 @@ How the coroutine runs:
 * It starts on the thread that resolves the field, which is a thread of the request executor, inside the propagated context of the request. A function that never suspends is done when the call returns, at no cost beyond the call.
 * The library gives the coroutine a context with the propagated context of the request, the contexts of the `HttpCoroutineContextFactory` beans (the same ones that Micronaut gives a `suspend` controller method), a job of its own and `Dispatchers.Unconfined`. The unconfined dispatcher moves no work to another thread. It makes the coroutine install the propagated context on whichever thread resumes it, so `PropagatedContext` values are visible after `delay`, and inside `withContext(Dispatchers.IO)`, where the context element also reaches the IO thread.
 * The coroutine resumes where its suspension point resumes. When it finishes on an event loop thread, the async boundary completes the field on the request executor, as for any async field.
-* An exception that the function throws becomes an error of the field, as the exception that you threw. Cancelling the field's future, which graphql-java does on a timeout, cancels the job, so the coroutine ends with a `CancellationException` at its next suspension point.
+* An exception that the function throws becomes an error of the field, as the exception that you threw. Cancelling the field's future, which graphql-java does on a timeout, or cancelling the execution (see <<cancellation,Cancellation>>), cancels the job, so the coroutine ends with a `CancellationException` at its next suspension point.
 * A `suspend` function declares the type of its value. It cannot return a `CompletionStage` or a `Publisher` as well, and it cannot be a field of the subscription type: both fail at compile time and at startup with `[unsupported-return-type]`. Return a `Publisher` without `suspend` for a subscription.
 * A function with a wrong number of parameters fails with `[argument-mismatch]`, at compile time and at startup, and the continuation is not counted.
 
