@@ -1,4 +1,5 @@
 :repo: https://github.com/{githubSlug}/blob/master
+:samples: {sourcedir}/test-suite-build/samples
 
 [[compileTimeOptions]]
 
@@ -16,6 +17,28 @@ The compile-time checks have six options. Every option name starts with `microna
 |===
 
 The names are written with dots and camel case because `javac` accepts only dot-separated identifiers as option names.
+
+== Setting `looseNullability`
+
+The option changes the outcome of a build only for Kotlin under KSP, the one compiler that reads Kotlin nullability (under kapt a class is read as Java stubs, and Java and Groovy have no Kotlin nullability). Its default is `ignore`: the checks report no `kotlin-nullability-loose` finding unless the build sets `warn` or `fail`.
+
+With Gradle and KSP the option is an `arg` of the `ksp` block. The default is `ignore`; `-PgraphqlLooseNullability=warn` or `=fail` changes it:
+
+[source,kotlin]
+----
+include::{samples}/kotlin-ksp/build.gradle.kts[tags=loose-nullability]
+----
+
+With Maven the option is a `-A` argument in `compilerArgs` of `maven-compiler-plugin`, and the sample reads its value from a property whose default is `ignore`. `mvn verify -Dgraphql.looseNullability=fail` overrides it. A value that is not `fail`, `warn` or `ignore` fails the build with `[processor-option-invalid]`:
+
+[source,xml]
+----
+include::{samples}/java-maven/pom.xml[tags=loose-nullability-property]
+
+include::{samples}/java-maven/pom.xml[tags=loose-nullability]
+----
+
+The tests that build these snippets are `KotlinKspLooseNullabilityTest` (the default passes, `warn` passes with the warning, `fail` fails with `[kotlin-nullability-loose] Query.book`) and `JavaMavenLooseNullabilityTest` (every value is accepted and a bad value fails) in the {repo}/test-suite-build/src/test/java/io/micronaut/graphql/tools/buildtools[build-tools tests].
 
 == How each tool passes an option
 

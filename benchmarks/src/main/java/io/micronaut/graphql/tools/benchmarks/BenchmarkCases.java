@@ -173,6 +173,22 @@ public final class BenchmarkCases implements AutoCloseable {
         OBSERVABILITY
     }
 
+    /** The field decorator bean of the application. */
+    public enum Decorators {
+        /** None: no {@code FieldFetcherDecorator} bean. */
+        NONE("none"),
+        /** One that is offered every field and selects none. */
+        UNSELECTIVE("unselective"),
+        /** One that wraps every field in a fetcher that delegates. */
+        WRAP_ALL("wrapAll");
+
+        private final String property;
+
+        Decorators(String property) {
+            this.property = property;
+        }
+    }
+
     @FunctionalInterface
     public interface Op {
         Object run() throws Exception;
@@ -205,6 +221,15 @@ public final class BenchmarkCases implements AutoCloseable {
      * @param instrumented which {@code Instrumentation} bean the application has
      */
     public BenchmarkCases(int loaders, Instrumented instrumented) {
+        this(loaders, instrumented, Decorators.UNSELECTIVE);
+    }
+
+    /**
+     * @param loaders      how many batch loader beans no operation uses: 0, 1 or 50
+     * @param instrumented which {@code Instrumentation} bean the application has
+     * @param decorators   which {@code FieldFetcherDecorator} bean the application has
+     */
+    public BenchmarkCases(int loaders, Instrumented instrumented, Decorators decorators) {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
         ApplicationContextBuilder builder = ApplicationContext.builder();
@@ -221,7 +246,8 @@ public final class BenchmarkCases implements AutoCloseable {
                         "micronaut.graphql.tools.scalars.enabled", false,
                         // the invocation gates measure the calling thread, so the operation must not hop
                         "micronaut.graphql.tools.execution.executor", "none",
-                        "benchmarks.loaders", loaders))
+                        "benchmarks.loaders", loaders,
+                        "benchmarks.decorator", decorators.property))
                 .singletons(registry)
                 .start();
         graphQL = context.getBean(GraphQL.class);
@@ -384,6 +410,21 @@ public final class BenchmarkCases implements AutoCloseable {
     private Op direct(int fields) {
         String query = fieldsQuery(fields);
         return () -> graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build());
+    }
+
+    /**
+     * A query of one root field and {@code items * 5} fields below it, run on the {@code GraphQL} bean. The operation fails when
+     * the result has errors.
+     */
+    public Op wideQuery(int items) {
+        String query = "{ items(count: " + items + ") { id name price label labelWithArgument(n: 1) } }";
+        return () -> {
+            ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput().query(query).build());
+            if (!result.getErrors().isEmpty()) {
+                throw new IllegalStateException(result.getErrors().toString());
+            }
+            return result;
+        };
     }
 
     private Op query(int count) {
