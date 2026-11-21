@@ -23,6 +23,8 @@ import io.micronaut.graphql.tools.annotation.GraphQLIgnore
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.binding.internal.meta.ResolverContracts
+import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry
 import io.micronaut.graphql.tools.resolver.MutationResolver
@@ -109,12 +111,12 @@ type Book {
 
         then:
         query.stringValues(ResolverContracts, 'operations').toList() == ['query']
-        query.stringValues(ResolverContracts, 'methods').toList() == ['book']
+        query.stringValues(ResolverContracts, 'contractMethods').toList() == ['query||book/1']
         type.classValues(ResolverContracts, 'value').toList() == [Book]
         type.stringValues(ResolverContracts, 'declaredBy').toList() == [TypeResolver.name]
-        type.stringValues(ResolverContracts, 'methods').toList() == ['summary']
+        type.stringValues(ResolverContracts, 'contractMethods').toList() == ["|${Book.name}|summary/1".toString()]
         stock.stringValues(ResolverContracts, 'operations').toList() == ['mutation']
-        stock.stringValues(ResolverContracts, 'methods').toList() == []
+        stock.stringValues(ResolverContracts, 'contractMethods').toList() == []
     }
 
     void "a marker bean whose contracts the build did not record fails loudly, naming the bean"() {
@@ -130,6 +132,60 @@ type Book {
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.beanType == BookResolver
+    }
+
+    void "a TypeResolver bean compiled without the processor fails with the contracts-not-found code at registration"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME)
+        def registry = new GraphQLResolversRegistry(applicationContext, applicationContext.getBean(GraphQLToolsConfiguration))
+        registry.setTypeResolverContractReader { BeanDefinition<?> definition -> [:] }
+        BeanDefinition<?> definition = applicationContext.getBeanDefinition(BookResolver)
+
+        when:
+        definition.executableMethods.each { registry.registerTypeResolverExecutableMethod(definition, it) }
+        registry.verifyTypeResolverContracts()
+
+        then:
+        def e = thrown(SchemaBindingException)
+        e.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+        e.message.contains('TypeResolver<T>')
+        e.beanType == BookResolver
+    }
+
+    void "a root set made of marker beans compiled without the processor fails with the contracts-not-found code"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME)
+        def registry = new GraphQLResolversRegistry(applicationContext, applicationContext.getBean(GraphQLToolsConfiguration))
+        registry.setMarkerReader { BeanDefinition<?> definition -> ResolverMarkers.NONE }
+
+        expect: 'the set is not empty for the wiring, so that the failure is the one that names the fix'
+        registry.hasRootResolvers()
+
+        when:
+        registry.verifyTypeResolverContracts()
+
+        then:
+        def e = thrown(SchemaBindingException)
+        e.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+    }
+
+    void "a contract method is matched by its name and its number of parameters"() {
+        given:
+        def markers = new ResolverMarkers(['mutation', 'query'], null, [
+                new ResolverMarkers.ContractMethod(['query'], null, 'book', 1),
+                new ResolverMarkers.ContractMethod(['mutation'], null, 'book', 2),
+                new ResolverMarkers.ContractMethod([], Book.name, 'title', 1)])
+
+        expect:
+        markers.admits('book', 1)
+        markers.admits('book', 2)
+        !markers.admits('book', 3)
+        !markers.admits('helper', 1)
+        markers.operationsOf('book', 1) == ['query']
+        markers.operationsOf('book', 2) == ['mutation']
+        markers.modelsOf('title', 1) == [Book.name]
+        markers.modelsOf('book', 1) == []
+        ResolverMarkers.ContractMethod.decode(markers.contractMethods()[2].encode()) == markers.contractMethods()[2]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

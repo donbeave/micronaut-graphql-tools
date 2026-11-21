@@ -9,7 +9,7 @@ Issue #142.
 
 ```
 <category>/<case>/
-  case.properties            description=...  tags=lang:all,area:...  environments=  config.<key>=<value>
+  case.properties            description=...  tags=lang:all,area:...  environments=  config.<key>=<value>  compile.processor=absent
   schema.graphqls            one or more *.graphqls files (merged into one TypeDefinitionRegistry)
   java/example/*.java        sources per language; a language directory is a language the case covers
   groovy/example/*.groovy
@@ -43,6 +43,8 @@ it. The startup runs with every module on the classpath. A language directory ho
 Case names are the relative paths. `tags` are free `key:value` words; `lang:all` means the case has a Java, a Groovy and
 a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.graphql.tools.strict=false`); the checks-on compilation also gets
 `config.micronaut.graphql.tools.resolver-accessor-prefixes` as the visitor option `micronaut.graphql.tools.processor.resolverAccessorPrefixes`.
+
+A case that says `compile.processor=absent` is compiled without the processor on the compiler path, as a build that never registered it: Java and Groovy compile in a class loader whose class path has no output of the processor module, and the Kotlin batch leaves the visitor out of the unchecked subproject and builds no checked one. Such a case has no compile-time verdict (`expected/compile.txt` is a layout problem), and its `runtime.txt` is what the startup says about classes that the build did not record (`marker/no-processor-type-resolver`, `marker/no-processor-root-markers`).
 
 ## What the runner asserts
 
@@ -114,6 +116,7 @@ case under `exception/` that shows it:
 | `other-class-binding-failure` | stops at a binding failure of another class before the strict checks of this one |
 | `kotlin-nullability` | reports nothing: the nullability of a Kotlin type is compile-time metadata (`kotlin-nullability-mismatch`) |
 | `conflicting-class-mapping` | reports `mapping-conflict` when two classes bind one input type or enum to different Java classes, before the strict checks |
+| `dictionary-member-wins` | lets a `SchemaMappingDictionary` entry name the class of a union member or interface implementation that `@GraphQLType(name)` maps to a disjoint class: the member binds and nothing is reported (`incorrect-member-mapping`); the visitor cannot see the dictionary |
 | `dictionary-entry-wins` | lets a `SchemaMappingDictionary` entry win over two classes that match one object type by name (`ambiguous-type-class`); the visitor cannot see the dictionary |
 
 The ceiling must equal the number of entries, so a new exception shows as a raised ceiling in the review. An entry is stale and

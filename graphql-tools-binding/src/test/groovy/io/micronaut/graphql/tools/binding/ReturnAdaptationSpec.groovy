@@ -40,7 +40,8 @@ class ReturnAdaptationSpec extends Specification {
     static final STRING = ref('java.lang.String')
     static final MODEL = model(['java.util.concurrent.CompletableFuture': [STAGE], 'reactor.core.publisher.Flux': [PUBLISHER], 'reactor.core.publisher.Mono': [PUBLISHER],
             'io.reactivex.rxjava3.core.Single': [], 'io.reactivex.Maybe': [], 'io.reactivex.rxjava3.core.Completable': [],
-            'io.micronaut.core.async.publisher.CompletableFuturePublisher': [PUBLISHER]])
+            'io.micronaut.core.async.publisher.CompletableFuturePublisher': [PUBLISHER],
+            'kotlinx.coroutines.flow.Flow': [], 'kotlinx.coroutines.flow.SharedFlow': ['kotlinx.coroutines.flow.Flow']])
 
     static final REGISTRY = new SchemaParser().parse('scalar JSON\ntype Book { title: String }')
 
@@ -227,5 +228,25 @@ class ReturnAdaptationSpec extends Specification {
         adapt(ref('reactor.core.publisher.Mono', STRING), nullable, true, false, false, true).failure() ==
                 WrapperRules.suspendWithAsyncReturn('reactor.core.publisher.Mono')
         adapt(ref('reactor.core.publisher.Flux', STRING), nullable, true, true, false, true).failure() == WrapperRules.suspendOnSubscription()
+    }
+
+    void "a Kotlin Flow on a subscription field streams like a Publisher"() {
+        given:
+        def verdict = adapt(ref('kotlinx.coroutines.flow.Flow', STRING), nullable, true, true)
+
+        expect:
+        verdict.failure() == null
+        verdict.depth() == 1
+        !verdict.async()
+        adapt(ref('kotlinx.coroutines.flow.SharedFlow', STRING), nullable, true, true).depth() == 1
+        adapt(ref('kotlinx.coroutines.flow.Flow', STRING), nullable, true, true).reactive() == ReturnVerdict.Reactive.NONE
+    }
+
+    void "a Kotlin Flow is rejected outside the subscription type, in a list, and inside a stage"() {
+        expect:
+        adapt(ref('kotlinx.coroutines.flow.Flow', STRING)).failure() == WrapperRules.flowOutsideSubscription()
+        adapt(ref('kotlinx.coroutines.flow.Flow', STRING), nullable, false, true).failure() == WrapperRules.flowOutsideSubscription()
+        adapt(ref(STAGE, ref('kotlinx.coroutines.flow.Flow', STRING)), nullable, true, true).failure() != null
+        WrapperRules.flowOutsideSubscription().contains('Fix:')
     }
 }

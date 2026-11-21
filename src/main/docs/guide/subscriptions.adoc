@@ -21,6 +21,8 @@ The library replaces the handler of `micronaut-graphql` for this endpoint, with 
 
 The deprecated Apollo `graphql-ws` sub-protocol (`graphql.graphql-apollo-ws.enabled`) stays with the transport. Its operations reach the library's invocation too, so they run on the executor like every other operation.
 
+`micronaut-graphql` guards its beans for that protocol with a condition that reads a missing `graphql.graphql-apollo-ws.enabled` as enabled, while its controller reads it as disabled. Its keep-alive sender (`GraphQLApolloWsKeepAlive`, a `@Scheduled` bean) would exist by default and fail at startup in a context that has no server to broadcast on (a `NoSuchBeanException` for a bean of the server, in a native image too). The library therefore sets `graphql.graphql-apollo-ws.enabled` to `false` as a default of the lowest precedence, so the sender is not a bean until the application sets the property to `true`. With the Apollo support on, `graphql.graphql-apollo-ws.keep-alive-enabled=false` turns the sender off.
+
 == Writing a subscription
 
 A method of a `SubscriptionResolver` (or of a `@GraphQLRootResolver` class) that is named after a field of the `Subscription` type returns a reactive stream of the event. `Publisher<T>`, Reactor's `Flux<T>` and the other reactive types that Micronaut converts to a `Publisher` are accepted.
@@ -36,6 +38,28 @@ The method itself runs on the executor of the operation (`micronaut.graphql.tool
 The cost is one wrapper and one queue for each subscription, and one executor task for each burst of events; fields do not hop.
 
 A query or a mutation can be sent over the same connection: it is one execution with one `next` and then `complete`. A resolver that blocks runs on the executor, not on the event loop, as it does over HTTP.
+
+== Kotlin Flow
+
+A Kotlin method can return a `Flow<T>` for a field of the `Subscription` type, as well as a `Publisher<T>`. This is Kotlin only: Java and Groovy have no `Flow`, so unlike the other examples of this guide, the example below exists in the Kotlin suite only.
+
+:flow-sources: {sourcedir}/test-suite-kotlin/src/test/kotlin
+
+[source,kotlin]
+----
+include::{flow-sources}/example/flow/FlowFixtures.kt[tags=flow-subscription]
+----
+
+The library adapts the flow to a `Publisher` once for each field at startup, with `asPublisher` of kotlinx-coroutines-reactive, and the adapted stream takes the same path as any other subscription (see above):
+
+* the flow is collected once for each subscription, by one coroutine, and a method that does not return a `Flow` gets no wrapper;
+* the coroutine runs in the propagated context of the operation and in the contexts of the `HttpCoroutineContextFactory` beans, as a `suspend` resolver does, so the context is visible inside the flow, also after `flowOn` or `withContext`;
+* the events are moved to the executor of the operation and the fields of each event are resolved there, off the event loop, with the context of the connection;
+* a `complete` from the client or the close of the connection cancels the subscription, which cancels the coroutine that collects the flow: the `CancellationException` reaches the flow, so its `onCompletion` and `finally` blocks run.
+
+A `Flow` is accepted on a field of the `Subscription` type only. On any other field, inside a list or inside a `CompletionStage`, it fails the startup with `[unsupported-return-type]`: return the value from a `suspend` function, or a `Publisher`, instead.
+
+The adapter needs `org.jetbrains.kotlinx:kotlinx-coroutines-reactive` on the classpath of the application, next to kotlinx-coroutines-core. The library does not depend on it: the adapter is a bean that exists only when those classes are present, so an application without them (and its native image) links no Kotlin type. Binding a `Flow` subscription without it fails the startup with `[flow-without-reactive-coroutines]` and the dependency to add.
 
 == Accepting a connection
 

@@ -36,6 +36,7 @@ import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator;
 import io.micronaut.inject.BeanDefinition;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -78,10 +79,17 @@ public final class SchemaCoordinateValidator {
                 .map(it -> it.getTypeName().getName())
                 .collect(Collectors.toCollection(TreeSet::new));
 
+        Map<String, String> typeByOperation = new HashMap<>();
+        schemaDefinition.getOperationTypeDefinitions()
+                .forEach(it -> typeByOperation.put(it.getName(), it.getTypeName().getName()));
+
         List<String> problems = new ArrayList<>();
         List<String> onNonResolvers = new ArrayList<>();
         for (SchemaCoordinateMethod coordinateMethod : graphQLResolversRegistry.getSchemaCoordinateMethods()) {
             String problem = checkSchemaCoordinate(coordinateMethod, operationTypeNames);
+            if (problem == null) {
+                problem = contradiction(coordinateMethod, operationTypeNames, typeByOperation);
+            }
             if (problem == NOT_A_RESOLVER) {
                 onNonResolvers.add(describe(coordinateMethod) + ": " + problem);
             } else if (problem != null) {
@@ -103,6 +111,24 @@ public final class SchemaCoordinateValidator {
         if (!failures.isEmpty()) {
             throw new BindingFailuresException(failures);
         }
+    }
+
+    // a coordinate on a root type that the marker contracts of the method do not bind: the startup does not bind the method to
+    // it, whether another bean binds the field or not, and the compile-time check reports the same finding
+    @Nullable
+    private String contradiction(SchemaCoordinateMethod coordinateMethod, Set<String> operationTypeNames,
+                                 Map<String, String> typeByOperation) {
+        String coordinate = coordinateMethod.coordinate();
+        if (coordinate.indexOf('.') <= 0 || !operationTypeNames.contains(SchemaCoordinates.typeName(coordinate))) {
+            return null;
+        }
+        List<String> operations = graphQLResolversRegistry.operationsOf(coordinateMethod);
+        if (operations.isEmpty()
+                || operations.stream().anyMatch(it -> SchemaCoordinates.typeName(coordinate).equals(typeByOperation.get(it)))) {
+            return null;
+        }
+        return "the coordinate names " + coordinate + ", a field of a root type that the contracts of the method do not bind: "
+                + "they bind " + String.join(", ", operations) + " only";
     }
 
     @Nullable

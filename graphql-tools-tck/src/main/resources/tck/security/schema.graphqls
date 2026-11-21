@@ -1,0 +1,21 @@
+# Extends the Query of the example schema that every suite serves; the names below must not clash with it.
+extend type Query {
+  secOpen: String!
+  # @Secured(isAuthenticated())
+  secAuthenticated: String
+  # @Secured("ROLE_ADMIN")
+  secAdmin: String
+  # @Secured(denyAll())
+  secNobody: String
+  # the identity of the caller, resolved in a child field after an async parent
+  secMe: SecMe!
+  # the root fields that the hook saw for this operation
+  secRoots: String!
+}
+
+type SecMe {
+  # the Authentication as a resolver parameter
+  principal: String
+  # SecurityService
+  service: String
+}

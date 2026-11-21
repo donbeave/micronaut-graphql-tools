@@ -32,7 +32,7 @@ import java.nio.file.Path
 /**
  * In-process javac (javax.tools) over the test classpath, with the annotation processors of the test classpath. The visitor of this module, which the test resources
  * register, is switched off here ({@link #CHECKS_OFF}): the classes are built to be started, and checked by the compile-time
- * binder. Micronaut's processors copy the {@code -Amicronaut.*} options into the system properties, so every
+ * binder. A case that says {@code compile.processor=absent} is compiled with Micronaut's processors of a {@link ProcessorlessLoader}, which has no visitor. Micronaut's processors copy the {@code -Amicronaut.*} options into the system properties, so every
  * {@code micronaut.graphql.tools.processor.*} property is cleared, and the properties are restored, around each compilation.
  */
 @CompileStatic
@@ -60,7 +60,7 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
     CompiledCase compile(CorpusCase corpusCase, Path work) {
         List<Path> outputs = []
         for (SourceUnit unit : corpusCase.units(Language.JAVA)) {
-            CompiledCase compiled = compileUnit(unit, work.resolve('unit-' + outputs.size()), outputs, ['-A' + CHECKS_OFF])
+            CompiledCase compiled = compileUnit(unit, work.resolve('unit-' + outputs.size()), outputs, ['-A' + CHECKS_OFF], corpusCase.processorAbsent())
             if (!compiled.success) {
                 return new CompiledCase(false, outputs.empty ? compiled.classes : outputs.first(), compiled.errors, outputs.drop(1))
             }
@@ -106,23 +106,24 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
         return new CompiledCase(success, classes, errors, [], warnings)
     }
 
-    private CompiledCase compileUnit(SourceUnit unit, Path work, List<Path> dependencies, List<String> options) {
+    private CompiledCase compileUnit(SourceUnit unit, Path work, List<Path> dependencies, List<String> options, boolean processorless = false) {
         Path classes = Files.createDirectories(work.resolve('classes'))
         JavaCompiler compiler = ToolProvider.systemJavaCompiler
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>()
         StandardJavaFileManager files = compiler.getStandardFileManager(diagnostics, null, StandardCharsets.UTF_8)
         Properties saved = (Properties) System.properties.clone()
+        URLClassLoader processors = processorless ? ProcessorlessLoader.create() : null
         try {
             List<File> classpath = System.getProperty('java.class.path').split(File.pathSeparator).collect { new File(it) }
             classpath.addAll(dependencies.collect { it.toFile() })
             files.setLocation(StandardLocation.CLASS_PATH, classpath)
             files.setLocation(StandardLocation.CLASS_OUTPUT, [classes.toFile()])
-            List<Processor> processors = new ArrayList<>()
-            ServiceLoader.load(Processor, getClass().classLoader).each { processors.add(it) }
+            List<Processor> found = new ArrayList<>()
+            ServiceLoader.load(Processor, processors ?: getClass().classLoader).each { found.add(it) }
             JavaCompiler.CompilationTask task = compiler.getTask(null, files, diagnostics,
                     ['-proc:full'] + options,
                     null, files.getJavaFileObjectsFromPaths(unit.sources))
-            task.setProcessors(processors)
+            task.setProcessors(found)
             clearSystemProperties()
             boolean success = task.call()
             List<String> errors = diagnostics.diagnostics.findAll { it.kind == Diagnostic.Kind.ERROR }
@@ -133,6 +134,7 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
             return new CompiledCase(success, classes, errors, [], warnings)
         } finally {
             files.close()
+            processors?.close()
             System.properties = saved
         }
     }

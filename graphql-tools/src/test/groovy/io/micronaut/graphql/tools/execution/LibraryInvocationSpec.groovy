@@ -54,12 +54,14 @@ import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Mono
+import reactor.util.context.Context
 import spock.lang.IgnoreIf
 import spock.lang.Requires as SpockRequires
 
 import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ExecutorService
 
 /** The library's GraphQLInvocation: the executor hop, the call order, the step-aside rules and the startup failures. */
@@ -89,10 +91,15 @@ type Child {
 """
 
     void setup() {
+        ProbeCustomizer.reset()
         CALLS.clear()
         RESOLVER_THREADS.clear()
         SEEN.clear()
         CUSTOMIZER_THREADS.clear()
+    }
+
+    private LibraryGraphQLInvocation invocation() {
+        applicationContext.getBean(LibraryGraphQLInvocation)
     }
 
     private ExecutionResult run(String query = '{ hello child { name } }') {
@@ -137,7 +144,7 @@ type Child {
         RESOLVER_THREADS.every { it == Thread.currentThread() }
     }
 
-    void "a named executor bean runs the operation, and the customizer and the resolvers run on it after one hop"() {
+    void "a named executor bean runs the operation, and the resolvers run on it after one hop from the customizer"() {
         given:
         startContext(SCHEMA, SPEC_NAME + '.recording', ['micronaut.graphql.tools.execution.executor': 'counting',
                                          'micronaut.executors.counting.type'          : 'fixed',
@@ -150,8 +157,8 @@ type Child {
         result.errors.isEmpty()
         RESOLVER_THREADS*.name.every { it.startsWith('counting') }
         RESOLVER_THREADS.toSet().size() == 1
-        CUSTOMIZER_THREADS.size() == 1
-        CUSTOMIZER_THREADS[0] == RESOLVER_THREADS[0]
+        CUSTOMIZER_THREADS == [Thread.currentThread()]
+        RESOLVER_THREADS[0] != Thread.currentThread()
     }
 
     void "a customizer that extends the transport's default one still runs"() {
@@ -165,7 +172,7 @@ type Child {
         CUSTOMIZER_THREADS.size() == 1
     }
 
-    void "the customizer runs after the hop and before graphql-java, and the state survives a fresh input"() {
+    void "the customizer runs on the subscribing thread and before graphql-java, and the state survives a fresh input"() {
         given:
         startContext(SCHEMA, SPEC_NAME + '.customizer', ['micronaut.graphql.tools.execution.executor': 'io'])
 
@@ -176,13 +183,58 @@ type Child {
         result.errors.isEmpty()
         result.data == [hello: 'world', child: [name: 'kid']]
         CALLS == ['customizer', 'fetch']
-        and: 'it saw the base input with the state in its context, off the calling thread'
+        and: 'it saw the base input with the state in its context, on the subscribing thread'
         SEEN[0] instanceof ExecutionState
         SEEN[0].transport() == GraphQLTransport.HTTP
-        SEEN[1] instanceof Thread && SEEN[1] != Thread.currentThread()
+        SEEN[1] == Thread.currentThread()
         and: 'the resolver found the state in the context of the fresh input'
         SEEN[2] instanceof ExecutionState
         SEEN[2].is(SEEN[0])
+    }
+
+    void "a customizer sees the Reactor context of the subscriber"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.probe', ['micronaut.graphql.tools.execution.executor': 'io'])
+
+        when:
+        def result = Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null))
+                .contextWrite(Context.of('probe-key', 'from-subscriber')).block()
+
+        then:
+        result.errors.isEmpty()
+        SEEN[0] == 'from-subscriber'
+    }
+
+    void "cancelling the returned publisher cancels the customizer subscription"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.probe', ['micronaut.graphql.tools.execution.executor': 'io'])
+        ProbeCustomizer.NEVER = true
+
+        when:
+        def subscription = Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)).subscribe()
+        def subscribed = ProbeCustomizer.SUBSCRIBED.get()
+        subscription.dispose()
+
+        then:
+        subscribed == 1
+        ProbeCustomizer.CANCELLED.get() == 1
+        CALLS.isEmpty()
+
+        cleanup:
+        ProbeCustomizer.NEVER = false
+    }
+
+    void "a returned publisher that is never subscribed starts no execution"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.probe', ['micronaut.graphql.tools.execution.executor': 'io'])
+
+        when:
+        invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)
+        Thread.sleep(200)
+
+        then:
+        ProbeCustomizer.CALLED.get() == 0
+        CALLS.isEmpty()
     }
 
     void "the propagated context of the caller is visible in the resolvers"() {
@@ -456,7 +508,7 @@ type Child {
     }
 
     @Singleton
-    @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(customizer|subclass)')
+    @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(customizer|subclass|probe)')
     @GraphQLRootResolver
     static class CustomizedQuery {
         String hello(DataFetchingEnvironment environment) {
@@ -480,6 +532,32 @@ type Child {
             SEEN << Thread.currentThread()
             // a fresh input: the library's entry in the context is gone
             Mono.just(ExecutionInput.newExecutionInput().query(executionInput.query).build())
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.probe')
+    @Singleton
+    static class ProbeCustomizer implements GraphQLExecutionInputCustomizer {
+        static final AtomicInteger CALLED = new AtomicInteger()
+        static final AtomicInteger SUBSCRIBED = new AtomicInteger()
+        static final AtomicInteger CANCELLED = new AtomicInteger()
+        static volatile boolean NEVER
+
+        static void reset() {
+            CALLED.set(0)
+            SUBSCRIBED.set(0)
+            CANCELLED.set(0)
+            NEVER = false
+        }
+
+        @Override
+        Publisher<ExecutionInput> customize(ExecutionInput executionInput, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
+            CALLED.incrementAndGet()
+            Mono<ExecutionInput> input = NEVER ? Mono.<ExecutionInput> never() : Mono.deferContextual { ctx ->
+                SEEN << ctx.getOrDefault('probe-key', 'missing')
+                Mono.just(executionInput)
+            }
+            input.doOnSubscribe { SUBSCRIBED.incrementAndGet() }.doOnCancel { CANCELLED.incrementAndGet() }
         }
     }
 

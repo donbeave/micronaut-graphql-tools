@@ -1,0 +1,3 @@
+query Echo($v: String!) {
+  httpEcho(value: $v)
+}
