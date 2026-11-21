@@ -73,6 +73,13 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     @Nullable
     private Compilation compilation;
 
+    // Micronaut runs the visitors from the highest order to the lowest: this one runs after Micronaut Validation's visitor (-90),
+    // which rewrites @Introspected, and before the one that generates the introspections (-100)
+    @Override
+    public int getOrder() {
+        return -95;
+    }
+
     @Override
     public @NonNull Set<String> getSupportedAnnotationNames() {
         return Set.of(AnnotationNames.ROOT_RESOLVER, AnnotationNames.TYPE_RESOLVER, AnnotationNames.SCHEMA_COORDINATE,
@@ -118,8 +125,11 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             ResolverContractsWriter.write(element);
         }
         Compilation current = compilation;
-        if (current != null && element.hasDeclaredAnnotation(AnnotationNames.MODELS)) {
-            recordModels(current, element, context);
+        if (element.hasDeclaredAnnotation(AnnotationNames.MODELS)) {
+            introspectModels(element);
+            if (current != null) {
+                recordModels(current, element, context);
+            }
         }
         if (current != null && current.options.checks()) {
             recordTypeClass(current, element);
@@ -153,6 +163,50 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         String declared = element.getAnnotationMetadata().stringValue(AnnotationNames.TYPE, "name").orElse("");
         current.typeClasses.put(element.getName(),
                 new TypeClassDerivation.Candidate(element.getName(), element.getSimpleName(), declared));
+    }
+
+    // Another processor can re-annotate the class with @Introspected after Micronaut resolved @GraphQLModels into it and keep only
+    // its own members (Micronaut Validation's processor does), so the listed classes and packages are put back on the
+    // declared @Introspected here, together with what it carries already. This runs after the visitors that annotate before it
+    // (see getOrder); the members are set, not added, so a class listed twice is introspected once.
+    private static void introspectModels(ClassElement element) {
+        var models = element.getAnnotationMetadata().findAnnotation(AnnotationNames.MODELS).orElse(null);
+        if (models == null) {
+            return;
+        }
+        var introspected = element.getAnnotationMetadata().findDeclaredAnnotation(INTROSPECTED).orElse(null);
+        element.annotate(INTROSPECTED, builder -> {
+            for (String member : List.of("classes", "includedAnnotations")) {
+                AnnotationClassValue<?>[] listed = union(models.annotationClassValues(member),
+                        introspected == null ? new AnnotationClassValue<?>[0] : introspected.annotationClassValues(member));
+                if (listed.length > 0) {
+                    builder.member(member, listed);
+                }
+            }
+            String[] packages = java.util.stream.Stream.concat(Arrays.stream(models.stringValues("packages")),
+                    introspected == null ? java.util.stream.Stream.<String>empty() : Arrays.stream(introspected.stringValues("packages")))
+                    .distinct().toArray(String[]::new);
+            if (packages.length > 0) {
+                builder.member("packages", packages);
+            }
+            if (introspected != null) {
+                var indexed = introspected.getAnnotations("indexed");
+                if (!indexed.isEmpty()) {
+                    builder.member("indexed", indexed.toArray(io.micronaut.core.annotation.AnnotationValue[]::new));
+                }
+            }
+        });
+    }
+
+    private static AnnotationClassValue<?>[] union(AnnotationClassValue<?>[] first, AnnotationClassValue<?>[] second) {
+        Map<String, AnnotationClassValue<?>> byName = new LinkedHashMap<>();
+        for (AnnotationClassValue<?> value : first) {
+            byName.putIfAbsent(value.getName(), value);
+        }
+        for (AnnotationClassValue<?> value : second) {
+            byName.putIfAbsent(value.getName(), value);
+        }
+        return byName.values().toArray(new AnnotationClassValue<?>[0]);
     }
 
     // the classes that @GraphQLModels lists make the compile-time check see them as introspected; an annotation that lists
