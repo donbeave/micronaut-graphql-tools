@@ -1,0 +1,14 @@
+{
+  sealedShapes {
+    __typename
+    ... on SealedCircle { radius }
+    ... on SealedSquare { side }
+    ... on SealedTriangle { base }
+  }
+  sealedPets {
+    __typename
+    name
+    ... on SealedDog { barks }
+    ... on SealedCat { lives }
+  }
+}

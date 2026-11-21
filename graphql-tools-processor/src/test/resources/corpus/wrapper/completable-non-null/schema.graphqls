@@ -1,0 +1,12 @@
+schema {
+  query: Query
+}
+
+type Query {
+  done: String
+  mustReturn: String!
+}
+
+type Book {
+  title: String!
+}

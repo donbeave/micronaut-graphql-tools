@@ -10,7 +10,7 @@ Open issues are listed at [donbeave/micronaut-graphql-tools/issues](https://gith
 
 ## JDK Setup
 
-Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-observability:check` works: the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
+Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-observability:check :micronaut-graphql-tools-upload:check` works: the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
 
 The tools are pinned in `mise.toml` and installed with [mise](https://mise.jdx.dev): run `mise install` in the project directory. It installs Oracle GraalVM 25 (the build JDK, and `native-image` for the native tests) and `jactionlint` (a fork of actionlint that lints the workflows and composite actions: run `jactionlint` in the project directory; CI runs the same command in the `actionlint` job, with the default profile, which adds the security rules). It is pinned in `mise.toml`; the [jactionlint documentation](https://jactionlint.jdx.dev) lists the other install methods. To build on another JDK line, select an overlay with `MISE_ENV`, for example `export MISE_ENV=jdk21` and then `mise install` (or one command at a time: `MISE_ENV=jdk21 mise exec -- ./gradlew build`; `mise install` alone does not activate the tools, so keep `MISE_ENV` set, or use `mise exec`, when you run Gradle) (`jdk17`, `jdk21`, `jdk25` and `jdk27` install Temurin; JDK 27 is for the canary only). Gradle is not installed by mise: use `./gradlew`.
 
@@ -28,7 +28,7 @@ The tests do not need Docker. These are the commands CI runs (all in `.github/wo
 
 - `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
 - `./gradlew build -PgraphqlJavaLeg=floor|ceiling` runs the same build on another graphql-java leg (`default` is the default; `latest` is for the canary). The versions of each role are in `gradle/libs.versions.toml`; the README explains the roles. `-PgraphqlJavaCompileLeg=default` compiles main code on the default leg while the tests run on the leg of `-PgraphqlJavaLeg` (the binary compatibility job).
-- `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-observability:check` checks the library, its binding module, the processor and the scalars module only; this is the one that works on JDK 17.
+- `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-observability:check :micronaut-graphql-tools-upload:check` checks the library, its binding module, the processor and the scalars module only; this is the one that works on JDK 17.
 - `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` runs the native image tests (the build runs tasks in parallel by default, and each native build needs about 5 GB) (Oracle GraalVM 25); add `-PgraphqlJavaLeg=ceiling` for another leg.
 - `./gradlew :test-suite-build:buildToolsTest` builds the sample projects of `test-suite-build` with Gradle TestKit and Maven against the library published to `build/repo` (CI job `build tools`, JDK 25 and `mvn`, needs the network; the job also runs `corpusKotlin`, below). `build` and `check` do not run it.
 
@@ -55,6 +55,29 @@ The example applications are three separate Gradle projects with the same schema
 | `test-suite-groovy` | Groovy (Spock) | `./gradlew :test-suite-groovy:test` | no native test: `./gradlew :test-suite-groovy:nativeSmokeTest` (see below) |
 
 Each native test takes about 5 to 7 minutes and 5 GB of memory: run them one after another.
+
+#### Native coverage
+
+`nativeTest` runs every JUnit 5 test of the suite as a native binary, so the table below is the list of feature categories that must keep a test in the Java and Kotlin suites (the Groovy example has the native smoke test). A category that runs a TCK scenario names it: the scenario is written once and `example.tck.GraphQLToolsTckTest` runs it in both suites, so the native run covers what the JVM run covers. `checkNativeCoverage` (part of `check`) fails when a row names a test class that is missing from a suite it lists, or a scenario that `scenarios.txt` does not list. Add a row when you add a feature category, and keep the table in step with the native page of the guide.
+
+<!-- native-coverage:begin -->
+| Category | Test class | TCK scenario | Suites |
+| --- | --- | --- | --- |
+| Inputs | `example.tck.GraphQLToolsTckTest` | `arguments`, `input-errors` | Java, Kotlin |
+| Enums | `example.enums.EnumValuesTest` | `enums` | Java, Kotlin |
+| Interfaces and unions | `example.tck.GraphQLToolsTckTest` | `abstract-types` | Java, Kotlin |
+| Scalar mapping | `example.scalars.ScalarsTest` | | Java, Kotlin |
+| Subscription | `example.tck.WebSocketTest` | `websocket` | Java, Kotlin |
+| Inherited resolver contracts | `example.contracts.InheritedContractTest` | | Java, Kotlin |
+| Directives | `example.directives.DirectiveWiringTest` | | Java, Kotlin |
+| Error handling | `example.tck.GraphQLToolsTckTest` | `errors`, `error-mapping`, `error-handling`, `error-details` | Java, Kotlin |
+| Binding manifest and strict-mode `Object` method detection | `example.manifest.BindingManifestTest` | | Java, Kotlin |
+| Schema discovery by index | `example.discovery.SchemaDiscoveryTest` | | Java, Kotlin |
+| Execution thread (not an event-loop thread) | `example.tck.EventLoopMarkerTest` | `execution-thread`, `execution-thread-none` | Java, Kotlin |
+| Context propagation | `example.tck.GraphQLToolsTckTest` | `per-execution-context`, `async-context` | Java, Kotlin |
+| Async returns | `example.tck.GraphQLToolsTckTest` | `return-types` | Java, Kotlin |
+| Kotlin `suspend` | `example.suspend.SuspendTest` | | Kotlin |
+<!-- native-coverage:end -->
 
 The three schemas (`src/main/resources/schema.graphqls`) are copies; `./gradlew :test-suite-java:checkSuiteSchemaParity` (part of `check`) fails when they differ.
 

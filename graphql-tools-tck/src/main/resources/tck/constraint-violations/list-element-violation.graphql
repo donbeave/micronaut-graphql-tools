@@ -1,0 +1,3 @@
+{
+  restock(lines: [{ sku: "a", quantity: 1 }, { sku: "", quantity: 2 }, { sku: "c", quantity: 0 }])
+}

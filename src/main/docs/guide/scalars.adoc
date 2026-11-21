@@ -15,6 +15,8 @@ The module registers one `GraphQLScalarMapping` bean for each scalar of the tabl
 
 snippet::example.scalars.ScalarsFixtures[project-base="test-suite", source="test", tags="schema", indent="0"]
 
+The schema of the example application declares `scalar JSON`, which the field `payload` uses.
+
 snippet::example.scalars.ScalarsQuery[project-base="test-suite", source="test", tags="resolver", indent="0"]
 
 snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="round-trip", indent="0"]
@@ -56,9 +58,13 @@ The id is the key of the scalar in the configuration. The name is the default na
 
 `Long`, `Short`, `BigDecimal` and `BigInteger` are built in and are not part of the table.
 
+A pattern is resolved strictly: a date that does not exist, such as `2026-02-31`, is refused. The letter `y` is read as the proleptic year, so a year reads and writes the same digits as written. A pattern may hold an optional section, and an era section is supported: `[G ]yyyy-MM-dd` reads `2026-05-01` and `AD 2026-05-01` as the same date (a text without an era is read as AD) and writes `AD 2026-05-01` (the era text is the one of the JDK, `CE` on JDK 25 and later). An optional section of any other field is supported when the fields outside it still resolve the value; a pattern that cannot resolve a value fails as a value that does not parse.
+
 The `java.time` scalars write a string (or a count for the epoch and duration keywords) and read it back. A value that does not parse is a GraphQL error that names the scalar and the expected format, in the phase it happened: a bad literal fails the validation of the query, a bad variable fails the coercion of the variables, and a bad value that a resolver returns fails that field.
 
 The `JSON` scalar passes a string, a number, a boolean, a `Map` or a collection on as it is. Any other value, such as a `@Serdeable` record, is converted into maps, lists and primitives with the application's `JsonMapper`. In an application that uses Micronaut Serialization that is the Serde mapper, so the value is written the way Serde writes it (with its inclusion rules, which leave out nulls and empty collections by default). The module depends on the JSON API only: it brings neither Jackson nor a Serde implementation, and the application picks the stack.
+
+The scalar refuses a number that is not finite (NaN or an infinity) at any depth of a map or a list, in a response and in a variable, and a float that is not zero but underflows to zero as a `double` (`1e-10000`): the value is a coercion error instead of a silently changed number. A literal that is zero (`0.0`, `0e5`) and the smallest subnormal double are accepted. An integral `Number` such as `AtomicLong` or `LongAdder` becomes an exact integer literal in `valueToLiteral`, whatever its size; a `Number` of an unknown kind is written through its decimal text, or refused when that text is not a decimal. The check walks the value without allocating when the maps and lists are mutable (`HashMap`, `LinkedHashMap`, `ArrayList`); the JDK's immutable maps, such as `Map.of`, allocate an iterator for each map the walk visits.
 
 == Configuring a scalar
 
@@ -93,4 +99,4 @@ The startup fails:
 
 == Performance
 
-Coercion allocates the result and nothing more in the common cases. `yyyy-MM-dd` is read without a formatter and an ISO instant (`yyyy-MM-ddTHH:mm:ss[.fraction]Z`) is read and written without one; anything else goes to `DateTimeFormatter`, which allocates its parse state. The `JSON` scalar returns a value that is JSON already as the same object, so it allocates nothing. The allocation gate of the benchmarks module records the bytes of one parse and one write for a `LocalDate` (136 B: the date and the string, written by `LocalDate.toString`), an `Instant` (144 B: the instant, the characters and the string) and a `JSON` value (0 B), and `FetcherBenchmark` has the same three cases next to the argument conversion cases (see <<performance,Performance>>).
+Coercion allocates the result and nothing more in the common cases. `yyyy-MM-dd` is read without a formatter and an ISO instant (`yyyy-MM-ddTHH:mm:ss[.fraction]Z`) is read and written without one; anything else goes to `DateTimeFormatter`, which allocates its parse state. The `JSON` scalar returns a value that is JSON already as the same object, so it allocates nothing. The allocation gate of the benchmarks module records the bytes of one parse and one write for a `LocalDate` (136 B: the date and the string, written by `LocalDate.toString`), an `Instant` (144 B: the instant, the characters and the string) and a `JSON` value (0 B, for a mutable map that holds a list and numbers), and `FetcherBenchmark` has the same three cases next to the argument conversion cases (see <<performance,Performance>>).

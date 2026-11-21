@@ -15,9 +15,12 @@
  */
 package example.observability;
 
+import io.micrometer.core.annotation.Timed;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+import io.micronaut.tracing.annotation.NewSpan;
+import io.micronaut.tracing.annotation.SpanTag;
 import jakarta.inject.Singleton;
 
 @Requires(env = ObservabilityFixtures.OBSERVED)
@@ -32,6 +35,25 @@ public class ObservedQuery {
     public ObservedBook observedBook() {
         return new ObservedBook("T");
     }
+
+    // tag::newspan[]
+    @NewSpan("observed.work")
+    public String observedTraced() {
+        return "traced";
+    }
+
+    @NewSpan("observed.tagged")
+    public String observedTagged(@SpanTag("observed.value") String value) {
+        return value;
+    }
+    // end::newspan[]
+
+    // tag::timed[]
+    @Timed("observed.timed")
+    public String observedTimed() {
+        return "timed";
+    }
+    // end::timed[]
 
     @Introspected
     public record ObservedBook(String title) {

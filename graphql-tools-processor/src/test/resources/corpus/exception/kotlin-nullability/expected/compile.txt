@@ -1,5 +1,6 @@
 kotlin-nullability-loose Query.subtitle schema.graphqls:10:3
-kotlin-nullability-mismatch Filter.text schema.graphqls:14:3
+kotlin-nullability-mismatch Filter.text schema.graphqls:15:3
+kotlin-nullability-mismatch Query.later schema.graphqls:11:3
 kotlin-nullability-mismatch Query.names schema.graphqls:9:3
 kotlin-nullability-mismatch Query.search(term:) schema.graphqls:7:10
 kotlin-nullability-mismatch Query.title schema.graphqls:6:3

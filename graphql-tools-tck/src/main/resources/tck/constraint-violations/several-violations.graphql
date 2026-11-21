@@ -1,0 +1,3 @@
+{
+  several(name: "", count: 0, cart: { owner: " ", quantity: -1, lines: [] })
+}

@@ -17,6 +17,7 @@ directives: Directives
 dataLoaders: Data Loaders
 errors: Errors
 observability: Observability
+fileUpload: File Upload
 subscriptions: Subscriptions
 context: Context
 execution: Execution

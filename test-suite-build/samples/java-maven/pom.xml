@@ -20,6 +20,10 @@
     <micronaut.graphql.tools.version>1.0.0-SNAPSHOT</micronaut.graphql.tools.version>
     <!-- mvn verify -Dgraphql.checks=false compiles without the checks -->
     <graphql.checks>true</graphql.checks>
+    <!-- tag::loose-nullability-property[] -->
+    <!-- ignore (the default), warn or fail: what the checks do with a Kotlin type that is stricter than the schema type -->
+    <graphql.looseNullability>ignore</graphql.looseNullability>
+    <!-- end::loose-nullability-property[] -->
   </properties>
 
   <repositories>
@@ -78,6 +82,9 @@
             <!-- tag::checks[] -->
             <arg>-Amicronaut.graphql.tools.processor.checks=${graphql.checks}</arg>
             <!-- end::checks[] -->
+            <!-- tag::loose-nullability[] -->
+            <arg>-Amicronaut.graphql.tools.processor.looseNullability=${graphql.looseNullability}</arg>
+            <!-- end::loose-nullability[] -->
           </compilerArgs>
         </configuration>
       </plugin>

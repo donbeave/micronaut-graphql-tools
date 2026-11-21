@@ -1,0 +1,13 @@
+{
+  "data": {
+    "sealedShapes": [
+      { "__typename": "SealedCircle", "radius": 3 },
+      { "__typename": "SealedSquare", "side": 4 },
+      { "__typename": "SealedTriangle", "base": 5 }
+    ],
+    "sealedPets": [
+      { "__typename": "SealedDog", "name": "Rex", "barks": true },
+      { "__typename": "SealedCat", "name": "Tom", "lives": 9 }
+    ]
+  }
+}

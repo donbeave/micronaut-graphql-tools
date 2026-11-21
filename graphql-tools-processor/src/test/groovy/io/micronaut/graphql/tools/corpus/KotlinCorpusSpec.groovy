@@ -53,7 +53,8 @@ class KotlinCorpusSpec extends Specification {
 
         where:
         [corpusCase, language] << new Corpus(CorpusFixtures.root()).units().findAll {
-            it[1] == Language.KOTLIN && KotlinBatchCompiler.covers(KotlinBatchCompiler.Processor.fromProperty(), (CorpusCase) it[0])
+            it[1] == Language.KOTLIN && KotlinBatchCompiler.covers(KotlinBatchCompiler.Processor.fromProperty(), (CorpusCase) it[0]) &&
+                    (CorpusFixtures.only() == null || ((CorpusCase) it[0]).name ==~ CorpusFixtures.only())
         }
     }
 

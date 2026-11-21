@@ -23,6 +23,8 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.propagation.PropagatedContext;
+import io.micronaut.core.propagation.PropagatedContextElement;
+import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 
@@ -44,7 +46,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
         }
     };
 
-    private final PropagatedContext propagatedContext;
+    private volatile PropagatedContext propagatedContext;
     private final GraphQLTransport transport;
     @Nullable
     private final HttpRequest<?> request;
@@ -54,6 +56,12 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     @Nullable
     private final Executor requestExecutor;
     private volatile boolean cancelled;
+    private volatile boolean subscription;
+    @Nullable
+    private DisconnectWatcher disconnectWatcher;
+    private boolean watching;
+    @Nullable
+    private Runnable unwatch;
     @Nullable
     private final String customizer;
     private ExecutionInput executionInput;
@@ -103,10 +111,26 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     }
 
     /**
-     * @return the propagated context captured when the operation arrived, with the request in it
+     * @return the propagated context captured when the operation arrived, with the request in it and the elements that
+     * {@link #addToPropagatedContext} added since
      */
     public PropagatedContext propagatedContext() {
         return propagatedContext;
+    }
+
+    /**
+     * Adds an element to the propagated context of the rest of the execution: the continuations of async fields run inside
+     * a context that holds it. This does not touch the current thread: the caller installs the returned context with
+     * {@link PropagatedContext#propagate()}, and the thread then holds the very object that the continuations get, which
+     * is what keeps an async field that is already done on the fast path of the async boundary.
+     *
+     * @param element what the continuations of the execution run with, for example the current span of a request
+     * @return the propagated context of the execution, with the element in it
+     */
+    public PropagatedContext addToPropagatedContext(PropagatedContextElement element) {
+        PropagatedContext extended = propagatedContext.plus(element);
+        propagatedContext = extended;
+        return extended;
     }
 
     /**
@@ -148,7 +172,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     }
 
     /**
-     * Marks the execution cancelled: its client went away (a WebSocket {@code complete} or close). Cancellation is
+     * Marks the execution cancelled: its client went away (an HTTP disconnect, a WebSocket {@code complete} or close). Cancellation is
      * cooperative: a hop task that has not started is skipped, a later async boundary completes with an abort and a
      * stream is cancelled, but synchronous code that is running is never interrupted.
      */
@@ -161,6 +185,60 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      */
     public boolean isCancelled() {
         return cancelled;
+    }
+
+    /**
+     * Marks the execution as a subscription operation: the loaders that it creates from now on have caching off.
+     */
+    void markSubscription() {
+        subscription = true;
+    }
+
+    /**
+     * @return whether the operation is a subscription, known once its root field is fetched
+     */
+    boolean isSubscription() {
+        return subscription;
+    }
+
+    void disconnectWatcher(DisconnectWatcher watcher) {
+        this.disconnectWatcher = watcher;
+    }
+
+    /**
+     * Called when a field returned a stage that is still pending, which is the time the operation waits and the client can
+     * go away. The first call starts to watch the connection of the request, when there is a watcher; a synchronous
+     * operation never pays for it.
+     */
+    void awaitingResult() {
+        if (disconnectWatcher == null) {
+            return;
+        }
+        synchronized (this) {
+            if (watching || cancelled || disconnectWatcher == null) {
+                return;
+            }
+            watching = true;
+            unwatch = disconnectWatcher.watch(request, this::cancel);
+        }
+    }
+
+    /**
+     * Called when the execution has its result: the connection is not watched any more.
+     */
+    void finished() {
+        if (disconnectWatcher == null) {
+            return;
+        }
+        Runnable stop;
+        synchronized (this) {
+            stop = unwatch;
+            unwatch = null;
+            disconnectWatcher = null;
+        }
+        if (stop != null) {
+            stop.run();
+        }
     }
 
     @Override
