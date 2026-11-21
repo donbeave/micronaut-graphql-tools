@@ -64,6 +64,7 @@ final class ElementTypeModel implements TypeModel {
     private static final String INTRODUCTION = "io.micronaut.aop.Introduction";
     private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
     private static final String KOTLIN_ELEMENTS = "io.micronaut.kotlin.processing.";
+    private static final String JAVAC_ELEMENTS = "io.micronaut.annotation.processing.";
     private static final String MODELS = "io.micronaut.graphql.tools.annotation.GraphQLModels";
 
     // what makes a class a bean by its own declaration, as the startup's bean set sees it
@@ -138,10 +139,15 @@ final class ElementTypeModel implements TypeModel {
     }
 
     private TypeRef ref(ClassElement type, AnnotationMetadata declaration) {
-        return ref(type, declaration, Set.of());
+        return ref(type, declaration, false, Set.of());
     }
 
-    private TypeRef ref(ClassElement type, AnnotationMetadata declaration, Set<String> variables) {
+    // stub: the declaration is a member of a Kotlin class that kapt wrote as a Java stub, whose nullability annotations are read
+    private TypeRef ref(ClassElement type, AnnotationMetadata declaration, boolean stub) {
+        return ref(type, declaration, stub, Set.of());
+    }
+
+    private TypeRef ref(ClassElement type, AnnotationMetadata declaration, boolean stub, Set<String> variables) {
         boolean array = type.isArray();
         ClassElement raw = resolved(array ? type.fromArray() : type);
         reachable.put(raw.getName(), erased(raw));
@@ -152,15 +158,12 @@ final class ElementTypeModel implements TypeModel {
             arguments.add(argument(argument, open));
         }
         boolean kotlin = isKotlin(type);
-        Nullability nullability = kotlin ? type.isNullable() ? Nullability.NULLABLE : Nullability.NON_NULL
-                : declaration.hasStereotype("javax.annotation.Nullable")
-                || declaration.hasStereotype("jakarta.annotation.Nullable")
-                || declaration.hasStereotype("io.micronaut.core.annotation.Nullable")
-                ? Nullability.NULLABLE
-                : declaration.hasStereotype("io.micronaut.core.annotation.NonNull")
-                || declaration.hasStereotype("jakarta.annotation.Nonnull")
-                ? Nullability.NON_NULL : Nullability.UNKNOWN;
-        return new TypeRef(raw.getName(), arguments, nullability, raw.isPrimitive(), array, kotlin);
+        // under kapt, the annotation that Kotlin wrote into the stub is the nullability of the Kotlin type; a stub holds none for a
+        // type argument, a type variable or an array, and a primitive is never compared, as under KSP
+        boolean stubbed = stub && !kotlin && usable(type) && !type.isPrimitive();
+        Nullability nullability = kotlin ? type.isNullable() ? Nullability.NULLABLE : Nullability.NON_NULL : declared(declaration);
+        return new TypeRef(raw.getName(), arguments, nullability, raw.isPrimitive(), array,
+                kotlin || stubbed && nullability != Nullability.UNKNOWN);
     }
 
     // only the KSP elements carry the nullability of a Kotlin type; under kapt a Kotlin class is read as Java stubs
@@ -168,12 +171,36 @@ final class ElementTypeModel implements TypeModel {
         return type.getClass().getName().startsWith(KOTLIN_ELEMENTS);
     }
 
+    // the nullability that an annotation of the declaration states; Micronaut maps the annotations of JetBrains that kapt writes
+    // to the jakarta ones
+    private static Nullability declared(AnnotationMetadata declaration) {
+        return declaration.hasStereotype("javax.annotation.Nullable")
+                || declaration.hasStereotype("jakarta.annotation.Nullable")
+                || declaration.hasStereotype("io.micronaut.core.annotation.Nullable")
+                ? Nullability.NULLABLE
+                : declaration.hasStereotype("io.micronaut.core.annotation.NonNull")
+                || declaration.hasStereotype("jakarta.annotation.Nonnull")
+                ? Nullability.NON_NULL : Nullability.UNKNOWN;
+    }
+
+    // kapt writes the annotation on the member of a stub for every reference type of the declaration, but none inside a type
+    // argument; a type variable and an array carry none that the rules can trust
+    private static boolean usable(ClassElement type) {
+        return !(type instanceof GenericPlaceholderElement) && !type.isArray();
+    }
+
+    // the declaring class of a stub is a Kotlin class when it carries the Kotlin metadata annotation, which Micronaut's annotation
+    // metadata leaves out, so the compiler's own element is asked; the elements of KSP and Groovy are not javac elements
+    private static boolean kotlinStub(ClassElement declaring) {
+        return declaring.getClass().getName().startsWith(JAVAC_ELEMENTS) && JavacElements.carriesKotlinMetadata(declaring);
+    }
+
     // a wildcard or a type variable is read as its first bound, as the runtime reads the type argument; a variable that is
     // bound by itself (T extends Comparable<T>) is followed once and read as its bound without arguments the second time
     private TypeRef argument(ClassElement argument, Set<String> variables) {
         if (argument instanceof WildcardElement wildcard) {
             List<? extends ClassElement> bounds = wildcard.getUpperBounds();
-            return bounds.isEmpty() ? ref(argument, AnnotationMetadata.EMPTY_METADATA, variables)
+            return bounds.isEmpty() ? ref(argument, AnnotationMetadata.EMPTY_METADATA, false, variables)
                     : argument(bounds.get(0), variables);
         }
         if (argument instanceof GenericPlaceholderElement placeholder) {
@@ -182,7 +209,7 @@ final class ElementTypeModel implements TypeModel {
             }
             List<? extends ClassElement> bounds = placeholder.getBounds();
             if (bounds.isEmpty()) {
-                return ref(argument, AnnotationMetadata.EMPTY_METADATA, variables);
+                return ref(argument, AnnotationMetadata.EMPTY_METADATA, false, variables);
             }
             if (variables.contains(placeholder.getVariableName())) {
                 ClassElement bound = bounds.get(0);
@@ -191,7 +218,7 @@ final class ElementTypeModel implements TypeModel {
             }
             return argument(bounds.get(0), with(variables, placeholder.getVariableName()));
         }
-        return ref(argument, AnnotationMetadata.EMPTY_METADATA, variables);
+        return ref(argument, AnnotationMetadata.EMPTY_METADATA, false, variables);
     }
 
     // a type variable that a subclass binds (Base<T> extended as Base<CompletionStage<String>>) is the type it is bound to
@@ -480,7 +507,8 @@ final class ElementTypeModel implements TypeModel {
 
         @Override
         public TypeRef genericReturnType() {
-            return ref(method.getGenericReturnType(), method.getMethodAnnotationMetadata());
+            return ref(method.getGenericReturnType(), method.getMethodAnnotationMetadata(),
+                    !method.isSuspend() && kotlinStub(method.getDeclaringType()));
         }
 
         @Override
@@ -519,7 +547,8 @@ final class ElementTypeModel implements TypeModel {
 
         @Override
         public TypeRef type() {
-            return ref(parameter.getGenericType(), parameter.getAnnotationMetadata());
+            return ref(parameter.getGenericType(), parameter.getAnnotationMetadata(),
+                    kotlinStub(parameter.getMethodElement().getDeclaringType()));
         }
 
         @Override
@@ -543,7 +572,7 @@ final class ElementTypeModel implements TypeModel {
 
         @Override
         public TypeRef type() {
-            return ref(property.getGenericType(), property.getAnnotationMetadata());
+            return ref(property.getGenericType(), property.getAnnotationMetadata(), kotlinStub(property.getDeclaringType()));
         }
 
         @Override

@@ -15,7 +15,7 @@
  */
 /**
  * The implementation of the observability module: the instrumentation that records one request, the Micrometer and OpenTelemetry
- * observers, the selection of the fields that get a span and the wrapper that traces them.
+ * observers, the selection of the fields that get a span and the wrapper that traces them, and the configuration of both.
  *
  * <p><b>Audience.</b> Internal. Not API.</p>
  */

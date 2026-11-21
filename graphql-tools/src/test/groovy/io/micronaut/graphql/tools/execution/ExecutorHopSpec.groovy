@@ -66,8 +66,8 @@ class ExecutorHopSpec extends Specification {
         ReturnVerdict verdict = new ReturnVerdict(0, false, null, ReturnVerdict.Reactive.NONE, false, null)
 
         expect:
-        FieldExecutionPlanner.plan(method, verdict, false, ConversionService.SHARED, null).is(method)
-        FieldExecutionPlanner.plan(method, verdict, false, ConversionService.SHARED, pool) instanceof ExecutorHopDataFetcher
+        FieldExecutionPlanner.plan(method, verdict, false, ConversionService.SHARED, null, null).is(method)
+        FieldExecutionPlanner.plan(method, verdict, false, ConversionService.SHARED, pool, null) instanceof ExecutorHopDataFetcher
     }
 
     void 'the method runs on the executor of the field with the context of the operation'() {

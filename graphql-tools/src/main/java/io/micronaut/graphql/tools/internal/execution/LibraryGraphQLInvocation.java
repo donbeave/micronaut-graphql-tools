@@ -119,7 +119,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
         this.customizerName = this.customizer == null ? null : this.customizer.getClass().getName();
         rejectRegistryBean(beanContext);
-        // no loader bean, no registry: graphql-java keeps its empty registry and selects its no-op dispatch strategy
+        // no loader bean and no contributor, no registry: graphql-java keeps its empty registry and selects its no-op dispatch strategy
         this.loaders = loaders.isEmpty() ? null : loaders;
         this.contributors = contributors.isEmpty() ? null : contributors.toArray(new GraphQLContextContributor[0]);
         this.executorName = configuration.getExecution().getExecutor();
@@ -361,6 +361,9 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 if (loaders != null) {
                     counters = loaders.statistics() ? new BatchCounters() : null;
                     builder.dataLoaderRegistry(new LazyDataLoaderRegistry(loaders, state, counters));
+                } else if (contributors != null) {
+                    // graphql-java's own empty registry is immutable, so a contributor could not register a loader in it
+                    builder.dataLoaderRegistry(new DataLoaderRegistry());
                 }
                 ExecutionInput input = builder.build();
                 state.storeIn(input.getGraphQLContext());

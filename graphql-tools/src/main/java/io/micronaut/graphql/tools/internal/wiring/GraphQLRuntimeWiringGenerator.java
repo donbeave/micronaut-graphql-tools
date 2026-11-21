@@ -109,6 +109,7 @@ import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDat
 import io.micronaut.graphql.tools.execution.FieldDescriptor;
 import io.micronaut.graphql.tools.execution.FieldExecutionKind;
 import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
+import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.execution.FieldExecutionPlanner;
 import io.micronaut.graphql.tools.internal.execution.FieldFetcherDecorators;
 import io.micronaut.graphql.tools.internal.execution.SuspendInvoker;
@@ -466,7 +467,8 @@ public final class GraphQLRuntimeWiringGenerator {
                 suspendInvoker);
         boolean subscriptionField = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
         DataFetcher<Object> planned = FieldExecutionPlanner.plan(fetcher, verdict, subscriptionField,
-                applicationContext.getConversionService(), fieldExecutor);
+                applicationContext.getConversionService(), fieldExecutor,
+                applicationContext.findBean(LibraryDataFetcherExceptionHandler.class).orElse(null));
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
                 fieldDecorators.apply(new FieldDescriptor(coordinates(mappingContext),
@@ -757,7 +759,7 @@ public final class GraphQLRuntimeWiringGenerator {
                     : abstractTypeWiring.getImplementations(interfaceTypeDefinition)) {
                 members.add(() -> {
                     Class<?> clazz = Optional
-                            .ofNullable(abstractTypeWiring.findClass(implementation, mappingContext))
+                            .ofNullable(abstractTypeWiring.findClass(implementation, targetClass, mappingContext))
                             .orElseThrow(() -> new InterfaceTypeMappingNotProvidedException(
                                     mappingContext, implementation.getName(), interfaceTypeDefinition.getName()
                             ));

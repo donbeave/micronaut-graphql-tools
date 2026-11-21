@@ -17,4 +17,6 @@ class Query {
 
     fun subtitle(): String = "subtitle"
 
+    suspend fun later(): String? = null
+
 }

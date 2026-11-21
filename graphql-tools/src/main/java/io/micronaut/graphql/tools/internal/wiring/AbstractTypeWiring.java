@@ -78,12 +78,13 @@ public final class AbstractTypeWiring {
 
     /**
      * @param objectType     an object type that a union or an interface has as a member
+     * @param declaredClass  the Java type that the field declares for the union or interface
      * @param mappingContext where a failure is reported
      * @return its class: the dictionary entry, else the derived class, else {@code null}
      */
     @Nullable
-    Class<?> findClass(ObjectTypeDefinition objectType, TypeMappingContext mappingContext) {
-        return typeClasses.find(objectType, mappingContext);
+    Class<?> findClass(ObjectTypeDefinition objectType, Class<?> declaredClass, TypeMappingContext mappingContext) {
+        return typeClasses.find(objectType, declaredClass, mappingContext);
     }
 
     @Nullable
@@ -104,7 +105,7 @@ public final class AbstractTypeWiring {
 
                 if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
                     Class<?> clazz = Optional
-                            .ofNullable(typeClasses.find(objectTypeDefinition, mappingContext))
+                            .ofNullable(typeClasses.find(objectTypeDefinition, targetClass, mappingContext))
                             .orElseThrow(() -> new UnionTypeMappingNotProvidedException(
                                     mappingContext, typeName.getName(), unionTypeDefinition.getName()
                             ));

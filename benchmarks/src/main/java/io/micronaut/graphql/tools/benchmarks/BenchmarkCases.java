@@ -51,7 +51,6 @@ import io.micronaut.graphql.tools.benchmarks.Fixtures.Square;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Triangle;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micronaut.graphql.tools.scalars.StandardScalar;
-import io.opentelemetry.api.OpenTelemetry;
 import io.micronaut.graphql.tools.scalars.internal.json.JsonCoercing;
 import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
 
@@ -71,6 +70,8 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String TYPE_RESOLVER_METHOD = "typeResolverMethod";
     public static final String TYPE_RESOLVER_METHOD_ARGUMENT = "typeResolverMethodWithArgument";
     public static final String SCALAR_ARGUMENT = "scalarArgument";
+    public static final String INJECTED_PARAMETERS = "injectedParameters";
+    public static final String INJECTED_STATE_PARAMETERS = "injectedStateParameters";
     public static final String LOCAL_DATE_COERCION = "localDateCoercion";
     public static final String INSTANT_COERCION = "instantCoercion";
     public static final String JSON_COERCION = "jsonCoercion";
@@ -125,6 +126,8 @@ public final class BenchmarkCases implements AutoCloseable {
             type Query {
               ping: String
               scalar(n: Int!): String
+              injected: String
+              injectedState: String
               enumArg(color: Color!): String
               input(input: PointInput!): String
               inputs(inputs: [PointInput!]!): String
@@ -169,8 +172,26 @@ public final class BenchmarkCases implements AutoCloseable {
         NONE,
         /** One that implements no hook: what any instrumentation costs graphql-java, with nothing of ours in it. */
         EMPTY,
-        /** The observability module's, with a meter registry and the no-op OpenTelemetry. */
-        OBSERVABILITY
+        /** The observability module's, with a meter registry and the OpenTelemetry SDK of Micronaut Tracing, and no field selected for a span. */
+        OBSERVABILITY,
+        /** The observability module's, with every {@code Query.ping} selected for a span by the field decorator. */
+        OBSERVABILITY_SELECTED
+    }
+
+    /** The field decorator bean of the application. */
+    public enum Decorators {
+        /** None: no {@code FieldFetcherDecorator} bean. */
+        NONE("none"),
+        /** One that is offered every field and selects none. */
+        UNSELECTIVE("unselective"),
+        /** One that wraps every field in a fetcher that delegates. */
+        WRAP_ALL("wrapAll");
+
+        private final String property;
+
+        Decorators(String property) {
+            this.property = property;
+        }
     }
 
     @FunctionalInterface
@@ -205,6 +226,15 @@ public final class BenchmarkCases implements AutoCloseable {
      * @param instrumented which {@code Instrumentation} bean the application has
      */
     public BenchmarkCases(int loaders, Instrumented instrumented) {
+        this(loaders, instrumented, Decorators.UNSELECTIVE);
+    }
+
+    /**
+     * @param loaders      how many batch loader beans no operation uses: 0, 1 or 50
+     * @param instrumented which {@code Instrumentation} bean the application has
+     * @param decorators   which {@code FieldFetcherDecorator} bean the application has
+     */
+    public BenchmarkCases(int loaders, Instrumented instrumented, Decorators decorators) {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
         ApplicationContextBuilder builder = ApplicationContext.builder();
@@ -212,7 +242,7 @@ public final class BenchmarkCases implements AutoCloseable {
             case NONE -> { }
             case EMPTY -> builder.singletons(new SimplePerformantInstrumentation());
             // the beans of the observability module, with no field selected for a span
-            case OBSERVABILITY -> builder.singletons(new SimpleMeterRegistry(), OpenTelemetry.noop());
+            case OBSERVABILITY, OBSERVABILITY_SELECTED -> builder.singletons(new SimpleMeterRegistry());
         }
         context = builder
                 .properties(Map.of("graphql.graphql-ws.enabled", false, "graphql.graphiql.enabled", false,
@@ -221,7 +251,15 @@ public final class BenchmarkCases implements AutoCloseable {
                         "micronaut.graphql.tools.scalars.enabled", false,
                         // the invocation gates measure the calling thread, so the operation must not hop
                         "micronaut.graphql.tools.execution.executor", "none",
-                        "benchmarks.loaders", loaders))
+                        "benchmarks.loaders", loaders,
+                        "benchmarks.decorator", decorators.property))
+                .properties(switch (instrumented) {
+                    case OBSERVABILITY_SELECTED -> Map.of("micronaut.graphql.tools.tracing.fields", List.of("Query.ping"));
+                    case OBSERVABILITY -> Map.<String, Object>of();
+                    // Micronaut Micrometer and Micronaut Tracing are on the classpath and would create a registry and an
+                    // OpenTelemetry bean, which switches the observability module on in the cases that must have none of it
+                    default -> Map.<String, Object>of("micronaut.metrics.enabled", false, "micronaut.otel.enabled", false);
+                })
                 .singletons(registry)
                 .start();
         graphQL = context.getBean(GraphQL.class);
@@ -242,6 +280,8 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(TYPE_RESOLVER_METHOD_ARGUMENT,
                 fetch("Item", "labelWithArgument", new Item("id", "name", 1), Map.of("n", 3)));
         ops.put(SCALAR_ARGUMENT, fetch("Query", "scalar", null, Map.of("n", 42)));
+        ops.put(INJECTED_PARAMETERS, fetch("Query", "injected", null, Map.of()));
+        ops.put(INJECTED_STATE_PARAMETERS, fetch("Query", "injectedState", null, Map.of()));
         ops.put(LOCAL_DATE_COERCION, coercion(TimeScalars.coercing(StandardScalar.LOCAL_DATE, "LocalDate", null),
                 "2026-12-24"));
         ops.put(INSTANT_COERCION, coercion(TimeScalars.coercing(StandardScalar.INSTANT, "Instant", null),
@@ -384,6 +424,21 @@ public final class BenchmarkCases implements AutoCloseable {
     private Op direct(int fields) {
         String query = fieldsQuery(fields);
         return () -> graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build());
+    }
+
+    /**
+     * A query of one root field and {@code items * 5} fields below it, run on the {@code GraphQL} bean. The operation fails when
+     * the result has errors.
+     */
+    public Op wideQuery(int items) {
+        String query = "{ items(count: " + items + ") { id name price label labelWithArgument(n: 1) } }";
+        return () -> {
+            ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput().query(query).build());
+            if (!result.getErrors().isEmpty()) {
+                throw new IllegalStateException(result.getErrors().toString());
+            }
+            return result;
+        };
     }
 
     private Op query(int count) {
