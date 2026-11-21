@@ -1039,6 +1039,9 @@ interface has a bean introspection of its own:
   and to make implementation-only getters non-candidates. [Strict mode](#strict-mode), on by default, rejects this
   case; it binds only with `strict: false`.
 
+At startup the library logs at INFO one line for each object type mapped to a Java interface, which names the interface
+and the mode the type uses, so that adding `@Introspected` to an interface for another reason is visible in the log.
+
 A getter that only an implementation class declares is not a property of an interface that has its own
 introspection. A GraphQL field that only such a getter could back fails at startup with `[field-not-bound]`,
 which names the GraphQL type, the field and the interface:
