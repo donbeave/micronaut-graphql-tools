@@ -36,6 +36,8 @@ The modules, and what each may depend on:
 
 - `graphql-tools-upload` (`io.micronaut.graphql.tools.upload`) holds the `Upload` scalar and the route of the GraphQL multipart request specification. The route is a second `@Post` on the path of the transport with `consumes = multipart/form-data`, which wins over the transport's `*/*` route for that content type (`MultipartUploadSpec` and the `precedence` test of the suites keep this). It carries no `@ExecuteOn`: it calls the `GraphQLInvocation` bean, which does the executor hop (`UploadArchitectureSpec`). It reads JSON with the `JsonMapper` API only, never Jackson. Its one public type is `GraphQLUpload`; everything else is `@Internal`. It compiles with `--release 17`, runs in the JDK 17 job and is published like the other library modules.
 
+Adding a module touches several lists of modules: `settings.gradle.kts` (the source), the publish init script, the summary of `release.yml`, the JDK 17 `check` command and the library-module comment in `gradle.yml`, `AGENTS.md`, `CONTRIBUTING.md`, the BOM README, the module and artifact tables of `README.md`, the list above and `PackageDocumentationSpec`. `.github/scripts/check-modules.py` (run by the `actionlint` job, so part of `required checks`) fails when one of them disagrees with `settings.gradle.kts`. A module that is not published (a test suite, the benchmarks, the TCK) is named in `NOT_PUBLISHED` of that script.
+
 The startup binding (`GraphQLRuntimeWiringGenerator`) is split by phase. Each phase class owns the mutable state it needs and hands the next phase an immutable result:
 
 | Class | Phase |
