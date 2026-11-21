@@ -1,0 +1,46 @@
+/*
+ * Copyright 2021-2026 original authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package example.tck
+
+import io.micronaut.context.ApplicationContext
+import io.micronaut.graphql.tools.tck.Tck
+import io.micronaut.http.netty.channel.NettyThreadFactory
+import io.micronaut.http.netty.configuration.NettyGlobalConfiguration
+import io.micronaut.inject.qualifiers.Qualifiers
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import reactor.core.scheduler.NonBlocking
+import java.util.concurrent.ThreadFactory
+
+/**
+ * The async boundary recognises a Netty event-loop thread by the [NonBlocking] marker, which Micronaut's event-loop
+ * threads carry while `micronaut.netty.default-thread-factory-reactor-non-blocking` is true. This pins that default.
+ */
+class EventLoopMarkerTest {
+
+    @Test
+    fun `the event loop threads of Micronaut are non blocking by default`() {
+        ApplicationContext.builder().properties(Tck.applicationProperties("execution-thread")).start().use { context ->
+            val configuration = context.getBean(NettyGlobalConfiguration::class.java)
+            assertTrue(
+                configuration.isDefaultThreadFactoryReactorNonBlocking,
+                "micronaut.netty.default-thread-factory-reactor-non-blocking must default to true",
+            )
+            val thread = context.getBean(ThreadFactory::class.java, Qualifiers.byName(NettyThreadFactory.NAME)).newThread { }
+            assertTrue(thread is NonBlocking, "the thread of the default factory is ${thread.javaClass.name}")
+        }
+    }
+}

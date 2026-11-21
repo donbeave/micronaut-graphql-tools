@@ -14,12 +14,22 @@ runs, or when they claim a performance gain.
   type resolver methods, argument conversion, union and interface resolution, a directive-wrapped fetcher, whole queries,
   start-up (`BindingBenchmark`, `RetainedHeapBenchmark`), and the executor hop (`InvocationBenchmark`,
   `AsyncBoundaryBenchmark`; plain graphql-java, no library code, no allocation gate), and the observability module on a
-  request with no field traced (`ObservabilityBenchmark`; its allocation gate is `observedInvocationSlope`: the bytes per field
-  that the module adds, which must stay 0).
+  request with no field traced (`ObservabilityBenchmark`, modes `none`, `empty` and `observed`; its allocation gate is
+  `observedInvocationSlope`: the bytes per field that the module adds, which must stay 0) and with every root field selected for a
+  span by the field decorator (mode `selected`: its difference to `observed`, divided by `rootFields`, is the cost of one field span),
+  the field decorators on one query of 1,050 fields (`FieldDecoratorBenchmark`: no decorator bean, one that selects no field, one that
+  wraps every field; each configuration checks its result against the first and what the decorator did at startup; no allocation gate),
+  and the per-class binding rules over a compiler `ClassElement` (`BindingRulesBenchmark`: a resolver class, an input class with
+  properties and an input class with constructor arguments; its allocation gate is `BindingRulesAllocationTest`).
 - `src/allocationTest/java`: the allocation gate. It fails when an operation allocates more bytes than its baseline in
   `allocation-baselines.properties`.
 - `src/jmhSmokeTest/java`: runs every JMH benchmark once, so that the benchmarks compile and start. Its numbers mean nothing.
-- `src/main`: the benchmark classes shared by the source sets (`Resolvers`, `BenchmarkCases`, `Fixtures`). The
+- `src/main`: the benchmark classes shared by the source sets (`Resolvers`, `BenchmarkCases`, `Fixtures`), and `ClassElementFixture`: compiler
+  class elements of fixture sources, compiled in process, for the binding rules. The compilation runs on a thread that stays parked inside its
+  processing round until the fixture is closed, because a class element is valid only during its round, and the class files are written
+  when the round is released. The fixture lives in the package of the processor's visitor, because the element adapter
+  (`ElementTypeModel`) is package-private there; the processor is not changed. `BindingRulesParityTest` (in `jmhSmokeTest`) shows that
+  the rules give the same findings for the elements as for the classes that the sources compile to. The
   `generateLargeSchema` task writes the large schema that the start-up benchmarks bind to `build/generated/large-schema`.
 - `benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
 

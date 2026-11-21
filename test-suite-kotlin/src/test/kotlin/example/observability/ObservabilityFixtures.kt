@@ -22,14 +22,12 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
-import io.opentelemetry.api.OpenTelemetry
-import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
-import io.opentelemetry.sdk.trace.SdkTracerProvider
+import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
 import jakarta.inject.Singleton
 
-// The environment that turns the fixtures on: a meter registry, an OpenTelemetry SDK that exports to memory, and two fields
+// The environment that turns the fixtures on: a meter registry, a span processor that exports to memory, and the observed fields
 const val OBSERVED = "observability"
 
 @Factory
@@ -46,12 +44,11 @@ class ObservabilityFixtures {
     @Requires(env = [OBSERVED])
     fun spanExporter(): InMemorySpanExporter = InMemorySpanExporter.create()
 
+    // the OpenTelemetry bean is the one of micronaut-tracing: it exports to the span processor beans
     @Bean
     @Singleton
     @Requires(env = [OBSERVED])
-    fun openTelemetry(exporter: InMemorySpanExporter): OpenTelemetry = OpenTelemetrySdk.builder()
-        .setTracerProvider(SdkTracerProvider.builder().addSpanProcessor(SimpleSpanProcessor.create(exporter)).build())
-        .build()
+    fun spanProcessor(exporter: InMemorySpanExporter): SpanProcessor = SimpleSpanProcessor.create(exporter)
     // end::beans[]
 
     @Bean
@@ -63,6 +60,9 @@ class ObservabilityFixtures {
                 "extend type Query {\n" +
                     "  observedHello: String!\n" +
                     "  observedBook: ObservedBook!\n" +
+                    "  observedTraced: String!\n" +
+                    "  observedTagged(value: String!): String!\n" +
+                    "  observedTimed: String!\n" +
                     "}\n" +
                     "type ObservedBook {\n" +
                     "  title: String!\n" +

@@ -1,0 +1,4 @@
+{
+  rename(name: "ok")
+  checkout(cart: { owner: "o", quantity: 1, lines: [{ sku: "a", quantity: 1 }] })
+}

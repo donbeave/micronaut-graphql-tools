@@ -25,6 +25,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 import io.micronaut.graphql.tools.binding.internal.finding.SchemaLocation;
+import io.micronaut.graphql.tools.binding.internal.membership.MemberClassRules;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
 import io.micronaut.graphql.tools.binding.internal.model.JClass;
 import io.micronaut.graphql.tools.binding.internal.model.JMethod;
@@ -33,6 +34,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.CountMi
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.DuplicateParameter;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.InvalidSource;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.ParameterWithoutArgument;
+import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.UnsatisfiableParameter;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.UntypedDataLoader;
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.FieldVerdict;
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.MethodVerdict;
@@ -87,10 +89,21 @@ public final class ResolverClassFindings {
      * @return the findings, in declaration order of the methods
      */
     public static List<Finding> check(SchemaModel schema, TypeModel model, JClass resolver, boolean accessorPrefixes) {
+        return checkClass(schema, model, resolver, accessorPrefixes).findings(List.of());
+    }
+
+    /**
+     * @param schema           the schema
+     * @param model            the type model
+     * @param resolver         a concrete resolver class, or an introduction interface that is a resolver bean
+     * @param accessorPrefixes whether {@code getX} and {@code isX} also bind the field {@code x}
+     * @return the findings of the class and the returns that wait for the member classes
+     */
+    public static ClassFindings checkClass(SchemaModel schema, TypeModel model, JClass resolver, boolean accessorPrefixes) {
         boolean root = resolver.annotations().has(AnnotationNames.ROOT_RESOLVER);
         boolean type = resolver.annotations().has(AnnotationNames.TYPE_RESOLVER);
         if (!root && !type) {
-            return nonResolver(resolver);
+            return only(nonResolver(resolver));
         }
         Set<String> contracts = contracts(resolver);
         String sourceType = contracts.size() == 1 ? contracts.iterator().next() : null;
@@ -132,7 +145,7 @@ public final class ResolverClassFindings {
 
         if (!findings.isEmpty()) {
             // the startup reports the invalid coordinates before it binds anything
-            return findings;
+            return only(findings);
         }
 
         ClassVerdict verdict = ResolverClassRules.check(schema, model, resolver, sourceType, accessorPrefixes);
@@ -140,6 +153,7 @@ public final class ResolverClassFindings {
         List<Finding> failures = new ArrayList<>();
         List<Finding> nullability = new ArrayList<>();
         List<Finding> strict = new ArrayList<>();
+        List<MemberClassRules.AbstractReturn> abstractReturns = new ArrayList<>();
         boolean failed = false;
         // several methods that can bind one field are an ambiguity of the startup, which judges no argument of them
         Map<String, Integer> claims = new HashMap<>();
@@ -158,7 +172,7 @@ public final class ResolverClassFindings {
                     // the source type of the fields of the other types is a whole-program fact for this class
                     continue;
                 }
-                failed |= !bindField(schema, inputs, failures, nullability, resolver, method, field, sourceType);
+                failed |= !bindField(schema, model, inputs, abstractReturns, failures, nullability, resolver, method, field, sourceType);
             }
             if (methodVerdict.coordinates().stream().map(SchemaCoordinates::typeName).distinct().count() > 1) {
                 strict.add(finding(resolver, method, BindingCode.ROOT_METHOD_SEVERAL_OPERATIONS, method.signature(),
@@ -186,21 +200,23 @@ public final class ResolverClassFindings {
                     strict.add(finding(resolver, method, BindingCode.UNBOUND_RESOLVER_METHOD, method.signature(),
                             "the resolver method " + method.signature() + " binds no schema field",
                             null, null,
-                            "annotate it with @GraphQLIgnore, make it non-public, or move it out of the resolver bean"));
+                            "annotate it with @GraphQLIgnore, make it private, or move it out of the resolver bean"));
                 }
             }
         }
         failures.addAll(inputs.failures());
         // the startup does not read the nullability of Kotlin, so what the rule finds is independent of the stage
         nullability.addAll(inputs.nullability());
-        if (failed || inputs.halted() || !failures.isEmpty()) {
-            // the startup throws the binding failures before it runs a strict check
-            failures.addAll(nullability);
-            return dedupe(failures);
+        boolean blocked = failed || inputs.halted() || !failures.isEmpty();
+        if (!blocked) {
+            strict.addAll(inputs.checks());
         }
-        strict.addAll(inputs.checks());
-        strict.addAll(nullability);
-        return dedupe(strict);
+        return new ClassFindings(List.copyOf(failures), List.copyOf(strict), List.copyOf(nullability), blocked,
+                List.copyOf(abstractReturns));
+    }
+
+    private static ClassFindings only(List<Finding> findings) {
+        return new ClassFindings(findings, List.of(), List.of(), true, List.of());
     }
 
     private static List<Finding> dedupe(List<Finding> findings) {
@@ -254,7 +270,8 @@ public final class ResolverClassFindings {
      *
      * @return whether the binding of the field did not fail, so that the startup goes on to the next field
      */
-    private static boolean bindField(SchemaModel schema, InputBindingFindings inputs, List<Finding> failures,
+    private static boolean bindField(SchemaModel schema, TypeModel model, InputBindingFindings inputs,
+                                     List<MemberClassRules.AbstractReturn> abstractReturns, List<Finding> failures,
                                      List<Finding> nullability, JClass resolver, JMethod method, FieldVerdict field,
                                      @Nullable String sourceType) {
         String coordinate = field.coordinate();
@@ -311,6 +328,13 @@ public final class ResolverClassFindings {
                     schema, coordinate, "declare it as DataLoader<K, V>, with the key and value types of the loader bean"));
             return false;
         }
+        if (failure instanceof UnsatisfiableParameter unsatisfiable) {
+            failures.add(finding(resolver, method, BindingCode.ARGUMENT_MISMATCH, coordinate,
+                    "the parameter " + method.parameters().get(unsatisfiable.parameter()).name() + " cannot be injected: "
+                            + unsatisfiable.reason(),
+                    schema, coordinate, null));
+            return false;
+        }
         if (failure instanceof InvalidSource invalid) {
             failures.add(finding(resolver, method, BindingCode.INVALID_SOURCE_PARAMETER, coordinate,
                     "the parameter " + method.parameters().get(invalid.parameter()).name() + " must be the source "
@@ -336,9 +360,44 @@ public final class ResolverClassFindings {
             if (leaf != null) {
                 inputs.returned(method.signature(), leaf.type(), leaf.schemaType(), coordinate,
                         definition.getSourceLocation());
+                abstractReturn(schema, model, resolver, method, coordinate, leaf).ifPresent(abstractReturns::add);
             }
         }
         return true;
+    }
+
+    // a union or interface that a field returns as a Java interface and that no other field of the schema returns: the field
+    // is where the startup reaches it, and binds its members in order
+    private static java.util.Optional<MemberClassRules.AbstractReturn> abstractReturn(SchemaModel schema, TypeModel model,
+                                                                                      JClass resolver, JMethod method,
+                                                                                      String coordinate,
+                                                                                      InputBindingFindings.Leaf leaf) {
+        if (!(leaf.schemaType() instanceof graphql.language.TypeName name) || leaf.type().array() || leaf.type().primitive()) {
+            return java.util.Optional.empty();
+        }
+        graphql.language.TypeDefinition<?> definition = schema.registry().getType(name.getName()).orElse(null);
+        if (!(definition instanceof graphql.language.UnionTypeDefinition || definition instanceof InterfaceTypeDefinition)
+                || MemberClassRules.fieldsReturning(schema, name.getName()) != 1
+                || model.resolve(leaf.type()).kind() != JClass.Kind.INTERFACE) {
+            return java.util.Optional.empty();
+        }
+        List<String> members;
+        if (definition instanceof graphql.language.UnionTypeDefinition union) {
+            members = union.getMemberTypes().stream().map(it -> it instanceof graphql.language.TypeName member
+                    ? member.getName() : "").toList();
+        } else if (definition instanceof InterfaceTypeDefinition) {
+            members = schema.registry().getTypes(ObjectTypeDefinition.class).stream()
+                    .filter(it -> it.getImplements().stream().anyMatch(implemented ->
+                            implemented instanceof graphql.language.TypeName implementedName
+                                    && implementedName.getName().equals(name.getName())))
+                    .map(ObjectTypeDefinition::getName).sorted().toList();
+        } else {
+            return java.util.Optional.empty();
+        }
+        String inheritedBy = method.declaringType().name().equals(resolver.name()) ? null : resolver.name();
+        return java.util.Optional.of(new MemberClassRules.AbstractReturn(method.signature(), coordinate,
+                location(schema, coordinate), definition instanceof graphql.language.UnionTypeDefinition, name.getName(),
+                leaf.type().rawName(), members, inheritedBy));
     }
 
     private static List<ResolverClassRules.SchemaArgument> schemaArguments(SchemaModel schema, String coordinate) {
@@ -370,15 +429,17 @@ public final class ResolverClassFindings {
         if (!method.declaringType().name().equals(resolver.name())) {
             sentence += " (inherited by " + resolver.name() + ")";
         }
-        SchemaLocation location = null;
-        if (schema != null && schemaCoordinate != null) {
-            SourceLocation at = schema.locationOf(schemaCoordinate).orElse(null);
-            if (at != null && at.getLine() > 0) {
-                location = new SchemaLocation(at.getSourceName() == null ? "schema" : at.getSourceName(), at.getLine(),
-                        at.getColumn());
-            }
-        }
+        SchemaLocation location = schema != null && schemaCoordinate != null ? location(schema, schemaCoordinate) : null;
         return new Finding(code.code(), coordinate, sentence, method.signature(), null, location, fix);
+    }
+
+    @Nullable
+    private static SchemaLocation location(SchemaModel schema, String schemaCoordinate) {
+        SourceLocation at = schema.locationOf(schemaCoordinate).orElse(null);
+        if (at != null && at.getLine() > 0) {
+            return new SchemaLocation(at.getSourceName() == null ? "schema" : at.getSourceName(), at.getLine(), at.getColumn());
+        }
+        return null;
     }
 
     @Nullable
@@ -405,5 +466,35 @@ public final class ResolverClassFindings {
             }
         });
         return names;
+    }
+
+    /**
+     * What the rules decide about one class, and what they leave to the classes of the whole compilation.
+     *
+     * @param failures        the binding failures
+     * @param strict          the strict checks, which the startup runs only when no class has a binding failure
+     * @param nullability     the findings of the Kotlin nullability rule, independent of the stage
+     * @param blocked         whether the startup throws while it binds a type of this class, so that it runs no strict check
+     * @param abstractReturns the fields that return a union or interface, whose member classes the class does not decide
+     */
+    public record ClassFindings(List<Finding> failures, List<Finding> strict, List<Finding> nullability, boolean blocked,
+                                List<MemberClassRules.AbstractReturn> abstractReturns) {
+
+        /**
+         * @param members the binding failures of the member classes of the unions and interfaces the class returns
+         * @return the findings of the class: the failures when there is one, else the strict checks, and the nullability findings
+         */
+        public List<Finding> findings(List<Finding> members) {
+            List<Finding> all = new ArrayList<>();
+            if (blocked || !members.isEmpty()) {
+                // the startup throws the binding failures before it runs a strict check
+                all.addAll(failures);
+                all.addAll(members);
+            } else {
+                all.addAll(strict);
+            }
+            all.addAll(nullability);
+            return dedupe(all);
+        }
     }
 }

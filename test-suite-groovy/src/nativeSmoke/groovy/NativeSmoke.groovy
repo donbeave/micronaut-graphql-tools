@@ -119,7 +119,13 @@ try {
     assert current.books.first().label != null
     assert execute('{ introduced }').introduced == 'introduced introduced'
 
-    println "Native smoke test passed: 6 scenarios against ${executable.name} on port $port"
+    Map scalars = execute('query($at: Instant!, $json: JSON) { echoInstant(at: $at) echoJson(data: $json) echoLocale(tag: "en-US") }',
+            [at: '2026-12-24T10:15:30Z', json: [kind: 'x', list: [1, 2]]])
+    assert scalars.echoInstant == '2026-12-24T10:16:30Z'
+    assert scalars.echoJson == [kind: 'x', list: [1, 2]]
+    assert scalars.echoLocale == 'en-US'
+
+    println "Native smoke test passed: 7 scenarios against ${executable.name} on port $port"
 } finally {
     process.destroy()
     if (!process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)) {

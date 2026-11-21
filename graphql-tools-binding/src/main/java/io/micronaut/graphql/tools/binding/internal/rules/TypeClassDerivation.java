@@ -34,7 +34,8 @@ import java.util.TreeSet;
 /**
  * The rule that derives the Java class of an object type that a union or an interface needs and the dictionary does not
  * name: a class that declares the type with {@code @GraphQLType(name)}, or, where a naming convention is set, a class
- * whose simple name is the convention with the type name in it. The startup and the compile-time checks apply it, so that
+ * whose simple name is the convention with the type name in it, or, for a type that a sealed Java type declares, the
+ * permitted subclass of that name. The startup and the compile-time checks apply it, so that
  * they reach one verdict.
  */
 @Internal
@@ -72,6 +73,22 @@ public final class TypeClassDerivation {
         String conventional = convention == null || convention.isBlank() ? null : convention.strip().replace(PLACEHOLDER, typeName);
         return candidates.stream()
                 .filter(it -> it.declaredName().isEmpty() ? it.simpleName().equals(conventional) : it.declaredName().equals(typeName))
+                .map(Candidate::className)
+                .sorted()
+                .toList();
+    }
+
+    /**
+     * The match inside the permitted subclasses of a sealed type, where the type needs no naming convention: a class that
+     * declares the name with {@code @GraphQLType(name)}, or, where it declares none, whose simple name is the type name.
+     *
+     * @param typeName   the name of an object type
+     * @param candidates the permitted subclasses that can stand for a type
+     * @return the binary names of the classes that match the type, sorted
+     */
+    public static List<String> matchingPermitted(String typeName, Collection<Candidate> candidates) {
+        return candidates.stream()
+                .filter(it -> it.declaredName().isEmpty() ? it.simpleName().equals(typeName) : it.declaredName().equals(typeName))
                 .map(Candidate::className)
                 .sorted()
                 .toList();

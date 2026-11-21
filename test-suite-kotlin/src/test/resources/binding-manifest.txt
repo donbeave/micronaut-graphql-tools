@@ -1,0 +1,67 @@
+AddBookPayload -> object ; example.graphql.type.AddBookPayload ; - ; -
+AddBookPayload.error: Error -> property ; example.graphql.type.AddBookPayload#error ; example.graphql.type.Error ; example.graphql.type.Error
+Book -> object ; example.data.Book ; - ; -
+Book.id: ID! -> property ; example.data.Book#id ; java.lang.String ; java.lang.String
+Book.label: String! -> resolver ; example.graphql.type.resolver.BookLabelResolver#label(example.data.Book) ; java.lang.String ; java.lang.String
+Book.sellers: [BookSeller!]! -> resolver ; example.graphql.type.resolver.BookResolver#sellers(example.data.Book, org.dataloader.DataLoader<java.lang.String, java.util.List<example.data.BookSeller>>) ; java.util.concurrent.CompletionStage<java.util.List<example.data.BookSeller>> ; java.util.List<example.data.BookSeller>
+Book.title: String! -> property ; example.data.Book#title ; java.lang.String ; java.lang.String
+Book.year: Int! -> property ; example.data.Book#year ; int ; int
+BookSeller -> object ; example.data.BookSeller ; - ; -
+BookSeller.name: String! -> property ; example.data.BookSeller#name ; java.lang.String ; java.lang.String
+BookSeller.price: Float! -> property ; example.data.BookSeller#price ; float ; float
+Error -> union ; example.graphql.type.Error ; - ; -
+Error/SecurityError -> resolves ; example.graphql.type.SecurityError ; - ; -
+Error/ValidationError -> resolves ; example.graphql.type.ValidationError ; - ; -
+Float -> scalar ; Float ; - ; -
+ID -> scalar ; ID ; - ; -
+Instant -> scalar ; Instant ; - ; -
+Int -> scalar ; Int ; - ; -
+JSON -> scalar ; JSON ; - ; -
+Locale -> scalar ; Locale ; - ; -
+Mutation -> object ; - ; - ; -
+Mutation.addBook(id: ID!): AddBookPayload! -> root ; example.graphql.mutation.AddBookMutation#addBook(java.lang.String) ; example.graphql.type.AddBookPayload ; example.graphql.type.AddBookPayload
+Mutation.signIn(username: String!, password: String!): SignInPayload! -> root ; example.graphql.mutation.SignInSignUpMutations#signIn(java.lang.String, java.lang.String) ; example.graphql.type.SignInPayload ; example.graphql.type.SignInPayload
+Mutation.signUp(input: SignUpInput!): SignUpPayload! -> root ; example.graphql.mutation.SignInSignUpMutations#signUp(example.graphql.input.SignUpInput) ; example.graphql.type.SignUpPayload ; example.graphql.type.SignUpPayload
+Profile -> object ; example.graphql.type.Profile ; - ; -
+Profile.fullName: String! -> property ; example.graphql.type.Profile#fullName ; java.lang.String ; java.lang.String
+Profile.username: String! -> property ; example.graphql.type.Profile#username ; java.lang.String ; java.lang.String
+Query -> object ; - ; - ; -
+Query.allBooks: [Book!]! -> root ; example.graphql.query.AllBooksQuery#allBooks() ; java.util.List<example.data.Book> ; java.util.List<example.data.Book>
+Query.currentUser: User -> root ; example.graphql.query.CurrentUserQuery#currentUser() ; example.data.User ; example.data.User
+Query.echoInstant(at: Instant!): Instant! -> root ; example.graphql.query.ScalarsQuery#echoInstant(java.time.Instant) ; java.time.Instant ; java.time.Instant
+Query.echoJson(data: JSON): JSON -> root ; example.graphql.query.ScalarsQuery#echoJson(java.lang.Object) ; java.lang.Object ; java.lang.Object
+Query.echoLocale(tag: Locale!): Locale! -> root ; example.graphql.query.ScalarsQuery#echoLocale(java.util.Locale) ; java.util.Locale ; java.util.Locale
+Query.introduced: String! -> root ; example.graphql.query.IntroducedQuery#introduced() ; java.lang.String ; java.lang.String
+Query.searchProfile(contains: String!, limit: Int): [Profile!]! -> root ; example.graphql.query.SearchProfileQuery#searchProfile(java.lang.String, java.lang.Integer) ; java.util.List<example.graphql.type.Profile> ; java.util.List<example.graphql.type.Profile>
+Query.shout: String! -> root ; example.graphql.query.DirectivesQuery#shout() ; java.lang.String ; java.lang.String
+Query.tagged: String! -> root ; example.graphql.query.DirectivesQuery#tagged() ; java.lang.String ; java.lang.String
+SecurityError -> object ; example.graphql.type.SecurityError ; - ; -
+SecurityError.code: SecurityErrorCode! -> property ; example.graphql.type.SecurityError#code ; example.graphql.type.SecurityErrorCode ; example.graphql.type.SecurityErrorCode
+SecurityError.message: String! -> property ; example.graphql.type.SecurityError#message ; java.lang.String ; java.lang.String
+SecurityErrorCode -> enum ; example.graphql.type.SecurityErrorCode ; - ; -
+SecurityErrorCode.INCORRECT_CREDENTIALS -> enumValue ; example.graphql.type.SecurityErrorCode#INCORRECT_CREDENTIALS ; - ; -
+SecurityErrorCode.NOT_AUTHENTICATED -> enumValue ; example.graphql.type.SecurityErrorCode#NOT_AUTHENTICATED ; - ; -
+SignInPayload -> object ; example.graphql.type.SignInPayload ; - ; -
+SignInPayload.data: User -> property ; example.graphql.type.SignInPayload#data ; example.data.User ; example.data.User
+SignInPayload.error: Error -> property ; example.graphql.type.SignInPayload#error ; example.graphql.type.Error ; example.graphql.type.Error
+SignUpInput -> input ; example.graphql.input.SignUpInput ; - ; -
+SignUpInput.firstName: String! -> inputField ; example.graphql.input.SignUpInput#firstName ; java.lang.String ; java.lang.String
+SignUpInput.lastName: String! -> inputField ; example.graphql.input.SignUpInput#lastName ; java.lang.String ; java.lang.String
+SignUpInput.password: String! -> inputField ; example.graphql.input.SignUpInput#password ; java.lang.String ; java.lang.String
+SignUpInput.username: String! -> inputField ; example.graphql.input.SignUpInput#username ; java.lang.String ; java.lang.String
+SignUpPayload -> object ; example.graphql.type.SignUpPayload ; - ; -
+SignUpPayload.data: User -> property ; example.graphql.type.SignUpPayload#data ; example.data.User ; example.data.User
+SignUpPayload.error: Error -> property ; example.graphql.type.SignUpPayload#error ; example.graphql.type.Error ; example.graphql.type.Error
+String -> scalar ; String ; - ; -
+User -> object ; example.data.User ; - ; -
+User.books: [Book!]! -> resolver ; example.graphql.type.resolver.UserResolver#books(example.data.User) ; java.util.List<example.data.Book> ; java.util.List<example.data.Book>
+User.firstName: String! -> property ; example.data.User#firstName ; java.lang.String ; java.lang.String
+User.lastName: String! -> property ; example.data.User#lastName ; java.lang.String ; java.lang.String
+User.username: String! -> property ; example.data.User#username ; java.lang.String ; java.lang.String
+ValidationError -> object ; example.graphql.type.ValidationError ; - ; -
+ValidationError.code: ValidationErrorCode! -> property ; example.graphql.type.ValidationError#code ; example.graphql.type.ValidationErrorCode ; example.graphql.type.ValidationErrorCode
+ValidationError.message: String! -> property ; example.graphql.type.ValidationError#message ; java.lang.String ; java.lang.String
+ValidationErrorCode -> enum ; example.graphql.type.ValidationErrorCode ; - ; -
+ValidationErrorCode.DUPLICATE -> enumValue ; example.graphql.type.ValidationErrorCode#DUPLICATE ; - ; -
+ValidationErrorCode.NOT_FOUND -> enumValue ; example.graphql.type.ValidationErrorCode#NOT_FOUND ; - ; -
+~ignored example.graphql.query.AllBooksQuery#helper(java.lang.String)
