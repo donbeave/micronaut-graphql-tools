@@ -23,7 +23,7 @@ import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 import io.micronaut.graphql.tools.binding.internal.finding.FindingRenderer;
 import io.micronaut.graphql.tools.binding.internal.finding.Severity;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
-import io.micronaut.graphql.tools.binding.internal.rules.MemberClassRules;
+import io.micronaut.graphql.tools.binding.internal.membership.MemberClassRules;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassFindings;
 import io.micronaut.graphql.tools.binding.internal.rules.TypeClassDerivation;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;

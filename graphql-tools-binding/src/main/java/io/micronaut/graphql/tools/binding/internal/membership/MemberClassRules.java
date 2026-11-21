@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.binding.internal.rules;
+package io.micronaut.graphql.tools.binding.internal.membership;
 
 import graphql.language.FieldDefinition;
 import graphql.language.InterfaceTypeDefinition;

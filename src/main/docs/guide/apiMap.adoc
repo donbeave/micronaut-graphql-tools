@@ -78,6 +78,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.internal.model` |graphql-tools |Internal |The runtime model the binding reads: the resolver registry, the introspection registry, the type and bean models
 |`io.micronaut.graphql.tools.binding.internal.finding` |graphql-tools-binding |Internal |Findings and their rendering
 |`io.micronaut.graphql.tools.binding.internal.manifest` |graphql-tools-binding |Internal |The binding manifest renderer and the schema hash
+|`io.micronaut.graphql.tools.binding.internal.membership` |graphql-tools-binding |Internal |The rule that a union or interface member is not mapped to a disjoint class
 |`io.micronaut.graphql.tools.binding.internal.meta` |graphql-tools-binding |Internal |The resolver contracts annotation
 |`io.micronaut.graphql.tools.binding.internal.model` |graphql-tools-binding |Internal |The model of classes and members that the rules read
 |`io.micronaut.graphql.tools.binding.internal.plan` |graphql-tools-binding |Internal |The binding plan and the bean model

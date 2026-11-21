@@ -15,9 +15,9 @@
  */
 package io.micronaut.graphql.tools.binding
 
-import io.micronaut.graphql.tools.binding.internal.rules.MemberClassRules
-import io.micronaut.graphql.tools.binding.internal.rules.MemberClassRules.AbstractReturn
-import io.micronaut.graphql.tools.binding.internal.rules.MemberClassRules.MemberClass
+import io.micronaut.graphql.tools.binding.internal.membership.MemberClassRules
+import io.micronaut.graphql.tools.binding.internal.membership.MemberClassRules.AbstractReturn
+import io.micronaut.graphql.tools.binding.internal.membership.MemberClassRules.MemberClass
 import spock.lang.Specification
 
 class MemberClassRulesSpec extends Specification {
