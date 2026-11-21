@@ -441,16 +441,27 @@ public final class BenchmarkCases implements AutoCloseable {
         return query.append(" }").toString();
     }
 
-    // the invocation runs on the calling thread (executor none), so the result future is complete when it returns; the
-    // Mono that the transport subscribes to is built and not subscribed, because its subscription is the transport's
+    // The invocation returns a Mono that does no work until it is subscribed to, so the operation subscribes and waits
+    // (the way a transport does); the query runs on the calling thread (executor none). It fails when the query did not run.
     private Op invoke(int fields) {
         GraphQLInvocationData data = new GraphQLInvocationData(fieldsQuery(fields), null, Map.of());
-        return () -> invocation.invoke(data, null, null);
+        return () -> executed(Mono.from(invocation.invoke(data, null, null)).block());
     }
 
     private Op direct(int fields) {
         String query = fieldsQuery(fields);
-        return () -> graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build());
+        return () -> executed(graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build()).join());
+    }
+
+    private static ExecutionResult executed(ExecutionResult result) {
+        if (result == null || !result.getErrors().isEmpty()) {
+            throw new IllegalStateException("The benchmarked query did not run: " + (result == null ? "no result" : result.getErrors()));
+        }
+        Map<String, Object> data = result.getData();
+        if (data == null || data.isEmpty() || !"pong".equals(data.get("f0"))) {
+            throw new IllegalStateException("The benchmarked query returned no data: " + data);
+        }
+        return result;
     }
 
     /**
