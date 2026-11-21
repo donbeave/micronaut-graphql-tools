@@ -61,10 +61,12 @@ micronaut {
     }
 }
 
-// The resolver fixtures of the constraint-violations scenario (#468), compiled with Micronaut Validation's processor and its own
-// source set: that processor re-annotates every class that has @Introspected through a meta-annotation, which drops the `classes`
-// of @GraphQLModels, so it cannot share a compilation with the external-model fixtures. The output is on the test classpath. The
-// validation artifacts are not in the `mn` catalog (the platform BOM manages them), so no version here.
+// The resolver fixtures of the constraint-violations scenario (#468) and the @GraphQLModels fixtures of #528, compiled with
+// Micronaut Validation's processor and the graphql-tools processor of `main` in a source set of their own: Micronaut Validation's
+// processor re-annotates every class that has @Introspected through a meta-annotation, and the graphql-tools processor puts the
+// classes of @GraphQLModels back. The output is on the test classpath. The validation artifacts are not in the `mn` catalog (the
+// platform BOM manages them), so no version here. The resolvers of this source set are completed by a schema customizer, so the
+// schema checks are off here.
 val validationFixtures: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets.main.get().output
     runtimeClasspath += sourceSets.main.get().output
@@ -76,8 +78,12 @@ configurations {
 dependencies {
     "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
     "validationFixturesCompileOnly"("io.micronaut.validation:micronaut-validation-processor")
+    "validationFixturesCompileOnly"(projects.micronautGraphqlToolsProcessor)
     testImplementation(validationFixtures.output)
     testImplementation("io.micronaut.validation:micronaut-validation")
+}
+tasks.named<GroovyCompile>(validationFixtures.getCompileTaskName("groovy")) {
+    options.forkOptions.jvmArgs!!.add("-Dmicronaut.graphql.tools.processor.checks=false")
 }
 
 // The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x.

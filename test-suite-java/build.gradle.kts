@@ -145,9 +145,15 @@ configurations {
     named(validationFixtures.implementationConfigurationName) { extendsFrom(implementation.get()) }
     named(validationFixtures.annotationProcessorConfigurationName) { extendsFrom(testAnnotationProcessor.get()) }
 }
+// The graphql-tools processor runs here too (#528): @GraphQLModels must keep its introspections next to Micronaut Validation's
+// processor. The resolvers of this source set are completed by a schema customizer, so the schema checks are off.
+tasks.named<JavaCompile>(validationFixtures.compileJavaTaskName) {
+    options.compilerArgs.add("-Amicronaut.graphql.tools.processor.checks=false")
+}
 dependencies {
     "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
     "validationFixturesAnnotationProcessor"("io.micronaut.validation:micronaut-validation-processor")
+    "validationFixturesAnnotationProcessor"(projects.micronautGraphqlToolsProcessor)
     testImplementation(validationFixtures.output)
     testImplementation("io.micronaut.validation:micronaut-validation")
 }
