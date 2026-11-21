@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class Author(val name: String)
 
 @GraphQLType
-class Volume(val title: String)
+open class Volume(val title: String)
 
 @GraphQLType
 class LoaderStats(val batches: Int, val keys: Int)

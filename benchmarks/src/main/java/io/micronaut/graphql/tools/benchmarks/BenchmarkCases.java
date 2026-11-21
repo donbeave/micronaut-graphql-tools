@@ -56,6 +56,7 @@ import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
 
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -173,6 +174,22 @@ public final class BenchmarkCases implements AutoCloseable {
         OBSERVABILITY_SELECTED
     }
 
+    /** The field decorator bean of the application. */
+    public enum Decorators {
+        /** None: no {@code FieldFetcherDecorator} bean. */
+        NONE("none"),
+        /** One that is offered every field and selects none. */
+        UNSELECTIVE("unselective"),
+        /** One that wraps every field in a fetcher that delegates. */
+        WRAP_ALL("wrapAll");
+
+        private final String property;
+
+        Decorators(String property) {
+            this.property = property;
+        }
+    }
+
     @FunctionalInterface
     public interface Op {
         Object run() throws Exception;
@@ -205,6 +222,15 @@ public final class BenchmarkCases implements AutoCloseable {
      * @param instrumented which {@code Instrumentation} bean the application has
      */
     public BenchmarkCases(int loaders, Instrumented instrumented) {
+        this(loaders, instrumented, Decorators.UNSELECTIVE);
+    }
+
+    /**
+     * @param loaders      how many batch loader beans no operation uses: 0, 1 or 50
+     * @param instrumented which {@code Instrumentation} bean the application has
+     * @param decorators   which {@code FieldFetcherDecorator} bean the application has
+     */
+    public BenchmarkCases(int loaders, Instrumented instrumented, Decorators decorators) {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
         ApplicationContextBuilder builder = ApplicationContext.builder();
@@ -221,7 +247,8 @@ public final class BenchmarkCases implements AutoCloseable {
                         "micronaut.graphql.tools.scalars.enabled", false,
                         // the invocation gates measure the calling thread, so the operation must not hop
                         "micronaut.graphql.tools.execution.executor", "none",
-                        "benchmarks.loaders", loaders))
+                        "benchmarks.loaders", loaders,
+                        "benchmarks.decorator", decorators.property))
                 .properties(switch (instrumented) {
                     case OBSERVABILITY_SELECTED -> Map.of("micronaut.graphql.tools.tracing.fields", List.of("Query.ping"));
                     case OBSERVABILITY -> Map.<String, Object>of();
@@ -253,7 +280,7 @@ public final class BenchmarkCases implements AutoCloseable {
                 "2026-12-24"));
         ops.put(INSTANT_COERCION, coercion(TimeScalars.coercing(StandardScalar.INSTANT, "Instant", null),
                 "2026-12-24T10:15:30Z"));
-        ops.put(JSON_COERCION, coercion(new JsonCoercing("JSON", () -> null), Map.of("kind", "x")));
+        ops.put(JSON_COERCION, coercion(new JsonCoercing("JSON", () -> null), jsonValue()));
         ops.put(ENUM_ARGUMENT, fetch("Query", "enumArg", null, Map.of("color", coercedEnum("Color", "GREEN"))));
         ops.put(INPUT_OBJECT_ARGUMENT, fetch("Query", "input", null, Map.of("input", point("a", 1, 2))));
         ops.put(LIST_OF_INPUTS_ARGUMENT, fetch("Query", "inputs", null,
@@ -319,6 +346,14 @@ public final class BenchmarkCases implements AutoCloseable {
 
     // What a request does with the scalar: parse the variable, then write the value that a resolver returns from it
     @SuppressWarnings("unchecked")
+    private static Map<String, Object> jsonValue() {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("kind", "x");
+        value.put("tags", new ArrayList<>(List.of("a", "b")));
+        value.put("ratio", 2.5d);
+        return value;
+    }
+
     private static Op coercion(Coercing<?, ?> scalar, Object input) {
         Coercing<Object, Object> coercing = (Coercing<Object, Object>) scalar;
         GraphQLContext graphQLContext = GraphQLContext.getDefault();
@@ -383,6 +418,21 @@ public final class BenchmarkCases implements AutoCloseable {
     private Op direct(int fields) {
         String query = fieldsQuery(fields);
         return () -> graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build());
+    }
+
+    /**
+     * A query of one root field and {@code items * 5} fields below it, run on the {@code GraphQL} bean. The operation fails when
+     * the result has errors.
+     */
+    public Op wideQuery(int items) {
+        String query = "{ items(count: " + items + ") { id name price label labelWithArgument(n: 1) } }";
+        return () -> {
+            ExecutionResult result = graphQL.execute(ExecutionInput.newExecutionInput().query(query).build());
+            if (!result.getErrors().isEmpty()) {
+                throw new IllegalStateException(result.getErrors().toString());
+            }
+            return result;
+        };
     }
 
     private Op query(int count) {

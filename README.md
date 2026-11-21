@@ -22,6 +22,7 @@ and test it.
 | [`graphql-tools-binding`](graphql-tools-binding/README.md) | `:micronaut-graphql-tools-binding` | The binding rules used by the runtime library. |
 | [`graphql-tools-scalars`](graphql-tools-scalars/README.md) | `:micronaut-graphql-tools-scalars` | The standard scalars: `java.time`, JSON and extended scalars, as beans. |
 | [`graphql-tools-observability`](graphql-tools-observability/README.md) | `:micronaut-graphql-tools-observability` | Request metrics (Micrometer) and traces (OpenTelemetry), optional. |
+| [`graphql-tools-upload`](graphql-tools-upload/README.md) | `:micronaut-graphql-tools-upload` | File upload: the `Upload` scalar and the multipart request route, optional. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
@@ -1278,6 +1279,21 @@ implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability
 
 The guide page on observability has the details, the span layout, `@NewSpan` and `@Timed` on resolvers, and the cost.
 
+## File upload
+
+The `micronaut-graphql-tools-upload` module implements the GraphQL multipart request specification for Micronaut 4: the
+`Upload` scalar and a `multipart/form-data` route on the path of the GraphQL endpoint.
+
+```groovy
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-upload:1.0.0-M4")
+```
+
+Declare `scalar Upload` in the schema and use it for an argument or an input object field; a resolver declares the
+parameter or the property as `CompletedFileUpload` (or `CompletedPart`). The route runs the operation through the
+library's invocation, so the resolver runs on the executor of the library, not on the event loop. An invalid request is a
+`400` with an error whose `extensions.code` is `INVALID_MULTIPART_REQUEST`. `micronaut.graphql.tools.upload.enabled`
+(default `true`) turns the module off. The guide page on file upload has the details.
+
 ## Error handling
 
 The library installs a `DataFetcherExceptionHandler` that hides the message of an exception that a resolver throws: the
@@ -1376,6 +1392,7 @@ To build or test against a role locally:
 | Binding rules (internal, pulled in by the library) | `io.micronaut.graphql.tools:micronaut-graphql-tools-binding` |
 | Standard scalars ([`java.time`, JSON and extended scalars](#standard-scalars)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
 | Observability ([Micrometer metrics and OpenTelemetry traces](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-observability` |
+| File upload ([`Upload` scalar and multipart route](#file-upload)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-upload` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 

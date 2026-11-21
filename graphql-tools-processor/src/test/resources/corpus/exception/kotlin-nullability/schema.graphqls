@@ -8,6 +8,7 @@ type Query {
   describe(filter: Filter!): String
   names: [String!]!
   subtitle: String
+  later: String!
 }
 
 input Filter {
