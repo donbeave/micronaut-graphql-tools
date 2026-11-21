@@ -111,7 +111,8 @@ Application developers, who add it to the path that their compiler reads Microna
 ## Public and internal
 
 Application code does not import anything from this module. Its classes are used by the compiler only, through the visitor's
-service registration.
+service registration. `BindingRulesAccess` is the one exception: it is public only so that the `:benchmarks` module
+can run the per-class rules over compiler elements without a class in this package. It is internal, not API, and may change without notice.
 
 ## Relation to other modules
 
@@ -152,4 +153,5 @@ leg), `ParitySpec` (the soundness and completeness rules and the exception list)
   of the case, and its `e: [ksp] [code] coordinate` lines are compared with `expected/compile.txt`). It needs the network and is not
   part of `check` or `build`; the CI job `build tools` runs it on every pull request, and the canary workflow runs it under kapt
   (`-Pcorpus.kotlin.processor=kapt`, the `lang:all` and `kapt:yes` cases; kapt reads Kotlin nullability from the stub annotations, `ElementTypeModel`) every night. Its budget is 8 minutes on JDK 25 (`corpus.kotlin.budget-seconds`, 480 s by default).
+  Under kapt every compilation gets a worker process of its own (a unique `-Dcorpus.kapt.worker` argument): Gradle reuses an idle worker for the next task with the same JVM arguments, and javac keeps the first value of a Micronaut option in the system properties of that process, so a shared worker made the verdicts depend on the order of the tasks.
   `-Pcorpus.update` with it rewrites the Kotlin expectations.

@@ -1,0 +1,3 @@
+query ($weights: Weights!) {
+  weights(weights: $weights)
+}

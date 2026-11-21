@@ -47,6 +47,7 @@ import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatche
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.context.ServerHttpRequestContext;
+import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.executor.ExecutorSelector;
 import jakarta.inject.Singleton;
@@ -58,6 +59,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.util.context.ContextView;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +67,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 /**
@@ -94,6 +99,7 @@ import java.util.function.BiConsumer;
 public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
     private static final Logger LOG = LoggerFactory.getLogger(LibraryGraphQLInvocation.class);
+    private static final String TIMEOUT_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.timeout";
     private static final String EXECUTOR_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.executor";
 
     private final GraphQL graphQL;
@@ -112,6 +118,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     private final GraphQLErrorsCustomizer[] errorsCustomizers;
     @Nullable
     private final DisconnectWatcher disconnectWatcher;
+    @Nullable
+    private final Duration timeout;
+    @Nullable
+    private final ScheduledExecutorService scheduler;
 
     LibraryGraphQLInvocation(GraphQL graphQL, GraphQLExecutionInputCustomizer customizer, GraphQLToolsConfiguration configuration,
                              ExecutorSelector executorSelector, BeanContext beanContext, DataLoaderTable loaders,
@@ -128,6 +138,17 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         this.contributors = contributors.isEmpty() ? null : contributors.toArray(new GraphQLContextContributor[0]);
         this.executorName = configuration.getExecution().getExecutor();
         this.executor = resolveExecutor(executorName, executorSelector, beanContext);
+        this.timeout = configuration.getExecution().getTimeout();
+        this.scheduler = timeout == null ? null : scheduler(beanContext);
+    }
+
+    private static ScheduledExecutorService scheduler(BeanContext beanContext) {
+        ExecutorService scheduled = beanContext.getBean(ExecutorService.class, Qualifiers.byName(TaskExecutors.SCHEDULED));
+        if (scheduled instanceof ScheduledExecutorService service) {
+            return service;
+        }
+        throw new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR, TIMEOUT_KEY + " is set, but the '" + TaskExecutors.SCHEDULED
+                + "' executor is a " + scheduled.getClass().getName() + ", which cannot schedule the timer.");
     }
 
     /**
@@ -167,6 +188,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 state.disconnectWatcher(disconnectWatcher);
             }
             Execution execution = new Execution(data, state);
+            if (scheduler != null) {
+                ScheduledFuture<?> timer = scheduler.schedule(execution::timeOut, timeout.toNanos(), TimeUnit.NANOSECONDS);
+                execution.whenComplete((r, failure) -> timer.cancel(false));
+            }
             if (customizer != null) {
                 execution.startCustomized(context);
             } else if (executor == null) {
@@ -313,6 +338,16 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 .build();
     }
 
+    private static ExecutionResult timedOut(Duration timeout) {
+        return ExecutionResultImpl.newExecutionResult()
+                .data(null)
+                .addError(GraphqlErrorBuilder.newError()
+                        .message("The operation did not finish within " + timeout + " and was cancelled.")
+                        .extensions(Map.of("code", "EXECUTION_TIMEOUT"))
+                        .build())
+                .build();
+    }
+
     /**
      * One operation: the task of the hop, the receiver of graphql-java's result and the future of the result. Cancelling
      * the future, which the cancellation of the response subscription does, marks the execution cancelled.
@@ -341,6 +376,20 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 }
             }
             return super.cancel(mayInterruptIfRunning);
+        }
+
+        /** The timer of {@code execution.timeout} fired: cancel the execution and answer the client now. */
+        void timeOut() {
+            // the answer first: cancelling the state aborts the pending stages, and the execution would finish with their partial data
+            if (!complete(timedOut(timeout))) {
+                return;
+            }
+            state.cancel();
+            state.finished();
+            Disposable subscription = customizerSubscription;
+            if (subscription != null) {
+                subscription.dispose();
+            }
         }
 
         @Override
@@ -439,6 +488,11 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         private void executeAsync(ExecutionInput input) {
             state.executionInput(input);
             if (contribute(input.getGraphQLContext())) {
+                if (state.isCancelled()) {
+                    // the timeout fired while the contributors ran: the client has its answer, so no resolver starts
+                    complete(cancelled());
+                    return;
+                }
                 graphQL.executeAsync(input).whenComplete(this);
             }
         }

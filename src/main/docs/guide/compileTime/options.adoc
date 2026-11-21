@@ -20,7 +20,7 @@ The names are written with dots and camel case because `javac` accepts only dot-
 
 == Setting `looseNullability`
 
-The option changes the outcome of a build only for Kotlin under KSP, the one compiler that reads Kotlin nullability (under kapt a class is read as Java stubs, and Java and Groovy have no Kotlin nullability). Its default is `ignore`: the checks report no `kotlin-nullability-loose` finding unless the build sets `warn` or `fail`.
+The option changes the outcome of a build only for Kotlin, under KSP and under kapt. KSP reads the nullability from the Kotlin declaration; kapt reads it from the `@NotNull` and `@Nullable` annotations of the Java stub of a Kotlin class, so under kapt the check skips the positions that a stub holds no annotation for (a type argument, a type variable, an array and the return type of a `suspend` function), see <<kotlinNullabilityKapt,Under kapt>>. Java and Groovy have no Kotlin nullability, so the option changes nothing there. Its default is `ignore`: the checks report no `kotlin-nullability-loose` finding unless the build sets `warn` or `fail`.
 
 With Gradle and KSP the option is an `arg` of the `ksp` block. The default is `ignore`; `-PgraphqlLooseNullability=warn` or `=fail` changes it:
 

@@ -27,6 +27,7 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.SlotKind;
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.graphql.tools.input.ArgumentValue;
 import io.micronaut.graphql.tools.internal.execution.ExecutionState;
 import io.micronaut.graphql.tools.internal.execution.LazyDataLoaderRegistry;
@@ -165,6 +166,8 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             }
         } catch (DataLoaderUnavailableException e) {
             return dataLoaderUnavailable(environment, e);
+        } catch (ResponseUnavailableException e) {
+            return responseUnavailable(environment, state);
         } catch (RuntimeException e) {
             return inputConversionFailure(environment, names[i], e);
         }
@@ -186,7 +189,7 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             case LOCALE -> environment.getLocale();
             case PRINCIPAL -> principal(state, principalTypes[index]);
             case REQUEST -> state == null ? null : state.httpRequest();
-            case RESPONSE -> state == null ? null : state.response();
+            case RESPONSE -> response(state);
             case OPTIONAL_RESPONSE -> state == null ? Optional.empty() : state.httpResponse();
             case DATA_LOADER -> {
                 // by index, from the registry of this execution: no string lookup, and the loader is created on first use
@@ -207,6 +210,14 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         };
     }
 
+    private static Object response(@Nullable ExecutionState state) {
+        MutableHttpResponse<?> response = state == null ? null : state.response();
+        if (response == null) {
+            throw new ResponseUnavailableException();
+        }
+        return response;
+    }
+
     @SuppressWarnings("unchecked")
     private static Class<? extends Principal>[] principalTypes(int size) {
         return (Class<? extends Principal>[]) new Class<?>[size];
@@ -216,6 +227,23 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     private static Object principal(@Nullable ExecutionState state, Class<? extends Principal> type) {
         HttpRequest<?> request = state == null ? null : state.httpRequest();
         return request == null ? null : request.getUserPrincipal(type).orElse(null);
+    }
+
+    private static DataFetcherResult<Object> responseUnavailable(DataFetchingEnvironment environment,
+                                                                 @Nullable ExecutionState state) {
+        String coordinate = ((GraphQLNamedType) environment.getParentType()).getName() + "."
+                + environment.getFieldDefinition().getName();
+        String transport = state == null ? "this call" : switch (state.transport()) {
+            case WEBSOCKET -> "a WebSocket operation";
+            case DIRECT -> "a call without a request";
+            default -> "this operation";
+        };
+        GraphQLError error = GraphqlErrorBuilder.newError(environment)
+                .message("The HTTP response of " + coordinate + " is unavailable: " + transport
+                        + " has none. Declare the parameter as Optional<MutableHttpResponse<?>> to run over both HTTP and WebSocket.")
+                .extensions(Map.of("code", "HTTP_RESPONSE_UNAVAILABLE"))
+                .build();
+        return DataFetcherResult.newResult().error(error).build();
     }
 
     private static DataFetcherResult<Object> dataLoaderUnavailable(DataFetchingEnvironment environment,
@@ -272,6 +300,16 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                 .extensions(Map.of("code", INPUT_CONVERSION_FAILED, "coordinate", coordinate, "inputPath", inputPath))
                 .build();
         return DataFetcherResult.newResult().error(error).build();
+    }
+
+    /** The operation has no HTTP response: it did not arrive over HTTP. */
+    private static final class ResponseUnavailableException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        ResponseUnavailableException() {
+            super(null, null, false, false);
+        }
     }
 
     /** The registry of the execution is not the library's: an application's customizer replaced it. */

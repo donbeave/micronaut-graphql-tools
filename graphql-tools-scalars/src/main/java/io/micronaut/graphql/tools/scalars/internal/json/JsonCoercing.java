@@ -269,7 +269,11 @@ public final class JsonCoercing extends WireCoercing<Object, Object> {
         }
         if (literal instanceof VariableReference) {
             Object variable = variables.get(((VariableReference) literal).getName());
-            checkInput(variable);
+            try {
+                checkInput(variable);
+            } catch (StackOverflowError e) {
+                throw new IllegalArgumentException(NESTED, e);
+            }
             return variable;
         }
         if (literal instanceof ArrayValue) {

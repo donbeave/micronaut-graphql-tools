@@ -219,7 +219,7 @@ input DocumentInput {
 
     void "a literal upload in the query is an error of the operation"() {
         when:
-        def response = postOk(withFile(operations('mutation { singleUpload(file: "x") }', [:], ['0': ['variables.file']]), '0', 'f.txt', 'x').build())
+        def response = postOk(withFile(operations('mutation { singleUpload(file: "x") }', [file: null], ['0': ['variables.file']]), '0', 'f.txt', 'x').build())
 
         then:
         response.errors
@@ -251,6 +251,12 @@ input DocumentInput {
         'a list index out of range'  | 'no index 3'               | withFile(MultipartBody.builder().addPart('operations', '{"query":"{ping}","variables":{"l":[null]}}').addPart('map', '{"0":["variables.l.3"]}'), '0', 'f', 'x').build()
         'a list index that is no number' | 'not a list index'     | withFile(MultipartBody.builder().addPart('operations', '{"query":"{ping}","variables":{"l":[null]}}').addPart('map', '{"0":["variables.l.x"]}'), '0', 'f', 'x').build()
         'variables that are no object' | "'variables'"            | MultipartBody.builder().addPart('operations', '{"query":"{ping}","variables":[]}').addPart('map', '{}').build()
+        'a map path without a null placeholder' | 'no null placeholder' | withFile(MultipartBody.builder().addPart('operations', '{"query":"{ping}","variables":{}}').addPart('map', '{"0":["variables.file"]}'), '0', 'f', 'x').build()
+        'a map path that holds a value' | 'not a null placeholder' | withFile(MultipartBody.builder().addPart('operations', '{"query":"{ping}","variables":{"file":"x"}}').addPart('map', '{"0":["variables.file"]}'), '0', 'f', 'x').build()
+        'a list element that is no placeholder' | 'not a null placeholder' | withFile(MultipartBody.builder().addPart('operations', '{"query":"{ping}","variables":{"l":["x"]}}').addPart('map', '{"0":["variables.l.0"]}'), '0', 'f', 'x').build()
+        'a path that two entries name' | 'not a null placeholder' | withFile(withFile(MultipartBody.builder().addPart('operations', '{"query":"{ping}","variables":{"file":null}}').addPart('map', '{"0":["variables.file"],"1":["variables.file"]}'), '0', 'f', 'x'), '1', 'g', 'y').build()
+        'an operations part without a query' | "has no 'query'" | MultipartBody.builder().addPart('operations', '{"variables":{}}').addPart('map', '{}').build()
+        'a blank query' | "has no 'query'" | MultipartBody.builder().addPart('operations', '{"query":"  "}').addPart('map', '{}').build()
         'a part sent twice'          | 'more than once'           | MultipartBody.builder().addPart('operations', '{"query":"{ping}"}').addPart('map', '{}').addPart('map', '{}').build()
     }
 

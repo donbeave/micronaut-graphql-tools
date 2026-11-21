@@ -19,6 +19,8 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micrometer.core.annotation.Timed
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.scheduling.TaskExecutors
+import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.tracing.annotation.SpanTag
 import jakarta.inject.Singleton
@@ -58,6 +60,12 @@ class ObservabilityFixtures {
         @NewSpan('resolver.work')
         String traced() {
             return 'traced'
+        }
+
+        @ExecuteOn(TaskExecutors.BLOCKING)
+        @NewSpan('resolver.hopped')
+        String tracedOnExecutor() {
+            return 'hopped'
         }
 
         @NewSpan('resolver.tagged')
