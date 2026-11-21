@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools.internal.wiring;
 
-import graphql.language.ObjectTypeDefinition;
+import graphql.language.TypeDefinition;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
@@ -54,20 +54,20 @@ final class TypeClasses {
     }
 
     /**
-     * @param objectType     an object type of a union or interface
+     * @param type           an object or interface type of a union or interface
      * @param mappingContext where the failure is reported
      * @return its class, or {@code null} when neither the dictionary nor the derivation names one
      * @throws AmbiguousTypeClassException if no dictionary entry exists and several classes match
      */
     @Nullable
-    Class<?> find(ObjectTypeDefinition objectType, MappingContext mappingContext) {
-        Class<?> mapped = dictionary.getTypes().get(objectType.getName());
+    Class<?> find(TypeDefinition<?> type, MappingContext mappingContext) {
+        Class<?> mapped = dictionary.getTypes().get(type.getName());
         if (mapped != null) {
             return mapped;
         }
-        List<String> matches = TypeClassDerivation.matching(objectType.getName(), convention, registry.getTypeClassCandidates());
+        List<String> matches = TypeClassDerivation.matching(type.getName(), convention, registry.getTypeClassCandidates());
         if (matches.size() > 1) {
-            throw new AmbiguousTypeClassException(mappingContext, objectType.getName(), matches);
+            throw new AmbiguousTypeClassException(mappingContext, type.getName(), matches);
         }
         return matches.isEmpty() ? null : registry.getCandidateClass(matches.get(0));
     }

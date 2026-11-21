@@ -368,6 +368,9 @@ public final class ResolverClassRules {
                 return new ReturnVerdict(depth + 1, false, null, ReturnVerdict.Reactive.MULTI, true, null);
             }
             if (valueless) {
+                if (fieldType instanceof NonNullType) {
+                    return ReturnVerdict.failed(WrapperRules.valuelessAtNonNull(className(result), SchemaTypes.print(fieldType)));
+                }
                 // a Completable emits no value and has no type argument: the field is null, there is nothing to unwrap or bind
                 return new ReturnVerdict(depth, false, null, ReturnVerdict.Reactive.VALUELESS, !subscription, null);
             }

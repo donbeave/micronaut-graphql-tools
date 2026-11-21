@@ -27,7 +27,7 @@ import jakarta.inject.Singleton
 @Factory
 class ScalarsFixtures {
 
-    // The scalars of the module under their default names
+    // The scalars of the module under their default names; the schema of the application declares JSON
     static final String DEFAULTS = 'scalars-default'
     // The same fields with a renamed scalar and a configured format
     static final String RENAMED = 'scalars-renamed'
@@ -42,7 +42,6 @@ class ScalarsFixtures {
                     'scalar LocalDate\n' +
                             'scalar OffsetDateTime\n' +
                             'scalar Duration\n' +
-                            'scalar JSON\n' +
                             'scalar UUID\n' +
                             'scalar Url\n' +
                             'extend type Query {\n' +
@@ -66,7 +65,6 @@ class ScalarsFixtures {
                     'scalar Date\n' +
                             'scalar OffsetDateTime\n' +
                             'scalar Duration\n' +
-                            'scalar JSON\n' +
                             'scalar UUID\n' +
                             'scalar Url\n' +
                             'extend type Query {\n' +

@@ -19,6 +19,8 @@ import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.order.OrderUtil;
+import io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
@@ -31,6 +33,7 @@ import org.dataloader.MappedBatchLoader;
 import org.dataloader.MappedBatchLoaderWithContext;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,12 +49,14 @@ import java.util.Map;
 @Requires(property = "graphql.enabled", notEquals = "false")
 public final class DataLoaderTable {
 
+    private static final DataLoaderOptionsCustomizer[] NO_CUSTOMIZERS = new DataLoaderOptionsCustomizer[0];
+
     private final BeanContext beanContext;
     private final Entry[] entries;
     private final Map<String, Entry> byName;
     private final boolean statistics;
 
-    DataLoaderTable(BeanContext beanContext, GraphQLToolsConfiguration configuration) {
+    DataLoaderTable(BeanContext beanContext, GraphQLToolsConfiguration configuration, List<DataLoaderOptionsCustomizer> customizers) {
         this.beanContext = beanContext;
         this.statistics = configuration.getExecution().isDataLoaderStatistics();
         Map<BeanDefinition<?>, Kind> kinds = new LinkedHashMap<>();
@@ -61,6 +66,12 @@ public final class DataLoaderTable {
                 kinds.putIfAbsent(definition, kind);
             }
         }
+        List<DataLoaderOptionsCustomizer> sorted = new ArrayList<>(customizers);
+        OrderUtil.sort(sorted);
+        Map<String, List<DataLoaderOptionsCustomizer>> customizersByName = new HashMap<>();
+        for (DataLoaderOptionsCustomizer customizer : sorted) {
+            customizersByName.computeIfAbsent(String.valueOf(customizer.loaderName()), name -> new ArrayList<>()).add(customizer);
+        }
         List<Entry> list = new ArrayList<>(kinds.size());
         Map<String, Entry> names = new HashMap<>();
         for (Map.Entry<BeanDefinition<?>, Kind> found : kinds.entrySet()) {
@@ -69,7 +80,10 @@ public final class DataLoaderTable {
             List<Argument<?>> arguments = definition.getTypeArguments(kind.type);
             Argument<?> key = arguments.size() == 2 ? arguments.get(0) : Argument.OBJECT_ARGUMENT;
             Argument<?> value = arguments.size() == 2 ? arguments.get(1) : Argument.OBJECT_ARGUMENT;
-            Entry entry = new Entry(list.size(), nameOf(definition), kind, definition, key, value);
+            String name = nameOf(definition);
+            List<DataLoaderOptionsCustomizer> own = customizersByName.remove(name);
+            Entry entry = new Entry(list.size(), name, kind, definition, key, value,
+                    own == null ? NO_CUSTOMIZERS : own.toArray(NO_CUSTOMIZERS));
             Entry other = names.putIfAbsent(entry.name(), entry);
             if (other != null) {
                 throw new ExecutionSetupException(BindingCode.DUPLICATE_DATA_LOADER, "Two batch loader beans are named '" + entry.name()
@@ -78,6 +92,12 @@ public final class DataLoaderTable {
                         + "letter. Fix: give one of them a different @Named qualifier.");
             }
             list.add(entry);
+        }
+        if (!customizersByName.isEmpty()) {
+            String unknown = customizersByName.keySet().iterator().next();
+            throw new ExecutionSetupException(BindingCode.DATA_LOADER_NOT_FOUND, "A DataLoaderOptionsCustomizer ("
+                    + customizersByName.get(unknown).get(0).getClass().getName() + ") is for the loader '" + unknown
+                    + "', and no batch loader bean has that name. " + known(list) + " Fix: return the name of a loader from loaderName().");
         }
         this.entries = list.toArray(new Entry[0]);
         this.byName = Map.copyOf(names);
@@ -154,7 +174,11 @@ public final class DataLoaderTable {
     }
 
     private String known() {
-        if (entries.length == 0) {
+        return known(Arrays.asList(entries));
+    }
+
+    private static String known(List<Entry> entries) {
+        if (entries.isEmpty()) {
             return "The application has no batch loader bean.";
         }
         List<String> described = new ArrayList<>();
@@ -208,8 +232,10 @@ public final class DataLoaderTable {
      * @param definition the bean definition
      * @param key        the key type
      * @param value      the value type
+     * @param customizers the options customizers of this loader, in order
      */
-    record Entry(int index, String name, Kind kind, BeanDefinition<?> definition, Argument<?> key, Argument<?> value) {
+    record Entry(int index, String name, Kind kind, BeanDefinition<?> definition, Argument<?> key, Argument<?> value,
+                 DataLoaderOptionsCustomizer[] customizers) {
 
         /** @return the loader as a description for a message: its name and types */
         String describe() {
