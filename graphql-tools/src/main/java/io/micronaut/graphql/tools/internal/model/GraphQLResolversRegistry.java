@@ -325,6 +325,15 @@ public final class GraphQLResolversRegistry {
         }
     }
 
+    /**
+     * @param coordinateMethod a method that carries {@code @GraphQLSchemaCoordinate}
+     * @return the operations that the marker contracts of the method bind, empty when no marker contract fixes them
+     */
+    public List<String> operationsOf(SchemaCoordinateMethod coordinateMethod) {
+        return markersOf(coordinateMethod.beanDefinition())
+                .operationsOf(coordinateMethod.method().getMethodName(), arity(coordinateMethod.method()));
+    }
+
     public List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
         registerIntroductionBeans();
         if (sortedSchemaCoordinateMethods == null) {
