@@ -27,12 +27,16 @@ dependencies {
     runtimeOnly("ch.qos.logback:logback-classic")
     testImplementation("io.micronaut:micronaut-http-client")
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
-    // The observability module and the libraries its tests observe with: a Micrometer registry and an OpenTelemetry SDK that
-    // exports to memory (#24). Test scope: the application itself does not depend on them.
+    // The observability module and the libraries its tests observe with: the Micrometer and OpenTelemetry integrations of
+    // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
     testImplementation(projects.micronautGraphqlToolsObservability)
-    testImplementation("io.micrometer:micrometer-core")
-    testImplementation("io.opentelemetry:opentelemetry-sdk")
+    testImplementation(mnMicrometer.micronaut.micrometer.core)
+    testImplementation(mnTracing.micronaut.tracing.opentelemetry)
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
+    // the mapper of @Timed, which KSP gives to the test source set; it is not transitive because its dependencies include a second
+    // Micronaut processor, and it needs Micrometer on the processor path
+    ksp(mnMicrometer.micronaut.micrometer.annotation) { isTransitive = false }
+    ksp("io.micrometer:micrometer-core")
     // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
     // itself does not depend on it.
     testImplementation(projects.micronautGraphqlToolsUpload)

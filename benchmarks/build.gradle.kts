@@ -19,8 +19,8 @@ dependencies {
     implementation(projects.micronautGraphqlToolsScalars)
     // a request with the observability module on and no field traced is gated against the same request without it (#24)
     implementation(projects.micronautGraphqlToolsObservability)
-    implementation("io.micrometer:micrometer-core")
-    implementation("io.opentelemetry:opentelemetry-api")
+    implementation(mnMicrometer.micronaut.micrometer.core)
+    implementation(mnTracing.micronaut.tracing.opentelemetry)
     implementation(mn.micronaut.inject)
     // the per-class binding rules in the form the compiler runs them (#417): the processor's element adapter over compiler class elements,
     // compiled in process; no part of it reaches the library's runtime API

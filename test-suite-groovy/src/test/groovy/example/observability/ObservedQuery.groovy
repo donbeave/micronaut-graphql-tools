@@ -16,9 +16,12 @@
 package example.observability
 
 import groovy.transform.CompileStatic
+import io.micrometer.core.annotation.Timed
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.tracing.annotation.NewSpan
+import io.micronaut.tracing.annotation.SpanTag
 import jakarta.inject.Singleton
 
 @CompileStatic
@@ -34,6 +37,25 @@ class ObservedQuery {
     ObservedBook observedBook() {
         return new ObservedBook(title: 'T')
     }
+
+    // tag::newspan[]
+    @NewSpan('observed.work')
+    String observedTraced() {
+        return 'traced'
+    }
+
+    @NewSpan('observed.tagged')
+    String observedTagged(@SpanTag('observed.value') String value) {
+        return value
+    }
+    // end::newspan[]
+
+    // tag::timed[]
+    @Timed('observed.timed')
+    String observedTimed() {
+        return 'timed'
+    }
+    // end::timed[]
 
     @Introspected
     static class ObservedBook {

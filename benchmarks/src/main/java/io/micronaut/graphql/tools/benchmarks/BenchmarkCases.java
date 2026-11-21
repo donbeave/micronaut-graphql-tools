@@ -51,7 +51,6 @@ import io.micronaut.graphql.tools.benchmarks.Fixtures.Square;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Triangle;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micronaut.graphql.tools.scalars.StandardScalar;
-import io.opentelemetry.api.OpenTelemetry;
 import io.micronaut.graphql.tools.scalars.internal.json.JsonCoercing;
 import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
 
@@ -169,8 +168,10 @@ public final class BenchmarkCases implements AutoCloseable {
         NONE,
         /** One that implements no hook: what any instrumentation costs graphql-java, with nothing of ours in it. */
         EMPTY,
-        /** The observability module's, with a meter registry and the no-op OpenTelemetry. */
-        OBSERVABILITY
+        /** The observability module's, with a meter registry and the OpenTelemetry SDK of Micronaut Tracing, and no field selected for a span. */
+        OBSERVABILITY,
+        /** The observability module's, with every {@code Query.ping} selected for a span by the field decorator. */
+        OBSERVABILITY_SELECTED
     }
 
     /** The field decorator bean of the application. */
@@ -237,7 +238,7 @@ public final class BenchmarkCases implements AutoCloseable {
             case NONE -> { }
             case EMPTY -> builder.singletons(new SimplePerformantInstrumentation());
             // the beans of the observability module, with no field selected for a span
-            case OBSERVABILITY -> builder.singletons(new SimpleMeterRegistry(), OpenTelemetry.noop());
+            case OBSERVABILITY, OBSERVABILITY_SELECTED -> builder.singletons(new SimpleMeterRegistry());
         }
         context = builder
                 .properties(Map.of("graphql.graphql-ws.enabled", false, "graphql.graphiql.enabled", false,
@@ -248,6 +249,13 @@ public final class BenchmarkCases implements AutoCloseable {
                         "micronaut.graphql.tools.execution.executor", "none",
                         "benchmarks.loaders", loaders,
                         "benchmarks.decorator", decorators.property))
+                .properties(switch (instrumented) {
+                    case OBSERVABILITY_SELECTED -> Map.of("micronaut.graphql.tools.tracing.fields", List.of("Query.ping"));
+                    case OBSERVABILITY -> Map.<String, Object>of();
+                    // Micronaut Micrometer and Micronaut Tracing are on the classpath and would create a registry and an
+                    // OpenTelemetry bean, which switches the observability module on in the cases that must have none of it
+                    default -> Map.<String, Object>of("micronaut.metrics.enabled", false, "micronaut.otel.enabled", false);
+                })
                 .singletons(registry)
                 .start();
         graphQL = context.getBean(GraphQL.class);

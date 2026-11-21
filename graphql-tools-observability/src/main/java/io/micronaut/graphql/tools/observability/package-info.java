@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 /**
- * The names that the observability module uses for its metrics, tags and span attributes:
+ * The names that the observability module uses for its meters and tags:
  * {@link io.micronaut.graphql.tools.observability.GraphQLObservability} lists them, so that a dashboard, an alert or a test
  * refers to a constant. The module records one timer for each request (tagged by operation name and outcome), DataLoader batch
  * counters, one span for each request and spans for the fields the application selects; the keys under
- * {@code micronaut.graphql.tools.observability} configure them.
+ * {@code micronaut.metrics.binders.graphql} and {@code micronaut.graphql.tools.tracing} configure them.
  *
  * <p><b>Audience.</b> Public API. An application reads the constants; it never calls into the implementation.</p>
  */

@@ -52,9 +52,9 @@ class ObservabilityArchitectureSpec extends Specification {
 
     void "the Micrometer and OpenTelemetry types stay out of the shared classes"() {
         expect: 'a class loads without either library, so that an application with one of them works'
-        noClasses().that().haveNameNotMatching('.*(Micrometer|Tracing|Traced).*')
+        noClasses().that().haveNameNotMatching('.*(Micrometer|Tracing|Traced|Span).*')
                 .should().dependOnClassesThat(resideInAPackage('io.micrometer..')).check(classes)
-        noClasses().that().haveNameNotMatching('.*(Micrometer|Tracing|Traced).*')
+        noClasses().that().haveNameNotMatching('.*(Micrometer|Tracing|Traced|Span).*')
                 .should().dependOnClassesThat(resideInAPackage('io.opentelemetry..')).check(classes)
     }
 

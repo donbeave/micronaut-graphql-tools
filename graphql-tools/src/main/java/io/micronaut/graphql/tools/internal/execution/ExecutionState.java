@@ -23,6 +23,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.propagation.PropagatedContext;
+import io.micronaut.core.propagation.PropagatedContextElement;
 import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
@@ -45,7 +46,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
         }
     };
 
-    private final PropagatedContext propagatedContext;
+    private volatile PropagatedContext propagatedContext;
     private final GraphQLTransport transport;
     @Nullable
     private final HttpRequest<?> request;
@@ -110,10 +111,26 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     }
 
     /**
-     * @return the propagated context captured when the operation arrived, with the request in it
+     * @return the propagated context captured when the operation arrived, with the request in it and the elements that
+     * {@link #addToPropagatedContext} added since
      */
     public PropagatedContext propagatedContext() {
         return propagatedContext;
+    }
+
+    /**
+     * Adds an element to the propagated context of the rest of the execution: the continuations of async fields run inside
+     * a context that holds it. This does not touch the current thread: the caller installs the returned context with
+     * {@link PropagatedContext#propagate()}, and the thread then holds the very object that the continuations get, which
+     * is what keeps an async field that is already done on the fast path of the async boundary.
+     *
+     * @param element what the continuations of the execution run with, for example the current span of a request
+     * @return the propagated context of the execution, with the element in it
+     */
+    public PropagatedContext addToPropagatedContext(PropagatedContextElement element) {
+        PropagatedContext extended = propagatedContext.plus(element);
+        propagatedContext = extended;
+        return extended;
     }
 
     /**

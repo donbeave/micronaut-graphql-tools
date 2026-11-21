@@ -31,6 +31,8 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true
     importMicronautCatalog()
     importMicronautCatalog("micronaut-graphql")
+    importMicronautCatalog("micronaut-micrometer")
+    importMicronautCatalog("micronaut-tracing")
 }
 
 gradle.settingsEvaluated {

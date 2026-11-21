@@ -22,17 +22,15 @@ import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import jakarta.inject.Singleton;
 
 @Factory
 public class ObservabilityFixtures {
 
-    // The environment that turns the fixtures on: a meter registry, an OpenTelemetry SDK that exports to memory, and two fields
+    // The environment that turns the fixtures on: a meter registry, a span processor that exports to memory, and the observed fields
     public static final String OBSERVED = "observability";
 
     // tag::beans[]
@@ -50,13 +48,12 @@ public class ObservabilityFixtures {
         return InMemorySpanExporter.create();
     }
 
+    // the OpenTelemetry bean is the one of micronaut-tracing: it exports to the span processor beans
     @Bean
     @Singleton
     @Requires(env = OBSERVED)
-    OpenTelemetry openTelemetry(InMemorySpanExporter exporter) {
-        return OpenTelemetrySdk.builder()
-                .setTracerProvider(SdkTracerProvider.builder().addSpanProcessor(SimpleSpanProcessor.create(exporter)).build())
-                .build();
+    SpanProcessor spanProcessor(InMemorySpanExporter exporter) {
+        return SimpleSpanProcessor.create(exporter);
     }
     // end::beans[]
 
@@ -68,6 +65,9 @@ public class ObservabilityFixtures {
                 "extend type Query {\n"
                         + "  observedHello: String!\n"
                         + "  observedBook: ObservedBook!\n"
+                        + "  observedTraced: String!\n"
+                        + "  observedTagged(value: String!): String!\n"
+                        + "  observedTimed: String!\n"
                         + "}\n"
                         + "type ObservedBook {\n"
                         + "  title: String!\n"

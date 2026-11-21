@@ -14,8 +14,9 @@ runs, or when they claim a performance gain.
   type resolver methods, argument conversion, union and interface resolution, a directive-wrapped fetcher, whole queries,
   start-up (`BindingBenchmark`, `RetainedHeapBenchmark`), and the executor hop (`InvocationBenchmark`,
   `AsyncBoundaryBenchmark`; plain graphql-java, no library code, no allocation gate), and the observability module on a
-  request with no field traced (`ObservabilityBenchmark`; its allocation gate is `observedInvocationSlope`: the bytes per field
-  that the module adds, which must stay 0),
+  request with no field traced (`ObservabilityBenchmark`, modes `none`, `empty` and `observed`; its allocation gate is
+  `observedInvocationSlope`: the bytes per field that the module adds, which must stay 0) and with every root field selected for a
+  span by the field decorator (mode `selected`: its difference to `observed`, divided by `rootFields`, is the cost of one field span),
   the field decorators on one query of 1,050 fields (`FieldDecoratorBenchmark`: no decorator bean, one that selects no field, one that
   wraps every field; each configuration checks its result against the first and what the decorator did at startup; no allocation gate),
   and the per-class binding rules over a compiler `ClassElement` (`BindingRulesBenchmark`: a resolver class, an input class with
