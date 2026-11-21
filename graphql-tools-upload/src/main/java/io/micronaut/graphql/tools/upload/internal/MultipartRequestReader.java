@@ -39,6 +39,8 @@ final class MultipartRequestReader {
     static final String MAP = "map";
     private static final String VARIABLES = "variables";
 
+    private static final Object MISSING = new Object();
+
     private final JsonMapper jsonMapper;
 
     MultipartRequestReader(JsonMapper jsonMapper) {
@@ -64,6 +66,10 @@ final class MultipartRequestReader {
             throw new InvalidMultipartRequestException("The 'map' part must be a JSON object: a part name for each file, with the "
                     + "list of paths that the file goes to.");
         }
+        String query = text(operation.get("query"));
+        if (query == null || query.isBlank()) {
+            throw new InvalidMultipartRequestException("The 'operations' part has no 'query': send the query as a string.");
+        }
         Map<String, Object> variables = variables(operation.get(VARIABLES));
         for (Map.Entry<?, ?> file : files.entrySet()) {
             String name = String.valueOf(file.getKey());
@@ -79,8 +85,7 @@ final class MultipartRequestReader {
                 place(variables, path, upload);
             }
         }
-        String query = text(operation.get("query"));
-        return new GraphQLInvocationData(query == null ? "" : query, text(operation.get("operationName")), variables);
+        return new GraphQLInvocationData(query, text(operation.get("operationName")), variables);
     }
 
     private static CompletedPart part(Map<String, CompletedPart> parts, String name) {
@@ -153,10 +158,25 @@ final class MultipartRequestReader {
         }
         String leaf = segments[segments.length - 1];
         if (container instanceof Map) {
-            ((Map<String, Object>) container).put(leaf, upload);
+            Map<String, Object> map = (Map<String, Object>) container;
+            requirePlaceholder(map.containsKey(leaf) ? map.get(leaf) : MISSING, text);
+            map.put(leaf, upload);
         } else {
             List<Object> list = (List<Object>) container;
-            list.set(index(list, leaf, text), upload);
+            int index = index(list, leaf, text);
+            requirePlaceholder(list.get(index), text);
+            list.set(index, upload);
+        }
+    }
+
+    private static void requirePlaceholder(@Nullable Object current, String path) {
+        if (current == MISSING) {
+            throw new InvalidMultipartRequestException("The path '" + path + "' has no null placeholder in the variables: add the key "
+                    + "with the value null.");
+        }
+        if (current != null) {
+            throw new InvalidMultipartRequestException("The path '" + path + "' is not a null placeholder: it holds a value, or "
+                    + "the 'map' part names it twice.");
         }
     }
 

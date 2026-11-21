@@ -27,6 +27,7 @@ import example.graphql.type.SecurityError;
 import example.graphql.type.SecurityErrorCode;
 import example.graphql.type.ValidationError;
 import example.graphql.type.ValidationErrorCode;
+import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 import java.util.Optional;
@@ -35,20 +36,17 @@ import java.util.Optional;
 @GraphQLRootResolver
 public class AddBookMutation {
 
-    private final AuthenticationService authenticationService;
     private final BookRepository bookRepository;
     private final UserBookRepository userBookRepository;
 
-    public AddBookMutation(AuthenticationService authenticationService, BookRepository bookRepository,
-                           UserBookRepository userBookRepository) {
-        this.authenticationService = authenticationService;
+    public AddBookMutation(BookRepository bookRepository, UserBookRepository userBookRepository) {
         this.bookRepository = bookRepository;
         this.userBookRepository = userBookRepository;
     }
 
     @ElapsedTime
-    public AddBookPayload addBook(String id) {
-        Optional<User> currentUser = authenticationService.getCurrentUser();
+    public AddBookPayload addBook(String id, DataFetchingEnvironment environment) {
+        Optional<User> currentUser = Optional.ofNullable(environment.getGraphQlContext().get(AuthenticationService.CURRENT_USER));
 
         if (currentUser.isEmpty()) {
             return new AddBookPayload(new SecurityError("Not logged in.", SecurityErrorCode.NOT_AUTHENTICATED));

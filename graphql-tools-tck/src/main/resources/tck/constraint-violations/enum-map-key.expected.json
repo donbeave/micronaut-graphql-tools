@@ -1,0 +1,27 @@
+{
+  "errors": [
+    {
+      "message": "must be greater than 0",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "tally"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "tally",
+        "inputPath": [
+          "SOUTH"
+        ],
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": {
+    "tally": null
+  }
+}

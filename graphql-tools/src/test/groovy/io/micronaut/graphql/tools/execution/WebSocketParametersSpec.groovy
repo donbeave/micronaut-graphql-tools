@@ -34,7 +34,7 @@ import java.security.Principal
 
 /**
  * What the request, response and principal parameters get on a WebSocket operation: the upgrade request of the connection
- * and its principal, no response.
+ * and its principal, no response (a plain response parameter fails with HTTP_RESPONSE_UNAVAILABLE, see ResolverParametersSpec).
  */
 class WebSocketParametersSpec extends AbstractTest {
 
@@ -88,14 +88,13 @@ type Subscription {
         data[field]
     }
 
-    void "a #operation over WebSocket: the request is the upgrade request, the principal is its principal, the response is null and the optional response is empty"() {
+    void "a #operation over WebSocket: the request is the upgrade request, the principal is its principal and the optional response is empty"() {
         given:
         startContext(SCHEMA, SPEC)
 
         expect:
         over(GraphQLTransport.WEBSOCKET, operation, named(prefix, 'request')) == '/graphql-ws'
         over(GraphQLTransport.WEBSOCKET, operation, named(prefix, 'principal')) == 'alice'
-        over(GraphQLTransport.WEBSOCKET, operation, named(prefix, 'response')) == 'null'
         over(GraphQLTransport.WEBSOCKET, operation, named(prefix, 'optionalResponse')) == false
 
         where:

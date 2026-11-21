@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools.benchmarks;
 
-import io.micronaut.graphql.tools.visitor.ClassElementFixture;
+import io.micronaut.graphql.tools.benchmarks.fixture.ClassElementFixture;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;

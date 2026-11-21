@@ -28,6 +28,12 @@ class DocsPageSpec extends Specification {
     @Shared Path root = Paths.get(System.getProperty('docs.root'))
     @Shared String page = Files.readString(root.resolve('src/main/docs/guide/fileUpload.adoc'))
 
+    void "the page has a CSRF section for the multipart route"() {
+        expect:
+        page.contains('[[csrf]]')
+        page.contains('simple request')
+    }
+
     void "the page names #name"() {
         expect:
         page.contains("`${name}`")

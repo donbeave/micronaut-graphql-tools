@@ -31,7 +31,7 @@ This page lists what a resolver method can take as a parameter besides the sourc
 |The request of the operation. On a WebSocket operation it is the HTTP request that upgraded the connection, the same object for every operation of the connection. It is `null` only when the operation did not arrive over HTTP and has no upgrade request (a direct call).
 
 |`MutableHttpResponse<?>` or `HttpResponse<?>`
-|The response of the operation, or `null` for a WebSocket operation (a query, a mutation or a subscription alike). A resolver can set a header on it.
+|The response of the operation. A resolver can set a header or a cookie on it. For a WebSocket operation the field fails with `HTTP_RESPONSE_UNAVAILABLE`, see <<httpAccess,HTTP Request and Response>>.
 
 |`Optional<MutableHttpResponse<?>>`
 |The same response, empty for a WebSocket operation.
