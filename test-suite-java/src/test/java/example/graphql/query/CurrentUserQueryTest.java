@@ -16,13 +16,11 @@
 package example.graphql.query;
 
 import com.apollographql.apollo.api.ApolloResponse;
+import com.apollographql.java.client.ApolloClient;
 import com.apollographql.java.rx3.Rx3Apollo;
 import example.AbstractTest;
 import example.client.CurrentUserQuery;
-import example.data.AuthenticationService;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,13 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @MicronautTest
 class CurrentUserQueryTest extends AbstractTest {
-
-    @Inject AuthenticationService authenticationService;
-
-    @AfterEach
-    public void cleanup() {
-        authenticationService.logout();
-    }
 
     @Test
     void testGuest() {
@@ -53,10 +44,10 @@ class CurrentUserQueryTest extends AbstractTest {
 
     @Test
     void testAuthenticated() {
-        authenticationService.login("test", "test");
+        ApolloClient client = clientOf("test");
 
         ApolloResponse<CurrentUserQuery.Data> response =
-                Rx3Apollo.single(apolloClient.query(new CurrentUserQuery())).blockingGet();
+                Rx3Apollo.single(client.query(new CurrentUserQuery())).blockingGet();
 
         assertFalse(response.hasErrors());
         assertNotNull(response.data);

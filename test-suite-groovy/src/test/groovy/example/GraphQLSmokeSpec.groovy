@@ -21,6 +21,7 @@ import graphql.schema.GraphQLEnumType
 import graphql.schema.GraphQLSchema
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
+import io.micronaut.http.MutableHttpRequest
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.spock.annotation.MicronautTest
@@ -39,9 +40,13 @@ class GraphQLSmokeSpec extends Specification {
     @Inject
     GraphQLSchema schema
 
-    private Map<String, Object> execute(String query, Map<String, Object> variables = [:]) {
+    private Map<String, Object> execute(String query, Map<String, Object> variables = [:], String user = null) {
+        MutableHttpRequest<Map<String, Object>> post = HttpRequest.POST('/graphql', [query: query, variables: variables])
+        if (user != null) {
+            post.header('X-User', user)
+        }
         Map<String, Object> response = client.toBlocking().retrieve(
-                HttpRequest.POST('/graphql', [query: query, variables: variables]),
+                post,
                 Argument.mapOf(Argument.STRING, Argument.OBJECT_ARGUMENT))
         assert response.errors == null: "GraphQL errors: ${response.errors}"
         (Map<String, Object>) response.data
@@ -125,8 +130,8 @@ class GraphQLSmokeSpec extends Specification {
     def 'signIn then addBook'() {
         when:
         Map signIn = execute('mutation { signIn(username: "bob", password: "bodi") { data { username } } }').signIn
-        Map addBook = execute('mutation { addBook(id: "ax") { error { __typename } } }').addBook
-        Map current = execute('{ currentUser { username books { id label } } }').currentUser
+        Map addBook = execute('mutation { addBook(id: "ax") { error { __typename } } }', [:], 'bob').addBook
+        Map current = execute('{ currentUser { username books { id label } } }', [:], 'bob').currentUser
 
         then:
         signIn.data.username == 'bob'

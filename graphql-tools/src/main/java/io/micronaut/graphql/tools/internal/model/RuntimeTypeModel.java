@@ -276,7 +276,7 @@ public final class RuntimeTypeModel implements TypeModel {
             for (ExecutableMethod<?, ?> method : beanDefinition.getExecutableMethods()) {
                 boolean objectMethod = method.getDeclaringType() == Object.class
                         || StrictModeChecks.isObjectSignature(method.getMethodName(), method.getArgumentTypes());
-                if (!objectMethod && fixed.admits(method.getMethodName())) {
+                if (!objectMethod && fixed.admits(method.getMethodName(), GraphQLResolversRegistry.arity(method))) {
                     result.add(new RuntimeMethod(method));
                 }
             }

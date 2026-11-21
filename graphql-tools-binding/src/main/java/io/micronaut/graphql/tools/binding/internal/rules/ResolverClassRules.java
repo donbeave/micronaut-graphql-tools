@@ -75,6 +75,7 @@ public final class ResolverClassRules {
     private static final String OBJECT = "java.lang.Object";
     private static final String COMPLETION_STAGE = "java.util.concurrent.CompletionStage";
     private static final String PUBLISHER = "org.reactivestreams.Publisher";
+    private static final String FLOW = "kotlinx.coroutines.flow.Flow";
     private static final String DATA_FETCHER_RESULT = "graphql.execution.DataFetcherResult";
     private static final String OPTIONAL = "java.util.Optional";
     private static final String ITERABLE = "java.lang.Iterable";
@@ -392,17 +393,24 @@ public final class ResolverClassRules {
             depth++;
         }
 
+        boolean flow = isAssignableTo(model, result, FLOW);
+        if (flow && !(fieldLevel && subscription)) {
+            return ReturnVerdict.failed(WrapperRules.flowOutsideSubscription());
+        }
+        if (flow && stage) {
+            return ReturnVerdict.failed(WrapperRules.cannotWrap(COMPLETION_STAGE, FLOW));
+        }
         boolean singleValueType = isSingleValueType(model, result);
-        // the RxJava types are not Publishers, they are adapted to one; on a subscription field only a Publisher streams
-        boolean publisher = isAssignableTo(model, result, PUBLISHER) || singleValueType && !(fieldLevel && subscription);
+        // the RxJava types are not Publishers, they are adapted to one; on a subscription field only a Publisher or a Flow streams
+        boolean publisher = flow || isAssignableTo(model, result, PUBLISHER) || singleValueType && !(fieldLevel && subscription);
 
         if (fieldLevel && subscription) {
             if (!publisher) {
                 return ReturnVerdict.failed(WrapperRules.subscriptionNeedsPublisher(className(result)));
             }
-            outer = PUBLISHER;
+            outer = flow ? FLOW : PUBLISHER;
             if (untyped(registry, result, fieldType)) {
-                return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
+                return ReturnVerdict.failed(WrapperRules.missingTypeArgument(outer));
             }
             result = result.typeArguments().get(0);
             depth++;
@@ -550,7 +558,6 @@ public final class ResolverClassRules {
         Map<String, String> declared = declaredCoordinates(bindable);
         boolean root = resolver.annotations().has(AnnotationNames.ROOT_RESOLVER);
         Set<String> rootTypes = schema.rootTypeNames();
-        Set<String> operationTypes = schema.rootTypeNames(resolver.markers().operations());
 
         List<MethodVerdict> methods = new ArrayList<>();
         for (JMethod method : bindable) {
@@ -560,12 +567,12 @@ public final class ResolverClassRules {
             List<String> coordinates = new ArrayList<>();
             if (declared != null) {
                 String coordinate = declared.get(method.signature());
-                if (coordinate.indexOf('.') > 0) {
+                if (coordinate.indexOf('.') > 0 && !contradictsOperation(schema, resolver, method, coordinate)) {
                     coordinates.add(coordinate);
                 }
             } else if (root) {
                 List<String> names = FieldNames.ofResolverMethod(method.name(), accessorPrefixes);
-                new TreeSet<>(operationTypes).forEach(type -> names.forEach(name -> {
+                new TreeSet<>(operationTypes(schema, resolver, method)).forEach(type -> names.forEach(name -> {
                     if (field(schema, type, name) != null) {
                         coordinates.add(type + "." + name);
                     }
@@ -596,6 +603,30 @@ public final class ResolverClassRules {
             methods.add(new MethodVerdict(method.signature(), coordinates, fields));
         }
         return new ClassVerdict(resolver.name(), methods);
+    }
+
+    /**
+     * @param schema     the schema
+     * @param resolver   a resolver class
+     * @param method     one of its methods
+     * @param coordinate the coordinate that the method declares
+     * @return whether the coordinate is a field of a root type that the contracts of the method do not bind, so that the
+     * startup does not bind the method to it
+     */
+    public static boolean contradictsOperation(SchemaModel schema, JClass resolver, JMethod method, String coordinate) {
+        String typeName = coordinate.substring(0, coordinate.indexOf('.'));
+        return schema.rootTypeNames().contains(typeName) && !operationTypes(schema, resolver, method).contains(typeName);
+    }
+
+    /**
+     * @param schema   the schema
+     * @param resolver a resolver class
+     * @param method   one of its methods
+     * @return the names of the root types whose fields the method may bind: the operations of the contracts that declare
+     * the method decide, and every root type is open for a method that no marker contract fixes
+     */
+    public static Set<String> operationTypes(SchemaModel schema, JClass resolver, JMethod method) {
+        return schema.rootTypeNames(resolver.markers().operationsOf(method.name(), method.parameters().size()));
     }
 
     /**
