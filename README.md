@@ -22,6 +22,7 @@ and test it.
 | [`graphql-tools-binding`](graphql-tools-binding/README.md) | `:micronaut-graphql-tools-binding` | The binding rules used by the runtime library. |
 | [`graphql-tools-scalars`](graphql-tools-scalars/README.md) | `:micronaut-graphql-tools-scalars` | The standard scalars: `java.time`, JSON and extended scalars, as beans. |
 | [`graphql-tools-observability`](graphql-tools-observability/README.md) | `:micronaut-graphql-tools-observability` | Request metrics (Micrometer) and traces (OpenTelemetry), optional. |
+| [`graphql-tools-upload`](graphql-tools-upload/README.md) | `:micronaut-graphql-tools-upload` | File upload: the `Upload` scalar and the multipart request route, optional. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
@@ -723,8 +724,10 @@ The ids, the default names and formats are in the guide page on scalars.
 ### Binding by name
 
 A resolver method parameter is bound to the field argument **with the same name**, not to the argument at the same
-position. The source object (first parameter of a type resolver method) and a trailing `DataFetchingEnvironment`
-keep their places; every other parameter is matched by name. Parameters may be declared in any order. The name-to-
+position. The source object (first parameter of a type resolver method) keeps its place, and a parameter of an injected kind
+(`DataFetchingEnvironment`, `GraphQLContext`, `@GraphQLContextValue`, `DataFetchingFieldSelectionSet`, `DataLoader`,
+`Locale`, `Principal`, the HTTP request and response; see the guide page "Resolver Parameters") takes any position after it;
+every other parameter is matched by name. Parameters may be declared in any order. The name-to-
 position plan is built once at startup, so a request does no name lookup.
 
 ```java
@@ -1039,6 +1042,9 @@ interface has a bean introspection of its own:
   and to make implementation-only getters non-candidates. [Strict mode](#strict-mode), on by default, rejects this
   case; it binds only with `strict: false`.
 
+At startup the library logs at INFO one line for each object type mapped to a Java interface, which names the interface
+and the mode the type uses, so that adding `@Introspected` to an interface for another reason is visible in the log.
+
 A getter that only an implementation class declares is not a property of an interface that has its own
 introspection. A GraphQL field that only such a getter could back fails at startup with `[field-not-bound]`,
 which names the GraphQL type, the field and the interface:
@@ -1264,16 +1270,34 @@ implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability
 ```
 
 - `graphql.request` is a timer of each request, tagged with `operation` (the operation name, capped at
-  `micronaut.graphql.tools.observability.metrics.max-operations`, default 100, the rest is `other`) and `outcome`
-  (`success` or `error`).
+  `micronaut.metrics.binders.graphql.max-operations`, default 100, the rest is `other`) and `outcome`
+  (`success` or `error`). `micronaut.metrics.binders.graphql.enabled` and `micronaut.metrics.enabled` switch the metrics off.
 - `graphql.dataloader.batches` and `graphql.dataloader.batch.keys` count the batches of each
   batch loader bean and the keys they loaded, tagged with `loader`, when `micronaut.graphql.tools.execution.data-loader-statistics` is `true`.
-- Each request is one span. `micronaut.graphql.tools.observability.tracing.fields` lists the fields that also get a span
-  (`Type.field` or `Type.*`); with the default empty list no field has a span, and a property read never has one.
-- `micronaut.graphql.tools.observability.enabled`, `.metrics.enabled` and `.tracing.enabled` switch the module, the metrics
-  and the tracing off.
+- Each request is one span, made with the OpenTelemetry `Instrumenter` API and named after the operation type (`query`,
+  `mutation`, `subscription`; `micronaut.graphql.tools.tracing.add-operation-name-to-span-name` adds the operation name). It has the
+  OpenTelemetry GraphQL attributes and is current in the propagated context, so a `@NewSpan` method that a resolver calls is
+  its child. `micronaut.graphql.tools.tracing.fields` lists the fields that also get a span (`Type.field` or `Type.*`); with
+  the default empty list no field has a span, and a property read never has one.
+- `micronaut.graphql.tools.tracing.enabled` and `micronaut.otel.enabled` switch the tracing off.
+- A timer or a span for one of your resolvers is `@Timed` or `@NewSpan` on the method.
 
-The guide page on observability has the details, the span layout and the cost.
+The guide page on observability has the details, the span layout, `@NewSpan` and `@Timed` on resolvers, and the cost.
+
+## File upload
+
+The `micronaut-graphql-tools-upload` module implements the GraphQL multipart request specification for Micronaut 4: the
+`Upload` scalar and a `multipart/form-data` route on the path of the GraphQL endpoint.
+
+```groovy
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-upload:1.0.0-M4")
+```
+
+Declare `scalar Upload` in the schema and use it for an argument or an input object field; a resolver declares the
+parameter or the property as `CompletedFileUpload` (or `CompletedPart`). The route runs the operation through the
+library's invocation, so the resolver runs on the executor of the library, not on the event loop. An invalid request is a
+`400` with an error whose `extensions.code` is `INVALID_MULTIPART_REQUEST`. `micronaut.graphql.tools.upload.enabled`
+(default `true`) turns the module off. The guide page on file upload has the details.
 
 ## Error handling
 
@@ -1373,6 +1397,7 @@ To build or test against a role locally:
 | Binding rules (internal, pulled in by the library) | `io.micronaut.graphql.tools:micronaut-graphql-tools-binding` |
 | Standard scalars ([`java.time`, JSON and extended scalars](#standard-scalars)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
 | Observability ([Micrometer metrics and OpenTelemetry traces](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-observability` |
+| File upload ([`Upload` scalar and multipart route](#file-upload)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-upload` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 

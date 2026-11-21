@@ -126,6 +126,191 @@ type $second {
         e.cause.code() == BindingCode.INVALID_TYPE_CLASS_CONVENTION
     }
 
+    void "a union whose Java type is sealed takes its members from the permitted subclasses"() {
+        given:
+        startContext(schema3('SealedResult', 'Iota', 'Kappa', 'Lambda'), SPEC_NAME, ['spec.scenario': 'sealed'])
+
+        when:
+        def result = executeQuery("{ results { __typename ... on Iota { title } ... on Kappa { title } ... on Lambda { title } } }")
+
+        then:
+        result.errors.isEmpty()
+        result.data.results*.__typename == ['Iota', 'Kappa', 'Lambda']
+        result.data.results*.title == ['iota', 'kappa', 'lambda']
+    }
+
+    void "an interface whose Java type is sealed takes its implementations from the permitted subclasses"() {
+        given:
+        startContext("""
+schema {
+  query: Query
+}
+
+type Query {
+  results: [SealedNode!]!
+}
+
+interface SealedNode {
+  title: String!
+}
+
+type Mu implements SealedNode {
+  title: String!
+}
+
+type Nu implements SealedNode {
+  title: String!
+}
+""", SPEC_NAME, ['spec.scenario': 'sealed-interface'])
+
+        when:
+        def result = executeQuery("{ results { __typename title } }")
+
+        then:
+        result.errors.isEmpty()
+        result.data.results*.__typename == ['Mu', 'Nu']
+    }
+
+    void "a union whose Java type is not sealed is not derived from its subclasses"() {
+        given:
+        startContext(schema('OpenResult', 'Xi', 'Omicron'), SPEC_NAME, ['spec.scenario': 'open'])
+
+        when:
+        getGraphQLBean()
+
+        then:
+        def e = thrown(BeanInstantiationException)
+        e.cause instanceof SchemaBindingException
+        e.cause.code() == BindingCode.UNION_TYPE_MAPPING_NOT_PROVIDED
+        e.cause.message.contains('Xi')
+    }
+
+    void "an explicit dictionary entry keeps its class when the Java type is sealed"() {
+        given:
+        startContext(schema('SealedOverrideResult', 'Pi', 'Rho'), SPEC_NAME, ['spec.scenario': 'sealed-override'])
+
+        when:
+        def result = executeQuery(query('Pi', 'Rho'))
+
+        then:
+        result.errors.isEmpty()
+        result.data.results*.title == ['explicit', 'rho']
+    }
+
+    static String schema3(String union, String first, String second, String third) {
+        schema(union, first, second).replace("union $union = $first | $second", "union $union = $first | $second | $third") +
+                "\ntype $third {\n  title: String!\n}\n"
+    }
+
+    sealed interface SealedResult permits Iota, Kappa, Lambda {
+    }
+
+    @GraphQLType
+    static final class Iota implements SealedResult {
+        String title = 'iota'
+    }
+
+    @GraphQLType
+    static final class Kappa implements SealedResult {
+        String title = 'kappa'
+    }
+
+    @GraphQLType
+    static final class Lambda implements SealedResult {
+        String title = 'lambda'
+    }
+
+    sealed interface SealedNode permits Mu, Nu {
+        String getTitle()
+    }
+
+    @GraphQLType
+    static final class Mu implements SealedNode {
+        String title = 'mu'
+    }
+
+    @GraphQLType
+    static final class Nu implements SealedNode {
+        String title = 'nu'
+    }
+
+    interface OpenResult {
+    }
+
+    @GraphQLType
+    static class Xi implements OpenResult {
+        String title = 'xi'
+    }
+
+    @GraphQLType
+    static class Omicron implements OpenResult {
+        String title = 'omicron'
+    }
+
+    sealed interface SealedOverrideResult permits Pi, PiExplicit, Rho {
+    }
+
+    @GraphQLType
+    static final class Pi implements SealedOverrideResult {
+        String title = 'pi'
+    }
+
+    @GraphQLType
+    static final class PiExplicit implements SealedOverrideResult {
+        String title = 'explicit'
+    }
+
+    @GraphQLType
+    static final class Rho implements SealedOverrideResult {
+        String title = 'rho'
+    }
+
+    @Requires(property = 'spec.scenario', value = 'sealed')
+    @Singleton
+    @GraphQLRootResolver
+    static class SealedQuery {
+        List<SealedResult> results() {
+            [new Iota(), new Kappa(), new Lambda()]
+        }
+    }
+
+    @Requires(property = 'spec.scenario', value = 'sealed-interface')
+    @Singleton
+    @GraphQLRootResolver
+    static class SealedInterfaceQuery {
+        List<SealedNode> results() {
+            [new Mu(), new Nu()]
+        }
+    }
+
+    @Requires(property = 'spec.scenario', value = 'open')
+    @Singleton
+    @GraphQLRootResolver
+    static class OpenQuery {
+        List<OpenResult> results() {
+            [new Xi(), new Omicron()]
+        }
+    }
+
+    @Requires(property = 'spec.scenario', value = 'sealed-override')
+    @Singleton
+    @GraphQLRootResolver
+    static class SealedOverrideQuery {
+        List<SealedOverrideResult> results() {
+            [new PiExplicit(), new Rho()]
+        }
+    }
+
+    @Requires(property = 'spec.scenario', value = 'sealed-override')
+    @Factory
+    static class SealedOverrideDictionary {
+        @Bean
+        @Singleton
+        SchemaMappingDictionaryCustomizer dictionary() {
+            return { it.registerType('Pi', PiExplicit) } as SchemaMappingDictionaryCustomizer
+        }
+    }
+
     interface ConventionResult {
     }
 

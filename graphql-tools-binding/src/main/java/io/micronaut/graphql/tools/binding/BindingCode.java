@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public enum BindingCode {
 
-    /** Check: a public resolver method binds no schema field. */
+    /** Check: a resolver method binds no schema field. */
     UNBOUND_RESOLVER_METHOD("unbound-resolver-method", true, true,
             "A resolver method binds no schema field."),
     /** Check: a root method binds fields of several operation types. */

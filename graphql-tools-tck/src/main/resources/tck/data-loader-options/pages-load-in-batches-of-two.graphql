@@ -1,0 +1,6 @@
+{
+  readers {
+    name
+    pages { title }
+  }
+}

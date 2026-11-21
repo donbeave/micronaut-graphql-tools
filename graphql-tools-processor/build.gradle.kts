@@ -12,6 +12,8 @@ dependencies {
     implementation(mnGraphql.graphql.java)
     // the visitor API: the processor path of a build brings its own copy
     compileOnly(mn.micronaut.core.processor)
+    // the javac elements, for the one question that only they answer (JavacElements); loaded only under javac
+    compileOnly(mn.micronaut.inject.java)
 
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)

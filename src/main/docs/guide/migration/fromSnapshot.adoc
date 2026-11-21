@@ -49,6 +49,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-36 a `DataLoaderRegistry` bean fails the startup (#20) | The library creates the `DataLoaderRegistry` of each execution itself, from `BatchLoader`, `BatchLoaderWithContext`, `MappedBatchLoader` and `MappedBatchLoaderWithContext` beans. A `DataLoaderRegistry` bean is not used: its loaders would be shared across the operations of one WebSocket connection, so the startup fails with `[data-loader-registry-bean]`. | Register each loader as a batch loader bean and read it with a typed `DataLoader<K, V>` resolver parameter, or add the loaders in a `GraphQLContextContributor`, or provide your own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)`.
 
 | BC-37 unhandled exceptions are hidden (#32) | The message of an exception that a resolver throws is no longer sent to the client: the error is `Internal server error` with `extensions.code` `INTERNAL_ERROR`. Before, graphql-java's handler sent `Exception while fetching data (/path) : <message>`, and logged each error at WARN with a stack trace; now one ERROR line without a stack trace is logged. A client that matched on that message text, or a test that asserts it, fails. | Add a `GraphQLExceptionMapper` bean for each exception whose message the client may see, throw a `GraphQLError` exception, or turn on `micronaut.graphql.tools.errors.details` in a development environment. A `DataFetcherExceptionHandler` of your own set in a `GraphQLBuilderCustomizer` keeps working.
+| BC-39 observability follows the Micronaut metrics and tracing conventions (#495) | The configuration keys of the observability module moved, and the span layout changed. `micronaut.graphql.tools.observability.enabled` is removed, `.metrics.enabled` and `.metrics.max-operations` are `micronaut.metrics.binders.graphql.enabled` and `.max-operations`, and `.tracing.enabled` and `.tracing.fields` are `micronaut.graphql.tools.tracing.enabled` and `.fields`. The request span is named `query`, `mutation` or `subscription`, not `query <operation>`. A field span has `graphql.field.path` and no `graphql.field.parent`. `GraphQLObservability.PREFIX` and the four span attribute constants are removed. The request span is now current in the propagated context, so a span started in a resolver is its child, not its sibling. | Rename the keys (the old ones are ignored, with no warning). Set `micronaut.graphql.tools.tracing.add-operation-name-to-span-name: true` to keep the operation name in the span name, and change a dashboard or a test that reads `graphql.field.parent` to read `graphql.field.name` and `graphql.field.path`. Use the attribute names as strings in place of the removed constants.
 |===
 
 == Entries for 1.0.0-M1
@@ -906,3 +907,53 @@ class OutOfStockMapper implements GraphQLExceptionMapper<OutOfStockException> {
 ----
 
 See the Errors page for the mappers, their order, the details setting and the customizers of the final error list.
+
+=== BC-39: observability follows the Micronaut metrics and tracing conventions (#495)
+
+The observability module recorded metrics and traces under a prefix of its own and called the raw OpenTelemetry API. It now follows the conventions of Micronaut Micrometer and Micronaut Tracing, and its tracing is built on the OpenTelemetry `Instrumenter` API. The module was never released, so the old names have no deprecation period: a key under the old prefix is ignored.
+
+[cols="3,3", options="header"]
+|===
+| Before | Now
+| `micronaut.graphql.tools.observability.enabled` | Removed: use `micronaut.metrics.enabled`, `micronaut.otel.enabled`, or the two keys below
+| `micronaut.graphql.tools.observability.metrics.enabled` | `micronaut.metrics.binders.graphql.enabled`
+| `micronaut.graphql.tools.observability.metrics.max-operations` | `micronaut.metrics.binders.graphql.max-operations`
+| `micronaut.graphql.tools.observability.tracing.enabled` | `micronaut.graphql.tools.tracing.enabled`
+| `micronaut.graphql.tools.observability.tracing.fields` | `micronaut.graphql.tools.tracing.fields`, with the same syntax, default and meaning
+| none | `micronaut.graphql.tools.tracing.add-operation-name-to-span-name`, `false` by default
+|===
+
+What else changes:
+
+* The request span is named after the operation type (`query`, `mutation` or `subscription`), following the OpenTelemetry semantic conventions for GraphQL, because a client chooses the operation name. Before it was `query <operation>`. The attributes `graphql.operation.name` and `graphql.operation.type` are unchanged. A request that does not reach an operation is named `GraphQL Operation`.
+* A field span keeps its name `Type.field`. It has `graphql.field.name` and the new `graphql.field.path`; `graphql.field.parent` is removed.
+* `GraphQLObservability.PREFIX` and the span attribute constants (`OPERATION_NAME_ATTRIBUTE`, `OPERATION_TYPE_ATTRIBUTE`, `FIELD_PARENT_ATTRIBUTE`, `FIELD_NAME_ATTRIBUTE`) are removed. The meter and tag constants stay.
+* The request span is current in the propagated context of the execution. A span that a resolver starts (a `@NewSpan` method, an HTTP client call) is its child; before it was a sibling, a child of the HTTP span.
+* The fields that `tracing.fields` selects are chosen by a `FieldFetcherDecorator`, not a `GraphQLSchemaCustomizer`. The same fields get a span, with the same names and parents.
+
+[source,yaml]
+----
+# Before
+micronaut:
+  graphql:
+    tools:
+      observability:
+        metrics:
+          max-operations: 50
+        tracing:
+          fields:
+            - Query.searchProfile
+# Now
+micronaut:
+  metrics:
+    binders:
+      graphql:
+        max-operations: 50
+  graphql:
+    tools:
+      tracing:
+        fields:
+          - Query.searchProfile
+----
+
+See the observability page for the span layout, `@NewSpan` and `@Timed` on resolvers, and the configuration.

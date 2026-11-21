@@ -15,7 +15,7 @@ A method of a Query, Mutation or type field can return a `Publisher` instead of 
 
 snippet::example.tck.ReturnTypesScenario[project-base="test-suite", source="test", tags="publisher-returns", indent="0"]
 
-* A single-value publisher gives the value of the field, and an empty one is `null`. The single-value types are named once, by their class name: `Mono`, the `Single`, `Maybe` and `Completable` of RxJava 3 (`io.reactivex.rxjava3.core`) and of RxJava 2 (`io.reactivex`), and Micronaut's `CompletableFuturePublisher`. Any other `Publisher` is a single-value publisher on a method that is annotated with `@SingleResult`. A `Completable` emits no value, so its field is `null`: declare the field without `!`. The RxJava types are converted through Micronaut's reactive converters: add `micronaut-rxjava3` or `micronaut-rxjava2` to the application.
+* A single-value publisher gives the value of the field, and an empty one is `null`. The single-value types are named once, by their class name: `Mono`, the `Single`, `Maybe` and `Completable` of RxJava 3 (`io.reactivex.rxjava3.core`) and of RxJava 2 (`io.reactivex`), and Micronaut's `CompletableFuturePublisher`. Any other `Publisher` is a single-value publisher on a method that is annotated with `@SingleResult`. A `Completable` emits no value, so its field is `null`: declare the field without `!`. A `Completable` on a field with `!` fails startup, and the compile-time check, with `[unsupported-return-type]`; the message names the field and the fix. The RxJava types are converted through Micronaut's reactive converters: add `micronaut-rxjava3` or `micronaut-rxjava2` to the application.
 * A publisher of many values (`Flux`, an RxJava `Flowable` or a plain `Publisher`) needs a list field. The values are collected into the list, in order. An empty `Flux` is an empty list.
 * An error signal is an error of that field, like an exception thrown by the method or a failed `CompletionStage`: the field is `null` (or the nearest nullable parent, for a non-null field) and the rest of the response is unchanged.
 * A `Mono` can be wrapped in `DataFetcherResult` or `Optional` inside, as `Mono<Optional<T>>`. For a `Flux`, the wrappers apply to each element: `Flux<DataFetcherResult<T>>`.
@@ -27,11 +27,12 @@ The adapted future completes on the thread that signals the publisher. The adapt
 [[typeDictionary]]
 == The classes of union members and interface implementations
 
-A field that returns an object type tells the library its class through the return type. The members of a union and the object types that implement an interface are not named by any return type, so each needs a class. Three sources give it, and the first one that has an answer wins:
+A field that returns an object type tells the library its class through the return type. The members of a union and the object types that implement an interface are not named by any return type, so each needs a class. Four sources give it, and the first one that has an answer wins:
 
 . *The dictionary.* `SchemaMappingDictionary.registerType("Book", BookModel.class)`, from a `SchemaMappingDictionaryCustomizer` bean, always wins. It is the escape hatch for a class that no rule below finds.
 . *`@GraphQLType(name = "Book")`* on the class. The class stands for the object type of that name. The annotation is read from the bean introspection, so the build-time processor and the startup see the same declaration.
 . *The naming convention* `micronaut.graphql.tools.type-class-convention`, a pattern that holds `{Type}` once. With `{Type}Graph`, the object type `Book` is the introspected class whose simple name is `BookGraph`. A class that declares a name with `@GraphQLType(name)` is matched by that name only. There is no convention by default.
+. *The permitted subclasses of a sealed type.* When the Java type that the field declares for the union or the interface is sealed, the object type is the permitted subclass whose `@GraphQLType(name)`, or, where it declares none, whose simple name, is the type name. The member list stays in the schema; the sealed type only says which class is each member, so the same schema gives the same members in Java, Kotlin and Groovy. See <<sealedTypes,Sealed types>>.
 
 snippet::example.tck.TypeClassDerivationScenario[project-base="test-suite", source="test", tags="type-classes", indent="0"]
 
@@ -42,6 +43,24 @@ Two classes that match one object type, by the annotation, by the convention or 
 The same three sources name the class of an interface that no field returns, so that a `@GraphQLTypeResolver` of that interface binds its fields on every implementation. Register the interface in the dictionary (`registerType("Node", Node.class)`), annotate it with `@GraphQLType(name)`, or let the convention find it. An implementation that binds the same field itself, with a member or a resolver of its own, is still reported: `[multiple-methods-found]` for two resolvers, and the `precedence` rules for a member. The dictionary entry of such an interface counts as used, so `strict` reports no `[unused-dictionary-entry]` for it.
 
 The derivation reads the compile-time introspection metadata only, so it works in a native image and adds no reflection. It runs once for each type at startup. A request resolves the object type of a value through a cache with one entry for each runtime class, and does no lookup of a name.
+
+[[sealedTypes]]
+=== Sealed types
+
+A union or an interface whose Java type is sealed needs no dictionary entry and no naming convention:
+
+snippet::example.tck.SealedTypesScenario[project-base="test-suite", source="test", tags="sealed-types", indent="0"]
+
+`SealedCircle` and `SealedSquare` are found because they are permitted subclasses of `SealedShape` and carry the names of the object types; `SealedDog` and `SealedCat` implement the interface `SealedPet` in the same way; the dictionary maps `SealedTriangle` to `ThreeSidedShape`, which has another name, and an explicit entry is used as before.
+
+The rules:
+
+* Java sealed types (a `permits` clause, or subclasses in the same compilation unit), Kotlin `sealed` classes and interfaces, and Groovy `sealed` classes and interfaces with a `permits` clause are all sealed types, and the rule is the same for each. Groovy needs the sealed type on a JVM that supports it (Java 17 or later).
+* Only the permitted subclasses that are introspected (`@GraphQLType`, `@Introspected`) are members, because the binding reads their properties through the introspection. An abstract or sealed intermediate class is not a member; its own permitted subclasses are.
+* Where no permitted subclass has the name of a member, the member has no class, as it has none without a sealed type: the startup fails with `[union-type-mapping-not-provided]` or `[interface-type-mapping-not-provided]`.
+* A type that is not sealed is not affected: its members are found by the dictionary, `@GraphQLType(name)` or the naming convention only.
+* The derivation reads no permits clause by reflection: every subclass of a sealed type is one of its permitted subclasses, so the introspected classes that the sealed type is assignable from are the candidates. It works in a native image and runs once for each type at startup.
+* The compile-time checks do not derive the members from a sealed type: the startup decides, and a sealed type adds no compile-time finding.
 
 === Compile-time check
 

@@ -10,6 +10,7 @@ exception/other-class-binding-failure java unbound-resolver-method example.Pings
 exception/runtime-exception-first java argument-mismatch Query.username runtime-exception-first
 exception/two-classes-one-root-field java argument-mismatch Query.book two-classes-one-root-field
 exception/kotlin-nullability kotlin kotlin-nullability-mismatch Filter.text kotlin-nullability
+exception/kotlin-nullability kotlin kotlin-nullability-mismatch Query.later kotlin-nullability
 exception/kotlin-nullability kotlin kotlin-nullability-mismatch Query.names kotlin-nullability
 exception/kotlin-nullability kotlin kotlin-nullability-mismatch Query.search(term:) kotlin-nullability
 exception/kotlin-nullability kotlin kotlin-nullability-mismatch Query.title kotlin-nullability

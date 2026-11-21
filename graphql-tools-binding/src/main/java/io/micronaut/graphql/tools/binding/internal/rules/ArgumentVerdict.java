@@ -43,16 +43,33 @@ public record ArgumentVerdict(List<Slot> slots, @Nullable Failure failure) {
         SOURCE,
         /** An argument of the field. */
         ARGUMENT,
-        /** The {@code DataFetchingEnvironment}: always the last parameter. */
+        /** The {@code DataFetchingEnvironment}: in any position after the source. */
         ENVIRONMENT,
         /** A {@code DataLoader<K, V>} of the execution: in any position after the source. */
-        DATA_LOADER
+        DATA_LOADER,
+        /** The {@code GraphQLContext} of the execution. */
+        CONTEXT,
+        /** A value of the {@code GraphQLContext}, by the name in {@code @GraphQLContextValue} or the parameter name. */
+        CONTEXT_VALUE,
+        /** The {@code DataFetchingFieldSelectionSet} of the field. */
+        SELECTION_SET,
+        /** The {@code Locale} of the execution. */
+        LOCALE,
+        /** The principal of the request: {@code Principal} or {@code Authentication}. */
+        PRINCIPAL,
+        /** The HTTP request. */
+        REQUEST,
+        /** The HTTP response. */
+        RESPONSE,
+        /** An {@code Optional} of the HTTP response. */
+        OPTIONAL_RESPONSE
     }
 
     /**
      * @param kind      what the parameter binds
      * @param parameter the index of the parameter in the method
-     * @param argument  the name of the schema argument for {@link SlotKind#ARGUMENT}, otherwise {@code null}
+     * @param argument  the name of the schema argument for {@link SlotKind#ARGUMENT}, the context key for
+     *                  {@link SlotKind#CONTEXT_VALUE}, otherwise {@code null}
      */
     public record Slot(SlotKind kind, int parameter, @Nullable String argument) {
     }
@@ -60,7 +77,8 @@ public record ArgumentVerdict(List<Slot> slots, @Nullable Failure failure) {
     /**
      * A violation of the argument rules.
      */
-    public sealed interface Failure permits CountMismatch, InvalidSource, ParameterWithoutArgument, DuplicateParameter, UntypedDataLoader {
+    public sealed interface Failure permits CountMismatch, InvalidSource, ParameterWithoutArgument, DuplicateParameter, UntypedDataLoader,
+            UnsatisfiableParameter {
     }
 
     /**
@@ -111,5 +129,14 @@ public record ArgumentVerdict(List<Slot> slots, @Nullable Failure failure) {
      * @param parameter the index of the parameter
      */
     public record UntypedDataLoader(int parameter) implements Failure {
+    }
+
+    /**
+     * A parameter of an injectable kind that cannot be satisfied, for example a context value of a primitive type.
+     *
+     * @param parameter the index of the parameter
+     * @param reason    why, and what to do
+     */
+    public record UnsatisfiableParameter(int parameter, String reason) implements Failure {
     }
 }

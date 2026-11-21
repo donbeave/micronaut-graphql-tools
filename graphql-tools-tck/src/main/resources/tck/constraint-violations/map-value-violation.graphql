@@ -1,0 +1,3 @@
+query ($limits: Limits!) {
+  cap(limits: $limits)
+}
