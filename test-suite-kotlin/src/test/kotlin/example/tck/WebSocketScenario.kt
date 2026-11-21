@@ -15,20 +15,28 @@
  */
 package example.tck
 
+import graphql.GraphQLError
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
+import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer
+import io.micronaut.graphql.tools.error.GraphQLExceptionContext
+import io.micronaut.graphql.tools.error.GraphQLExceptionMapper
 import io.micronaut.graphql.tools.internal.execution.ExecutionState
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionResult
 import io.micronaut.http.context.ServerRequestContext
 import jakarta.inject.Singleton
+import org.dataloader.BatchLoader
+import org.dataloader.DataLoader
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.NonBlocking
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -54,6 +62,37 @@ class TokenInterceptor : GraphQLConnectionInterceptor {
 @Requires(property = "tck.scenario", value = "websocket")
 class CancelledStreams {
     val count = AtomicInteger()
+    val echoKeys = AtomicInteger()
+}
+
+/** Counts the keys that reach its batch function. */
+@Singleton
+@Requires(property = "tck.scenario", value = "websocket")
+class EchoLoader(private val counters: CancelledStreams) : BatchLoader<Int, String> {
+
+    override fun load(keys: List<Int>): CompletionStage<List<String>> {
+        counters.echoKeys.addAndGet(keys.size)
+        return CompletableFuture.completedFuture(keys.map { "e$it" })
+    }
+}
+
+class TickFailure : RuntimeException("secret internal detail")
+
+@Singleton
+@Requires(property = "tck.scenario", value = "websocket")
+class TickFailureMapper : GraphQLExceptionMapper<TickFailure> {
+
+    override fun map(exception: TickFailure, context: GraphQLExceptionContext): GraphQLError =
+        context.error("tick failed", mapOf("code" to "TICK_FAILED"))
+}
+
+@Singleton
+@Requires(property = "tck.scenario", value = "websocket")
+class StreamCustomizer : GraphQLErrorsCustomizer {
+
+    override fun customize(errors: List<GraphQLError>): List<GraphQLError> = errors.map { error ->
+        MappedError(error.message, error.path ?: emptyList(), error.locations?.firstOrNull(), (error.extensions ?: emptyMap()) + ("stream" to "customized"))
+    }
 }
 
 @GraphQLType
@@ -76,12 +115,20 @@ class WebSocketQueries(private val cancelled: CancelledStreams) {
         ExecutionState.of(environment.graphQlContext).transport().name
 
     fun cancelledStreams(): Int = cancelled.count.get()
+
+    fun echoLoaderKeys(): Int = cancelled.echoKeys.get()
 }
 
 @Singleton
 @GraphQLRootResolver
 @Requires(property = "tck.scenario", value = "websocket")
 class WebSocketSubscriptions(private val cancelled: CancelledStreams) {
+
+    fun failing(): Flux<Tick> = Flux.error<Tick>(IllegalStateException("secret internal detail"))
+
+    fun failingMapped(): Flux<Tick> = Flux.error<Tick>(TickFailure())
+
+    fun brokenEvent(): Flux<Tick> = Flux.just(Tick(1, true))
 
     // tag::ws-subscription[]
     fun ticks(count: Int): Flux<Tick> =
@@ -103,6 +150,14 @@ class WebSocketSubscriptions(private val cancelled: CancelledStreams) {
 class TickFields {
 
     fun onEventLoop(tick: Tick): Boolean = Thread.currentThread() is NonBlocking
+
+    fun echo(tick: Tick, loader: DataLoader<Int, String>): CompletionStage<String> = loader.load(1)
+
+    fun echoAgain(tick: Tick, loader: DataLoader<Int, String>): CompletionStage<String> = loader.load(1)
+
+    fun broken(tick: Tick): String? {
+        throw IllegalStateException("secret internal detail")
+    }
 
     fun requestHeader(tick: Tick): String? =
         ServerRequestContext.currentRequest<Any>().map { it.headers.get("X-Tck") }.orElse(null)

@@ -31,7 +31,8 @@ import java.util.List;
 /**
  * The Java class of an object type that a union or an interface needs: the entry of the dictionary, else the class that
  * {@link TypeClassDerivation} derives from {@code @GraphQLType(name)} or the naming convention. An explicit entry always
- * wins, and two derived classes fail the startup. It runs once for each type at startup, from the compile-time
+ * wins, and two derived classes fail the startup. Where nothing else names a class and the declared Java type is sealed,
+ * the permitted subclass of that name is the class. It runs once for each type at startup, from the compile-time
  * introspection metadata; a request resolves the class of an object through the cache of the type resolver.
  */
 @Internal
@@ -68,6 +69,37 @@ final class TypeClasses {
         List<String> matches = TypeClassDerivation.matching(type.getName(), convention, registry.getTypeClassCandidates());
         if (matches.size() > 1) {
             throw new AmbiguousTypeClassException(mappingContext, type.getName(), matches);
+        }
+        return matches.isEmpty() ? null : registry.getCandidateClass(matches.get(0));
+    }
+
+    /**
+     * @param type           an object type of a union or interface
+     * @param declaredClass  the Java type that the field declares for the union or interface
+     * @param mappingContext where the failure is reported
+     * @return its class: the dictionary entry, else the derived class, else the permitted subclass of a sealed
+     * {@code declaredClass}, else {@code null}
+     * @throws AmbiguousTypeClassException if no dictionary entry exists and several classes match
+     */
+    @Nullable
+    Class<?> find(TypeDefinition<?> type, Class<?> declaredClass, MappingContext mappingContext) {
+        Class<?> found = find(type, mappingContext);
+        if (found != null || !declaredClass.isSealed()) {
+            return found;
+        }
+        return findPermitted(type, declaredClass, mappingContext);
+    }
+
+    // Every subclass of a sealed type is one of its permitted subclasses, so the introspected classes that the sealed type
+    // is assignable from are its permitted subclasses that can be a member; no reflective lookup of the permits clause
+    @Nullable
+    private Class<?> findPermitted(TypeDefinition<?> objectType, Class<?> sealedClass, MappingContext mappingContext) {
+        List<TypeClassDerivation.Candidate> permitted = registry.getTypeClassCandidates().stream()
+                .filter(it -> sealedClass.isAssignableFrom(registry.getCandidateClass(it.className())))
+                .toList();
+        List<String> matches = TypeClassDerivation.matchingPermitted(objectType.getName(), permitted);
+        if (matches.size() > 1) {
+            throw new AmbiguousTypeClassException(mappingContext, objectType.getName(), matches);
         }
         return matches.isEmpty() ? null : registry.getCandidateClass(matches.get(0));
     }

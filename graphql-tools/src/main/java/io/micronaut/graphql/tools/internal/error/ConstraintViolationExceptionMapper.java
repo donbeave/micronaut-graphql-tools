@@ -28,13 +28,14 @@ import jakarta.validation.ElementKind;
 import jakarta.validation.Path;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Maps a {@code ConstraintViolationException} (Micronaut Validation on a resolver method or an input class) to one error
- * for each violation, with the argument that failed and the path inside it. The message of a violation is the message of the
+ * for each violation, with the argument that failed and the path inside it (property names, list indexes and map keys). The errors are in the order of the arguments, then of the path, because the validator returns the violations in no fixed order. The message of a violation is the message of the
  * constraint, written to be shown to a user. Present only when Jakarta Validation is on the classpath, and last in the order, so that an
  * application's own mapper for the exception wins.
  */
@@ -44,6 +45,11 @@ import java.util.Map;
 final class ConstraintViolationExceptionMapper implements GraphQLExceptionMapper<ConstraintViolationException>, Ordered {
 
     static final String CODE = "CONSTRAINT_VIOLATION";
+
+    private static final Comparator<ConstraintViolation<?>> ORDER = Comparator
+            .<ConstraintViolation<?>>comparingInt(ConstraintViolationExceptionMapper::parameterIndex)
+            .thenComparing(violation -> violation.getPropertyPath().toString())
+            .thenComparing(ConstraintViolation::getMessage);
 
     @Override
     public int getOrder() {
@@ -58,23 +64,49 @@ final class ConstraintViolationExceptionMapper implements GraphQLExceptionMapper
 
     @Override
     public List<GraphQLError> mapAll(ConstraintViolationException exception, GraphQLExceptionContext context) {
-        List<GraphQLError> errors = new ArrayList<>();
-        for (ConstraintViolation<?> violation : exception.getConstraintViolations()) {
-            List<String> names = new ArrayList<>();
+        List<ConstraintViolation<?>> violations = new ArrayList<>(exception.getConstraintViolations());
+        violations.sort(ORDER);
+        List<GraphQLError> errors = new ArrayList<>(violations.size());
+        for (ConstraintViolation<?> violation : violations) {
+            String argument = null;
+            List<Object> inputPath = new ArrayList<>();
             for (Path.Node node : violation.getPropertyPath()) {
-                if (node.getKind() != ElementKind.METHOD && node.getKind() != ElementKind.CONSTRUCTOR && node.getName() != null) {
-                    names.add(node.getName());
+                if (node.getKind() == ElementKind.METHOD || node.getKind() == ElementKind.CONSTRUCTOR || node.getName() == null) {
+                    continue;
+                }
+                if (argument == null) {
+                    argument = node.getName();
+                    continue;
+                }
+                if (node.isInIterable()) {
+                    if (node.getIndex() != null) {
+                        inputPath.add(node.getIndex());
+                    } else if (node.getKey() != null) {
+                        inputPath.add(node.getKey());
+                    }
+                }
+                if (node.getKind() != ElementKind.CONTAINER_ELEMENT) {
+                    inputPath.add(node.getName());
                 }
             }
             Map<String, Object> extensions = new LinkedHashMap<>();
             extensions.put("code", CODE);
-            if (!names.isEmpty()) {
-                extensions.put("argument", names.get(0));
-                extensions.put("inputPath", List.copyOf(names.subList(1, names.size())));
+            if (argument != null) {
+                extensions.put("argument", argument);
+                extensions.put("inputPath", List.copyOf(inputPath));
             }
             errors.add(context.newError().message(violation.getMessage()).extensions(extensions).build());
         }
         return errors.isEmpty() ? null : errors;
+    }
+
+    private static int parameterIndex(ConstraintViolation<?> violation) {
+        for (Path.Node node : violation.getPropertyPath()) {
+            if (node instanceof Path.ParameterNode parameter) {
+                return parameter.getParameterIndex();
+            }
+        }
+        return -1;
     }
 
 }

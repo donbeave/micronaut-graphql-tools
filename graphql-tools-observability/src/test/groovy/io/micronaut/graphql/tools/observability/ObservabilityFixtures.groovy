@@ -17,11 +17,17 @@ package io.micronaut.graphql.tools.observability
 
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
+import io.micrometer.core.annotation.Timed
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.tracing.annotation.NewSpan
+import io.micronaut.tracing.annotation.SpanTag
 import jakarta.inject.Singleton
+import org.reactivestreams.Publisher
+import reactor.core.publisher.Flux
 import org.dataloader.DataLoader
 import org.dataloader.MappedBatchLoader
 
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
 /** The resolvers and the batch loader of the specs: one root resolver, a model with a property, and one loader. */
@@ -48,6 +54,34 @@ class ObservabilityFixtures {
         CompletionStage<String> loaded(DataLoader<String, String> loader) {
             return loader.load('a')
         }
+
+        @NewSpan('resolver.work')
+        String traced() {
+            return 'traced'
+        }
+
+        @NewSpan('resolver.tagged')
+        String tagged(@SpanTag('value') String value) {
+            return value
+        }
+
+        @Timed('resolver.timed')
+        String timed() {
+            return 'timed'
+        }
+
+        CompletionStage<Book> later() {
+            return CompletableFuture.supplyAsync { new Book(title: 'L') }
+        }
+    }
+
+    @Requires(property = 'spec.name', pattern = SPECS)
+    @Singleton
+    @GraphQLRootResolver
+    static class Subscriptions {
+        Publisher<String> ticks() {
+            return Flux.just('tick')
+        }
     }
 
     @Requires(property = 'spec.name', pattern = SPECS)
@@ -60,6 +94,7 @@ class ObservabilityFixtures {
     @Singleton
     static class Titles implements MappedBatchLoader<String, String> {
         @Override
+        @NewSpan('loader.batch')
         CompletionStage<Map<String, String>> load(Set<String> keys) {
             return java.util.concurrent.CompletableFuture.completedFuture(keys.collectEntries { [(it): 'title-' + it] })
         }

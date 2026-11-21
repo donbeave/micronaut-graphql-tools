@@ -28,7 +28,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules.SchemaArgument;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
-import io.micronaut.graphql.tools.internal.exceptions.resolver.DataLoaderParameterException;
+import io.micronaut.graphql.tools.internal.exceptions.resolver.InjectedParameterException;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.IncorrectArgumentCountException;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.IncorrectArgumentNameException;
 import io.micronaut.graphql.tools.internal.exceptions.resolver.InvalidSourceArgumentException;
@@ -38,6 +38,7 @@ import io.micronaut.graphql.tools.internal.input.InputTypeBinder;
 import io.micronaut.graphql.tools.internal.input.ValueConverter;
 import io.micronaut.graphql.tools.internal.model.RuntimeTypeModel;
 import io.micronaut.inject.ExecutableMethod;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -79,27 +80,42 @@ public final class ArgumentPlanner {
 
         List<ArgumentDefinition> result = new ArrayList<>();
         for (ArgumentVerdict.Slot slot : verdict.slots()) {
-            if (slot.kind() == ArgumentVerdict.SlotKind.SOURCE) {
-                result.add(ArgumentDefinition.ofSourceArgument());
-            } else if (slot.kind() == ArgumentVerdict.SlotKind.ENVIRONMENT) {
-                result.add(ArgumentDefinition.ofDataFetchingEnvironmentArgument());
-            } else if (slot.kind() == ArgumentVerdict.SlotKind.DATA_LOADER) {
-                result.add(ArgumentDefinition.ofDataLoaderArgument(dataLoader(arguments[slot.parameter()], executable,
-                        mappingContext)));
-            } else {
-                Argument<?> argument = arguments[slot.parameter()];
-                InputValueDefinition input = inputs.stream()
-                        .filter(it -> it.getName().equals(slot.argument()))
-                        .findFirst()
-                        .get();
-                ValueConverter converter = inputTypeBinder.processInputType(input.getType(), argument,
-                        TypeMappingContext.forArgument(mappingContext, slot.argument()));
-                result.add(ArgumentDefinition.ofInputValueArgument(slot.argument(), argument, converter));
+            switch (slot.kind()) {
+                case SOURCE, ENVIRONMENT, CONTEXT, SELECTION_SET, LOCALE -> result.add(ArgumentDefinition.ofKind(slot.kind()));
+                case CONTEXT_VALUE -> result.add(ArgumentDefinition.ofContextValue(slot.argument()));
+                case DATA_LOADER -> result.add(ArgumentDefinition.ofDataLoaderArgument(dataLoader(arguments[slot.parameter()],
+                        executable, mappingContext)));
+                case PRINCIPAL -> {
+                    requireExecutionContext(arguments[slot.parameter()], executable, mappingContext, "the principal");
+                    result.add(ArgumentDefinition.ofPrincipal(arguments[slot.parameter()].getType().asSubclass(Principal.class)));
+                }
+                case REQUEST -> {
+                    requireExecutionContext(arguments[slot.parameter()], executable, mappingContext, "the HTTP request");
+                    result.add(ArgumentDefinition.ofKind(slot.kind()));
+                }
+                case RESPONSE, OPTIONAL_RESPONSE -> {
+                    requireExecutionContext(arguments[slot.parameter()], executable, mappingContext, "the HTTP response");
+                    result.add(ArgumentDefinition.ofKind(slot.kind()));
+                }
+                default -> {
+                    Argument<?> argument = arguments[slot.parameter()];
+                    InputValueDefinition input = inputs.stream()
+                            .filter(it -> it.getName().equals(slot.argument()))
+                            .findFirst()
+                            .get();
+                    ValueConverter converter = inputTypeBinder.processInputType(input.getType(), argument,
+                            TypeMappingContext.forArgument(mappingContext, slot.argument()));
+                    result.add(ArgumentDefinition.ofInputValueArgument(slot.argument(), argument, converter));
+                }
             }
         }
 
         if (verdict.failure() instanceof ArgumentVerdict.UntypedDataLoader untyped) {
             throw IncorrectArgumentNameException.untypedDataLoader(mappingContext, arguments[untyped.parameter()].getName());
+        }
+        if (verdict.failure() instanceof ArgumentVerdict.UnsatisfiableParameter unsatisfiable) {
+            throw IncorrectArgumentNameException.unsatisfiableParameter(mappingContext,
+                    arguments[unsatisfiable.parameter()].getName(), unsatisfiable.reason());
         }
         if (verdict.failure() instanceof ArgumentVerdict.InvalidSource invalid) {
             throw new InvalidSourceArgumentException(mappingContext, arguments[invalid.parameter()].getType(),
@@ -120,16 +136,33 @@ public final class ArgumentPlanner {
      * the loader by index and does no string lookup.
      */
     private int dataLoader(Argument<?> parameter, Executable<?, ?> executable, TypeMappingContext mappingContext) {
-        String location = mappingContext.getGraphQlObjectType() + "." + mappingContext.getGraphQlField() + " (parameter '"
-                + parameter.getName() + "' of " + executable.getDeclaringType().getName() + "#" + getMethodName(executable) + ")";
+        String location = location(parameter, executable, mappingContext);
         try {
             ExecutionContextAvailability.require(beanContext, location, "a DataLoader");
             Argument<?>[] types = parameter.getTypeParameters();
             String named = parameter.getAnnotationMetadata().stringValue(AnnotationUtil.NAMED).orElse(null);
             return beanContext.getBean(DataLoaderTable.class).resolve(named, types[0], types[1], location);
         } catch (ExecutionSetupException e) {
-            throw new DataLoaderParameterException(e.code(), e.getMessage(), mappingContext);
+            throw new InjectedParameterException(e.code(), e.getMessage(), mappingContext);
         }
+    }
+
+    /**
+     * Fails the startup of a parameter that reads the per-execution state when the library's invocation, which creates it,
+     * stepped aside.
+     */
+    private void requireExecutionContext(Argument<?> parameter, Executable<?, ?> executable,
+                                         TypeMappingContext mappingContext, String need) {
+        try {
+            ExecutionContextAvailability.require(beanContext, location(parameter, executable, mappingContext), need);
+        } catch (ExecutionSetupException e) {
+            throw new InjectedParameterException(e.code(), e.getMessage(), mappingContext);
+        }
+    }
+
+    private static String location(Argument<?> parameter, Executable<?, ?> executable, TypeMappingContext mappingContext) {
+        return mappingContext.getGraphQlObjectType() + "." + mappingContext.getGraphQlField() + " (parameter '"
+                + parameter.getName() + "' of " + executable.getDeclaringType().getName() + "#" + getMethodName(executable) + ")";
     }
 
     public void checkArgumentCount(BeanProperty<?, ?> beanProperty, TypeMappingContext mappingContext) {

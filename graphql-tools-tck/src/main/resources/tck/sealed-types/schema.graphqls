@@ -1,0 +1,34 @@
+# The members of the union and the implementations of the interface are the permitted subclasses of the sealed Java type that
+# the field returns; SealedTriangle is the one member that the dictionary maps to a class of another name.
+extend type Query {
+  sealedShapes: [SealedShape!]!
+  sealedPets: [SealedPet!]!
+}
+
+union SealedShape = SealedCircle | SealedSquare | SealedTriangle
+
+type SealedCircle {
+  radius: Int!
+}
+
+type SealedSquare {
+  side: Int!
+}
+
+type SealedTriangle {
+  base: Int!
+}
+
+interface SealedPet {
+  name: String!
+}
+
+type SealedDog implements SealedPet {
+  name: String!
+  barks: Boolean!
+}
+
+type SealedCat implements SealedPet {
+  name: String!
+  lives: Int!
+}

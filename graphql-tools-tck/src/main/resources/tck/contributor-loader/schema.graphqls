@@ -1,0 +1,4 @@
+# Extends the Query of the example schema that every suite serves; the names below must not clash with it.
+extend type Query {
+  contributorLoaded: String!
+}

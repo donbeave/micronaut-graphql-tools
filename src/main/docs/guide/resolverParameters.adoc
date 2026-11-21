@@ -1,0 +1,56 @@
+This page lists what a resolver method can take as a parameter besides the source object and the arguments of its field, and how the library decides it. A parameter of a kind below is injected: you declare it, and the library supplies it, with no call to the `DataFetchingEnvironment` by hand.
+
+== The kinds
+
+[cols="3,4", options="header"]
+|===
+|Declare |You get
+
+|`DataFetchingEnvironment`
+|The environment of the field.
+
+|`GraphQLContext`
+|The context of the execution, with what the `GraphQLContextContributor` beans put in it.
+
+|`@GraphQLContextValue("<key>") T`
+|The value of one key of the context, or `null` when the key is absent. Without a value the parameter name is the key.
+
+|`DataFetchingFieldSelectionSet`
+|The selection set of the field.
+
+|`DataLoader<K, V>`
+|The loader of the execution that matches the types, see <<dataLoaders,Data Loaders>>.
+
+|`Locale`
+|The locale of the execution.
+
+|`Principal`, or a subtype such as Micronaut Security's `Authentication`
+|The principal of the request, or `null` when the request has none.
+
+|`HttpRequest<?>`
+|The request of the operation, or `null` for an operation that did not arrive over HTTP (a WebSocket operation).
+
+|`MutableHttpResponse<?>` or `HttpResponse<?>`
+|The response of the operation, or `null` for a WebSocket operation. A resolver can set a header on it.
+
+|`Optional<MutableHttpResponse<?>>`
+|The same response, empty for a WebSocket operation.
+|===
+
+snippet::example.tck.ResolverParametersScenario[project-base="test-suite", source="test", tags="parameters", indent="0"]
+
+== How a parameter is decided
+
+* The library decides the kind of each parameter once per field, at startup, from its type or annotation. A parameter binds by type and annotation, in any position after the source object. It is not an argument of the field, so it does not count against the arguments of the schema field, and the other parameters still bind by name. The kind of a parameter never depends on its name, so a `Locale locale` parameter and a schema argument named `locale` do not collide.
+* A parameter that is none of the kinds above is an argument of the field and must match one by name, as <<inputs,Inputs>> describes. A parameter of another type with no such argument fails the startup with `[argument-mismatch]`, and the message names the method and the parameter.
+* A `@GraphQLContextValue` parameter cannot be a primitive, because an absent key is `null`: it fails with `[argument-mismatch]`. The parameter needs a name from the class file (compile with `-parameters`) or a key in the annotation. A value of another type than the parameter's fails the field when the method is called.
+* The compile-time check applies the same rules as the startup and reports the same errors with the same codes. The facts that only the running application knows (which loader beans exist) are reported by the startup alone.
+* Nothing is looked up by reflection to resolve a parameter: the types and annotations come from the compile-time metadata of Micronaut, so the same rules hold in a native image.
+
+== Which parameters need the library's invocation
+
+`GraphQLContext`, a context value, the environment, the selection set and the locale come from the `DataFetchingEnvironment` and work with any invocation. A `DataLoader`, the request, the response and the principal read the state that the library's `GraphQLInvocation` keeps for the execution. When the application provides its own `GraphQLInvocation` (`@Replaces(DefaultGraphQLInvocation.class)` or `@Primary`), the library's is not used, and a resolver with one of these parameters fails the startup with `[execution-context-unavailable]`; the message names the method, the parameter and the application's invocation.
+
+== Cost
+
+The plan of the parameters of a field is built at startup. A call fills one argument array and allocates nothing else for the injected kinds. A field whose plan has none of the request, response or principal kinds reads no per-execution state, and a field with no injected parameter takes the same path as before.
