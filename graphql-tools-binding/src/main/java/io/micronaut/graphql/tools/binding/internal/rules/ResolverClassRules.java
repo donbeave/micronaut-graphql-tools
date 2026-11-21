@@ -66,6 +66,7 @@ public final class ResolverClassRules {
     private static final String OBJECT = "java.lang.Object";
     private static final String COMPLETION_STAGE = "java.util.concurrent.CompletionStage";
     private static final String PUBLISHER = "org.reactivestreams.Publisher";
+    private static final String FLOW = "kotlinx.coroutines.flow.Flow";
     private static final String DATA_FETCHER_RESULT = "graphql.execution.DataFetcherResult";
     private static final String OPTIONAL = "java.util.Optional";
     private static final String ITERABLE = "java.lang.Iterable";
@@ -333,17 +334,24 @@ public final class ResolverClassRules {
             depth++;
         }
 
+        boolean flow = isAssignableTo(model, result, FLOW);
+        if (flow && !(fieldLevel && subscription)) {
+            return ReturnVerdict.failed(WrapperRules.flowOutsideSubscription());
+        }
+        if (flow && stage) {
+            return ReturnVerdict.failed(WrapperRules.cannotWrap(COMPLETION_STAGE, FLOW));
+        }
         boolean singleValueType = isSingleValueType(model, result);
-        // the RxJava types are not Publishers, they are adapted to one; on a subscription field only a Publisher streams
-        boolean publisher = isAssignableTo(model, result, PUBLISHER) || singleValueType && !(fieldLevel && subscription);
+        // the RxJava types are not Publishers, they are adapted to one; on a subscription field only a Publisher or a Flow streams
+        boolean publisher = flow || isAssignableTo(model, result, PUBLISHER) || singleValueType && !(fieldLevel && subscription);
 
         if (fieldLevel && subscription) {
             if (!publisher) {
                 return ReturnVerdict.failed(WrapperRules.subscriptionNeedsPublisher(className(result)));
             }
-            outer = PUBLISHER;
+            outer = flow ? FLOW : PUBLISHER;
             if (untyped(registry, result, fieldType)) {
-                return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
+                return ReturnVerdict.failed(WrapperRules.missingTypeArgument(outer));
             }
             result = result.typeArguments().get(0);
             depth++;

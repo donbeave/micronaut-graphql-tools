@@ -231,6 +231,9 @@ public enum BindingCode {
     /** Failure: a Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath. */
     SUSPEND_WITHOUT_COROUTINES("suspend-without-coroutines", false, false,
             "A Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath."),
+    /** Failure: a Kotlin Flow subscription is bound and kotlinx-coroutines-reactive is not on the classpath. */
+    FLOW_WITHOUT_REACTIVE_COROUTINES("flow-without-reactive-coroutines", false, false,
+            "A Kotlin Flow subscription is bound and kotlinx-coroutines-reactive is not on the classpath."),
     /** Failure: binding a field threw an exception the library does not know. */
     UNEXPECTED_BINDING_ERROR("unexpected-binding-error", false, false,
             "Binding a field failed with an unexpected exception; the cause is attached."),
