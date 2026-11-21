@@ -1,0 +1,13 @@
+{
+  "data": null,
+  "errors": [
+    {
+      "message": "The operation did not finish within PT0.5S and was cancelled.",
+      "locations": [],
+      "extensions": {
+        "code": "EXECUTION_TIMEOUT",
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

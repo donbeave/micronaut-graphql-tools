@@ -181,6 +181,41 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The compile-time budget (#418): the gradle-profiler scenarios of test-suite-build/profiler run against the samples, and the job
+  # fails when a median build time exceeds the budget in compile-time-budget.properties. The profiler release is pinned by checksum.
+  compile-time-budget:
+    runs-on: ubuntu-latest
+    name: compile-time budget (Java 25, graphql-java default)
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Install gradle-profiler
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/gradle-profiler.zip" https://github.com/gradle/gradle-profiler/releases/download/v0.26.0/gradle-profiler-0.26.0.zip
+          echo "c573cdaffac8ecfa60cdd0624274511f46cbdde77fbba39ce35eae0fae7c9877  $RUNNER_TEMP/gradle-profiler.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/gradle-profiler.zip" -d "$RUNNER_TEMP"
+      - name: Profile and check the budget
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-build:compileTimeBudget --no-daemon -PgradleProfiler="$RUNNER_TEMP/gradle-profiler-0.26.0/bin/gradle-profiler"
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Report the compile time of the checks
+        if: always()
+        run: cat test-suite-build/build/reports/compile-time/report.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Upload the profiler results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: compile-time-profile
+          path: |
+            test-suite-build/build/profiler/output/
+            test-suite-build/build/reports/compile-time/
+          if-no-files-found: ignore
+          retention-days: 7
+
   # Native image tests on Oracle GraalVM from mise.toml (it provides native-image).
   native:
     runs-on: ubuntu-latest
@@ -364,7 +399,7 @@ jobs:
   required:
     name: required checks
     if: always()
-    needs: [actionlint, build, check-library, binary-compatibility, build-tools, native, native-groovy-smoke, docs, consumer-name-guard]
+    needs: [actionlint, build, check-library, binary-compatibility, build-tools, compile-time-budget, native, native-groovy-smoke, docs, consumer-name-guard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

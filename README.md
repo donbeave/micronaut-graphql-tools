@@ -210,7 +210,8 @@ test environment). Micronaut AOP advice (`@Around`) on the implementation still 
 `io.micronaut.graphql.tools.resolver`) are the contracts without an annotation. `interface BookTitleResolver extends
 TypeResolver<Book>` binds to `Book` with no class literal, and the root marker fixes the operation type: the methods of
 a `MutationResolver` bind fields of the mutation type only, so one method name can serve a field of each operation type.
-Only the methods that implement a method of a contract interface bind: a public helper of the implementation binds
+Only the methods that implement a method of a contract interface (same name, same number of parameters) bind, each to the
+operation of its own contract: a public helper of the implementation binds
 nothing and does not fail strict mode. A class that implements a marker directly binds all its public methods. The
 processor records the operation, the source type and the contract methods in the annotation metadata of the
 implementation (the build needs `micronaut-graphql-tools-processor`, otherwise the startup fails with
@@ -873,6 +874,11 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.checks` | map of check code to `fail` \| `warn` \| `ignore` (empty) | The severity of single checks, for example `checks.unwired-directive: ignore`: `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`, `unreachable-type`, `unreachable-value-type`, `unused-dictionary-entry`, `interface-read-through-implementation`, `unwired-directive`. An entry wins over `strict`. An unknown code or severity fails the startup. The five compile-time checks (`unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`) are not relaxed at compile time. |
 | `micronaut.graphql.tools.eager-init` | `true` \| `false` | Bind the schema when the application context starts, so that a broken binding fails the startup (also when the application defines its own `GraphQL` bean) and the first request does no binding work. `false` binds it when the first bean that needs the `GraphQLSchema` is created. |
 | `micronaut.graphql.tools.execution.data-loader-statistics` | `false` \| `true` | Whether the library counts the batches that each batch loader bean dispatches in an execution (`DataLoaderBatchStatistics` in the GraphQL context); the [observability module](#observability) turns the counts into DataLoader metrics. Off by default: counting adds two atomic increments to each batch. |
+| `micronaut.graphql.tools.execution.timeout` | duration, default none | How long an operation may take until its result is ready. When it runs out the client gets an `EXECUTION_TIMEOUT` error and the execution is cancelled, so later async fields abort; a running resolver is not interrupted. The timer exists only when the key is set. |
+| `micronaut.graphql.tools.protection.document-cache-size` | `1000` | How many parsed and validated documents are kept, keyed by the query text (least recently used); `0` turns the cache off. |
+| `micronaut.graphql.tools.protection.max-depth` | `0` (no limit) | The deepest selection nesting that an operation may have; a deeper one is rejected with a GraphQL error. |
+| `micronaut.graphql.tools.protection.max-complexity` | `0` (no limit) | The highest complexity (every selected field counts 1) that an operation may have; a higher one is rejected with a GraphQL error. |
+| `micronaut.graphql.tools.protection.introspection` | `true` \| `false` | Whether `__schema` and `__type` can be queried; off, they fail validation. |
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded. The checks run the same either way. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path one line is logged at INFO and the manifest lines at DEBUG. |

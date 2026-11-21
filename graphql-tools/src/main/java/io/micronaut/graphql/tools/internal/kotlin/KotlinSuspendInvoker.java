@@ -18,8 +18,6 @@ package io.micronaut.graphql.tools.internal.kotlin;
 import io.micronaut.aop.util.CompletableFutureContinuation;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.core.async.propagation.KotlinCoroutinePropagation;
-import io.micronaut.core.propagation.PropagatedContext;
 import io.micronaut.core.type.Executable;
 import io.micronaut.core.util.KotlinUtils;
 import io.micronaut.graphql.tools.internal.execution.SuspendInvoker;
@@ -27,9 +25,7 @@ import io.micronaut.http.bind.binders.HttpCoroutineContextFactory;
 import jakarta.inject.Singleton;
 import kotlin.coroutines.Continuation;
 import kotlin.coroutines.CoroutineContext;
-import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.CompletableJob;
-import kotlinx.coroutines.Dispatchers;
 import kotlinx.coroutines.JobKt;
 import kotlinx.coroutines.ThreadContextElement;
 
@@ -65,12 +61,7 @@ final class KotlinSuspendInvoker implements SuspendInvoker {
     @Override
     public CompletionStage<Object> invoke(Executable<Object, ?> executable, Object target, Object[] arguments) {
         CompletableJob job = JobKt.Job(null);
-        CoroutineContext context = EmptyCoroutineContext.INSTANCE.plus(job).plus(Dispatchers.getUnconfined());
-        PropagatedContext propagated = PropagatedContext.getOrEmpty();
-        context = KotlinCoroutinePropagation.Companion.addPropagatedContext(context, propagated);
-        for (HttpCoroutineContextFactory<?> factory : contextFactories) {
-            context = context.plus(factory.create());
-        }
+        CoroutineContext context = CoroutineContexts.create(job, contextFactories);
 
         CompletableFutureContinuation continuation = new CompletableFutureContinuation(new ContextContinuation(context));
         SuspendFuture future = new SuspendFuture(job);

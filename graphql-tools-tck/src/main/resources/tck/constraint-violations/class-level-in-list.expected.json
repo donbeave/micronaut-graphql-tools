@@ -1,0 +1,27 @@
+{
+  "errors": [
+    {
+      "message": "min must not exceed max",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "spans"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "spans",
+        "inputPath": [
+          1
+        ],
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": {
+    "spans": null
+  }
+}

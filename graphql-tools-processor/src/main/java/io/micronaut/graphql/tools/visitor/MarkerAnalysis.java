@@ -22,6 +22,7 @@ import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.ast.ElementQuery;
 import io.micronaut.inject.ast.GenericPlaceholderElement;
 import io.micronaut.inject.ast.MethodElement;
+import io.micronaut.inject.ast.ParameterElement;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
@@ -46,6 +48,8 @@ final class MarkerAnalysis {
 
     private static final Set<String> MARKERS = Set.of(AnnotationNames.QUERY_RESOLVER, AnnotationNames.MUTATION_RESOLVER,
             AnnotationNames.SUBSCRIPTION_RESOLVER, AnnotationNames.TYPE_RESOLVER_MARKER);
+
+    private static final String CONTINUATION = "kotlin.coroutines.Continuation";
 
     private MarkerAnalysis() {
     }
@@ -77,20 +81,28 @@ final class MarkerAnalysis {
             type.getSuperType().ifPresent(types::add);
             types.addAll(type.getInterfaces());
         }
-        return new ResolverMarkers(List.copyOf(operations), sourceType(element),
-                contractMethods(contracts.isEmpty() ? contracts : concat(contracts, annotated)));
+        String sourceType = sourceType(element);
+        return new ResolverMarkers(List.copyOf(operations), sourceType,
+                contractMethods(contracts, contracts.isEmpty() ? List.of() : annotated, sourceType));
+    }
+
+    /**
+     * @param method a method of a class or of a contract interface
+     * @return its number of parameters, without the continuation of a Kotlin suspend function
+     */
+    static int arity(MethodElement method) {
+        ParameterElement[] parameters = method.getParameters();
+        int count = parameters.length;
+        if (count > 0 && method.isSuspend() && CONTINUATION.equals(parameters[count - 1].getType().getName())) {
+            count--;
+        }
+        return count;
     }
 
     // a contract interface that carries @GraphQLRootResolver or @GraphQLTypeResolver itself: a class that also implements a
     // marker contract keeps binding its methods
     private static boolean annotatedContract(ClassElement type) {
         return type.hasDeclaredStereotype(AnnotationNames.ROOT_RESOLVER) || type.hasDeclaredStereotype(AnnotationNames.TYPE_RESOLVER);
-    }
-
-    private static List<ClassElement> concat(List<ClassElement> first, List<ClassElement> second) {
-        List<ClassElement> all = new ArrayList<>(first);
-        all.addAll(second);
-        return all;
     }
 
     private static boolean markerBelow(ClassElement type) {
@@ -142,19 +154,45 @@ final class MarkerAnalysis {
         return type == null || type.getName().equals("java.lang.Object") ? null : type.getName();
     }
 
-    // the names of the methods that the contract interfaces declare or inherit from the interfaces they extend: the class implements each of them, so these are the
-    // methods of the class that are contract methods. The methods of the class itself are not listed here: asking the class
-    // element for its methods before the visitor annotates it makes the annotation not reach the bean definition.
+    // the methods that the contract interfaces declare or inherit from the interfaces they extend, one entry per method of each
+    // contract with what that contract fixes: the class implements each of them, so these are the methods of the class that
+    // are contract methods. The methods of the class itself are not listed here: asking the class element for its methods
+    // before the visitor annotates it makes the annotation not reach the bean definition.
     @Nullable
-    private static Set<String> contractMethods(List<ClassElement> contracts) {
-        Set<String> names = new TreeSet<>();
-        for (ClassElement contract : contracts) {
-            for (MethodElement method : contract.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance())) {
-                if (!method.isStatic() && !method.isPrivate()) {
-                    names.add(method.getName());
-                }
+    private static List<ResolverMarkers.ContractMethod> contractMethods(List<ClassElement> markerContracts,
+                                                                       List<ClassElement> annotatedContracts,
+                                                                       @Nullable String sourceType) {
+        Map<String, ResolverMarkers.ContractMethod> entries = new TreeMap<>();
+        for (ClassElement contract : markerContracts) {
+            List<String> operations = OPERATIONS.entrySet().stream().filter(it -> contract.isAssignable(it.getKey()))
+                    .map(Map.Entry::getValue).sorted().toList();
+            String model = contract.isAssignable(AnnotationNames.TYPE_RESOLVER_MARKER) ? sourceType : null;
+            add(entries, contract, operations, model);
+        }
+        for (ClassElement contract : annotatedContracts) {
+            add(entries, contract, List.of(), declaredModel(contract));
+        }
+        return entries.isEmpty() ? null : List.copyOf(entries.values());
+    }
+
+    private static void add(Map<String, ResolverMarkers.ContractMethod> entries, ClassElement contract,
+                            List<String> operations, @Nullable String model) {
+        for (MethodElement method : contract.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance())) {
+            if (!method.isStatic() && !method.isPrivate()) {
+                ResolverMarkers.ContractMethod entry =
+                        new ResolverMarkers.ContractMethod(operations, model, method.getName(), arity(method));
+                entries.putIfAbsent(entry.encode(), entry);
             }
         }
-        return names.isEmpty() ? null : names;
+    }
+
+    // the model class that @GraphQLTypeResolver names on a contract interface; null when it names none
+    @Nullable
+    private static String declaredModel(ClassElement contract) {
+        return contract.findDeclaredAnnotation(AnnotationNames.TYPE_RESOLVER)
+                .map(it -> it.annotationClassValues("value"))
+                .filter(it -> it.length > 0 && !it[0].getName().equals("void"))
+                .map(it -> it[0].getName())
+                .orElse(null);
     }
 }

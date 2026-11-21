@@ -21,12 +21,17 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class AbstractTest {
 
     @Inject
     EmbeddedServer embeddedServer;
 
     protected ApolloClient apolloClient;
+
+    private final List<ApolloClient> userClients = new ArrayList<>();
 
     @BeforeEach
     public void setup() {
@@ -37,9 +42,23 @@ public class AbstractTest {
                 .build();
     }
 
+    /**
+     * @param username the user that the client acts as: it sends the header that the example server reads the user from
+     * @return a client for the server
+     */
+    protected ApolloClient clientOf(String username) {
+        ApolloClient client = new ApolloClient.Builder()
+                .serverUrl("http://" + embeddedServer.getHost() + ":" + embeddedServer.getPort() + "/graphql")
+                .addHttpHeader("X-User", username)
+                .build();
+        userClients.add(client);
+        return client;
+    }
+
     @AfterEach
-    public void cleanup() {
+    public void closeClients() {
         apolloClient.close();
+        userClients.forEach(ApolloClient::close);
     }
 
 }

@@ -1,0 +1,3 @@
+query ($tally: Tally!) {
+  tally(tally: $tally)
+}

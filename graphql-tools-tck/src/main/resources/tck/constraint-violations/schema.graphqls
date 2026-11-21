@@ -1,5 +1,9 @@
 # Extends the Query of the example schema that every suite serves; the types below must not clash with its names.
 scalar Limits
+scalar Spans
+scalar Weights
+scalar Tally
+scalar Pack
 
 input Line {
   sku: String!
@@ -12,11 +16,21 @@ input Cart {
   lines: [Line!]!
 }
 
+input Span {
+  min: Int!
+  max: Int!
+}
+
 extend type Query {
   fine: String!
   rename(name: String!): String
   checkout(cart: Cart!): String
   restock(lines: [Line!]!): String
   cap(limits: Limits!): String
+  spans(spans: [Span!]!): String
+  spanMap(spans: Spans!): String
+  weights(weights: Weights!): String
+  tally(tally: Tally!): String
+  pack(pack: Pack!): String
   several(name: String!, count: Int!, cart: Cart!): String
 }

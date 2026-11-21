@@ -23,6 +23,8 @@ fileUpload: File Upload
 subscriptions: Subscriptions
 context: Context
 execution: Execution
+protection: Protection
+transport: Transports
 customization: Customization
 safety: Safety
 manifest: Binding Manifest

@@ -163,6 +163,10 @@ public final class WebSocketScenario {
             return ExecutionState.of(environment.getGraphQlContext()).connectionAttributes().get("user", String.class).orElse(null);
         }
 
+        public String transport(DataFetchingEnvironment environment) {
+            return ExecutionState.of(environment.getGraphQlContext()).transport().name();
+        }
+
         public int cancelledStreams() {
             return cancelled.count.get();
         }

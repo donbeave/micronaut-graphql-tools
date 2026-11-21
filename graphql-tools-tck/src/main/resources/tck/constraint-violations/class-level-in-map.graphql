@@ -1,0 +1,3 @@
+query ($spans: Spans!) {
+  spanMap(spans: $spans)
+}
