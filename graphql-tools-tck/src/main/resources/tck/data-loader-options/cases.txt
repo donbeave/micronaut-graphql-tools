@@ -1,0 +1,2 @@
+pages-load-in-batches-of-two
+stats-after-one-request

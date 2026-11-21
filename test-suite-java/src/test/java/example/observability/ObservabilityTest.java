@@ -21,6 +21,7 @@ import graphql.GraphQL;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micronaut.context.ApplicationContext;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import org.junit.jupiter.api.Test;
@@ -59,22 +60,74 @@ class ObservabilityTest {
     // tag::tracing[]
     @Test
     void selectedFieldsGetSpansAndPropertyReadsDoNot() {
-        Map<String, Object> properties = Map.of("micronaut.graphql.tools.observability.tracing.fields",
+        Map<String, Object> properties = Map.of("micronaut.graphql.tools.tracing.fields",
                 List.of("Query.observedHello", "ObservedBook.*"));
         try (ApplicationContext context = ApplicationContext.run(properties, ObservabilityFixtures.OBSERVED)) {
             ExecutionResult result = execute(context, "query Both { observedHello observedBook { title } }", "Both");
             assertTrue(result.getErrors().isEmpty(), result.getErrors().toString());
 
             List<SpanData> spans = context.getBean(InMemorySpanExporter.class).getFinishedSpanItems();
-            assertEquals(List.of("Query.observedHello", "query Both"),
+            assertEquals(List.of("Query.observedHello", "query"),
                     spans.stream().map(SpanData::getName).sorted().collect(Collectors.toList()));
         }
     }
     // end::tracing[]
 
+    // tag::span-name[]
+    @Test
+    void theRequestSpanIsNamedAfterTheOperationTypeUnlessTheKeyAddsTheName() {
+        try (ApplicationContext context = ApplicationContext.run(Map.of(), ObservabilityFixtures.OBSERVED)) {
+            execute(context, "query Hello { observedHello }", "Hello");
+            assertEquals(List.of("query"), names(context));
+        }
+        Map<String, Object> properties = Map.of("micronaut.graphql.tools.tracing.add-operation-name-to-span-name", true);
+        try (ApplicationContext context = ApplicationContext.run(properties, ObservabilityFixtures.OBSERVED)) {
+            execute(context, "query Hello { observedHello }", "Hello");
+            assertEquals(List.of("query Hello"), names(context));
+        }
+    }
+    // end::span-name[]
+
+    // tag::new-span[]
+    @Test
+    void aNewSpanResolverIsAChildOfTheRequestSpan() {
+        try (ApplicationContext context = ApplicationContext.run(Map.of(), ObservabilityFixtures.OBSERVED)) {
+            ExecutionResult result = execute(context,
+                    "query Work { observedTraced observedTagged(value: \"x\") }", "Work");
+            assertTrue(result.getErrors().isEmpty(), result.getErrors().toString());
+
+            List<SpanData> spans = context.getBean(InMemorySpanExporter.class).getFinishedSpanItems();
+            SpanData request = spans.stream().filter(span -> span.getName().equals("query")).findFirst().orElseThrow();
+            SpanData work = spans.stream().filter(span -> span.getName().endsWith("#observed.work")).findFirst().orElseThrow();
+            SpanData tagged = spans.stream().filter(span -> span.getName().endsWith("#observed.tagged")).findFirst().orElseThrow();
+            assertEquals(request.getSpanId(), work.getParentSpanId());
+            assertEquals("x", tagged.getAttributes().get(AttributeKey.stringKey("observed.value")));
+        }
+    }
+    // end::new-span[]
+
+    // tag::timed-resolver[]
+    @Test
+    void aTimedResolverHasATimer() {
+        try (ApplicationContext context = ApplicationContext.run(Map.of(), ObservabilityFixtures.OBSERVED)) {
+            ExecutionResult result = execute(context, "query Work { observedTimed }", "Work");
+            assertTrue(result.getErrors().isEmpty(), result.getErrors().toString());
+
+            Timer timer = context.getBean(MeterRegistry.class).find("observed.timed").timer();
+            assertNotNull(timer);
+            assertEquals(1, timer.count());
+        }
+    }
+    // end::timed-resolver[]
+
+    private static List<String> names(ApplicationContext context) {
+        return context.getBean(InMemorySpanExporter.class).getFinishedSpanItems().stream().map(SpanData::getName)
+                .collect(Collectors.toList());
+    }
+
     @Test
     void theCardinalityOfTheOperationTagIsCapped() {
-        Map<String, Object> properties = Map.of("micronaut.graphql.tools.observability.metrics.max-operations", 2);
+        Map<String, Object> properties = Map.of("micronaut.metrics.binders.graphql.max-operations", 2);
         try (ApplicationContext context = ApplicationContext.run(properties, ObservabilityFixtures.OBSERVED)) {
             for (int i = 0; i < 10; i++) {
                 execute(context, "query Op" + i + " { observedHello }", null);

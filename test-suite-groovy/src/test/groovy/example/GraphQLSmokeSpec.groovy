@@ -136,6 +136,17 @@ class GraphQLSmokeSpec extends Specification {
         current.books.first().label != null
     }
 
+    def 'the standard scalars of the example schema'() {
+        when:
+        Map data = execute('query($at: Instant!, $json: JSON) { echoInstant(at: $at) echoJson(data: $json) echoLocale(tag: "en-US") }',
+                [at: '2026-12-24T10:15:30Z', json: [kind: 'x', list: [1, 2]]])
+
+        then:
+        data.echoInstant == '2026-12-24T10:16:30Z'
+        data.echoJson == [kind: 'x', list: [1, 2]]
+        data.echoLocale == 'en-US'
+    }
+
     def 'schema enum values are the Groovy constants'() {
         expect:
         ((GraphQLEnumType) schema.getType('SecurityErrorCode')).getValue('NOT_AUTHENTICATED').value.is(SecurityErrorCode.NOT_AUTHENTICATED)

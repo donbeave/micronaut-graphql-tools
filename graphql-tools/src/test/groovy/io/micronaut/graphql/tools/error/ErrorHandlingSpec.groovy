@@ -382,7 +382,7 @@ type Query {
         }
 
         private static Path.Node node(String name, ElementKind kind) {
-            [getName: { name }, getKind: { kind }] as Path.Node
+            [getName: { name }, getKind: { kind }, isInIterable: { false }, getIndex: { null }, getKey: { null }] as Path.Node
         }
     }
 

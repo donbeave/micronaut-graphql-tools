@@ -32,10 +32,10 @@ import graphql.GraphQLContext;
  * {@link graphql.GraphqlErrorException}): its error is the only error of the response and no resolver runs. Any other
  * exception is logged at ERROR and the response carries a generic error that does not leak its message.</p>
  *
- * <p>When the application has batch loader beans, {@code request.executionInput().getDataLoaderRegistry()} is the
- * library's registry of this execution, and a contributor may register more loaders in it. Without such beans it is
- * graphql-java's shared empty registry, which no contributor may change: an application that needs its own registry
- * then replaces it in its {@code GraphQLExecutionInputCustomizer}.</p>
+ * <p>{@code request.executionInput().getDataLoaderRegistry()} is a registry of this execution that a contributor may
+ * register loaders in. With batch loader beans it is the library's registry, which also creates the bean loaders on first
+ * use. Without them, and with at least one contributor, it is a new empty registry for each execution. Without loader beans
+ * and without contributors no registry is set, and graphql-java keeps its shared empty one.</p>
  */
 @FunctionalInterface
 public interface GraphQLContextContributor {

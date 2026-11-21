@@ -26,13 +26,13 @@ import java.util.stream.Collectors
 import java.util.stream.Stream
 
 /**
- * Every Java package of the library, binding, processor, scalars, observability and TCK modules is documented by a package-info.java, is small
+ * Every Java package of the library, binding, processor, scalars, observability, upload and TCK modules is documented by a package-info.java, is small
  * enough to have one responsibility, and is listed in the API map (src/main/docs/guide/apiMap.adoc) with an audience that
  * agrees with the @Internal marker of the package. The checks read the sources, so they hold on every JDK.
  */
 class PackageDocumentationSpec extends Specification {
 
-    static final List<String> MODULES = ['graphql-tools', 'graphql-tools-binding', 'graphql-tools-processor', 'graphql-tools-scalars', 'graphql-tools-observability', 'graphql-tools-tck']
+    static final List<String> MODULES = ['graphql-tools', 'graphql-tools-binding', 'graphql-tools-processor', 'graphql-tools-scalars', 'graphql-tools-observability', 'graphql-tools-upload', 'graphql-tools-tck']
     static final int MAX_TYPES = 15
 
     /** A package over the limit needs an entry here, with the reason and the issue that removes it. */
@@ -50,6 +50,7 @@ class PackageDocumentationSpec extends Specification {
         packages.containsKey('io.micronaut.graphql.tools.tck')
         packages.containsKey('io.micronaut.graphql.tools.scalars')
         packages.containsKey('io.micronaut.graphql.tools.observability')
+        packages.containsKey('io.micronaut.graphql.tools.upload')
     }
 
     def "every package has a package-info.java with a package statement that matches and a description"() {

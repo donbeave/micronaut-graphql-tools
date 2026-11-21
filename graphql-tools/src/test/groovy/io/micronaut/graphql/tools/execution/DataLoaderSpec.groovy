@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.execution
 import graphql.ExecutionInput
 import graphql.ExecutionResult
 import graphql.GraphQL
+import graphql.GraphQLContext
 import graphql.execution.instrumentation.InstrumentationState
 import graphql.execution.instrumentation.SimplePerformantInstrumentation
 import graphql.execution.instrumentation.parameters.InstrumentationFieldFetchParameters
@@ -43,6 +44,8 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.execution.GraphQLContextContributor
+import io.micronaut.graphql.tools.execution.GraphQLExecutionRequest
 import io.micronaut.graphql.tools.internal.execution.LazyDataLoaderRegistry
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
@@ -52,6 +55,7 @@ import org.dataloader.BatchLoader
 import org.dataloader.BatchLoaderEnvironment
 import org.dataloader.BatchLoaderWithContext
 import org.dataloader.DataLoader
+import org.dataloader.DataLoaderFactory
 import org.dataloader.DataLoaderRegistry
 import org.dataloader.MappedBatchLoader
 import org.dataloader.MappedBatchLoaderWithContext
@@ -73,6 +77,7 @@ class DataLoaderSpec extends AbstractTest {
 
     static final AtomicInteger BOOK_BATCHES = new AtomicInteger()
     static final List<Set<String>> BOOK_KEYS = Collections.synchronizedList([])
+    static final AtomicInteger CONTRIBUTED_BATCHES = new AtomicInteger()
     static final List<Object> MARKERS = Collections.synchronizedList([])
     static final List<DataLoaderRegistry> REGISTRIES = Collections.synchronizedList([])
 
@@ -98,6 +103,7 @@ type Author {
 
     void setup() {
         BOOK_BATCHES.set(0)
+        CONTRIBUTED_BATCHES.set(0)
         BOOK_KEYS.clear()
         MARKERS.clear()
         REGISTRIES.clear()
@@ -294,6 +300,23 @@ type Author {
         STRATEGIES.every { it == 'none' || it.is(noOp()) }
     }
 
+    void "a contributor registers a loader in an application without loader beans: it is created on first use and its batch function runs"() {
+        given:
+        startContext(SCHEMA2, SPEC + '.contributed')
+
+        when:
+        def first = run('{ hello(prefix: "a") }')
+        def second = run('{ hello(prefix: "b") }')
+
+        then:
+        first.errors.isEmpty()
+        first.data.hello == 'contributed:a'
+        second.data.hello == 'contributed:b'
+        CONTRIBUTED_BATCHES.get() == 2
+        registries().size() == 2
+        REGISTRIES.every { !(it instanceof LazyDataLoaderRegistry) }
+    }
+
     void "a DataLoaderRegistry bean fails the startup with data-loader-registry-bean and the fix"() {
         when:
         startContext(SCHEMA2, SPEC + '.registry', ['micronaut.graphql.tools.eager-init': true])
@@ -333,6 +356,26 @@ type Author {
         cause.message.contains("parameter 'loader' of")
         cause.message.contains('Unmatched#hello')
         cause.message.contains('DataLoader<java.lang.Integer, java.lang.Integer>')
+    }
+
+    void "a DataLoader parameter with a wildcard element type, as Kotlin writes it for a non-final class, matches the loader declared without it"() {
+        given:
+        startContext(SCHEMA2, SPEC + '.wildcard', ['micronaut.graphql.tools.eager-init': true])
+
+        expect:
+        run('{ hello(prefix: "a") }').data.hello == 'wild:a'
+    }
+
+    void "a DataLoader parameter of other element types than the loader fails with data-loader-not-found and names the parameter types"() {
+        when:
+        startContext(SCHEMA2, SPEC + '.wildcardMismatch', ['micronaut.graphql.tools.eager-init': true])
+
+        then:
+        def e = thrown(Exception)
+        def cause = causeOfType(e, SchemaBindingException)
+        cause.code() == BindingCode.DATA_LOADER_NOT_FOUND
+        cause.message.contains('WildcardMismatch#hello')
+        cause.message.contains('DataLoader<java.lang.Long, java.util.List<')
     }
 
     void "a DataLoader parameter that matches two loaders fails the startup unless it is named"() {
@@ -603,6 +646,68 @@ type Query {
         @Override
         CompletionStage<Map<String, String>> load(Set<String> keys) {
             CompletableFuture.completedFuture(keys.collectEntries { [(it): 'second:' + it] } as Map<String, String>)
+        }
+    }
+
+    static class WildItem {
+        String name
+    }
+
+    @Requires(property = 'spec.name', value = SPEC + '.wildcard')
+    @Singleton
+    static class WildLoader implements MappedBatchLoader<Long, List<WildItem>> {
+        @Override
+        CompletionStage<Map<Long, List<WildItem>>> load(Set<Long> keys) {
+            CompletableFuture.completedFuture(keys.collectEntries { [(it): [new WildItem(name: 'wild')]] } as Map<Long, List<WildItem>>)
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC + '.wildcard')
+    @Singleton
+    @GraphQLRootResolver
+    static class Wildcard {
+        CompletionStage<String> hello(String prefix, DataLoader<Long, List<? extends WildItem>> loader) {
+            loader.load(1L).thenApply { items -> 'wild:' + prefix }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC + '.wildcardMismatch')
+    @Singleton
+    static class WildMismatchLoader implements MappedBatchLoader<Long, List<WildItem>> {
+        @Override
+        CompletionStage<Map<Long, List<WildItem>>> load(Set<Long> keys) {
+            CompletableFuture.completedFuture([:])
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC + '.wildcardMismatch')
+    @Singleton
+    @GraphQLRootResolver
+    static class WildcardMismatch {
+        CompletionStage<String> hello(String prefix, DataLoader<Long, List<? extends String>> loader) {
+            CompletableFuture.completedFuture(prefix)
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC + '.contributed')
+    @Singleton
+    static class RegisteringContributor implements GraphQLContextContributor {
+        @Override
+        void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
+            request.executionInput().dataLoaderRegistry.register('contributed', DataLoaderFactory.newDataLoader({ List<String> keys ->
+                CONTRIBUTED_BATCHES.incrementAndGet()
+                CompletableFuture.completedFuture(keys.collect { 'contributed:' + it })
+            } as BatchLoader<String, String>))
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC + '.contributed')
+    @Singleton
+    @GraphQLRootResolver
+    static class Contributed {
+        CompletionStage<String> hello(String prefix, DataFetchingEnvironment environment) {
+            REGISTRIES << environment.dataLoaderRegistry
+            environment.getDataLoader('contributed').load(prefix)
         }
     }
 

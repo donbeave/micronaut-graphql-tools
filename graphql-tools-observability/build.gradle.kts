@@ -8,25 +8,31 @@ apply(from = rootProject.file("config/spotless.license.gradle"))
 
 // Request metrics (Micrometer) and traces (OpenTelemetry) of the executions. Neither library is a dependency of the module's
 // consumers: each is compile-only here, and the beans that use it exist only when the application has it (and a MeterRegistry
-// or OpenTelemetry bean).
+// or OpenTelemetry bean). The versions come from the micronaut-micrometer and micronaut-tracing catalogs.
 dependencies {
     api(projects.micronautGraphqlTools)
-    compileOnly(platform(libs.micronaut.platform))
-    compileOnly("io.micrometer:micrometer-core")
-    compileOnly("io.opentelemetry:opentelemetry-api")
+    compileOnly(mnMicrometer.micronaut.micrometer.core)
+    compileOnly(mnTracing.micronaut.tracing.opentelemetry)
 
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)
     testImplementation(libs.jetbrains.annotations)
     testImplementation(libs.archunit)
-    testImplementation(platform(libs.micronaut.platform))
-    testImplementation("io.micrometer:micrometer-core")
-    testImplementation("io.opentelemetry:opentelemetry-api")
+    testImplementation(mnMicrometer.micronaut.micrometer.core)
+    testImplementation(mnTracing.micronaut.tracing.opentelemetry)
+    testImplementation(mnTracing.micronaut.tracing.opentelemetry.http)
+    testImplementation(mnTracing.micronaut.tracing.opentelemetry.annotation)
+    testImplementation(mnMicrometer.micronaut.micrometer.annotation)
+    testImplementation(mn.micronaut.http.server.netty)
+    testImplementation(mn.micronaut.http.client)
+    testImplementation(platform(mnTracing.boms.opentelemetry))
     testImplementation("io.opentelemetry:opentelemetry-sdk")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
-    testAnnotationProcessor(platform(libs.micronaut.platform))
     testAnnotationProcessor(mn.micronaut.inject.java)
+    testAnnotationProcessor(mnTracing.micronaut.tracing.opentelemetry.annotation)
+    testAnnotationProcessor(mnMicrometer.micronaut.micrometer.annotation)
+    testRuntimeOnly(mn.micronaut.jackson.databind)
     testRuntimeOnly("ch.qos.logback:logback-classic")
 }
 

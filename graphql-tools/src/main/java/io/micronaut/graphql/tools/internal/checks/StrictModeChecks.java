@@ -108,7 +108,7 @@ public final class StrictModeChecks {
             }
         }
         findings.forEach((member, description) -> finding(BindingCode.UNBOUND_RESOLVER_METHOD,
-                "The resolver method " + member + " binds no schema field. Remove it, make it non-public, "
+                "The resolver method " + member + " binds no schema field. Remove it, make it private, "
                         + "or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.",
                 member));
     }

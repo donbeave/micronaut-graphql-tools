@@ -15,15 +15,24 @@
  */
 package io.micronaut.graphql.tools.observability
 
+import graphql.schema.FieldCoordinates
 import graphql.schema.GraphQLSchema
 import io.micronaut.context.exceptions.ConfigurationException
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.sdk.trace.data.SpanData
 
 class TracingSpec extends AbstractObservabilitySpec {
 
-    static final String FIELDS = 'micronaut.graphql.tools.observability.tracing.fields'
+    static final String FIELDS = 'micronaut.graphql.tools.tracing.fields'
+    static final String ADD_NAME = 'micronaut.graphql.tools.tracing.add-operation-name-to-span-name'
 
-    void "a request is one span named after the operation, with its attributes"() {
+    static String attribute(SpanData span, String key) {
+        span.attributes.get(AttributeKey.stringKey(key))
+    }
+
+    void "a request is one span named after the operation type, with the semantic-convention attributes"() {
         given:
         start('ObservabilityTracing')
 
@@ -31,14 +40,58 @@ class TracingSpec extends AbstractObservabilitySpec {
         run('query Hello { hello }')
 
         then:
+        hasBean('RequestSpanObserver')
         finished().size() == 1
         def span = finished()[0]
-        span.name == 'query Hello'
-        span.attributes.get(io.opentelemetry.api.common.AttributeKey.stringKey(GraphQLObservability.OPERATION_NAME_ATTRIBUTE)) == 'Hello'
-        span.attributes.get(io.opentelemetry.api.common.AttributeKey.stringKey(GraphQLObservability.OPERATION_TYPE_ATTRIBUTE)) == 'query'
+        span.name == 'query'
+        span.kind == SpanKind.INTERNAL
+        span.instrumentationScopeInfo.name == 'io.micronaut.graphql.tools'
+        attribute(span, 'graphql.operation.name') == 'Hello'
+        attribute(span, 'graphql.operation.type') == 'query'
     }
 
-    void "a result with an error marks the span"() {
+    void "an anonymous operation has the type attribute and no name attribute"() {
+        given:
+        start('ObservabilityTracing')
+
+        when:
+        run('{ hello }')
+
+        then:
+        def span = finished()[0]
+        span.name == 'query'
+        attribute(span, 'graphql.operation.type') == 'query'
+        attribute(span, 'graphql.operation.name') == null
+    }
+
+    void "the operation name is part of the span name only when the key asks for it"() {
+        given:
+        start('ObservabilityTracing', [(ADD_NAME): true])
+
+        when:
+        run('query Hello { hello }')
+        run('{ hello }')
+
+        then:
+        finished()*.name.sort() == ['query', 'query Hello']
+    }
+
+    void "a request that never reaches an operation is a span named GraphQL Operation with an error status"() {
+        given:
+        start('ObservabilityTracing')
+
+        when:
+        run('query Invalid { nothing }')
+
+        then:
+        def span = finished()[0]
+        span.name == 'GraphQL Operation'
+        span.status.statusCode == StatusCode.ERROR
+        span.events*.name == ['exception']
+        attribute(span, 'graphql.operation.type') == null
+    }
+
+    void "a result with an error marks the span and records one exception event for each error"() {
         given:
         start('ObservabilityTracing')
 
@@ -46,7 +99,11 @@ class TracingSpec extends AbstractObservabilitySpec {
         run('query Broken { broken }')
 
         then:
-        finished()[0].status.statusCode == StatusCode.ERROR
+        def span = finished()[0]
+        span.status.statusCode == StatusCode.ERROR
+        span.events*.name == ['exception']
+        span.events[0].attributes.get(AttributeKey.stringKey('exception.message')) != null
+        span.events[0].attributes.get(AttributeKey.stringKey('exception.type')) != null
     }
 
     void "selected fields get spans that are children of the request span, and property reads get none"() {
@@ -58,28 +115,61 @@ class TracingSpec extends AbstractObservabilitySpec {
 
         then:
         result.errors.isEmpty()
-        def request = finished().find { it.name == 'query Both' }
+        def request = finished().find { it.name == 'query' }
         def names = finished()*.name
-        names.sort() == ['Query.book', 'Query.hello', 'query Both']
-        finished().findAll { it.name != 'query Both' }.every {
+        names.sort() == ['Query.book', 'Query.hello', 'query']
+        finished().findAll { it.name != 'query' }.every {
             it.parentSpanId == request.spanId && it.traceId == request.traceId
         }
         !names.contains('Book.title')
     }
 
-    void "a field that is not selected keeps the fetcher the library bound"() {
+    void "a field span has the OpenTelemetry field attributes"() {
+        given:
+        start('ObservabilityTracing', [(FIELDS): ['Query.hello']])
+
+        when:
+        run('{ hello }')
+
+        then:
+        def field = finished().find { it.name == 'Query.hello' }
+        attribute(field, 'graphql.field.name') == 'hello'
+        attribute(field, 'graphql.field.path') == '/hello'
+        attribute(field, 'graphql.field.parent') == null
+        field.kind == SpanKind.INTERNAL
+        field.instrumentationScopeInfo.name == 'io.micronaut.graphql.tools'
+    }
+
+    void "a field that is not selected keeps the fetcher the library bound, gets no span and no instrumenter call"() {
         given:
         start('ObservabilityTracing', [(FIELDS): ['Query.hello']])
         GraphQLSchema schema = context.getBean(GraphQLSchema)
         def fetcher = { String type, String field ->
-            schema.codeRegistry.getDataFetcher(graphql.schema.FieldCoordinates.coordinates(type, field),
-                    schema.getObjectType(type).getFieldDefinition(field))
+            schema.codeRegistry.getDataFetcher(FieldCoordinates.coordinates(type, field), schema.getObjectType(type).getFieldDefinition(field))
         }
+        def before = startedSpans.get()
 
-        expect:
-        fetcher('Query', 'hello').getClass().simpleName == 'TracedDataFetcher'
-        fetcher('Query', 'book').getClass().simpleName != 'TracedDataFetcher'
-        fetcher('Book', 'title').getClass().simpleName != 'TracedDataFetcher'
+        when:
+        run('query Q { book { title } }')
+
+        then:
+        fetcher('Query', 'hello').getClass().simpleName == 'FieldSpanFetcher'
+        fetcher('Query', 'book').getClass().simpleName != 'FieldSpanFetcher'
+        fetcher('Book', 'title').getClass().simpleName != 'FieldSpanFetcher'
+        startedSpans.get() - before == 1
+        finished()*.name == ['query']
+    }
+
+    void "a selected field makes one instrumenter call, and the request one"() {
+        given:
+        start('ObservabilityTracing', [(FIELDS): ['Query.hello']])
+        def before = startedSpans.get()
+
+        when:
+        run('query Q { hello book { title } }')
+
+        then:
+        startedSpans.get() - before == 2
     }
 
     void "a property read named explicitly is not wrapped"() {
@@ -88,13 +178,13 @@ class TracingSpec extends AbstractObservabilitySpec {
         GraphQLSchema schema = context.getBean(GraphQLSchema)
 
         when:
-        def fetcher = schema.codeRegistry.getDataFetcher(graphql.schema.FieldCoordinates.coordinates('Book', 'title'),
+        def fetcher = schema.codeRegistry.getDataFetcher(FieldCoordinates.coordinates('Book', 'title'),
                 schema.getObjectType('Book').getFieldDefinition('title'))
         run('query Q { book { title } }')
 
         then:
-        fetcher.getClass().simpleName != 'TracedDataFetcher'
-        finished()*.name == ['query Q']
+        fetcher.getClass().simpleName != 'FieldSpanFetcher'
+        finished()*.name == ['query']
     }
 
     void "with no field selected the library's schema is untouched and only the request has a span"() {
@@ -107,10 +197,11 @@ class TracingSpec extends AbstractObservabilitySpec {
 
         then:
         schema.getObjectType('Query').fieldDefinitions.every {
-            schema.codeRegistry.getDataFetcher(graphql.schema.FieldCoordinates.coordinates('Query', it.name), it)
-                    .getClass().simpleName != 'TracedDataFetcher'
+            schema.codeRegistry.getDataFetcher(FieldCoordinates.coordinates('Query', it.name), it)
+                    .getClass().simpleName != 'FieldSpanFetcher'
         }
         finished().size() == 1
+        startedSpans.get() == 1
     }
 
     void "a failing field span records the error"() {
@@ -124,6 +215,112 @@ class TracingSpec extends AbstractObservabilitySpec {
         def field = finished().find { it.name == 'Query.broken' }
         field.status.statusCode == StatusCode.ERROR
         field.events*.name.contains('exception')
+    }
+
+    void "an async selected field ends its span when the value arrives"() {
+        given:
+        start('ObservabilityTracing', [(FIELDS): ['Query.later']])
+
+        when:
+        def result = run('query Later { later { title } }')
+
+        then:
+        result.data == [later: [title: 'L']]
+        finished()*.name.sort() == ['Query.later', 'query']
+    }
+
+    void "a field of the subscription type is never traced, even when the selection names it"() {
+        given:
+        start('ObservabilityTracing', [(FIELDS): ['Subscription.*', 'Query.hello']])
+        GraphQLSchema schema = context.getBean(GraphQLSchema)
+
+        when:
+        def result = run('subscription S { ticks }')
+
+        then:
+        result.errors.isEmpty()
+        result.data instanceof org.reactivestreams.Publisher
+        schema.codeRegistry.getDataFetcher(FieldCoordinates.coordinates('Subscription', 'ticks'),
+                schema.getObjectType('Subscription').getFieldDefinition('ticks')).getClass().simpleName != 'FieldSpanFetcher'
+        finished()*.name == ['subscription']
+        startedSpans.get() == 1
+    }
+
+    void "the request span is current in the propagated context: a @NewSpan resolver is its child"() {
+        given:
+        start('ObservabilityTracing')
+
+        when:
+        def result = run('query T { traced }')
+
+        then:
+        result.data == [traced: 'traced']
+        def request = finished().find { it.name == 'query' }
+        def child = finished().find { it.name.endsWith('#resolver.work') }
+        child.parentSpanId == request.spanId
+        child.traceId == request.traceId
+    }
+
+    void "@SpanTag puts the argument on the span of a resolver"() {
+        given:
+        start('ObservabilityTracing')
+
+        when:
+        run('query T { tagged(value: "x") }')
+
+        then:
+        attribute(finished().find { it.name.endsWith('#resolver.tagged') }, 'value') == 'x'
+    }
+
+    void "a @NewSpan resolver under a selected field is a child of the field span"() {
+        given:
+        start('ObservabilityTracing', [(FIELDS): ['Query.traced']])
+
+        when:
+        run('query T { traced }')
+
+        then:
+        def request = finished().find { it.name == 'query' }
+        def field = finished().find { it.name == 'Query.traced' }
+        def child = finished().find { it.name.endsWith('#resolver.work') }
+        field.parentSpanId == request.spanId
+        child.parentSpanId == field.spanId
+    }
+
+    void "a batch loader that runs after the resolver returned still sees the request span"() {
+        given:
+        start('ObservabilityTracing')
+
+        when:
+        def result = run('query L { loaded }')
+
+        then:
+        result.data == [loaded: 'title-a']
+        def request = finished().find { it.name == 'query' }
+        finished().find { it.name.endsWith('#loader.batch') }.parentSpanId == request.spanId
+    }
+
+    void "the thread has no span of the request left when the operation returned"() {
+        given:
+        start('ObservabilityTracing')
+
+        when:
+        run('query T { traced }')
+
+        then:
+        !io.opentelemetry.api.trace.Span.current().spanContext.valid
+        !io.micronaut.core.propagation.PropagatedContext.exists()
+    }
+
+    void "a @Timed resolver has a timer"() {
+        given:
+        start('ObservabilityTracing')
+
+        when:
+        run('query T { timed }')
+
+        then:
+        meters.find('resolver.timed').timer().count() == 1
     }
 
     void "a selection that names nothing fails the startup"() {
@@ -147,12 +344,28 @@ class TracingSpec extends AbstractObservabilitySpec {
 
     void "tracing can be turned off"() {
         given:
-        start('ObservabilityTracing', ['micronaut.graphql.tools.observability.tracing.enabled': false, (FIELDS): ['Query.hello']])
+        start('ObservabilityTracing', ['micronaut.graphql.tools.tracing.enabled': false, (FIELDS): ['Query.hello']])
 
         when:
         run('query Hello { hello }')
 
         then:
+        !hasBean('RequestSpanObserver')
+        !hasBean('FieldSpanDecorator')
+        finished().isEmpty()
+        meters.find(GraphQLObservability.REQUEST_TIMER).timer().count() == 1
+    }
+
+    void "micronaut.otel.enabled=false removes the tracing beans and leaves the metrics"() {
+        given:
+        start('ObservabilityTracing', ['micronaut.otel.enabled': false, (FIELDS): ['Query.hello']])
+
+        when:
+        run('query Hello { hello }')
+
+        then:
+        !hasBean('RequestSpanObserver')
+        !hasBean('FieldSpanDecorator')
         finished().isEmpty()
         meters.find(GraphQLObservability.REQUEST_TIMER).timer().count() == 1
     }

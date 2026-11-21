@@ -1,0 +1,2 @@
+incorrect-class-mapping Book.title schema.graphqls:12:3
+incorrect-member-mapping Query.search schema.graphqls:6:3

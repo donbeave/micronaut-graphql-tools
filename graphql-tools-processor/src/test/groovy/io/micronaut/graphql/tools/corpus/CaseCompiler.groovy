@@ -36,4 +36,13 @@ interface CaseCompiler {
      */
     CompiledCase compile(CorpusCase corpusCase, Path work)
 
+    /**
+     * @param corpusCase the case
+     * @return the expected file that holds the findings of the checked compilation: {@code compile.txt}, or the file of the case
+     * that says what this compiler reports where it differs
+     */
+    default String compileVerdictFile(CorpusCase corpusCase) {
+        return 'compile.txt'
+    }
+
 }

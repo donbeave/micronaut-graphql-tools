@@ -32,7 +32,9 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.ResolverStyle;
+import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalQuery;
 import java.util.Locale;
 
@@ -139,7 +141,8 @@ public final class TimeScalars {
      * A pattern is resolved strictly, so that a value such as 31/02/2026 is refused instead of clamped to the end of the month.
      * Strict resolution needs the proleptic year {@code u}, as {@code y} (year of era) cannot resolve a date without an era, so
      * the {@code y} letters of the pattern, outside quotes, are read as {@code u}: the same digits for every year since 1 AD.
-     * A pattern with an era letter ({@code G}) keeps its {@code y}, as the era makes it resolvable.
+     * A pattern with an era letter ({@code G}) keeps its {@code y}, as the era makes it resolvable; the era defaults to AD, so
+     * an optional era section such as {@code [G ]yyyy-MM-dd} also reads a text without it.
      */
     private static boolean unquoted(String format, char letter) {
         boolean quoted = false;
@@ -165,7 +168,11 @@ public final class TimeScalars {
             }
             pattern.append(!quoted && !era && c == 'y' ? 'u' : c);
         }
-        return DateTimeFormatter.ofPattern(pattern.toString(), Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
+        DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder().appendPattern(pattern.toString());
+        if (era && unquoted(format, 'y')) {
+            builder.parseDefaulting(ChronoField.ERA, 1);
+        }
+        return builder.toFormatter(Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
     }
 
 }
