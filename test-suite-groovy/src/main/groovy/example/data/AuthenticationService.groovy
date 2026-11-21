@@ -18,9 +18,15 @@ package example.data
 import groovy.transform.CompileStatic
 import jakarta.inject.Singleton
 
+/**
+ * Checks credentials and finds users. It holds no state about who is logged in: the user of a request comes from the
+ * request, see `CurrentUserContributor`, because a singleton shared by all requests cannot hold a per-request value.
+ */
 @CompileStatic
 @Singleton
 class AuthenticationService {
+
+    static final String CURRENT_USER = 'example.currentUser'
 
     static class UserNotFoundException extends RuntimeException {
     }
@@ -29,7 +35,6 @@ class AuthenticationService {
     }
 
     private final UserRepository userRepository
-    private User currentUser
 
     AuthenticationService(UserRepository userRepository) {
         this.userRepository = userRepository
@@ -43,15 +48,10 @@ class AuthenticationService {
         if (user.password != password) {
             throw new IncorrectCredentialsException()
         }
-        currentUser = user
         return user
     }
 
-    void logout() {
-        currentUser = null
-    }
-
-    User getCurrentUser() {
-        currentUser
+    User find(String username) {
+        userRepository.findByUsername(username)
     }
 }

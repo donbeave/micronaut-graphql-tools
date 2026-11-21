@@ -32,7 +32,8 @@ import java.util.TreeMap;
 
 /**
  * Writes what a resolver class inherits into its annotation metadata, as {@code @ResolverContracts}: the contracts of a
- * type resolver, the root operations of its marker interfaces and the methods that implement a contract interface. The
+ * type resolver, the root operations of its marker interfaces and the methods of its contract interfaces, each with the operations and
+ * the source type of its contract. The
  * startup reads them from the bean definition and never looks at the class hierarchy by reflection. A contract is a type of the hierarchy, the class itself included, that declares
  * {@code @GraphQLTypeResolver}; it is recorded with the model class of that annotation, in the order of the binary name of
  * the contract.
@@ -46,11 +47,12 @@ final class ResolverContractsWriter {
 
     /**
      * @param element a class
-     * @return whether the class is a bean that is a resolver, directly or through a supertype
+     * @return whether the class is a resolver, directly or through a supertype, that can be a bean: a bean class, or a
+     * concrete class that a factory method can expose, which carries no scope annotation of its own
      */
     static boolean applies(ClassElement element) {
         return (element.hasStereotype(AnnotationNames.TYPE_RESOLVER) || element.hasStereotype(AnnotationNames.ROOT_RESOLVER))
-                && ElementTypeModel.isBeanClass(element);
+                && (ElementTypeModel.isBeanClass(element) || ElementTypeModel.isConcreteClass(element));
     }
 
     /**
@@ -82,7 +84,8 @@ final class ResolverContractsWriter {
         if (markers.sourceType() != null) {
             contracts.put(AnnotationNames.TYPE_RESOLVER_MARKER, markers.sourceType());
         }
-        Set<String> methods = markers.contractMethods() == null ? Set.of() : markers.contractMethods();
+        List<String> methods = markers.contractMethods() == null ? List.of()
+                : markers.contractMethods().stream().map(ResolverMarkers.ContractMethod::encode).toList();
         if (contracts.isEmpty() && markers.operations().isEmpty() && methods.isEmpty()) {
             return;
         }
@@ -92,7 +95,7 @@ final class ResolverContractsWriter {
                 .member("value", models.toArray(new AnnotationClassValue<?>[0]))
                 .member("declaredBy", contracts.keySet().toArray(new String[0]))
                 .member("operations", markers.operations().toArray(new String[0]))
-                .member("methods", methods.toArray(new String[0])));
+                .member("contractMethods", methods.toArray(new String[0])));
     }
 
     @Nullable

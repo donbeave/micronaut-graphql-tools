@@ -1,0 +1,39 @@
+// Init script of the compile-time profile (#418). gradle-profiler runs it with `-I` in each profiled sample.
+//   - editSchema appends a new comment line to the schema file of the project, so that a scenario can edit the schema inside
+//     the measured build; the compile tasks run after it
+//   - editBody does the same to the resolver source file BookQuery, a change that leaves its signatures alone
+//   - every compile task that can run the checks (javac, kapt, KSP, the Groovy compiler) appends `<scenario> <project> <task>
+//     <milliseconds>` to the file in COMPILE_TIME_LOG, which is how the cost of the checks is reported per module
+def compileTasks = ['compileJava', 'compileKotlin', 'kspKotlin', 'kaptKotlin', 'compileGroovy']
+def scenario = gradle.startParameter.projectProperties.get('profilerScenario') ?: 'unnamed'
+def logFile = System.getenv('COMPILE_TIME_LOG')
+
+allprojects {
+    def schemaFile = file('src/main/resources/graphql/schema.graphqls')
+    if (schemaFile.exists()) {
+        tasks.register('editSchema') {
+            doLast {
+                schemaFile.text = schemaFile.text.replaceAll(/(?m)^# profiler edit .*\n/, '') + "# profiler edit ${System.nanoTime()}\n"
+            }
+        }
+    }
+    def bodyFile = fileTree('src/main') { include '**/BookQuery.*' }.files.find { it.name.startsWith('BookQuery.') }
+    if (bodyFile != null) {
+        tasks.register('editBody') {
+            doLast {
+                bodyFile.text = bodyFile.text.replaceAll(/(?m)^\/\/ profiler edit .*\n/, '') + "// profiler edit ${System.nanoTime()}\n"
+            }
+        }
+    }
+    tasks.matching { it.name in compileTasks }.configureEach { task ->
+        def started = new long[1]
+        def projectPath = project.path
+        task.mustRunAfter { rootProject.allprojects.collect { [it.tasks.findByName('editSchema'), it.tasks.findByName('editBody')] }.flatten().findAll { it != null } }
+        task.doFirst { started[0] = System.nanoTime() }
+        task.doLast {
+            if (logFile != null) {
+                new File(logFile).withWriterAppend { it << "${scenario} ${projectPath} ${task.name} ${(System.nanoTime() - started[0]).intdiv(1_000_000)}\n" }
+            }
+        }
+    }
+}
