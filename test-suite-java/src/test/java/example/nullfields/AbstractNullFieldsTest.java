@@ -15,11 +15,9 @@
  */
 package example.nullfields;
 
-import example.data.AuthenticationService;
 import io.micronaut.json.JsonMapper;
 import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -42,14 +40,6 @@ abstract class AbstractNullFieldsTest {
 
     @Inject
     JsonMapper jsonMapper;
-
-    @Inject
-    AuthenticationService authenticationService;
-
-    @AfterEach
-    void logout() {
-        authenticationService.logout();
-    }
 
     abstract String expectedMapperClassName();
 

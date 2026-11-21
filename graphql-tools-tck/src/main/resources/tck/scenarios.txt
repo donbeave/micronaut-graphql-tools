@@ -21,3 +21,5 @@ field-decorator
 type-class-derivation
 contributor-loader
 disconnect
+protection
+http

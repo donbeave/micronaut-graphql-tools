@@ -12,9 +12,15 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ErrorsConfiguration.adoc[]
 
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ProtectionConfiguration.adoc[]
+
 == Execution
 
 `micronaut.graphql.tools.execution.executor` names the executor that every operation hops to once, before graphql-java runs: `blocking` (the default), `io`, `virtual` (JDK 21 and later), an executor you configure under `micronaut.executors`, or `none` to run on the thread that receives the operation. An unknown name fails the startup with `[unknown-executor]`. See <<execution,Execution>>.
+
+== Protection
+
+`micronaut.graphql.tools.protection.document-cache-size` (default `1000`, `0` for none) bounds the cache of parsed documents; `protection.max-depth` and `protection.max-complexity` (default `0`, no limit) reject expensive operations; `protection.introspection` (default `true`) switches `+__schema+` and `+__type+` off; `micronaut.graphql.tools.execution.timeout` (default none) cancels a slow operation. See <<protection,Protection>>.
 
 == Errors
 
