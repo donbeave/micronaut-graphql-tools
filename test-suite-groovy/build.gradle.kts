@@ -29,6 +29,9 @@ dependencies {
     testImplementation("io.micrometer:micrometer-core")
     testImplementation("io.opentelemetry:opentelemetry-sdk")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
+    // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
+    // itself does not depend on it.
+    testImplementation(projects.micronautGraphqlToolsUpload)
 }
 
 graalvmNative.toolchainDetection = false

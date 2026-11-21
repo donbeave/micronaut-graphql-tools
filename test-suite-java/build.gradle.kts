@@ -25,6 +25,10 @@ dependencies {
     testImplementation("io.micrometer:micrometer-core")
     testImplementation("io.opentelemetry:opentelemetry-sdk")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
+    // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
+    // itself does not depend on it.
+    testImplementation(projects.micronautGraphqlToolsUpload)
+    testImplementation("io.micronaut:micronaut-http-client")
     runtimeOnly("ch.qos.logback:logback-classic")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
