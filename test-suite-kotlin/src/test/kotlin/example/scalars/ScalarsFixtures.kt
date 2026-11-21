@@ -41,7 +41,6 @@ class ScalarsFixtures {
                 "scalar LocalDate\n" +
                     "scalar OffsetDateTime\n" +
                     "scalar Duration\n" +
-                    "scalar JSON\n" +
                     "scalar UUID\n" +
                     "scalar Url\n" +
                     "extend type Query {\n" +
@@ -66,7 +65,6 @@ class ScalarsFixtures {
                 "scalar Date\n" +
                     "scalar OffsetDateTime\n" +
                     "scalar Duration\n" +
-                    "scalar JSON\n" +
                     "scalar UUID\n" +
                     "scalar Url\n" +
                     "extend type Query {\n" +

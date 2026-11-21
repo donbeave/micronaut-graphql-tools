@@ -20,6 +20,12 @@ type Subscription {
   ticks(count: Int!): Tick!
   # never completes: it ends when the client completes it or closes the connection
   endless: Tick!
+  # the publisher fails with an exception that has no mapper
+  failing: Tick!
+  # the publisher fails with an exception that has a mapper
+  failingMapped: Tick!
+  # emits one event whose field "broken" fails
+  brokenEvent: Tick!
 }
 
 # The fields of an event say where and in what context it is resolved.
@@ -31,4 +37,5 @@ type Tick {
   # both load the same key from one loader: with caching off (a subscription) the batch function receives it twice
   echo: String
   echoAgain: String
+  broken: String
 }

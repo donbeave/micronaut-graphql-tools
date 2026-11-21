@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
+import graphql.execution.DataFetcherExceptionHandler;
 import graphql.schema.DataFetcher;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
@@ -57,13 +58,16 @@ public final class FieldExecutionPlanner {
      * @param subscriptionField whether the field belongs to the subscription type
      * @param conversionService converts a reactive type that is not a {@code Publisher} (RxJava) to one
      * @param fieldExecutor     the executor that {@code @ExecuteOn} names when it differs from the executor of the operation, else null
+     * @param errorHandler      the handler that makes the errors of a failing subscription publisher, or null
      * @return the fetcher of the field
      */
     public static DataFetcher<Object> plan(DataFetcher<Object> method, ReturnVerdict verdict, boolean subscriptionField,
-                                           ConversionService conversionService, @Nullable Executor fieldExecutor) {
+                                           ConversionService conversionService, @Nullable Executor fieldExecutor,
+                                           @Nullable DataFetcherExceptionHandler errorHandler) {
         if (subscriptionField) {
             // the hop of an @ExecuteOn runs the method on its executor; the stream fetcher wraps the publisher that comes back
-            return new StreamDataFetcher(fieldExecutor == null ? method : new ExecutorHopDataFetcher(fieldExecutor, method), conversionService);
+            return new StreamDataFetcher(fieldExecutor == null ? method : new ExecutorHopDataFetcher(fieldExecutor, method), conversionService,
+                    errorHandler);
         }
         DataFetcher<Object> adapted = verdict.reactive() == ReturnVerdict.Reactive.NONE ? method
                 : new PublisherAdaptingDataFetcher(method, verdict.reactive() == ReturnVerdict.Reactive.MULTI, conversionService);
