@@ -71,6 +71,13 @@ file without parameter names, is `ParameterNamesSpec` (a class file cannot be a 
    (field not bound, reachability, ambiguity, the dictionary, customizers) is not a gap: the compile side cannot see it, and
    the case records `compile.txt` as `ok`.
 
+A Kotlin `internal` method compiles to the JVM name `name$<module>`. The visitor reports that JVM name, exactly as the startup does, so
+the soundness rule compares one name (option (b) of #439: the product keeps one name, and the harness gives the two subprojects of a Kotlin
+case, the checked and the unchecked one, the same module name, the project name of the case, in `KotlinBatchCompiler`). A coordinate in a
+`compile.txt` or `runtime.txt` therefore carries the module of its case, as in `strict/kotlin-internal-method`. No normalizing rule strips the
+suffix, so a real difference between the two sides still shows. An internal method never binds a field by its Kotlin name, because the name
+it carries is another one.
+
 A compile line that starts with `warning ` is a warning of the compiler, not an error: the build passes. A check that cannot
 prove its fact from one class reports it so (`class-not-introspected`: another class can make a class introspected with
 `@Introspected(classes)` or `(packages)`, and so can a dependency, which a visitor that looks at one class cannot see). A warning is
@@ -155,7 +162,7 @@ A completeness gap of one language goes in `corpus-divergences.txt` with the lan
 
 Adding a Kotlin case is adding a `kotlin/` directory (and the tag `lang:all`, with a `java/` and a `groovy/` directory next to it);
 `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` runs it (network needed), and `-Pcorpus.update` with it records what
-the Kotlin run says. `-Pcorpus.kotlin.processor=kapt` runs the same cases under kapt; the canary workflow does it every night. In CI, the
+the Kotlin run says. `-Pcorpus.kotlin.processor=kapt` runs the cases tagged `lang:all` or `kapt:yes` under kapt; the canary workflow does it every night. A kapt stub holds less nullability than KSP reads, so a case tagged `kapt:yes` may record `expected/compile.kapt.txt`, the findings under kapt where they differ from `compile.txt`. In CI, the
 job `build tools` runs `corpusKotlin` on every pull request, and it is a gated check.
 
 Kotlin compilation is the cost of the corpus. The batch builds `2 x N` subprojects with `--parallel`; the measurements of 23 cases are

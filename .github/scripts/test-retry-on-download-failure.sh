@@ -45,6 +45,10 @@ expect mixed 1 1 "failing tests"
 stub failedtask "Execution failed for task ':test-suite-java:test'.
 > Could not resolve com.example:x:1" 1
 expect failedtask 1 1 "Execution failed"
+stub japicmp "Could not determine the dependencies of task ':micronaut-graphql-tools:japiCmp'.
+> Could not resolve all dependencies for configuration ':micronaut-graphql-tools:runtimeClasspath'.
+   > Could not find any matches for com.graphql-java:graphql-java:[1.0,1000) as no versions of com.graphql-java:graphql-java are available." 1
+expect japicmp 0 2 recovered
 cat > "$work/always" <<STUB
 #!/usr/bin/env bash
 echo \$(( \$(cat "$work/always.count" 2>/dev/null || echo 0) + 1 )) > "$work/always.count"
