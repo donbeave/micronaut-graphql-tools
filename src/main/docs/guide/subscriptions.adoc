@@ -97,7 +97,12 @@ A `complete` from the client and the close of the connection cancel the operatio
 
 == Over WebSocket, the response is not there
 
-The upgrade request is available to resolvers, the HTTP response is not: it does not exist for a message of an open connection. The connection attributes are the way to carry what the handshake learned.
+A query, a mutation and a subscription over a WebSocket see the same parameters (see <<resolverParameters,Resolver parameters>>):
+
+* an `HttpRequest<?>` parameter is the upgrade request of the connection, and a `Principal` parameter is the principal of that request;
+* an `Optional<MutableHttpResponse<?>>` parameter is empty, and a plain `MutableHttpResponse<?>` or `HttpResponse<?>` parameter fails the field with `HTTP_RESPONSE_UNAVAILABLE`, see <<httpAccess,HTTP Request and Response>>: the response does not exist for a message of an open connection.
+
+The recommended way to carry data from the connection to the resolvers is the `payload` of `connection_init`: a `GraphQLConnectionInterceptor` reads it and returns the connection attributes, and a `GraphQLContextContributor` puts them into the `GraphQLContext` with `connectionAttributes()` of the execution request, where a resolver reads them as a context value.
 
 == Native image
 
