@@ -51,6 +51,9 @@ final class CorpusCase {
     static final Set<String> PROPERTY_KEYS = ['description', 'tags', 'environments'] as Set<String>
     static final String CONFIG_PREFIX = 'config.'
     static final String COMPILE_PREFIX = 'compile.'
+    /** {@code compile.processor=absent}: the case is compiled without the processor on the compiler path, as a build that does not register it */
+    static final String PROCESSOR = 'processor'
+    static final String PROCESSOR_ABSENT = 'absent'
 
     final String name
     final Path dir
@@ -79,8 +82,10 @@ final class CorpusCase {
             } else if (key.startsWith(COMPILE_PREFIX)) {
                 String setting = key.substring(COMPILE_PREFIX.length())
                 String value = properties.getProperty(key)
-                if (setting == 'schema-dirs' ? !CompileOptions.DIRS.contains(value) : !setting.startsWith('option.')) {
-                    problems.add("${PROPERTIES}: unknown compile setting '${key}' (known: compile.schema-dirs=${CompileOptions.DIRS.join('|')}, compile.option.<key>)".toString())
+                boolean valid = setting == 'schema-dirs' ? CompileOptions.DIRS.contains(value)
+                        : setting == PROCESSOR ? value in ['present', PROCESSOR_ABSENT] : setting.startsWith('option.')
+                if (!valid) {
+                    problems.add("${PROPERTIES}: unknown compile setting '${key}' (known: compile.schema-dirs=${CompileOptions.DIRS.join('|')}, compile.processor=present|${PROCESSOR_ABSENT}, compile.option.<key>)".toString())
                 } else {
                     compile.put(setting, value)
                 }
@@ -182,6 +187,11 @@ final class CorpusCase {
     /** @return whether the checked compilation of the case has the checks switched off ({@code compile.option.<processor>.checks=false}) */
     boolean checksOff() {
         return compile.get('option.' + CompileOptions.CHECKS)?.trim()?.toLowerCase() in ['false', 'no', 'off']
+    }
+
+    /** @return whether the case is compiled without the processor: nothing is checked at compile time and the startup sees what a build without it produces */
+    boolean processorAbsent() {
+        return compile.get(PROCESSOR) == PROCESSOR_ABSENT
     }
 
     boolean hasTag(String tag) {
@@ -294,6 +304,10 @@ final class CorpusCase {
                     problems.add("stale override ${EXPECTED}/${language.dir}/${file}: it equals ${EXPECTED}/${file}".toString())
                 }
             }
+        }
+        if (processorAbsent() && (baseExpected.containsKey('compile.txt') || baseExpected.containsKey('compile.kapt.txt') ||
+                expectedFiles.values().any { it.containsKey('compile.txt') })) {
+            problems.add("${EXPECTED}/compile.txt: a case with compile.processor=absent has no compile-time verdict".toString())
         }
         if (baseExpected.containsKey('compile.kapt.txt')) {
             if (!hasTag('kapt:yes')) {

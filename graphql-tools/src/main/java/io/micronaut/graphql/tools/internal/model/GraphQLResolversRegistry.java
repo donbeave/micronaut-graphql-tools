@@ -39,6 +39,7 @@ import io.micronaut.graphql.tools.internal.exceptions.implementation.TypeResolve
 import io.micronaut.graphql.tools.resolver.MutationResolver;
 import io.micronaut.graphql.tools.resolver.QueryResolver;
 import io.micronaut.graphql.tools.resolver.SubscriptionResolver;
+import io.micronaut.graphql.tools.resolver.TypeResolver;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.qualifiers.Qualifiers;
@@ -130,7 +131,8 @@ public final class GraphQLResolversRegistry {
         if (beanDefinition.isAbstract()) {
             return;
         }
-        if (declaredModel(beanDefinition) == null && typeResolverContractReader.apply(beanDefinition).isEmpty()) {
+        if (declaredModel(beanDefinition) == null && typeResolverContractReader.apply(beanDefinition).isEmpty()
+                && !TypeResolver.class.isAssignableFrom(getUserBeanType(beanDefinition))) {
             throw new IncorrectAnnotationException(beanDefinition.getBeanType());
         }
         if (!markersOf(beanDefinition).admits(method.getMethodName())) {
@@ -160,6 +162,25 @@ public final class GraphQLResolversRegistry {
         String[] operations = metadata.stringValues(ResolverContracts.class, "operations");
         String[] methods = metadata.stringValues(ResolverContracts.class, "methods");
         return new ResolverMarkers(List.of(operations), null, methods.length == 0 ? null : Set.of(methods));
+    }
+
+    // a marker bean that the build did not process has no executable method that the registry is told about, so the startup
+    // asks the bean context for the beans of each marker interface and reads what the build recorded for them
+    private void findUnrecordedMarkerBeans() {
+        for (Class<?> marker : List.of(QueryResolver.class, MutationResolver.class, SubscriptionResolver.class)) {
+            for (BeanDefinition<?> beanDefinition : beanContext.getBeanDefinitions(marker)) {
+                if (!beanDefinition.isAbstract() && markersOf(beanDefinition).operations().isEmpty()
+                        && !unreadableRootMarkers.contains(beanDefinition)) {
+                    unreadableRootMarkers.add(beanDefinition);
+                }
+            }
+        }
+        for (BeanDefinition<?> beanDefinition : beanContext.getBeanDefinitions(TypeResolver.class)) {
+            if (!beanDefinition.isAbstract() && typeResolverContractReader.apply(beanDefinition).isEmpty()
+                    && !unreadableTypeResolverContracts.contains(beanDefinition)) {
+                unreadableTypeResolverContracts.add(beanDefinition);
+            }
+        }
     }
 
     private static boolean implementsRootMarker(Class<?> beanType) {
@@ -364,15 +385,24 @@ public final class GraphQLResolversRegistry {
                 .anyMatch(it -> !it.getName().equals("groovy.lang.GroovyObject"));
     }
 
-    public void verifyTypeResolverContracts() {
-        registerIntroductionBeans();
-        resolveTypeResolverMethods();
-
+    /**
+     * Fails when a bean implements a root marker interface and the build did not record its operation. It runs before the
+     * check for a root resolver, because such a bean is not a root resolver for the registry without that record.
+     */
+    public void verifyRootMarkersRecorded() {
+        findUnrecordedMarkerBeans();
         unreadableRootMarkers.stream()
                 .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))
                 .ifPresent(beanDefinition -> {
                     throw TypeResolverContractsNotFoundException.forRootMarker(getUserBeanType(beanDefinition));
                 });
+    }
+
+    public void verifyTypeResolverContracts() {
+        registerIntroductionBeans();
+        resolveTypeResolverMethods();
+        findUnrecordedMarkerBeans();
+        verifyRootMarkersRecorded();
 
         unreadableTypeResolverContracts.stream()
                 .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))

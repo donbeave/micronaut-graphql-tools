@@ -16,19 +16,14 @@
 package io.micronaut.graphql.tools.mapping.resolver.marker
 
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.AnnotationMetadata
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.binding.internal.meta.ResolverContracts
-import io.micronaut.graphql.tools.exceptions.SchemaBindingException
-import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry
 import io.micronaut.graphql.tools.resolver.MutationResolver
 import io.micronaut.graphql.tools.resolver.QueryResolver
 import io.micronaut.graphql.tools.resolver.TypeResolver
-import io.micronaut.inject.BeanDefinition
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
@@ -115,21 +110,6 @@ type Book {
         type.stringValues(ResolverContracts, 'methods').toList() == ['summary']
         stock.stringValues(ResolverContracts, 'operations').toList() == ['mutation']
         stock.stringValues(ResolverContracts, 'methods').toList() == []
-    }
-
-    void "a marker bean whose contracts the build did not record fails loudly, naming the bean"() {
-        given:
-        startContext(SCHEMA, SPEC_NAME)
-        applicationContext.getBean(GraphQLResolversRegistry).setTypeResolverContractReader { BeanDefinition<?> definition -> [:] }
-
-        when:
-        getGraphQLBean()
-
-        then:
-        def e = thrown(BeanInstantiationException)
-        e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
-        e.cause.beanType == BookResolver
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
