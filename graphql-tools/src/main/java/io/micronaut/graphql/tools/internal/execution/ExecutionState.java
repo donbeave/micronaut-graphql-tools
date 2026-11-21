@@ -31,6 +31,7 @@ import io.micronaut.http.MutableHttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
@@ -335,4 +336,22 @@ public final class ExecutionState implements GraphQLExecutionRequest {
         return customizer;
     }
 
+    /**
+     * An async boundary of an execution that is still waiting for its source. The execution keeps its pending stages in a
+     * list that runs through the stages themselves, so tracking one allocates nothing and cancelling the execution can
+     * reach each of them.
+     */
+    abstract static class PendingStage extends CompletableFuture<Object> {
+
+        @Nullable
+        PendingStage previous;
+        @Nullable
+        PendingStage next;
+        boolean listed;
+
+        /**
+         * Cancels the source of this stage and completes the stage with an abort, because its execution was cancelled.
+         */
+        abstract void abort();
+    }
 }

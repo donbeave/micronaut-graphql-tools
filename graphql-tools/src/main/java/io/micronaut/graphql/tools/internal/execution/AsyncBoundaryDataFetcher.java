@@ -106,7 +106,7 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
     }
 
     /** The future that graphql-java continues on, and the callback of the source. */
-    private static final class Boundary extends PendingStage implements BiConsumer<Object, Throwable> {
+    private static final class Boundary extends ExecutionState.PendingStage implements BiConsumer<Object, Throwable> {
 
         private final ExecutionState state;
         private final CompletionStage<?> source;
