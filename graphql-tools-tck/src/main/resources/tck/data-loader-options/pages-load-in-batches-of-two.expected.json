@@ -1,0 +1,9 @@
+{
+  "data": {
+    "readers": [
+      { "name": "ada", "pages": [{ "title": "ada-1" }, { "title": "ada-2" }] },
+      { "name": "grace", "pages": [{ "title": "grace-1" }, { "title": "grace-2" }] },
+      { "name": "lin", "pages": [{ "title": "lin-1" }, { "title": "lin-2" }] }
+    ]
+  }
+}

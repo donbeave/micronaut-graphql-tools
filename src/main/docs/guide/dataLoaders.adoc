@@ -17,7 +17,7 @@ snippet::example.tck.DataLoaderScenario[project-base="test-suite", source="test"
 The rules:
 
 * The parameter can be in any position after the source object. It is not an argument of the field, so it does not count against the arguments of the schema field, and the other parameters still bind by name.
-* The type arguments must be the types of the loader bean. A parameter that matches no loader, or more than one, fails the startup with `[data-loader-not-found]`, and the message names the method, the parameter and the loaders that exist. Name the loader with `@Named("<name>")` on the parameter when two loaders have the same types.
+* The type arguments must be the types of the loader bean. A parameter that matches no loader, or more than one, fails the startup with `[data-loader-not-found]`, and the message names the method, the parameter and the loaders that exist. Name the loader with `@Named("<name>")` on the parameter when two loaders have the same types. A wildcard element type, which Kotlin writes for a non-final class (`List<? extends Item>`), is matched by its bound, so it finds the loader declared as `List<Item>`.
 * A raw `DataLoader` parameter, or `DataLoader<Object, Object>`, is rejected with `[argument-mismatch]`. The compile-time check reports the same error as the startup, because both use the same binding rules. Whether a matching loader bean exists is a fact about the whole program, so only the startup reports it.
 * The match is made at startup and the field reads its loader by position: no string lookup per call.
 * A resolver with a `DataLoader` parameter needs the library's invocation. When the application provides its own `GraphQLInvocation`, the startup fails with `[execution-context-unavailable]`.
@@ -30,7 +30,7 @@ The registry of an execution holds no loader when it is created. A loader is cre
 
 An execution is one HTTP request, or one operation on a WebSocket connection. Each has its own registry, so two operations of one connection, and two concurrent requests, never share a loader or its cache.
 
-When the application has no loader bean, the library sets no registry. graphql-java then keeps its empty registry and selects its no-op dispatch strategy, so an application without loaders pays nothing for them.
+When the application has no loader bean and no `GraphQLContextContributor` bean, the library sets no registry. graphql-java then keeps its empty registry and selects its no-op dispatch strategy, so an application without loaders pays nothing for them. With a contributor and no loader bean the library sets a new empty registry for each execution (see Context contributors), so the contributor can register loaders in it; graphql-java then dispatches the loaders that were registered.
 
 A batch function runs inside the propagated context of the execution, also when graphql-java dispatches from a thread that does not hold it. The library wraps the batch function once, when it creates the loader, and installs the context only when the calling thread lacks it, so a call on the right thread allocates nothing. `ServerRequestContext`, security and tracing elements are therefore visible in a batch function.
 
@@ -43,6 +43,25 @@ The library does not dispatch loaders itself: graphql-java does, and the library
 * On the floor leg (graphql-java 21.x) the `DataLoaderDispatcherInstrumentation` of graphql-java tracks the registry that the execution input carries, and treats only its own empty registry instance as "no data loaders". The lazy registry is not that instance, so the loaders created during the execution are dispatched, level by level.
 * From graphql-java 22 the execution selects a `DataLoaderDispatchStrategy`: `NO_OP` for the empty registry (an application without loader beans), and the per-level strategy for any other registry. Newer lines of graphql-java can dispatch from a thread that is not the one that fetched the field. The batch function wrapper installs the context there.
 * The tests of the library run these checks on the floor, default and ceiling legs.
+
+== Options of one loader
+
+A loader is created with the default `DataLoaderOptions`. To change the options of one loader, register a `DataLoaderOptionsCustomizer` bean: `loaderName()` names the loader (its `@Named` qualifier, or the class name with a lower-case first letter), and `customize` gets the options and returns the options that the loader uses.
+
+snippet::example.tck.DataLoaderOptionsScenario[project-base="test-suite", source="test", tags="options", indent="0"]
+
+* The customizer applies to its loader and to no other. A customizer that names no loader bean fails the startup with `[data-loader-not-found]`, and the message lists the loaders that exist.
+* Several customizers of one loader run by order (`@Order` or `Ordered#getOrder()`), lowest first, and each gets the options that the previous one returned.
+* It runs each time the loader is created, so once for each execution that uses the loader. Return new options (and a new cache map, if you set one) rather than shared ones.
+* The library calls no setter of `DataLoaderOptions`, because the setters differ between java-dataloader 3.x, where the options are mutable and a setter returns the same object, and 6.x, where they are immutable and are copied with `transform`. Write the body with the API of the version that your application has. The example overrides `maxBatchSize()`, which both lines have; with the setters of 3.x it is `return options.setMaxBatchSize(2);`, and with 6.x it is `return options.transform(builder -> builder.setMaxBatchSize(2));`.
+
+== Caching in a subscription
+
+A loader that a subscription operation creates has caching off. The loader of a query keeps the default, caching on. The cache of a `DataLoader` lives as long as the loader, and a subscription lives as long as its connection, so a cache would serve the value of the first event to every later one. A `DataLoaderOptionsCustomizer` can turn caching back on for a loader. The options that it gets already hold the default of the library, so on java-dataloader 6.x, which copies the field values in `transform`, set the value that you want explicitly instead of relying on the options you received.
+
+== The context of a batch function
+
+A `BatchLoaderWithContext` and a `MappedBatchLoaderWithContext` get the `GraphQLContext` of the execution from `BatchLoaderEnvironment#getContext()`, so a batch function reads the values that a `GraphQLContextContributor` added. A context that your own `DataLoaderOptionsCustomizer` provides with `setBatchLoaderContextProvider` wins.
 
 == Replacing the registry
 
@@ -58,7 +77,9 @@ snippet::example.tck.PerExecutionContextScenario[project-base="test-suite", sour
 * It runs on the execution executor (see the Execution page), after the `GraphQLExecutionInputCustomizer` and before graphql-java, inside the propagated context of the request. A contributor may therefore block and may use request-scoped beans.
 * `GraphQLExecutionRequest` is a read-only view of the execution: `httpRequest()` (null for a direct call), `httpResponse()` (empty on a WebSocket connection), `transport()` (`GraphQLTransport.HTTP`, `WEBSOCKET` or `DIRECT`), `connectionAttributes()` (empty except on a WebSocket connection) and `executionInput()`.
 * A contributor rejects an operation by throwing a `graphql.GraphQLError` (for example `GraphqlErrorException`): its error is the only error of the response, with `data` of `null`, and no resolver runs. Any other exception is logged at ERROR and the response carries one generic error, `extensions.code` `INTERNAL_ERROR`, without the message of the exception.
-* When the application has loader beans, `request.executionInput().getDataLoaderRegistry()` is the library's registry of this execution, and a contributor may register more loaders in it. Without loader beans it is graphql-java's shared empty registry, which no contributor may change.
+* `request.executionInput().getDataLoaderRegistry()` is a registry of this execution, and a contributor may register loaders in it: with loader beans it is the library's registry, and without them it is a new, mutable registry for each execution. A loader that a contributor registers lives and caches for that execution only, and a resolver reads it with `DataFetchingEnvironment#getDataLoader(String)`.
+
+snippet::example.tck.ContributorLoaderScenario[project-base="test-suite", source="test", tags="contributor-loader", indent="0"]
 
 == Startup failures
 
@@ -77,6 +98,4 @@ A `DataLoaderRegistry` bean is not used any more and fails the startup (BC-36). 
 
 == Not in this version
 
-* A per-loader options customizer. A loader is created with the default `DataLoaderOptions`; the options API differs between java-dataloader 3.x and 6.x, and a customizer needs a version-neutral shape first.
-* Caching is not switched off for the loaders of a subscription operation, and the `BatchLoaderEnvironment` of a `BatchLoaderWithContext` carries no context. Both need the options above.
 * An `@GraphQLBatch` annotation.

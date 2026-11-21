@@ -87,6 +87,11 @@ public final class AbstractTypeWiring {
         return typeClasses.find(objectType, declaredClass, mappingContext);
     }
 
+    @Nullable
+    Class<?> findInterfaceClass(InterfaceTypeDefinition interfaceType, TypeMappingContext mappingContext) {
+        return typeClasses.find(interfaceType, mappingContext);
+    }
+
     void wireUnion(UnionTypeDefinition unionTypeDefinition, Class<?> targetClass, TypeMappingContext mappingContext,
                    MemberBinder memberBinder, Consumer<List<Runnable>> inOrder) {
         Map<Class<?>, String> exactClasses = new HashMap<>();

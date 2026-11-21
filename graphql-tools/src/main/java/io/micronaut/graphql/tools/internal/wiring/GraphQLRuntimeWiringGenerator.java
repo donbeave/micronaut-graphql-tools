@@ -109,6 +109,7 @@ import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDat
 import io.micronaut.graphql.tools.execution.FieldDescriptor;
 import io.micronaut.graphql.tools.execution.FieldExecutionKind;
 import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
+import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.execution.FieldExecutionPlanner;
 import io.micronaut.graphql.tools.internal.execution.FieldFetcherDecorators;
 import io.micronaut.graphql.tools.internal.execution.SuspendInvoker;
@@ -211,6 +212,7 @@ public final class GraphQLRuntimeWiringGenerator {
 
     private final DictionaryValidator dictionaryValidator;
     private final DeclaringInterfaces interfaceIndex;
+    private final Set<String> boundUnreturnedInterfaces = new HashSet<>();
 
     private final UnreachableTypeChecks unreachableTypeChecks;
 
@@ -407,7 +409,9 @@ public final class GraphQLRuntimeWiringGenerator {
             checks.unboundEnumConstants(processed, typeDefinitionRegistry, typeModel);
         }
         if (checks.enabled(BindingCode.UNUSED_DICTIONARY_ENTRY)) {
-            checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), processed.keySet(), allowedTypes);
+            Set<String> usedTypes = new HashSet<>(processed.keySet());
+            usedTypes.addAll(boundUnreturnedInterfaces);
+            checks.unusedDictionaryEntries(schemaMappingDictionary.getTypes(), usedTypes, allowedTypes);
         }
         if (checks.enabled(BindingCode.INTERFACE_READ_THROUGH_IMPLEMENTATION)) {
             checks.interfacesReadThroughImplementations(interfacesReadThroughImplementations);
@@ -463,7 +467,8 @@ public final class GraphQLRuntimeWiringGenerator {
                 suspendInvoker);
         boolean subscriptionField = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
         DataFetcher<Object> planned = FieldExecutionPlanner.plan(fetcher, verdict, subscriptionField,
-                applicationContext.getConversionService(), fieldExecutor);
+                applicationContext.getConversionService(), fieldExecutor,
+                applicationContext.findBean(LibraryDataFetcherExceptionHandler.class).orElse(null));
         typeRuntimeWiringBuilder.dataFetcher(
                 mappingContext.getFieldDefinition().getName(),
                 fieldDecorators.apply(new FieldDescriptor(coordinates(mappingContext),
@@ -1085,6 +1090,7 @@ public final class GraphQLRuntimeWiringGenerator {
         bindings.resolverBindings().forEach((method, coordinates) ->
                 resolverBindings.computeIfAbsent(method, it -> new TreeSet<>()).addAll(coordinates));
         bindingFailures.addAll(bindings.failures());
+        boundUnreturnedInterfaces.addAll(bindings.boundUnreturned());
         ambiguities = ambiguityLog.snapshot().plus(bindings.ambiguities());
     }
 
@@ -1299,6 +1305,11 @@ public final class GraphQLRuntimeWiringGenerator {
                                                       TypeMappingContext mappingContext) {
             return GraphQLRuntimeWiringGenerator.this.methodNotFound(objectTypeName, sourceClass, fieldName,
                     mappingContext);
+        }
+
+        @Override
+        public Class<?> findInterfaceClass(InterfaceTypeDefinition interfaceType, TypeMappingContext mappingContext) {
+            return abstractTypeWiring.findInterfaceClass(interfaceType, mappingContext);
         }
 
         @Override
