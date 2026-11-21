@@ -35,7 +35,7 @@ import java.util.concurrent.CompletionStage
 @CompileStatic
 @Singleton
 @Requires(property = 'tck.scenario', value = 'http')
-class TenantContributor implements GraphQLContextContributor {
+class HttpTenantContributor implements GraphQLContextContributor {
 
     @Override
     void contribute(GraphQLContext context, GraphQLExecutionRequest request) {

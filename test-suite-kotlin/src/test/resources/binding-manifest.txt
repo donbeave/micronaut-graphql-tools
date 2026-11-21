@@ -19,7 +19,7 @@ Int -> scalar ; Int ; - ; -
 JSON -> scalar ; JSON ; - ; -
 Locale -> scalar ; Locale ; - ; -
 Mutation -> object ; - ; - ; -
-Mutation.addBook(id: ID!): AddBookPayload! -> root ; example.graphql.mutation.AddBookMutation#addBook(java.lang.String) ; example.graphql.type.AddBookPayload ; example.graphql.type.AddBookPayload
+Mutation.addBook(id: ID!): AddBookPayload! -> root ; example.graphql.mutation.AddBookMutation#addBook(java.lang.String, graphql.schema.DataFetchingEnvironment) ; example.graphql.type.AddBookPayload ; example.graphql.type.AddBookPayload
 Mutation.signIn(username: String!, password: String!): SignInPayload! -> root ; example.graphql.mutation.SignInSignUpMutations#signIn(java.lang.String, java.lang.String) ; example.graphql.type.SignInPayload ; example.graphql.type.SignInPayload
 Mutation.signUp(input: SignUpInput!): SignUpPayload! -> root ; example.graphql.mutation.SignInSignUpMutations#signUp(example.graphql.input.SignUpInput) ; example.graphql.type.SignUpPayload ; example.graphql.type.SignUpPayload
 Profile -> object ; example.graphql.type.Profile ; - ; -
@@ -27,7 +27,7 @@ Profile.fullName: String! -> property ; example.graphql.type.Profile#fullName ; 
 Profile.username: String! -> property ; example.graphql.type.Profile#username ; java.lang.String ; java.lang.String
 Query -> object ; - ; - ; -
 Query.allBooks: [Book!]! -> root ; example.graphql.query.AllBooksQuery#allBooks() ; java.util.List<example.data.Book> ; java.util.List<example.data.Book>
-Query.currentUser: User -> root ; example.graphql.query.CurrentUserQuery#currentUser() ; example.data.User ; example.data.User
+Query.currentUser: User -> root ; example.graphql.query.CurrentUserQuery#currentUser(graphql.schema.DataFetchingEnvironment) ; example.data.User ; example.data.User
 Query.echoInstant(at: Instant!): Instant! -> root ; example.graphql.query.ScalarsQuery#echoInstant(java.time.Instant) ; java.time.Instant ; java.time.Instant
 Query.echoJson(data: JSON): JSON -> root ; example.graphql.query.ScalarsQuery#echoJson(java.lang.Object) ; java.lang.Object ; java.lang.Object
 Query.echoLocale(tag: Locale!): Locale! -> root ; example.graphql.query.ScalarsQuery#echoLocale(java.util.Locale) ; java.util.Locale ; java.util.Locale

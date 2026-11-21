@@ -34,7 +34,7 @@ private const val TENANT = "tck.tenant"
 
 @Singleton
 @Requires(property = "tck.scenario", value = "http")
-class TenantContributor : GraphQLContextContributor {
+class HttpTenantContributor : GraphQLContextContributor {
 
     override fun contribute(context: GraphQLContext, request: GraphQLExecutionRequest) {
         request.httpRequest()?.headers?.get("X-Tenant", String::class.java)?.ifPresent { tenant -> context.put(TENANT, tenant) }

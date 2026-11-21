@@ -380,9 +380,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
         /** The timer of {@code execution.timeout} fired: cancel the execution and answer the client now. */
         void timeOut() {
+            // the answer first: cancelling the state aborts the pending stages, and the execution would finish with their partial data
+            complete(timedOut(timeout));
             state.cancel();
             state.finished();
-            complete(timedOut(timeout));
         }
 
         @Override
