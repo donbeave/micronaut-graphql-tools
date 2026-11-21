@@ -218,8 +218,9 @@ plugins {
     id("org.jetbrains.kotlin.kapt") version "${KOTLIN}" apply false
 }
 """)
-        // kapt: one JVM per compilation, so that the options of one case cannot stay in the system properties of the next (javac
-        // copies a micronaut option there and the first value stays)
+        // kapt: a worker process of its own (the worker JVM arguments of each project are unique, see writeProject), so that the
+        // options of one case cannot stay in the system properties of the next (javac copies a micronaut option there and the first
+        // value stays)
         // the build runs every case in one daemon, whose default heap of 512 MiB runs out at about 80 cases
         Files.writeString(buildDir.resolve('gradle.properties'),
                 'kapt.workers.isolation=process\norg.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=1g\n')
@@ -309,7 +310,19 @@ plugins {
         List<String> arguments = values.findAll { it.value != null }.collect { String key, String value ->
             "arg(\"${key}\", \"${value.replace('\\', '/')}\")".toString()
         }
-        String options = processor == Processor.KSP ? "ksp {\n    ${arguments.join('\n    ')}\n}" : "kapt {\n    arguments {\n        ${arguments.join('\n        ')}\n    }\n}"
+        // Gradle reuses an idle worker process for the next task that asks for the same JVM arguments, so a kapt worker that served
+        // one compilation also serves a later one, with the micronaut options of the first still in its system properties (javac
+        // copies them there and the first value wins). A JVM argument of its own for every compilation gives each one a fresh process.
+        String options = processor == Processor.KSP ? "ksp {\n    ${arguments.join('\n    ')}\n}" : """\
+kapt {
+    arguments {
+        ${arguments.join('\n        ')}
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
+    kaptProcessJvmArgs.add("-Dcorpus.kapt.worker=${name}")
+}"""
         Files.writeString(project.resolve('build.gradle.kts'), """\
 plugins {
     id("org.jetbrains.kotlin.jvm")
