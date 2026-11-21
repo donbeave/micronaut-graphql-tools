@@ -1,0 +1,1 @@
+unsupported-return-type Query.mustReturn schema.graphqls:7:3

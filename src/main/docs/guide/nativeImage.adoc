@@ -3,3 +3,24 @@ NOTE: This page is pending. It will be written with the user guide (epic #97).
 == Architecture rules
 
 A native image needs configuration for every reflective access, so the build keeps the library free of it. `ArchitectureRulesSpec` fails when a class of the library or of `graphql-tools-binding` looks up a class, member or annotation reflectively (`Class.forName`, `getMethod`, `getDeclaredMethod`, `getDeclaredAnnotation`, `getEnumConstants`, `setAccessible`, `java.lang.reflect` types other than `Modifier`, `java.lang.invoke`), when it depends on Jackson, or when the public API exposes an internal type. The allowlist is empty: the type resolver contracts that a bean inherits are written by the compile-time visitor into the annotation metadata of the bean and read from the bean definition, so a class that is a type resolver only through an interface binds the same way on the JVM and in a native image (the build needs `micronaut-graphql-tools-processor`; see BC-33). The same holds for the marker interfaces of <<resolverContracts,Resolver Contracts>>: the processor records the root operation, the source type of `TypeResolver<T>` and the contract methods, and the registry reads no class annotation by reflection (BC-34).
+
+== What the native tests cover
+
+The native image tests (`./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest`) run the JUnit 5 tests of the Java and the Kotlin example suites as native binaries. The tests that exercise the native-sensitive paths are the same ones that run on the JVM, and most of them are the scenarios of the execution-behaviour TCK, which are written once and run in both suites, so the native run covers what the JVM run covers. Every category below has a test in the Java suite and in the Kotlin suite (the Kotlin `suspend` category is Kotlin only):
+
+* inputs, including input errors
+* enums
+* interfaces and unions
+* a scalar mapping
+* a subscription
+* inherited resolver contracts
+* directives
+* error handling and error mapping
+* the binding manifest, with the detection of `Object` methods in strict mode
+* schema discovery by index
+* the execution thread: a resolver does not run on an event-loop thread (the test asserts that the thread is not `NonBlocking`, not its name)
+* context propagation, including the per-execution context contributors
+* async returns
+* Kotlin `suspend` functions
+
+Groovy has no native test, because Spock cannot run natively: the Groovy example runs its tests on the JVM and has a native smoke test of its own. The table of categories, with the test of each, is in the contributor guide (`CONTRIBUTING.md`) and `checkNativeCoverage` keeps it in step with the suites.

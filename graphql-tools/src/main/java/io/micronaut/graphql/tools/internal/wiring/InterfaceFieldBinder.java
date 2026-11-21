@@ -73,6 +73,8 @@ public final class InterfaceFieldBinder {
     private final Map<String, List<WaitingField>> waitingOnInterface = new HashMap<>();
     // the sequence numbers of the waiting fields already listed under their unbound interfaces: once is enough
     private final Set<Long> listed = new HashSet<>();
+    private final Map<String, Class<?>> unreturnedClasses = new HashMap<>();
+    private final Set<String> boundUnreturned = new TreeSet<>();
     private long nextSequence;
     private final List<InterfaceField> interfaceResolverFields = new ArrayList<>();
     private final List<InterfaceField> ownInterfaceFields = new ArrayList<>();
@@ -104,7 +106,7 @@ public final class InterfaceFieldBinder {
     InterfaceBindings bind() {
         bindInterfaceFields();
         return new InterfaceBindings(Map.copyOf(fieldBindings), Map.copyOf(resolverBindings), ambiguityLog.snapshot(),
-                List.copyOf(failures));
+                List.copyOf(failures), Set.copyOf(boundUnreturned));
     }
 
     private List<InterfaceResolverMethod> findInterfaceResolverMethods(InterfaceField field) {
@@ -114,6 +116,10 @@ public final class InterfaceFieldBinder {
         for (InterfaceTypeDefinition interfaceTypeDefinition
                 : declaringInterfaces.of(field.objectTypeDefinition(), fieldName)) {
             Class<?> interfaceClass = processedTypes.get(interfaceTypeDefinition.getName());
+            boolean unreturned = interfaceClass == null;
+            if (unreturned) {
+                interfaceClass = unreturnedInterfaceClass(interfaceTypeDefinition, field.mappingContext());
+            }
 
             if (interfaceClass == null || interfaceClass.equals(field.ownSourceClass())) {
                 continue;
@@ -123,10 +129,29 @@ public final class InterfaceFieldBinder {
                     : graphQLResolversRegistry.findTypeExecutableMethods(interfaceClass,
                     interfaceTypeDefinition.getName(), fieldName)) {
                 result.add(new InterfaceResolverMethod(interfaceTypeDefinition, interfaceClass, method));
+                if (unreturned) {
+                    boundUnreturned.add(interfaceTypeDefinition.getName());
+                }
             }
         }
 
         return result;
+    }
+
+    // an interface that no field returns is never processed, so its class comes from the dictionary or the derivation
+    @Nullable
+    private Class<?> unreturnedInterfaceClass(InterfaceTypeDefinition interfaceType, TypeMappingContext mappingContext) {
+        if (unreturnedClasses.containsKey(interfaceType.getName())) {
+            return unreturnedClasses.get(interfaceType.getName());
+        }
+        Class<?> found = null;
+        try {
+            found = callbacks.findInterfaceClass(interfaceType, mappingContext);
+        } catch (AbstractMappingException e) {
+            failures.add(e);
+        }
+        unreturnedClasses.put(interfaceType.getName(), found);
+        return found;
     }
 
     private void takeDiscoveredFields() {
@@ -367,6 +392,14 @@ public final class InterfaceFieldBinder {
         MethodNotFoundException methodNotFound(String objectTypeName, Class<?> sourceClass, String fieldName,
                                                TypeMappingContext mappingContext);
 
+        /**
+         * @param interfaceType  an interface that no field returned, so the type phase bound no class to it
+         * @param mappingContext where a failure is reported
+         * @return the class that the dictionary or the derivation names for it, or null
+         */
+        @Nullable
+        Class<?> findInterfaceClass(InterfaceTypeDefinition interfaceType, TypeMappingContext mappingContext);
+
         @Nullable
         String resolverDirective(FieldDefinition fieldDefinition);
     }
@@ -390,9 +423,11 @@ public final class InterfaceFieldBinder {
      * @param resolverBindings the coordinates each resolver method was bound to, by method
      * @param ambiguities      the fields that both sides could bind
      * @param failures         the failures of the fields it could not bind
+     * @param boundUnreturned  the interfaces that no field returns and whose resolver bound a field
      */
     record InterfaceBindings(Map<String, String> fieldBindings, Map<String, Set<String>> resolverBindings,
-                             Ambiguities ambiguities, List<AbstractMappingException> failures) {
+                             Ambiguities ambiguities, List<AbstractMappingException> failures,
+                             Set<String> boundUnreturned) {
     }
 
 }

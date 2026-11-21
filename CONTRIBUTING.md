@@ -56,6 +56,29 @@ The example applications are three separate Gradle projects with the same schema
 
 Each native test takes about 5 to 7 minutes and 5 GB of memory: run them one after another.
 
+#### Native coverage
+
+`nativeTest` runs every JUnit 5 test of the suite as a native binary, so the table below is the list of feature categories that must keep a test in the Java and Kotlin suites (the Groovy example has the native smoke test). A category that runs a TCK scenario names it: the scenario is written once and `example.tck.GraphQLToolsTckTest` runs it in both suites, so the native run covers what the JVM run covers. `checkNativeCoverage` (part of `check`) fails when a row names a test class that is missing from a suite it lists, or a scenario that `scenarios.txt` does not list. Add a row when you add a feature category, and keep the table in step with the native page of the guide.
+
+<!-- native-coverage:begin -->
+| Category | Test class | TCK scenario | Suites |
+| --- | --- | --- | --- |
+| Inputs | `example.tck.GraphQLToolsTckTest` | `arguments`, `input-errors` | Java, Kotlin |
+| Enums | `example.enums.EnumValuesTest` | `enums` | Java, Kotlin |
+| Interfaces and unions | `example.tck.GraphQLToolsTckTest` | `abstract-types` | Java, Kotlin |
+| Scalar mapping | `example.scalars.ScalarsTest` | | Java, Kotlin |
+| Subscription | `example.tck.WebSocketTest` | `websocket` | Java, Kotlin |
+| Inherited resolver contracts | `example.contracts.InheritedContractTest` | | Java, Kotlin |
+| Directives | `example.directives.DirectiveWiringTest` | | Java, Kotlin |
+| Error handling | `example.tck.GraphQLToolsTckTest` | `errors`, `error-mapping`, `error-handling`, `error-details` | Java, Kotlin |
+| Binding manifest and strict-mode `Object` method detection | `example.manifest.BindingManifestTest` | | Java, Kotlin |
+| Schema discovery by index | `example.discovery.SchemaDiscoveryTest` | | Java, Kotlin |
+| Execution thread (not an event-loop thread) | `example.tck.EventLoopMarkerTest` | `execution-thread`, `execution-thread-none` | Java, Kotlin |
+| Context propagation | `example.tck.GraphQLToolsTckTest` | `per-execution-context`, `async-context` | Java, Kotlin |
+| Async returns | `example.tck.GraphQLToolsTckTest` | `return-types` | Java, Kotlin |
+| Kotlin `suspend` | `example.suspend.SuspendTest` | | Kotlin |
+<!-- native-coverage:end -->
+
 The three schemas (`src/main/resources/schema.graphqls`) are copies; `./gradlew :test-suite-java:checkSuiteSchemaParity` (part of `check`) fails when they differ.
 
 Groovy has no native test, because Spock cannot run natively: its extensions are loaded reflectively and it ships no native metadata. The Groovy application is smoke-tested natively instead. `./gradlew :test-suite-groovy:nativeSmokeTest` (Oracle GraalVM 25, about 5 minutes and 5 GB) builds the native executable with `:test-suite-groovy:nativeCompile`, starts it on a free port, posts the queries of the Java and Kotlin smoke tests to `/graphql` (`src/nativeSmoke/groovy/NativeSmoke.groovy`), asserts the response bodies and stops the process; add `-PgraphqlJavaLeg=ceiling` for another leg. Groovy 4.0.x ships no GraalVM metadata, so the reachability metadata the Groovy runtime needs is in `test-suite-groovy/src/main/resources/META-INF/native-image`: the `invokedynamic` call sites are off, the example code is `@CompileStatic`, SAM arguments are Java lambdas (a closure passed as a SAM type is coerced at run time, which the image cannot do), and each closure class that a Groovy method (`findAll`, `collect`, ...) calls is listed in `reflect-config.json`; add one when you add such a closure, the smoke test fails without it. The Spock suite itself runs on the JVM only.

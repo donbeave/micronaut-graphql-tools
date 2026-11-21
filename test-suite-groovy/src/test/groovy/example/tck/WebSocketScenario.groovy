@@ -15,22 +15,31 @@
  */
 package example.tck
 
+import graphql.GraphQLError
+import graphql.GraphqlErrorBuilder
 import graphql.schema.DataFetchingEnvironment
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
+import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer
+import io.micronaut.graphql.tools.error.GraphQLExceptionContext
+import io.micronaut.graphql.tools.error.GraphQLExceptionMapper
 import io.micronaut.graphql.tools.internal.execution.ExecutionState
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionResult
 import io.micronaut.http.context.ServerRequestContext
 import jakarta.inject.Singleton
+import org.dataloader.BatchLoader
+import org.dataloader.DataLoader
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.NonBlocking
 
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -59,6 +68,60 @@ class TokenInterceptor implements GraphQLConnectionInterceptor {
 @Requires(property = 'tck.scenario', value = 'websocket')
 class CancelledStreams {
     final AtomicInteger count = new AtomicInteger()
+    final AtomicInteger echoKeys = new AtomicInteger()
+}
+
+/** Counts the keys that reach its batch function. */
+@CompileStatic
+@Singleton
+@Requires(property = 'tck.scenario', value = 'websocket')
+class EchoLoader implements BatchLoader<Integer, String> {
+
+    private final CancelledStreams counters
+
+    EchoLoader(CancelledStreams counters) {
+        this.counters = counters
+    }
+
+    @Override
+    CompletionStage<List<String>> load(List<Integer> keys) {
+        counters.echoKeys.addAndGet(keys.size())
+        return CompletableFuture.completedFuture(keys.collect { Integer key -> 'e' + key } as List<String>)
+    }
+}
+
+class TickFailure extends RuntimeException {
+    TickFailure() {
+        super('secret internal detail')
+    }
+}
+
+@CompileStatic
+@Singleton
+@Requires(property = 'tck.scenario', value = 'websocket')
+class TickFailureMapper implements GraphQLExceptionMapper<TickFailure> {
+
+    @Override
+    GraphQLError map(TickFailure exception, GraphQLExceptionContext context) {
+        return context.error('tick failed', [code: 'TICK_FAILED'] as Map<String, Object>)
+    }
+}
+
+@CompileStatic
+@Singleton
+@Requires(property = 'tck.scenario', value = 'websocket')
+class StreamCustomizer implements GraphQLErrorsCustomizer {
+
+    @Override
+    List<GraphQLError> customize(List<GraphQLError> errors) {
+        return errors.collect { GraphQLError error ->
+            Map<String, Object> extensions = new LinkedHashMap<String, Object>(error.extensions ?: [:] as Map<String, Object>)
+            extensions.put('stream', 'customized')
+            (GraphQLError) GraphqlErrorBuilder.newError()
+                    .message(error.message).path(error.path).locations(error.locations)
+                    .errorType(error.errorType).extensions(extensions).build()
+        }
+    }
 }
 
 @CompileStatic
@@ -97,6 +160,10 @@ class WebSocketQueries {
     int cancelledStreams() {
         return cancelled.count.get()
     }
+
+    int echoLoaderKeys() {
+        return cancelled.echoKeys.get()
+    }
 }
 
 @CompileStatic
@@ -109,6 +176,18 @@ class WebSocketSubscriptions {
 
     WebSocketSubscriptions(CancelledStreams cancelled) {
         this.cancelled = cancelled
+    }
+
+    Flux<Tick> failing() {
+        return Flux.error(new IllegalStateException('secret internal detail'))
+    }
+
+    Flux<Tick> failingMapped() {
+        return Flux.error(new TickFailure())
+    }
+
+    Flux<Tick> brokenEvent() {
+        return Flux.just(new Tick(1, true))
     }
 
     // tag::ws-subscription[]
@@ -135,6 +214,18 @@ class TickFields {
 
     boolean onEventLoop(Tick tick) {
         return Thread.currentThread() instanceof NonBlocking
+    }
+
+    CompletionStage<String> echo(Tick tick, DataLoader<Integer, String> loader) {
+        return loader.load(1)
+    }
+
+    CompletionStage<String> echoAgain(Tick tick, DataLoader<Integer, String> loader) {
+        return loader.load(1)
+    }
+
+    String broken(Tick tick) {
+        throw new IllegalStateException('secret internal detail')
     }
 
     String requestHeader(Tick tick) {

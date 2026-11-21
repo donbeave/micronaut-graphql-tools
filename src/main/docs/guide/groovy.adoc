@@ -43,7 +43,7 @@ Arguments are never `GString`: graphql-java passes `String` values, so a resolve
 
 == Sealed types
 
-A Groovy 4 `sealed` interface can be the Java type of a union or an interface. The library resolves the concrete type of a value from its class, so the permitted subclasses are an ordinary set of classes that you register for the schema types with the `SchemaMappingDictionary`, as for Java classes:
+A Groovy 4 `sealed` interface can be the Java type of a union or an interface. The library resolves the concrete type of a value from its class, so the permitted subclasses are an ordinary set of classes. The object types of a union or an interface are found among them by name (see <<sealedTypes,Sealed types>> of the type system page), and a class that the name does not find is registered with the `SchemaMappingDictionary`, as for Java classes:
 
 [source,groovy]
 ----
