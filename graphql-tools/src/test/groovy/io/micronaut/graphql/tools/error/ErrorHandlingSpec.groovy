@@ -22,6 +22,7 @@ import ch.qos.logback.core.read.ListAppender
 import graphql.ExecutionResult
 import graphql.GraphQLError
 import graphql.GraphqlErrorException
+import graphql.language.SourceLocation
 import io.micronaut.configuration.graphql.GraphQLInvocation
 import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.annotation.Requires
@@ -62,6 +63,8 @@ type Query {
   later: String
   laterRuntime: String
   rejected: String
+  emptyPath: String
+  withPath: String
   invalid: String
 }
 """
@@ -153,6 +156,33 @@ type Query {
         result.errors[0].extensions.reason == 'policy'
         result.errors[0].path == ['rejected']
         result.errors[0].locations.size() == 1
+    }
+
+    void "a GraphQLError with an empty path and an empty location list gets the path and the location of the field"() {
+        given:
+        startContext(SCHEMA, SPEC)
+
+        when:
+        Map body = executeQuery('{ ok emptyPath }').toSpecification()
+
+        then:
+        body.errors.size() == 1
+        body.errors[0].message == 'Empty'
+        body.errors[0].path == ['emptyPath']
+        body.errors[0].locations == [[line: 1, column: 6]]
+    }
+
+    void "a GraphQLError that has a path and a location keeps them"() {
+        given:
+        startContext(SCHEMA, SPEC)
+
+        when:
+        Map body = executeQuery('{ ok withPath }').toSpecification()
+
+        then:
+        body.errors.size() == 1
+        body.errors[0].path == ['custom', 0]
+        body.errors[0].locations == [[line: 7, column: 8]]
     }
 
     void "a ConstraintViolationException becomes one error for each violation, with the argument and its path"() {
@@ -263,6 +293,19 @@ type Query {
         result.errors[0].extensions == [code: 'INTERNAL_ERROR']
     }
 
+    void "a customizer that returns an empty list ends the chain and the response has no errors"() {
+        given:
+        startContext(SCHEMA, SPEC + '.empty')
+
+        when:
+        Map body = invoke('{ boom }').toSpecification()
+
+        then:
+        !body.containsKey('errors')
+        body.data == [boom: null]
+        CUSTOMIZER_CALLS.get() == 2
+    }
+
     // the customizers of the final error list belong to the invocation, which the transport calls
     private ExecutionResult invoke(String query) {
         Mono.from(applicationContext.getBean(GraphQLInvocation).invoke(new GraphQLInvocationData(query, null, [:]), null, null)).block()
@@ -313,6 +356,15 @@ type Query {
         CompletionStage<String> later() { CompletableFuture.<String> failedFuture(new NotFoundException(9)) }
 
         CompletionStage<String> laterRuntime() { CompletableFuture.<String> failedFuture(new IllegalStateException('secret later')) }
+
+        String emptyPath() {
+            throw GraphqlErrorException.newErrorException().message('Empty').path([]).build()
+        }
+
+        String withPath() {
+            throw GraphqlErrorException.newErrorException().message('Custom').path(['custom', 0])
+                    .sourceLocation(new SourceLocation(7, 8)).build()
+        }
 
         String rejected() {
             throw GraphqlErrorException.newErrorException().message('Not allowed').extensions([reason: 'policy']).build()
@@ -383,6 +435,39 @@ type Query {
         List<GraphQLError> customize(List<GraphQLError> errors) {
             CUSTOMIZER_CALLS.incrementAndGet()
             errors.collect { tag(it, 'second') }
+        }
+    }
+
+    @Singleton
+    @Order(1)
+    @Requires(property = 'spec.name', value = 'ErrorHandlingSpec.empty')
+    static class EmptyFirst implements GraphQLErrorsCustomizer {
+        @Override
+        List<GraphQLError> customize(List<GraphQLError> errors) {
+            CUSTOMIZER_CALLS.incrementAndGet()
+            errors
+        }
+    }
+
+    @Singleton
+    @Order(2)
+    @Requires(property = 'spec.name', value = 'ErrorHandlingSpec.empty')
+    static class EmptySecond implements GraphQLErrorsCustomizer {
+        @Override
+        List<GraphQLError> customize(List<GraphQLError> errors) {
+            CUSTOMIZER_CALLS.incrementAndGet()
+            []
+        }
+    }
+
+    @Singleton
+    @Order(3)
+    @Requires(property = 'spec.name', value = 'ErrorHandlingSpec.empty')
+    static class EmptyThird implements GraphQLErrorsCustomizer {
+        @Override
+        List<GraphQLError> customize(List<GraphQLError> errors) {
+            CUSTOMIZER_CALLS.incrementAndGet()
+            throw new IllegalStateException('a customizer after an empty list must not be called')
         }
     }
 

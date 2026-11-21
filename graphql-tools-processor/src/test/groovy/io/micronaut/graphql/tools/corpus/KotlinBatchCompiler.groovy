@@ -113,6 +113,11 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
         return corpusCase.name.replace('/', '-')
     }
 
+    /** The Kotlin module name of both subprojects of a case; an internal member compiles to {@code name$<module>} (#439). */
+    static String moduleName(CorpusCase corpusCase) {
+        return projectName(corpusCase)
+    }
+
     static String checkedName(CorpusCase corpusCase) {
         return projectName(corpusCase) + '--checked'
     }
@@ -325,6 +330,9 @@ kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
         javaParameters.set(true)
+        // the module name is part of the JVM name of an internal member (name\$module): both subprojects of a case use one name,
+        // so that the checked compilation and the started application see the same method
+        moduleName.set("${moduleName(c)}")
     }
 }
 

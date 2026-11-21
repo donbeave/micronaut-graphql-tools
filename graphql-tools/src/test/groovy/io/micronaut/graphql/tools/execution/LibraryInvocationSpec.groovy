@@ -57,7 +57,9 @@ import reactor.core.publisher.Mono
 import spock.lang.IgnoreIf
 import spock.lang.Requires as SpockRequires
 
+import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.ExecutorService
 
 /** The library's GraphQLInvocation: the executor hop, the call order, the step-aside rules and the startup failures. */
@@ -221,6 +223,25 @@ type Child {
         warningLogger().detachAppender(appender)
     }
 
+    void "an executor that throws a runtime exception from execute gives a failed publisher, not a thrown exception"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.execution.executor': 'throwing'])
+
+        when:
+        def publisher = applicationContext.getBean(GraphQLInvocation).invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)
+
+        then:
+        noExceptionThrown()
+
+        when:
+        Mono.from(publisher).block()
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == 'execute failed'
+        RESOLVER_THREADS.isEmpty()
+    }
+
     void "cancelling the result of an execution that is still queued skips its hop task"() {
         given:
         startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.execution.executor': 'queued'])
@@ -338,6 +359,25 @@ type Child {
         then:
         !applicationContext.findBean(LibraryGraphQLInvocation).isPresent()
         applicationContext.getBean(GraphQLInvocation) instanceof PrimaryInvocation
+        !ExecutionContextAvailability.isAvailable(applicationContext)
+
+        then:
+        appender.list.count { it.formattedMessage.contains('does not create its GraphQLInvocation bean') } == 1
+
+        cleanup:
+        infoLogger().detachAppender(appender)
+    }
+
+    void "an application @Primary factory method that returns DefaultGraphQLInvocation wins, with the INFO line"() {
+        given:
+        def appender = captureInfo()
+
+        when:
+        startContext(SCHEMA, SPEC_NAME + '.factory')
+
+        then:
+        !applicationContext.findBean(LibraryGraphQLInvocation).isPresent()
+        applicationContext.getBean(GraphQLInvocation) instanceof DefaultGraphQLInvocation
         !ExecutionContextAvailability.isAvailable(applicationContext)
 
         then:
@@ -475,6 +515,13 @@ type Child {
 
         @Bean
         @Singleton
+        @Named('throwing')
+        ExecutorService throwing() {
+            new ThrowingExecutor()
+        }
+
+        @Bean
+        @Singleton
         @Named('rejecting')
         ExecutorService rejecting() {
             def executor = Executors.newSingleThreadExecutor()
@@ -500,6 +547,48 @@ type Child {
         @Override
         Publisher<ExecutionResult> invoke(GraphQLInvocationData invocationData, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
             Mono.empty()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.factory')
+    @Factory
+    static class InvocationFactory {
+        @Bean
+        @Primary
+        @Singleton
+        DefaultGraphQLInvocation invocation() {
+            new DefaultGraphQLInvocation(null, null, null)
+        }
+    }
+
+    static class ThrowingExecutor extends AbstractExecutorService {
+        @Override
+        void execute(Runnable command) {
+            throw new IllegalStateException('execute failed')
+        }
+
+        @Override
+        void shutdown() {
+        }
+
+        @Override
+        List<Runnable> shutdownNow() {
+            []
+        }
+
+        @Override
+        boolean isShutdown() {
+            false
+        }
+
+        @Override
+        boolean isTerminated() {
+            false
+        }
+
+        @Override
+        boolean awaitTermination(long timeout, TimeUnit unit) {
+            true
         }
     }
 

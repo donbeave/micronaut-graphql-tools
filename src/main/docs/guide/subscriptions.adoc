@@ -65,7 +65,7 @@ Each connection keeps its own state, in the attributes of its `WebSocketSession`
 | `4429` | More than one `connection_init`.
 |===
 
-An operation that does not parse or validate is answered with an `error` message and ends. A result of an executed operation, also one with field errors, is a `next` message; the operation ends with `complete` (the client's own `complete` is not answered). If the stream of a subscription fails, the client receives an `error` message with a generic text, and the library logs the cause.
+An operation that does not parse or validate is answered with an `error` message and ends. A result of an executed operation, also one with field errors, is a `next` message; the operation ends with `complete` (the client's own `complete` is not answered). If the publisher of a subscription fails, the client receives an `error` message whose payload is the list of errors that the default error handling makes of the exception, the same as for a query (see the Errors page); an exception that no mapper handles is the generic `INTERNAL_ERROR` error without its message, and the library logs the cause.
 
 == Cancellation
 
