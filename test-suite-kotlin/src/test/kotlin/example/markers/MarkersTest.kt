@@ -48,6 +48,16 @@ class MarkersTest {
     }
 
     @Test
+    fun `a bean that mixes a root marker and a type resolver binds each method on its side`() {
+        ApplicationContext.run(mapOf(), MARKERS).use { context ->
+            assertEquals(
+                mapOf("crate" to mapOf("id" to "7", "tag" to "tag of 7"), "tag" to "root tag"),
+                run(context, "{ crate { id tag } tag }")
+            )
+        }
+    }
+
+    @Test
     fun `an implementation without a scope annotation is not a bean`() {
         ApplicationContext.run(mapOf(), MARKERS).use { context ->
             assertFalse(context.containsBean(UnscopedShelfQuery::class.java))

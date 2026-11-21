@@ -121,7 +121,7 @@ public final class GraphQLResolversRegistry {
             }
             return;
         }
-        if (!markers.admits(method.getMethodName(), arity(method))) {
+        if (!markers.admitsRoot(method.getMethodName(), arity(method))) {
             return;
         }
         rootResolvers.computeIfAbsent(beanDefinition, this::newItem).addExecutableMethod(method);
@@ -136,7 +136,7 @@ public final class GraphQLResolversRegistry {
                 && !TypeResolver.class.isAssignableFrom(getUserBeanType(beanDefinition))) {
             throw new IncorrectAnnotationException(beanDefinition.getBeanType());
         }
-        if (!markersOf(beanDefinition).admits(method.getMethodName(), arity(method))) {
+        if (!markersOf(beanDefinition).admitsType(method.getMethodName(), arity(method))) {
             return;
         }
 

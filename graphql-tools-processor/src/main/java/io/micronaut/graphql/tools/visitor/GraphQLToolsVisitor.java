@@ -72,6 +72,8 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
 
     private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
 
+    private static final String FACTORY = "io.micronaut.context.annotation.Factory";
+
     @Nullable
     private Compilation compilation;
 
@@ -126,10 +128,42 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         if (current != null && current.options.checks()) {
             recordTypeClass(current, element);
         }
-        if (current == null || current.failed || !current.options.checks()
-                || !isResolver(element) && !hasCoordinateMethod(element) || !ElementTypeModel.isBeanClass(element)) {
+        if (current == null || current.failed || !current.options.checks()) {
             return;
         }
+        if (isFactory(element)) {
+            checkFactoryBeans(current, element, context);
+        }
+        if (isCheckable(element) && ElementTypeModel.isBeanClass(element)) {
+            checkSafely(current, element, context);
+        }
+    }
+
+    private static boolean isCheckable(ClassElement element) {
+        return isResolver(element) || hasCoordinateMethod(element);
+    }
+
+    private static boolean isFactory(ClassElement element) {
+        return element.hasDeclaredStereotype(FACTORY);
+    }
+
+    // a concrete class that a factory method exposes as a bean has no scope annotation of its own, so no visit of the class
+    // makes it a bean: the startup binds it like any other, and so the check of the factory method returns it. A class that is
+    // a bean by itself is checked when it is visited.
+    private void checkFactoryBeans(Compilation current, ClassElement factory, VisitorContext context) {
+        for (MethodElement method : factory.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance().onlyDeclared())) {
+            if (!ElementTypeModel.isBeanFactoryMethod(method)) {
+                continue;
+            }
+            ClassElement exposed = method.getReturnType();
+            if (exposed != null && ElementTypeModel.isConcreteClass(exposed) && !ElementTypeModel.isBeanClass(exposed)
+                    && isCheckable(exposed) && current.factoryChecked.add(exposed.getName())) {
+                checkSafely(current, exposed, context);
+            }
+        }
+    }
+
+    private void checkSafely(Compilation current, ClassElement element, VisitorContext context) {
         try {
             check(current, element, context);
         } catch (RuntimeException e) {
@@ -388,6 +422,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         final Map<String, MemberClassRules.MemberClass> memberClasses = new LinkedHashMap<>();
         final List<ResolverClassFindings.ClassFindings> deferred = new ArrayList<>();
         final Set<String> reportedTypes = new HashSet<>();
+        final Set<String> factoryChecked = new HashSet<>();
         final ElementTypeModel model = new ElementTypeModel(coverage);
         // the warnings that a @GraphQLModels visited later can still remove
         final List<Pending> pending = new ArrayList<>();

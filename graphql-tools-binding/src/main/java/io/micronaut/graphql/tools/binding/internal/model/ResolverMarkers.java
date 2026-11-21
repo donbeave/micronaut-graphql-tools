@@ -56,6 +56,29 @@ public record ResolverMarkers(List<String> operations, @Nullable String sourceTy
     /**
      * @param name       the name of a method
      * @param parameters its number of parameters
+     * @return whether the method is a candidate on the root side: no contract interface declares methods, or a contract
+     * that is not bound to a source type declares it
+     */
+    public boolean admitsRoot(String name, int parameters) {
+        return contractMethods == null
+                || contractMethods.stream().anyMatch(it -> it.matches(name, parameters) && it.root());
+    }
+
+    /**
+     * @param name       the name of a method
+     * @param parameters its number of parameters
+     * @return whether the method is a candidate on the type side: no contract interface declares methods, or a contract
+     * that names a source type declares it. A bean that mixes a root marker and a {@code TypeResolver} contract binds each
+     * method on the side of the contract that declares it.
+     */
+    public boolean admitsType(String name, int parameters) {
+        return contractMethods == null
+                || contractMethods.stream().anyMatch(it -> it.matches(name, parameters) && it.model() != null);
+    }
+
+    /**
+     * @param name       the name of a method
+     * @param parameters its number of parameters
      * @return the root operations whose fields the method may bind, sorted; empty when every root type is open. The
      * operations of the contracts that declare the method decide, not those of the other contracts of the class.
      */
