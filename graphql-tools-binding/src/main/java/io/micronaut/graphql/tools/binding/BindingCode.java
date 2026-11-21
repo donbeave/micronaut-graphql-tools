@@ -117,7 +117,7 @@ public enum BindingCode {
     INCORRECT_CLASS_MAPPING("incorrect-class-mapping", false, false,
             "A Java class is mapped to a type it cannot serve."),
     /** Failure: a member is mapped outside the declared Java type. */
-    INCORRECT_MEMBER_MAPPING("incorrect-member-mapping", false, false,
+    INCORRECT_MEMBER_MAPPING("incorrect-member-mapping", false, true,
             "An object type of a union or interface is mapped to a Java type disjoint from the declared one."),
     /** Failure: a mapped implementation does not fit the abstract type. */
     INCORRECT_IMPLEMENTATION("incorrect-implementation", false, false,

@@ -37,6 +37,7 @@ Each package has a `package-info.java`. All packages below `internal` are implem
 | `io.micronaut.graphql.tools.binding` | Public API | `BindingCode` |
 | `...binding.internal.finding` | Internal | Findings and their rendering |
 | `...binding.internal.manifest` | Internal | The manifest renderer and the schema hash |
+| `...binding.internal.membership` | Internal | The rule that a union or interface member is not mapped to a disjoint class |
 | `...binding.internal.meta` | Internal | The resolver contracts annotation |
 | `...binding.internal.model` | Internal | The model of classes and members that the rules read |
 | `...binding.internal.plan` | Internal | The binding plan and the bean model |
