@@ -111,7 +111,8 @@ Application developers, who add it to the path that their compiler reads Microna
 ## Public and internal
 
 Application code does not import anything from this module. Its classes are used by the compiler only, through the visitor's
-service registration.
+service registration. `BindingRulesAccess` is the one exception: it is public only so that the `:benchmarks` module
+can run the per-class rules over compiler elements without a class in this package. It is internal, not API, and may change without notice.
 
 ## Relation to other modules
 

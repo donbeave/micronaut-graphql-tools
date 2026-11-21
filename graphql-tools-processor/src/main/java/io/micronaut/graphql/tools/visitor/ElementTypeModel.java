@@ -119,6 +119,14 @@ final class ElementTypeModel implements TypeModel {
     }
 
     /**
+     * @param element a class
+     * @return whether it is a concrete class, which a factory method can expose as a bean without a scope annotation of its own
+     */
+    static boolean isConcreteClass(ClassElement element) {
+        return !element.isInterface() && !element.isAbstract() && !element.isEnum() && !element.isRecord();
+    }
+
+    /**
      * @param element a resolver class, or an introduction interface that is a resolver bean
      * @return whether the class is one the visitor checks: a concrete class that is a bean, or an introduction advice
      * interface with a scope annotation of its own, whose methods are all abstract and whose generated bean is concrete. A concrete class is a bean when a
@@ -359,7 +367,7 @@ final class ElementTypeModel implements TypeModel {
                 List<JMethod> result = new ArrayList<>();
                 ResolverMarkers fixed = markers();
                 for (MethodElement method : element.getEnclosedElements(ElementQuery.ALL_METHODS.onlyInstance())) {
-                    if (isBindable(method) && fixed.admits(method.getName())) {
+                    if (isBindable(method) && fixed.admits(method.getName(), MarkerAnalysis.arity(method))) {
                         ElementMethod adapted = new ElementMethod(method);
                         methods.put(adapted.signature(), method);
                         result.add(adapted);

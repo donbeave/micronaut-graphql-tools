@@ -19,21 +19,16 @@ import jakarta.inject.Singleton;
 import example.ElapsedTime;
 import example.data.AuthenticationService;
 import example.data.User;
+import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 
 @Singleton
 @GraphQLRootResolver
 public class CurrentUserQuery {
 
-    private final AuthenticationService authenticationService;
-
-    public CurrentUserQuery(AuthenticationService authenticationService) {
-        this.authenticationService = authenticationService;
-    }
-
     @ElapsedTime
-    public User currentUser() {
-        return authenticationService.getCurrentUser().orElse(null);
+    public User currentUser(DataFetchingEnvironment environment) {
+        return environment.getGraphQlContext().get(AuthenticationService.CURRENT_USER);
     }
 
 }

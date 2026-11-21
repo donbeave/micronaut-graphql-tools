@@ -52,6 +52,8 @@ class DataLoaderOptionsSpec extends AbstractTest {
     static final List<Integer> CHUNKED_BATCHES = Collections.synchronizedList([])
     static final List<Integer> OTHER_BATCHES = Collections.synchronizedList([])
     static final List<Integer> SEEN_BY_SECOND = Collections.synchronizedList([])
+    static final List<Integer> RETURNED_BATCHES = Collections.synchronizedList([])
+    static final List<Integer> MUTATED_BATCHES = Collections.synchronizedList([])
     static final List<Object> CONTEXTS = Collections.synchronizedList([])
 
     @Language('GraphQL')
@@ -76,6 +78,8 @@ type Author {
   other: String
   contextual: String
   mappedContextual: String
+  returned: String
+  mutated: String
 }
 """
 
@@ -84,6 +88,8 @@ type Author {
         CHUNKED_BATCHES.clear()
         OTHER_BATCHES.clear()
         SEEN_BY_SECOND.clear()
+        RETURNED_BATCHES.clear()
+        MUTATED_BATCHES.clear()
         CONTEXTS.clear()
     }
 
@@ -161,6 +167,35 @@ type Author {
         CONTEXTS.size() == 2
         CONTEXTS.every { it instanceof GraphQLContext && ExecutionState.of(it as GraphQLContext) != null }
         CONTEXTS[0].is(CONTEXTS[1])
+    }
+
+    void "a customizer that returns new options with caching on re-enables the cache in a subscription"() {
+        given:
+        startContext(SCHEMA, SPEC)
+
+        when:
+        def result = run('subscription { authorStream(count: 3) { returned } }')
+        def events = Flux.from(result.<Publisher<ExecutionResult>> getData()).collectList().block()
+
+        then:
+        events[0].errors.isEmpty()
+        events[0].data.authorStream*.returned == ['r1', 'r1', 'r1']
+        RETURNED_BATCHES == [1]
+    }
+
+    @spock.lang.Requires({ DataLoaderOptions.methods.any { it.name == 'setCachingEnabled' } })
+    void "on java-dataloader 3.x a customizer that mutates the options it was given does not re-enable the cache"() {
+        given:
+        startContext(SCHEMA, SPEC)
+
+        when:
+        def result = run('subscription { authorStream(count: 3) { mutated } }')
+        def events = Flux.from(result.<Publisher<ExecutionResult>> getData()).collectList().block()
+
+        then:
+        events[0].errors.isEmpty()
+        events[0].data.authorStream*.mutated == ['u1', 'u1', 'u1']
+        MUTATED_BATCHES.sum() == 3
     }
 
     void "a customizer for a loader that no bean has fails the startup, naming the loaders that exist"() {
@@ -247,7 +282,63 @@ type Author {
         }
     }
 
+    @Requires(property = 'spec.name', pattern = SPEC + '(\\.unknown)?')
+    @Singleton
+    static class ReturnedLoader implements BatchLoader<Long, String> {
+        @Override
+        CompletionStage<List<String>> load(List<Long> keys) {
+            RETURNED_BATCHES << keys.size()
+            CompletableFuture.completedFuture(keys.collect { 'r' + it })
+        }
+    }
+
+    @Requires(property = 'spec.name', pattern = SPEC + '(\\.unknown)?')
+    @Singleton
+    static class MutatedLoader implements BatchLoader<Long, String> {
+        @Override
+        CompletionStage<List<String>> load(List<Long> keys) {
+            MUTATED_BATCHES << keys.size()
+            CompletableFuture.completedFuture(keys.collect { 'u' + it })
+        }
+    }
+
     // ---- the customizers
+
+    @Requires(property = 'spec.name', value = SPEC)
+    @Singleton
+    static class ReturnedCustomizer implements DataLoaderOptionsCustomizer {
+        @Override
+        String loaderName() {
+            'returnedLoader'
+        }
+
+        @Override
+        DataLoaderOptions customize(DataLoaderOptions options) {
+            new DataLoaderOptions() {
+                @Override
+                boolean cachingEnabled() {
+                    true
+                }
+            }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC)
+    @Singleton
+    static class MutatingCustomizer implements DataLoaderOptionsCustomizer {
+        @Override
+        String loaderName() {
+            'mutatedLoader'
+        }
+
+        @Override
+        DataLoaderOptions customize(DataLoaderOptions options) {
+            if (options.metaClass.respondsTo(options, 'setCachingEnabled', boolean)) {
+                options.setCachingEnabled(true)
+            }
+            options
+        }
+    }
 
     @Requires(property = 'spec.name', value = SPEC)
     @Singleton
@@ -340,6 +431,14 @@ type Author {
 
         CompletionStage<String> contextual(Author author, DataFetchingEnvironment environment) {
             environment.<DataLoader<Float, String>> getDataLoader('contextLoader').load(author.id as Float)
+        }
+
+        CompletionStage<String> returned(Author author, DataFetchingEnvironment environment) {
+            environment.<DataLoader<Long, String>> getDataLoader('returnedLoader').load(1L)
+        }
+
+        CompletionStage<String> mutated(Author author, DataFetchingEnvironment environment) {
+            environment.<DataLoader<Long, String>> getDataLoader('mutatedLoader').load(1L)
         }
 
         CompletionStage<String> mappedContextual(Author author, DataFetchingEnvironment environment) {

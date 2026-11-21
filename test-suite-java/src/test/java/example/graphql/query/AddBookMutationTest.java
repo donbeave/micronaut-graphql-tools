@@ -16,15 +16,13 @@
 package example.graphql.query;
 
 import com.apollographql.apollo.api.ApolloResponse;
+import com.apollographql.java.client.ApolloClient;
 import com.apollographql.java.rx3.Rx3Apollo;
 import example.AbstractTest;
 import example.client.AddBookMutation;
 import example.client.CurrentUserQuery;
 import example.client.type.SecurityErrorCode;
-import example.data.AuthenticationService;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,13 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 @MicronautTest
 class AddBookMutationTest extends AbstractTest {
-
-    @Inject AuthenticationService authenticationService;
-
-    @AfterEach
-    public void cleanup() {
-        authenticationService.logout();
-    }
 
     @Test
     void testNotAuthenticated() {
@@ -62,13 +53,13 @@ class AddBookMutationTest extends AbstractTest {
 
     @Test
     void testAddBook() {
-        authenticationService.login("bob", "bodi");
+        ApolloClient bob = clientOf("bob");
 
         AddBookMutation addBookMutation =
                 new AddBookMutation("ab");
 
         ApolloResponse<AddBookMutation.Data> addBookResponse =
-                Rx3Apollo.single(apolloClient.mutation(addBookMutation)).blockingGet();
+                Rx3Apollo.single(bob.mutation(addBookMutation)).blockingGet();
 
         assertFalse(addBookResponse.hasErrors());
         assertNotNull(addBookResponse.data);
@@ -76,7 +67,7 @@ class AddBookMutationTest extends AbstractTest {
         assertNull(addBookResponse.data.addBook.error);
 
         ApolloResponse<example.client.CurrentUserQuery.Data> currentUserResponse =
-                Rx3Apollo.single(apolloClient.query(new CurrentUserQuery())).blockingGet();
+                Rx3Apollo.single(bob.query(new CurrentUserQuery())).blockingGet();
 
         assertFalse(currentUserResponse.hasErrors());
         assertNotNull(currentUserResponse.data);

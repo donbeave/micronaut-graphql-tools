@@ -1,0 +1,4 @@
+package example
+
+interface SearchResult {
+}

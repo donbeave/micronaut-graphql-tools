@@ -1,0 +1,4 @@
+{
+  badge { id tag }
+  ribbon { id tag }
+}

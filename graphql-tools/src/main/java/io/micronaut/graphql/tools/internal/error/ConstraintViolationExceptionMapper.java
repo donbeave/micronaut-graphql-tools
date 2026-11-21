@@ -46,10 +46,10 @@ final class ConstraintViolationExceptionMapper implements GraphQLExceptionMapper
 
     static final String CODE = "CONSTRAINT_VIOLATION";
 
-    private static final Comparator<ConstraintViolation<?>> ORDER = Comparator
-            .<ConstraintViolation<?>>comparingInt(ConstraintViolationExceptionMapper::parameterIndex)
-            .thenComparing(violation -> violation.getPropertyPath().toString())
-            .thenComparing(ConstraintViolation::getMessage);
+    private static final Comparator<Located> ORDER = Comparator
+            .<Located>comparingInt(located -> located.parameterIndex)
+            .thenComparing(located -> located.inputPath, ConstraintViolationExceptionMapper::comparePaths)
+            .thenComparing(located -> located.violation.getMessage());
 
     @Override
     public int getOrder() {
@@ -64,49 +64,92 @@ final class ConstraintViolationExceptionMapper implements GraphQLExceptionMapper
 
     @Override
     public List<GraphQLError> mapAll(ConstraintViolationException exception, GraphQLExceptionContext context) {
-        List<ConstraintViolation<?>> violations = new ArrayList<>(exception.getConstraintViolations());
+        List<Located> violations = new ArrayList<>(exception.getConstraintViolations().size());
+        for (ConstraintViolation<?> violation : exception.getConstraintViolations()) {
+            violations.add(locate(violation));
+        }
         violations.sort(ORDER);
         List<GraphQLError> errors = new ArrayList<>(violations.size());
-        for (ConstraintViolation<?> violation : violations) {
-            String argument = null;
-            List<Object> inputPath = new ArrayList<>();
-            for (Path.Node node : violation.getPropertyPath()) {
-                if (node.getKind() == ElementKind.METHOD || node.getKind() == ElementKind.CONSTRUCTOR || node.getName() == null) {
-                    continue;
-                }
-                if (argument == null) {
-                    argument = node.getName();
-                    continue;
-                }
-                if (node.isInIterable()) {
-                    if (node.getIndex() != null) {
-                        inputPath.add(node.getIndex());
-                    } else if (node.getKey() != null) {
-                        inputPath.add(node.getKey());
-                    }
-                }
-                if (node.getKind() != ElementKind.CONTAINER_ELEMENT) {
-                    inputPath.add(node.getName());
-                }
-            }
+        for (Located located : violations) {
             Map<String, Object> extensions = new LinkedHashMap<>();
             extensions.put("code", CODE);
-            if (argument != null) {
-                extensions.put("argument", argument);
-                extensions.put("inputPath", List.copyOf(inputPath));
+            if (located.argument != null) {
+                extensions.put("argument", located.argument);
+                extensions.put("inputPath", located.inputPath);
             }
-            errors.add(context.newError().message(violation.getMessage()).extensions(extensions).build());
+            errors.add(context.newError().message(located.violation.getMessage()).extensions(extensions).build());
         }
         return errors.isEmpty() ? null : errors;
     }
 
-    private static int parameterIndex(ConstraintViolation<?> violation) {
+    private static Located locate(ConstraintViolation<?> violation) {
+        String argument = null;
+        int parameterIndex = -1;
+        List<Object> inputPath = new ArrayList<>();
         for (Path.Node node : violation.getPropertyPath()) {
             if (node instanceof Path.ParameterNode parameter) {
-                return parameter.getParameterIndex();
+                parameterIndex = parameter.getParameterIndex();
+            }
+            String name = node.getName();
+            if (node.getKind() == ElementKind.METHOD || node.getKind() == ElementKind.CONSTRUCTOR) {
+                continue;
+            }
+            if (argument == null) {
+                argument = name;
+                continue;
+            }
+            boolean element = node.getKind() == ElementKind.CONTAINER_ELEMENT;
+            boolean named = name != null && (!element || !isStandardElementName(name));
+            if (element && named) {
+                inputPath.add(name);
+            }
+            if (node.isInIterable()) {
+                if (node.getIndex() != null) {
+                    inputPath.add(node.getIndex());
+                } else if (node.getKey() != null) {
+                    inputPath.add(String.valueOf(node.getKey()));
+                }
+            }
+            if (named && !element) {
+                inputPath.add(name);
             }
         }
-        return -1;
+        return new Located(violation, argument, parameterIndex, List.copyOf(inputPath));
+    }
+
+    /**
+     * The names that Jakarta Validation gives the elements of its own containers, such as {@code <list element>}. A
+     * container element with another name comes from a custom {@code ValueExtractor}, and the name is part of the path.
+     */
+    private static boolean isStandardElementName(String name) {
+        return name.startsWith("<");
+    }
+
+    private static int comparePaths(List<Object> left, List<Object> right) {
+        int shared = Math.min(left.size(), right.size());
+        for (int i = 0; i < shared; i++) {
+            int order = compareElements(left.get(i), right.get(i));
+            if (order != 0) {
+                return order;
+            }
+        }
+        return Integer.compare(left.size(), right.size());
+    }
+
+    private static int compareElements(Object left, Object right) {
+        if (left instanceof Integer a && right instanceof Integer b) {
+            return a.compareTo(b);
+        }
+        if (left instanceof Integer) {
+            return -1;
+        }
+        if (right instanceof Integer) {
+            return 1;
+        }
+        return String.valueOf(left).compareTo(String.valueOf(right));
+    }
+
+    private record Located(ConstraintViolation<?> violation, String argument, int parameterIndex, List<Object> inputPath) {
     }
 
 }

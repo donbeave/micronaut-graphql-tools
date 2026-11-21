@@ -29,6 +29,10 @@ dependencies {
     // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
     // itself does not depend on it.
     testImplementation(projects.micronautGraphqlToolsUpload)
+    // The security module and Micronaut Security: the principal in the context, @Secured on resolvers and the root fields hook, tested with
+    // a real HTTP and WebSocket client. Test scope: the application itself does not depend on them.
+    testImplementation(projects.micronautGraphqlToolsSecurity)
+    testImplementation(mnSecurity.micronaut.security)
     testImplementation("io.micronaut:micronaut-http-client")
     runtimeOnly("ch.qos.logback:logback-classic")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -141,9 +145,15 @@ configurations {
     named(validationFixtures.implementationConfigurationName) { extendsFrom(implementation.get()) }
     named(validationFixtures.annotationProcessorConfigurationName) { extendsFrom(testAnnotationProcessor.get()) }
 }
+// The graphql-tools processor runs here too (#528): @GraphQLModels must keep its introspections next to Micronaut Validation's
+// processor. The resolvers of this source set are completed by a schema customizer, so the schema checks are off.
+tasks.named<JavaCompile>(validationFixtures.compileJavaTaskName) {
+    options.compilerArgs.add("-Amicronaut.graphql.tools.processor.checks=false")
+}
 dependencies {
     "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
     "validationFixturesAnnotationProcessor"("io.micronaut.validation:micronaut-validation-processor")
+    "validationFixturesAnnotationProcessor"(projects.micronautGraphqlToolsProcessor)
     testImplementation(validationFixtures.output)
     testImplementation("io.micronaut.validation:micronaut-validation")
 }

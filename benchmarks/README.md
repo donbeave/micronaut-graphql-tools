@@ -13,7 +13,8 @@ runs, or when they claim a performance gain.
 - `src/jmh/java` (package `io.micronaut.graphql.tools.benchmarks`): the JMH benchmarks. They cover property, root and
   type resolver methods, argument conversion, union and interface resolution, a directive-wrapped fetcher, whole queries,
   start-up (`BindingBenchmark`, `RetainedHeapBenchmark`), and the executor hop (`InvocationBenchmark`,
-  `AsyncBoundaryBenchmark`; plain graphql-java, no library code, no allocation gate), and the observability module on a
+  `AsyncBoundaryBenchmark`; plain graphql-java, no library code, no allocation gate), the parsed-document cache of
+  `protection.document-cache-size` (`DocumentCacheBenchmark`: the same query text with the cache off and on), and the observability module on a
   request with no field traced (`ObservabilityBenchmark`, modes `none`, `empty` and `observed`; its allocation gate is
   `observedInvocationSlope`: the bytes per field that the module adds, which must stay 0) and with every root field selected for a
   span by the field decorator (mode `selected`: its difference to `observed`, divided by `rootFields`, is the cost of one field span),
@@ -27,8 +28,8 @@ runs, or when they claim a performance gain.
 - `src/main`: the benchmark classes shared by the source sets (`Resolvers`, `BenchmarkCases`, `Fixtures`), and `ClassElementFixture`: compiler
   class elements of fixture sources, compiled in process, for the binding rules. The compilation runs on a thread that stays parked inside its
   processing round until the fixture is closed, because a class element is valid only during its round, and the class files are written
-  when the round is released. The fixture lives in the package of the processor's visitor, because the element adapter
-  (`ElementTypeModel`) is package-private there; the processor is not changed. `BindingRulesParityTest` (in `jmhSmokeTest`) shows that
+  when the round is released. The fixture is in a package of this module (`benchmarks.fixture`) and reaches the element adapter
+  (`ElementTypeModel`, package-private) through `BindingRulesAccess`, a public class of the processor that is documented as internal. `BindingRulesParityTest` (in `jmhSmokeTest`) shows that
   the rules give the same findings for the elements as for the classes that the sources compile to. The
   `generateLargeSchema` task writes the large schema that the start-up benchmarks bind to `build/generated/large-schema`.
 - `benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
@@ -40,6 +41,7 @@ Benchmark code, not a library package: no `package-info.java`. Nothing here is A
 | Package | Audience | Holds |
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.benchmarks` | Test helper | The JMH benchmarks, the allocation tests and the shared benchmark classes |
+| `io.micronaut.graphql.tools.benchmarks.fixture` | Test helper | The in-process compilation that yields compiler class elements for the binding rules benchmark |
 
 ## Who uses it
 

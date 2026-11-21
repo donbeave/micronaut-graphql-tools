@@ -23,6 +23,7 @@ import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 import io.micronaut.graphql.tools.binding.internal.finding.FindingRenderer;
 import io.micronaut.graphql.tools.binding.internal.finding.Severity;
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames;
+import io.micronaut.graphql.tools.binding.internal.membership.MemberClassRules;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassFindings;
 import io.micronaut.graphql.tools.binding.internal.rules.TypeClassDerivation;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
@@ -45,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * The compile-time checks of the binding rules, as a visitor that runs under javac, KSP, kapt and the Groovy compiler. It is
@@ -72,6 +74,13 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
 
     @Nullable
     private Compilation compilation;
+
+    // Micronaut runs the visitors from the highest order to the lowest: this one runs after Micronaut Validation's visitor (-90),
+    // which rewrites @Introspected, and before the one that generates the introspections (-100)
+    @Override
+    public int getOrder() {
+        return -95;
+    }
 
     @Override
     public @NonNull Set<String> getSupportedAnnotationNames() {
@@ -118,8 +127,11 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             ResolverContractsWriter.write(element);
         }
         Compilation current = compilation;
-        if (current != null && element.hasDeclaredAnnotation(AnnotationNames.MODELS)) {
-            recordModels(current, element, context);
+        if (element.hasDeclaredAnnotation(AnnotationNames.MODELS)) {
+            introspectModels(element);
+            if (current != null) {
+                recordModels(current, element, context);
+            }
         }
         if (current != null && current.options.checks()) {
             recordTypeClass(current, element);
@@ -153,6 +165,63 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         String declared = element.getAnnotationMetadata().stringValue(AnnotationNames.TYPE, "name").orElse("");
         current.typeClasses.put(element.getName(),
                 new TypeClassDerivation.Candidate(element.getName(), element.getSimpleName(), declared));
+        Set<String> supertypes = new HashSet<>();
+        collectSupertypes(element, supertypes);
+        current.memberClasses.put(element.getName(), new MemberClassRules.MemberClass(element.getName(), element.isFinal(), supertypes));
+    }
+
+    private static void collectSupertypes(ClassElement element, Set<String> names) {
+        List<ClassElement> parents = new ArrayList<>(element.getInterfaces());
+        element.getSuperType().ifPresent(parents::add);
+        for (ClassElement parent : parents) {
+            if (names.add(parent.getName())) {
+                collectSupertypes(parent, names);
+            }
+        }
+    }
+
+    // Another processor can re-annotate the class with @Introspected after Micronaut resolved @GraphQLModels into it and keep only
+    // its own members (Micronaut Validation's processor does), so the listed classes and packages are put back on the
+    // declared @Introspected here, together with what it carries already. This runs after the visitors that annotate before it
+    // (see getOrder); the members are set, not added, so a class listed twice is introspected once.
+    private static void introspectModels(ClassElement element) {
+        var models = element.getAnnotationMetadata().findAnnotation(AnnotationNames.MODELS).orElse(null);
+        if (models == null) {
+            return;
+        }
+        var introspected = element.getAnnotationMetadata().findDeclaredAnnotation(INTROSPECTED).orElse(null);
+        element.annotate(INTROSPECTED, builder -> {
+            for (String member : List.of("classes", "includedAnnotations")) {
+                AnnotationClassValue<?>[] listed = union(models.annotationClassValues(member),
+                        introspected == null ? new AnnotationClassValue<?>[0] : introspected.annotationClassValues(member));
+                if (listed.length > 0) {
+                    builder.member(member, listed);
+                }
+            }
+            String[] packages = java.util.stream.Stream.concat(Arrays.stream(models.stringValues("packages")),
+                    introspected == null ? java.util.stream.Stream.<String>empty() : Arrays.stream(introspected.stringValues("packages")))
+                    .distinct().toArray(String[]::new);
+            if (packages.length > 0) {
+                builder.member("packages", packages);
+            }
+            if (introspected != null) {
+                var indexed = introspected.getAnnotations("indexed");
+                if (!indexed.isEmpty()) {
+                    builder.member("indexed", indexed.toArray(io.micronaut.core.annotation.AnnotationValue[]::new));
+                }
+            }
+        });
+    }
+
+    private static AnnotationClassValue<?>[] union(AnnotationClassValue<?>[] first, AnnotationClassValue<?>[] second) {
+        Map<String, AnnotationClassValue<?>> byName = new LinkedHashMap<>();
+        for (AnnotationClassValue<?> value : first) {
+            byName.putIfAbsent(value.getName(), value);
+        }
+        for (AnnotationClassValue<?> value : second) {
+            byName.putIfAbsent(value.getName(), value);
+        }
+        return byName.values().toArray(new AnnotationClassValue<?>[0]);
     }
 
     // the classes that @GraphQLModels lists make the compile-time check see them as introspected; an annotation that lists
@@ -201,6 +270,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
         current.pending.clear();
         checkTypeClasses(current, context);
+        reportDeferred(current, context);
         if (current.noted) {
             return;
         }
@@ -240,6 +310,43 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
     }
 
+    // a class that returns a union or interface waits for the end of the compilation: the classes of its members may be visited
+    // after it, and a member that fails is a binding failure, which the startup throws before it runs a strict check of the class.
+    // The report has no element: a class element of an earlier round is not valid any more under KSP
+    private static void reportDeferred(Compilation current, VisitorContext context) {
+        Function<String, Optional<MemberClassRules.MemberClass>> classes = objectType -> {
+            List<String> matches = TypeClassDerivation.matching(objectType, current.options.typeClassConvention(),
+                    current.typeClasses.values());
+            return matches.size() == 1 ? Optional.ofNullable(current.memberClasses.get(matches.get(0))) : Optional.empty();
+        };
+        for (ResolverClassFindings.ClassFindings deferred : current.deferred) {
+            List<Finding> members = deferred.abstractReturns().stream()
+                    .map(it -> MemberClassRules.check(it, classes))
+                    .flatMap(Optional::stream)
+                    .toList();
+            for (Finding finding : deferred.findings(members)) {
+                if (!UNPROVEN.equals(finding.code())) {
+                    reportChecked(current, context, finding, null);
+                }
+            }
+        }
+        current.deferred.clear();
+    }
+
+    private static void reportChecked(Compilation current, VisitorContext context, Finding finding, @Nullable Element at) {
+        if (BindingCode.KOTLIN_NULLABILITY_LOOSE.code().equals(finding.code())
+                && current.options.looseNullability() != Severity.FAIL) {
+            // stricter than the schema: the code cannot fail for it, so it is off, or a warning, unless the build asks
+            if (current.options.looseNullability() == Severity.WARN) {
+                current.warnings++;
+                context.warn(FindingRenderer.render(finding), at);
+            }
+        } else {
+            current.findings++;
+            report(context, finding, at);
+        }
+    }
+
     private void check(Compilation current, ClassElement element, VisitorContext context) {
         if (current.foreignOutput != null) {
             current.failed = true;
@@ -272,27 +379,21 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         current.checked++;
         ElementTypeModel model = current.model;
         current.coverage.resetMissed();
-        List<Finding> findings = ResolverClassFindings.check(schema.get(), model, model.of(element),
+        ResolverClassFindings.ClassFindings result = ResolverClassFindings.checkClass(schema.get(), model, model.of(element),
                 current.options.accessorPrefixes());
-        for (Finding finding : findings) {
+        boolean deferred = !result.abstractReturns().isEmpty();
+        if (deferred) {
+            current.deferred.add(result);
+        }
+        for (Finding finding : result.findings(List.of())) {
             if (UNPROVEN.equals(finding.code())) {
                 // a @GraphQLModels of this compilation that is visited after this class can still cover the class, so the
                 // warning is made when the compilation finishes; the walk stopped at the class it names
                 current.pending.add(new Pending(current.checked, finding, current.coverage.missedIn(finding.sentence())));
-            } else {
+            } else if (!deferred) {
                 MethodElement method = finding.member() == null ? null : model.elementOf(finding.member());
                 Element at = method != null && element.equals(method.getDeclaringType()) ? method : element;
-                if (BindingCode.KOTLIN_NULLABILITY_LOOSE.code().equals(finding.code())
-                        && current.options.looseNullability() != Severity.FAIL) {
-                    // stricter than the schema: the code cannot fail for it, so it is off, or a warning, unless the build asks
-                    if (current.options.looseNullability() == Severity.WARN) {
-                        current.warnings++;
-                        context.warn(FindingRenderer.render(finding), at);
-                    }
-                } else {
-                    current.findings++;
-                    report(context, finding, at);
-                }
+                reportChecked(current, context, finding, at);
             }
         }
     }
@@ -338,6 +439,8 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         final CheckedSchema schema;
         final ModelCoverage coverage = new ModelCoverage();
         final Map<String, TypeClassDerivation.Candidate> typeClasses = new LinkedHashMap<>();
+        final Map<String, MemberClassRules.MemberClass> memberClasses = new LinkedHashMap<>();
+        final List<ResolverClassFindings.ClassFindings> deferred = new ArrayList<>();
         final Set<String> reportedTypes = new HashSet<>();
         final ElementTypeModel model = new ElementTypeModel(coverage);
         // the warnings that a @GraphQLModels visited later can still remove

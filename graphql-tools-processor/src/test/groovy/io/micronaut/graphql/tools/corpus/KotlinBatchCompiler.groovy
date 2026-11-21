@@ -195,7 +195,7 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
         Files.createDirectories(buildDir)
         String only = CorpusFixtures.only()
         List<CorpusCase> cases = corpus.cases.findAll { covers(processor, it) && (only == null || it.name ==~ only) }
-        List<String> projects = cases.collectMany { [projectName(it), checkedName(it)] }
+        List<String> projects = cases.collectMany { it.processorAbsent() ? [projectName(it)] : [projectName(it), checkedName(it)] }
         // `a-b/c` and `a/b-c` would share the project `a-b-c`: refuse instead of mixing two cases
         Set<String> seen = new HashSet<>()
         projects.findAll { !seen.add(it) }.each {
@@ -230,11 +230,16 @@ plugins {
         String classpath = libraries().collect { "        \"${it.replace('\\', '/')}\"," }.join('\n')
         String path = visitorPath.collect { "        \"${it}\"," }.join('\n')
         cases.each { CorpusCase c ->
-            writeProject(c, projectName(c), false, classpath, path)
-            writeProject(c, checkedName(c), true, classpath, path)
+            writeProject(c, projectName(c), false, classpath, c.processorAbsent() ? '' : path)
+            if (!c.processorAbsent()) {
+                writeProject(c, checkedName(c), true, classpath, path)
+            }
         }
         long start = System.nanoTime()
-        List<String> tasks = cases.collectMany { [":${projectName(it)}:compileKotlin".toString(), ":${checkedName(it)}:${processor.task}".toString()] }
+        List<String> tasks = cases.collectMany {
+            it.processorAbsent() ? [":${projectName(it)}:compileKotlin".toString()]
+                    : [":${projectName(it)}:compileKotlin".toString(), ":${checkedName(it)}:${processor.task}".toString()]
+        }
         GradleRunner runner = GradleRunner.create()
                 .withProjectDir(buildDir.toFile())
                 .withArguments(['--continue', '--parallel', '--console=plain', '--stacktrace'] + tasks)
@@ -358,10 +363,7 @@ ${classpath}
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     ${processor.configuration}(platform("io.micronaut.platform:micronaut-platform:${micronaut}"))
     ${processor.configuration}("${processor.micronaut}")
-    ${processor.configuration}(files(
-${path}
-    ))
-}
+${path.empty ? '' : "    ${processor.configuration}(files(\n${path}\n    ))\n"}}
 
 ${options}
 """)
