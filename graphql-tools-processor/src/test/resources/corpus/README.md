@@ -114,6 +114,7 @@ case under `exception/` that shows it:
 | `other-class-binding-failure` | stops at a binding failure of another class before the strict checks of this one |
 | `kotlin-nullability` | reports nothing: the nullability of a Kotlin type is compile-time metadata (`kotlin-nullability-mismatch`) |
 | `conflicting-class-mapping` | reports `mapping-conflict` when two classes bind one input type or enum to different Java classes, before the strict checks |
+| `dictionary-member-wins` | lets a `SchemaMappingDictionary` entry name the class of a union member or interface implementation that `@GraphQLType(name)` maps to a disjoint class: the member binds and nothing is reported (`incorrect-member-mapping`); the visitor cannot see the dictionary |
 | `dictionary-entry-wins` | lets a `SchemaMappingDictionary` entry win over two classes that match one object type by name (`ambiguous-type-class`); the visitor cannot see the dictionary |
 
 The ceiling must equal the number of entries, so a new exception shows as a raised ceiling in the review. An entry is stale and
