@@ -396,9 +396,10 @@ public class GraphQLToolsConfiguration {
         }
 
         /**
-         * Sets the executor that runs every operation. The operation hops to it once, before graphql-java parses the
-         * query, so parsing, validation, the {@code GraphQLExecutionInputCustomizer} and every synchronous resolver
-         * run on it. {@code blocking} (Micronaut's blocking executor: virtual threads on JDK 21 and later, the
+         * Sets the executor that runs every operation. The operation hops to it once, after the
+         * {@code GraphQLExecutionInputCustomizer} has answered and before graphql-java parses the query, so parsing,
+         * validation and every synchronous resolver run on it. The customizer does not: it runs on the subscribing
+         * thread, which is the HTTP event loop for an HTTP request, so it must not block. {@code blocking} (Micronaut's blocking executor: virtual threads on JDK 21 and later, the
          * {@code io} pool on JDK 17) is the default; {@code none} runs the operation on the thread that receives it,
          * which is the Netty event loop over HTTP and WebSocket; {@code io}, {@code virtual} (JDK 21 and later) or the
          * name of an executor configured under {@code micronaut.executors} choose that executor. {@code scheduled} is

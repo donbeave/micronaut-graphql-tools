@@ -81,7 +81,9 @@ import java.util.function.BiConsumer;
  * context and, when the application has batch loader beans, the lazy {@link LazyDataLoaderRegistry}; call the
  * application's customizer (skipped when it is the transport's default); put the state back when the customizer built a
  * fresh input; call the {@code GraphQLContextContributor} beans; run graphql-java. The propagated context is captured once on the calling thread and
- * installed in the hop only when the executing thread does not hold it already.</p>
+ * installed in the hop only when the executing thread does not hold it already.
+ * It is captured when {@link #execute} is called, not when the returned publisher is subscribed, so a subscriber on
+ * another thread does not lose it.</p>
  *
  * <p>The bean steps aside when the application declares a {@code GraphQLInvocation} that is {@code @Primary} or
  * {@code @Replaces(DefaultGraphQLInvocation.class)}.</p>
@@ -157,11 +159,12 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     public Publisher<ExecutionResult> execute(GraphQLInvocationData data, GraphQLTransport transport,
                                               @Nullable HttpRequest<?> request, @Nullable MutableHttpResponse<?> response,
                                               ConvertibleValues<Object> attributes) {
+        PropagatedContext propagated = PropagatedContext.getOrEmpty();
+        if (request != null && propagated.find(ServerHttpRequestContext.class).isEmpty()) {
+            propagated = propagated.plus(new ServerHttpRequestContext(request));
+        }
+        PropagatedContext captured = propagated;
         Mono<ExecutionResult> result = Mono.deferContextual(context -> {
-            PropagatedContext captured = PropagatedContext.getOrEmpty();
-            if (request != null && captured.find(ServerHttpRequestContext.class).isEmpty()) {
-                captured = captured.plus(new ServerHttpRequestContext(request));
-            }
             ExecutionState state = new ExecutionState(captured, transport, request, response, attributes, executor, customizerName);
             if (disconnectWatcher != null && request != null && transport == GraphQLTransport.HTTP) {
                 state.disconnectWatcher(disconnectWatcher);

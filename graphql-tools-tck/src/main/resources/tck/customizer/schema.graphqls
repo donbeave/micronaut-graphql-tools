@@ -1,0 +1,15 @@
+# Extends the Query of the example schema that every suite serves; the names below must not clash with it.
+extend type Query {
+  # how many times the customizer was called for a tracked operation
+  customizerCalls: Int!
+  # how many times the publisher of the customizer was subscribed
+  customizerSubscribes: Int!
+  # how many times the publisher of the customizer was cancelled
+  customizerCancels: Int!
+  # the value of the Reactor context entry that the customizer saw when it was subscribed, or none
+  customizerSeen: String!
+  # a field of the tracked operation, which counts how often it ran
+  tracked: String!
+  # how many times tracked ran
+  trackedRuns: Int!
+}

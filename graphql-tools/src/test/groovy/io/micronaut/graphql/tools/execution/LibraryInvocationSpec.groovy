@@ -256,6 +256,33 @@ type Child {
         SEEN.contains(element)
     }
 
+    void "the propagated context is captured when invoke is called, so a subscriber on another thread still sees it"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME)
+        def element = new MarkerElement('request-2')
+        Publisher<ExecutionResult> publisher
+        ExecutionResult result
+
+        when: 'invoke is called with the context, and the publisher is subscribed later on a thread without it'
+        def scope = PropagatedContext.getOrEmpty().plus(element).propagate()
+        try {
+            publisher = invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)
+        } finally {
+            scope.close()
+        }
+        def pool = Executors.newSingleThreadExecutor()
+        try {
+            result = pool.submit({ Mono.from(publisher).block() } as java.util.concurrent.Callable<ExecutionResult>).get(10, TimeUnit.SECONDS)
+        } finally {
+            pool.shutdownNow()
+        }
+
+        then:
+        PropagatedContext.getOrEmpty().findAll(MarkerElement).findFirst().isEmpty()
+        result.errors.isEmpty()
+        SEEN.contains(element)
+    }
+
     void "an executor that rejects the hop gives one EXECUTION_REJECTED error with data null"() {
         given:
         def appender = captureWarnings()
