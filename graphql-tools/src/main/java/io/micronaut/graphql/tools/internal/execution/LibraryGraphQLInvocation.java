@@ -381,9 +381,15 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         /** The timer of {@code execution.timeout} fired: cancel the execution and answer the client now. */
         void timeOut() {
             // the answer first: cancelling the state aborts the pending stages, and the execution would finish with their partial data
-            complete(timedOut(timeout));
+            if (!complete(timedOut(timeout))) {
+                return;
+            }
             state.cancel();
             state.finished();
+            Disposable subscription = customizerSubscription;
+            if (subscription != null) {
+                subscription.dispose();
+            }
         }
 
         @Override
@@ -482,6 +488,11 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         private void executeAsync(ExecutionInput input) {
             state.executionInput(input);
             if (contribute(input.getGraphQLContext())) {
+                if (state.isCancelled()) {
+                    // the timeout fired while the contributors ran: the client has its answer, so no resolver starts
+                    complete(cancelled());
+                    return;
+                }
                 graphQL.executeAsync(input).whenComplete(this);
             }
         }
