@@ -1,0 +1,7 @@
+within-limits
+depth-over-limit
+complexity-over-limit
+repeated-query-text
+introspection-disabled
+typename-still-works
+timeout

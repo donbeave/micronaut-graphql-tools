@@ -19,6 +19,7 @@ import jakarta.inject.Singleton
 import example.ElapsedTime
 import example.data.AuthenticationService
 import example.data.User
+import graphql.schema.DataFetchingEnvironment
 import groovy.transform.CompileStatic
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
@@ -27,14 +28,8 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 @GraphQLRootResolver
 class CurrentUserQuery {
 
-    private final AuthenticationService authenticationService
-
-    CurrentUserQuery(AuthenticationService authenticationService) {
-        this.authenticationService = authenticationService
-    }
-
     @ElapsedTime
-    User currentUser() {
-        authenticationService.currentUser
+    User currentUser(DataFetchingEnvironment environment) {
+        (User) environment.graphQlContext.get(AuthenticationService.CURRENT_USER)
     }
 }

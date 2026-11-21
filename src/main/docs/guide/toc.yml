@@ -19,6 +19,8 @@ observability: Observability
 subscriptions: Subscriptions
 context: Context
 execution: Execution
+protection: Protection
+transport: Transports
 customization: Customization
 safety: Safety
 manifest: Binding Manifest

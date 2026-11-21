@@ -44,9 +44,13 @@ class GraphQLSmokeTest(
 ) {
 
     @Suppress("UNCHECKED_CAST")
-    private fun execute(query: String, variables: Map<String, Any> = HashMap()): Map<String, Any?> {
+    private fun execute(query: String, variables: Map<String, Any> = HashMap(), user: String? = null): Map<String, Any?> {
+        val post = HttpRequest.POST("/graphql", mapOf("query" to query, "variables" to variables))
+        if (user != null) {
+            post.header("X-User", user)
+        }
         val response = client.toBlocking().retrieve(
-            HttpRequest.POST("/graphql", mapOf("query" to query, "variables" to variables)),
+            post,
             Argument.mapOf(Argument.STRING, Argument.OBJECT_ARGUMENT),
         )
         assertNull(response["errors"], "GraphQL errors: ${response["errors"]}")
@@ -141,9 +145,9 @@ class GraphQLSmokeTest(
         val signIn = execute("mutation { signIn(username: \"bob\", password: \"bodi\") { data { username } } }").obj("signIn")
         assertEquals("bob", signIn.obj("data")["username"])
 
-        assertNull(execute("mutation { addBook(id: \"ax\") { error { __typename } } }").obj("addBook")["error"])
+        assertNull(execute("mutation { addBook(id: \"ax\") { error { __typename } } }", user = "bob").obj("addBook")["error"])
 
-        val current = execute("{ currentUser { username books { id label } } }").obj("currentUser")
+        val current = execute("{ currentUser { username books { id label } } }", user = "bob").obj("currentUser")
         assertEquals("bob", current["username"])
         assertEquals(listOf("ax"), current.list("books").map { it["id"] })
         assertNotNull(current.list("books").first()["label"])
