@@ -1,0 +1,3 @@
+{
+  restock(lines: [{ sku: "", quantity: 1 }, { sku: "", quantity: 2 }, { sku: "", quantity: 3 }, { sku: "", quantity: 4 }, { sku: "", quantity: 5 }, { sku: "", quantity: 6 }, { sku: "", quantity: 7 }, { sku: "", quantity: 8 }, { sku: "", quantity: 9 }, { sku: "", quantity: 10 }, { sku: "", quantity: 11 }, { sku: "", quantity: 12 }])
+}

@@ -1,0 +1,27 @@
+{
+  "errors": [
+    {
+      "message": "must be greater than 0",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "weights"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "weights",
+        "inputPath": [
+          "6f1b2c3d-0000-4000-8000-000000000002"
+        ],
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": {
+    "weights": null
+  }
+}

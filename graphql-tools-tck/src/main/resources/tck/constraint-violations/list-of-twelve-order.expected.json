@@ -1,0 +1,259 @@
+{
+  "errors": [
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          0,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          1,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          2,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          3,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          4,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          5,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          6,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          7,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          8,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          9,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          10,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          11,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": {
+    "restock": null
+  }
+}
