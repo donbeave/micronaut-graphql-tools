@@ -104,4 +104,10 @@ public final class IncorrectArgumentNameException extends AbstractMappingExcepti
         );
     }
 
+    public static IncorrectArgumentNameException unsatisfiableParameter(MappingContext mappingContext, String parameterName,
+                                                                       String reason) {
+        return new IncorrectArgumentNameException(
+                String.format("The method parameter '%s' cannot be injected: %s.", parameterName, reason), mappingContext);
+    }
+
 }

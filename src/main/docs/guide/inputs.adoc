@@ -2,13 +2,13 @@ The values of arguments and input objects reach a resolver in the Java type the 
 
 == Binding by name
 
-A resolver parameter is bound to the field argument with the same name, whatever its position. The source object of a type resolver method stays the first parameter and a trailing `DataFetchingEnvironment` the last; every other parameter is matched by name. The plan from names to positions is built once at startup, so a request does no name lookup.
+A resolver parameter is bound to the field argument with the same name, whatever its position. The source object of a type resolver method stays the first parameter; a parameter of an injected kind (the `DataFetchingEnvironment`, the context, a `DataLoader` and the others of <<resolverParameters,Resolver Parameters>>) takes any position after it; every other parameter is matched by name. The plan from names to positions is built once at startup, so a request does no name lookup.
 
 snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="by-name", indent="0"]
 
 `@GraphQLArgument("<name>")` binds a parameter whose name cannot be the argument's, such as the argument `in`, which no Java, Kotlin or Groovy parameter can be named. The annotation on a parameter of an interface or superclass method also applies to the method that overrides it. Reordering the arguments of the schema field does not change which parameter gets which value.
 
-The startup and the compile-time check (the visitor of `graphql-tools-processor`) apply the same rule and report the same code, `argument-mismatch`, with the same schema coordinate, for a parameter that names no argument (the message lists the arguments of the field), for two parameters that name one argument, and for a number of parameters that differs from the number of arguments. A parameter that is not the source object or the environment and has a name the field does not have is never matched by position: there is no positional opt-out.
+The startup and the compile-time check (the visitor of `graphql-tools-processor`) apply the same rule and report the same code, `argument-mismatch`, with the same schema coordinate, for a parameter that names no argument (the message lists the arguments of the field), for two parameters that name one argument, and for a number of parameters that differs from the number of arguments. A parameter that is not the source object or an injected parameter (see <<resolverParameters,Resolver Parameters>>) and has a name the field does not have is never matched by position: there is no positional opt-out.
 
 === Where the names come from
 

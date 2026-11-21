@@ -35,17 +35,27 @@ class DocsPageSpec extends Specification {
         where:
         name << [GraphQLObservability.REQUEST_TIMER, GraphQLObservability.DATA_LOADER_BATCHES, GraphQLObservability.DATA_LOADER_BATCH_KEYS,
                  GraphQLObservability.OPERATION_TAG, GraphQLObservability.OUTCOME_TAG,
-                 GraphQLObservability.LOADER_TAG, GraphQLObservability.OPERATION_NAME_ATTRIBUTE,
-                 GraphQLObservability.OPERATION_TYPE_ATTRIBUTE, GraphQLObservability.ANONYMOUS_OPERATION,
+                 GraphQLObservability.LOADER_TAG, GraphQLObservability.ANONYMOUS_OPERATION,
                  GraphQLObservability.OTHER_OPERATION]
     }
 
     void "the page documents the key #key"() {
         expect:
-        page.contains("`${GraphQLObservability.PREFIX}.${key}`")
+        page.contains("`${key}`")
 
         where:
-        key << ['enabled', 'metrics.enabled', 'metrics.max-operations', 'tracing.enabled', 'tracing.fields']
+        key << ['micronaut.metrics.binders.graphql.enabled', 'micronaut.metrics.binders.graphql.max-operations',
+                'micronaut.graphql.tools.tracing.enabled', 'micronaut.graphql.tools.tracing.fields',
+                'micronaut.graphql.tools.tracing.add-operation-name-to-span-name']
+    }
+
+    void "the page documents the span and attribute #name"() {
+        expect:
+        page.contains("`${name}`")
+
+        where:
+        name << ['graphql.operation.name', 'graphql.operation.type', 'graphql.field.name', 'graphql.field.path',
+                 'GraphQL Operation', 'io.micronaut.graphql.tools', '@NewSpan', '@ContinueSpan', '@SpanTag', '@Timed']
     }
 
     void "the page documents the DataLoader statistics key"() {

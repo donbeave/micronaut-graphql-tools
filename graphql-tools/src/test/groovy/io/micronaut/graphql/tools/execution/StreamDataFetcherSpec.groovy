@@ -40,7 +40,7 @@ class StreamDataFetcherSpec extends Specification {
         DataFetcher<Object> method = { env -> CompletableFuture.completedFuture(Flux.never()) }
 
         when:
-        def stage = new StreamDataFetcher(method, ConversionService.SHARED).get(environment) as CompletionStage
+        def stage = new StreamDataFetcher(method, ConversionService.SHARED, null).get(environment) as CompletionStage
         def events = Flux.from(stage.toCompletableFuture().get() as org.reactivestreams.Publisher)
         def subscription = events.subscribe()
         subscription.dispose()

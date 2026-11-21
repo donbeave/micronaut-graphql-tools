@@ -131,6 +131,16 @@ public final class WrapperRules {
     }
 
     /**
+     * @param returned    the simple name of the value-less return type, such as {@code Completable}
+     * @param graphQlType the printed GraphQL type of the field
+     * @return the sentence for a value-less single-value return on a non-null field
+     */
+    public static String valuelessAtNonNull(String returned, String graphQlType) {
+        return returned + " emits no value, so the field resolves to null, and the GraphQL type is " + graphQlType
+                + ". Fix: make the GraphQL field nullable (remove the trailing '!'), or return a type that carries the value.";
+    }
+
+    /**
      * @param graphQlType the printed GraphQL type of the field, or of the list element
      * @param fieldLevel  whether the type is the type of the field itself, not the element of a list
      * @return the sentence for an {@code Optional} at a non-null position

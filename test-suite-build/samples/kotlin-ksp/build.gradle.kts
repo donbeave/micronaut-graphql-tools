@@ -62,3 +62,11 @@ ksp {
     arg("micronaut.graphql.tools.processor.checks", providers.gradleProperty("graphqlChecks").getOrElse("true"))
 }
 // end::checks[]
+
+// tag::loose-nullability[]
+// ./gradlew build -PgraphqlLooseNullability=warn reports a Kotlin type that is stricter than the schema type as a compiler warning, and
+// =fail as a compile error. The default is ignore: the check is off.
+ksp {
+    arg("micronaut.graphql.tools.processor.looseNullability", providers.gradleProperty("graphqlLooseNullability").getOrElse("ignore"))
+}
+// end::loose-nullability[]

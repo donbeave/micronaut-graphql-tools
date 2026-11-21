@@ -1,0 +1,26 @@
+{
+  "data": {
+    "fine": "fine",
+    "rename": null
+  },
+  "errors": [
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 3,
+          "column": 3
+        }
+      ],
+      "path": [
+        "rename"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "name",
+        "inputPath": [],
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

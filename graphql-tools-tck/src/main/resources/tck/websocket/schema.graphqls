@@ -4,8 +4,12 @@ extend type Query {
   onEventLoop: Boolean!
   # the attribute "user" that the connection interceptor accepted the connection with
   connectionUser: String
+  # the transport kind of the execution state: HTTP or WEBSOCKET
+  transport: String!
   # how many streams were cancelled
   cancelledStreams: Int!
+  # how many keys the batch function of the echo loader received, over all batches
+  echoLoaderKeys: Int!
 }
 
 # The example schema has a schema definition, which does not name a subscription type.
@@ -18,6 +22,12 @@ type Subscription {
   ticks(count: Int!): Tick!
   # never completes: it ends when the client completes it or closes the connection
   endless: Tick!
+  # the publisher fails with an exception that has no mapper
+  failing: Tick!
+  # the publisher fails with an exception that has a mapper
+  failingMapped: Tick!
+  # emits one event whose field "broken" fails
+  brokenEvent: Tick!
 }
 
 # The fields of an event say where and in what context it is resolved.
@@ -26,4 +36,8 @@ type Tick {
   sourceNonBlocking: Boolean!
   onEventLoop: Boolean!
   requestHeader: String
+  # both load the same key from one loader: with caching off (a subscription) the batch function receives it twice
+  echo: String
+  echoAgain: String
+  broken: String
 }

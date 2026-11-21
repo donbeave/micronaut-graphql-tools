@@ -17,7 +17,9 @@ package io.micronaut.graphql.tools.internal.execution;
 
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer;
 import org.dataloader.DataLoader;
+import org.dataloader.DataLoaderOptions;
 import org.dataloader.DataLoaderRegistry;
 
 import java.util.Arrays;
@@ -96,7 +98,7 @@ public final class LazyDataLoaderRegistry extends DataLoaderRegistry {
             }
             DataLoader<?, ?> registered = super.getDataLoader(entry.name());
             DataLoader<?, ?> loader = registered != null ? registered
-                    : ContextualBatchLoaders.create(entry.kind(), bean, state.propagatedContext(),
+                    : ContextualBatchLoaders.create(entry.kind(), bean, state, options(entry),
                             counters == null ? null : counters.counter(entry.name()));
             int size = snapshot.indexes.length;
             int[] indexes = Arrays.copyOf(snapshot.indexes, size + 1);
@@ -108,6 +110,32 @@ public final class LazyDataLoaderRegistry extends DataLoaderRegistry {
             }
             created = new Created(indexes, loaders);
             return loader;
+        }
+    }
+
+    @Nullable
+    private DataLoaderOptions options(DataLoaderTable.Entry entry) {
+        DataLoaderOptions options = state.isSubscription() ? new UncachedOptions() : null;
+        for (DataLoaderOptionsCustomizer customizer : entry.customizers()) {
+            DataLoaderOptions customized = customizer.customize(options == null ? new DataLoaderOptions() : options);
+            if (customized == null) {
+                throw new IllegalStateException("The DataLoaderOptionsCustomizer " + customizer.getClass().getName()
+                        + " returned no options for the loader '" + entry.name() + "'");
+            }
+            options = customized;
+        }
+        return options;
+    }
+
+    /**
+     * The options of a loader of a subscription operation: the same as the defaults, with caching off. Only a getter is
+     * overridden, because the setters of {@code DataLoaderOptions} differ between java-dataloader 3.x and 6.x.
+     */
+    private static final class UncachedOptions extends DataLoaderOptions {
+
+        @Override
+        public boolean cachingEnabled() {
+            return false;
         }
     }
 

@@ -197,6 +197,138 @@ type First {
         e.cause instanceof AbortExecutionException
     }
 
+    private static CompletableFuture<Object> boundary(ExecutionState state, CompletableFuture<Object> source) {
+        new AsyncBoundaryDataFetcher({ env -> source } as DataFetcher<Object>).get(environment(state)) as CompletableFuture<Object>
+    }
+
+    void "a pending async boundary is registered, and removed when it completes, fails or is cancelled"() {
+        given:
+        ExecutionState state = state()
+        def completing = new CompletableFuture<Object>()
+        def failing = new CompletableFuture<Object>()
+        def cancelling = new CompletableFuture<Object>()
+
+        when:
+        def first = boundary(state, completing)
+        def second = boundary(state, failing)
+        def third = boundary(state, cancelling)
+
+        then:
+        state.pendingStages() == 3
+
+        when:
+        completing.complete('value')
+
+        then:
+        first.get(5, TimeUnit.SECONDS) == 'value'
+        state.pendingStages() == 2
+
+        when:
+        failing.completeExceptionally(new IllegalStateException('boom'))
+        second.get(5, TimeUnit.SECONDS)
+
+        then:
+        thrown(ExecutionException)
+        state.pendingStages() == 1
+
+        when:
+        third.cancel(true)
+
+        then:
+        state.pendingStages() == 0
+        cancelling.cancelled
+    }
+
+    void "a stage that is already done is not registered"() {
+        given:
+        ExecutionState state = state()
+
+        when:
+        boundary(state, CompletableFuture.completedFuture('value'))
+
+        then:
+        state.pendingStages() == 0
+    }
+
+    void "cancelling an execution cancels its pending source stages, and no stage of another execution"() {
+        given:
+        ExecutionState other = state()
+        ExecutionState state = state()
+        def mine = new CompletableFuture<Object>()
+        def mine2 = new CompletableFuture<Object>()
+        def done = new CompletableFuture<Object>()
+        def theirs = new CompletableFuture<Object>()
+        def myStage = boundary(state, mine)
+        boundary(state, mine2)
+        def doneStage = boundary(state, done)
+        def theirStage = boundary(other, theirs)
+        done.complete('kept')
+        assert doneStage.get(5, TimeUnit.SECONDS) == 'kept'
+
+        when:
+        state.cancel()
+
+        then: 'the pending sources are cancelled and the registry is empty'
+        mine.cancelled
+        mine2.cancelled
+        state.pendingStages() == 0
+
+        and: 'the stage that completed before keeps its result'
+        doneStage.get() == 'kept'
+        !done.cancelled
+
+        and: 'the other execution is untouched'
+        !theirs.cancelled
+        !theirStage.done
+        other.pendingStages() == 1
+
+        when:
+        myStage.get(5, TimeUnit.SECONDS)
+
+        then:
+        def e = thrown(ExecutionException)
+        e.cause instanceof AbortExecutionException
+
+        when:
+        theirs.complete('theirs')
+
+        then:
+        theirStage.get(5, TimeUnit.SECONDS) == 'theirs'
+        other.pendingStages() == 0
+    }
+
+    void "an async boundary that starts after the cancel cancels its source at once"() {
+        given:
+        ExecutionState state = state()
+        def source = new CompletableFuture<Object>()
+        state.cancel()
+
+        when:
+        def stage = boundary(state, source)
+        stage.get(5, TimeUnit.SECONDS)
+
+        then:
+        source.cancelled
+        state.pendingStages() == 0
+        def e = thrown(ExecutionException)
+        e.cause instanceof AbortExecutionException
+    }
+
+    void "an execution that is not cancelled keeps its stages and their result"() {
+        given:
+        ExecutionState state = state()
+        def source = new CompletableFuture<Object>()
+        def stage = boundary(state, source)
+
+        when:
+        source.complete('value')
+
+        then:
+        stage.get(5, TimeUnit.SECONDS) == 'value'
+        !source.cancelled
+        state.pendingStages() == 0
+    }
+
     void "a field hop task of a cancelled execution is skipped"() {
         given:
         ExecutionState state = state()

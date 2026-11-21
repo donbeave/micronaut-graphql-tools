@@ -66,7 +66,7 @@ class MarkersTest {
             AnnotationMetadata mutation = context.getBeanDefinition(MarkerFixtures.StockMutation.class).getAnnotationMetadata();
 
             assertEquals(List.of("query"), List.of(query.stringValues(ResolverContracts.class, "operations")));
-            assertEquals(List.of("shelf"), List.of(query.stringValues(ResolverContracts.class, "methods")));
+            assertEquals(List.of("query||shelf/0"), List.of(query.stringValues(ResolverContracts.class, "contractMethods")));
             assertEquals(List.of(MarkerFixtures.Shelf.class), List.of(labels.classValues(ResolverContracts.class, "value")));
             assertEquals(List.of(TypeResolver.class.getName()),
                     List.of(labels.stringValues(ResolverContracts.class, "declaredBy")));

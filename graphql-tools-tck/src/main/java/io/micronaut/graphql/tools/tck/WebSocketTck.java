@@ -44,6 +44,8 @@ public final class WebSocketTck {
 
     /** The token that the connection interceptor of the scenario accepts, with the attribute {@code user=alice}. */
     private static final String TOKEN = "secret";
+    /** The message of the exceptions that no mapper handles in the scenario: it must never reach a client. */
+    private static final String SECRET = "secret internal detail";
     private static final String SUBPROTOCOL = "graphql-transport-ws";
     private static final long SECONDS = 10;
 
@@ -53,11 +55,16 @@ public final class WebSocketTck {
             "operation-ids-are-per-connection",
             "rejecting-interceptor-closes",
             "accepting-interceptor-attributes",
+            "transport-per-entry",
             "events-off-event-loop-with-context",
             "blocking-resolver-off-event-loop",
             "complete-cancels",
             "close-cancels",
-            "protocol-errors");
+            "protocol-errors",
+            "publisher-error-unmapped",
+            "publisher-error-mapped",
+            "event-errors-customized",
+            "subscription-loader-caching-off");
 
     private WebSocketTck() {
     }
@@ -88,10 +95,15 @@ public final class WebSocketTck {
                 case "operation-ids-are-per-connection" -> operationIdsArePerConnection(env);
                 case "rejecting-interceptor-closes" -> rejectingInterceptorCloses(env);
                 case "accepting-interceptor-attributes" -> acceptingInterceptorAttributes(env);
+                case "transport-per-entry" -> transportPerEntry(env);
                 case "events-off-event-loop-with-context" -> eventsOffEventLoopWithContext(env);
                 case "blocking-resolver-off-event-loop" -> blockingResolverOffEventLoop(env);
                 case "complete-cancels" -> completeCancels(env);
                 case "close-cancels" -> closeCancels(env);
+                case "subscription-loader-caching-off" -> subscriptionLoaderCachingOff(env);
+                case "publisher-error-unmapped" -> publisherErrorUnmapped(env);
+                case "publisher-error-mapped" -> publisherErrorMapped(env);
+                case "event-errors-customized" -> eventErrorsCustomized(env);
                 default -> protocolErrors(env);
             }
         } catch (AssertionError | RuntimeException e) {
@@ -176,6 +188,22 @@ public final class WebSocketTck {
         }
     }
 
+    // A resolver reads the transport of the execution state: WEBSOCKET for an operation over graphql-transport-ws, HTTP for a POST.
+    private static void transportPerEntry(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "{ transport }");
+            Map<String, Object> next = socket.next();
+            expect("WEBSOCKET", path(next, "payload", "data", "transport"), next);
+            expect("complete", socket.next().get("type"), "completion");
+        }
+        HttpResponse<String> response = env.client.send(HttpRequest.newBuilder(URI.create("http://" + env.authority + "/graphql"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"query\":\"{ transport }\"}")).build(), HttpResponse.BodyHandlers.ofString());
+        Map<String, Object> body = env.json.readValue(response.body(), OBJECT);
+        expect("HTTP", path(body, "data", "transport"), body);
+    }
+
     // The events are resolved off the event loop although their source emits on a thread that declares itself one, and
     // the child fields see the upgrade request in the propagated context.
     private static void eventsOffEventLoopWithContext(Env env) throws Exception {
@@ -201,6 +229,21 @@ public final class WebSocketTck {
             Map<String, Object> next = socket.next();
             expect(false, path(next, "payload", "data", "onEventLoop"), next);
             expect("complete", socket.next().get("type"), "completion");
+        }
+    }
+
+    // The loader of a subscription operation has caching off: a key that two fields load reaches the batch function twice.
+    private static void subscriptionLoaderCachingOff(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { ticks(count: 1) { echo echoAgain } }");
+            Map<String, Object> next = socket.next();
+            expect("e1", path(next, "payload", "data", "ticks", "echo"), next);
+            expect("e1", path(next, "payload", "data", "ticks", "echoAgain"), next);
+            expect("complete", socket.next().get("type"), "completion");
+            socket.subscribe("2", "{ echoLoaderKeys }");
+            Map<String, Object> keys = socket.next();
+            expect(2, path(keys, "payload", "data", "echoLoaderKeys"), keys);
         }
     }
 
@@ -253,6 +296,63 @@ public final class WebSocketTck {
             Map<String, Object> error = socket.next();
             expect("error", error.get("type"), "a query that does not validate: " + error);
         }
+    }
+
+    // A publisher that fails with an exception that has no mapper ends the operation with the generic error, which the
+    // customizers of the final list see, and the message of the exception never reaches the client.
+    private static void publisherErrorUnmapped(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { failing { number } }");
+            Map<String, Object> error = socket.next();
+            expect("error", error.get("type"), error);
+            expect("1", error.get("id"), error);
+            Map<String, Object> first = firstError(error);
+            expect("Internal server error", first.get("message"), error);
+            expect("INTERNAL_ERROR", path(first, "extensions", "code"), error);
+            expect("customized", path(first, "extensions", "stream"), error);
+            expect(false, error.toString().contains(SECRET), "the error leaks the message of the exception: " + error);
+        }
+    }
+
+    // A publisher that fails with a mapped exception sends the mapped error.
+    private static void publisherErrorMapped(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { failingMapped { number } }");
+            Map<String, Object> error = socket.next();
+            expect("error", error.get("type"), error);
+            Map<String, Object> first = firstError(error);
+            expect("tick failed", first.get("message"), error);
+            expect("TICK_FAILED", path(first, "extensions", "code"), error);
+            expect("customized", path(first, "extensions", "stream"), error);
+        }
+    }
+
+    // The result of an event that has errors is a response of its own: the customizers of the final list see its errors.
+    private static void eventErrorsCustomized(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { brokenEvent { number broken } }");
+            Map<String, Object> next = socket.next();
+            expect("next", next.get("type"), next);
+            expect(1, path(next, "payload", "data", "brokenEvent", "number"), next);
+            Map<String, Object> first = firstError(next);
+            expect("Internal server error", first.get("message"), next);
+            expect("INTERNAL_ERROR", path(first, "extensions", "code"), next);
+            expect("customized", path(first, "extensions", "stream"), next);
+            expect(false, next.toString().contains(SECRET), "the error leaks the message of the exception: " + next);
+            expect("complete", socket.next().get("type"), "completion");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> firstError(Map<String, Object> message) {
+        Object errors = message.get("payload") instanceof Map<?, ?> payload ? payload.get("errors") : message.get("payload");
+        if (!(errors instanceof List<?> list) || list.isEmpty() || !(list.get(0) instanceof Map<?, ?> first)) {
+            throw new AssertionError("expected a list of errors in the payload: " + message);
+        }
+        return (Map<String, Object>) first;
     }
 
     private static int cancelled(Env env) throws IOException, InterruptedException {

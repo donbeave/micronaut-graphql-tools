@@ -65,7 +65,7 @@ class MarkersSpec extends Specification {
 
         expect:
         query.stringValues(ResolverContracts, 'operations').toList() == ['query']
-        query.stringValues(ResolverContracts, 'methods').toList() == ['shelf']
+        query.stringValues(ResolverContracts, 'contractMethods').toList() == ['query||shelf/0']
         labels.classValues(ResolverContracts, 'value').toList() == [MarkerFixtures.Shelf]
         labels.stringValues(ResolverContracts, 'declaredBy').toList() == [TypeResolver.name]
         mutation.stringValues(ResolverContracts, 'operations').toList() == ['mutation']
