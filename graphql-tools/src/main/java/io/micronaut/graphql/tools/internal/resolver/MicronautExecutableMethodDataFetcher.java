@@ -25,6 +25,8 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.type.Executable;
+import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.SlotKind;
+import io.micronaut.http.HttpRequest;
 import io.micronaut.graphql.tools.input.ArgumentValue;
 import io.micronaut.graphql.tools.internal.execution.ExecutionState;
 import io.micronaut.graphql.tools.internal.execution.LazyDataLoaderRegistry;
@@ -33,8 +35,10 @@ import io.micronaut.graphql.tools.internal.execution.SuspendInvoker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import io.micronaut.graphql.tools.internal.input.InputConversionException;
 import io.micronaut.graphql.tools.internal.input.ValueConverter;
 import io.micronaut.graphql.tools.internal.input.ValueConverters;
@@ -59,12 +63,22 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
     private static final int ARGUMENT_VALUE = 2;
     private static final int INPUT_VALUE = 3;
     private static final int DATA_LOADER = 4;
+    private static final int CONTEXT = 5;
+    private static final int CONTEXT_VALUE = 6;
+    private static final int SELECTION_SET = 7;
+    private static final int LOCALE = 8;
+    private static final int PRINCIPAL = 9;
+    private static final int REQUEST = 10;
+    private static final int RESPONSE = 11;
+    private static final int OPTIONAL_RESPONSE = 12;
 
     private final Executable<Object, ?> executable;
     private final int[] kinds;
     private final String[] names;
     private final ValueConverter[] converters;
     private final int[] loaders;
+    private final Class<? extends Principal>[] principalTypes;
+    private final boolean needsState;
     private final Object instance;
     private final PerCallResolver perCall;
     @Nullable
@@ -98,6 +112,8 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         this.names = new String[size];
         this.converters = new ValueConverter[size];
         this.loaders = new int[size];
+        this.principalTypes = principalTypes(size);
+        boolean state = false;
         for (int i = 0; i < size; i++) {
             ArgumentDefinition argumentDefinition = argumentDefinitions.get(i);
             names[i] = argumentDefinition.getName();
@@ -108,6 +124,19 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             } else if (argumentDefinition.isDataLoaderArgument()) {
                 kinds[i] = DATA_LOADER;
                 loaders[i] = argumentDefinition.getDataLoaderIndex();
+            } else if (argumentDefinition.getKind() != SlotKind.ARGUMENT) {
+                kinds[i] = switch (argumentDefinition.getKind()) {
+                    case CONTEXT -> CONTEXT;
+                    case CONTEXT_VALUE -> CONTEXT_VALUE;
+                    case SELECTION_SET -> SELECTION_SET;
+                    case LOCALE -> LOCALE;
+                    case PRINCIPAL -> PRINCIPAL;
+                    case REQUEST -> REQUEST;
+                    case RESPONSE -> RESPONSE;
+                    default -> OPTIONAL_RESPONSE;
+                };
+                principalTypes[i] = argumentDefinition.getPrincipalType();
+                state |= kinds[i] >= PRINCIPAL;
             } else {
                 Argument<?> argument = argumentDefinition.getInputValueArgument().orElseThrow();
                 boolean argumentValue = ArgumentValue.class.equals(argument.getType());
@@ -116,6 +145,7 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                 converters[i] = converter == ValueConverters.IDENTITY ? null : converter;
             }
         }
+        this.needsState = state;
         this.perCall = instance instanceof PerCallResolver resolver ? resolver : null;
         this.instance = perCall == null ? instance : null;
     }
@@ -126,10 +156,12 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         // a suspend method has one more parameter than the field has arguments: the continuation, which the invoker fills
         Object[] arguments = suspendInvoker != null ? new Object[size + 1] : size == 0 ? NO_ARGUMENTS : new Object[size];
 
+        // read only by a plan that has a request, response or principal parameter: any other field touches no state
+        ExecutionState state = needsState ? ExecutionState.of(environment.getGraphQlContext()) : null;
         int i = 0;
         try {
             for (; i < size; i++) {
-                arguments[i] = argument(environment, i);
+                arguments[i] = argument(environment, state, i);
             }
         } catch (DataLoaderUnavailableException e) {
             return dataLoaderUnavailable(environment, e);
@@ -144,10 +176,18 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
         return suspendInvoker != null ? suspendInvoker.invoke(executable, target, arguments) : executable.invoke(target, arguments);
     }
 
-    private Object argument(DataFetchingEnvironment environment, int index) {
+    private Object argument(DataFetchingEnvironment environment, @Nullable ExecutionState state, int index) {
         return switch (kinds[index]) {
             case SOURCE -> environment.getSource();
             case DATA_FETCHING_ENVIRONMENT -> environment;
+            case CONTEXT -> environment.getGraphQlContext();
+            case CONTEXT_VALUE -> environment.getGraphQlContext().get(names[index]);
+            case SELECTION_SET -> environment.getSelectionSet();
+            case LOCALE -> environment.getLocale();
+            case PRINCIPAL -> principal(state, principalTypes[index]);
+            case REQUEST -> state == null ? null : state.httpRequest();
+            case RESPONSE -> state == null ? null : state.response();
+            case OPTIONAL_RESPONSE -> state == null ? Optional.empty() : state.httpResponse();
             case DATA_LOADER -> {
                 // by index, from the registry of this execution: no string lookup, and the loader is created on first use
                 if (environment.getDataLoaderRegistry() instanceof LazyDataLoaderRegistry registry) {
@@ -165,6 +205,17 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             }
             default -> convert(index, environment.getArgument(names[index]));
         };
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<? extends Principal>[] principalTypes(int size) {
+        return (Class<? extends Principal>[]) new Class<?>[size];
+    }
+
+    @Nullable
+    private static Object principal(@Nullable ExecutionState state, Class<? extends Principal> type) {
+        HttpRequest<?> request = state == null ? null : state.httpRequest();
+        return request == null ? null : request.getUserPrincipal(type).orElse(null);
     }
 
     private static DataFetcherResult<Object> dataLoaderUnavailable(DataFetchingEnvironment environment,

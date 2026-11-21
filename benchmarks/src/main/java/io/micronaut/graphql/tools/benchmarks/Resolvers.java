@@ -28,6 +28,7 @@ import io.micronaut.graphql.tools.directive.SchemaDirective;
 import io.micronaut.graphql.tools.execution.FieldDescriptor;
 import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
 import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.annotation.GraphQLContextValue;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Circle;
@@ -41,10 +42,15 @@ import io.micronaut.graphql.tools.benchmarks.Fixtures.Shape;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Square;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.StockInput;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Triangle;
+import io.micronaut.http.HttpRequest;
+import io.micronaut.http.MutableHttpResponse;
 import jakarta.inject.Singleton;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -92,6 +98,16 @@ public final class Resolvers {
         }
 
         public String scalar(int n) {
+            return "x";
+        }
+
+        public String injected(GraphQLContext context, Locale locale, @GraphQLContextValue("tenant") String tenant,
+                               DataFetchingEnvironment environment) {
+            return "x";
+        }
+
+        public String injectedState(HttpRequest<?> request, Optional<MutableHttpResponse<?>> response,
+                                    Principal principal) {
             return "x";
         }
 

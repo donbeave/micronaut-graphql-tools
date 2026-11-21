@@ -21,14 +21,15 @@ import io.micronaut.graphql.tools.internal.exceptions.AbstractMappingException;
 import io.micronaut.graphql.tools.mapping.MappingContext;
 
 /**
- * A {@code DataLoader<K, V>} parameter of a resolver method cannot be served: no batch loader bean has its types
- * ({@link BindingCode#DATA_LOADER_NOT_FOUND}), or the application replaced the library's invocation, which provides the
- * loaders ({@link BindingCode#EXECUTION_CONTEXT_UNAVAILABLE}).
+ * An injected parameter of a resolver method cannot be served: a {@code DataLoader<K, V>} parameter matches no batch
+ * loader bean ({@link BindingCode#DATA_LOADER_NOT_FOUND}), or a parameter needs the execution context (a DataLoader, the
+ * request, the response or the principal) and the application replaced the library's invocation
+ * ({@link BindingCode#EXECUTION_CONTEXT_UNAVAILABLE}).
  */
 @Internal
-public final class DataLoaderParameterException extends AbstractMappingException {
+public final class InjectedParameterException extends AbstractMappingException {
 
-    public DataLoaderParameterException(BindingCode code, String message, MappingContext mappingContext) {
+    public InjectedParameterException(BindingCode code, String message, MappingContext mappingContext) {
         super(code, message, mappingContext);
     }
 

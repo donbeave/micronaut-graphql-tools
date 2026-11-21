@@ -15,6 +15,7 @@
  */
 package example.graphql.query
 
+import io.micronaut.graphql.tools.annotation.GraphQLArgument
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import java.time.Instant
@@ -28,5 +29,5 @@ class ScalarsQuery {
 
     fun echoJson(data: Any?): Any? = data
 
-    fun echoLocale(tag: Locale): Locale = tag
+    fun echoLocale(@GraphQLArgument("tag") tag: Locale): Locale = tag
 }

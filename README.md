@@ -724,8 +724,10 @@ The ids, the default names and formats are in the guide page on scalars.
 ### Binding by name
 
 A resolver method parameter is bound to the field argument **with the same name**, not to the argument at the same
-position. The source object (first parameter of a type resolver method) and a trailing `DataFetchingEnvironment`
-keep their places; every other parameter is matched by name. Parameters may be declared in any order. The name-to-
+position. The source object (first parameter of a type resolver method) keeps its place, and a parameter of an injected kind
+(`DataFetchingEnvironment`, `GraphQLContext`, `@GraphQLContextValue`, `DataFetchingFieldSelectionSet`, `DataLoader`,
+`Locale`, `Principal`, the HTTP request and response; see the guide page "Resolver Parameters") takes any position after it;
+every other parameter is matched by name. Parameters may be declared in any order. The name-to-
 position plan is built once at startup, so a request does no name lookup.
 
 ```java

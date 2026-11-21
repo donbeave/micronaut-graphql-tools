@@ -70,6 +70,8 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String TYPE_RESOLVER_METHOD = "typeResolverMethod";
     public static final String TYPE_RESOLVER_METHOD_ARGUMENT = "typeResolverMethodWithArgument";
     public static final String SCALAR_ARGUMENT = "scalarArgument";
+    public static final String INJECTED_PARAMETERS = "injectedParameters";
+    public static final String INJECTED_STATE_PARAMETERS = "injectedStateParameters";
     public static final String LOCAL_DATE_COERCION = "localDateCoercion";
     public static final String INSTANT_COERCION = "instantCoercion";
     public static final String JSON_COERCION = "jsonCoercion";
@@ -124,6 +126,8 @@ public final class BenchmarkCases implements AutoCloseable {
             type Query {
               ping: String
               scalar(n: Int!): String
+              injected: String
+              injectedState: String
               enumArg(color: Color!): String
               input(input: PointInput!): String
               inputs(inputs: [PointInput!]!): String
@@ -276,6 +280,8 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(TYPE_RESOLVER_METHOD_ARGUMENT,
                 fetch("Item", "labelWithArgument", new Item("id", "name", 1), Map.of("n", 3)));
         ops.put(SCALAR_ARGUMENT, fetch("Query", "scalar", null, Map.of("n", 42)));
+        ops.put(INJECTED_PARAMETERS, fetch("Query", "injected", null, Map.of()));
+        ops.put(INJECTED_STATE_PARAMETERS, fetch("Query", "injectedState", null, Map.of()));
         ops.put(LOCAL_DATE_COERCION, coercion(TimeScalars.coercing(StandardScalar.LOCAL_DATE, "LocalDate", null),
                 "2026-12-24"));
         ops.put(INSTANT_COERCION, coercion(TimeScalars.coercing(StandardScalar.INSTANT, "Instant", null),

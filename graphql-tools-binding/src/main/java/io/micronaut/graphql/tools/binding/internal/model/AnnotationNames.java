@@ -40,6 +40,8 @@ public final class AnnotationNames {
     public static final String SCHEMA_COORDINATE = PACKAGE + "GraphQLSchemaCoordinate";
     /** {@code @GraphQLArgument}. */
     public static final String ARGUMENT = PACKAGE + "GraphQLArgument";
+    /** {@code @GraphQLContextValue}. */
+    public static final String CONTEXT_VALUE = PACKAGE + "GraphQLContextValue";
     /** {@code @GraphQLInput}. */
     public static final String INPUT = PACKAGE + "GraphQLInput";
     /** {@code @GraphQLType}. */

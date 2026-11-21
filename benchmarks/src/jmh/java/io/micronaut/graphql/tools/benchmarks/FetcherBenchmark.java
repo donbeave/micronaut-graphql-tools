@@ -37,6 +37,8 @@ public class FetcherBenchmark extends CaseState {
     private BenchmarkCases.Op typeResolverMethodWithArgument;
     private BenchmarkCases.Op directiveWrapped;
     private BenchmarkCases.Op scalarArgument;
+    private BenchmarkCases.Op injectedParameters;
+    private BenchmarkCases.Op injectedStateParameters;
     private BenchmarkCases.Op localDateCoercion;
     private BenchmarkCases.Op instantCoercion;
     private BenchmarkCases.Op jsonCoercion;
@@ -56,6 +58,8 @@ public class FetcherBenchmark extends CaseState {
         typeResolverMethodWithArgument = op(BenchmarkCases.TYPE_RESOLVER_METHOD_ARGUMENT);
         directiveWrapped = op(BenchmarkCases.DIRECTIVE_WRAPPED_FETCHER);
         scalarArgument = op(BenchmarkCases.SCALAR_ARGUMENT);
+        injectedParameters = op(BenchmarkCases.INJECTED_PARAMETERS);
+        injectedStateParameters = op(BenchmarkCases.INJECTED_STATE_PARAMETERS);
         localDateCoercion = op(BenchmarkCases.LOCAL_DATE_COERCION);
         instantCoercion = op(BenchmarkCases.INSTANT_COERCION);
         jsonCoercion = op(BenchmarkCases.JSON_COERCION);
@@ -100,6 +104,16 @@ public class FetcherBenchmark extends CaseState {
     @Benchmark
     public Object scalarArgument() throws Exception {
         return scalarArgument.run();
+    }
+
+    @Benchmark
+    public Object injectedParameters() throws Exception {
+        return injectedParameters.run();
+    }
+
+    @Benchmark
+    public Object injectedStateParameters() throws Exception {
+        return injectedStateParameters.run();
     }
 
     @Benchmark
