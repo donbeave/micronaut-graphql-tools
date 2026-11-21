@@ -35,6 +35,8 @@ public final class BindingRulesAccess {
     }
 
     /**
+     * Reads the schema the way the visitor does.
+     *
      * @param directories directories with {@code .graphqls} files
      * @return the schema, or empty when it cannot be read
      */
