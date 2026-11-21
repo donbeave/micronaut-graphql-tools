@@ -15,9 +15,12 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
+import graphql.execution.DataFetcherExceptionHandler;
+import graphql.execution.DataFetcherExceptionHandlerParameters;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.async.propagation.ReactivePropagation;
 import io.micronaut.core.async.publisher.Publishers;
 import io.micronaut.core.convert.ConversionService;
@@ -38,20 +41,29 @@ import java.util.concurrent.Executor;
  *
  * <p>The cost is the wrapper and one queue for each subscription, and one executor task for each burst of events, not for
  * each field. An execution that the library's invocation did not start passes through.</p>
+ *
+ * <p>An error that the publisher signals ends the stream with a {@link SubscriptionFailure}, which carries the errors that
+ * the default error handler (the mappers and the generic error) made of the exception, so that a transport sends the
+ * same errors as for a query. A transport that does not know the class sees the original exception.</p>
  */
 @Internal
 public final class StreamDataFetcher implements DataFetcher<Object> {
 
     private final DataFetcher<Object> delegate;
     private final ConversionService conversionService;
+    @Nullable
+    private final DataFetcherExceptionHandler errorHandler;
 
     /**
      * @param delegate          the fetcher that invokes the resolver method
      * @param conversionService converts a reactive type that is not a {@code Publisher} to one
+     * @param errorHandler      makes the errors of an exception that the publisher signals, or null to pass it on as it is
      */
-    public StreamDataFetcher(DataFetcher<Object> delegate, ConversionService conversionService) {
+    public StreamDataFetcher(DataFetcher<Object> delegate, ConversionService conversionService,
+                             @Nullable DataFetcherExceptionHandler errorHandler) {
         this.delegate = delegate;
         this.conversionService = conversionService;
+        this.errorHandler = errorHandler;
     }
 
     @Override
@@ -60,13 +72,13 @@ public final class StreamDataFetcher implements DataFetcher<Object> {
         ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
         if (result instanceof CompletionStage<?> stage) {
             // CompletionStage<Publisher<T>>: graphql-java unwraps the stage later, so the publisher is wrapped when it arrives
-            return stage.thenApply(value -> wrap(value, state));
+            return stage.thenApply(value -> wrap(value, state, environment));
         }
-        return wrap(result, state);
+        return wrap(result, state, environment);
     }
 
     @SuppressWarnings("unchecked")
-    private Object wrap(Object result, ExecutionState state) {
+    private Object wrap(Object result, ExecutionState state, DataFetchingEnvironment environment) {
         Publisher<Object> publisher;
         if (result instanceof Publisher<?> direct) {
             publisher = (Publisher<Object>) direct;
@@ -76,6 +88,7 @@ public final class StreamDataFetcher implements DataFetcher<Object> {
             return result;
         }
         if (state == null) {
+            // not run by the library transport, which alone understands SubscriptionFailure: the publisher passes on as it is
             return publisher;
         }
         Flux<Object> events = Flux.from(publisher);
@@ -83,6 +96,18 @@ public final class StreamDataFetcher implements DataFetcher<Object> {
         if (executor != null) {
             events = events.publishOn(Schedulers.fromExecutor(executor));
         }
+        if (errorHandler != null) {
+            // after the hop, so that the exception mappers do not run on the thread that the source signals from
+            events = events.onErrorMap(failure -> failure instanceof SubscriptionFailure ? failure : failed(failure, environment));
+        }
         return ReactivePropagation.propagate(state.propagatedContext(), events.doOnCancel(state::cancel));
+    }
+
+    private Throwable failed(Throwable failure, DataFetchingEnvironment environment) {
+        DataFetcherExceptionHandlerParameters parameters = DataFetcherExceptionHandlerParameters.newExceptionParameters()
+                .dataFetchingEnvironment(environment)
+                .exception(failure)
+                .build();
+        return new SubscriptionFailure(failure, errorHandler.handleException(parameters).join().getErrors());
     }
 }

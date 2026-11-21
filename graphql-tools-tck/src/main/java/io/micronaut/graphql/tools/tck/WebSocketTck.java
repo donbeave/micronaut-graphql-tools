@@ -44,6 +44,8 @@ public final class WebSocketTck {
 
     /** The token that the connection interceptor of the scenario accepts, with the attribute {@code user=alice}. */
     private static final String TOKEN = "secret";
+    /** The message of the exceptions that no mapper handles in the scenario: it must never reach a client. */
+    private static final String SECRET = "secret internal detail";
     private static final String SUBPROTOCOL = "graphql-transport-ws";
     private static final long SECONDS = 10;
 
@@ -57,7 +59,10 @@ public final class WebSocketTck {
             "blocking-resolver-off-event-loop",
             "complete-cancels",
             "close-cancels",
-            "protocol-errors");
+            "protocol-errors",
+            "publisher-error-unmapped",
+            "publisher-error-mapped",
+            "event-errors-customized");
 
     private WebSocketTck() {
     }
@@ -92,6 +97,9 @@ public final class WebSocketTck {
                 case "blocking-resolver-off-event-loop" -> blockingResolverOffEventLoop(env);
                 case "complete-cancels" -> completeCancels(env);
                 case "close-cancels" -> closeCancels(env);
+                case "publisher-error-unmapped" -> publisherErrorUnmapped(env);
+                case "publisher-error-mapped" -> publisherErrorMapped(env);
+                case "event-errors-customized" -> eventErrorsCustomized(env);
                 default -> protocolErrors(env);
             }
         } catch (AssertionError | RuntimeException e) {
@@ -253,6 +261,63 @@ public final class WebSocketTck {
             Map<String, Object> error = socket.next();
             expect("error", error.get("type"), "a query that does not validate: " + error);
         }
+    }
+
+    // A publisher that fails with an exception that has no mapper ends the operation with the generic error, which the
+    // customizers of the final list see, and the message of the exception never reaches the client.
+    private static void publisherErrorUnmapped(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { failing { number } }");
+            Map<String, Object> error = socket.next();
+            expect("error", error.get("type"), error);
+            expect("1", error.get("id"), error);
+            Map<String, Object> first = firstError(error);
+            expect("Internal server error", first.get("message"), error);
+            expect("INTERNAL_ERROR", path(first, "extensions", "code"), error);
+            expect("customized", path(first, "extensions", "stream"), error);
+            expect(false, error.toString().contains(SECRET), "the error leaks the message of the exception: " + error);
+        }
+    }
+
+    // A publisher that fails with a mapped exception sends the mapped error.
+    private static void publisherErrorMapped(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { failingMapped { number } }");
+            Map<String, Object> error = socket.next();
+            expect("error", error.get("type"), error);
+            Map<String, Object> first = firstError(error);
+            expect("tick failed", first.get("message"), error);
+            expect("TICK_FAILED", path(first, "extensions", "code"), error);
+            expect("customized", path(first, "extensions", "stream"), error);
+        }
+    }
+
+    // The result of an event that has errors is a response of its own: the customizers of the final list see its errors.
+    private static void eventErrorsCustomized(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { brokenEvent { number broken } }");
+            Map<String, Object> next = socket.next();
+            expect("next", next.get("type"), next);
+            expect(1, path(next, "payload", "data", "brokenEvent", "number"), next);
+            Map<String, Object> first = firstError(next);
+            expect("Internal server error", first.get("message"), next);
+            expect("INTERNAL_ERROR", path(first, "extensions", "code"), next);
+            expect("customized", path(first, "extensions", "stream"), next);
+            expect(false, next.toString().contains(SECRET), "the error leaks the message of the exception: " + next);
+            expect("complete", socket.next().get("type"), "completion");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> firstError(Map<String, Object> message) {
+        Object errors = message.get("payload") instanceof Map<?, ?> payload ? payload.get("errors") : message.get("payload");
+        if (!(errors instanceof List<?> list) || list.isEmpty() || !(list.get(0) instanceof Map<?, ?> first)) {
+            throw new AssertionError("expected a list of errors in the payload: " + message);
+        }
+        return (Map<String, Object>) first;
     }
 
     private static int cancelled(Env env) throws IOException, InterruptedException {

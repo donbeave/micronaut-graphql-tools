@@ -15,11 +15,16 @@
  */
 package example.tck;
 
+import graphql.GraphQLError;
+import graphql.GraphqlErrorBuilder;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
+import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer;
+import io.micronaut.graphql.tools.error.GraphQLExceptionContext;
+import io.micronaut.graphql.tools.error.GraphQLExceptionMapper;
 import io.micronaut.graphql.tools.internal.execution.ExecutionState;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest;
@@ -30,6 +35,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.NonBlocking;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,6 +73,39 @@ public final class WebSocketScenario {
     public static class CancelledStreams {
 
         final AtomicInteger count = new AtomicInteger();
+    }
+
+    public static class TickFailure extends RuntimeException {
+
+        public TickFailure() {
+            super("secret internal detail");
+        }
+    }
+
+    @Singleton
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class TickFailureMapper implements GraphQLExceptionMapper<TickFailure> {
+
+        @Override
+        public GraphQLError map(TickFailure exception, GraphQLExceptionContext context) {
+            return context.error("tick failed", Map.of("code", "TICK_FAILED"));
+        }
+    }
+
+    @Singleton
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class StreamCustomizer implements GraphQLErrorsCustomizer {
+
+        @Override
+        public List<GraphQLError> customize(List<GraphQLError> errors) {
+            return errors.stream().map(error -> {
+                Map<String, Object> extensions = new LinkedHashMap<>(error.getExtensions() == null ? Map.of() : error.getExtensions());
+                extensions.put("stream", "customized");
+                return (GraphQLError) GraphqlErrorBuilder.newError()
+                        .message(error.getMessage()).path(error.getPath()).locations(error.getLocations())
+                        .errorType(error.getErrorType()).extensions(extensions).build();
+            }).toList();
+        }
     }
 
     @GraphQLType
@@ -116,6 +156,18 @@ public final class WebSocketScenario {
             this.cancelled = cancelled;
         }
 
+        public Flux<Tick> failing() {
+            return Flux.error(new IllegalStateException("secret internal detail"));
+        }
+
+        public Flux<Tick> failingMapped() {
+            return Flux.error(new TickFailure());
+        }
+
+        public Flux<Tick> brokenEvent() {
+            return Flux.just(new Tick(1, true));
+        }
+
         // tag::ws-subscription[]
         public Flux<Tick> ticks(int count) {
             // the timer of Reactor emits on a thread that declares itself an event-loop thread
@@ -147,6 +199,10 @@ public final class WebSocketScenario {
 
         public boolean onEventLoop(Tick tick) {
             return Thread.currentThread() instanceof NonBlocking;
+        }
+
+        public String broken(Tick tick) {
+            throw new IllegalStateException("secret internal detail");
         }
 
         public String requestHeader(Tick tick) {
