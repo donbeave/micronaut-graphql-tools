@@ -61,7 +61,7 @@ class HttpQueries {
     fun tenant(environment: DataFetchingEnvironment): String? = environment.graphQlContext.get<String>(TENANT)
 
     fun tenantLoaded(loader: DataLoader<String, String>, environment: DataFetchingEnvironment): CompletionStage<String> =
-        loader.load(environment.graphQlContext.get<String>(TENANT))
+        loader.load(requireNotNull(environment.graphQlContext.get<String>(TENANT)))
 
     fun loaderId(loader: DataLoader<String, String>): String = Integer.toHexString(System.identityHashCode(loader))
 }
