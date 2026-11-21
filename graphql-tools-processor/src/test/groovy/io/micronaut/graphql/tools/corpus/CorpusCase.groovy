@@ -306,7 +306,7 @@ final class CorpusCase {
             }
         }
         if (processorAbsent() && (baseExpected.containsKey('compile.txt') || baseExpected.containsKey('compile.kapt.txt') ||
-                expectedFiles.values().any { it.containsKey('compile.txt') })) {
+                expectedFiles.values().any { it.containsKey('compile.txt') || it.containsKey('compile.kapt.txt') })) {
             problems.add("${EXPECTED}/compile.txt: a case with compile.processor=absent has no compile-time verdict".toString())
         }
         if (baseExpected.containsKey('compile.kapt.txt')) {

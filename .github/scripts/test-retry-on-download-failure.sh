@@ -49,6 +49,25 @@ stub japicmp "Could not determine the dependencies of task ':micronaut-graphql-t
 > Could not resolve all dependencies for configuration ':micronaut-graphql-tools:runtimeClasspath'.
    > Could not find any matches for com.graphql-java:graphql-java:[1.0,1000) as no versions of com.graphql-java:graphql-java are available." 1
 expect japicmp 0 2 recovered
+mkdir "$work/bin"
+cat > "$work/bin/gradlew" <<STUB
+#!/usr/bin/env bash
+echo \$(( \$(cat "$work/gradlew.count" 2>/dev/null || echo 0) + 1 )) > "$work/gradlew.count"
+if [ "\$(cat "$work/gradlew.count")" -eq 1 ]; then
+  echo "Could not resolve all artifacts for configuration 'x'."
+  echo "> Could not find micronaut-security-bom-4.18.2.toml (io.micronaut.security:micronaut-security-bom:4.18.2)."
+  exit 1
+fi
+echo "retried with: \$*"
+STUB
+chmod +x "$work/bin/gradlew"
+out=$("$script" "$work/bin/gradlew" build 2>&1)
+if [ "$(cat "$work/gradlew.count")" -ne 2 ] || ! grep -qF "retried with: build --refresh-dependencies" <<<"$out"; then
+  echo "FAIL missing: $out"
+  failures=$((failures + 1))
+else
+  echo "ok   missing"
+fi
 cat > "$work/always" <<STUB
 #!/usr/bin/env bash
 echo \$(( \$(cat "$work/always.count" 2>/dev/null || echo 0) + 1 )) > "$work/always.count"
