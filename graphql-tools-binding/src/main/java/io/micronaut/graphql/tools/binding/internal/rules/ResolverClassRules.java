@@ -488,7 +488,6 @@ public final class ResolverClassRules {
         Map<String, String> declared = declaredCoordinates(bindable);
         boolean root = resolver.annotations().has(AnnotationNames.ROOT_RESOLVER);
         Set<String> rootTypes = schema.rootTypeNames();
-        Set<String> operationTypes = schema.rootTypeNames(resolver.markers().operations());
 
         List<MethodVerdict> methods = new ArrayList<>();
         for (JMethod method : bindable) {
@@ -498,12 +497,12 @@ public final class ResolverClassRules {
             List<String> coordinates = new ArrayList<>();
             if (declared != null) {
                 String coordinate = declared.get(method.signature());
-                if (coordinate.indexOf('.') > 0) {
+                if (coordinate.indexOf('.') > 0 && !contradictsOperation(schema, resolver, method, coordinate)) {
                     coordinates.add(coordinate);
                 }
             } else if (root) {
                 List<String> names = FieldNames.ofResolverMethod(method.name(), accessorPrefixes);
-                new TreeSet<>(operationTypes).forEach(type -> names.forEach(name -> {
+                new TreeSet<>(operationTypes(schema, resolver, method)).forEach(type -> names.forEach(name -> {
                     if (field(schema, type, name) != null) {
                         coordinates.add(type + "." + name);
                     }
@@ -534,6 +533,30 @@ public final class ResolverClassRules {
             methods.add(new MethodVerdict(method.signature(), coordinates, fields));
         }
         return new ClassVerdict(resolver.name(), methods);
+    }
+
+    /**
+     * @param schema     the schema
+     * @param resolver   a resolver class
+     * @param method     one of its methods
+     * @param coordinate the coordinate that the method declares
+     * @return whether the coordinate is a field of a root type that the contracts of the method do not bind, so that the
+     * startup does not bind the method to it
+     */
+    public static boolean contradictsOperation(SchemaModel schema, JClass resolver, JMethod method, String coordinate) {
+        String typeName = coordinate.substring(0, coordinate.indexOf('.'));
+        return schema.rootTypeNames().contains(typeName) && !operationTypes(schema, resolver, method).contains(typeName);
+    }
+
+    /**
+     * @param schema   the schema
+     * @param resolver a resolver class
+     * @param method   one of its methods
+     * @return the names of the root types whose fields the method may bind: the operations of the contracts that declare
+     * the method decide, and every root type is open for a method that no marker contract fixes
+     */
+    public static Set<String> operationTypes(SchemaModel schema, JClass resolver, JMethod method) {
+        return schema.rootTypeNames(resolver.markers().operationsOf(method.name(), method.parameters().size()));
     }
 
     /**

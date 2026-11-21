@@ -67,7 +67,7 @@ class MarkersTest {
             val mutation = contracts(context, StockMutation::class.java)
 
             assertEquals(listOf("query"), query.stringValues("operations").toList())
-            assertEquals(listOf("shelf"), query.stringValues("methods").toList())
+            assertEquals(listOf("query||shelf/0"), query.stringValues("contractMethods").toList())
             assertEquals(listOf(Shelf::class.java.name), labels.annotationClassValues("value").map { it.name })
             assertEquals(listOf(TypeResolver::class.java.name), labels.stringValues("declaredBy").toList())
             assertEquals(listOf("mutation"), mutation.stringValues("operations").toList())
