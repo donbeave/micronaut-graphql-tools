@@ -44,6 +44,25 @@ The library does not dispatch loaders itself: graphql-java does, and the library
 * From graphql-java 22 the execution selects a `DataLoaderDispatchStrategy`: `NO_OP` for the empty registry (an application without loader beans), and the per-level strategy for any other registry. Newer lines of graphql-java can dispatch from a thread that is not the one that fetched the field. The batch function wrapper installs the context there.
 * The tests of the library run these checks on the floor, default and ceiling legs.
 
+== Options of one loader
+
+A loader is created with the default `DataLoaderOptions`. To change the options of one loader, register a `DataLoaderOptionsCustomizer` bean: `loaderName()` names the loader (its `@Named` qualifier, or the class name with a lower-case first letter), and `customize` gets the options and returns the options that the loader uses.
+
+snippet::example.tck.DataLoaderOptionsScenario[project-base="test-suite", source="test", tags="options", indent="0"]
+
+* The customizer applies to its loader and to no other. A customizer that names no loader bean fails the startup with `[data-loader-not-found]`, and the message lists the loaders that exist.
+* Several customizers of one loader run by order (`@Order` or `Ordered#getOrder()`), lowest first, and each gets the options that the previous one returned.
+* It runs each time the loader is created, so once for each execution that uses the loader. Return new options (and a new cache map, if you set one) rather than shared ones.
+* The library calls no setter of `DataLoaderOptions`, because the setters differ between java-dataloader 3.x, where the options are mutable and a setter returns the same object, and 6.x, where they are immutable and are copied with `transform`. Write the body with the API of the version that your application has. The example overrides `maxBatchSize()`, which both lines have; with the setters of 3.x it is `return options.setMaxBatchSize(2);`, and with 6.x it is `return options.transform(builder -> builder.setMaxBatchSize(2));`.
+
+== Caching in a subscription
+
+A loader that a subscription operation creates has caching off. The loader of a query keeps the default, caching on. The cache of a `DataLoader` lives as long as the loader, and a subscription lives as long as its connection, so a cache would serve the value of the first event to every later one. A `DataLoaderOptionsCustomizer` can turn caching back on for a loader. The options that it gets already hold the default of the library, so on java-dataloader 6.x, which copies the field values in `transform`, set the value that you want explicitly instead of relying on the options you received.
+
+== The context of a batch function
+
+A `BatchLoaderWithContext` and a `MappedBatchLoaderWithContext` get the `GraphQLContext` of the execution from `BatchLoaderEnvironment#getContext()`, so a batch function reads the values that a `GraphQLContextContributor` added. A context that your own `DataLoaderOptionsCustomizer` provides with `setBatchLoaderContextProvider` wins.
+
 == Replacing the registry
 
 A `GraphQLExecutionInputCustomizer` that returns an input with another `DataLoaderRegistry` replaces the library's registry for that execution. The library's loaders are then unavailable: a resolver with a `DataLoader` parameter returns a field error (`extensions.code` is `DATA_LOADER_UNAVAILABLE`) that names the customizer. `DataFetchingEnvironment#getDataLoader(String)` serves the customizer's own registry as usual.
@@ -79,6 +98,4 @@ A `DataLoaderRegistry` bean is not used any more and fails the startup (BC-36). 
 
 == Not in this version
 
-* A per-loader options customizer. A loader is created with the default `DataLoaderOptions`; the options API differs between java-dataloader 3.x and 6.x, and a customizer needs a version-neutral shape first.
-* Caching is not switched off for the loaders of a subscription operation, and the `BatchLoaderEnvironment` of a `BatchLoaderWithContext` carries no context. Both need the options above.
 * An `@GraphQLBatch` annotation.

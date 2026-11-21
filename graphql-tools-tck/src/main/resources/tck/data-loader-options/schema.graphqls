@@ -1,0 +1,20 @@
+# Extends the Query of the example schema that every suite serves; the types below must not clash with its names.
+extend type Query {
+  readers: [Reader!]!
+
+  pageStats: PageStats!
+}
+
+type Reader {
+  name: String!
+  pages: [Page!]!
+}
+
+type Page {
+  title: String!
+}
+
+type PageStats {
+  batches: Int!
+  keys: Int!
+}

@@ -62,7 +62,8 @@ public final class WebSocketTck {
             "protocol-errors",
             "publisher-error-unmapped",
             "publisher-error-mapped",
-            "event-errors-customized");
+            "event-errors-customized",
+            "subscription-loader-caching-off");
 
     private WebSocketTck() {
     }
@@ -97,6 +98,7 @@ public final class WebSocketTck {
                 case "blocking-resolver-off-event-loop" -> blockingResolverOffEventLoop(env);
                 case "complete-cancels" -> completeCancels(env);
                 case "close-cancels" -> closeCancels(env);
+                case "subscription-loader-caching-off" -> subscriptionLoaderCachingOff(env);
                 case "publisher-error-unmapped" -> publisherErrorUnmapped(env);
                 case "publisher-error-mapped" -> publisherErrorMapped(env);
                 case "event-errors-customized" -> eventErrorsCustomized(env);
@@ -209,6 +211,21 @@ public final class WebSocketTck {
             Map<String, Object> next = socket.next();
             expect(false, path(next, "payload", "data", "onEventLoop"), next);
             expect("complete", socket.next().get("type"), "completion");
+        }
+    }
+
+    // The loader of a subscription operation has caching off: a key that two fields load reaches the batch function twice.
+    private static void subscriptionLoaderCachingOff(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { ticks(count: 1) { echo echoAgain } }");
+            Map<String, Object> next = socket.next();
+            expect("e1", path(next, "payload", "data", "ticks", "echo"), next);
+            expect("e1", path(next, "payload", "data", "ticks", "echoAgain"), next);
+            expect("complete", socket.next().get("type"), "completion");
+            socket.subscribe("2", "{ echoLoaderKeys }");
+            Map<String, Object> keys = socket.next();
+            expect(2, path(keys, "payload", "data", "echoLoaderKeys"), keys);
         }
     }
 
