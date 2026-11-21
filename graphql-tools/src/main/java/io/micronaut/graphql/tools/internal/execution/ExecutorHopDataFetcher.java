@@ -52,7 +52,7 @@ public final class ExecutorHopDataFetcher implements DataFetcher<Object> {
     @Override
     public Object get(DataFetchingEnvironment environment) {
         ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
-        PropagatedContext captured = state != null ? state.propagatedContext() : PropagatedContext.getOrEmpty();
+        PropagatedContext captured = state == null || PropagatedContext.exists() ? PropagatedContext.getOrEmpty() : state.propagatedContext();
         CompletableFuture<Object> result = new CompletableFuture<>();
         try {
             executor.execute(() -> run(environment, captured, result, state));
