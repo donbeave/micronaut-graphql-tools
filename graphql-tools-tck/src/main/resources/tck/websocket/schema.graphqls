@@ -4,6 +4,8 @@ extend type Query {
   onEventLoop: Boolean!
   # the attribute "user" that the connection interceptor accepted the connection with
   connectionUser: String
+  # the transport kind of the execution state: HTTP or WEBSOCKET
+  transport: String!
   # how many streams were cancelled
   cancelledStreams: Int!
 }

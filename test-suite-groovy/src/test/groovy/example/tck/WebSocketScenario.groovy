@@ -94,6 +94,10 @@ class WebSocketQueries {
         return ExecutionState.of(environment.graphQlContext).connectionAttributes().get('user', String).orElse(null)
     }
 
+    String transport(DataFetchingEnvironment environment) {
+        return ExecutionState.of(environment.graphQlContext).transport().name()
+    }
+
     int cancelledStreams() {
         return cancelled.count.get()
     }

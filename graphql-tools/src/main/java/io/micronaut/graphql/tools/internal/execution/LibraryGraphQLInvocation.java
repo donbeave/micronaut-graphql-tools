@@ -54,7 +54,9 @@ import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
+import reactor.util.context.ContextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,11 +71,13 @@ import java.util.function.BiConsumer;
  * The library's {@link GraphQLInvocation}: it replaces the transport's default one, which runs parsing, validation and
  * every synchronous resolver on the thread that receives the request (the Netty event loop). An operation hops once to
  * the configured executor ({@code micronaut.graphql.tools.execution.executor}, {@code blocking} by default) before
- * graphql-java runs, so that parsing, validation, the application's {@link GraphQLExecutionInputCustomizer} and every
- * synchronous resolver run there. With {@code none} the operation runs on the caller thread. The library does not
+ * graphql-java runs, so that parsing, validation and every synchronous resolver run there. Nothing starts before the
+ * returned publisher is subscribed. The application's {@link GraphQLExecutionInputCustomizer} publisher is subscribed on
+ * the subscribing thread with the subscriber's Reactor context, and cancelling the returned publisher cancels that
+ * subscription. With {@code none} the operation runs on the caller thread. The library does not
  * hop again at the execution strategy or per field.
  *
- * <p>The order after the hop: build the base {@link ExecutionInput} with the {@link ExecutionState} in its GraphQL
+ * <p>The order: build the base {@link ExecutionInput} with the {@link ExecutionState} in its GraphQL
  * context and, when the application has batch loader beans, the lazy {@link LazyDataLoaderRegistry}; call the
  * application's customizer (skipped when it is the transport's default); put the state back when the customizer built a
  * fresh input; call the {@code GraphQLContextContributor} beans; run graphql-java. The propagated context is captured once on the calling thread and
@@ -153,27 +157,31 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     public Publisher<ExecutionResult> execute(GraphQLInvocationData data, GraphQLTransport transport,
                                               @Nullable HttpRequest<?> request, @Nullable MutableHttpResponse<?> response,
                                               ConvertibleValues<Object> attributes) {
-        PropagatedContext captured = PropagatedContext.getOrEmpty();
-        if (request != null && captured.find(ServerHttpRequestContext.class).isEmpty()) {
-            captured = captured.plus(new ServerHttpRequestContext(request));
-        }
-        ExecutionState state = new ExecutionState(captured, transport, request, response, attributes, executor, customizerName);
-        if (disconnectWatcher != null && request != null && transport == GraphQLTransport.HTTP) {
-            state.disconnectWatcher(disconnectWatcher);
-        }
-        Execution execution = new Execution(data, state);
-        if (executor == null) {
-            execution.run();
-        } else {
-            try {
-                executor.execute(execution);
-            } catch (RejectedExecutionException e) {
-                execution.reject(e);
-            } catch (RuntimeException e) {
-                execution.completeExceptionally(e);
+        Mono<ExecutionResult> result = Mono.deferContextual(context -> {
+            PropagatedContext captured = PropagatedContext.getOrEmpty();
+            if (request != null && captured.find(ServerHttpRequestContext.class).isEmpty()) {
+                captured = captured.plus(new ServerHttpRequestContext(request));
             }
-        }
-        Mono<ExecutionResult> result = Mono.fromFuture(execution);
+            ExecutionState state = new ExecutionState(captured, transport, request, response, attributes, executor, customizerName);
+            if (disconnectWatcher != null && request != null && transport == GraphQLTransport.HTTP) {
+                state.disconnectWatcher(disconnectWatcher);
+            }
+            Execution execution = new Execution(data, state);
+            if (customizer != null) {
+                execution.startCustomized(context);
+            } else if (executor == null) {
+                execution.run();
+            } else {
+                try {
+                    executor.execute(execution);
+                } catch (RejectedExecutionException e) {
+                    execution.reject(e);
+                } catch (RuntimeException e) {
+                    execution.completeExceptionally(e);
+                }
+            }
+            return Mono.fromFuture(execution);
+        });
         if (errorsCustomizers != null) {
             result = result.map(this::customizeErrors);
         }
@@ -313,7 +321,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
         private final GraphQLInvocationData data;
         private final ExecutionState state;
-        private Thread hopThread;
+        private Disposable customizerSubscription;
 
         Execution(GraphQLInvocationData data, ExecutionState state) {
             this.data = data;
@@ -327,6 +335,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 state.cancel();
                 // a pending stage may never complete, so nothing else would stop the watch of the connection
                 state.finished();
+                Disposable subscription = customizerSubscription;
+                if (subscription != null) {
+                    subscription.dispose();
+                }
             }
             return super.cancel(mayInterruptIfRunning);
         }
@@ -353,42 +365,47 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
         private void start() {
             try {
-                ExecutionInput.Builder builder = ExecutionInput.newExecutionInput()
-                        .query(data.getQuery())
-                        .operationName(data.getOperationName())
-                        .variables(data.getVariables());
-                BatchCounters counters = null;
-                if (loaders != null) {
-                    counters = loaders.statistics() ? new BatchCounters() : null;
-                    builder.dataLoaderRegistry(new LazyDataLoaderRegistry(loaders, state, counters));
-                }
-                ExecutionInput input = builder.build();
-                state.storeIn(input.getGraphQLContext());
-                if (counters != null) {
-                    input.getGraphQLContext().put(DataLoaderBatchStatistics.CONTEXT_KEY, counters);
-                }
-                if (customizer == null) {
-                    executeAsync(input);
-                } else {
-                    customize(input);
-                }
+                executeAsync(baseInput());
             } catch (Throwable e) {
                 completeExceptionally(e);
             }
         }
 
+        private ExecutionInput baseInput() {
+            ExecutionInput.Builder builder = ExecutionInput.newExecutionInput()
+                    .query(data.getQuery())
+                    .operationName(data.getOperationName())
+                    .variables(data.getVariables());
+            BatchCounters counters = null;
+            if (loaders != null) {
+                counters = loaders.statistics() ? new BatchCounters() : null;
+                builder.dataLoaderRegistry(new LazyDataLoaderRegistry(loaders, state, counters));
+            }
+            ExecutionInput input = builder.build();
+            state.storeIn(input.getGraphQLContext());
+            if (counters != null) {
+                input.getGraphQLContext().put(DataLoaderBatchStatistics.CONTEXT_KEY, counters);
+            }
+            return input;
+        }
+
+        /** Subscribes the customizer on the subscribing thread, with the subscriber's context; the rest hops. */
         @SuppressWarnings("unchecked")
-        private void customize(ExecutionInput input) {
-            hopThread = Thread.currentThread();
-            Mono.from(customizer.customize(input, state.httpRequest(), (MutableHttpResponse<String>) state.response()))
-                    .switchIfEmpty(Mono.error(() -> new IllegalStateException("The GraphQLExecutionInputCustomizer "
-                            + customizer.getClass().getName() + " published no ExecutionInput")))
-                    .subscribe(this::customized, this::completeExceptionally);
+        void startCustomized(ContextView context) {
+            try {
+                ExecutionInput input = baseInput();
+                customizerSubscription = Mono.from(customizer.customize(input, state.httpRequest(), (MutableHttpResponse<String>) state.response()))
+                        .switchIfEmpty(Mono.error(() -> new IllegalStateException("The GraphQLExecutionInputCustomizer "
+                                + customizer.getClass().getName() + " published no ExecutionInput")))
+                        .contextWrite(context)
+                        .subscribe(this::customized, this::completeExceptionally);
+            } catch (Throwable e) {
+                completeExceptionally(e);
+            }
         }
 
         private void customized(ExecutionInput customized) {
-            if (executor != null && Thread.currentThread() != hopThread) {
-                // a customizer that answers on another thread (for example an event loop) must not carry the operation along
+            if (executor != null) {
                 try {
                     executor.execute(() -> inContext(() -> executeCustomized(customized)));
                 } catch (RejectedExecutionException e) {
@@ -402,6 +419,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         }
 
         private void executeCustomized(ExecutionInput customized) {
+            if (state.isCancelled()) {
+                complete(cancelled());
+                return;
+            }
             try {
                 if (!state.isStoredIn(customized.getGraphQLContext())) {
                     state.storeIn(customized.getGraphQLContext());
