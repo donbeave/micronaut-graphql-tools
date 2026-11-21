@@ -25,6 +25,8 @@ constraint-violations
 sealed-types
 contributor-loader
 disconnect
+http-access
+security
 unreturned-interface-resolver
 protection
 http

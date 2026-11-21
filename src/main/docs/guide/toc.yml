@@ -12,6 +12,8 @@ typeSystem: Type System
 models: Model Classes
 inputs: Inputs
 resolverParameters: Resolver Parameters
+httpAccess: HTTP Request and Response
+security: Security
 scalars: Scalars
 directives: Directives
 dataLoaders: Data Loaders

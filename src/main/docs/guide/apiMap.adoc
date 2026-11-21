@@ -24,6 +24,7 @@ This page tells you which package holds what, which packages you may import from
 |Use the standard scalars (`java.time`, JSON, extended scalars) |`io.micronaut.graphql.tools.scalars` (`StandardScalar`; the module `graphql-tools-scalars`)
 |Name the request metrics and tags of the observability module |`io.micronaut.graphql.tools.observability` (`GraphQLObservability`; the module `graphql-tools-observability`)
 |Name the `Upload` scalar and the error code of an invalid multipart request |`io.micronaut.graphql.tools.upload` (`GraphQLUpload`; the module `graphql-tools-upload`)
+|Name the context key of the authentication, the error codes of a secured field, and see the root fields of an operation |`io.micronaut.graphql.tools.security` (`GraphQLSecurity`, `RootFieldsHook`; the module `graphql-tools-security`)
 |Tell an omitted argument from an explicit `null` |`io.micronaut.graphql.tools.input` (`ArgumentValue`)
 |Accept or reject a `graphql-transport-ws` connection, with attributes |`io.micronaut.graphql.tools.websocket` (`GraphQLConnectionInterceptor`, `GraphQLConnectionRequest`, `GraphQLConnectionResult`)
 |Wire a directive |`io.micronaut.graphql.tools.directive` (`SchemaDirective`)
@@ -36,7 +37,7 @@ Do not import any type annotated `@Internal`, and nothing from a package named `
 
 == Current layout
 
-This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-observability` the request metrics and traces, `graphql-tools-upload` the file upload and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-observability` the request metrics and traces, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
 
 [cols="5,2,2,6", options="header"]
 |===
@@ -94,6 +95,8 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.observability.internal` |graphql-tools-observability |Internal |The instrumentation, the Micrometer and OpenTelemetry observers, the field span decorator and the configuration of the metrics and of the tracing
 |`io.micronaut.graphql.tools.upload` |graphql-tools-upload |Public API |`GraphQLUpload`, the name of the `Upload` scalar, the configuration key and the error code of an invalid multipart request
 |`io.micronaut.graphql.tools.upload.internal` |graphql-tools-upload |Internal |The multipart route, the reader of the `operations` and `map` parts and the `Upload` scalar
+|`io.micronaut.graphql.tools.security` |graphql-tools-security |Public API |`GraphQLSecurity`, the configuration prefix, the context key of the authentication and the error codes of a secured field, and `RootFieldsHook`
+|`io.micronaut.graphql.tools.security.internal` |graphql-tools-security |Internal |The context contributor, the decorator and fetcher of the secured fields and the instrumentation of the hook
 |`io.micronaut.graphql.tools.visitor` |graphql-tools-processor |Compiler plug-in |The compile-time `TypeElementVisitor`, loaded by the compiler and never imported
 |`io.micronaut.graphql.tools.tck` |graphql-tools-tck |Test helper |The TCK runner; not published
 |===

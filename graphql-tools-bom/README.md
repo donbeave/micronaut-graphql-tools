@@ -5,12 +5,12 @@ Gradle project `:micronaut-graphql-tools-bom`, folder `graphql-tools-bom/`. It h
 ## Purpose
 
 The bill of materials (BOM) for the published artifacts. It pins one version of each artifact, so that an application
-that imports the BOM uses matching versions of the library, the binding module, the standard scalars module, the observability module, the upload module and the compile-time processor.
+that imports the BOM uses matching versions of the library, the binding module, the standard scalars module, the observability module, the upload module, the security module and the compile-time processor.
 
 ## Responsibility
 
 - Manage the versions of `micronaut-graphql-tools`, `micronaut-graphql-tools-binding`, `micronaut-graphql-tools-processor`,
-  `micronaut-graphql-tools-scalars`, `micronaut-graphql-tools-observability` and `micronaut-graphql-tools-upload` (the generated POM lists these six in `dependencyManagement`).
+  `micronaut-graphql-tools-scalars`, `micronaut-graphql-tools-observability`, `micronaut-graphql-tools-upload` and `micronaut-graphql-tools-security` (the generated POM lists these seven in `dependencyManagement`).
 - Nothing else: no code, no dependencies of its own. The build applies the Micronaut BOM convention
   (`io.micronaut.build.internal.bom`) from `micronaut-build`.
 
@@ -20,14 +20,14 @@ Library users who want one version for all the artifacts.
 
 ## Public and internal
 
-The BOM is public. It lists the six artifacts above; the test suites, the benchmarks and `graphql-tools-tck` are not
+The BOM is public. It lists the seven artifacts above; the test suites, the benchmarks and `graphql-tools-tck` are not
 in it.
 
 ## Relation to other modules
 
 - Depends on nothing in this repository.
 - Its version is the `projectVersion` in `gradle.properties`.
-- The modules it manages are `graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`, `graphql-tools-observability` and `graphql-tools-upload`.
+- The modules it manages are `graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`, `graphql-tools-observability`, `graphql-tools-upload` and `graphql-tools-security`.
 
 ## Build and test
 
