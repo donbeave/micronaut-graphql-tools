@@ -440,6 +440,58 @@ type Query {
         thrown(CoercingParseValueException)
     }
 
+    void "a cyclic #kind is a coercion error through all four methods, a variable reference included"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def cycle = factory()
+
+        when:
+        coercing.serialize(cycle, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingSerializeException)
+
+        when:
+        coercing.parseValue(cycle, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+
+        when:
+        coercing.valueToLiteral(cycle, CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseValueException)
+
+        when:
+        coercing.parseLiteral(new VariableReference('v'), CoercedVariables.of([v: cycle]), CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseLiteralException)
+
+        when:
+        def nested = ObjectValue.newObjectValue()
+                .objectField(ObjectField.newObjectField().name('a').value(new VariableReference('v')).build()).build()
+        coercing.parseLiteral(nested, CoercedVariables.of([v: cycle]), CONTEXT, Locale.ROOT)
+
+        then:
+        thrown(CoercingParseLiteralException)
+
+        where:
+        kind  | factory
+        'map' | { Map m = [:]; m.self = m; m }
+        'list' | { List l = []; l << l; l }
+    }
+
+    void "an ordinary nested value passes through a variable reference"() {
+        given:
+        def coercing = new JsonCoercing('JSON', { null })
+        def value = [a: [1, [b: 'c']], d: null]
+
+        expect:
+        coercing.parseLiteral(new VariableReference('v'), CoercedVariables.of([v: value]), CONTEXT, Locale.ROOT) == value
+    }
+
     void "an unknown number outside the range of a double keeps its exact decimal text"() {
         given:
         def coercing = new JsonCoercing('JSON', { null })

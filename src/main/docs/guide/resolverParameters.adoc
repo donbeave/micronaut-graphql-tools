@@ -25,17 +25,19 @@ This page lists what a resolver method can take as a parameter besides the sourc
 |The locale of the execution.
 
 |`Principal`, or a subtype such as Micronaut Security's `Authentication`
-|The principal of the request, or `null` when the request has none.
+|The principal of the request, or `null` when the request has none. On a WebSocket operation it is the principal of the upgrade request.
 
 |`HttpRequest<?>`
-|The request of the operation, or `null` for an operation that did not arrive over HTTP (a WebSocket operation).
+|The request of the operation. On a WebSocket operation it is the HTTP request that upgraded the connection, the same object for every operation of the connection. It is `null` only when the operation did not arrive over HTTP and has no upgrade request (a direct call).
 
 |`MutableHttpResponse<?>` or `HttpResponse<?>`
-|The response of the operation, or `null` for a WebSocket operation. A resolver can set a header on it.
+|The response of the operation, or `null` for a WebSocket operation (a query, a mutation or a subscription alike). A resolver can set a header on it.
 
 |`Optional<MutableHttpResponse<?>>`
 |The same response, empty for a WebSocket operation.
 |===
+
+Over WebSocket, the request and the principal are those of the handshake, not of the message: a header or a principal that the client sends later does not show up in them. To read data that the client sends with the connection, such as a token, put it in the `payload` of `connection_init`, accept it in a `GraphQLConnectionInterceptor` and read the connection attributes that it returns, as <<subscriptions,Subscriptions>> describes.
 
 snippet::example.tck.ResolverParametersScenario[project-base="test-suite", source="test", tags="parameters", indent="0"]
 
