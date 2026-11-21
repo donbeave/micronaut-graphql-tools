@@ -1,1 +1,1 @@
-io.micronaut.graphql.tools.visitor.FixtureCaptureVisitor
+io.micronaut.graphql.tools.benchmarks.fixture.FixtureCaptureVisitor

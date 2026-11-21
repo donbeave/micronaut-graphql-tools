@@ -17,6 +17,10 @@ package example.data
 
 import jakarta.inject.Singleton
 
+/**
+ * Checks credentials and finds users. It holds no state about who is logged in: the user of a request comes from the
+ * request, see `CurrentUserContributor`, because a singleton shared by all requests cannot hold a per-request value.
+ */
 @Singleton
 class AuthenticationService(private val userRepository: UserRepository) {
 
@@ -24,19 +28,17 @@ class AuthenticationService(private val userRepository: UserRepository) {
 
     class IncorrectCredentialsException : RuntimeException()
 
-    var currentUser: User? = null
-        private set
-
     fun login(username: String, password: String): User {
         val user = userRepository.findByUsername(username) ?: throw UserNotFoundException()
         if (user.password != password) {
             throw IncorrectCredentialsException()
         }
-        currentUser = user
         return user
     }
 
-    fun logout() {
-        currentUser = null
+    fun find(username: String): User? = userRepository.findByUsername(username)
+
+    companion object {
+        const val CURRENT_USER = "example.currentUser"
     }
 }

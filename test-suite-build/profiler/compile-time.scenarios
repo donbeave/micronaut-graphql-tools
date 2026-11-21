@@ -1,0 +1,149 @@
+# gradle-profiler scenarios of the compile-time checks (#418). One project per language and tool, each with six scenarios:
+# a clean build, a body-only edit and a schema edit (both made by an init script task inside the measured build), with the checks on and with the checks off (the control).
+# Scenario names are <sample>-<edit>-<on|off>. `run.sh` (and the Gradle task compileTimeProfile) runs them against copies of
+# the samples; the control is -PgraphqlChecks=false, which keeps the processor on the compile path and turns its checks off.
+
+common = ["-I", "profiler.init.gradle"]
+on = ["-PgraphqlChecks=true"]
+off = ["-PgraphqlChecks=false"]
+
+java-gradle-clean-on {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=java-gradle-clean-on"]
+}
+java-gradle-body-on {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=java-gradle-body-on"]
+}
+java-gradle-schema-on {
+  tasks = [":editSchema", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=java-gradle-schema-on"]
+}
+
+java-gradle-clean-off {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=java-gradle-clean-off"]
+}
+java-gradle-body-off {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=java-gradle-body-off"]
+}
+java-gradle-schema-off {
+  tasks = [":editSchema", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=java-gradle-schema-off"]
+}
+
+kotlin-ksp-clean-on {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-ksp-clean-on"]
+}
+kotlin-ksp-body-on {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-ksp-body-on"]
+}
+kotlin-ksp-schema-on {
+  tasks = [":editSchema", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-ksp-schema-on"]
+}
+
+kotlin-ksp-clean-off {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-ksp-clean-off"]
+}
+kotlin-ksp-body-off {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-ksp-body-off"]
+}
+kotlin-ksp-schema-off {
+  tasks = [":editSchema", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-ksp-schema-off"]
+}
+
+kotlin-kapt-clean-on {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-kapt-clean-on"]
+}
+kotlin-kapt-body-on {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-kapt-body-on"]
+}
+kotlin-kapt-schema-on {
+  tasks = [":editSchema", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=kotlin-kapt-schema-on"]
+}
+
+kotlin-kapt-clean-off {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-kapt-clean-off"]
+}
+kotlin-kapt-body-off {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-kapt-body-off"]
+}
+kotlin-kapt-schema-off {
+  tasks = [":editSchema", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=kotlin-kapt-schema-off"]
+}
+
+groovy-gradle-clean-on {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=groovy-gradle-clean-on"]
+}
+groovy-gradle-body-on {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=groovy-gradle-body-on"]
+}
+groovy-gradle-schema-on {
+  tasks = [":editSchema", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=groovy-gradle-schema-on"]
+}
+
+groovy-gradle-clean-off {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=groovy-gradle-clean-off"]
+}
+groovy-gradle-body-off {
+  tasks = [":editBody", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=groovy-gradle-body-off"]
+}
+groovy-gradle-schema-off {
+  tasks = [":editSchema", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=groovy-gradle-schema-off"]
+}
+
+multi-module-gradle-clean-on {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=multi-module-gradle-clean-on"]
+}
+multi-module-gradle-body-on {
+  tasks = [":books:editBody", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=multi-module-gradle-body-on"]
+}
+multi-module-gradle-schema-on {
+  tasks = [":schema:editSchema", "classes"]
+  gradle-args = ${common} ${on} ["-PprofilerScenario=multi-module-gradle-schema-on"]
+}
+
+multi-module-gradle-clean-off {
+  tasks = ["classes"]
+  cleanup-tasks = ["clean"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=multi-module-gradle-clean-off"]
+}
+multi-module-gradle-body-off {
+  tasks = [":books:editBody", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=multi-module-gradle-body-off"]
+}
+multi-module-gradle-schema-off {
+  tasks = [":schema:editSchema", "classes"]
+  gradle-args = ${common} ${off} ["-PprofilerScenario=multi-module-gradle-schema-off"]
+}
+

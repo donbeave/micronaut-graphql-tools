@@ -20,6 +20,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     // suspend resolvers (#185): the library starts a coroutine only when this is on the classpath
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    // Flow subscriptions (#181): the library adapts a Flow only when this is on the classpath
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
     ksp("io.micronaut:micronaut-inject-kotlin")
     kspTest("io.micronaut:micronaut-inject-kotlin")
     // the compile-time checks (#291): the processor registers the visitor, which KSP loads next to Micronaut's processor

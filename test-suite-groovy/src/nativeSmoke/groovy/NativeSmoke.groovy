@@ -35,13 +35,16 @@ Process process = new ProcessBuilder(executable.absolutePath)
 
 HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()
 
-Map<String, Object> post(HttpClient http, int port, String query, Map<String, Object> variables = [:]) {
+Map<String, Object> post(HttpClient http, int port, String query, Map<String, Object> variables = [:], String user = null) {
+    HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("http://localhost:$port/graphql"))
+            .timeout(Duration.ofSeconds(30))
+            .header('Content-Type', 'application/json')
+            .POST(HttpRequest.BodyPublishers.ofString(JsonOutput.toJson([query: query, variables: variables])))
+    if (user != null) {
+        request.header('X-User', user)
+    }
     HttpResponse<String> response = http.send(
-            HttpRequest.newBuilder(URI.create("http://localhost:$port/graphql"))
-                    .timeout(Duration.ofSeconds(30))
-                    .header('Content-Type', 'application/json')
-                    .POST(HttpRequest.BodyPublishers.ofString(JsonOutput.toJson([query: query, variables: variables])))
-                    .build(),
+            request.build(),
             HttpResponse.BodyHandlers.ofString())
     assert response.statusCode() == 200: "HTTP ${response.statusCode()}: ${response.body()}"
     Map body = new JsonSlurper().parseText(response.body()) as Map
@@ -62,7 +65,7 @@ try {
         }
     }
 
-    Closure<Map<String, Object>> execute = { String query, Map<String, Object> variables = [:] -> post(http, port, query, variables) }
+    Closure<Map<String, Object>> execute = { String query, Map<String, Object> variables = [:], String user = null -> post(http, port, query, variables, user) }
 
     Map payload = execute('mutation($id: ID!) { addBook(id: $id) { error { __typename ... on SecurityError { securityCode: code message } } } }',
             [id: 'ab']).addBook
@@ -110,8 +113,8 @@ try {
     assert duplicate.error.message == 'User with username john already exists.'
 
     Map signIn = execute('mutation { signIn(username: "bob", password: "bodi") { data { username } } }').signIn
-    Map addBook = execute('mutation { addBook(id: "ax") { error { __typename } } }').addBook
-    Map current = execute('{ currentUser { username books { id label } } }').currentUser
+    Map addBook = execute('mutation { addBook(id: "ax") { error { __typename } } }', [:], 'bob').addBook
+    Map current = execute('{ currentUser { username books { id label } } }', [:], 'bob').currentUser
     assert signIn.data.username == 'bob'
     assert addBook.error == null
     assert current.username == 'bob'
