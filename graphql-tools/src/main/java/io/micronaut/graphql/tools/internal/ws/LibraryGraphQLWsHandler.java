@@ -274,8 +274,11 @@ public class LibraryGraphQLWsHandler {
                 .concatMap(result -> result(session, id, result, failed))
                 .then(Mono.defer(() -> failed.get() ? Mono.empty() : send(session, Map.of("id", id, "type", "complete"))));
         handle.update(operation
-                .onErrorResume(SubscriptionFailure.class, failure -> send(session, error(id,
-                        customizeErrors(failure.errors()).stream().map(GraphQLError::toSpecification).toList())))
+                .onErrorResume(SubscriptionFailure.class, failure -> {
+                    List<Map<String, Object>> errors = customizeErrors(failure.errors()).stream().map(GraphQLError::toSpecification).toList();
+                    // an error message carries at least one error: a customizer that drops them all ends the operation as completed
+                    return errors.isEmpty() ? send(session, Map.of("id", id, "type", "complete")) : send(session, error(id, errors));
+                })
                 .onErrorResume(failure -> {
                     LOG.warn("The operation '{}' of a WebSocket connection failed: {}", id, failure.toString());
                     return send(session, error(id, List.of(Map.of("message", GENERIC_FAILURE))));
