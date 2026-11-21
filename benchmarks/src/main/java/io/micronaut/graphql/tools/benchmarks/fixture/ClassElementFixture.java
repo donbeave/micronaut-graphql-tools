@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.visitor;
+package io.micronaut.graphql.tools.benchmarks.fixture;
 
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
-import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassFindings;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
+import io.micronaut.graphql.tools.visitor.BindingRulesAccess;
 import io.micronaut.inject.ast.ClassElement;
 
 import javax.annotation.processing.Processor;
@@ -56,8 +56,8 @@ import java.util.concurrent.TimeoutException;
  * keeps parked inside the round ({@link FixtureCaptureVisitor#finish}) until {@link #close()}. The benchmark thread reads the
  * elements while the compiler thread waits; no compiler type reaches the runtime API, and the library is not changed.</p>
  *
- * <p>This class lives in the package of the processor's visitor because the element adapter, {@code ElementTypeModel}, is
- * package-private there. The visitor itself is switched off in the fixture's compilation ({@code checks=false}).</p>
+ * <p>The rules run through {@link BindingRulesAccess}, the processor's internal accessor. The visitor itself is switched off in the
+ * fixture's compilation ({@code checks=false}).</p>
  */
 public final class ClassElementFixture implements AutoCloseable {
 
@@ -87,7 +87,7 @@ public final class ClassElementFixture implements AutoCloseable {
             work = Files.createTempDirectory("binding-fixture");
             Path schemaDirectory = Files.createDirectories(work.resolve("graphql"));
             Files.writeString(schemaDirectory.resolve("schema.graphqls"), BindingFixtureSources.SCHEMA);
-            schema = new CheckedSchema(List.of(schemaDirectory)).model()
+            schema = BindingRulesAccess.schema(List.of(schemaDirectory))
                     .orElseThrow(() -> new IllegalStateException("The fixture schema cannot be read"));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -180,8 +180,7 @@ public final class ClassElementFixture implements AutoCloseable {
         if (element == null) {
             throw new IllegalArgumentException("No fixture class " + className + ", known: " + elements.keySet());
         }
-        ElementTypeModel model = new ElementTypeModel(new ModelCoverage());
-        return ResolverClassFindings.check(schema, model, model.of(element), false);
+        return BindingRulesAccess.check(schema, element);
     }
 
     /** @return the text of the schema that the rules check the fixture against */
