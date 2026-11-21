@@ -15,12 +15,18 @@
  */
 package example.tck;
 
+import graphql.GraphQLContext;
+import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer;
+import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
+import io.micronaut.graphql.tools.execution.GraphQLExecutionRequest;
 import jakarta.inject.Singleton;
+import org.dataloader.BatchLoaderEnvironment;
+import org.dataloader.BatchLoaderWithContext;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.MappedBatchLoader;
@@ -35,7 +41,8 @@ import java.util.stream.Collectors;
 
 /**
  * The fixtures of the TCK scenario {@code data-loader-options}: a customizer that limits the batch size of one loader to
- * two keys, and counters that show how often the loader ran and with how many keys.
+ * two keys, and counters that show how often the loader ran and with how many keys. A second loader reads the context of its
+ * execution through {@code BatchLoaderEnvironment#getContext()}.
  */
 public final class DataLoaderOptionsScenario {
 
@@ -127,6 +134,28 @@ public final class DataLoaderOptionsScenario {
     // end::options[]
 
     @Singleton
+    @Requires(property = "tck.scenario", value = "data-loader-options")
+    public static class ScopeContributor implements GraphQLContextContributor {
+
+        @Override
+        public void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
+            context.put("scope", "alpha");
+        }
+    }
+
+    @Singleton
+    @Requires(property = "tck.scenario", value = "data-loader-options")
+    public static class ScopeLoader implements BatchLoaderWithContext<String, String> {
+
+        @Override
+        public CompletionStage<List<String>> load(List<String> keys, BatchLoaderEnvironment environment) {
+            GraphQLContext context = environment.getContext();
+            return CompletableFuture.completedFuture(keys.stream()
+                    .map(key -> "scope:" + context.get("scope") + ":" + keys.size()).toList());
+        }
+    }
+
+    @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "data-loader-options")
     public static class Queries {
@@ -139,6 +168,10 @@ public final class DataLoaderOptionsScenario {
 
         public List<Reader> readers() {
             return List.of(new Reader("ada"), new Reader("grace"), new Reader("lin"));
+        }
+
+        public CompletionStage<String> batchContext(DataFetchingEnvironment environment) {
+            return environment.<String, String>getDataLoader("scopeLoader").load("a");
         }
 
         public PageStats pageStats() {

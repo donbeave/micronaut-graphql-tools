@@ -25,3 +25,4 @@ constraint-violations
 sealed-types
 contributor-loader
 disconnect
+unreturned-interface-resolver
