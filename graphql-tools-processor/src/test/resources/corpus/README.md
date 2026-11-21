@@ -71,6 +71,13 @@ file without parameter names, is `ParameterNamesSpec` (a class file cannot be a 
    (field not bound, reachability, ambiguity, the dictionary, customizers) is not a gap: the compile side cannot see it, and
    the case records `compile.txt` as `ok`.
 
+A Kotlin `internal` method compiles to the JVM name `name$<module>`. The visitor reports that JVM name, exactly as the startup does, so
+the soundness rule compares one name (option (b) of #439: the product keeps one name, and the harness gives the two subprojects of a Kotlin
+case, the checked and the unchecked one, the same module name, the project name of the case, in `KotlinBatchCompiler`). A coordinate in a
+`compile.txt` or `runtime.txt` therefore carries the module of its case, as in `strict/kotlin-internal-method`. No normalizing rule strips the
+suffix, so a real difference between the two sides still shows. An internal method never binds a field by its Kotlin name, because the name
+it carries is another one.
+
 A compile line that starts with `warning ` is a warning of the compiler, not an error: the build passes. A check that cannot
 prove its fact from one class reports it so (`class-not-introspected`: another class can make a class introspected with
 `@Introspected(classes)` or `(packages)`, and so can a dependency, which a visitor that looks at one class cannot see). A warning is
@@ -105,6 +112,7 @@ case under `exception/` that shows it:
 | `customizer-claimed-field` | binds no method to a field that a `RuntimeWiringCustomizer` claims (`unbound-resolver-method` with strict on, nothing with strict off) |
 | `runtime-exception-first` | binding the field throws before the argument rule (a singleton resolver that cannot be created): `unexpected-binding-error` |
 | `other-class-binding-failure` | stops at a binding failure of another class before the strict checks of this one |
+| `kotlin-nullability` | reports nothing: the nullability of a Kotlin type is compile-time metadata (`kotlin-nullability-mismatch`) |
 | `conflicting-class-mapping` | reports `mapping-conflict` when two classes bind one input type or enum to different Java classes, before the strict checks |
 | `dictionary-entry-wins` | lets a `SchemaMappingDictionary` entry win over two classes that match one object type by name (`ambiguous-type-class`); the visitor cannot see the dictionary |
 
@@ -125,7 +133,7 @@ compile time silent; `input/class-not-introspected` shows both sides for a class
    exists, even empty) and, for Java and Groovy, `expected/compile.txt` from the checks-on compilation. A Kotlin case writes
    `expected/compile.txt` by hand from the rule set (only per-class checks and failures, `ok` where the finding is whole-program).
 3. Read the diff: it is the review. Check each verdict against what the case is meant to show.
-4. `./gradlew :micronaut-graphql-tools-processor:corpusShard1 :micronaut-graphql-tools-processor:corpusShard2 :micronaut-graphql-tools-processor:test --tests '*BindingCorpusSpec'` must pass (the corpus runs in three JVMs, one third of the units each, because every unit leaves its class loader behind; `test` alone runs the first third). `-Pcorpus.only='<regex>'` runs
+4. `./gradlew :micronaut-graphql-tools-processor:test --tests '*BindingCorpusSpec'` must pass (the whole corpus runs in one JVM). `-Pcorpus.only='<regex>'` runs
    only the cases whose name matches it (for example `-Pcorpus.only='input/.*'`), for writing a case; CI runs them all.
 
 Updating after a behaviour change is the same task (`-Pcorpus.update` on `test` does the same). The diff of the expected

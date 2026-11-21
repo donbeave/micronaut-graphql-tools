@@ -97,4 +97,23 @@ class ScalarsTest {
             assertTrue(variable.errors[0].message.contains("Duration"), variable.errors.toString())
         }
     }
+
+    @Test
+    fun aJsonNumberThatCannotBeWrittenIsAnErrorThatNamesTheScalar() {
+        ApplicationContext.run(emptyMap<String, Any>(), SCALARS_DEFAULTS).use { context ->
+            val values = listOf<Any>(
+                mapOf("a" to Double.NaN),
+                mapOf("a" to listOf(java.math.BigDecimal("1e-10000"))),
+                listOf(java.math.BigDecimal("1e10000")),
+            )
+            for (value in values) {
+                val result = execute(context, "query (\$j: JSON) { payload(data: \$j) }", mapOf("j" to value))
+                assertFalse(result.errors.isEmpty(), value.toString())
+                assertTrue(result.errors[0].message.contains("JSON"), result.errors.toString())
+            }
+            val literal = execute(context, "{ payload(data: {a: 1e10000}) }")
+            assertFalse(literal.errors.isEmpty())
+            assertTrue(literal.errors[0].message.contains("JSON"), literal.errors.toString())
+        }
+    }
 }

@@ -36,7 +36,7 @@ public interface GraphQLErrorsCustomizer {
 
     /**
      * @param errors the errors of the response, never empty; do not modify the list
-     * @return the errors to send; an empty list sends a response without {@code errors}
+     * @return the errors to send; an empty list sends a response without {@code errors} and ends the chain: no later customizer is called
      */
     @NonNull
     List<GraphQLError> customize(@NonNull List<GraphQLError> errors);

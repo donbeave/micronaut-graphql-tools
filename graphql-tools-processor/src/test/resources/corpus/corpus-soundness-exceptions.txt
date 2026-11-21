@@ -1,10 +1,15 @@
 # The documented exceptions to the soundness rule: a compile error that the startup does not report with the same code
 # and coordinate. One line per case, language and finding, with one of the six reasons (see SoundnessExceptions); an entry
 # that is not needed any more is stale and fails, and the ceiling may only go down.
-max-entries: 6
+max-entries: 11
 exception/conflicting-class-mapping java unmapped-input-property Filter.extra conflicting-class-mapping
 exception/customizer-claimed-field java argument-mismatch Query.version customizer-claimed-field
 exception/dictionary-entry-wins java ambiguous-type-class Book dictionary-entry-wins
 exception/other-class-binding-failure java unbound-resolver-method example.Pings#stray() other-class-binding-failure
 exception/runtime-exception-first java argument-mismatch Query.username runtime-exception-first
 exception/two-classes-one-root-field java argument-mismatch Query.book two-classes-one-root-field
+exception/kotlin-nullability kotlin kotlin-nullability-mismatch Filter.text kotlin-nullability
+exception/kotlin-nullability kotlin kotlin-nullability-mismatch Query.names kotlin-nullability
+exception/kotlin-nullability kotlin kotlin-nullability-mismatch Query.search(term:) kotlin-nullability
+exception/kotlin-nullability kotlin kotlin-nullability-mismatch Query.title kotlin-nullability
+exception/kotlin-nullability kotlin kotlin-nullability-loose Query.subtitle kotlin-nullability

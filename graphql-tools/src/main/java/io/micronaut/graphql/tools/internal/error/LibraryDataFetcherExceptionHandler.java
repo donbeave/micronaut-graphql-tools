@@ -130,21 +130,23 @@ public final class LibraryDataFetcherExceptionHandler implements DataFetcherExce
         if (LOG.isDebugEnabled()) {
             LOG.debug("{} at {} is a GraphQLError and is sent as it is", error.getClass().getName(), context.getPath());
         }
-        if (error.getPath() != null && error.getLocations() != null) {
+        boolean hasPath = error.getPath() != null && !error.getPath().isEmpty();
+        boolean hasLocations = error.getLocations() != null && !error.getLocations().isEmpty();
+        if (hasPath && hasLocations) {
             return error;
         }
         GraphqlErrorBuilder<?> builder = GraphqlErrorBuilder.newError()
                 .message(error.getMessage())
                 .errorType(error.getErrorType() == null ? ErrorType.DataFetchingException : error.getErrorType())
                 .extensions(error.getExtensions());
-        if (error.getPath() != null) {
+        if (hasPath) {
             builder.path(error.getPath());
         } else {
             builder.path(context.getPath());
         }
-        if (error.getLocations() != null) {
+        if (hasLocations) {
             builder.locations(error.getLocations());
-        } else {
+        } else if (context.getSourceLocation() != null) {
             builder.location(context.getSourceLocation());
         }
         return builder.build();

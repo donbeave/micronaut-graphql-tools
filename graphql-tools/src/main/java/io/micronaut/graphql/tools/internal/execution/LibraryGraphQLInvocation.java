@@ -43,6 +43,7 @@ import io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics;
 import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
+import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.context.ServerHttpRequestContext;
@@ -105,11 +106,14 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     private final String executorName;
     @Nullable
     private final GraphQLErrorsCustomizer[] errorsCustomizers;
+    @Nullable
+    private final DisconnectWatcher disconnectWatcher;
 
     LibraryGraphQLInvocation(GraphQL graphQL, GraphQLExecutionInputCustomizer customizer, GraphQLToolsConfiguration configuration,
                              ExecutorSelector executorSelector, BeanContext beanContext, DataLoaderTable loaders,
                              List<GraphQLContextContributor> contributors,
-                             List<GraphQLErrorsCustomizer> errorsCustomizers) {
+                             List<GraphQLErrorsCustomizer> errorsCustomizers, @Nullable DisconnectWatcher disconnectWatcher) {
+        this.disconnectWatcher = disconnectWatcher;
         this.errorsCustomizers = errorsCustomizers.isEmpty() ? null : errorsCustomizers.toArray(new GraphQLErrorsCustomizer[0]);
         this.graphQL = graphQL;
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
@@ -153,8 +157,11 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         if (request != null && captured.find(ServerHttpRequestContext.class).isEmpty()) {
             captured = captured.plus(new ServerHttpRequestContext(request));
         }
-        Execution execution = new Execution(data, new ExecutionState(captured, transport, request, response, attributes, executor,
-                customizerName));
+        ExecutionState state = new ExecutionState(captured, transport, request, response, attributes, executor, customizerName);
+        if (disconnectWatcher != null && request != null && transport == GraphQLTransport.HTTP) {
+            state.disconnectWatcher(disconnectWatcher);
+        }
+        Execution execution = new Execution(data, state);
         if (executor == null) {
             execution.run();
         } else {
@@ -162,14 +169,15 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 executor.execute(execution);
             } catch (RejectedExecutionException e) {
                 execution.reject(e);
+            } catch (RuntimeException e) {
+                execution.completeExceptionally(e);
             }
         }
-        Mono<ExecutionResult> result = Mono.fromFuture(execution.result);
+        Mono<ExecutionResult> result = Mono.fromFuture(execution);
         if (errorsCustomizers != null) {
             result = result.map(this::customizeErrors);
         }
-        // HTTP pays nothing: its disconnect and timeout handling is a separate change, and a cancel hook allocates for each request
-        return transport == GraphQLTransport.HTTP ? result : result.doOnCancel(execution.state::cancel);
+        return result;
     }
 
     /**
@@ -202,6 +210,9 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                     throw new IllegalStateException("returned null instead of a list of errors");
                 }
                 current = customized;
+                if (current.isEmpty()) {
+                    break;
+                }
             } catch (RuntimeException e) {
                 LOG.error("The GraphQLErrorsCustomizer {} failed; the errors are sent as the previous customizer left them",
                         customizer.getClass().getName(), e);
@@ -294,12 +305,14 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 .build();
     }
 
-    /** One operation: the task of the hop, and the receiver of graphql-java's result. */
-    private final class Execution implements Runnable, BiConsumer<ExecutionResult, Throwable> {
+    /**
+     * One operation: the task of the hop, the receiver of graphql-java's result and the future of the result. Cancelling
+     * the future, which the cancellation of the response subscription does, marks the execution cancelled.
+     */
+    private final class Execution extends CompletableFuture<ExecutionResult> implements Runnable, BiConsumer<ExecutionResult, Throwable> {
 
         private final GraphQLInvocationData data;
         private final ExecutionState state;
-        private final CompletableFuture<ExecutionResult> result = new CompletableFuture<>();
         private Thread hopThread;
 
         Execution(GraphQLInvocationData data, ExecutionState state) {
@@ -308,9 +321,20 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         }
 
         @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            // the subscriber cancels after it has the result too, and a result that is done has nothing left to stop
+            if (!isDone()) {
+                state.cancel();
+                // a pending stage may never complete, so nothing else would stop the watch of the connection
+                state.finished();
+            }
+            return super.cancel(mayInterruptIfRunning);
+        }
+
+        @Override
         public void run() {
             if (state.isCancelled()) {
-                result.complete(cancelled());
+                complete(cancelled());
                 return;
             }
             inContext(this::start);
@@ -352,7 +376,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                     customize(input);
                 }
             } catch (Throwable e) {
-                result.completeExceptionally(e);
+                completeExceptionally(e);
             }
         }
 
@@ -362,7 +386,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             Mono.from(customizer.customize(input, state.httpRequest(), (MutableHttpResponse<String>) state.response()))
                     .switchIfEmpty(Mono.error(() -> new IllegalStateException("The GraphQLExecutionInputCustomizer "
                             + customizer.getClass().getName() + " published no ExecutionInput")))
-                    .subscribe(this::customized, result::completeExceptionally);
+                    .subscribe(this::customized, this::completeExceptionally);
         }
 
         private void customized(ExecutionInput customized) {
@@ -372,6 +396,8 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                     executor.execute(() -> inContext(() -> executeCustomized(customized)));
                 } catch (RejectedExecutionException e) {
                     reject(e);
+                } catch (RuntimeException e) {
+                    completeExceptionally(e);
                 }
             } else {
                 executeCustomized(customized);
@@ -385,7 +411,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 }
                 executeAsync(customized);
             } catch (Throwable e) {
-                result.completeExceptionally(e);
+                completeExceptionally(e);
             }
         }
 
@@ -406,11 +432,11 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                     contributor.contribute(context, state);
                 } catch (Exception e) {
                     if (e instanceof GraphQLError error) {
-                        result.complete(ExecutionResultImpl.newExecutionResult().data(null).addError(error).build());
+                        complete(ExecutionResultImpl.newExecutionResult().data(null).addError(error).build());
                     } else {
                         LOG.error("The GraphQLContextContributor {} failed; the operation is answered with an error",
                                 contributor.getClass().getName(), e);
-                        result.complete(contributorFailed());
+                        complete(contributorFailed());
                     }
                     return false;
                 }
@@ -420,16 +446,17 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
         @Override
         public void accept(ExecutionResult executionResult, Throwable failure) {
+            state.finished();
             if (failure != null) {
-                result.completeExceptionally(failure);
+                completeExceptionally(failure);
             } else {
-                result.complete(executionResult);
+                complete(executionResult);
             }
         }
 
         void reject(RejectedExecutionException e) {
             LOG.warn("The executor '{}' rejected an operation, which is answered with EXECUTION_REJECTED: {}", executorName, e.toString());
-            result.complete(rejected());
+            complete(rejected());
         }
     }
 

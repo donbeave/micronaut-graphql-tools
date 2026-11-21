@@ -89,6 +89,14 @@ public enum BindingCode {
     /** Failure: an input field maps to a property that cannot be set. */
     INPUT_FIELD_NOT_SETTABLE("input-field-not-settable", false, true,
             "An input field maps to a property that cannot be set."),
+    /** Failure: a Kotlin type allows or rejects {@code null} where the schema type does the opposite, and it fails at run time. */
+    KOTLIN_NULLABILITY_MISMATCH("kotlin-nullability-mismatch", false, true,
+            "A Kotlin return type is nullable where the schema field is non-null, or a Kotlin parameter or input property "
+                    + "is non-null where the schema accepts null."),
+    /** Failure: a Kotlin type is stricter than the schema type, which is a warning at compile time. */
+    KOTLIN_NULLABILITY_LOOSE("kotlin-nullability-loose", false, true,
+            "A Kotlin return type is non-null where the schema field is nullable, or a Kotlin parameter or input property "
+                    + "is nullable where the schema requires a value; the compiler reports it as a warning."),
     /** Failure: a class that must be introspected is not. */
     CLASS_NOT_INTROSPECTED("class-not-introspected", false, true,
             "A class that backs an input or enum type has no bean introspection."),
