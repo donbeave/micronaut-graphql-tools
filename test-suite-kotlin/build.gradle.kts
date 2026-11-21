@@ -20,6 +20,8 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     // suspend resolvers (#185): the library starts a coroutine only when this is on the classpath
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    // Flow subscriptions (#181): the library adapts a Flow only when this is on the classpath
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
     ksp("io.micronaut:micronaut-inject-kotlin")
     kspTest("io.micronaut:micronaut-inject-kotlin")
     // the compile-time checks (#291): the processor registers the visitor, which KSP loads next to Micronaut's processor
@@ -27,12 +29,19 @@ dependencies {
     runtimeOnly("ch.qos.logback:logback-classic")
     testImplementation("io.micronaut:micronaut-http-client")
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
-    // The observability module and the libraries its tests observe with: a Micrometer registry and an OpenTelemetry SDK that
-    // exports to memory (#24). Test scope: the application itself does not depend on them.
+    // The observability module and the libraries its tests observe with: the Micrometer and OpenTelemetry integrations of
+    // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
     testImplementation(projects.micronautGraphqlToolsObservability)
-    testImplementation("io.micrometer:micrometer-core")
-    testImplementation("io.opentelemetry:opentelemetry-sdk")
+    testImplementation(mnMicrometer.micronaut.micrometer.core)
+    testImplementation(mnTracing.micronaut.tracing.opentelemetry)
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
+    // the mapper of @Timed, which KSP gives to the test source set; it is not transitive because its dependencies include a second
+    // Micronaut processor, and it needs Micrometer on the processor path
+    ksp(mnMicrometer.micronaut.micrometer.annotation) { isTransitive = false }
+    ksp("io.micrometer:micrometer-core")
+    // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
+    // itself does not depend on it.
+    testImplementation(projects.micronautGraphqlToolsUpload)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -74,8 +83,8 @@ tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative"
 // fails instead of reading these.
 val graphqlSchemaDirs = files("src/main/resources")
 // The checks cover `main` only: the test fixtures (for example the precedence classes) have no schema file in the schema directories.
-// KSP gives `kspTest` the processors of `ksp`, so the processor is excluded from it.
-configurations.matching { it.name == "kspTest" }.configureEach {
+// KSP gives `kspTest` and `kspValidationFixtures` the processors of `ksp`, so the processor is excluded from them.
+configurations.matching { it.name == "kspTest" || it.name == "kspValidationFixtures" }.configureEach {
     val processor = project(projects.micronautGraphqlToolsProcessor.path)
     exclude(group = processor.group.toString(), module = processor.name)
 }
@@ -85,6 +94,25 @@ ksp {
 }
 tasks.matching { it.name.startsWith("ksp") && it.name.endsWith("Kotlin") }.configureEach {
     inputs.files(graphqlSchemaDirs).withPropertyName("graphqlSchemaDirs").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+// The resolver fixtures of the constraint-violations scenario (#468), compiled with Micronaut Validation's processor and its own
+// source set: that processor re-annotates every class that has @Introspected through a meta-annotation, which drops the `classes`
+// of @GraphQLModels, so it cannot share a compilation with the external-model fixtures. The output is on the test classpath. The
+// validation artifacts are not in the `mn` catalog (the platform BOM manages them), so no version here.
+val validationFixtures: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(validationFixtures.implementationConfigurationName) { extendsFrom(implementation.get()) }
+}
+dependencies {
+    "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
+    "kspValidationFixtures"("io.micronaut:micronaut-inject-kotlin")
+    "kspValidationFixtures"("io.micronaut.validation:micronaut-validation-processor")
+    testImplementation(validationFixtures.output)
+    testImplementation("io.micronaut.validation:micronaut-validation")
 }
 
 // A class that drifts from the schema on purpose, compiled with the processor and the options of `main`: driftFixtureTest asserts

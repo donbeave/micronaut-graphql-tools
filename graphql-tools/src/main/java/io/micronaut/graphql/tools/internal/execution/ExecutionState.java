@@ -23,11 +23,15 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.convert.value.ConvertibleValues;
 import io.micronaut.core.propagation.PropagatedContext;
+import io.micronaut.core.propagation.PropagatedContextElement;
 import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
@@ -45,7 +49,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
         }
     };
 
-    private final PropagatedContext propagatedContext;
+    private volatile PropagatedContext propagatedContext;
     private final GraphQLTransport transport;
     @Nullable
     private final HttpRequest<?> request;
@@ -55,9 +59,13 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     @Nullable
     private final Executor requestExecutor;
     private volatile boolean cancelled;
+    private volatile boolean subscription;
     @Nullable
     private DisconnectWatcher disconnectWatcher;
     private boolean watching;
+    @Nullable
+    private PendingStage pending;
+    private int pendingCount;
     @Nullable
     private Runnable unwatch;
     @Nullable
@@ -109,10 +117,26 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     }
 
     /**
-     * @return the propagated context captured when the operation arrived, with the request in it
+     * @return the propagated context captured when the operation arrived, with the request in it and the elements that
+     * {@link #addToPropagatedContext} added since
      */
     public PropagatedContext propagatedContext() {
         return propagatedContext;
+    }
+
+    /**
+     * Adds an element to the propagated context of the rest of the execution: the continuations of async fields run inside
+     * a context that holds it. This does not touch the current thread: the caller installs the returned context with
+     * {@link PropagatedContext#propagate()}, and the thread then holds the very object that the continuations get, which
+     * is what keeps an async field that is already done on the fast path of the async boundary.
+     *
+     * @param element what the continuations of the execution run with, for example the current span of a request
+     * @return the propagated context of the execution, with the element in it
+     */
+    public PropagatedContext addToPropagatedContext(PropagatedContextElement element) {
+        PropagatedContext extended = propagatedContext.plus(element);
+        propagatedContext = extended;
+        return extended;
     }
 
     /**
@@ -144,7 +168,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      * @return the HTTP response, or null when the transport has none (WebSocket)
      */
     @Nullable
-    MutableHttpResponse<?> response() {
+    public MutableHttpResponse<?> response() {
         return response;
     }
 
@@ -155,11 +179,83 @@ public final class ExecutionState implements GraphQLExecutionRequest {
 
     /**
      * Marks the execution cancelled: its client went away (an HTTP disconnect, a WebSocket {@code complete} or close). Cancellation is
-     * cooperative: a hop task that has not started is skipped, a later async boundary completes with an abort and a
-     * stream is cancelled, but synchronous code that is running is never interrupted.
+     * cooperative: a hop task that has not started is skipped, every async boundary that is still pending has its source
+     * stage cancelled (which cancels the coroutine of a Kotlin {@code suspend} resolver) and completes with an abort, a later
+     * async boundary completes with an abort and a stream is cancelled, but synchronous code that is running is never
+     * interrupted. A stage that already completed is not changed.
      */
     public void cancel() {
         cancelled = true;
+        List<PendingStage> stages;
+        synchronized (this) {
+            if (pending == null) {
+                return;
+            }
+            stages = new ArrayList<>(pendingCount);
+            for (PendingStage stage = pending; stage != null; ) {
+                PendingStage following = stage.next;
+                stage.next = null;
+                stage.previous = null;
+                stage.listed = false;
+                stages.add(stage);
+                stage = following;
+            }
+            pending = null;
+            pendingCount = 0;
+        }
+        for (PendingStage stage : stages) {
+            stage.abort();
+        }
+    }
+
+    /**
+     * @param stage an async boundary that waits for its source
+     * @return false when the execution is already cancelled, so that the stage was not registered and the caller aborts it
+     */
+    boolean register(PendingStage stage) {
+        synchronized (this) {
+            if (cancelled) {
+                return false;
+            }
+            stage.next = pending;
+            if (pending != null) {
+                pending.previous = stage;
+            }
+            pending = stage;
+            stage.listed = true;
+            pendingCount++;
+            return true;
+        }
+    }
+
+    /**
+     * @param stage a stage that completed, failed or was cancelled; one that is not registered is ignored
+     */
+    void unregister(PendingStage stage) {
+        synchronized (this) {
+            if (!stage.listed) {
+                return;
+            }
+            if (stage.previous != null) {
+                stage.previous.next = stage.next;
+            } else {
+                pending = stage.next;
+            }
+            if (stage.next != null) {
+                stage.next.previous = stage.previous;
+            }
+            stage.next = null;
+            stage.previous = null;
+            stage.listed = false;
+            pendingCount--;
+        }
+    }
+
+    /**
+     * @return the number of async boundaries that wait for their source; zero when the execution has its result
+     */
+    synchronized int pendingStages() {
+        return pendingCount;
     }
 
     /**
@@ -167,6 +263,20 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      */
     public boolean isCancelled() {
         return cancelled;
+    }
+
+    /**
+     * Marks the execution as a subscription operation: the loaders that it creates from now on have caching off.
+     */
+    void markSubscription() {
+        subscription = true;
+    }
+
+    /**
+     * @return whether the operation is a subscription, known once its root field is fetched
+     */
+    boolean isSubscription() {
+        return subscription;
     }
 
     void disconnectWatcher(DisconnectWatcher watcher) {
@@ -226,4 +336,22 @@ public final class ExecutionState implements GraphQLExecutionRequest {
         return customizer;
     }
 
+    /**
+     * An async boundary of an execution that is still waiting for its source. The execution keeps its pending stages in a
+     * list that runs through the stages themselves, so tracking one allocates nothing and cancelling the execution can
+     * reach each of them.
+     */
+    abstract static class PendingStage extends CompletableFuture<Object> {
+
+        @Nullable
+        PendingStage previous;
+        @Nullable
+        PendingStage next;
+        boolean listed;
+
+        /**
+         * Cancels the source of this stage and completes the stage with an abort, because its execution was cancelled.
+         */
+        abstract void abort();
+    }
 }

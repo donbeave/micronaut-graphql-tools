@@ -39,6 +39,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.Duplica
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.InvalidSource;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.ParameterWithoutArgument;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.Slot;
+import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.UnsatisfiableParameter;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.UntypedDataLoader;
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.SlotKind;
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.FieldVerdict;
@@ -63,9 +64,18 @@ public final class ResolverClassRules {
 
     private static final String DATA_FETCHING_ENVIRONMENT = "graphql.schema.DataFetchingEnvironment";
     private static final String DATA_LOADER = "org.dataloader.DataLoader";
+    private static final String GRAPHQL_CONTEXT = "graphql.GraphQLContext";
+    private static final String SELECTION_SET = "graphql.schema.DataFetchingFieldSelectionSet";
+    private static final String LOCALE = "java.util.Locale";
+    private static final String PRINCIPAL = "java.security.Principal";
+    private static final String AUTHENTICATION = "io.micronaut.security.authentication.Authentication";
+    private static final String HTTP_REQUEST = "io.micronaut.http.HttpRequest";
+    private static final String HTTP_RESPONSE = "io.micronaut.http.HttpResponse";
+    private static final String MUTABLE_HTTP_RESPONSE = "io.micronaut.http.MutableHttpResponse";
     private static final String OBJECT = "java.lang.Object";
     private static final String COMPLETION_STAGE = "java.util.concurrent.CompletionStage";
     private static final String PUBLISHER = "org.reactivestreams.Publisher";
+    private static final String FLOW = "kotlinx.coroutines.flow.Flow";
     private static final String DATA_FETCHER_RESULT = "graphql.execution.DataFetcherResult";
     private static final String OPTIONAL = "java.util.Optional";
     private static final String ITERABLE = "java.lang.Iterable";
@@ -86,9 +96,12 @@ public final class ResolverClassRules {
     }
 
     /**
-     * Matches the parameters of a resolver method with the arguments of the field it binds: the source parameter first
-     * (type resolver methods only), the {@code DataFetchingEnvironment} last, a {@code DataLoader<K, V>} in any position
-     * after the source (it is no argument of the field and is not counted), and every other parameter by its name or its
+     * Matches the parameters of a resolver method with the arguments of the field it binds. The source parameter comes
+     * first (type resolver methods only). After it, a parameter of an injectable kind binds by its type or annotation, in
+     * any position, and is no argument of the field and is not counted: the {@code DataFetchingEnvironment},
+     * {@code GraphQLContext}, {@code DataFetchingFieldSelectionSet}, {@code Locale}, a {@code DataLoader<K, V>}, a
+     * {@code Principal} or {@code Authentication}, the HTTP request, the HTTP response, an {@code Optional} of it, and a
+     * parameter annotated {@code @GraphQLContextValue}. Every other parameter binds by its name or its
      * {@code @GraphQLArgument} value.
      *
      * @param sourceType      the binary name of the source type, or {@code null} for a root resolver method
@@ -103,35 +116,49 @@ public final class ResolverClassRules {
             return new ArgumentVerdict(List.of(), null);
         }
 
-        int found = (int) parameters.stream().filter(it -> !isEnvironment(it.type()) && !isDataLoader(it.type())).count();
+        int first = sourceType == null ? 0 : 1;
+        int found = Math.min(first, parameters.size());
+        for (int i = first; i < parameters.size(); i++) {
+            if (injectable(parameters.get(i)) == null) {
+                found++;
+            }
+        }
         if (found != required) {
             return new ArgumentVerdict(List.of(), new CountMismatch(found > required, found, required));
         }
 
         List<Slot> slots = new ArrayList<>();
-        int first = 0;
-        int end = parameters.size();
         if (sourceType != null) {
             if (!isType(parameters.get(0).type(), sourceType)) {
                 return new ArgumentVerdict(slots, new InvalidSource(0));
             }
             slots.add(new Slot(SlotKind.SOURCE, 0, null));
-            first = 1;
-        }
-        boolean environment = end > first && isEnvironment(parameters.get(end - 1).type());
-        if (environment) {
-            end--;
         }
 
         List<String> available = List.copyOf(argumentNames);
         Set<String> bound = new HashSet<>();
-        for (int i = first; i < end; i++) {
+        for (int i = first; i < parameters.size(); i++) {
             JParameter parameter = parameters.get(i);
-            if (isDataLoader(parameter.type())) {
-                if (untypedDataLoader(parameter.type())) {
-                    return new ArgumentVerdict(slots, new UntypedDataLoader(i));
+            SlotKind kind = injectable(parameter);
+            if (kind == SlotKind.DATA_LOADER && untypedDataLoader(parameter.type())) {
+                return new ArgumentVerdict(slots, new UntypedDataLoader(i));
+            }
+            if (kind == SlotKind.CONTEXT_VALUE) {
+                String declared = parameter.annotations().stringValue(AnnotationNames.CONTEXT_VALUE, "value")
+                        .filter(it -> !it.isEmpty()).orElse(null);
+                if (declared == null && parameter.nameIsSynthetic()) {
+                    return new ArgumentVerdict(slots, new UnsatisfiableParameter(i, "the class file has no parameter "
+                            + "names: compile it with -parameters, or give the name in @GraphQLContextValue(\"<name>\")"));
                 }
-                slots.add(new Slot(SlotKind.DATA_LOADER, i, null));
+                if (parameter.type().primitive() && !parameter.type().array()) {
+                    return new ArgumentVerdict(slots, new UnsatisfiableParameter(i, "a primitive cannot hold a context "
+                            + "value that is absent: declare the wrapper type"));
+                }
+                slots.add(new Slot(kind, i, declared != null ? declared : parameter.name()));
+                continue;
+            }
+            if (kind != null) {
+                slots.add(new Slot(kind, i, null));
                 continue;
             }
             String declared = parameter.annotations().stringValue(AnnotationNames.ARGUMENT, "value").orElse(null);
@@ -145,10 +172,43 @@ public final class ResolverClassRules {
             }
             slots.add(new Slot(SlotKind.ARGUMENT, i, name));
         }
-        if (environment) {
-            slots.add(new Slot(SlotKind.ENVIRONMENT, end, null));
-        }
         return new ArgumentVerdict(slots, null);
+    }
+
+    /**
+     * @param parameter a parameter after the source
+     * @return the injectable kind that its annotation or type selects, or {@code null} for an argument of the field
+     */
+    @Nullable
+    private static SlotKind injectable(JParameter parameter) {
+        if (parameter.annotations().has(AnnotationNames.ARGUMENT)) {
+            // an explicit @GraphQLArgument makes the parameter an argument of the field, whatever its type
+            return null;
+        }
+        if (parameter.annotations().has(AnnotationNames.CONTEXT_VALUE)) {
+            return SlotKind.CONTEXT_VALUE;
+        }
+        TypeRef type = parameter.type();
+        if (type.array()) {
+            return null;
+        }
+        return switch (type.rawName()) {
+            case DATA_FETCHING_ENVIRONMENT -> SlotKind.ENVIRONMENT;
+            case DATA_LOADER -> SlotKind.DATA_LOADER;
+            case GRAPHQL_CONTEXT -> SlotKind.CONTEXT;
+            case SELECTION_SET -> SlotKind.SELECTION_SET;
+            case LOCALE -> SlotKind.LOCALE;
+            case PRINCIPAL, AUTHENTICATION -> SlotKind.PRINCIPAL;
+            case HTTP_REQUEST -> SlotKind.REQUEST;
+            case HTTP_RESPONSE, MUTABLE_HTTP_RESPONSE -> SlotKind.RESPONSE;
+            case OPTIONAL -> type.typeArguments().size() == 1 && isResponse(type.typeArguments().get(0))
+                    ? SlotKind.OPTIONAL_RESPONSE : null;
+            default -> null;
+        };
+    }
+
+    private static boolean isResponse(TypeRef type) {
+        return isType(type, HTTP_RESPONSE) || isType(type, MUTABLE_HTTP_RESPONSE);
     }
 
     /**
@@ -333,17 +393,24 @@ public final class ResolverClassRules {
             depth++;
         }
 
+        boolean flow = isAssignableTo(model, result, FLOW);
+        if (flow && !(fieldLevel && subscription)) {
+            return ReturnVerdict.failed(WrapperRules.flowOutsideSubscription());
+        }
+        if (flow && stage) {
+            return ReturnVerdict.failed(WrapperRules.cannotWrap(COMPLETION_STAGE, FLOW));
+        }
         boolean singleValueType = isSingleValueType(model, result);
-        // the RxJava types are not Publishers, they are adapted to one; on a subscription field only a Publisher streams
-        boolean publisher = isAssignableTo(model, result, PUBLISHER) || singleValueType && !(fieldLevel && subscription);
+        // the RxJava types are not Publishers, they are adapted to one; on a subscription field only a Publisher or a Flow streams
+        boolean publisher = flow || isAssignableTo(model, result, PUBLISHER) || singleValueType && !(fieldLevel && subscription);
 
         if (fieldLevel && subscription) {
             if (!publisher) {
                 return ReturnVerdict.failed(WrapperRules.subscriptionNeedsPublisher(className(result)));
             }
-            outer = PUBLISHER;
+            outer = flow ? FLOW : PUBLISHER;
             if (untyped(registry, result, fieldType)) {
-                return ReturnVerdict.failed(WrapperRules.missingTypeArgument(PUBLISHER));
+                return ReturnVerdict.failed(WrapperRules.missingTypeArgument(outer));
             }
             result = result.typeArguments().get(0);
             depth++;
@@ -491,7 +558,6 @@ public final class ResolverClassRules {
         Map<String, String> declared = declaredCoordinates(bindable);
         boolean root = resolver.annotations().has(AnnotationNames.ROOT_RESOLVER);
         Set<String> rootTypes = schema.rootTypeNames();
-        Set<String> operationTypes = schema.rootTypeNames(resolver.markers().operations());
 
         List<MethodVerdict> methods = new ArrayList<>();
         for (JMethod method : bindable) {
@@ -501,12 +567,12 @@ public final class ResolverClassRules {
             List<String> coordinates = new ArrayList<>();
             if (declared != null) {
                 String coordinate = declared.get(method.signature());
-                if (coordinate.indexOf('.') > 0) {
+                if (coordinate.indexOf('.') > 0 && !contradictsOperation(schema, resolver, method, coordinate)) {
                     coordinates.add(coordinate);
                 }
             } else if (root) {
                 List<String> names = FieldNames.ofResolverMethod(method.name(), accessorPrefixes);
-                new TreeSet<>(operationTypes).forEach(type -> names.forEach(name -> {
+                new TreeSet<>(operationTypes(schema, resolver, method)).forEach(type -> names.forEach(name -> {
                     if (field(schema, type, name) != null) {
                         coordinates.add(type + "." + name);
                     }
@@ -537,6 +603,30 @@ public final class ResolverClassRules {
             methods.add(new MethodVerdict(method.signature(), coordinates, fields));
         }
         return new ClassVerdict(resolver.name(), methods);
+    }
+
+    /**
+     * @param schema     the schema
+     * @param resolver   a resolver class
+     * @param method     one of its methods
+     * @param coordinate the coordinate that the method declares
+     * @return whether the coordinate is a field of a root type that the contracts of the method do not bind, so that the
+     * startup does not bind the method to it
+     */
+    public static boolean contradictsOperation(SchemaModel schema, JClass resolver, JMethod method, String coordinate) {
+        String typeName = coordinate.substring(0, coordinate.indexOf('.'));
+        return schema.rootTypeNames().contains(typeName) && !operationTypes(schema, resolver, method).contains(typeName);
+    }
+
+    /**
+     * @param schema   the schema
+     * @param resolver a resolver class
+     * @param method   one of its methods
+     * @return the names of the root types whose fields the method may bind: the operations of the contracts that declare
+     * the method decide, and every root type is open for a method that no marker contract fixes
+     */
+    public static Set<String> operationTypes(SchemaModel schema, JClass resolver, JMethod method) {
+        return schema.rootTypeNames(resolver.markers().operationsOf(method.name(), method.parameters().size()));
     }
 
     /**
@@ -620,14 +710,6 @@ public final class ResolverClassRules {
     private static boolean untypedDataLoader(TypeRef type) {
         List<TypeRef> arguments = type.typeArguments();
         return arguments.size() != 2 || (OBJECT.equals(arguments.get(0).rawName()) && OBJECT.equals(arguments.get(1).rawName()));
-    }
-
-    private static boolean isDataLoader(TypeRef type) {
-        return isType(type, DATA_LOADER);
-    }
-
-    private static boolean isEnvironment(TypeRef type) {
-        return isType(type, DATA_FETCHING_ENVIRONMENT);
     }
 
     private static boolean isType(TypeRef type, String binaryName) {

@@ -74,6 +74,61 @@ val buildToolsTest by tasks.registering(Test::class) {
     systemProperty("sample.groovy", libs.versions.groovy.get())
     outputs.upToDateWhen { false }
 }
+// The compile time of the checks (#418): gradle-profiler scenarios (profiler/compile-time.scenarios) run against copies of the samples,
+// and a budget (profiler/compile-time-budget.properties) that the measured times must stay under.
+//   compileTimeProfile  needs gradle-profiler on the PATH (or -PgradleProfiler=<path>) and the network; -Pprofiler.warmups and
+//                       -Pprofiler.iterations set the number of builds of each scenario
+//   compileTimeBudget   fails when a measured median exceeds its budget; writes build/reports/compile-time/report.md
+val profilerDir = layout.projectDirectory.dir("profiler")
+val profilerProjects = layout.buildDirectory.dir("profiler/projects")
+val profilerOutput = layout.buildDirectory.dir("profiler/output")
+val profilerWarmups = providers.gradleProperty("profiler.warmups").orElse("2")
+val profilerIterations = providers.gradleProperty("profiler.iterations").orElse("5")
+val profiledSamples = listOf("java-gradle", "kotlin-ksp", "kotlin-kapt", "groovy-gradle", "multi-module-gradle")
+
+val prepareCompileTimeProfile by tasks.registering(Sync::class) {
+    description = "Copies the profiled samples with the properties and the init script that the scenarios need."
+    dependsOn(publishLibrary)
+    profiledSamples.forEach { from(samples.dir(it)) { into(it) } }
+    profiledSamples.forEach { from(profilerDir.file("profiler.init.gradle")) { into(it) } }
+    into(profilerProjects)
+    doLast {
+        profiledSamples.forEach {
+            profilerProjects.get().dir(it).file("gradle.properties").asFile.writeText(listOf(
+                "graphqlToolsRepository=" + sampleRepository.get().asFile.toURI(),
+                "graphqlToolsVersion=" + providers.gradleProperty("projectVersion").get(),
+                "micronautPlatformVersion=" + libs.versions.micronaut.platform.get(),
+                "micronautGradlePluginVersion=" + pluginPin("io.micronaut.application"),
+                "kotlinVersion=" + pluginPin("org.jetbrains.kotlin.jvm"),
+                "kspVersion=" + pluginPin("com.google.devtools.ksp"),
+                "groovyVersion=" + libs.versions.groovy.get(),
+                "org.gradle.vfs.watch=false",
+                "org.gradle.jvmargs=-Xmx1g -Dfile.encoding=UTF-8",
+                "").joinToString("\n"))
+        }
+    }
+}
+
+val compileTimeProfile by tasks.registering(Exec::class) {
+    description = "Runs the gradle-profiler scenarios of the compile-time checks."
+    group = "verification"
+    dependsOn(prepareCompileTimeProfile)
+    inputs.dir(profilerDir).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.upToDateWhen { false }
+    commandLine(profilerDir.file("run.sh").asFile.absolutePath, providers.gradleProperty("gradleProfiler").getOrElse("gradle-profiler"),
+        profilerProjects.get().asFile.absolutePath, profilerOutput.get().asFile.absolutePath, profilerWarmups.get(), profilerIterations.get(), gradle.gradleVersion)
+}
+
+val compileTimeBudget by tasks.registering(JavaExec::class) {
+    description = "Fails when a measured compile time exceeds the budget; writes the per-module report."
+    group = "verification"
+    dependsOn(compileTimeProfile, tasks.named("testClasses"))
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("io.micronaut.graphql.tools.buildtools.CompileTimeBudget")
+    args(profilerOutput.get().asFile.absolutePath, profilerDir.file("compile-time-budget.properties").asFile.absolutePath,
+        layout.buildDirectory.file("reports/compile-time/report.md").get().asFile.absolutePath, profilerIterations.get())
+}
+
 // The standard test task stays out of `check`: the specs are slow, build real projects and need the network.
 tasks.test {
     enabled = false

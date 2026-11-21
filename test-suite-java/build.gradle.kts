@@ -19,12 +19,17 @@ dependencies {
     implementation(libs.apollo.java.rx3)
     implementation(libs.apollo.api) // the Java client 1.0.0 resolves apollo-api 5.0.1; keep the API at the plugin's version
     testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
-    // The observability module and the libraries its tests observe with: a Micrometer registry and an OpenTelemetry SDK that
-    // exports to memory (#24). Test scope: the application itself does not depend on them.
+    // The observability module and the libraries its tests observe with: the Micrometer and OpenTelemetry integrations of
+    // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
     testImplementation(projects.micronautGraphqlToolsObservability)
-    testImplementation("io.micrometer:micrometer-core")
-    testImplementation("io.opentelemetry:opentelemetry-sdk")
+    testImplementation(mnMicrometer.micronaut.micrometer.core)
+    testImplementation(mnTracing.micronaut.tracing.opentelemetry)
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
+    testAnnotationProcessor(mnMicrometer.micronaut.micrometer.annotation)
+    // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
+    // itself does not depend on it.
+    testImplementation(projects.micronautGraphqlToolsUpload)
+    testImplementation("io.micronaut:micronaut-http-client")
     runtimeOnly("ch.qos.logback:logback-classic")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -123,6 +128,25 @@ extra["driftFailingTask"] = driftFixture.compileJavaTaskName
 extra["driftInputs"] = files(fileTree("src/driftFixture"), driftFixture.compileClasspath, driftFixture.annotationProcessorPath,
     graphqlSchemaDirs)
 apply(from = rootProject.file("config/drift-fixture.gradle.kts"))
+
+// The resolver fixtures of the constraint-violations scenario (#468), compiled with Micronaut Validation's processor and its own
+// source set: that processor re-annotates every class that has @Introspected through a meta-annotation, which drops the `classes`
+// of @GraphQLModels, so it cannot share a compilation with the external-model fixtures. The output is on the test classpath. The
+// validation artifacts are not in the `mn` catalog (the platform BOM manages them), so no version here.
+val validationFixtures: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(validationFixtures.implementationConfigurationName) { extendsFrom(implementation.get()) }
+    named(validationFixtures.annotationProcessorConfigurationName) { extendsFrom(testAnnotationProcessor.get()) }
+}
+dependencies {
+    "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
+    "validationFixturesAnnotationProcessor"("io.micronaut.validation:micronaut-validation-processor")
+    testImplementation(validationFixtures.output)
+    testImplementation("io.micronaut.validation:micronaut-validation")
+}
 
 // The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x.
 configurations.configureEach {

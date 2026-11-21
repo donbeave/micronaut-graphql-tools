@@ -101,3 +101,47 @@ tasks.named("publishGuide") {
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("snippetSources")
 }
+
+// The native coverage table of CONTRIBUTING.md names a test class per feature category and suite, and the TCK scenarios it
+// relies on. The native run executes the whole test source set, so a row whose class is missing means a category lost its test.
+val checkNativeCoverage by tasks.registering {
+    group = "verification"
+    description = "Checks that every row of the native coverage table of CONTRIBUTING.md names existing tests and scenarios."
+    val contributing = layout.projectDirectory.file("CONTRIBUTING.md")
+    val scenarios = layout.projectDirectory.file("graphql-tools-tck/src/main/resources/tck/scenarios.txt")
+    val sources = fileTree(layout.projectDirectory) {
+        include("test-suite-java/src/test/**/*.java", "test-suite-kotlin/src/test/**/*.kt")
+    }
+    inputs.files(contributing, scenarios, sources).withPathSensitivity(PathSensitivity.RELATIVE)
+    val marker = layout.buildDirectory.file("checks/native-coverage.ok")
+    outputs.file(marker)
+    doLast {
+        val text = contributing.asFile.readText()
+        val table = text.substringAfter("<!-- native-coverage:begin -->").substringBefore("<!-- native-coverage:end -->")
+        val rows = table.lines().filter { it.startsWith("| ") && !it.startsWith("| Category") && !it.startsWith("| ---") }
+        if (rows.isEmpty()) throw GradleException("CONTRIBUTING.md has no native coverage table")
+        val known = scenarios.asFile.readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }.toSet()
+        val problems = mutableListOf<String>()
+        rows.forEach { row ->
+            val cells = row.trim().trim('|').split("|").map { it.trim() }
+            val category = cells[0]
+            val testClass = cells[1].trim('`')
+            val ids = cells[2].split(",").map { it.trim().trim('`') }.filter { it.isNotEmpty() }
+            val suites = cells[3].split(",").map { it.trim() }
+            val path = testClass.replace('.', '/')
+            suites.forEach { suite ->
+                val (module, extension) = when (suite) {
+                    "Java" -> "test-suite-java" to "java"
+                    "Kotlin" -> "test-suite-kotlin" to "kotlin"
+                    else -> throw GradleException("Unknown suite '$suite' in the native coverage row '$category'")
+                }
+                val file = layout.projectDirectory.file("$module/src/test/$extension/$path.${if (extension == "kotlin") "kt" else extension}").asFile
+                if (!file.isFile) problems += "$category: $testClass is missing from $module"
+            }
+            ids.filter { it !in known }.forEach { problems += "$category: scenario '$it' is not in scenarios.txt" }
+        }
+        if (problems.isNotEmpty()) throw GradleException("Native coverage table is out of date:\n" + problems.joinToString("\n"))
+        marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
+    }
+}
+tasks.matching { it.name == "check" }.configureEach { dependsOn(checkNativeCoverage) }

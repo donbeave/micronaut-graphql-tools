@@ -115,7 +115,7 @@ input Filter {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
         e.cause.code() == BindingCode.STRICT_FINDINGS
-        e.cause.problems == ["The resolver method ${UnboundQuery.name}#stray(java.lang.String) binds no schema field. Remove it, make it non-public, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.".toString()]
+        e.cause.problems == ["The resolver method ${UnboundQuery.name}#stray(java.lang.String) binds no schema field. Remove it, make it private, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.".toString()]
     }
 
     void "an ignored resolver method does not bind the field of its name"() {

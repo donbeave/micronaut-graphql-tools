@@ -55,12 +55,23 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   the same in both. Each state is also built from scratch in a copy, and must pass: an incremental build never fails where a clean
   build passes. A schema edit that drifts the resolver fails the incremental build with the code and the coordinate, and the repair
   passes. The specs record the clean and incremental times, with the JDK and the machine load, in `outcomes.txt`; they assert no time.
+  `KotlinKspLooseNullabilityTest` and `JavaMavenLooseNullabilityTest` cover the processor option `looseNullability`: the `kotlin-ksp`
+  sample (`-PgraphqlLooseNullability`) passes by default and with `warn` and fails with `fail` on `Query.book`, a non-null return type at a nullable
+  field; the `java-maven` sample (`-Dgraphql.looseNullability`) accepts every value and fails on a bad one. Maven cannot show the effect: kapt reads
+  Kotlin classes as Java stubs. The guide page of the options includes their tagged snippets.
   `MultiModuleGradleSampleTest` adds, on top of the contract: every module compiles and `app` starts and answers a query through
   the resolvers of both feature modules; a schema edit reruns `books` and `authors` and leaves `model` and `app` up to date; a
   wrong argument type, a wrong argument name, or a model enum that drifts from the schema fails the compile task of the module
   whose resolver is affected, with the code and the coordinate, while the module next to it still compiles (`--continue`); a field
   with no resolver in any module compiles everywhere and fails `:app:run` with the coordinate; and a module that forgot the
-  snippet, built after one that set it in the same daemon, fails with `processor-schema-not-configured` and its own directory.- The samples resolve the library from `build/repo`, as published, so the processor jar they use is the real one: it registers the visitor and only the visitor.
+  snippet, built after one that set it in the same daemon, fails with `processor-schema-not-configured` and its own directory.
+- `profiler/`: the compile-time profile and budget (#418). `compile-time.scenarios` holds the gradle-profiler scenarios (a clean build, a
+  body edit and a schema edit, each with the checks on and off, for `java-gradle`, `kotlin-ksp`, `kotlin-kapt`, `groovy-gradle` and
+  `multi-module-gradle`); `profiler.init.gradle` makes the edits inside the measured build and records the time of each compile task;
+  `compile-time-budget.properties` is the budget; `CompileTimeBudget` compares the medians with it and writes the per-module report.
+  `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>` runs all of it (CI job `compile-time budget`).
+  `CompileTimeBudgetTest` runs in `buildToolsTest`: the scenario definitions and the budget check, with a measurement that exceeds its budget.
+- The samples resolve the library from `build/repo`, as published, so the processor jar they use is the real one: it registers the visitor and only the visitor.
 
 Not in this module: the visitor and its options (`graphql-tools-processor`), the binding corpus, and the example applications.
 

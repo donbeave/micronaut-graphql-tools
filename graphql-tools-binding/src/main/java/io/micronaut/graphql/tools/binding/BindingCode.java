@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public enum BindingCode {
 
-    /** Check: a public resolver method binds no schema field. */
+    /** Check: a resolver method binds no schema field. */
     UNBOUND_RESOLVER_METHOD("unbound-resolver-method", true, true,
             "A resolver method binds no schema field."),
     /** Check: a root method binds fields of several operation types. */
@@ -117,7 +117,7 @@ public enum BindingCode {
     INCORRECT_CLASS_MAPPING("incorrect-class-mapping", false, false,
             "A Java class is mapped to a type it cannot serve."),
     /** Failure: a member is mapped outside the declared Java type. */
-    INCORRECT_MEMBER_MAPPING("incorrect-member-mapping", false, false,
+    INCORRECT_MEMBER_MAPPING("incorrect-member-mapping", false, true,
             "An object type of a union or interface is mapped to a Java type disjoint from the declared one."),
     /** Failure: a mapped implementation does not fit the abstract type. */
     INCORRECT_IMPLEMENTATION("incorrect-implementation", false, false,
@@ -231,6 +231,9 @@ public enum BindingCode {
     /** Failure: a Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath. */
     SUSPEND_WITHOUT_COROUTINES("suspend-without-coroutines", false, false,
             "A Kotlin suspend resolver is bound and kotlinx-coroutines-core is not on the classpath."),
+    /** Failure: a Kotlin Flow subscription is bound and kotlinx-coroutines-reactive is not on the classpath. */
+    FLOW_WITHOUT_REACTIVE_COROUTINES("flow-without-reactive-coroutines", false, false,
+            "A Kotlin Flow subscription is bound and kotlinx-coroutines-reactive is not on the classpath."),
     /** Failure: binding a field threw an exception the library does not know. */
     UNEXPECTED_BINDING_ERROR("unexpected-binding-error", false, false,
             "Binding a field failed with an unexpected exception; the cause is attached."),

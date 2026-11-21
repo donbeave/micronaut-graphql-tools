@@ -1,0 +1,49 @@
+{
+  "data": {
+    "restock": null
+  },
+  "errors": [
+    {
+      "message": "must not be blank",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          1,
+          "sku"
+        ],
+        "classification": "DataFetchingException"
+      }
+    },
+    {
+      "message": "must be greater than 0",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "restock"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "lines",
+        "inputPath": [
+          2,
+          "quantity"
+        ],
+        "classification": "DataFetchingException"
+      }
+    }
+  ]
+}

@@ -6,9 +6,10 @@ The transport (`micronaut-graphql`) receives an operation on a Netty event loop 
 
 The library replaces the transport's `GraphQLInvocation`. For each operation it hops once to an executor, before graphql-java runs:
 
-* the operation is received on the event loop;
+* the operation is received on the event loop, and nothing starts until the returned publisher is subscribed;
+* the library builds the `ExecutionInput` and subscribes the publisher of your `GraphQLExecutionInputCustomizer` on the subscribing thread, with the Reactor context of the subscriber (`Mono.deferContextual` sees it), and cancelling the response cancels that subscription;
 * one task goes to the executor (`blocking` by default);
-* on that executor the library builds the `ExecutionInput`, calls your `GraphQLExecutionInputCustomizer`, and calls graphql-java, which parses and validates the query and runs every synchronous resolver.
+* on that executor the library calls graphql-java, which parses and validates the query and runs every synchronous resolver.
 
 There is one thread change per operation. A field hops only when you annotate it with `@ExecuteOn` (see <<executeOn,@ExecuteOn per field>>): the library adds no task, no future and no thread-local read per field, and a trivial field costs the same as before.
 
@@ -65,11 +66,11 @@ Either keep the customizer on the calling thread, or complete its publisher on a
 
 snippet::example.tck.ExecutorNoneCustomizerScenario[project-base="test-suite", source="test", tags="executor-none-customizer", indent="0"]
 
-To keep the operation on a blocking executor, keep the default `blocking` or name your own: when the customizer answers on another thread, the library hops back to the executor once more.
+To keep the operation on a blocking executor, keep the default `blocking` or name your own: the library hops to the executor when the customizer emits.
 
 == Order of the steps
 
-After the hop the library runs, in this order:
+The library runs, in this order (the hop to the executor comes after the customizer, or first when there is none):
 
 . build the `ExecutionInput` from the query, the operation name and the variables, put the library's per-execution state in its `GraphQLContext`, and set the lazy `DataLoaderRegistry` (only when the application has loader beans);
 . call the application's `GraphQLExecutionInputCustomizer` (skipped when it is the transport's default one);
@@ -77,7 +78,7 @@ After the hop the library runs, in this order:
 . call every `GraphQLContextContributor`, in order;
 . run graphql-java.
 
-The customizer therefore runs on the executor and may block. A customizer that publishes its input on another thread makes the operation hop to the executor once more (with `executor: none` it does not, see <<executorNone,Executor none>>). The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
+The customizer therefore runs on the subscribing thread, which is the event loop for an HTTP request, and must not block. When its publisher emits, the operation hops to the executor once, whichever thread emits (with `executor: none` it does not, see <<executorNone,Executor none>>). The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
 
 The state is also the read-only `GraphQLExecutionRequest` that the context contributors receive. The registry is the library's own: an application with a `DataLoaderRegistry` bean fails the startup (BC-36). See the Data Loaders page for the loaders and the contributors.
 
@@ -132,11 +133,13 @@ The library reads the annotation from the bean metadata once at startup and look
 
 The cost of a hop is one task and one future for the annotated field only. The `InvocationBenchmark` of the `benchmarks` module reports the hop; see CONTRIBUTING.md.
 
+[[cancellation]]
 == Cancellation
 
 An execution is cancelled when its client goes away: an HTTP client that closes its connection, a WebSocket `complete` and the close of a WebSocket connection (see <<subscriptions,Subscriptions>>). Cancellation is cooperative, and it does not depend on the graphql-java version. The library stops starting new work for the execution, and never interrupts code that is running, because interrupting a thread inside a JDBC driver can break the connection:
 
 * A hop task that is still queued, the one of the operation or the one of an `@ExecuteOn` field, is skipped. The operation then ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, which goes through the default error handling and the `GraphQLErrorsCustomizer` beans like any other error of the execution (see <<errors,Errors>>). Nobody reads that response over HTTP, because the client is gone.
+* An async field that is still pending when the execution is cancelled has its source stage cancelled right away: a `CompletableFuture` that the resolver returned is cancelled, and the coroutine of a Kotlin `suspend` resolver is cancelled with it, so it ends with a `CancellationException` at its next suspension point and the code after that point does not run. Only the stages of that execution are cancelled, never those of another execution, and a stage that already completed keeps its result. A resolver that returns a stage that cannot be cancelled (a `CompletableFuture.minimalCompletionStage`, for example) is not interrupted: its field completes with an abort.
 * The continuation of an async field that completes afterwards is aborted with graphql-java's `AbortExecutionException`: the children of the field, and every later async field, do not run.
 * The stream of a subscription is cancelled upstream.
 * A synchronous resolver that is already running finishes.
@@ -180,7 +183,7 @@ How the coroutine runs:
 * It starts on the thread that resolves the field, which is a thread of the request executor, inside the propagated context of the request. A function that never suspends is done when the call returns, at no cost beyond the call.
 * The library gives the coroutine a context with the propagated context of the request, the contexts of the `HttpCoroutineContextFactory` beans (the same ones that Micronaut gives a `suspend` controller method), a job of its own and `Dispatchers.Unconfined`. The unconfined dispatcher moves no work to another thread. It makes the coroutine install the propagated context on whichever thread resumes it, so `PropagatedContext` values are visible after `delay`, and inside `withContext(Dispatchers.IO)`, where the context element also reaches the IO thread.
 * The coroutine resumes where its suspension point resumes. When it finishes on an event loop thread, the async boundary completes the field on the request executor, as for any async field.
-* An exception that the function throws becomes an error of the field, as the exception that you threw. Cancelling the field's future, which graphql-java does on a timeout, cancels the job, so the coroutine ends with a `CancellationException` at its next suspension point.
+* An exception that the function throws becomes an error of the field, as the exception that you threw. Cancelling the field's future, which graphql-java does on a timeout, or cancelling the execution (see <<cancellation,Cancellation>>), cancels the job, so the coroutine ends with a `CancellationException` at its next suspension point.
 * A `suspend` function declares the type of its value. It cannot return a `CompletionStage` or a `Publisher` as well, and it cannot be a field of the subscription type: both fail at compile time and at startup with `[unsupported-return-type]`. Return a `Publisher` without `suspend` for a subscription.
 * A function with a wrong number of parameters fails with `[argument-mismatch]`, at compile time and at startup, and the continuation is not counted.
 

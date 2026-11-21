@@ -2,7 +2,7 @@ package example;
 
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 
-@GraphQLType
+@GraphQLType(name = "Magazine")
 public final class Magazine {
 
     public int getIssue() {

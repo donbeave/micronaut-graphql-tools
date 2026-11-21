@@ -20,9 +20,11 @@ import graphql.GraphQLContext;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.micronaut.configuration.metrics.annotation.RequiresMetrics;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.util.StringUtils;
 import io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics;
 import io.micronaut.graphql.tools.observability.GraphQLObservability;
 import jakarta.inject.Singleton;
@@ -34,18 +36,17 @@ import java.util.Map;
  */
 @Internal
 @Singleton
+@RequiresMetrics
 @Requires(classes = MeterRegistry.class)
-@Requires(beans = MeterRegistry.class)
-@Requires(property = GraphQLObservability.PREFIX + ".enabled", notEquals = "false")
-@Requires(property = GraphQLObservability.PREFIX + ".metrics.enabled", notEquals = "false")
+@Requires(property = GraphQLMetricsConfiguration.PREFIX + ".enabled", notEquals = StringUtils.FALSE)
 final class MicrometerObserver implements RequestObserver {
 
     private final MeterRegistry registry;
     private final OperationNames operations;
 
-    MicrometerObserver(MeterRegistry registry, ObservabilitySettings settings) {
+    MicrometerObserver(MeterRegistry registry, GraphQLMetricsConfiguration configuration) {
         this.registry = registry;
-        this.operations = new OperationNames(settings.getMetrics().getMaxOperations());
+        this.operations = new OperationNames(configuration.getMaxOperations());
     }
 
     @Override

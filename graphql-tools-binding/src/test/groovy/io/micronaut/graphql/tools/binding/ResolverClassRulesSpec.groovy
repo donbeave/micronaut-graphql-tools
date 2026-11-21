@@ -19,6 +19,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict
 import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.SlotKind
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules.SchemaArgument
+import io.micronaut.graphql.tools.binding.internal.model.AnnotationNames
 import io.micronaut.graphql.tools.binding.internal.model.AnnotationView
 import io.micronaut.graphql.tools.binding.internal.model.JParameter
 import io.micronaut.graphql.tools.binding.internal.model.Nullability
@@ -63,6 +64,93 @@ class ResolverClassRulesSpec extends Specification {
         raw.failure() == new ArgumentVerdict.UntypedDataLoader(0)
         objects.failure() == new ArgumentVerdict.UntypedDataLoader(0)
         typed.failure() == null
+    }
+
+    private static JParameter contextValue(String name, String type, String key = '', boolean primitive = false,
+                                           boolean synthetic = false) {
+        def view = [has: { String it -> it == AnnotationNames.CONTEXT_VALUE },
+                    stringValue: { String a, String m ->
+                        a == AnnotationNames.CONTEXT_VALUE && m == 'value' ? Optional.of(key) : Optional.empty()
+                    },
+                    classValues: { String a, String m -> [] }] as AnnotationView
+        def ref = new TypeRef(type, [], Nullability.UNKNOWN, primitive, false)
+        [name: { name }, nameIsSynthetic: { synthetic }, type: { ref }, annotations: { view }] as JParameter
+    }
+
+    void "each injectable kind binds by its type in any position and is no argument of the field"() {
+        when:
+        def verdict = ResolverClassRules.arguments(null,
+                [FakeModel.parameter(name, type), FakeModel.parameter('id', 'java.lang.String')], schema('id'))
+
+        then:
+        verdict.failure() == null
+        verdict.slots()*.kind() == [kind, SlotKind.ARGUMENT]
+
+        where:
+        name        | type                                                | kind
+        'env'       | DFE                                                 | SlotKind.ENVIRONMENT
+        'context'   | 'graphql.GraphQLContext'                            | SlotKind.CONTEXT
+        'selection' | 'graphql.schema.DataFetchingFieldSelectionSet'      | SlotKind.SELECTION_SET
+        'locale'    | 'java.util.Locale'                                  | SlotKind.LOCALE
+        'principal' | 'java.security.Principal'                           | SlotKind.PRINCIPAL
+        'auth'      | 'io.micronaut.security.authentication.Authentication' | SlotKind.PRINCIPAL
+        'request'   | 'io.micronaut.http.HttpRequest'                     | SlotKind.REQUEST
+        'response'  | 'io.micronaut.http.HttpResponse'                    | SlotKind.RESPONSE
+        'mutable'   | 'io.micronaut.http.MutableHttpResponse'             | SlotKind.RESPONSE
+    }
+
+    void "an Optional of the response is an injectable kind, an Optional of anything else is an argument"() {
+        when:
+        def response = new TypeRef('java.util.Optional', [TypeRef.of('io.micronaut.http.MutableHttpResponse')],
+                Nullability.UNKNOWN, false, false)
+        def other = new TypeRef('java.util.Optional', [TypeRef.of('java.lang.String')], Nullability.UNKNOWN, false, false)
+        def optionalResponse = [name: { 'response' }, nameIsSynthetic: { false }, type: { response },
+                                annotations: { AnnotationView.none() }] as JParameter
+        def optionalOther = [name: { 'id' }, nameIsSynthetic: { false }, type: { other },
+                             annotations: { AnnotationView.none() }] as JParameter
+        def verdict = ResolverClassRules.arguments(null, [optionalResponse, optionalOther], schema('id'))
+
+        then:
+        verdict.failure() == null
+        verdict.slots()*.kind() == [SlotKind.OPTIONAL_RESPONSE, SlotKind.ARGUMENT]
+    }
+
+    void "a context value binds by the annotation value, else by the parameter name, and its name never collides with an argument"() {
+        when:
+        def verdict = ResolverClassRules.arguments(null,
+                [contextValue('id', 'java.lang.String', 'tenant'), contextValue('region', 'java.lang.String'),
+                 FakeModel.parameter('id', 'java.lang.String')], schema('id'))
+
+        then:
+        verdict.failure() == null
+        verdict.slots()*.kind() == [SlotKind.CONTEXT_VALUE, SlotKind.CONTEXT_VALUE, SlotKind.ARGUMENT]
+        verdict.slots()*.argument() == ['tenant', 'region', 'id']
+    }
+
+    void "a context value of a primitive type, or without a name in the class file, cannot be satisfied"() {
+        when:
+        def primitive = ResolverClassRules.arguments(null, [contextValue('count', 'int', 'count', true)], schema())
+        def unnamed = ResolverClassRules.arguments(null, [contextValue('arg0', 'java.lang.String', '', false, true)], schema())
+        def named = ResolverClassRules.arguments(null, [contextValue('arg0', 'java.lang.String', 'tenant', false, true)], schema())
+
+        then:
+        primitive.failure() instanceof ArgumentVerdict.UnsatisfiableParameter
+        primitive.failure().parameter() == 0
+        unnamed.failure() instanceof ArgumentVerdict.UnsatisfiableParameter
+        named.failure() == null
+    }
+
+    void "an injectable parameter after the source is not counted, and a method with too many other parameters still fails"() {
+        when:
+        def ok = ResolverClassRules.arguments('a.Book',
+                [FakeModel.parameter('book', 'a.Book'), FakeModel.parameter('locale', 'java.util.Locale')], schema())
+        def tooMany = ResolverClassRules.arguments(null,
+                [FakeModel.parameter('locale', 'java.util.Locale'), FakeModel.parameter('x', 'java.lang.String')], schema())
+
+        then:
+        ok.failure() == null
+        ok.slots()*.kind() == [SlotKind.SOURCE, SlotKind.LOCALE]
+        tooMany.failure() == new ArgumentVerdict.CountMismatch(true, 1, 0)
     }
 
     void "parameters bind the arguments by name, the environment last"() {

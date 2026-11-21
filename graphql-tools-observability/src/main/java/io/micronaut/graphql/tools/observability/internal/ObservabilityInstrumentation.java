@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.observability.internal;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
+import graphql.GraphQLContext;
 import graphql.execution.instrumentation.InstrumentationContext;
 import io.micronaut.context.annotation.Requires;
 import graphql.execution.instrumentation.InstrumentationState;
@@ -31,6 +32,7 @@ import jakarta.inject.Singleton;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The one {@code Instrumentation} bean of the module. It implements the three request-level hooks and nothing at field level,
@@ -77,7 +79,39 @@ public final class ObservabilityInstrumentation extends SimplePerformantInstrume
         RequestState request = (RequestState) state;
         request.operationName = operation.getName();
         request.operationType = operation.getOperation().name().toLowerCase(Locale.ROOT);
-        return SimpleInstrumentationContext.noOp();
+        GraphQLContext context = parameters.getExecutionContext().getGraphQLContext();
+        for (int i = 0; i < observers.length; i++) {
+            observers[i].operationStarted(request.tokens[i], context, request.operationName, request.operationType);
+        }
+        return new Dispatch(request);
+    }
+
+    /**
+     * Tells the observers that the operation returned its future. graphql-java 21 calls {@code onDispatched(CompletableFuture)}
+     * and 22 and later call {@code onDispatched()}: the class has both, and neither is an override of the version it compiles
+     * against.
+     */
+    private final class Dispatch implements InstrumentationContext<ExecutionResult> {
+
+        private final RequestState request;
+
+        private Dispatch(RequestState request) {
+            this.request = request;
+        }
+
+        public void onDispatched(CompletableFuture<ExecutionResult> result) {
+            onDispatched();
+        }
+
+        public void onDispatched() {
+            for (int i = observers.length - 1; i >= 0; i--) {
+                observers[i].dispatched(request.tokens[i]);
+            }
+        }
+
+        @Override
+        public void onCompleted(ExecutionResult result, Throwable failure) {
+        }
     }
 
     private static final class RequestState implements InstrumentationState {

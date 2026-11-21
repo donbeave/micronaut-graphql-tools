@@ -30,9 +30,13 @@ import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionResult
 import io.micronaut.http.context.ServerRequestContext
 import jakarta.inject.Singleton
+import org.dataloader.BatchLoader
+import org.dataloader.DataLoader
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.NonBlocking
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -58,6 +62,18 @@ class TokenInterceptor : GraphQLConnectionInterceptor {
 @Requires(property = "tck.scenario", value = "websocket")
 class CancelledStreams {
     val count = AtomicInteger()
+    val echoKeys = AtomicInteger()
+}
+
+/** Counts the keys that reach its batch function. */
+@Singleton
+@Requires(property = "tck.scenario", value = "websocket")
+class EchoLoader(private val counters: CancelledStreams) : BatchLoader<Int, String> {
+
+    override fun load(keys: List<Int>): CompletionStage<List<String>> {
+        counters.echoKeys.addAndGet(keys.size)
+        return CompletableFuture.completedFuture(keys.map { "e$it" })
+    }
 }
 
 class TickFailure : RuntimeException("secret internal detail")
@@ -95,7 +111,12 @@ class WebSocketQueries(private val cancelled: CancelledStreams) {
     fun connectionUser(environment: DataFetchingEnvironment): String? =
         ExecutionState.of(environment.graphQlContext).connectionAttributes().get("user", String::class.java).orElse(null)
 
+    fun transport(environment: DataFetchingEnvironment): String =
+        ExecutionState.of(environment.graphQlContext).transport().name
+
     fun cancelledStreams(): Int = cancelled.count.get()
+
+    fun echoLoaderKeys(): Int = cancelled.echoKeys.get()
 }
 
 @Singleton
@@ -129,6 +150,10 @@ class WebSocketSubscriptions(private val cancelled: CancelledStreams) {
 class TickFields {
 
     fun onEventLoop(tick: Tick): Boolean = Thread.currentThread() is NonBlocking
+
+    fun echo(tick: Tick, loader: DataLoader<Int, String>): CompletionStage<String> = loader.load(1)
+
+    fun echoAgain(tick: Tick, loader: DataLoader<Int, String>): CompletionStage<String> = loader.load(1)
 
     fun broken(tick: Tick): String? {
         throw IllegalStateException("secret internal detail")
