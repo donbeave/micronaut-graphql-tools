@@ -308,6 +308,8 @@ public final class GraphQLRuntimeWiringGenerator {
             SchemaDefinition schemaDefinition = typeDefinitionRegistry.schemaDefinition()
                     .orElseThrow(SchemaDefinitionNotProvidedException::new);
 
+            graphQLResolversRegistry.verifyRootMarkersRecorded();
+
             if (!graphQLResolversRegistry.hasRootResolvers()) {
                 throw new RootResolverNotFoundException();
             }

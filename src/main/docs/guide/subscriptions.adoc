@@ -21,6 +21,8 @@ The library replaces the handler of `micronaut-graphql` for this endpoint, with 
 
 The deprecated Apollo `graphql-ws` sub-protocol (`graphql.graphql-apollo-ws.enabled`) stays with the transport. Its operations reach the library's invocation too, so they run on the executor like every other operation.
 
+`micronaut-graphql` guards its beans for that protocol with a condition that reads a missing `graphql.graphql-apollo-ws.enabled` as enabled, while its controller reads it as disabled. Its keep-alive sender (`GraphQLApolloWsKeepAlive`, a `@Scheduled` bean) would exist by default and fail at startup in a context that has no server to broadcast on (a `NoSuchBeanException` for a bean of the server, in a native image too). The library therefore sets `graphql.graphql-apollo-ws.enabled` to `false` as a default of the lowest precedence, so the sender is not a bean until the application sets the property to `true`. With the Apollo support on, `graphql.graphql-apollo-ws.keep-alive-enabled=false` turns the sender off.
+
 == Writing a subscription
 
 A method of a `SubscriptionResolver` (or of a `@GraphQLRootResolver` class) that is named after a field of the `Subscription` type returns a reactive stream of the event. `Publisher<T>`, Reactor's `Flux<T>` and the other reactive types that Micronaut converts to a `Publisher` are accepted.
