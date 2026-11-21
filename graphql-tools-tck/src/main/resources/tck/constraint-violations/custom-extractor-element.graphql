@@ -1,0 +1,3 @@
+query ($pack: Pack!) {
+  pack(pack: $pack)
+}

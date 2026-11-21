@@ -1,0 +1,28 @@
+{
+  "errors": [
+    {
+      "message": "must be greater than 0",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": [
+        "pack"
+      ],
+      "extensions": {
+        "code": "CONSTRAINT_VIOLATION",
+        "argument": "pack",
+        "inputPath": [
+          "item",
+          1
+        ],
+        "classification": "DataFetchingException"
+      }
+    }
+  ],
+  "data": {
+    "pack": null
+  }
+}
