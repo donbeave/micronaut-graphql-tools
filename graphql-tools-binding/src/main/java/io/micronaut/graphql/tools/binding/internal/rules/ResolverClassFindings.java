@@ -186,7 +186,7 @@ public final class ResolverClassFindings {
                     strict.add(finding(resolver, method, BindingCode.UNBOUND_RESOLVER_METHOD, method.signature(),
                             "the resolver method " + method.signature() + " binds no schema field",
                             null, null,
-                            "annotate it with @GraphQLIgnore, make it non-public, or move it out of the resolver bean"));
+                            "annotate it with @GraphQLIgnore, make it private, or move it out of the resolver bean"));
                 }
             }
         }
