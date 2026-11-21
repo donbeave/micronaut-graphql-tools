@@ -113,7 +113,6 @@ public final class ResolverClassFindings {
         bindable.forEach(it -> bySignature.put(it.signature(), it));
         Map<String, String> declared = ResolverClassRules.declaredCoordinates(bindable);
         Set<String> rootTypes = schema.rootTypeNames();
-        Set<String> operationTypes = schema.rootTypeNames(resolver.markers().operations());
 
         EnumSet<ResolverKind> kinds = EnumSet.noneOf(ResolverKind.class);
         if (root) {
@@ -139,12 +138,20 @@ public final class ResolverClassFindings {
                             "the @GraphQLSchemaCoordinate on " + method.signature() + " is invalid: " + problem,
                             schema, coordinate,
                             "correct the coordinate to Type.field of a field with the name of the method, or remove it"));
+                } else if (ResolverClassRules.contradictsOperation(schema, resolver, method, coordinate)) {
+                    findings.add(finding(resolver, method, BindingCode.UNKNOWN_SCHEMA_COORDINATE, coordinate,
+                            "the @GraphQLSchemaCoordinate on " + method.signature() + " names " + coordinate
+                                    + ", a field of a root type that the contracts of the method do not bind: they bind "
+                                    + operationNames(resolver, method) + " only, so the method is not bound to it",
+                            schema, coordinate,
+                            "name a field of the root type of the operation of the contract, or move the method to a contract "
+                                    + "of the operation of the coordinate"));
                 }
             }
         }
 
         if (!findings.isEmpty()) {
-            // the startup reports the invalid coordinates before it binds anything
+            // the startup reports the invalid and the contradicting coordinates before it binds anything
             return only(findings);
         }
 
@@ -193,6 +200,7 @@ public final class ResolverClassFindings {
                     }
                     unbound = contracts.size() == 1 && names.stream().noneMatch(objectFields::contains);
                 } else {
+                    Set<String> operationTypes = ResolverClassRules.operationTypes(schema, resolver, method);
                     unbound = names.stream().noneMatch(name -> operationTypes.stream()
                             .anyMatch(rootType -> fieldDefinition(schema, rootType, name) != null));
                 }
@@ -217,6 +225,10 @@ public final class ResolverClassFindings {
 
     private static ClassFindings only(List<Finding> findings) {
         return new ClassFindings(findings, List.of(), List.of(), true, List.of());
+    }
+
+    private static String operationNames(JClass resolver, JMethod method) {
+        return String.join(", ", resolver.markers().operationsOf(method.name(), method.parameters().size()));
     }
 
     private static List<Finding> dedupe(List<Finding> findings) {

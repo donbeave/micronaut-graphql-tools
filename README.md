@@ -209,7 +209,8 @@ test environment). Micronaut AOP advice (`@Around`) on the implementation still 
 `io.micronaut.graphql.tools.resolver`) are the contracts without an annotation. `interface BookTitleResolver extends
 TypeResolver<Book>` binds to `Book` with no class literal, and the root marker fixes the operation type: the methods of
 a `MutationResolver` bind fields of the mutation type only, so one method name can serve a field of each operation type.
-Only the methods that implement a method of a contract interface bind: a public helper of the implementation binds
+Only the methods that implement a method of a contract interface (same name, same number of parameters) bind, each to the
+operation of its own contract: a public helper of the implementation binds
 nothing and does not fail strict mode. A class that implements a marker directly binds all its public methods. The
 processor records the operation, the source type and the contract methods in the annotation metadata of the
 implementation (the build needs `micronaut-graphql-tools-processor`, otherwise the startup fails with
