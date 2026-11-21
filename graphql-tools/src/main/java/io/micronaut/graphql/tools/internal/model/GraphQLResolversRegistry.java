@@ -83,6 +83,7 @@ public final class GraphQLResolversRegistry {
     private final Map<BeanDefinition<?>, ResolverMarkers> markers = new HashMap<>();
     private Function<BeanDefinition<?>, Map<String, Class<?>>> typeResolverContractReader =
             GraphQLResolversRegistry::readTypeResolverContracts;
+    private Function<BeanDefinition<?>, ResolverMarkers> markerReader = GraphQLResolversRegistry::readMarkers;
     private final List<SchemaCoordinateMethod> schemaCoordinateMethods = new ArrayList<>();
     // by the signature of the method as the type model prints it
     private final Map<BeanDefinition<?>, Map<String, String>> schemaCoordinateSignatures = new HashMap<>();
@@ -120,7 +121,7 @@ public final class GraphQLResolversRegistry {
             }
             return;
         }
-        if (!markers.admits(method.getMethodName())) {
+        if (!markers.admits(method.getMethodName(), arity(method))) {
             return;
         }
         rootResolvers.computeIfAbsent(beanDefinition, this::newItem).addExecutableMethod(method);
@@ -135,11 +136,18 @@ public final class GraphQLResolversRegistry {
                 && !TypeResolver.class.isAssignableFrom(getUserBeanType(beanDefinition))) {
             throw new IncorrectAnnotationException(beanDefinition.getBeanType());
         }
-        if (!markersOf(beanDefinition).admits(method.getMethodName())) {
+        if (!markersOf(beanDefinition).admits(method.getMethodName(), arity(method))) {
             return;
         }
 
         pendingTypeResolverMethods.computeIfAbsent(beanDefinition, it -> new ArrayList<>()).add(method);
+    }
+
+    // the number of parameters of a method as the contract methods count them: a Kotlin suspend function has its continuation
+    // as the last argument, which is no parameter of the resolver
+    static int arity(ExecutableMethod<?, ?> method) {
+        int count = method.getArguments().length;
+        return method.isSuspend() ? count - 1 : count;
     }
 
     // the class that @GraphQLTypeResolver names on the bean, or null when the annotation names none (the marker
@@ -154,14 +162,15 @@ public final class GraphQLResolversRegistry {
 
     // what the visitor wrote for the bean: the root operations and the contract methods of its marker interfaces
     private ResolverMarkers markersOf(BeanDefinition<?> beanDefinition) {
-        return markers.computeIfAbsent(beanDefinition, GraphQLResolversRegistry::readMarkers);
+        return markers.computeIfAbsent(beanDefinition, markerReader);
     }
 
     static ResolverMarkers readMarkers(BeanDefinition<?> beanDefinition) {
         AnnotationMetadata metadata = beanDefinition.getAnnotationMetadata();
         String[] operations = metadata.stringValues(ResolverContracts.class, "operations");
-        String[] methods = metadata.stringValues(ResolverContracts.class, "methods");
-        return new ResolverMarkers(List.of(operations), null, methods.length == 0 ? null : Set.of(methods));
+        String[] methods = metadata.stringValues(ResolverContracts.class, "contractMethods");
+        return new ResolverMarkers(List.of(operations), null,
+                methods.length == 0 ? null : Arrays.stream(methods).map(ResolverMarkers.ContractMethod::decode).toList());
     }
 
     // a marker bean that the build did not process has no executable method that the registry is told about, so the startup
@@ -209,9 +218,13 @@ public final class GraphQLResolversRegistry {
             Class<?> annotatedClass = contracts.values().iterator().next();
 
             Set<Class<?>> modelClasses = new HashSet<>(contracts.values());
+            ResolverMarkers fixed = markersOf(beanDefinition);
             for (ExecutableMethod<Object, ?> method : entry.getValue()) {
                 Class<?> modelClass = annotatedClass;
-                if (modelClasses.size() > 1) {
+                Set<Class<?>> declaring = declaringModels(fixed, method, contracts);
+                if (declaring.size() == 1) {
+                    modelClass = declaring.iterator().next();
+                } else if (modelClasses.size() > 1) {
                     Class<?>[] argumentTypes = method.getArgumentTypes();
                     if (argumentTypes.length == 0 || !modelClasses.contains(argumentTypes[0])) {
                         unassignedTypeResolverMethods.computeIfAbsent(beanDefinition, it -> new ArrayList<>())
@@ -227,6 +240,19 @@ public final class GraphQLResolversRegistry {
         pendingTypeResolverMethods.clear();
     }
 
+    // the model classes of the contracts that declare the method, when the build recorded them
+    private static Set<Class<?>> declaringModels(ResolverMarkers fixed, ExecutableMethod<?, ?> method,
+                                                 Map<String, Class<?>> contracts) {
+        Set<String> names = new HashSet<>(fixed.modelsOf(method.getMethodName(), arity(method)));
+        Set<Class<?>> models = new HashSet<>();
+        for (Class<?> model : contracts.values()) {
+            if (names.contains(model.getName())) {
+                models.add(model);
+            }
+        }
+        return models;
+    }
+
     private void addTypeResolverMethod(Class<?> modelClass, BeanDefinition<?> beanDefinition,
                                        ExecutableMethod<Object, ?> method) {
         typeResolvers.computeIfAbsent(modelClass, it -> new ArrayList<>()).stream()
@@ -238,6 +264,10 @@ public final class GraphQLResolversRegistry {
                     return item;
                 })
                 .addExecutableMethod(method);
+    }
+
+    void setMarkerReader(Function<BeanDefinition<?>, ResolverMarkers> markerReader) {
+        this.markerReader = markerReader;
     }
 
     void setTypeResolverContractReader(Function<BeanDefinition<?>, Map<String, Class<?>>> typeResolverContractReader) {
@@ -314,6 +344,15 @@ public final class GraphQLResolversRegistry {
         }
     }
 
+    /**
+     * @param coordinateMethod a method that carries {@code @GraphQLSchemaCoordinate}
+     * @return the operations that the marker contracts of the method bind, empty when no marker contract fixes them
+     */
+    public List<String> operationsOf(SchemaCoordinateMethod coordinateMethod) {
+        return markersOf(coordinateMethod.beanDefinition())
+                .operationsOf(coordinateMethod.method().getMethodName(), arity(coordinateMethod.method()));
+    }
+
     public List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
         registerIntroductionBeans();
         if (sortedSchemaCoordinateMethods == null) {
@@ -355,10 +394,17 @@ public final class GraphQLResolversRegistry {
     }
 
     private List<BeanDefinitionAndMethod> findMethods(BeanDefinitionAndMethods item, String fieldName,
-                                                      Set<String> coordinates) {
+                                                      Set<String> coordinates, @Nullable String operation) {
         Map<String, String> signatures = schemaCoordinateSignatures.get(item.getBeanDefinition());
+        ResolverMarkers fixed = markersOf(item.getBeanDefinition());
         List<BeanDefinitionAndMethod> result = new ArrayList<>();
         for (Map.Entry<ExecutableMethod<Object, ?>, JMethod> method : item.methodsNamed(fieldName)) {
+            if (operation != null) {
+                List<String> operations = fixed.operationsOf(method.getValue().name(), method.getValue().parameters().size());
+                if (!operations.isEmpty() && !operations.contains(operation)) {
+                    continue;
+                }
+            }
             if (ResolverClassRules.bindsField(method.getValue(), fieldName, coordinates, signatures, accessorPrefixes)) {
                 result.add(new BeanDefinitionAndMethod(item.getBeanDefinition(), method.getKey()));
             }
@@ -407,7 +453,11 @@ public final class GraphQLResolversRegistry {
         unreadableTypeResolverContracts.stream()
                 .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))
                 .ifPresent(beanDefinition -> {
-                    throw new TypeResolverContractsNotFoundException(getUserBeanType(beanDefinition),
+                    Class<?> beanType = getUserBeanType(beanDefinition);
+                    if (TypeResolver.class.isAssignableFrom(beanType)) {
+                        throw TypeResolverContractsNotFoundException.forTypeMarker(beanType);
+                    }
+                    throw new TypeResolverContractsNotFoundException(beanType,
                             beanDefinition.hasDeclaredAnnotation(GraphQLTypeResolver.class));
                 });
 
@@ -488,7 +538,7 @@ public final class GraphQLResolversRegistry {
 
     public boolean hasRootResolvers() {
         registerIntroductionBeans();
-        return !rootResolvers.isEmpty();
+        return !rootResolvers.isEmpty() || !unreadableRootMarkers.isEmpty();
     }
 
     public List<BeanDefinitionAndMethod> getRootExecutableMethods(String operation, String operationTypeName,
@@ -496,10 +546,7 @@ public final class GraphQLResolversRegistry {
         List<BeanDefinitionAndMethod> all = new ArrayList<>();
 
         for (BeanDefinitionAndMethods item : rootResolvers.values()) {
-            List<String> operations = markersOf(item.getBeanDefinition()).operations();
-            if (operations.isEmpty() || operations.contains(operation)) {
-                all.addAll(findMethods(item, methodName, Set.of(operationTypeName + "." + methodName)));
-            }
+            all.addAll(findMethods(item, methodName, Set.of(operationTypeName + "." + methodName), operation));
         }
 
         if (!all.isEmpty()) {
@@ -540,7 +587,7 @@ public final class GraphQLResolversRegistry {
         List<BeanDefinitionAndMethod> result = new ArrayList<>();
 
         for (BeanDefinitionAndMethods item : typeResolvers.getOrDefault(beanType, Collections.emptyList())) {
-            result.addAll(findMethods(item, methodName, Set.of(typeName + "." + methodName)));
+            result.addAll(findMethods(item, methodName, Set.of(typeName + "." + methodName), null));
         }
 
         return result;

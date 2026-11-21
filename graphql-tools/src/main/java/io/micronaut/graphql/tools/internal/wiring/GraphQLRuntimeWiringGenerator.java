@@ -112,6 +112,8 @@ import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
 import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.execution.FieldExecutionPlanner;
 import io.micronaut.graphql.tools.internal.execution.FieldFetcherDecorators;
+import io.micronaut.graphql.tools.internal.resolver.FlowAdapter;
+import io.micronaut.graphql.tools.internal.resolver.FlowDataFetcher;
 import io.micronaut.graphql.tools.internal.execution.SuspendInvoker;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
 import io.micronaut.graphql.tools.internal.resolver.MicronautIntrospectionDataFetcher;
@@ -468,6 +470,10 @@ public final class GraphQLRuntimeWiringGenerator {
         DataFetcher<Object> fetcher = new MicronautExecutableMethodDataFetcher(executable, argumentDefinitions, instance,
                 suspendInvoker);
         boolean subscriptionField = mappingContext.getGraphQlObjectType().equals(subscriptionTypeName);
+        if (subscriptionField && ReturnTypes.isFlow(returnType.getType())) {
+            fetcher = new FlowDataFetcher(fetcher, flowAdapter(applicationContext, executable,
+                    mappingContext.getGraphQlObjectType() + "." + mappingContext.getGraphQlField()));
+        }
         DataFetcher<Object> planned = FieldExecutionPlanner.plan(fetcher, verdict, subscriptionField,
                 applicationContext.getConversionService(), fieldExecutor,
                 applicationContext.findBean(LibraryDataFetcherExceptionHandler.class).orElse(null));
@@ -505,6 +511,13 @@ public final class GraphQLRuntimeWiringGenerator {
                 BindingCode.SUSPEND_WITHOUT_COROUTINES, "The field " + coordinate + " binds the Kotlin suspend function "
                 + getExecutableMethodFullName(executable) + ", which needs kotlinx-coroutines-core on the classpath, and it "
                 + "is not there. Fix: add org.jetbrains.kotlinx:kotlinx-coroutines-core to the dependencies of the application."));
+    }
+
+    static FlowAdapter flowAdapter(BeanContext context, Executable<Object, ?> executable, String coordinate) {
+        return context.findBean(FlowAdapter.class).orElseThrow(() -> new ExecutionSetupException(
+                BindingCode.FLOW_WITHOUT_REACTIVE_COROUTINES, "The field " + coordinate + " binds the Kotlin Flow method "
+                + getExecutableMethodFullName(executable) + ", which needs kotlinx-coroutines-reactive on the classpath, and "
+                + "it is not there. Fix: add org.jetbrains.kotlinx:kotlinx-coroutines-reactive to the dependencies of the application."));
     }
 
     private static boolean isSingleResult(AnnotationMetadataProvider method) {

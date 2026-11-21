@@ -39,6 +39,28 @@ The cost is one wrapper and one queue for each subscription, and one executor ta
 
 A query or a mutation can be sent over the same connection: it is one execution with one `next` and then `complete`. A resolver that blocks runs on the executor, not on the event loop, as it does over HTTP.
 
+== Kotlin Flow
+
+A Kotlin method can return a `Flow<T>` for a field of the `Subscription` type, as well as a `Publisher<T>`. This is Kotlin only: Java and Groovy have no `Flow`, so unlike the other examples of this guide, the example below exists in the Kotlin suite only.
+
+:flow-sources: {sourcedir}/test-suite-kotlin/src/test/kotlin
+
+[source,kotlin]
+----
+include::{flow-sources}/example/flow/FlowFixtures.kt[tags=flow-subscription]
+----
+
+The library adapts the flow to a `Publisher` once for each field at startup, with `asPublisher` of kotlinx-coroutines-reactive, and the adapted stream takes the same path as any other subscription (see above):
+
+* the flow is collected once for each subscription, by one coroutine, and a method that does not return a `Flow` gets no wrapper;
+* the coroutine runs in the propagated context of the operation and in the contexts of the `HttpCoroutineContextFactory` beans, as a `suspend` resolver does, so the context is visible inside the flow, also after `flowOn` or `withContext`;
+* the events are moved to the executor of the operation and the fields of each event are resolved there, off the event loop, with the context of the connection;
+* a `complete` from the client or the close of the connection cancels the subscription, which cancels the coroutine that collects the flow: the `CancellationException` reaches the flow, so its `onCompletion` and `finally` blocks run.
+
+A `Flow` is accepted on a field of the `Subscription` type only. On any other field, inside a list or inside a `CompletionStage`, it fails the startup with `[unsupported-return-type]`: return the value from a `suspend` function, or a `Publisher`, instead.
+
+The adapter needs `org.jetbrains.kotlinx:kotlinx-coroutines-reactive` on the classpath of the application, next to kotlinx-coroutines-core. The library does not depend on it: the adapter is a bean that exists only when those classes are present, so an application without them (and its native image) links no Kotlin type. Binding a `Flow` subscription without it fails the startup with `[flow-without-reactive-coroutines]` and the dependency to add.
+
 == Accepting a connection
 
 A browser cannot set a header on a WebSocket, so clients put the token in the `payload` of the `connection_init` message. A `GraphQLConnectionInterceptor` bean (package `io.micronaut.graphql.tools.websocket`) sees that payload and the HTTP request that upgraded the connection, and answers with `GraphQLConnectionResult`:

@@ -25,8 +25,8 @@ import java.lang.annotation.Target;
 
 /**
  * What a concrete resolver class inherits: the contracts of a type resolver, the root operations that its marker
- * interfaces fix and the methods that implement a contract interface. The visitor writes it into the annotation metadata of
- * the class and the runtime reads it from the bean definition, so that no reflection is needed to find a class annotation
+ * interfaces fix and the methods of its contract interfaces, each with the operations and the source type of its contract.
+ * The visitor writes it into the annotation metadata of the class and the runtime reads it from the bean definition, so that no reflection is needed to find a class annotation
  * or a generic type argument of a supertype. The visitor writes it, also when the checks are off.
  */
 @Internal
@@ -52,8 +52,9 @@ public @interface ResolverContracts {
     String[] operations() default {};
 
     /**
-     * @return the names of the methods of the class that implement a method of a contract interface; empty when every
-     * public method is a candidate
+     * @return the methods of the contract interfaces of the class, one entry per method of each contract, as
+     * {@code operations|model|name/arity} (see {@code ResolverMarkers.ContractMethod}); a method of the class that has
+     * the name and the number of parameters of an entry implements it. Empty when every public method is a candidate
      */
-    String[] methods() default {};
+    String[] contractMethods() default {};
 }

@@ -6,9 +6,10 @@ micronaut-platform = "4.10.24"
 micronaut-docs = "3.0.0"
 micronaut-test = "4.10.3"
 micronaut-graphql = "4.8.0"
-# The versions that micronaut-platform 4.10.24 manages; the catalogs of these two give the observability module its compile-only APIs
+# The versions that micronaut-platform 4.10.24 manages; the catalogs of these three give the observability and security modules their compile-only APIs
 micronaut-micrometer = "5.13.3"
 micronaut-tracing = "7.2.0"
+micronaut-security = "4.18.2"
 
 # Override of the BOM-managed Groovy 4.0.28, which cannot read JDK 27 class files: until the Micronaut BOM catches up. Applied
 # by resolutionStrategy (buildSrc convention plugin and the test-suite builds); the only override of a managed version.
@@ -54,6 +55,7 @@ micronaut-platform = { module = "io.micronaut.platform:micronaut-platform", vers
 micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", version.ref = "micronaut-graphql" }
 micronaut-micrometer = { module = "io.micronaut.micrometer:micronaut-micrometer-bom", version.ref = "micronaut-micrometer" }
 micronaut-tracing = { module = "io.micronaut.tracing:micronaut-tracing-bom", version.ref = "micronaut-tracing" }
+micronaut-security = { module = "io.micronaut.security:micronaut-security-bom", version.ref = "micronaut-security" }
 
 graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-extended-validation", version.ref = "graphql-java-extended-validation" }
 

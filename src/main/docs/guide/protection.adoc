@@ -1,0 +1,72 @@
+The library's `GraphQL` bean protects the server from operations that cost more than they should. Four settings under `micronaut.graphql.tools.protection` and one under `micronaut.graphql.tools.execution` do it. They apply to the `GraphQL` bean that the library builds; an application that provides its own `GraphQL` bean sets its own limits (see <<customization,Customization>>).
+
+[source,yaml]
+----
+micronaut:
+  graphql:
+    tools:
+      protection:
+        document-cache-size: 1000
+        max-depth: 15
+        max-complexity: 500
+        introspection: false
+      execution:
+        timeout: 10s
+----
+
+[cols="3,1,4"]
+|===
+|Key |Default |Effect
+
+|`protection.document-cache-size`
+|`1000`
+|How many parsed and validated documents are kept. `0` turns the cache off.
+
+|`protection.max-depth`
+|`0` (no limit)
+|The deepest selection nesting that an operation may have.
+
+|`protection.max-complexity`
+|`0` (no limit)
+|The highest complexity that an operation may have. Every selected field counts 1.
+
+|`protection.introspection`
+|`true`
+|Whether a client can query `+__schema+` and `+__type+`.
+
+|`execution.timeout`
+|none
+|How long an operation may take until its result is ready.
+|===
+
+A negative number, and a timeout that is not positive, fail the startup.
+
+== The parsed-document cache
+
+Parsing and validating the text of a query is often the largest cost of a small operation, and an operation of a few thousand fields makes it larger. The library keeps the parsed and validated document under the text of the query, so the same text is parsed and validated once. The variables and the operation name are not part of the key: they change the execution, not the document. The cache is a least-recently-used cache of at most `document-cache-size` documents, so its memory is bounded by that count. It also keeps the entry of a query that failed to parse or validate, so a repeated invalid query is as cheap as a valid one.
+
+Parsing and validation on a miss run on the executor of the operation, after the hop (see <<execution,Execution>>), never on the event loop. The depth and complexity limits run on every execution, after the cache, so a cached document is judged again by the current limits.
+
+Clients that send the same text with different literals fill the cache with distinct documents. Send values as variables, so that the text is stable.
+
+== Depth and complexity
+
+An operation over `max-depth` or `max-complexity` is rejected before any resolver runs. The response has no `data` and one error, with `extensions.classification` `ExecutionAborted`, and its message says the limit and the measured value. Nesting counts one per selected field level, so `{ a { b { c } } }` has depth 3 and complexity 3. Fragments and inline fragments are expanded. An introspection query nests about a dozen levels, so a low `max-depth` rejects the introspection query of a client tool.
+
+== Introspection
+
+With `introspection: false`, a query for `+__schema+` or `+__type+` fails validation with a GraphQL error, and the client cannot list the schema. `+__typename+` keeps working. The switch hides the fields from the schema's field visibility, so it replaces a field visibility that the application set on the schema. Hiding the schema from clients is not access control: keep every field's authorization in the resolvers.
+
+== Timeout
+
+`micronaut.graphql.tools.execution.timeout` takes a duration such as `500ms` or `10s`. The clock starts when the operation arrives, before it waits for its executor, and stops when graphql-java has the result. When it runs out:
+
+* the client gets an error at once, with `extensions.code` `EXECUTION_TIMEOUT`;
+* the execution is marked cancelled, as it is when a client disconnects (see <<execution,Execution>>), so the continuation of an async field that completes later is aborted with graphql-java's `AbortExecutionException`, and no later async field starts;
+* a resolver that is already running is not interrupted.
+
+A subscription is covered until its stream is established; the events that follow are not timed. The timer is scheduled on Micronaut's `scheduled` executor, and only when the key is set: without it an operation pays nothing.
+
+== Evidence
+
+`example.tck.ProtectionScenario` serves the `protection` scenario of the TCK in the three example suites (and in the native images of the Java and Kotlin suites): an operation within the limits, one over the depth limit, one over the complexity limit, a repeated query text, a disabled introspection and a stalled field that times out. `ProtectionSpec` in the library module counts the parses to show that a query text is parsed once.

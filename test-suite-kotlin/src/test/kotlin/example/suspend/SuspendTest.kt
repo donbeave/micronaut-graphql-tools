@@ -15,6 +15,8 @@
  */
 package example.suspend
 
+import io.micronaut.configuration.graphql.GraphQLInvocation
+import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.type.Argument
 import io.micronaut.graphql.tools.internal.execution.SuspendInvoker
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import reactor.core.publisher.Mono
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.Continuation
 
@@ -128,5 +131,33 @@ class SuspendTest(@Client("/") private val client: HttpClient) {
         assertTrue(stage.cancel(true))
         assertTrue(SuspendProbe.finished.await(10, TimeUnit.SECONDS))
         assertEquals("cancelled", SuspendProbe.outcome.get())
+    }
+
+    private fun start(query: String) =
+        Mono.from(context.getBean(GraphQLInvocation::class.java).invoke(GraphQLInvocationData(query, null, emptyMap()), null, null)).toFuture()
+
+    @Test
+    fun `cancelling the execution cancels the coroutine of its suspended resolver and leaves another execution alone`() {
+        val cancelled = start("{ cancelledWithExecution }")
+        val other = start("{ held }")
+        assertTrue(SuspendProbe.execution.started.await(10, TimeUnit.SECONDS))
+        assertTrue(SuspendProbe.other.started.await(10, TimeUnit.SECONDS))
+        assertFalse(cancelled.isDone)
+
+        assertTrue(cancelled.cancel(true))
+
+        assertTrue(SuspendProbe.execution.finished.await(10, TimeUnit.SECONDS))
+        assertEquals("cancelled", SuspendProbe.execution.outcome.get())
+        val result = other.get(10, TimeUnit.SECONDS)
+        assertTrue(result.errors.isEmpty(), result.errors.toString())
+        assertEquals(mapOf("held" to "held"), result.getData<Map<String, Any?>>())
+        assertEquals("completed", SuspendProbe.other.outcome.get())
+    }
+
+    @Test
+    fun `an execution that is not cancelled runs its suspended resolver to the end`() {
+        val result = start("{ shelf(id: \"s9\") { sellers } }").get(10, TimeUnit.SECONDS)
+        assertTrue(result.errors.isEmpty(), result.errors.toString())
+        assertEquals(mapOf("shelf" to mapOf("sellers" to 2)), result.getData<Map<String, Any?>>())
     }
 }

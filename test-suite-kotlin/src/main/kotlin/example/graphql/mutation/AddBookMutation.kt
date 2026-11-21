@@ -25,19 +25,20 @@ import example.graphql.type.SecurityError
 import example.graphql.type.SecurityErrorCode
 import example.graphql.type.ValidationError
 import example.graphql.type.ValidationErrorCode
+import example.data.User
+import graphql.schema.DataFetchingEnvironment
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
 @Singleton
 @GraphQLRootResolver
 open class AddBookMutation(
-    private val authenticationService: AuthenticationService,
     private val bookRepository: BookRepository,
     private val userBookRepository: UserBookRepository,
 ) {
 
     @ElapsedTime
-    open fun addBook(id: String): AddBookPayload {
-        val currentUser = authenticationService.currentUser
+    open fun addBook(id: String, environment: DataFetchingEnvironment): AddBookPayload {
+        val currentUser = environment.graphQlContext.get<User>(AuthenticationService.CURRENT_USER)
             ?: return AddBookPayload(SecurityError("Not logged in.", SecurityErrorCode.NOT_AUTHENTICATED))
         val book = bookRepository.findById(id)
             ?: return AddBookPayload(ValidationError("The book with id $id not found.", ValidationErrorCode.NOT_FOUND))

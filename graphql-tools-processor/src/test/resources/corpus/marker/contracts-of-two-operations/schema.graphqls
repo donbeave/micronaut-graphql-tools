@@ -1,0 +1,16 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  book(id: ID!): Book
+}
+
+type Mutation {
+  book(id: ID!, title: String!): Book
+}
+
+type Book {
+  title: String!
+}

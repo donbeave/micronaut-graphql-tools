@@ -28,10 +28,10 @@ This page lists what a resolver method can take as a parameter besides the sourc
 |The principal of the request, or `null` when the request has none.
 
 |`HttpRequest<?>`
-|The request of the operation, or `null` for an operation that did not arrive over HTTP (a WebSocket operation).
+|The request of the operation: the HTTP request, or the upgrade request of a WebSocket connection. It is `null` only for a call of the invocation without a request.
 
 |`MutableHttpResponse<?>` or `HttpResponse<?>`
-|The response of the operation, or `null` for a WebSocket operation. A resolver can set a header on it.
+|The response of the operation. A resolver can set a header or a cookie on it. For a WebSocket operation the field fails with `HTTP_RESPONSE_UNAVAILABLE`, see <<httpAccess,HTTP Request and Response>>.
 
 |`Optional<MutableHttpResponse<?>>`
 |The same response, empty for a WebSocket operation.

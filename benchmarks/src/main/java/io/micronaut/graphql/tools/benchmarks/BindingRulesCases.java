@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools.benchmarks;
 
-import io.micronaut.graphql.tools.visitor.ClassElementFixture;
+import io.micronaut.graphql.tools.benchmarks.fixture.ClassElementFixture;
 
 /** The subjects of {@code BindingRulesBenchmark} and of its allocation gate, by name. */
 public final class BindingRulesCases {
