@@ -87,16 +87,18 @@ public final class StreamDataFetcher implements DataFetcher<Object> {
         } else {
             return result;
         }
-        Flux<Object> events = Flux.from(publisher);
-        if (errorHandler != null) {
-            events = events.onErrorMap(failure -> failure instanceof SubscriptionFailure ? failure : failed(failure, environment));
-        }
         if (state == null) {
-            return events;
+            // not run by the library transport, which alone understands SubscriptionFailure: the publisher passes on as it is
+            return publisher;
         }
+        Flux<Object> events = Flux.from(publisher);
         Executor executor = state.requestExecutor();
         if (executor != null) {
             events = events.publishOn(Schedulers.fromExecutor(executor));
+        }
+        if (errorHandler != null) {
+            // after the hop, so that the exception mappers do not run on the thread that the source signals from
+            events = events.onErrorMap(failure -> failure instanceof SubscriptionFailure ? failure : failed(failure, environment));
         }
         return ReactivePropagation.propagate(state.propagatedContext(), events.doOnCancel(state::cancel));
     }

@@ -169,7 +169,7 @@ public final class TimeScalars {
             pattern.append(!quoted && !era && c == 'y' ? 'u' : c);
         }
         DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder().appendPattern(pattern.toString());
-        if (era) {
+        if (era && unquoted(format, 'y')) {
             builder.parseDefaulting(ChronoField.ERA, 1);
         }
         return builder.toFormatter(Locale.ROOT).withResolverStyle(ResolverStyle.STRICT);
