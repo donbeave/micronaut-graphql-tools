@@ -121,6 +121,26 @@ include::{samples}/java-gradle/build.gradle.kts[tags=checks]
 
 A build prints one note that names the schema directory of each compilation that runs the checks, so a build log shows whether they ran. A processor that is not on the path of the compiler does not fail anything: it does not run, and no note appears.
 
+== Compile time
+
+The checks run inside the compile task of each language (javac, KSP, kapt and the Groovy compiler), so their cost is part of that task. The repository measures it with gradle-profiler and keeps a budget that fails the build when a build gets much slower.
+
+*The scenarios.* link:{repo}/test-suite-build/profiler/compile-time.scenarios[`compile-time.scenarios`] has six scenarios for each of the Java, Kotlin (KSP), Kotlin (kapt), Groovy and multi-module samples: a clean build, a body-only edit of the resolver class and an edit of the schema, each with the checks on and with the checks off (`-PgraphqlChecks=false`, the control: the processor stays on the compile path, so the control isolates the checks from the rest of the annotation processing). The edits are made by an init script task inside the measured build, which also records the time of every compile task, so the report names the cost of the checks per module (`books` and `authors` of the multi-module sample, the only modules there that apply them). Run them with `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>`; the report is `test-suite-build/build/reports/compile-time/report.md`.
+
+*The budget.* The build fails when the median of the measured builds with the checks on is over the budget of its language. It is set from the measured numbers with a margin of three, because the numbers come from small samples that a shared runner times with a lot of noise. The incremental budget holds for the body edit and for the schema edit.
+
+[cols="2,1,1,1,1", options="header"]
+|===
+|Sample |Clean, measured (ms) |Clean, budget (ms) |Incremental, slowest measured (ms) |Incremental, budget (ms)
+|Java |1226 |4000 |2124 |7000
+|Kotlin, KSP |2583 |8000 |4371 |14000
+|Kotlin, kapt |2508 |8000 |3481 |11000
+|Groovy |3102 |10000 |4101 |13000
+|Multi-module, Java |7356 |23000 |4133 |13000
+|===
+
+The numbers are the medians of 5 builds after 2 warm-ups, on JDK 25.0.5 (Oracle GraalVM) with Gradle 9.9.1 on a machine whose load average was 32 to 38, so the noise is large: the cost of the checks (the build time with the checks on minus off) is a few hundred milliseconds for Java and up to about 1.8 seconds for KSP and kapt, and it is negative for Groovy, which means that the difference is below the noise. Treat the budget as a guard against a regression of several times, not as a measurement of the cost. The CI job `compile-time budget` runs the scenarios on every change and fails when a budget is exceeded; the budget file is link:{repo}/test-suite-build/profiler/compile-time-budget.properties[`compile-time-budget.properties`]. A change that raises a budget quotes new numbers from gradle-profiler.
+
 == What fails the build
 
 [cols="3,3,4", options="header"]
