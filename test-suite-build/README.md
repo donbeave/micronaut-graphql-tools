@@ -60,7 +60,14 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   wrong argument type, a wrong argument name, or a model enum that drifts from the schema fails the compile task of the module
   whose resolver is affected, with the code and the coordinate, while the module next to it still compiles (`--continue`); a field
   with no resolver in any module compiles everywhere and fails `:app:run` with the coordinate; and a module that forgot the
-  snippet, built after one that set it in the same daemon, fails with `processor-schema-not-configured` and its own directory.- The samples resolve the library from `build/repo`, as published, so the processor jar they use is the real one: it registers the visitor and only the visitor.
+  snippet, built after one that set it in the same daemon, fails with `processor-schema-not-configured` and its own directory.
+- `profiler/`: the compile-time profile and budget (#418). `compile-time.scenarios` holds the gradle-profiler scenarios (a clean build, a
+  body edit and a schema edit, each with the checks on and off, for `java-gradle`, `kotlin-ksp`, `kotlin-kapt`, `groovy-gradle` and
+  `multi-module-gradle`); `profiler.init.gradle` makes the edits inside the measured build and records the time of each compile task;
+  `compile-time-budget.properties` is the budget; `CompileTimeBudget` compares the medians with it and writes the per-module report.
+  `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>` runs all of it (CI job `compile-time budget`).
+  `CompileTimeBudgetTest` runs in `buildToolsTest`: the scenario definitions and the budget check, with a measurement that exceeds its budget.
+- The samples resolve the library from `build/repo`, as published, so the processor jar they use is the real one: it registers the visitor and only the visitor.
 
 Not in this module: the visitor and its options (`graphql-tools-processor`), the binding corpus, and the example applications.
 
