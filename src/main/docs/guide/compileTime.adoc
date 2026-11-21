@@ -123,7 +123,7 @@ A build prints one note that names the schema directory of each compilation that
 
 == Compile time
 
-The checks run inside the compile task of each language (javac, KSP, kapt and the Groovy compiler), so their cost is part of that task. The repository measures it with https://github.com/gradle/gradle-profiler[gradle-profiler] and keeps a budget that fails the build when a build gets much slower.
+The checks run inside the compile task of each language (javac, KSP, kapt and the Groovy compiler), so their cost is part of that task. The repository measures it with gradle-profiler and keeps a budget that fails the build when a build gets much slower.
 
 *The scenarios.* link:{repo}/test-suite-build/profiler/compile-time.scenarios[`compile-time.scenarios`] has six scenarios for each of the Java, Kotlin (KSP), Kotlin (kapt), Groovy and multi-module samples: a clean build, a body-only edit of the resolver class and an edit of the schema, each with the checks on and with the checks off (`-PgraphqlChecks=false`, the control: the processor stays on the compile path, so the control isolates the checks from the rest of the annotation processing). The edits are made by an init script task inside the measured build, which also records the time of every compile task, so the report names the cost of the checks per module (`books` and `authors` of the multi-module sample, the only modules there that apply them). Run them with `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>`; the report is `test-suite-build/build/reports/compile-time/report.md`.
 
