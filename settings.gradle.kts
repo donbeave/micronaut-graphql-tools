@@ -18,6 +18,7 @@ include("graphql-tools-binding")
 include("graphql-tools-bom")
 include("graphql-tools-scalars")
 include("graphql-tools-observability")
+include("graphql-tools-upload")
 include("graphql-tools-processor")
 include("benchmarks")
 include("graphql-tools-tck")
@@ -30,6 +31,8 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true
     importMicronautCatalog()
     importMicronautCatalog("micronaut-graphql")
+    importMicronautCatalog("micronaut-micrometer")
+    importMicronautCatalog("micronaut-tracing")
 }
 
 gradle.settingsEvaluated {

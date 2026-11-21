@@ -1,0 +1,54 @@
+The `micronaut-graphql-tools-upload` module accepts files in a GraphQL request. It implements the GraphQL multipart request specification for Micronaut 4: an `Upload` scalar, and a `multipart/form-data` route on the path of the GraphQL endpoint. It is available from the milestone after 1.0.0-M4.
+
+== The module
+
+[source,groovy]
+----
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-upload:1.0.0-M4")
+----
+
+The module reads JSON with the `JsonMapper` API of Micronaut (Micronaut Serialization or any other mapper you have) and uses no Jackson type. The key `micronaut.graphql.tools.upload.enabled` (default `true`) switches the scalar and the route off.
+
+== The Upload scalar
+
+Declare the scalar in the schema and use it for an argument or an input object field, at the top level or nested, alone or in a list:
+
+snippet::example.fileupload.UploadFixtures[project-base="test-suite", source="test", tags="schema", indent="0"]
+
+A resolver declares the parameter, or the property of the input class, as `CompletedFileUpload`; `CompletedPart` is the other class the scalar is bound to, for a part that is not a file:
+
+snippet::example.fileupload.UploadMutation[project-base="test-suite", source="test", tags="resolver", indent="0"]
+
+`Upload` is an input type: a field cannot return it, and a query cannot write it as a literal. Both are errors. Read the file inside the resolver: the module discards the files when the response is complete. A file that is mapped to several paths is one object, and Micronaut's `getBytes()` and `getInputStream()` give the content once, so read it once.
+
+== The request
+
+A request follows the https://github.com/jaydenseric/graphql-multipart-request-spec[GraphQL multipart request specification]: an `operations` part with the query, the operation name and the variables (`null` where a file goes), a `map` part that names, for each file part, the paths it replaces, and the file parts. A path starts with `variables`, followed by object keys and list indexes: `variables.file`, `variables.input.cover`, `variables.input.pages.0`. A nullable `Upload` variable may be left out of the map. The files may come before the two JSON parts.
+
+snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="top-level", indent="0"]
+
+snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="input-object", indent="0"]
+
+A batch (an `operations` part that is an array) is not supported. A request that does not follow the specification is answered with `400 Bad Request` and a body with one error, whose `extensions.code` is `INVALID_MULTIPART_REQUEST` (`GraphQLUpload.INVALID_REQUEST_CODE`): there is no `operations` or `map` part, a part is not valid JSON, the map names a part that the request does not have, a path does not exist in the variables, or a part is sent twice.
+
+snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="invalid", indent="0"]
+
+An error of the operation itself (a variable that no file replaces, an unknown field) is a `200` with the usual `errors`, as for a JSON request.
+
+== The route
+
+The transport (`micronaut-graphql`) has a `POST` route on the GraphQL path that consumes every content type and cannot read a multipart body. The module adds a second `POST` route on the same path that consumes `multipart/form-data` only. Micronaut's router picks the more specific `consumes`, so a multipart request reaches the module, and every other request still reaches the transport:
+
+snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="precedence", indent="0"]
+
+The route carries no `@ExecuteOn`. It reads the parts, then calls the `GraphQLInvocation` bean, which hops once to the executor of the library (`micronaut.graphql.tools.execution.executor`, `blocking` by default), so parsing, validation and the resolvers run off the event loop:
+
+snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="executor", indent="0"]
+
+With `executor: none` the operation runs on the thread that completes the request body, as it does for a JSON request.
+
+== Cost and limits
+
+The route exists only for `multipart/form-data`: a request of another content type does not touch the module, and the module adds no instrumentation, filter or per-field work. A multipart request pays for reading two small JSON parts and one pass over the map.
+
+The module does not buffer the request itself. Micronaut completes each part as it arrives, under `micronaut.server.multipart.*`: with the defaults a part is kept in memory up to the limit `micronaut.server.multipart.max-file-size`; set `micronaut.server.multipart.mixed` to `true` to keep a part in memory up to `micronaut.server.multipart.threshold` and write the rest to disk, or `micronaut.server.multipart.disk` to `true` to write every part to disk. Use `micronaut.server.max-request-size` to limit the whole request. The parts are held until the operation has run, because the resolver reads them.

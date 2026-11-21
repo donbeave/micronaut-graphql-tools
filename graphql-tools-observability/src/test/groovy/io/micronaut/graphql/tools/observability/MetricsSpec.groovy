@@ -73,7 +73,7 @@ class MetricsSpec extends AbstractObservabilitySpec {
 
     void "the cardinality cap holds: names beyond it share one value"() {
         given:
-        start('ObservabilityMetrics', ['micronaut.graphql.tools.observability.metrics.max-operations': 3])
+        start('ObservabilityMetrics', ['micronaut.metrics.binders.graphql.max-operations': 3])
 
         when:
         (1..20).each { run("query Op$it { hello }") }
@@ -88,7 +88,7 @@ class MetricsSpec extends AbstractObservabilitySpec {
 
     void "the cap holds under concurrent requests"() {
         given:
-        start('ObservabilityMetrics', ['micronaut.graphql.tools.observability.metrics.max-operations': 5])
+        start('ObservabilityMetrics', ['micronaut.metrics.binders.graphql.max-operations': 5])
 
         when:
         def threads = (1..8).collect { t ->
@@ -135,16 +135,41 @@ class MetricsSpec extends AbstractObservabilitySpec {
         meters.meters.findAll { it.id.name.startsWith('graphql.dataloader') }.isEmpty()
     }
 
-    void "metrics can be turned off"() {
+    void "the binder key turns the metrics off and leaves the traces"() {
         given:
-        start('ObservabilityMetrics', ['micronaut.graphql.tools.observability.metrics.enabled': false])
+        start('ObservabilityMetrics', ['micronaut.metrics.binders.graphql.enabled': false])
 
         when:
         run('query Hello { hello }')
 
         then:
+        !hasBean('MicrometerObserver')
         meters.meters.collect { it.id.name }.every { !it.startsWith('graphql.') }
         !finished().isEmpty()
+    }
+
+    void "the Micronaut metrics switch turns the metrics off and leaves the traces"() {
+        given:
+        start('ObservabilityMetrics', ['micronaut.metrics.enabled': false])
+
+        when:
+        run('query Hello { hello }')
+
+        then:
+        !hasBean('MicrometerObserver')
+        meters.meters.collect { it.id.name }.every { !it.startsWith('graphql.') }
+        !finished().isEmpty()
+    }
+
+    void "the metrics are on by default, with the cap at 100 operation names"() {
+        given:
+        start('ObservabilityMetrics')
+
+        expect:
+        hasBean('MicrometerObserver')
+        context.getBean(Class.forName('io.micronaut.graphql.tools.observability.internal.GraphQLMetricsConfiguration')).with {
+            it.enabled && it.maxOperations == 100
+        }
     }
 
 }

@@ -5,6 +5,7 @@ return-types
 abstract-types
 errors
 data-loader
+data-loader-options
 enums
 error-mapping
 bean-scopes
@@ -19,4 +20,8 @@ error-handling
 error-details
 field-decorator
 type-class-derivation
+resolver-parameters
+constraint-violations
+sealed-types
+contributor-loader
 disconnect

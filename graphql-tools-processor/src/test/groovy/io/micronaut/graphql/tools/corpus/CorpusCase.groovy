@@ -47,7 +47,7 @@ final class CorpusCase {
     static final String EXPECTED = 'expected'
     static final String JAR = 'jar'
     static final String MODULE_PREFIX = 'module-'
-    static final List<String> EXPECTED_FILES = ['runtime.txt', 'compile.txt', 'manifest.txt']
+    static final List<String> EXPECTED_FILES = ['runtime.txt', 'compile.txt', 'compile.kapt.txt', 'manifest.txt']
     static final Set<String> PROPERTY_KEYS = ['description', 'tags', 'environments'] as Set<String>
     static final String CONFIG_PREFIX = 'config.'
     static final String COMPILE_PREFIX = 'compile.'
@@ -293,6 +293,14 @@ final class CorpusCase {
                 if (baseExpected.get(file) == text) {
                     problems.add("stale override ${EXPECTED}/${language.dir}/${file}: it equals ${EXPECTED}/${file}".toString())
                 }
+            }
+        }
+        if (baseExpected.containsKey('compile.kapt.txt')) {
+            if (!hasTag('kapt:yes')) {
+                problems.add("${EXPECTED}/compile.kapt.txt needs the tag kapt:yes".toString())
+            }
+            if (baseExpected.get('compile.kapt.txt') == baseExpected.get('compile.txt')) {
+                problems.add("stale ${EXPECTED}/compile.kapt.txt: it equals ${EXPECTED}/compile.txt".toString())
             }
         }
         Set<String> recorded = new LinkedHashSet<>(baseExpected.keySet())

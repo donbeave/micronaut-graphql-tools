@@ -1,0 +1,22 @@
+# Extends the Query of the example schema that every suite serves; the types below must not clash with its names.
+scalar Limits
+
+input Line {
+  sku: String!
+  quantity: Int!
+}
+
+input Cart {
+  owner: String!
+  quantity: Int!
+  lines: [Line!]!
+}
+
+extend type Query {
+  fine: String!
+  rename(name: String!): String
+  checkout(cart: Cart!): String
+  restock(lines: [Line!]!): String
+  cap(limits: Limits!): String
+  several(name: String!, count: Int!, cart: Cart!): String
+}

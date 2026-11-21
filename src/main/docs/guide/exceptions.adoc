@@ -67,7 +67,7 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`root-resolver-not-found` |failure |no |The schema has a root operation type and no resolver bean serves it.
 |`resolver-required` |failure |no |A field with a resolver directive has no type resolver method.
 |`incorrect-class-mapping` |failure |no |A Java class is mapped to a type it cannot serve.
-|`incorrect-member-mapping` |failure |no |An object type of a union or interface is mapped to a Java type disjoint from the declared one.
+|`incorrect-member-mapping` |failure |yes |An object type of a union or interface is mapped to a Java type disjoint from the declared one.
 |`incorrect-implementation` |failure |no |A mapped implementation does not fit its interface or union.
 |`implementation-not-found` |failure |no |No class is registered for an object type of an interface or union.
 |`multiple-implementations-found` |failure |no |Several classes are registered for one object type.
