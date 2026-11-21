@@ -808,6 +808,9 @@ public final class GraphQLRuntimeWiringGenerator {
                 interfacesReadThroughImplementations.put(objectTypeDefinition.getName(),
                         List.of(targetClass, beanIntrospection.getBeanType()));
             }
+            if (targetClass.isInterface()) {
+                logInterfaceLookupMode(objectTypeDefinition.getName(), targetClass, beanIntrospection.getBeanType());
+            }
             manifestRecorder.type(objectTypeDefinition.getName(), "object", beanIntrospection.getBeanType());
 
             TypeRuntimeWiring.Builder typeRuntimeWiringBuilder = TypeRuntimeWiring
@@ -823,6 +826,19 @@ public final class GraphQLRuntimeWiringGenerator {
                         TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName())));
             }
         });
+    }
+
+    private static void logInterfaceLookupMode(String typeName, Class<?> interfaceClass, Class<?> beanType) {
+        if (!LOG.isInfoEnabled()) {
+            return;
+        }
+        if (beanType.isInterface()) {
+            LOG.info("The type {} is mapped to the interface {}, which has its own bean introspection: its properties are "
+                    + "the getters of the interface", typeName, interfaceClass.getName());
+        } else {
+            LOG.info("The type {} is mapped to the interface {}, which has no bean introspection of its own: its properties "
+                    + "are all the getters of the implementation {}", typeName, interfaceClass.getName(), beanType.getName());
+        }
     }
 
     private boolean isIgnored(AnnotationMetadataProvider member, String name) {
