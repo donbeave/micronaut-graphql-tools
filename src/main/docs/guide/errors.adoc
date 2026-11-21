@@ -121,7 +121,7 @@ A call that violates the constraint is rejected before the resolver runs. The me
 }
 ----
 
-`argument` is the name of the method parameter, and `inputPath` is the way from the parameter to the value that failed: property names, list indexes (numbers) and map keys (strings). It is the same shape as the `inputPath` of an input conversion error. The list below shows what a real validation run gives:
+`argument` is the name of the method parameter, and `inputPath` is the way from the parameter to the value that failed: property names, list indexes (numbers), map keys (always strings, so a `UUID` or an enum key is written with `toString()`) and the element name that a custom `ValueExtractor` gives its values. It is the same shape as the `inputPath` of an input conversion error. The list below shows what a real validation run gives:
 
 [cols="2,2,2", options="header"]
 |===
@@ -131,9 +131,13 @@ A call that violates the constraint is rejected before the resolver runs. The me
 |A property of a list element, `@Valid List<Line> lines` |`lines` |`[1, "sku"]`
 |A list inside an input, `Cart.lines` |`cart` |`["lines", 1, "sku"]`
 |A value of a map, `Map<String, @Positive Integer> limits` |`limits` |`["south"]`
+|A value of a map with a `UUID` or an enum key |`weights` |`["6f1b2c3d-0000-4000-8000-000000000002"]`
+|A class-level constraint on a bean in a list, `@Valid List<Span> spans` |`spans` |`[1]`
+|A class-level constraint on a bean in a map, `Map<String, @Valid Span> spans` |`spans` |`["b"]`
+|A value that a custom `ValueExtractor` names `item` |`pack` |`["item", 1]`
 |===
 
-A call with several violations gives one error for each, all with the path of the field. The errors are in the order of the parameters, then of the `inputPath`, because the validator returns the violations in no fixed order. The mapper has the lowest precedence: your own mapper for `ConstraintViolationException` wins.
+A call with several violations gives one error for each, all with the path of the field. The errors are in the order of the parameters, then of the `inputPath` (list indexes compare as numbers, so `[2]` comes before `[10]`, and names compare as text), because the validator returns the violations in no fixed order. The mapper has the lowest precedence: your own mapper for `ConstraintViolationException` wins.
 
 [[executionErrors]]
 == Errors of the execution

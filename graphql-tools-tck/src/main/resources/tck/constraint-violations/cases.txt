@@ -5,3 +5,9 @@ nested-list-element-violation
 map-value-violation
 several-violations
 valid-call
+list-of-twelve-order
+class-level-in-list
+class-level-in-map
+uuid-map-key
+enum-map-key
+custom-extractor-element
