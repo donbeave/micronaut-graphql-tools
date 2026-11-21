@@ -88,7 +88,7 @@ class ScopeContributor : GraphQLContextContributor {
 class ScopeLoader : BatchLoaderWithContext<String, String> {
     override fun load(keys: List<String>, environment: BatchLoaderEnvironment): CompletionStage<List<String>> {
         val context = environment.getContext<GraphQLContext>()
-        return CompletableFuture.completedFuture(keys.map { "scope:${context.get<String>("scope")}:${keys.size}" })
+        return CompletableFuture.completedFuture(keys.map { "scope:${context!!.get<String>("scope")}:${keys.size}" })
     }
 }
 
