@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools.benchmarks;
 
-import io.micronaut.graphql.tools.visitor.ClassElementFixture;
+import io.micronaut.graphql.tools.benchmarks.fixture.ClassElementFixture;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;

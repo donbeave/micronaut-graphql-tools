@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.visitor;
+package io.micronaut.graphql.tools.benchmarks.fixture;
 
 import io.micronaut.inject.ast.ClassElement;
 import io.micronaut.inject.visitor.TypeElementQuery;

@@ -27,8 +27,8 @@ runs, or when they claim a performance gain.
 - `src/main`: the benchmark classes shared by the source sets (`Resolvers`, `BenchmarkCases`, `Fixtures`), and `ClassElementFixture`: compiler
   class elements of fixture sources, compiled in process, for the binding rules. The compilation runs on a thread that stays parked inside its
   processing round until the fixture is closed, because a class element is valid only during its round, and the class files are written
-  when the round is released. The fixture lives in the package of the processor's visitor, because the element adapter
-  (`ElementTypeModel`) is package-private there; the processor is not changed. `BindingRulesParityTest` (in `jmhSmokeTest`) shows that
+  when the round is released. The fixture is in a package of this module (`benchmarks.fixture`) and reaches the element adapter
+  (`ElementTypeModel`, package-private) through `BindingRulesAccess`, a public class of the processor that is documented as internal. `BindingRulesParityTest` (in `jmhSmokeTest`) shows that
   the rules give the same findings for the elements as for the classes that the sources compile to. The
   `generateLargeSchema` task writes the large schema that the start-up benchmarks bind to `build/generated/large-schema`.
 - `benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
@@ -40,6 +40,7 @@ Benchmark code, not a library package: no `package-info.java`. Nothing here is A
 | Package | Audience | Holds |
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.benchmarks` | Test helper | The JMH benchmarks, the allocation tests and the shared benchmark classes |
+| `io.micronaut.graphql.tools.benchmarks.fixture` | Test helper | The in-process compilation that yields compiler class elements for the binding rules benchmark |
 
 ## Who uses it
 

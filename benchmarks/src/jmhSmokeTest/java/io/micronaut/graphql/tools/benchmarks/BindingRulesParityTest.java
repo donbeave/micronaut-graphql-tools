@@ -24,7 +24,7 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import io.micronaut.graphql.tools.internal.model.RuntimeTypeModel;
-import io.micronaut.graphql.tools.visitor.ClassElementFixture;
+import io.micronaut.graphql.tools.benchmarks.fixture.ClassElementFixture;
 import io.micronaut.inject.BeanDefinition;
 import org.junit.jupiter.api.Test;
 
