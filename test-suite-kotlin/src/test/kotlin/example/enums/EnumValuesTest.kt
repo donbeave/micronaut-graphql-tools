@@ -33,9 +33,9 @@ class EnumValuesTest {
     @Test
     fun `schema enum values are the Kotlin constants`() {
         val security = schema.getType("SecurityErrorCode") as GraphQLEnumType
-        assertSame(SecurityErrorCode.NOT_AUTHENTICATED, security.getValue("NOT_AUTHENTICATED").value)
-        assertSame(SecurityErrorCode.INCORRECT_CREDENTIALS, security.getValue("INCORRECT_CREDENTIALS").value)
+        assertSame(SecurityErrorCode.NOT_AUTHENTICATED, security.getValue("NOT_AUTHENTICATED")!!.value)
+        assertSame(SecurityErrorCode.INCORRECT_CREDENTIALS, security.getValue("INCORRECT_CREDENTIALS")!!.value)
         val validation = schema.getType("ValidationErrorCode") as GraphQLEnumType
-        assertSame(ValidationErrorCode.DUPLICATE, validation.getValue("DUPLICATE").value)
+        assertSame(ValidationErrorCode.DUPLICATE, validation.getValue("DUPLICATE")!!.value)
     }
 }
