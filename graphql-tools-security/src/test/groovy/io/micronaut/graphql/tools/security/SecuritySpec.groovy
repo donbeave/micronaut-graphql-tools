@@ -257,7 +257,6 @@ type Me {
             return json.readValue(received.poll(10, TimeUnit.SECONDS), Map)
         } finally {
             socket.sendClose(WebSocket.NORMAL_CLOSURE, 'done')
-            http.close()
         }
     }
 
