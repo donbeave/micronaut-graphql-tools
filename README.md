@@ -23,6 +23,7 @@ and test it.
 | [`graphql-tools-scalars`](graphql-tools-scalars/README.md) | `:micronaut-graphql-tools-scalars` | The standard scalars: `java.time`, JSON and extended scalars, as beans. |
 | [`graphql-tools-observability`](graphql-tools-observability/README.md) | `:micronaut-graphql-tools-observability` | Request metrics (Micrometer) and traces (OpenTelemetry), optional. |
 | [`graphql-tools-upload`](graphql-tools-upload/README.md) | `:micronaut-graphql-tools-upload` | File upload: the `Upload` scalar and the multipart request route, optional. |
+| [`graphql-tools-security`](graphql-tools-security/README.md) | `:micronaut-graphql-tools-security` | Micronaut Security: the principal in resolvers, `@Secured` on resolver methods and the root fields hook, optional. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
@@ -1299,6 +1300,25 @@ library's invocation, so the resolver runs on the executor of the library, not o
 `400` with an error whose `extensions.code` is `INVALID_MULTIPART_REQUEST`. `micronaut.graphql.tools.upload.enabled`
 (default `true`) turns the module off. The guide page on file upload has the details.
 
+## Security
+
+The `micronaut-graphql-tools-security` module integrates Micronaut Security. Micronaut Security stays the application's own
+dependency; the core library has none.
+
+```groovy
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-security:1.0.0-M4")
+implementation("io.micronaut.security:micronaut-security")
+```
+
+A resolver declares `Principal` or `Authentication` as a parameter and gets the principal of the request, also in a field
+that runs after an async hop and over WebSocket (the principal of the upgrade request). `@Secured` on a resolver method
+guards its field: an anonymous call gets an `UNAUTHENTICATED` error of the field, a call without the role a `FORBIDDEN`
+one, and a field without `@Secured` keeps its fetcher. A `RootFieldsHook` bean sees the root fields of an operation after
+parsing, so an application need not parse the body in a filter. `micronaut.graphql.tools.security.enabled` (default `true`)
+turns the module off. A resolver also reads the HTTP request and changes the response (a header, a cookie) with the
+`HttpRequest` and `MutableHttpResponse` parameters. The guide pages on security and on the HTTP request and response have
+the details.
+
 ## Error handling
 
 The library installs a `DataFetcherExceptionHandler` that hides the message of an exception that a resolver throws: the
@@ -1398,6 +1418,7 @@ To build or test against a role locally:
 | Standard scalars ([`java.time`, JSON and extended scalars](#standard-scalars)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
 | Observability ([Micrometer metrics and OpenTelemetry traces](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-observability` |
 | File upload ([`Upload` scalar and multipart route](#file-upload)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-upload` |
+| Security ([principal, `@Secured` and the root fields hook](#security)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-security` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 

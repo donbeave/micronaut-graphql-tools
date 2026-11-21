@@ -1,0 +1,18 @@
+A resolver can read the HTTP request of the operation and change its response, for example to set a cookie or a header. The request and the response are parameters of the resolver method, see <<resolverParameters,Resolver Parameters>>: declare them, and the library supplies them.
+
+== Over HTTP
+
+snippet::example.tck.HttpAccessScenario[project-base="test-suite", source="test", tags="http-access", indent="0"]
+
+The response is the one of the GraphQL request: the library creates it before the execution and returns it to the client with the result, so a header or a cookie that a resolver sets reaches the client. A field that runs after an async hop changes the same response.
+
+== Over WebSocket
+
+An operation of a `graphql-transport-ws` connection has the upgrade request as its request: a resolver reads the headers and the attributes of the handshake with the `HttpRequest` parameter, and the principal of the connection with a `Principal` parameter. A WebSocket operation has no HTTP response, because the upgrade response was sent when the connection opened.
+
+* `Optional<MutableHttpResponse<?>>` is empty over WebSocket and present over HTTP. Use it in code that serves both transports.
+* A plain `MutableHttpResponse<?>` or `HttpResponse<?>` parameter over WebSocket is an error of the field, with `extensions.code` `HTTP_RESPONSE_UNAVAILABLE` and a message that says to declare the `Optional` form. It is not a `NullPointerException`, and the other fields of the operation still run. A call without a request (a direct call of the invocation) has no response either and gets the same error.
+
+== Cost
+
+The request and the response come from the state that the library keeps for the execution; they are not separate context entries, and nothing is added to the context for them. A field that does not declare one of them reads no state, and a call that does fills its argument array and allocates nothing else.
