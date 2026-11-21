@@ -62,6 +62,11 @@ class CancelPendingStagesTest {
 
         assertTrue(cancelled.cancel(true));
 
+        // the stage may not be registered yet when the cancel arrives; it is then aborted as soon as it registers
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (!heldStage.isCancelled() && System.nanoTime() < deadline) {
+            Thread.sleep(10);
+        }
         assertTrue(heldStage.isCancelled());
         ExecutionResult result = other.get(10, TimeUnit.SECONDS);
         assertTrue(result.getErrors().isEmpty(), result.getErrors().toString());
