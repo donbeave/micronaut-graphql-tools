@@ -29,6 +29,9 @@ dependencies {
     testImplementation("io.micrometer:micrometer-core")
     testImplementation("io.opentelemetry:opentelemetry-sdk")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
+    // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
+    // itself does not depend on it.
+    testImplementation(projects.micronautGraphqlToolsUpload)
 }
 
 graalvmNative.toolchainDetection = false
@@ -51,6 +54,25 @@ micronaut {
         incremental(true)
         annotations("example.*")
     }
+}
+
+// The resolver fixtures of the constraint-violations scenario (#468), compiled with Micronaut Validation's processor and its own
+// source set: that processor re-annotates every class that has @Introspected through a meta-annotation, which drops the `classes`
+// of @GraphQLModels, so it cannot share a compilation with the external-model fixtures. The output is on the test classpath. The
+// validation artifacts are not in the `mn` catalog (the platform BOM manages them), so no version here.
+val validationFixtures: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations {
+    named(validationFixtures.implementationConfigurationName) { extendsFrom(implementation.get()) }
+    named(validationFixtures.compileOnlyConfigurationName) { extendsFrom(configurations.testCompileOnly.get()) }
+}
+dependencies {
+    "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
+    "validationFixturesCompileOnly"("io.micronaut.validation:micronaut-validation-processor")
+    testImplementation(validationFixtures.output)
+    testImplementation("io.micronaut.validation:micronaut-validation")
 }
 
 // The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x.

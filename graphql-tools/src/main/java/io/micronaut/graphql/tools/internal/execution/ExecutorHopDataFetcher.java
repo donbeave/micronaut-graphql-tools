@@ -15,9 +15,11 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
+import graphql.execution.AbortExecutionException;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.propagation.PropagatedContext;
 
 import java.util.concurrent.CompletableFuture;
@@ -53,15 +55,20 @@ public final class ExecutorHopDataFetcher implements DataFetcher<Object> {
         PropagatedContext captured = state != null ? state.propagatedContext() : PropagatedContext.getOrEmpty();
         CompletableFuture<Object> result = new CompletableFuture<>();
         try {
-            executor.execute(() -> run(environment, captured, result));
+            executor.execute(() -> run(environment, captured, result, state));
         } catch (RejectedExecutionException e) {
             result.completeExceptionally(e);
         }
         return result;
     }
 
-    private void run(DataFetchingEnvironment environment, PropagatedContext captured, CompletableFuture<Object> result) {
+    private void run(DataFetchingEnvironment environment, PropagatedContext captured, CompletableFuture<Object> result,
+                     @Nullable ExecutionState state) {
         if (result.isDone()) {
+            return;
+        }
+        if (state != null && state.isCancelled()) {
+            result.completeExceptionally(new AbortExecutionException("The execution was cancelled"));
             return;
         }
         if (PropagatedContext.getOrEmpty() == captured) {

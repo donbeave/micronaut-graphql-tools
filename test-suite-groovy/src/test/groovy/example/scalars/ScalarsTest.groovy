@@ -104,4 +104,25 @@ class ScalarsTest extends Specification {
         context?.close()
     }
 
+    void 'a JSON number that cannot be written is an error that names the scalar'() {
+        given:
+        ApplicationContext context = ApplicationContext.run([:], ScalarsFixtures.DEFAULTS)
+
+        when:
+        def result = execute(context, 'query ($j: JSON) { payload(data: $j) }', [j: value])
+        def literal = execute(context, '{ payload(data: {a: 1e10000}) }')
+
+        then:
+        result.errors.size() == 1
+        result.errors[0].message.contains('JSON')
+        literal.errors.size() == 1
+        literal.errors[0].message.contains('JSON')
+
+        cleanup:
+        context?.close()
+
+        where:
+        value << [[a: Double.NaN], [a: [new BigDecimal('1e-10000')]], [new BigDecimal('1e10000')]]
+    }
+
 }

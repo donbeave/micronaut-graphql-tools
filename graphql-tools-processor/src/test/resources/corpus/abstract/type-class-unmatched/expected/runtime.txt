@@ -1,0 +1,1 @@
+union-type-mapping-not-provided Query.search schema.graphqls:6:3

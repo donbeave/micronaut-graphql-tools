@@ -5,7 +5,7 @@ A resolver that throws does not fail the response. The field becomes `null`, one
 The library installs its own `DataFetcherExceptionHandler` when it builds the `GraphQL` bean. It treats the exception that a resolver threw as follows. A `CompletionException` or `ExecutionException` around it is removed first, so a failure of a `CompletionStage` or a `Mono` is handled as the exception you threw.
 
 . A mapper bean for the exception type returns the error: see <<exceptionMappers,Exception mappers>>.
-. An exception that is a `graphql.GraphQLError` (for example `GraphqlErrorException`) is the error as it is: your message, your extensions. The path and the location of the field are added when it has none.
+. An exception that is a `graphql.GraphQLError` (for example `GraphqlErrorException`) is the error as it is: your message, your extensions. The path and the location of the field are added when it has none: a missing path or location list and an empty one count the same, and an error that has a path or a location keeps it.
 . Any other exception gets the generic error, and its message never reaches the client:
 
 [source,json]
@@ -28,7 +28,7 @@ The same rules apply to every transport, and the exception handler runs only whe
 [[exceptionMappers]]
 == Exception mappers
 
-An exception mapper is a bean that implements `GraphQLExceptionMapper<E>`. It is registered for `E` and its subclasses, and it chooses the message and the extensions of the error. The context gives the error the path and the location of the field.
+An exception mapper is a bean that implements `GraphQLExceptionMapper<E>`. It is registered for `E` and its subclasses, and it chooses the message and the extensions of the error. The context gives the error the path and the location of the field. `getSourceLocation()` is `null` when graphql-java has no location for the field; the error then has no entry in `locations`, and never a `null` one.
 
 snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="test", tags="mapper", indent="0"]
 
@@ -89,23 +89,51 @@ A `GraphQLErrorsCustomizer` bean changes the list of errors of a response after 
 
 snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="test", tags="customizer", indent="0"]
 
-The customizers run by order, lowest first, and each gets the list that the previous one returned. They run once for each response that has an error, and never for a successful response. A customizer that throws is logged at ERROR and skipped. Errors are immutable: build a new one, copying the message, the path and the locations as above.
+The customizers run by order, lowest first, and each gets the list that the previous one returned. They run once for each response that has an error, and never for a successful response. A customizer that throws is logged at ERROR and skipped. A customizer that returns an empty list ends the chain: no later customizer is called, and the response has no `errors` key (a response with `data` only). Errors are immutable: build a new one, copying the message, the path and the locations as above.
+
+[[subscriptionErrors]]
+== Errors of a subscription
+
+A subscription reaches the client over the `graphql-transport-ws` WebSocket (see the Subscriptions page), and its errors take the same route as the errors of a query:
+
+* An error of one event, such as a field of the event that fails, is part of the `next` message of that event. The exception goes through the mappers and the default handler, and the `GraphQLErrorsCustomizer` beans change the errors of each event that has any, so every event is a response of its own.
+* A publisher that signals an error ends the operation with an `error` message. The exception goes through the mappers and the default handler as if the subscription field had thrown it: a mapped exception sends the mapped errors, a `GraphQLError` is sent as it is, and any other exception sends the generic `INTERNAL_ERROR` error without its message (or with it when `micronaut.graphql.tools.errors.details` is on). The customizers see these errors too.
+* The error handling of a publisher is the library's: a `DataFetcherExceptionHandler` that a `GraphQLBuilderCustomizer` installs does not see an error that the publisher signals.
+* The library has no server-sent events transport, so there is no such path to route.
 
 [[constraintViolations]]
 == Bean validation
 
-A `jakarta.validation.ConstraintViolationException` (Micronaut Validation on a resolver method or an input class) becomes one error for each violation when Jakarta Validation is on the classpath. The message is the message of the constraint, and the extensions say where it applies:
+A `jakarta.validation.ConstraintViolationException` (Micronaut Validation on a resolver method or an input class) becomes one error for each violation when Jakarta Validation is on the classpath. Add `io.micronaut.validation:micronaut-validation` and its annotation processor (`micronaut-validation-processor`) to the application, and constrain the parameters of a resolver method and the properties of an input class:
+
+snippet::example.tck.ConstraintViolationsScenario[project-base="test-suite", source="validationFixtures", tags="constrained-input", indent="0"]
+
+snippet::example.tck.ConstraintViolationsScenario[project-base="test-suite", source="validationFixtures", tags="constrained-parameter", indent="0"]
+
+A call that violates the constraint is rejected before the resolver runs. The message is the message of the constraint, and the extensions say where it applies:
 
 [source,json]
 ----
 {
   "message": "must not be blank",
-  "path": ["addBook"],
-  "extensions": { "code": "CONSTRAINT_VIOLATION", "argument": "book", "inputPath": ["title"] }
+  "path": ["checkout"],
+  "extensions": { "code": "CONSTRAINT_VIOLATION", "argument": "cart", "inputPath": ["lines", 1, "sku"] }
 }
 ----
 
-`argument` is the name of the method parameter and `inputPath` the properties inside it; `inputPath` is empty when the parameter itself violates the constraint. The mapper has the lowest precedence: your own mapper for `ConstraintViolationException` wins.
+`argument` is the name of the method parameter, and `inputPath` is the way from the parameter to the value that failed: property names, list indexes (numbers) and map keys (strings). It is the same shape as the `inputPath` of an input conversion error. The list below shows what a real validation run gives:
+
+[cols="2,2,2", options="header"]
+|===
+|The violation |`argument` |`inputPath`
+|The parameter itself, `@NotBlank String name` |`name` |`[]`
+|A property of an input, `Cart.owner` |`cart` |`["owner"]`
+|A property of a list element, `@Valid List<Line> lines` |`lines` |`[1, "sku"]`
+|A list inside an input, `Cart.lines` |`cart` |`["lines", 1, "sku"]`
+|A value of a map, `Map<String, @Positive Integer> limits` |`limits` |`["south"]`
+|===
+
+A call with several violations gives one error for each, all with the path of the field. The errors are in the order of the parameters, then of the `inputPath`, because the validator returns the violations in no fixed order. The mapper has the lowest precedence: your own mapper for `ConstraintViolationException` wins.
 
 [[executionErrors]]
 == Errors of the execution
@@ -116,7 +144,7 @@ These errors are about the operation, not about a field. Match on `extensions.co
 |===
 |Code |When
 |`EXECUTION_REJECTED` |The executor that runs operations rejected the operation, for example a bounded pool that is full. The response has the status 200, `data` of `null`, and this one error. The library logs a warning. See <<execution,Execution>>.
-|`EXECUTION_CANCELLED` |The operation was cancelled before it started, because the client had gone away or the operation timed out. The code is reserved for the cancellation of an execution (#429) and is documented here so that clients can already handle it.
+|`EXECUTION_CANCELLED` |The execution was cancelled before its hop task started, because the client had gone away (an HTTP disconnect, a WebSocket `complete` or close). The response has `data` of `null` and this one error, and goes through the default error handling and the `GraphQLErrorsCustomizer` beans. See <<execution,Execution>>.
 |`INTERNAL_ERROR` |The generic error of an exception that no mapper handled, or of a failure of a context contributor.
 |===
 

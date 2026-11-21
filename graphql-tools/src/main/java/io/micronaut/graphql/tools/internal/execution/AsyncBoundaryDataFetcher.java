@@ -72,6 +72,7 @@ public final class AsyncBoundaryDataFetcher implements DataFetcher<Object> {
             return result;
         }
         Boundary boundary = new Boundary(state, stage);
+        state.awaitingResult();
         stage.whenComplete(boundary);
         return boundary;
     }
