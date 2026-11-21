@@ -52,12 +52,13 @@ snippet::example.tck.DataLoaderOptionsScenario[project-base="test-suite", source
 
 * The customizer applies to its loader and to no other. A customizer that names no loader bean fails the startup with `[data-loader-not-found]`, and the message lists the loaders that exist.
 * Several customizers of one loader run by order (`@Order` or `Ordered#getOrder()`), lowest first, and each gets the options that the previous one returned.
+* A customizer should return new options rather than change the ones it was given. Changing the argument in place can be ignored on java-dataloader 3.x (see the caching of a subscription below); the options that a customizer returns are always used.
 * It runs each time the loader is created, so once for each execution that uses the loader. Return new options (and a new cache map, if you set one) rather than shared ones.
 * The library calls no setter of `DataLoaderOptions`, because the setters differ between java-dataloader 3.x, where the options are mutable and a setter returns the same object, and 6.x, where they are immutable and are copied with `transform`. Write the body with the API of the version that your application has. The example overrides `maxBatchSize()`, which both lines have; with the setters of 3.x it is `return options.setMaxBatchSize(2);`, and with 6.x it is `return options.transform(builder -> builder.setMaxBatchSize(2));`.
 
 == Caching in a subscription
 
-A loader that a subscription operation creates has caching off. The loader of a query keeps the default, caching on. The cache of a `DataLoader` lives as long as the loader, and a subscription lives as long as its connection, so a cache would serve the value of the first event to every later one. A `DataLoaderOptionsCustomizer` can turn caching back on for a loader. The options that it gets already hold the default of the library, so on java-dataloader 6.x, which copies the field values in `transform`, set the value that you want explicitly instead of relying on the options you received.
+A loader that a subscription operation creates has caching off. The loader of a query keeps the default, caching on. The cache of a `DataLoader` lives as long as the loader, and a subscription lives as long as its connection, so a cache would serve the value of the first event to every later one. A `DataLoaderOptionsCustomizer` can turn caching back on for a loader. The options that it gets already hold the default of the library, so on java-dataloader 6.x, which copies the field values in `transform`, set the value that you want explicitly instead of relying on the options you received. Return new options that enable caching: on java-dataloader 3.x a customizer that only calls `setCachingEnabled(true)` on the options it was given is ignored in a subscription, because the options that the library passes keep caching off whatever the setter stores.
 
 == The context of a batch function
 
