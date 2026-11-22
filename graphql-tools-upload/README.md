@@ -22,7 +22,7 @@ invocation) and the multipart handling itself (Micronaut: `micronaut.server.mult
 
 ## Packages
 
-Each package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
+Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
 
 | Package | Audience | Holds |
 | --- | --- | --- |

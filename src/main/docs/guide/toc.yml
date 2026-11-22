@@ -1,5 +1,7 @@
 introduction:
   title: Introduction
+releaseHistory: Release History
+breaks: Breaking Changes
 quickStart:
   title: Quick Start
 languageSupport: Language Support
@@ -35,13 +37,16 @@ codegen: Code Generation
 nativeImage: Native Image
 testing: Testing
 performance: Performance
-apiMap: API Map
-configuration: Configuration
+configuration:
+  title: Configuration
+  scalarSettings: Scalars
+  executionSettings: Execution
+  errorSettings: Errors
+  precedence: Precedence
+  checkSeverity: Check Severity
 exceptions: Exceptions
 migration:
   title: Migration
   fromSnapshot: Migrating from 1.0.0-SNAPSHOT
-breaks: Breaking Changes
 compatibility: Compatibility
-releaseHistory: Release History
 repository: Repository

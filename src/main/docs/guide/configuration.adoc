@@ -1,4 +1,4 @@
-NOTE: This page is pending: the prose will be written with the user guide (epic #97). The reference below is generated from the configuration class.
+The library reads its settings from `micronaut.graphql.tools`, in `application.yml` or any other property source that Micronaut reads. The reference below is generated from the configuration class: each key has its type and its default. The topics with settings of their own have a child page: <<scalarSettings,Scalars>>, <<executionSettings,Execution>>, <<errorSettings,Errors>>, <<precedence,Precedence>> and <<checkSeverity,Check severity>>. The keys of protection and the binding of a renamed field are on this page.
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.adoc[]
 
@@ -14,31 +14,9 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ProtectionConfiguration.adoc[]
 
-== Scalars
-
-The keys of the `micronaut-graphql-tools-scalars` module are under `micronaut.graphql.tools.scalars`: `enabled` switches the module, and `<id>.enabled`, `<id>.name` and `<id>.format` configure one scalar. An id that is not a standard scalar fails the startup. See <<scalars,Scalars>>.
-
-include::{includedir}/configurationProperties/io.micronaut.graphql.tools.scalars.ScalarsConfiguration.adoc[]
-
-include::{includedir}/configurationProperties/io.micronaut.graphql.tools.scalars.ScalarConfiguration.adoc[]
-
-== Execution
-
-`micronaut.graphql.tools.execution.executor` names the executor that every operation hops to once, before graphql-java runs: `blocking` (the default), `io`, `virtual` (JDK 21 and later), an executor you configure under `micronaut.executors`, or `none` to run on the thread that receives the operation. An unknown name fails the startup with `[unknown-executor]`. See <<execution,Execution>>.
-
 == Protection
 
 `micronaut.graphql.tools.protection.document-cache-size` (default `1000`, `0` for none) bounds the cache of parsed documents; `protection.max-depth` and `protection.max-complexity` (default `0`, no limit) reject expensive operations; `protection.introspection` (default `true`) switches `+__schema+` and `+__type+` off; `micronaut.graphql.tools.execution.timeout` (default none) cancels a slow operation. See <<protection,Protection>>.
-
-== Errors
-
-`micronaut.graphql.tools.errors.details` (default `false`) sends the message and the class of an exception that has no mapper to the client, and `micronaut.graphql.tools.errors.stack-traces` (default `false`) adds the stack trace to its log entry. See <<errors,Errors>>.
-
-== Precedence
-
-`micronaut.graphql.tools.precedence` decides a field that a member of the Java type (a property or a `@GraphQLField` method) and a type resolver method can both bind. One rule covers object and interface fields: `fail` (the default) fails the startup with `[precedence-ambiguity]`, `resolver-first` binds the resolver method, and `property-first` binds the member; the lenient values log the ambiguity at WARN and write a `!precedence-ambiguity` line to the binding manifest. A resolver directive, a type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate`, or `@GraphQLIgnore` on the member says which side binds one field, and the setting is not consulted. `precedence` is independent of `strict` and is not a `checks.<code>` entry. The value `strict`, the former name of `fail`, is rejected (BC-29).
-
-`micronaut.graphql.tools.type-class-convention` (default none) is the naming convention that derives the class of a union member or an interface implementation that the dictionary does not name: a pattern with `{Type}` once, such as `{Type}Graph`. See <<typeDictionary,the classes of union members and interface implementations>>. The compile-time checks take the same value as the processor option `micronaut.graphql.tools.processor.type.class.convention`.
 
 [[renaming]]
 == Binding a field to a differently named member
@@ -51,26 +29,3 @@ A member binds the field of its own name unless it says otherwise. There are thr
 
 The names are resolved once at startup and by the compile-time checks, with the same rules; a request does no name lookup.
 
-== Check severity
-
-Each check has a severity, `micronaut.graphql.tools.checks.<code>`: `fail` (the default), `warn` or `ignore`. `strict` is the shorthand for the checks that have no entry: `true` is every check at `fail`, `false` is every check at `warn`. An explicit entry wins. A check at `ignore` does no work. An unknown code or severity fails the startup. The `allow` settings accept findings: `allow.unreachable`, `allow.inert-directives`, `allow.schema-customizer-directives` and `allow.findings` (lines of the binding manifest). Every entry is validated, and one that no longer applies fails the startup.
-
-An allowed type, or an unreachable type under `checks.unreachable-type` `warn` or `ignore`, also covers the enum, input and scalar types that its fields and arguments use, and those that the input types use in turn. List only the type itself. A type that only a type that is not allowed uses still fails.
-
-== Check codes
-
-Each strict check has a code, from the code registry (`BindingCode` in `graphql-tools-binding`). The code is the key of `micronaut.graphql.tools.checks` (`checks.<code>`), the word in an `allow.findings` line, the token at the start of the startup error (`[unbound-enum-constant] ...`) and the word after `!` in a line of the binding manifest. The five checks that the compile-time check also reports are marked: relaxing one at startup does not relax the compile error. The other five run at startup only.
-
-
-* `unbound-resolver-method` (compile time)
-* `root-method-several-operations` (compile time)
-* `unbound-enum-constant` (compile time)
-* `unmapped-input-property` (compile time)
-* `nullable-primitive` (compile time)
-* `unreachable-type`
-* `unreachable-value-type`
-* `unused-dictionary-entry`
-* `interface-read-through-implementation`
-* `unwired-directive`
-
-A precedence ambiguity under `precedence: fail` is a binding failure with the code `precedence-ambiguity`, not a check. Its message names the field coordinate, both members and the ways out. Match on `SchemaBindingException#getCode()`; <<exceptions,the error reference>> lists every code of the registry.

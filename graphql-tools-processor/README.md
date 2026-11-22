@@ -97,7 +97,7 @@ under `modules/` (see the corpus README).
 
 ## Packages
 
-Each package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
+Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
 
 | Package | Audience | Holds |
 | --- | --- | --- |

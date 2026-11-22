@@ -174,6 +174,119 @@ repositories {
 }
 ```
 
+## API map
+
+This section tells you which package holds what, which packages you may import from, and which ones are implementation. Every Java package of the library modules has a `package-info.java` that says the same thing in the Javadoc, and the build checks that each of them exists.
+
+### The rules
+
+* A package has one responsibility. A package with more than 15 types is a smell: the build lists the ones that are over the limit, each with a reason, and a package that is no longer over the limit leaves the list.
+* The public API is what you import from application code: the annotations, the customizer, mapping and directive interfaces and mapping contexts, `CustomWiring`, the context contributor interface and the request view it receives, the configuration class, `ArgumentValue`, `BindingManifest`, `BindingCode` and the one exception, `SchemaBindingException`. The table below lists where each one is. Everything else is implementation and can change in any release.
+* Implementation is marked in two ways. A type is annotated `@Internal` (`io.micronaut.core.annotation.Internal`, the same marker Micronaut uses), and a package of implementation types carries the `internal` segment in its name and an `@Internal` on the package in its `package-info.java`. Micronaut itself follows this convention.
+* A public type never lives in an `internal` package, and an internal type belongs in an `internal` package. The code follows both halves; see [Planned layout](#planned-layout) for what is still to be split.
+* If a package holds both, the Javadoc of its `package-info.java` says so, and an `@Internal` type is not API even when it is `public`.
+
+### Which package do I import from?
+
+| I want to | Import from |
+| --- | --- |
+| Mark a resolver class, a method, a parameter, an input class, or list model classes without an annotation | `io.micronaut.graphql.tools.annotation` |
+| Declare a resolver contract that fixes the root operation type or the source type | `io.micronaut.graphql.tools.resolver` (`QueryResolver`, `MutationResolver`, `SubscriptionResolver`, `TypeResolver<T>`) |
+| Catch a startup failure | `io.micronaut.graphql.tools.exceptions` (`SchemaBindingException`; match on its code) |
+| Read an error code | `io.micronaut.graphql.tools.binding` (`BindingCode`) |
+| Change a setting in code | `io.micronaut.graphql.tools.config` (`GraphQLToolsConfiguration`) |
+| Change the `GraphQL` builder, the schema, the runtime wiring or the type registry, or the final list of errors | `io.micronaut.graphql.tools.customizer` (the `*Customizer` interfaces) |
+| Turn an exception of a resolver into an error with a message and extensions | `io.micronaut.graphql.tools.error` (`GraphQLExceptionMapper`) |
+| Map a custom scalar, or a union member to a Java type | `io.micronaut.graphql.tools.mapping` (`GraphQLScalarMapping`, `SchemaMappingDictionary`) |
+| Use the standard scalars (`java.time`, JSON, extended scalars) | `io.micronaut.graphql.tools.scalars` (`StandardScalar`; the module `graphql-tools-scalars`) |
+| Name the request metrics and tags of the Micrometer module | `io.micronaut.graphql.tools.micrometer` (`GraphQLMetrics`; the module `graphql-tools-micrometer`) |
+| Name the `Upload` scalar and the error code of an invalid multipart request | `io.micronaut.graphql.tools.upload` (`GraphQLUpload`; the module `graphql-tools-upload`) |
+| Name the context key of the authentication, the error codes of a secured field, and see the root fields of an operation | `io.micronaut.graphql.tools.security` (`GraphQLSecurity`, `RootFieldsHook`; the module `graphql-tools-security`) |
+| Tell an omitted argument from an explicit `null` | `io.micronaut.graphql.tools.input` (`ArgumentValue`) |
+| Accept or reject a `graphql-transport-ws` connection, with attributes | `io.micronaut.graphql.tools.websocket` (`GraphQLConnectionInterceptor`, `GraphQLConnectionRequest`, `GraphQLConnectionResult`) |
+| Wire a directive | `io.micronaut.graphql.tools.directive` (`SchemaDirective`) |
+| Read what the schema is bound to | `io.micronaut.graphql.tools.manifest` (`BindingManifest`) |
+| Add values to the GraphQL context of each operation | `io.micronaut.graphql.tools.execution` (`GraphQLContextContributor`, `GraphQLExecutionRequest`, `GraphQLTransport`, `DataLoaderBatchStatistics`, `DataLoaderOptionsCustomizer`) |
+| Wrap the data fetchers of selected fields | `io.micronaut.graphql.tools.execution` (`FieldFetcherDecorator`, `FieldDescriptor`, `FieldExecutionKind`) |
+
+Do not import any type annotated `@Internal`, and nothing from a package named `internal`.
+
+### Current layout
+
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+
+| Package | Module | Audience | Holds |
+| --- | --- | --- | --- |
+| `io.micronaut.graphql.tools` | graphql-tools | Public API | No types: the namespace of the packages below |
+| `io.micronaut.graphql.tools.config` | graphql-tools | Public API | The configuration class, `GraphQLToolsConfiguration` |
+| `io.micronaut.graphql.tools.customizer` | graphql-tools | Public API | The six `*Customizer` interfaces, `GraphQLErrorsCustomizer` among them |
+| `io.micronaut.graphql.tools.error` | graphql-tools | Public API | `GraphQLExceptionMapper` and `GraphQLExceptionContext`: the mapping of the exceptions that resolvers throw to errors |
+| `io.micronaut.graphql.tools.mapping` | graphql-tools | Public API | `SchemaMappingDictionary`, `GraphQLScalarMapping` and the mapping contexts |
+| `io.micronaut.graphql.tools.directive` | graphql-tools | Public API | `SchemaDirective` and `CustomWiring` |
+| `io.micronaut.graphql.tools.input` | graphql-tools | Public API | `ArgumentValue` |
+| `io.micronaut.graphql.tools.manifest` | graphql-tools | Public API | `BindingManifest` |
+| `io.micronaut.graphql.tools.execution` | graphql-tools | Public API | `GraphQLContextContributor`, the read-only `GraphQLExecutionRequest` that it receives, the `GraphQLTransport` kinds, the `DataLoaderBatchStatistics` of an execution, the `DataLoaderOptionsCustomizer` of one batch loader, and `FieldFetcherDecorator` with its `FieldDescriptor` and `FieldExecutionKind` |
+| `io.micronaut.graphql.tools.annotation` | graphql-tools | Public API | The annotations of resolver classes, methods, parameters and input classes |
+| `io.micronaut.graphql.tools.resolver` | graphql-tools | Public API | The marker interfaces of resolver contracts: `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` |
+| `io.micronaut.graphql.tools.websocket` | graphql-tools | Public API | The connection hook of the `graphql-transport-ws` endpoint: `GraphQLConnectionInterceptor`, the request it receives and the result it returns |
+| `io.micronaut.graphql.tools.exceptions` | graphql-tools | Public API | The startup failure: `SchemaBindingException`, the one exception to catch |
+| `io.micronaut.graphql.tools.internal.exceptions` | graphql-tools | Internal | The base classes of the failures and the aggregate of one binding run; the classes of each kind are in the sub-packages |
+| `io.micronaut.graphql.tools.internal.exceptions.mapping` | graphql-tools | Internal | The failures of the mapping dictionary and of class and scalar mappings |
+| `io.micronaut.graphql.tools.internal.exceptions.resolver` | graphql-tools | Internal | The failures of binding a field to a resolver method, its arguments and its return type |
+| `io.micronaut.graphql.tools.internal.exceptions.implementation` | graphql-tools | Internal | The failures of finding the implementation and the type resolver of an interface, union or abstract type |
+| `io.micronaut.graphql.tools.internal.exceptions.input` | graphql-tools | Internal | The failures of input types, their properties and enum values |
+| `io.micronaut.graphql.tools.internal.exceptions.wiring` | graphql-tools | Internal | The failures of directive wiring and runtime wiring |
+| `io.micronaut.graphql.tools.internal.exceptions.checks` | graphql-tools | Internal | The failures that the startup checks report: strict mode, unreachable types, schema coordinates |
+| `io.micronaut.graphql.tools.internal.exceptions.configuration` | graphql-tools | Internal | The failures of the setup: configuration, the schema definition and schema discovery |
+| `io.micronaut.graphql.tools.internal` | graphql-tools | Internal | The entry points of the binding: the factories, the eager binding, the bean selection and the shared helpers |
+| `io.micronaut.graphql.tools.internal.registry` | graphql-tools | Internal | The runtime method processors that register the resolvers (not the compile-time processor module) |
+| `io.micronaut.graphql.tools.internal.discovery` | graphql-tools | Internal | Schema discovery: reads the schema files into the type registry |
+| `io.micronaut.graphql.tools.internal.resolver` | graphql-tools | Internal | The data fetchers and the type resolvers, the planning of resolver arguments, and the bean condition behind the resolver annotations |
+| `io.micronaut.graphql.tools.internal.wiring` | graphql-tools | Internal | The runtime wiring generator, the wiring factory that picks the data fetcher and the type resolver of each field and type, the interface field binder and the directive wirings |
+| `io.micronaut.graphql.tools.binding` | graphql-tools-binding | Public API | `BindingCode`, the registry of the error codes |
+| `io.micronaut.graphql.tools.internal.error` | graphql-tools | Internal | The default `DataFetcherExceptionHandler` that hides messages and runs the exception mappers, and the mapper of `ConstraintViolationException` |
+| `io.micronaut.graphql.tools.internal.execution` | graphql-tools | Internal | The library's GraphQL invocation: the executor hop, the per-execution state, the lazy DataLoader registry, the wrapper of a subscription stream and the step-aside rules |
+| `io.micronaut.graphql.tools.internal.execution.disconnect` | graphql-tools | Internal | The watcher that tells an execution its client disconnected, and its Netty implementation, active only when the Netty server classes are on the classpath |
+| `io.micronaut.graphql.tools.internal.ws` | graphql-tools | Internal | The `graphql-transport-ws` handler and the state of its connections |
+| `io.micronaut.graphql.tools.internal.observer` | graphql-tools | Internal | The observer SPI of the request hooks (`RequestObserver`), which the Micrometer and OpenTelemetry modules implement, and the one `Instrumentation` bean that calls the observers |
+| `io.micronaut.graphql.tools.internal.protection` | graphql-tools | Internal | The cache of parsed documents of the protection settings |
+| `io.micronaut.graphql.tools.internal.kotlin` | graphql-tools | Internal | Kotlin `suspend` resolvers and `Flow` subscriptions: the beans that start the coroutine and adapt the flow, active only when the Kotlin coroutine classes (and kotlinx-coroutines-reactive for a `Flow`) are on the classpath |
+| `io.micronaut.graphql.tools.internal.input` | graphql-tools | Internal | The conversion of argument and input values, and the input type binder |
+| `io.micronaut.graphql.tools.internal.checks` | graphql-tools | Internal | The startup checks and validators: strict mode, unreachable types, schema coordinates, the directive wiring check and the mapping dictionary |
+| `io.micronaut.graphql.tools.internal.manifest` | graphql-tools | Internal | Recording and writing the binding manifest at startup |
+| `io.micronaut.graphql.tools.internal.model` | graphql-tools | Internal | The runtime model the binding reads: the resolver registry, the introspection registry, the type and bean models |
+| `io.micronaut.graphql.tools.binding.internal.finding` | graphql-tools-binding | Internal | Findings and their rendering |
+| `io.micronaut.graphql.tools.binding.internal.manifest` | graphql-tools-binding | Internal | The binding manifest renderer and the schema hash |
+| `io.micronaut.graphql.tools.binding.internal.membership` | graphql-tools-binding | Internal | The rule that a union or interface member is not mapped to a disjoint class |
+| `io.micronaut.graphql.tools.binding.internal.meta` | graphql-tools-binding | Internal | The resolver contracts annotation |
+| `io.micronaut.graphql.tools.binding.internal.model` | graphql-tools-binding | Internal | The model of classes and members that the rules read |
+| `io.micronaut.graphql.tools.binding.internal.plan` | graphql-tools-binding | Internal | The binding plan and the bean model |
+| `io.micronaut.graphql.tools.binding.internal.rules` | graphql-tools-binding | Internal | The per-class rules and their verdicts |
+| `io.micronaut.graphql.tools.binding.internal.schema` | graphql-tools-binding | Internal | Reading the schema files and the schema model |
+| `io.micronaut.graphql.tools.scalars` | graphql-tools-scalars | Public API | `StandardScalar`, the ids, default names and Java classes of the standard scalars |
+| `io.micronaut.graphql.tools.scalars.internal` | graphql-tools-scalars | Internal | The factory that registers a mapping for each scalar, the reader of the configuration and the shared coercion |
+| `io.micronaut.graphql.tools.scalars.internal.json` | graphql-tools-scalars | Internal | The JSON scalar |
+| `io.micronaut.graphql.tools.scalars.internal.time` | graphql-tools-scalars | Internal | The `java.time` scalars and the builder that picks one from its format |
+| `io.micronaut.graphql.tools.micrometer` | graphql-tools-micrometer | Public API | `GraphQLMetrics`, the names of the meters and tags |
+| `io.micronaut.graphql.tools.micrometer.internal` | graphql-tools-micrometer | Internal | The Micrometer observer, the cap on operation names and the configuration of the metrics |
+| `io.micronaut.graphql.tools.opentelemetry.internal` | graphql-tools-opentelemetry | Internal | The request span observer, the field span decorator and the wrapper that traces a field, the propagated context element and the configuration of the tracing |
+| `io.micronaut.graphql.tools.upload` | graphql-tools-upload | Public API | `GraphQLUpload`, the name of the `Upload` scalar, the configuration key and the error code of an invalid multipart request |
+| `io.micronaut.graphql.tools.upload.internal` | graphql-tools-upload | Internal | The multipart route, the reader of the `operations` and `map` parts and the `Upload` scalar |
+| `io.micronaut.graphql.tools.security` | graphql-tools-security | Public API | `GraphQLSecurity`, the configuration prefix, the context key of the authentication and the error codes of a secured field, and `RootFieldsHook` |
+| `io.micronaut.graphql.tools.security.internal` | graphql-tools-security | Internal | The context contributor, the decorator and fetcher of the secured fields and the instrumentation of the hook |
+| `io.micronaut.graphql.tools.visitor` | graphql-tools-processor | Compiler plug-in | The compile-time `TypeElementVisitor`, loaded by the compiler and never imported |
+| `io.micronaut.graphql.tools.tck` | graphql-tools-tck | Test helper | The TCK runner; not published |
+
+Kotlin and Groovy sources need no `package-info`; the library modules are Java.
+
+### Planned layout
+
+The public API is split into its role packages (`annotation`, `config`, `customizer`, `directive`, `error`, `exceptions`, `execution`, `input`, `manifest`, `mapping`, `resolver` and `websocket`), and the root package `io.micronaut.graphql.tools` holds no types. The implementation side is split by responsibility too: `internal` holds the factories, the eager binding and the shared helpers, and `internal.exceptions` holds the base failure classes with one sub-package for each kind of failure. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, only `visitor` remains. Each change that moves a public type gets an entry in [Breaking Changes](src/main/docs/guide/breaks.adoc) and in the [migration page](src/main/docs/guide/migration.adoc).
+
+### How the build keeps this true
+
+`PackageDocumentationSpec` fails when a Java package of the four modules has no `package-info.java`, when a `package-info.java` has no description, when a package has more than 15 types without a listed exception, when the package list of this section differs from the packages of the code, or when `@Internal` on a package and the audience column of this section disagree.
+
 ## Benchmarks
 
 The `benchmarks` module measures the request hot path: a property fetch, a root method, a type resolver method

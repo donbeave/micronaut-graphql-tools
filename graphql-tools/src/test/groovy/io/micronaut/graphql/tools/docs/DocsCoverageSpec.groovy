@@ -78,7 +78,7 @@ class DocsCoverageSpec extends Specification {
 
     def "the configuration reference lists every check code"() {
         given:
-        def page = Files.readString(root.resolve(GUIDE + '/configuration.adoc'))
+        def page = Files.readString(root.resolve(GUIDE + '/configuration/checkSeverity.adoc'))
 
         expect:
         BindingCode.values().findAll { it.check() }.every { page.contains('`' + it.code() + '`') }
