@@ -16,6 +16,9 @@
 /**
  * Mapping of the exceptions that resolvers throw to GraphQL errors: {@link io.micronaut.graphql.tools.error.GraphQLExceptionMapper}.
  *
+ * <p>This package is the error-handling SPI. The types the library itself throws are in
+ * {@code io.micronaut.graphql.tools.exceptions}.</p>
+ *
  * <p><b>Audience.</b> Public API. Application code implements the mapper for each exception type whose message and
  * extensions the client may see, and uses the {@link io.micronaut.graphql.tools.error.GraphQLExceptionContext} to build the
  * error with the path and the location of the field.</p>

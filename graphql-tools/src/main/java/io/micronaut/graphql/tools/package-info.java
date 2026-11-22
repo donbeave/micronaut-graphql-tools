@@ -15,8 +15,12 @@
  */
 /**
  * The root package of the runtime library. It holds no types: the public API is in the sub-packages
- * {@code config}, {@code customizer}, {@code mapping}, {@code directive}, {@code input}, {@code manifest},
- * {@code annotation} and {@code exceptions}.
+ * {@code annotation}, {@code config}, {@code customizer}, {@code directive}, {@code error}, {@code exceptions},
+ * {@code execution}, {@code input}, {@code manifest}, {@code mapping}, {@code resolver} and {@code websocket}.
+ *
+ * <p>{@code exceptions} holds the types the library throws, which an application catches ({@code SchemaBindingException});
+ * {@code error} is the error-handling SPI an application implements, to map the exceptions that resolvers throw to GraphQL
+ * errors.</p>
  *
  * <p><b>Audience.</b> Public API (a namespace only). The implementation is in {@code io.micronaut.graphql.tools.internal}.</p>
  */

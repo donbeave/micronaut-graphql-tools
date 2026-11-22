@@ -182,6 +182,11 @@ class ArchitectureRulesSpec extends Specification {
         }
     }
 
+    /** A public annotation names its internal condition class in @Requires(condition), as the Micronaut annotations do. */
+    private static boolean conditionOfAnnotation(JavaClass origin, JavaClass target) {
+        origin.annotation && target.isAssignableTo('io.micronaut.context.condition.Condition')
+    }
+
     private static DescribedPredicate<JavaClass> inPublicPackage() {
         DescribedPredicate.describe('classes of a public package: not in an internal package, not annotated @Internal', { JavaClass c ->
             !generated(c) && !internalChain(c)
@@ -193,7 +198,7 @@ class ArchitectureRulesSpec extends Specification {
             @Override
             void check(JavaClass item, ConditionEvents events) {
                 item.directDependenciesFromSelf.findAll {
-                    ('internal' in it.targetClass.packageName.split('\\.').toList())
+                    ('internal' in it.targetClass.packageName.split('\\.').toList()) && !conditionOfAnnotation(item, it.targetClass)
                 }.each { events.add(SimpleConditionEvent.satisfied(item, it.description)) }
             }
         }
