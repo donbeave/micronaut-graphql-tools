@@ -38,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The end-to-end checks of the {@code graphql-transport-ws} support (#29), run by each example suite against its own
@@ -65,6 +66,12 @@ public final class WebSocketTck {
             "blocking-resolver-off-event-loop",
             "complete-cancels",
             "close-cancels",
+            "abort-cancels",
+            "finished-operation-frees-id",
+            "finished-operation-is-not-cancelled",
+            "subscribe-with-variables-and-operation-name",
+            "configured-path",
+            "init-timeout-configured",
             "concurrent-subscriptions-are-isolated",
             "protocol-errors",
             "publisher-error-unmapped",
@@ -72,7 +79,19 @@ public final class WebSocketTck {
             "event-errors-customized",
             "subscription-loader-caching-off");
 
+    private static final String CONFIGURED_PATH = "/configured-ws";
+
     private WebSocketTck() {
+    }
+
+    private static Map<String, Object> properties(String check) {
+        Map<String, Object> properties = Tck.applicationProperties("websocket");
+        if ("configured-path".equals(check)) {
+            properties.put("graphql.graphql-ws.path", CONFIGURED_PATH);
+        } else if ("init-timeout-configured".equals(check)) {
+            properties.put("graphql.graphql-ws.connection-init-wait-timeout", "1s");
+        }
+        return properties;
     }
 
     /**
@@ -91,10 +110,11 @@ public final class WebSocketTck {
         if (!CHECKS.contains(check)) {
             throw new IllegalArgumentException("No such check: " + check);
         }
-        try (ApplicationContext context = ApplicationContext.builder().properties(Tck.applicationProperties("websocket")).start();
+        try (ApplicationContext context = ApplicationContext.builder().properties(properties(check)).start();
              HttpClient client = HttpClient.newHttpClient()) {
             EmbeddedServer server = context.getBean(EmbeddedServer.class).start();
-            Env env = new Env(client, context.getBean(JsonMapper.class), server.getHost() + ":" + server.getPort());
+            Env env = new Env(client, context.getBean(JsonMapper.class), server.getHost() + ":" + server.getPort(),
+                    "configured-path".equals(check) ? CONFIGURED_PATH : "/graphql-ws");
             switch (check) {
                 case "subscribe-and-receive" -> subscribeAndReceive(env);
                 case "same-operation-id-after-reconnect" -> sameOperationIdAfterReconnect(env);
@@ -106,6 +126,12 @@ public final class WebSocketTck {
                 case "blocking-resolver-off-event-loop" -> blockingResolverOffEventLoop(env);
                 case "complete-cancels" -> completeCancels(env);
                 case "close-cancels" -> closeCancels(env);
+                case "abort-cancels" -> abortCancels(env);
+                case "finished-operation-frees-id" -> finishedOperationFreesId(env);
+                case "finished-operation-is-not-cancelled" -> finishedOperationIsNotCancelled(env);
+                case "subscribe-with-variables-and-operation-name" -> subscribeWithVariablesAndOperationName(env);
+                case "configured-path" -> configuredPath(env);
+                case "init-timeout-configured" -> initTimeoutConfigured(env);
                 case "concurrent-subscriptions-are-isolated" -> concurrentSubscriptionsAreIsolated(env);
                 case "subscription-loader-caching-off" -> subscriptionLoaderCachingOff(env);
                 case "publisher-error-unmapped" -> publisherErrorUnmapped(env);
@@ -276,6 +302,86 @@ public final class WebSocketTck {
         awaitCancelled(env, 2);
     }
 
+    // A connection that drops without the closing handshake ends the session the same way a close does.
+    private static void abortCancels(Env env) throws Exception {
+        Socket socket = env.connect(Map.of());
+        socket.init(TOKEN);
+        socket.subscribe("1", "subscription { endless { number } }");
+        expect("next", socket.next().get("type"), "the first event");
+        expect(0, cancelled(env), "streams cancelled before the connection drops");
+        socket.abort();
+        awaitCancelled(env, 1);
+    }
+
+    // An operation that completed by itself leaves the session's operations: its id is free again, and the same
+    // connection can run another operation under it, repeatedly.
+    private static void finishedOperationFreesId(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            for (int round = 0; round < 3; round++) {
+                socket.subscribe("1", "subscription { ticks(count: 1) { number } }");
+                expect("next", socket.next().get("type"), "the event of round " + round);
+                expect("complete", socket.next().get("type"), "the completion of round " + round);
+            }
+        }
+    }
+
+    // A stream that completed by itself is no longer the session's: closing the connection cancels only what still runs.
+    private static void finishedOperationIsNotCancelled(Env env) throws Exception {
+        Socket socket = env.connect(Map.of());
+        socket.init(TOKEN);
+        socket.subscribe("1", "subscription { ticks(count: 2) { number } }");
+        expect("next", socket.next().get("type"), "the first event");
+        expect("next", socket.next().get("type"), "the second event");
+        expect("complete", socket.next().get("type"), "the completion");
+        socket.subscribe("2", "subscription { endless { number } }");
+        expect("next", socket.next().get("type"), "the first event of the endless stream");
+        socket.close();
+        awaitCancelled(env, 1);
+    }
+
+    // The payload of a subscribe message carries variables and an operation name, as the HTTP body does.
+    private static void subscribeWithVariablesAndOperationName(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            String document = "subscription First($n: Int!) { ticks(count: $n) { number } } subscription Second { ticks(count: 1) { number } }";
+            socket.send(Map.of("id", "1", "type", "subscribe", "payload",
+                    Map.of("query", document, "variables", Map.of("n", 2), "operationName", "First")));
+            for (int i = 0; i < 2; i++) {
+                Map<String, Object> next = socket.next();
+                expect(i, path(next, "payload", "data", "ticks", "number"), next);
+            }
+            expect("complete", socket.next().get("type"), "completion of the first operation");
+            socket.send(Map.of("id", "2", "type", "subscribe", "payload", Map.of("query", document, "operationName", "Second")));
+            Map<String, Object> next = socket.next();
+            expect(0, path(next, "payload", "data", "ticks", "number"), next);
+            expect("complete", socket.next().get("type"), "completion of the second operation");
+        }
+    }
+
+    // graphql.graphql-ws.path moves the endpoint: the configured path speaks the protocol, the default path is gone.
+    private static void configuredPath(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "subscription { ticks(count: 1) { number } }");
+            expect("next", socket.next().get("type"), "the event on the configured path");
+            expect("complete", socket.next().get("type"), "the completion on the configured path");
+        }
+        try {
+            new Env(env.client, env.json, env.authority, "/graphql-ws").connect(Map.of()).close();
+        } catch (ExecutionException | TimeoutException expected) {
+            return;
+        }
+        throw new AssertionError("the default path still accepts a WebSocket after graphql.graphql-ws.path moved it");
+    }
+
+    // graphql.graphql-ws.connection-init-wait-timeout closes a connection that sends no connection_init in time.
+    private static void initTimeoutConfigured(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            expect(4408, socket.awaitClose(), "a connection that never sent connection_init, with a timeout of 1s");
+        }
+    }
+
     // Clients on their own connections subscribe at the same time, each with a header of its own: every event of a client
     // shows its own header and the numbers of its own stream, in order, whatever the other streams do.
     private static void concurrentSubscriptionsAreIsolated(Env env) throws Exception {
@@ -440,13 +546,13 @@ public final class WebSocketTck {
         }
     }
 
-    private record Env(HttpClient client, JsonMapper json, String authority) {
+    private record Env(HttpClient client, JsonMapper json, String authority, String path) {
 
         Socket connect(Map<String, String> headers) throws Exception {
             Socket socket = new Socket(json);
             WebSocket.Builder builder = client.newWebSocketBuilder().subprotocols(SUBPROTOCOL);
             headers.forEach(builder::header);
-            socket.webSocket = builder.buildAsync(URI.create("ws://" + authority + "/graphql-ws"), socket.listener)
+            socket.webSocket = builder.buildAsync(URI.create("ws://" + authority + path), socket.listener)
                     .get(SECONDS, TimeUnit.SECONDS);
             return socket;
         }
@@ -518,6 +624,11 @@ public final class WebSocketTck {
                     return code;
                 }
             }
+        }
+
+        void abort() {
+            closed = true;
+            webSocket.abort();
         }
 
         @Override
