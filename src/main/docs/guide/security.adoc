@@ -4,9 +4,11 @@ The `micronaut-graphql-tools-security` module integrates Micronaut Security: the
 
 [source,groovy]
 ----
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-security:$graphqlToolsVersion")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-security")
 implementation("io.micronaut.security:micronaut-security")
 ----
+
+The version comes from the `micronaut-graphql-tools-bom` import of the quick start.
 
 `micronaut.graphql.tools.security.enabled` (default `true`) turns the beans of the module off: the contributor, the decorator of `@Secured` and the `Instrumentation` of the root fields hook. With it `false`, `@Secured` guards nothing, no `RootFieldsHook` bean is called, and a hook bean that nothing else injects is not even created. Micronaut Security authenticates the request as it always does, with its filter, its fetchers and its rules, and this module adds nothing to that. A URL rule on the GraphQL path decides who may reach the endpoint at all, for example `isAnonymous()` when the schema guards its own fields.
 

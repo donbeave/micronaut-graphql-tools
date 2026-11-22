@@ -6,12 +6,14 @@ Add the module of the technology you use, or both, and the Micronaut integration
 
 [source,groovy]
 ----
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer:$graphqlToolsVersion")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer")
 implementation("io.micronaut.micrometer:micronaut-micrometer-core")
 
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry:$graphqlToolsVersion")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry")
 implementation("io.micronaut.tracing:micronaut-tracing-opentelemetry")
 ----
+
+The version of both modules comes from the `micronaut-graphql-tools-bom` import of the quick start.
 
 The modules do not depend on each other, and neither has Micrometer or OpenTelemetry as a dependency. The metrics need a `MeterRegistry` bean, which Micronaut Micrometer provides. The tracing needs an `OpenTelemetry` bean, which Micronaut Tracing provides from the `otel.*` properties and exports to the `SpanProcessor` beans of the application. With neither bean the library installs no instrumentation. The tests use a meter registry, and a span processor that exports to memory:
 

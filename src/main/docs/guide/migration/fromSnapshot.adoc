@@ -1030,9 +1030,11 @@ The configuration keys of BC-39 stay as they are: `micronaut.metrics.binders.gra
 // Before
 implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability:1.0.0-M4")
 // Now: the module of each technology you use
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer:$graphqlToolsVersion")
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry:$graphqlToolsVersion")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry")
 ----
+
+The version comes from the `micronaut-graphql-tools-bom` import of the quick start.
 
 See the observability page.
 
