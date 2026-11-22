@@ -77,7 +77,7 @@ Run from the repository root. JDK 21 or 25.
   allocation the change added. Use `-PgraphqlJavaLeg=floor` or `ceiling` for the other legs, which have their own
   baselines.
 - `:benchmarks:jmhJar` builds the benchmark jar.
-- `-PlargeFields=<fields>` generates the start-up schema of another size, one size per build; `-PlargeShape=interfaces` generates the interface-heavy schema instead of the rings.
+- `-PlargeFields=<fields>` generates the start-up schema of another size, one size per build; `-PlargeShape=interfaces` generates the interface-heavy schema instead of the rings; add `-PlargeUnreturnedShared=true` to leave the root field `shared` out of that schema, so that the interface `Shared`, which every object type implements, is one that no field returns.
 
 ## Measured start-up results
 
@@ -111,5 +111,51 @@ Customizer replacement snapshot, before and after skipping it with no user custo
 
 At 20,000 fields the saving is about 38 ms, which is the roughly 42 ms the snapshot was measured to cost (the interval,
 12 to 67 ms, holds 42 ms). The retained heap does not change (21.87 MB and 21.86 MB for the interface schema).
+
+## Measured request-path results of the field decorators
+
+`FieldDecoratorBenchmark` (one query of 1,050 fields) and `ObservabilityBenchmark` (a request of 10 and of 1,000 root fields),
+rerun for #532 on an idle machine. Command: `./gradlew :benchmarks:jmhJar`, then
+`java -jar benchmarks/build/libs/benchmarks-1.0.0-SNAPSHOT-jmh.jar 'FieldDecoratorBenchmark|ObservabilityBenchmark' -f 5 -wi 5 -i 10 -w 1s -r 1s -prof gc`.
+Temurin 25.0.5+8, graphql-java default leg, Apple M1 Max (10 cores), 5 forks, 50 samples per case. The machine was idle: the one-minute load average
+was 2.4 at the start and 2.7 at the end of the 15-minute run (about 91 percent CPU idle before the start), and no other Gradle, native or benchmark job ran.
+The score is the mean with the 99.9 percent error that JMH prints.
+
+| FieldDecoratorBenchmark, decorator | us/op | gc.alloc.rate.norm (B/op) |
+| --- | --- | --- |
+| none (no decorator bean) | 217.358 +- 0.575 | 1289888.7 +- 62.0 |
+| unselective (selects no field) | 217.684 +- 0.339 | 1289955.5 +- 53.5 |
+| wrapAll (wraps every field) | 220.815 +- 0.944 | 1289941.6 +- 52.3 |
+
+| ObservabilityBenchmark, mode | 10 root fields, us/op | 1,000 root fields, us/op |
+| --- | --- | --- |
+| none | 2.028 +- 0.009 | 155.136 +- 0.720 |
+| empty | 2.034 +- 0.016 | 154.736 +- 0.796 |
+| observed | 2.455 +- 0.021 | 143.851 +- 4.567 |
+| selected | 4.740 +- 0.030 | 362.877 +- 4.135 |
+
+The intervals now separate the cases. A decorator that selects no field costs nothing measurable (217.7 against 217.4 us, the
+intervals overlap, the allocation is equal). Wrapping all 1,050 fields with a delegating wrapper costs about 3.5 us per query (+1.6 percent, intervals do not
+overlap), about 3 ns per field, and allocates the same. The tracing and metrics modules with no field traced (`empty`) are within the noise of
+no instrumentation at both sizes; `observed` adds about 0.42 us to a 10-field request. At 1,000 fields `observed` measures 11 us
+(7 percent) below `none`, with a wider interval; instrumentation cannot make a request faster, so read that as a JIT or
+fork-layout effect of this case, not a gain. `selected` adds about 2.3 us for 10 spans and about 219 us for 1,000, so one field span costs
+about 0.22 us and about 1.0 KB of allocation (`selected` minus `observed`, divided by `rootFields`).
+
+## Measured start-up cost of an interface that no field returns
+
+#71: the cold-start binding cost of the interface-heavy schema at 20,000 fields with `Shared` returned by a root field (`returned`) and with that
+field left out (`unreturned`, `-PlargeUnreturnedShared=true`), so that every field of the 2,000 object types looks up the class of an interface that no field
+returns. Two jars, `scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25`, Temurin 25.0.5+8, graphql-java default leg, Apple M1 Max. The
+load average at fork start ranged from 3.6 to 8.7 (median 6.3): the forks of this script run back to back on an otherwise idle machine, so
+this is lighter than the other start-up figures but not as idle as the request-path run above.
+
+| Build | Median binding time | Quartiles | Range | Retained heap |
+| --- | --- | --- | --- | --- |
+| returned | 1498.6 ms | 1487.4 to 1518.8 | 1453.5 to 1597.4 | 23.33 MB |
+| unreturned | 1504.2 ms | 1484.5 to 1515.4 | 1465.9 to 1533.5 | 23.63 MB |
+
+The difference is +5.6 ms (95 percent bootstrap interval -14.5 to +16.2): inside the noise. No resolver bean is bound to `Shared` in this schema, so the run
+measures the lookup that the unreturned-interface path adds, not the binding of a resolver method.
 
 The full description, including the cold start procedure, is the "Benchmarks" section of `CONTRIBUTING.md`.

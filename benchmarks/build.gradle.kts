@@ -55,6 +55,10 @@ val interfaceShape = largeShape == "interfaces"
 val largeTypeCounts = providers.gradleProperty("largeFields").map { listOf(it.toInt() / 10) }
     .orElse(listOf(if (interfaceShape) 300 else 160)).get()
 val smokeTypeCounts = listOf(10, 1000)
+// -PlargeUnreturnedShared=true leaves the root field `shared` out of the interface-heavy schema, so the interface Shared, which
+// every object type implements, is one that no field returns (#71): its class comes from the dictionary lookup, not from a field.
+val largeUnreturnedShared = providers.gradleProperty("largeUnreturnedShared").map { it.toBoolean() }.getOrElse(false)
+require(!largeUnreturnedShared || interfaceShape) { "-PlargeUnreturnedShared needs -PlargeShape=interfaces" }
 // The types form rings of at most this many types, each reached from a root field of its own. graphql-java builds the
 // executable schema with one recursive call per type of a chain, so one ring of a thousand types overflows the default
 // thread stack of a cold JVM (on CI); rings of this length leave the benchmark JVMs on the default stack.
@@ -172,8 +176,9 @@ $ringRoots
 // from a root field returning a list of its interface, and the type-mapping dictionary has an entry for every object
 // type: a quarter of them map to a Java interface, the rest to a class.
 fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provider<org.gradle.api.file.Directory>,
-                            typeCounts: List<Int>) = tasks.register(name) {
+                            typeCounts: List<Int>, unreturnedShared: Boolean = false) = tasks.register(name) {
     inputs.property("typeCounts", typeCounts)
+    inputs.property("unreturnedShared", unreturnedShared)
     outputs.dir(output)
     doLast {
         val root = output.get().asFile
@@ -188,7 +193,10 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
             // an object type maps to its interface when its number is a multiple of four
             fun javaType(i: Int) = if (i % 4 == 0) "Obj${i}Api" else "Obj$i"
             fun write(file: String, body: String) = javaDir.resolve("$file.java").writeText(body.trimMargin())
-            val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n  shared: [Shared!]!\n")
+            val sdl = StringBuilder("schema {\n  query: LargeQuery\n}\n\ntype LargeQuery {\n")
+            if (!unreturnedShared) {
+                sdl.append("  shared: [Shared!]!\n")
+            }
             for (g in 0 until groups) {
                 sdl.append("  group$g: [Group$g!]!\n")
             }
@@ -300,7 +308,7 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
                 |    }
                 |}
                 |""")
-            val roots = StringBuilder("|    public java.util.List<Shared> shared() { return java.util.List.of(); }\n")
+            val roots = StringBuilder(if (unreturnedShared) "" else "|    public java.util.List<Shared> shared() { return java.util.List.of(); }\n")
             for (g in 0 until groups) {
                 roots.append("|    public java.util.List<Group$g> group$g() { return java.util.List.of(); }\n")
             }
@@ -322,7 +330,7 @@ $roots|}
     }
 }
 val generateLargeSchema = if (interfaceShape) {
-    registerInterfaceSchema("generateLargeSchema", generatedLargeSchema, largeTypeCounts)
+    registerInterfaceSchema("generateLargeSchema", generatedLargeSchema, largeTypeCounts, largeUnreturnedShared)
 } else {
     registerLargeSchema("generateLargeSchema", generatedLargeSchema, largeTypeCounts)
 }

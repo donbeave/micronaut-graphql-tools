@@ -166,6 +166,7 @@ snippet::example.tck.FieldDecoratorScenario[project-base="test-suite", source="t
 * Decorators wrap outermost. The composition of a field, outermost first, is: the decorators (lowest `@Order` or `Ordered` first), the async boundary, the executor hop of `@ExecuteOn`, the publisher adapter, the method or property fetcher. A decorator therefore sees the whole field, including the hop, and a wrapper it returns runs on the thread that resolves the parent.
 * Directive wirings (`SchemaDirective`) are applied when graphql-java builds the schema, after the decorators, so they wrap the decorated fetcher.
 * A decorator is a bean found at compile time, so it works in a native image. A decorator that returns `null` fails the startup.
+* The cost on the request path is measured (Temurin 25, graphql-java default leg, idle machine, JMH error quoted in `benchmarks/README.md`): on a query of 1,050 fields, a decorator that selects no field is not measurable (217.7 +- 0.3 us against 217.4 +- 0.6 us with no decorator), and one that wraps every field with a delegating wrapper adds about 3.5 us (220.8 +- 0.9 us, +1.6 percent), about 3 ns per field, with the same allocation.
 
 == Kotlin suspend resolvers
 
