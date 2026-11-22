@@ -553,4 +553,74 @@ public class Book {
         result.warnings.any { it.contains('@GraphQLModels on example.EmptyModels lists no class and no package') }
         result.warnings.any { it.startsWith('[class-not-introspected] Query.book: ') }
     }
+
+    static final String FIELDS = HEADER + '''
+public class Fields {
+    public String a;
+    public String b;
+    public String c;
+}'''
+
+    private static Set<String> propertyNames(VisitorCompilation.Result result, String type) {
+        def loader = new URLClassLoader([result.classOutput.toURI().toURL()] as URL[], GraphQLToolsVisitorSpec.classLoader)
+        try {
+            def introspection = io.micronaut.core.beans.BeanIntrospector.forClassLoader(loader)
+                    .findIntrospection(loader.loadClass(type))
+            return introspection.get().beanProperties.collect { it.name } as Set<String>
+        } finally {
+            loader.close()
+        }
+    }
+
+    def "a declared @Introspected keeps its accessKind, includes and excludes next to @GraphQLModels"() {
+        when:
+        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+                .source('example.Fields', FIELDS)
+                .source('example.Models', HEADER + '''
+@GraphQLModels(classes = Fields.class)
+@io.micronaut.core.annotation.Introspected(accessKind = io.micronaut.core.annotation.Introspected.AccessKind.FIELD,
+        includes = {"a", "b"}, excludes = {"b"})
+public class Models { }''').compile()
+
+        then:
+        result.success
+        propertyNames(result, 'example.Fields') == ['a'] as Set
+    }
+
+    def "a class that @GraphQLModels lists is introspected with the default access without a declared @Introspected"() {
+        when:
+        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+                .source('example.Fields', FIELDS)
+                .source('example.Models', HEADER + '@GraphQLModels(classes = Fields.class) public class Models { }').compile()
+
+        then:
+        result.success
+        propertyNames(result, 'example.Fields').empty
+    }
+
+    def "classes of @GraphQLModels and packages of a declared @Introspected are merged with a warning"() {
+        when:
+        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+                .source('example.Fields', FIELDS)
+                .source('example.Models', HEADER + '''
+@GraphQLModels(classes = Fields.class)
+@io.micronaut.core.annotation.Introspected(packages = "example", includedAnnotations = Deprecated.class)
+public class Models { }''').compile()
+
+        then:
+        result.warnings.any { it.contains('@GraphQLModels on example.Models lists classes') && it.contains('declared @Introspected') }
+    }
+
+    def "classes of @GraphQLModels and classes of a declared @Introspected are merged without a warning"() {
+        when:
+        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+                .source('example.Fields', FIELDS)
+                .source('example.Models', HEADER + '''
+@GraphQLModels(classes = Fields.class)
+@io.micronaut.core.annotation.Introspected(classes = String.class)
+public class Models { }''').compile()
+
+        then:
+        result.warnings.every { !it.contains('@GraphQLModels on example.Models') }
+    }
 }
