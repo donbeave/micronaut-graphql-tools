@@ -57,7 +57,7 @@ repositories {
 }
 
 dependencies {
-    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M3")
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M4")
 }
 ```
 
@@ -77,7 +77,7 @@ Maven (the repository goes in the POM, the credentials in `~/.m2/settings.xml`, 
     <dependency>
         <groupId>io.micronaut.graphql.tools</groupId>
         <artifactId>micronaut-graphql-tools</artifactId>
-        <version>1.0.0-M3</version>
+        <version>1.0.0-M4</version>
     </dependency>
 </dependencies>
 ```
