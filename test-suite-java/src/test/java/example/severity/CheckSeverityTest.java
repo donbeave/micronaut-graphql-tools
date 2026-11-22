@@ -56,7 +56,7 @@ class CheckSeverityTest {
     void anUnreachableTypeFailsTheStartupByDefault() {
         SchemaBindingException e = assertFails(Map.of(), "unreachable-type");
         // the failure is about a type, not one field: no coordinate, and it is no aggregate
-        assertEquals(BindingCode.UNREACHABLE_TYPE, e.code());
+        assertEquals(BindingCode.UNREACHABLE_TYPE, e.getCode());
         assertNull(e.getCoordinate());
         assertTrue(e.getFailures().isEmpty());
         assertTrue(e.getCodes().isEmpty());

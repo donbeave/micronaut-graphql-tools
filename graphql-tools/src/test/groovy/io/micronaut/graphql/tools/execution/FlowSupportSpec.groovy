@@ -55,7 +55,7 @@ class FlowSupportSpec extends Specification {
 
         then:
         SchemaBindingException e = thrown()
-        e.code() == BindingCode.FLOW_WITHOUT_REACTIVE_COROUTINES
+        e.getCode() == BindingCode.FLOW_WITHOUT_REACTIVE_COROUTINES
         e.message.startsWith('[flow-without-reactive-coroutines]')
         e.message.contains('Subscription.ticks')
         e.message.contains('org.jetbrains.kotlinx:kotlinx-coroutines-reactive')

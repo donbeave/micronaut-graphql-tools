@@ -91,7 +91,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.STRICT_FINDINGS
+        failure.getCode() == BindingCode.STRICT_FINDINGS
         failure.codes.toSet() == [BindingCode.UNBOUND_RESOLVER_METHOD, BindingCode.UNBOUND_ENUM_CONSTANT,
                                   BindingCode.UNUSED_DICTIONARY_ENTRY] as Set
     }
@@ -113,7 +113,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then: 'only that check fails; the others are warnings'
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.STRICT_FINDINGS
+        failure.getCode() == BindingCode.STRICT_FINDINGS
         failure.codes == [BindingCode.UNBOUND_ENUM_CONSTANT]
         appender.list.findAll { it.level == Level.WARN }.size() == 2
     }
@@ -126,7 +126,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then: 'the other check still fails'
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.STRICT_FINDINGS
+        failure.getCode() == BindingCode.STRICT_FINDINGS
         failure.codes.toSet() == [BindingCode.UNBOUND_RESOLVER_METHOD] as Set
     }
 
@@ -137,7 +137,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         if (severity == 'fail') {
-            assert failure.code() == BindingCode.STRICT_FINDINGS
+            assert failure.getCode() == BindingCode.STRICT_FINDINGS
             assert failure.codes.contains(BindingCode.fromCode(code))
         } else {
             assert failure == null
@@ -175,7 +175,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.INVALID_CHECK_SETTING
+        failure.getCode() == BindingCode.INVALID_CHECK_SETTING
         failure.problems.size() == 3
         failure.message.startsWith('[invalid-check-setting] The checks setting is invalid:')
         failure.message.contains('micronaut.graphql.tools.checks.unbound-method: not a code of the registry')
@@ -189,7 +189,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.REMOVED_CONFIGURATION_KEY
+        failure.getCode() == BindingCode.REMOVED_CONFIGURATION_KEY
         failure.message.startsWith('[removed-configuration-key] ')
         failure.message.contains("${PREFIX}${key} was removed; use ${PREFIX}${replacement}")
 
@@ -209,7 +209,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.REMOVED_CONFIGURATION_KEY
+        failure.getCode() == BindingCode.REMOVED_CONFIGURATION_KEY
         failure.message.contains("${PREFIX}input.detect-omission was removed; declare ArgumentValue")
     }
 
@@ -227,7 +227,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then: 'the other findings still fail, this one is neither reported nor listed'
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.STRICT_FINDINGS
+        failure.getCode() == BindingCode.STRICT_FINDINGS
         failure.codes.count(BindingCode.UNBOUND_RESOLVER_METHOD) == 1
         failure.problems.every { !it.contains('#helper(') }
         failure.problems.any { it.contains('#legacyName(') }
@@ -257,7 +257,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.INVALID_ALLOW_FINDINGS
+        failure.getCode() == BindingCode.INVALID_ALLOW_FINDINGS
         failure.problems == ['micronaut.graphql.tools.allow.findings: "!unbound-resolver-method example.Gone#method()" matches no finding.']
     }
 
@@ -268,7 +268,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.INVALID_ALLOW_FINDINGS
+        failure.getCode() == BindingCode.INVALID_ALLOW_FINDINGS
         failure.problems[0].contains('has no effect, micronaut.graphql.tools.checks.unbound-enum-constant is ignore')
         failure.message.startsWith('[invalid-allow-findings] ')
     }
@@ -279,7 +279,7 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         failure instanceof SchemaBindingException
-        failure.code() == BindingCode.INVALID_ALLOW_FINDINGS
+        failure.getCode() == BindingCode.INVALID_ALLOW_FINDINGS
         failure.message.contains("\"${entry}\" is not a line of the binding manifest that a check writes")
 
         where:

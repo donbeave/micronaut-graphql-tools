@@ -60,7 +60,7 @@ class CheckSeveritySpec extends Specification {
         failure([:]) instanceof SchemaBindingException
         failure([:]).message.startsWith('[unreachable-type]')
         // the failure is about a type, not one field: no coordinate, and it is no aggregate
-        failure([:]).code() == BindingCode.UNREACHABLE_TYPE
+        failure([:]).getCode() == BindingCode.UNREACHABLE_TYPE
         failure([:]).coordinate == null
         failure([:]).failures.empty
         failure([:]).codes.empty

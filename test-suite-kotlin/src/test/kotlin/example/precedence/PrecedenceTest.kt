@@ -18,6 +18,7 @@ package example.precedence
 import graphql.GraphQL
 import graphql.schema.GraphQLSchema
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.exceptions.ConfigurationException
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -61,12 +62,24 @@ class PrecedenceTest {
     fun `an ambiguous field fails the startup by default and strict false does not change it`() {
         val e = assertFails(mapOf(), PRECEDENCE_AMBIGUOUS, "precedence-ambiguity")
         // a failure about one field names its schema coordinate and is no aggregate
-        assertEquals(BindingCode.PRECEDENCE_AMBIGUITY, e.code())
+        assertEquals(BindingCode.PRECEDENCE_AMBIGUITY, e.getCode())
         assertEquals("Gadget.label", e.coordinate)
         assertEquals("Gadget.label", e.mappingContext.coordinate)
         assertTrue(e.failures.isEmpty())
         assertTrue(e.codes.isEmpty())
         assertFails(mapOf("micronaut.graphql.tools.strict" to false), PRECEDENCE_AMBIGUOUS, "precedence-ambiguity")
+    }
+
+    @Test
+    fun `a broken binding fails the startup with a ConfigurationException in the cause chain`() {
+        var e: Throwable = assertThrows(Exception::class.java) { run(mapOf(), PRECEDENCE_AMBIGUOUS, "{ __typename }") }
+        while (e !is ConfigurationException && e.cause != null && e.cause !== e) {
+            e = e.cause!!
+        }
+        assertTrue(e is ConfigurationException, e.toString())
+        assertTrue(e is SchemaBindingException)
+        assertEquals(BindingCode.PRECEDENCE_AMBIGUITY, (e as SchemaBindingException).getCode())
+        assertTrue(e.message!!.startsWith("[precedence-ambiguity]"), e.message)
     }
 
     @Test

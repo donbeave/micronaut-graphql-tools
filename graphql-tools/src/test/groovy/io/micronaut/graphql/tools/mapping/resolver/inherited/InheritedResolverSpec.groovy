@@ -179,7 +179,7 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.book (line 7, column 3)
   Methods:\u0020
@@ -198,7 +198,7 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Book.summary (line 13, column 3)
   Methods:\u0020
@@ -294,7 +294,7 @@ type Writer {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.AMBIGUOUS_TYPE_RESOLVER
+        e.cause.getCode() == BindingCode.AMBIGUOUS_TYPE_RESOLVER
         e.cause.message == "[ambiguous-type-resolver] The bean ${UnassignableResolvers.name} is a @GraphQLTypeResolver for several classes " +
                 "through ${NovelContract.name} (${Novel.name}) and ${WriterContract.name} (${Writer.name}), and the " +
                 "first parameter of these methods is none of those classes, so they cannot be assigned to one: " +
@@ -376,7 +376,7 @@ type Writer {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+        e.cause.getCode() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.message == "[type-resolver-contracts-not-found] The bean ${BothResolvers.name} is a @GraphQLTypeResolver only through an inherited " +
                 "annotation, but the build did not record its contracts. Add micronaut-graphql-tools-processor to the path that " +
                 "your compiler reads Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, " +
@@ -406,7 +406,7 @@ type Writer {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+        e.cause.getCode() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.beanType == BookResolver
         e.cause.message.contains(BookResolver.name)
         e.cause.message.contains('@GraphQLTypeResolver only through an inherited annotation')
@@ -423,7 +423,7 @@ type Writer {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+        e.cause.getCode() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.beanType == MixedResolvers
         e.cause.message.contains(MixedResolvers.name)
         !e.cause.message.contains('annotate the bean class directly')

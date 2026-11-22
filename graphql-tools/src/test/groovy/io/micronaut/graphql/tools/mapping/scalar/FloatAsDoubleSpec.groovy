@@ -158,7 +158,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
+        e.cause.getCode() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.providedClass == Long
         e.cause.supportedClasses == [float, Float, double, Double] as HashSet
         e.cause.message.contains("GraphQL coordinate: Query.ratio")

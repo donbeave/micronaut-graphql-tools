@@ -153,7 +153,7 @@ scalar Long @specifiedBy(url: "https://example.com/long")
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.cause.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.cause.unwiredDirectives == ['auth', 'cached']
         e.cause.invalidInertDirectives == []
         e.cause.message == "[unwired-directive] " + UNWIRED_MESSAGE
@@ -216,7 +216,7 @@ scalar Sc @onScalar
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.cause.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.cause.unwiredDirectives == ['onDirArg', 'onExt', 'onExtField', 'onIface', 'onIfaceArg', 'onIfaceField',
                                        'onInputExt', 'onScalar', 'onSchema', 'onSchemaExt', 'onUnion', 'rep']
         e.cause.message.startsWith('[unwired-directive] The schema applies directives that have no wiring: ' +
@@ -252,7 +252,7 @@ scalar Sc @onScalar
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.cause.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.cause.unwiredDirectives == ['cached']
         e.cause.invalidInertDirectives == ['deprecated', 'missing', 'upper']
         e.cause.message == """[unwired-directive] The schema applies directives that have no wiring: @cached (Query.items(limit:)).
@@ -291,7 +291,7 @@ scalar Sc @onScalar
         then: 'only the invalid entries fail; @auth is a WARN'
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_INERT_DIRECTIVES
+        e.cause.getCode() == BindingCode.INVALID_INERT_DIRECTIVES
         e.cause.unwiredDirectives == []
         e.cause.invalidInertDirectives == ['missing', 'upper']
         appender.list.findAll { it.level == Level.WARN }*.formattedMessage == [
@@ -312,7 +312,7 @@ scalar Sc @onScalar
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_INERT_DIRECTIVES
+        e.cause.getCode() == BindingCode.INVALID_INERT_DIRECTIVES
         e.cause.unwiredDirectives == []
         e.cause.invalidInertDirectives == ['unused']
         e.cause.message.contains('@unused (listed in micronaut.graphql.tools.resolver-directives)')
@@ -356,7 +356,7 @@ scalar Sc @onScalar
         then: 'only the schema definition is unwired'
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.cause.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.cause.unwiredDirectives == ['audit']
         e.cause.message.contains('@audit (schema definition)')
         !e.cause.message.contains('typeDir')
@@ -387,7 +387,7 @@ scalar Sc @onScalar
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.cause.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.cause.invalidSchemaCustomizerDirectives == ['unused']
         e.cause.message.contains('@unused (never applied to the schema definition or to a directive argument)')
     }
@@ -402,7 +402,7 @@ scalar Sc @onScalar
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.cause.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.cause.unwiredDirectives == ['audit', 'doc']
         e.cause.message == """[unwired-directive] The schema applies directives that have no wiring: @audit (schema definition), @doc (@meta(x:)).
   Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.allow.inert-directives if it has no effect at runtime, or set micronaut.graphql.tools.checks.unwired-directive to warn or ignore.
@@ -425,7 +425,7 @@ scalar Sc @onScalar
 
         then: '@doc is still unwired: only the schema-level directive was listed'
         e instanceof SchemaBindingException
-        e.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.unwiredDirectives == ['doc']
     }
 
@@ -441,7 +441,7 @@ scalar Sc @onScalar
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_INERT_DIRECTIVES
+        e.cause.getCode() == BindingCode.INVALID_INERT_DIRECTIVES
         e.cause.unwiredDirectives == []
         e.cause.invalidInertDirectives == ['gone*']
         e.cause.invalidSchemaCustomizerDirectives == ['deprecated', 'missing']
@@ -462,7 +462,7 @@ scalar Sc @onScalar
         }
 
         then:
-        (failure?.code() == BindingCode.UNWIRED_DIRECTIVE) == fails
+        (failure?.getCode() == BindingCode.UNWIRED_DIRECTIVE) == fails
         appender.list.findAll { it.level == Level.WARN }.size() == warnings
 
         where:

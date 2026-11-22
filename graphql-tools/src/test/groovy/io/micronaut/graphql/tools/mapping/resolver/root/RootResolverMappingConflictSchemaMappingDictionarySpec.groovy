@@ -56,7 +56,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MAPPING_CONFLICT
+        e.cause.getCode() == BindingCode.MAPPING_CONFLICT
         e.cause.message == """[mapping-conflict] Unable to map GraphQL type `User` to ${User.name}, as it is already mapped to ${AnotherUser.name}.
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}
