@@ -38,7 +38,7 @@ Issue #15 (BC-19, resolver parameters bound by name): its runtime half is listed
 
 == 1.0.0-M4
 
-Not tagged yet. Entries for a change that is on `master` are listed here; the fix is on the migration page, entries for 1.0.0-M4.
+Tagged `1.0.0-M4` and published to GitHub Packages. The breaking changes are listed below with the numbers of the release notes of 1.0.0-M4. See the migration page, entries for 1.0.0-M4, for the fix of each one.
 
 * #49 (BC-35): resolvers run on the blocking executor by default, not on the Netty event loop; `micronaut.graphql.tools.execution.executor: none` keeps the old behaviour. See the migration page, entries for 1.0.0-M4.
 * #20 (BC-36): a `DataLoaderRegistry` bean fails the startup with `[data-loader-registry-bean]`; register the loaders as `BatchLoader` beans (the library creates the registry of each execution), add them in a `GraphQLContextContributor`, or provide your own `GraphQLInvocation`. See the migration page, entries for 1.0.0-M4.

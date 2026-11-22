@@ -1,4 +1,4 @@
-The `micronaut-graphql-tools-security` module integrates Micronaut Security: the `Authentication` of the request reaches the resolvers, `@Secured` guards resolver methods, and a hook sees the root fields of an operation after the document is parsed. The core library does not depend on Micronaut Security: its beans exist only when the application has it. It is available from the milestone after 1.0.0-M4.
+The `micronaut-graphql-tools-security` module integrates Micronaut Security: the `Authentication` of the request reaches the resolvers, `@Secured` guards resolver methods, and a hook sees the root fields of an operation after the document is parsed. The core library does not depend on Micronaut Security: its beans exist only when the application has it. It is available since 1.0.0-M4.
 
 == The module
 
