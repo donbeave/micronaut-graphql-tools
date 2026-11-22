@@ -37,7 +37,7 @@ final class VisitorCompileTimeBinder implements CompileTimeBinder {
 
     @Override
     Verdict bind(BindRequest request) {
-        if (!(request.compiler instanceof CheckedCaseCompiler)) {
+        if (!(request.compiler instanceof CheckedCaseCompiler) || request.corpusCase.processorAbsent()) {
             return Verdict.unavailable()
         }
         String label = "${request.corpusCase.name} [${request.language.dir}]"

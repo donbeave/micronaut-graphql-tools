@@ -43,6 +43,7 @@ import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.ApplicationContextBuilder;
+import io.micronaut.graphql.tools.internal.execution.ExecutionState;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Circle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Item;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.PlainItem;
@@ -298,7 +299,7 @@ public final class BenchmarkCases implements AutoCloseable {
                 Map.of("line", Map.of("label", "l", "point", point("a", 1, 2), "tags", List.of("x", "y")))));
         ops.put(DIRECTIVE_WRAPPED_FETCHER, fetch("Query", "guarded", null, Map.of()));
         ops.put(ASYNC_BOUNDARY_DONE, fetch("Query", "asyncDone", null, Map.of()));
-        ops.put(ASYNC_BOUNDARY_OTHER_THREAD, fetch("Query", "asyncPending", null, Map.of()));
+        ops.put(ASYNC_BOUNDARY_OTHER_THREAD, pendingFetch("Query", "asyncPending"));
         Resolvers.Query resolver = new Resolvers.Query();
         ops.put(ASYNC_PENDING_SOURCE, resolver::asyncPending);
         ops.put(UNION_RESOLUTION, resolve(schema.getType("Shape"), new Circle(), new Square()));
@@ -348,6 +349,32 @@ public final class BenchmarkCases implements AutoCloseable {
                 definition);
         DataFetchingEnvironment environment = environment(parent, definition, source, arguments);
         return () -> fetcher.get(environment);
+    }
+
+    private static final int PENDING_STAGES_PER_EXECUTION = 4_096;
+
+    // A pending stage stays registered with its execution until the execution ends, and this operation never completes it, so
+    // the operation starts a new execution after a number of calls, as the requests of a server do, instead of letting one
+    // execution collect every stage of the run
+    private Op pendingFetch(String type, String field) {
+        GraphQLObjectType parent = schema.getObjectType(type);
+        GraphQLFieldDefinition definition = parent.getFieldDefinition(field);
+        DataFetcher<?> fetcher = schema.getCodeRegistry().getDataFetcher(FieldCoordinates.coordinates(type, field), definition);
+        DataFetchingEnvironment environment = environment(parent, definition, null, Map.of());
+        return new Op() {
+            private int calls;
+
+            @Override
+            public Object run() throws Exception {
+                if (++calls == PENDING_STAGES_PER_EXECUTION) {
+                    calls = 0;
+                    ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
+                    new ExecutionState(state.propagatedContext(), state.transport(), state.httpRequest(), null,
+                            state.connectionAttributes(), state.requestExecutor(), null).storeIn(environment.getGraphQlContext());
+                }
+                return fetcher.get(environment);
+            }
+        };
     }
 
     // What a request does with the scalar: parse the variable, then write the value that a resolver returns from it
@@ -414,16 +441,27 @@ public final class BenchmarkCases implements AutoCloseable {
         return query.append(" }").toString();
     }
 
-    // the invocation runs on the calling thread (executor none), so the result future is complete when it returns; the
-    // Mono that the transport subscribes to is built and not subscribed, because its subscription is the transport's
+    // The invocation returns a Mono that does no work until it is subscribed to, so the operation subscribes and waits
+    // (the way a transport does); the query runs on the calling thread (executor none). It fails when the query did not run.
     private Op invoke(int fields) {
         GraphQLInvocationData data = new GraphQLInvocationData(fieldsQuery(fields), null, Map.of());
-        return () -> invocation.invoke(data, null, null);
+        return () -> executed(Mono.from(invocation.invoke(data, null, null)).block());
     }
 
     private Op direct(int fields) {
         String query = fieldsQuery(fields);
-        return () -> graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build());
+        return () -> executed(graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build()).join());
+    }
+
+    private static ExecutionResult executed(ExecutionResult result) {
+        if (result == null || !result.getErrors().isEmpty()) {
+            throw new IllegalStateException("The benchmarked query did not run: " + (result == null ? "no result" : result.getErrors()));
+        }
+        Map<String, Object> data = result.getData();
+        if (data == null || data.isEmpty() || !"pong".equals(data.get("f0"))) {
+            throw new IllegalStateException("The benchmarked query returned no data: " + data);
+        }
+        return result;
     }
 
     /**

@@ -65,6 +65,8 @@ class SuspendFixtures {
                     "  immediate: String!\n" +
                     "  failing: String!\n" +
                     "  cancelled: String!\n" +
+                    "  cancelledWithExecution: String!\n" +
+                    "  held: String!\n" +
                     "}\n" +
                     "extend type Mutation { renameShelf(id: ID!, title: String!): Shelf! }\n"
             )
@@ -90,10 +92,21 @@ private fun currentRequest(): String =
     PropagatedContext.getOrEmpty().find(SuspendRequestElement::class.java).map { it.value }.orElse("none")
 
 // What the coroutine of the field that is cancelled reports: the test reads it.
-object SuspendProbe {
+class CoroutineProbe {
     val started = CountDownLatch(1)
     val finished = CountDownLatch(1)
     val outcome = AtomicReference<String>()
+}
+
+object SuspendProbe {
+    val started get() = direct.started
+    val finished get() = direct.finished
+    val outcome get() = direct.outcome
+    private val direct = CoroutineProbe()
+
+    // the field that the cancelled execution stops, and one that another execution keeps waiting for
+    val execution = CoroutineProbe()
+    val other = CoroutineProbe()
 }
 
 // tag::suspend-resolvers[]
@@ -143,6 +156,29 @@ class ShelfQueries {
             SuspendProbe.finished.countDown()
         }
         return "finished"
+    }
+
+    suspend fun cancelledWithExecution(): String {
+        val probe = SuspendProbe.execution
+        probe.started.countDown()
+        try {
+            delay(60_000)
+        } catch (e: CancellationException) {
+            probe.outcome.set("cancelled")
+            throw e
+        } finally {
+            probe.finished.countDown()
+        }
+        return "finished"
+    }
+
+    suspend fun held(): String {
+        val probe = SuspendProbe.other
+        probe.started.countDown()
+        delay(1_000)
+        probe.outcome.set("completed")
+        probe.finished.countDown()
+        return "held"
     }
 }
 

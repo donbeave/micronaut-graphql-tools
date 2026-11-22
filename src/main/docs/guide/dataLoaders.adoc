@@ -52,12 +52,22 @@ snippet::example.tck.DataLoaderOptionsScenario[project-base="test-suite", source
 
 * The customizer applies to its loader and to no other. A customizer that names no loader bean fails the startup with `[data-loader-not-found]`, and the message lists the loaders that exist.
 * Several customizers of one loader run by order (`@Order` or `Ordered#getOrder()`), lowest first, and each gets the options that the previous one returned.
+* A customizer should return new options rather than change the ones it was given. Changing the argument in place can be ignored on java-dataloader 3.x (see the caching of a subscription below); the options that a customizer returns are always used.
 * It runs each time the loader is created, so once for each execution that uses the loader. Return new options (and a new cache map, if you set one) rather than shared ones.
 * The library calls no setter of `DataLoaderOptions`, because the setters differ between java-dataloader 3.x, where the options are mutable and a setter returns the same object, and 6.x, where they are immutable and are copied with `transform`. Write the body with the API of the version that your application has. The example overrides `maxBatchSize()`, which both lines have; with the setters of 3.x it is `return options.setMaxBatchSize(2);`, and with 6.x it is `return options.transform(builder -> builder.setMaxBatchSize(2));`.
 
 == Caching in a subscription
 
-A loader that a subscription operation creates has caching off. The loader of a query keeps the default, caching on. The cache of a `DataLoader` lives as long as the loader, and a subscription lives as long as its connection, so a cache would serve the value of the first event to every later one. A `DataLoaderOptionsCustomizer` can turn caching back on for a loader. The options that it gets already hold the default of the library, so on java-dataloader 6.x, which copies the field values in `transform`, set the value that you want explicitly instead of relying on the options you received.
+A loader that a subscription operation creates has caching off. The loader of a query keeps the default, caching on. The cache of a `DataLoader` lives as long as the loader, and a subscription lives as long as its connection, so a cache would serve the value of the first event to every later one. A `DataLoaderOptionsCustomizer` can turn caching back on for a loader. The options that it gets already hold the default of the library, so on java-dataloader 6.x, which copies the field values in `transform`, set the value that you want explicitly instead of relying on the options you received. Return new options that enable caching: on java-dataloader 3.x a customizer that only calls `setCachingEnabled(true)` on the options it was given is ignored in a subscription, because the options that the library passes keep caching off whatever the setter stores.
+
+== Batching in a subscription event
+
+Each event of a subscription is executed as a small operation of its own, and what graphql-java does with the loaders of that execution depends on its line:
+
+* On graphql-java 21.5 and 22.4 (the floor and default legs) the subscription execution strategy is not the one that graphql-java batches per level, so graphql-java dispatches the registry after every data fetcher returns. Three `load` calls in three fetchers of one event reach the batch function as three batches of one key.
+* On graphql-java 26.2 (the ceiling leg) the per-level dispatch also covers the events, and the same three calls reach the batch function as one batch of three keys. A query batches the loads of one level on every line.
+
+The library does not change this: the dispatch is graphql-java's, and the library only makes the loaders visible to it. To get one batch on every line, load all the keys of an event in one fetcher with `DataLoader#loadMany`, for example in the fetcher of the list field of the event payload, or resolve the data before the publisher emits the event. The loads inside one fetcher are queued before graphql-java dispatches, so `loadMany` gives one batch per event.
 
 == The context of a batch function
 

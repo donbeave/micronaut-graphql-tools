@@ -21,12 +21,17 @@ import jakarta.inject.Singleton;
 
 import java.util.Optional;
 
+/**
+ * Checks credentials and finds users. It holds no state about who is logged in: the user of a request comes from the
+ * request, see {@link example.graphql.CurrentUserContributor}, because a singleton shared by all requests cannot hold a
+ * per-request value.
+ */
 @Singleton
 public class AuthenticationService {
 
-    private final UserRepository userRepository;
+    public static final String CURRENT_USER = "example.currentUser";
 
-    private User currentUser;
+    private final UserRepository userRepository;
 
     public AuthenticationService(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -42,23 +47,13 @@ public class AuthenticationService {
             throw new IncorrectCredentialsException();
         }
 
-        currentUser = user;
-
-        return currentUser;
+        return user;
     }
 
-    public void logout() {
-        this.currentUser = null;
-    }
+    public Optional<User> find(@NonNull String username) {
+        ArgumentUtils.requireNonNull("username", username);
 
-    public void setCurrentUser(@NonNull User user) {
-        ArgumentUtils.requireNonNull("user", user);
-
-        this.currentUser = user;
-    }
-
-    public Optional<User> getCurrentUser() {
-        return Optional.ofNullable(currentUser);
+        return userRepository.findByUsername(username);
     }
 
     public static class UserNotFoundException extends RuntimeException {

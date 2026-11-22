@@ -1,0 +1,20 @@
+# No field returns the interface Tagged: only its implementations are returned. Extends the Query of the example schema.
+interface Tagged {
+  tag: String!
+}
+
+type Badge implements Tagged {
+  id: ID!
+  tag: String!
+}
+
+type Ribbon implements Tagged {
+  id: ID!
+  tag: String!
+}
+
+extend type Query {
+  badge: Badge!
+
+  ribbon: Ribbon!
+}
