@@ -13,7 +13,7 @@ The library replaces the transport's `GraphQLInvocation`. For each operation it 
 
 There is one thread change per operation. A field hops only when you annotate it with `@ExecuteOn` (see <<executeOn,@ExecuteOn per field>>): the library adds no task, no future and no thread-local read per field, and a trivial field costs the same as before.
 
-The `PropagatedContext` of the receiving thread (the request, and what your filters add, such as security and tracing elements) is captured once and installed in the task when the executing thread does not hold it already, so `ServerRequestContext.currentRequest()`, `@RequestScope` beans and the security service work in your resolvers.
+The `PropagatedContext` of the receiving thread (the request, and what your filters add, such as security and tracing elements) is captured once, when the library's `invoke` is called (not when the publisher is subscribed, so a subscriber on another thread does not lose it), and installed in the task when the executing thread does not hold it already, so `ServerRequestContext.currentRequest()`, `@RequestScope` beans and the security service work in your resolvers.
 
 == The executor key
 
