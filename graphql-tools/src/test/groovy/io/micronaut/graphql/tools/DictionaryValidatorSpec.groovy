@@ -52,7 +52,7 @@ class DictionaryValidatorSpec extends Specification {
         try {
             new DictionaryValidator(registry, dictionary).validate()
         } catch (SchemaBindingException e) {
-            assert e.code() == BindingCode.AMBIGUOUS_TYPE_MAPPING
+            assert e.getCode() == BindingCode.AMBIGUOUS_TYPE_MAPPING
             thrown = e
         }
         Map<String, Object> expected = everyPair(entries)

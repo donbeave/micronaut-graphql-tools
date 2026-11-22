@@ -54,7 +54,7 @@ type User {
         then:
         def e = thrown(BeanContextException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INCORRECT_ANNOTATION
+        e.cause.getCode() == BindingCode.INCORRECT_ANNOTATION
         e.cause.message == "[incorrect-annotation] Empty value member for @GraphQLTypeResolver annotation in ${UserResolver.class.name} class."
     }
 

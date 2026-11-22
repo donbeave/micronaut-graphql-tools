@@ -45,7 +45,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.ROOT_RESOLVER_NOT_FOUND
+        e.cause.getCode() == BindingCode.ROOT_RESOLVER_NOT_FOUND
         e.cause.message == "[root-resolver-not-found] No any root resolvers found. Create one or ensure the class is annotated with ${GraphQLRootResolver.name}."
     }
 

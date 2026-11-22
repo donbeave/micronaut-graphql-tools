@@ -50,7 +50,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: Query.hello (line 7, column 3)
   Methods: 

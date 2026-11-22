@@ -119,7 +119,7 @@ type OrdN3 implements OrdNode {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.BINDING_FAILURES
+        e.cause.getCode() == BindingCode.BINDING_FAILURES
 
         SchemaBindingException failures = e.cause
         failures.failures*.coordinate == EXPECTED_COORDINATES

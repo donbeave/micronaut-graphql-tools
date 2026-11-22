@@ -47,7 +47,7 @@ class ExecuteOnFailureSpec extends Specification {
         SchemaBindingException e = (SchemaBindingException) failure(ExecuteOnFixtures.UNKNOWN)
 
         then:
-        e.code() == BindingCode.UNKNOWN_EXECUTOR
+        e.getCode() == BindingCode.UNKNOWN_EXECUTOR
         e.message.startsWith('[unknown-executor] ')
         e.message.contains('@ExecuteOn("no-such-executor")')
         e.message.contains('Query.slowLookup')
@@ -60,7 +60,7 @@ class ExecuteOnFailureSpec extends Specification {
         SchemaBindingException e = (SchemaBindingException) failure(ExecuteOnFixtures.PROPERTY)
 
         then:
-        e.code() == BindingCode.EXECUTE_ON_PROPERTY
+        e.getCode() == BindingCode.EXECUTE_ON_PROPERTY
         e.message.startsWith('[execute-on-property] ')
         e.message.contains('@GraphQLField method') && e.message.contains('type resolver')
     }

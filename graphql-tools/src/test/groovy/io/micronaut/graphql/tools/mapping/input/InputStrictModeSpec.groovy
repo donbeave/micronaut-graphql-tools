@@ -143,7 +143,7 @@ input PointInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNMAPPED_INPUT_PROPERTY
+        e.cause.getCode() == BindingCode.UNMAPPED_INPUT_PROPERTY
         e.cause.unmappedProperties.keySet() == ['BasketInput', 'ItemInput'] as Set
     }
 
@@ -187,7 +187,7 @@ input PointInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.NULLABLE_PRIMITIVE
+        e.cause.getCode() == BindingCode.NULLABLE_PRIMITIVE
         e.cause.message == """[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. The check nullable-primitive rejects this for built-in scalars too; with micronaut.graphql.tools.checks.nullable-primitive set to warn or ignore a null reaches the primitive as its default value or fails the request.
   GraphQL coordinate: Query.repeat(times:) (line 7, column 25)
   GraphQL argument: times
@@ -207,7 +207,7 @@ input PointInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.NULLABLE_PRIMITIVE
+        e.cause.getCode() == BindingCode.NULLABLE_PRIMITIVE
         e.cause.mappingContext.graphQlInputObjectType == 'LineInput'
         e.cause.message.startsWith("[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable")
     }

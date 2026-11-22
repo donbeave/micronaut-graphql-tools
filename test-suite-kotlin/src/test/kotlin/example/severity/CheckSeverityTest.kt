@@ -65,7 +65,7 @@ class CheckSeverityTest {
     fun `an unreachable type fails the startup by default`() {
         val e = assertFails(mapOf(), "unreachable-type")
         // the failure is about a type, not one field: no coordinate, and it is no aggregate
-        assertEquals(BindingCode.UNREACHABLE_TYPE, e.code())
+        assertEquals(BindingCode.UNREACHABLE_TYPE, e.getCode())
         assertNull(e.coordinate)
         assertTrue(e.failures.isEmpty())
         assertTrue(e.codes.isEmpty())

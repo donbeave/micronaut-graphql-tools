@@ -107,10 +107,10 @@ final class CorpusStartup {
         if (failure instanceof BindingFailuresException) {
             return failure.failures.collectMany { flatten(it) }
         } else if (failure instanceof AmbiguousTypeClassException) {
-            return [[failure.code().code(), failure.typeName, '-']]
+            return [[failure.getCode().code(), failure.typeName, '-']]
         } else if (failure instanceof AbstractMappingException) {
             SourceLocation at = failure.mappingContext.sourceLocation
-            return [[failure.code().code(), failure.mappingContext.coordinate, location(at)]]
+            return [[failure.getCode().code(), failure.mappingContext.coordinate, location(at)]]
         } else if (failure instanceof StrictModeException) {
             List<List<String>> problems = []
             failure.problems.eachWithIndex { String problem, int index -> problems.add(classify(failure.codes[index], problem)) }
@@ -137,10 +137,10 @@ final class CorpusStartup {
         } else if (failure instanceof InvalidSchemaCoordinateException) {
             return failure.problems.collect { String problem ->
                 Matcher matcher = (problem =~ SCHEMA_COORDINATE)
-                [failure.code().code(), matcher.find() ? matcher.group(1) : '-', '-']
+                [failure.getCode().code(), matcher.find() ? matcher.group(1) : '-', '-']
             }
         }
-        String code = ((SchemaBindingException) failure).code().code()
+        String code = ((SchemaBindingException) failure).getCode().code()
         // the exceptions that list their findings as lines: the first token of a line is the coordinate or the class
         List<String> lines = listOf(failure, 'getProblems') ?: listOf(failure, 'getAmbiguities')
         if (lines != null) {

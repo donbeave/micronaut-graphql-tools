@@ -56,7 +56,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_SOURCE_PARAMETER
+        e.cause.getCode() == BindingCode.INVALID_SOURCE_PARAMETER
         e.cause.message == """[invalid-source-parameter] The source argument must be instance of ${User.name} class, provided: ${String.name}.
   GraphQL coordinate: User.username (line 11, column 3)
   Mapped class: ${UserResolver.name}

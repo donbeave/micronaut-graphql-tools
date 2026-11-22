@@ -324,7 +324,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.DATA_LOADER_REGISTRY_BEAN
+        cause.getCode() == BindingCode.DATA_LOADER_REGISTRY_BEAN
         cause.message.startsWith('[data-loader-registry-bean] ')
         cause.message.contains('RegistryFactory')
         cause.message.contains('shared across operations on one WebSocket connection')
@@ -340,7 +340,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.DUPLICATE_DATA_LOADER
+        cause.getCode() == BindingCode.DUPLICATE_DATA_LOADER
         cause.message.contains("'shared'")
         cause.message.contains('@Named')
     }
@@ -352,7 +352,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.DATA_LOADER_NOT_FOUND
+        cause.getCode() == BindingCode.DATA_LOADER_NOT_FOUND
         cause.message.contains("parameter 'loader' of")
         cause.message.contains('Unmatched#hello')
         cause.message.contains('DataLoader<java.lang.Integer, java.lang.Integer>')
@@ -373,7 +373,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.DATA_LOADER_NOT_FOUND
+        cause.getCode() == BindingCode.DATA_LOADER_NOT_FOUND
         cause.message.contains('WildcardMismatch#hello')
         cause.message.contains('DataLoader<java.lang.Long, java.util.List<')
     }
@@ -385,7 +385,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.DATA_LOADER_NOT_FOUND
+        cause.getCode() == BindingCode.DATA_LOADER_NOT_FOUND
         cause.message.contains('2 batch loader beans')
         cause.message.contains('@Named')
 
@@ -404,7 +404,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.ARGUMENT_MISMATCH
+        cause.getCode() == BindingCode.ARGUMENT_MISMATCH
         cause.message.contains('without its key and value types')
     }
 
@@ -415,7 +415,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
+        cause.getCode() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
         cause.message.contains('a DataLoader')
         cause.message.contains('Query.hello')
     }
@@ -427,7 +427,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
+        cause.getCode() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
         cause.message.contains('a DataLoader')
         cause.message.contains('PrimaryInvocation')
     }

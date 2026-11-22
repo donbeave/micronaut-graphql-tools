@@ -56,7 +56,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message == """[multiple-methods-found] Found multiple methods for one GraphQL field.
   GraphQL coordinate: User.username (line 11, column 3)
   Methods: 

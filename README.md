@@ -323,7 +323,7 @@ type resolver method (of a `@GraphQLTypeResolver` for that type, or for the Java
 declares the field). One rule covers object and interface fields. When both exist for one field,
 `micronaut.graphql.tools.precedence` decides:
 
-- `fail` (default): the startup fails with `[precedence-ambiguity]` (match on `SchemaBindingException#code()`), naming the field
+- `fail` (default): the startup fails with `[precedence-ambiguity]` (match on `SchemaBindingException#getCode()`), naming the field
   and both members. `strict` does not relax it. The value `strict`, the former name of this default, is rejected with
   `[removed-configuration-key]` (BC-29).
 - `property-first`: the member of the Java type binds, and the type resolver method is never called. This was the
@@ -484,7 +484,7 @@ The method `missing` not found in any root resolvers: [example.BookQuery].
 ### Error codes
 
 Every startup exception extends `SchemaBindingException`, and every message starts with a code in square brackets
-(`[field-not-bound] The method ...`). `SchemaBindingException#code()` returns the same code as a `BindingCode`, the one
+(`[field-not-bound] The method ...`). `SchemaBindingException#getCode()` returns the same code as a `BindingCode`, the one
 public type of the `graphql-tools-binding` module. A code is a lower-case kebab-case word and does not change after a
 release. The word after `!` in a [binding manifest](#binding-manifest) line, the name of a strict check and the code of
 the compile-time diagnostic are the same code. The ten strict checks have these codes: `unbound-resolver-method`,

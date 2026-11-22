@@ -58,7 +58,7 @@ input ConversionInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
+        e.cause.getCode() == BindingCode.CLASS_NOT_INTROSPECTED
         e.cause.message == """[class-not-introspected] The class ${ConversionInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}. A class that cannot carry it, such as a generated or external one, is listed (or its package) in @GraphQLModels.
   GraphQL coordinate: ConversionInput (line 14, column 1)
   Mapped class: ${ConversionInput.name}

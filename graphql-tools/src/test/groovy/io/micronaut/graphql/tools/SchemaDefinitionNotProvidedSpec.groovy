@@ -39,7 +39,7 @@ type Hello {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.SCHEMA_DEFINITION_NOT_PROVIDED
+        e.cause.getCode() == BindingCode.SCHEMA_DEFINITION_NOT_PROVIDED
         e.cause.message == """[schema-definition-not-provided] Schema definition is not set, and the schema has no object type named Query. Define one, or make sure your GraphQL schema contains such definition:
   schema {
     query: Query
