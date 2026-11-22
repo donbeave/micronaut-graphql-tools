@@ -64,7 +64,7 @@ final class MicrometerObserver implements RequestObserver {
                 GraphQLMetrics.OUTCOME_TAG, failed ? GraphQLMetrics.ERROR : GraphQLMetrics.SUCCESS));
         DataLoaderBatchStatistics batches = DataLoaderBatchStatistics.of(context);
         if (batches != null) {
-            for (Map.Entry<String, DataLoaderBatchStatistics.Counts> entry : batches.counts().entrySet()) {
+            for (Map.Entry<String, DataLoaderBatchStatistics.Counts> entry : batches.getCounts().entrySet()) {
                 count(GraphQLMetrics.DATA_LOADER_BATCHES, entry.getKey(), entry.getValue().batches());
                 count(GraphQLMetrics.DATA_LOADER_BATCH_KEYS, entry.getKey(), entry.getValue().keys());
             }

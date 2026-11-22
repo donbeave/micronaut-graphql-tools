@@ -24,35 +24,20 @@ import java.util.Objects;
 /**
  * What a {@link GraphQLConnectionInterceptor} sees of a connection: the payload of its {@code connection_init} message and
  * the HTTP request that upgraded the connection (its headers, cookies and query parameters).
+ *
+ * @param payload     the payload of the {@code connection_init} message, where browser clients put their token; never null,
+ *                    empty when the client sent none
+ * @param httpRequest the HTTP request that upgraded the connection; never null
  */
-public final class GraphQLConnectionRequest {
-
-    private final Map<String, Object> payload;
-    private final HttpRequest<?> httpRequest;
+public record GraphQLConnectionRequest(@NonNull Map<String, Object> payload, @NonNull HttpRequest<?> httpRequest) {
 
     /**
      * @param payload     the {@code payload} of the {@code connection_init} message, empty when the client sent none
      * @param httpRequest the upgrade request
      */
-    public GraphQLConnectionRequest(@NonNull Map<String, Object> payload, @NonNull HttpRequest<?> httpRequest) {
-        this.payload = Objects.requireNonNull(payload, "payload");
-        this.httpRequest = Objects.requireNonNull(httpRequest, "httpRequest");
-    }
-
-    /**
-     * @return the payload of the {@code connection_init} message, where browser clients put their token; never null
-     */
-    @NonNull
-    public Map<String, Object> payload() {
-        return payload;
-    }
-
-    /**
-     * @return the HTTP request that upgraded the connection
-     */
-    @NonNull
-    public HttpRequest<?> httpRequest() {
-        return httpRequest;
+    public GraphQLConnectionRequest {
+        Objects.requireNonNull(payload, "payload");
+        Objects.requireNonNull(httpRequest, "httpRequest");
     }
 
 }

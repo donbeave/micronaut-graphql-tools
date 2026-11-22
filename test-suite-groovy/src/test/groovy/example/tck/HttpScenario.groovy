@@ -39,7 +39,7 @@ class HttpTenantContributor implements GraphQLContextContributor {
 
     @Override
     void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
-        request.httpRequest()?.headers?.get('X-Tenant', String)?.ifPresent { String tenant -> context.put('tck.tenant', tenant) }
+        request.httpRequest?.headers?.get('X-Tenant', String)?.ifPresent { String tenant -> context.put('tck.tenant', tenant) }
     }
 }
 

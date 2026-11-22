@@ -68,7 +68,7 @@ final class ContextualBatchLoaders {
         if (environment.getContext() != null) {
             return environment;
         }
-        ExecutionInput input = state.executionInput();
+        ExecutionInput input = state.getExecutionInput();
         if (input == null) {
             return environment;
         }
@@ -76,7 +76,7 @@ final class ContextualBatchLoaders {
     }
 
     private static BatchLoaderEnvironment withContext(BatchLoaderEnvironment environment, ExecutionState state) {
-        if (environment.getContext() != null || state.executionInput() == null) {
+        if (environment.getContext() != null || state.getExecutionInput() == null) {
             return environment;
         }
         Map<Object, Object> keyContexts = environment.getKeyContexts();

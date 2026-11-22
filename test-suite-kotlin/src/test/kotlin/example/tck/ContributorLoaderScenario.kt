@@ -36,7 +36,7 @@ import java.util.concurrent.CompletionStage
 class LoaderRegisteringContributor : GraphQLContextContributor {
 
     override fun contribute(context: GraphQLContext, request: GraphQLExecutionRequest) {
-        request.executionInput().dataLoaderRegistry.register("contributed", DataLoaderFactory.newDataLoader(ContributedBatch()))
+        request.executionInput.dataLoaderRegistry.register("contributed", DataLoaderFactory.newDataLoader(ContributedBatch()))
     }
 }
 

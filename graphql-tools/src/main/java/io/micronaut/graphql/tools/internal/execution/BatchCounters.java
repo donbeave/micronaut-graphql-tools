@@ -36,7 +36,7 @@ final class BatchCounters implements DataLoaderBatchStatistics {
     }
 
     @Override
-    public Map<String, Counts> counts() {
+    public Map<String, Counts> getCounts() {
         Map<String, Counts> result = new HashMap<>();
         counters.forEach((name, counter) -> {
             long batches = counter.batches.get();

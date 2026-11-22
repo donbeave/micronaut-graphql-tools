@@ -44,7 +44,7 @@ public final class ContributorLoaderScenario {
 
         @Override
         public void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
-            request.executionInput().getDataLoaderRegistry().register("contributed",
+            request.getExecutionInput().getDataLoaderRegistry().register("contributed",
                     DataLoaderFactory.<String, String>newDataLoader(keys -> CompletableFuture.completedFuture(
                             keys.stream().map(key -> "contributed:" + key + ":" + keys.size()).toList())));
         }

@@ -47,8 +47,8 @@ public final class HttpScenario {
 
         @Override
         public void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
-            if (request.httpRequest() != null) {
-                request.httpRequest().getHeaders().get("X-Tenant", String.class).ifPresent(tenant -> context.put(TENANT, tenant));
+            if (request.getHttpRequest() != null) {
+                request.getHttpRequest().getHeaders().get("X-Tenant", String.class).ifPresent(tenant -> context.put(TENANT, tenant));
             }
         }
     }

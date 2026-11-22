@@ -208,7 +208,7 @@ type Author {
         cause.getCode() == BindingCode.DATA_LOADER_NOT_FOUND
         cause.message.contains("'missingLoader'")
         cause.message.contains('chunkedLoader')
-        cause.message.contains('loaderName()')
+        cause.message.contains('getLoaderName()')
     }
 
     private static SchemaBindingException causeOf(Throwable e) {
@@ -308,7 +308,7 @@ type Author {
     @Singleton
     static class ReturnedCustomizer implements DataLoaderOptionsCustomizer {
         @Override
-        String loaderName() {
+        String getLoaderName() {
             'returnedLoader'
         }
 
@@ -327,7 +327,7 @@ type Author {
     @Singleton
     static class MutatingCustomizer implements DataLoaderOptionsCustomizer {
         @Override
-        String loaderName() {
+        String getLoaderName() {
             'mutatedLoader'
         }
 
@@ -344,7 +344,7 @@ type Author {
     @Singleton
     static class FirstCustomizer implements DataLoaderOptionsCustomizer {
         @Override
-        String loaderName() {
+        String getLoaderName() {
             'chunkedLoader'
         }
 
@@ -363,7 +363,7 @@ type Author {
     @Singleton
     static class SecondCustomizer implements DataLoaderOptionsCustomizer {
         @Override
-        String loaderName() {
+        String getLoaderName() {
             'chunkedLoader'
         }
 
@@ -383,7 +383,7 @@ type Author {
     @Singleton
     static class MissingCustomizer implements DataLoaderOptionsCustomizer {
         @Override
-        String loaderName() {
+        String getLoaderName() {
             'missingLoader'
         }
 

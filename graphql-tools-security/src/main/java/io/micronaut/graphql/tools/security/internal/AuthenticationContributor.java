@@ -38,7 +38,7 @@ final class AuthenticationContributor implements GraphQLContextContributor {
 
     @Override
     public void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
-        HttpRequest<?> http = request.httpRequest();
+        HttpRequest<?> http = request.getHttpRequest();
         if (http == null) {
             return;
         }

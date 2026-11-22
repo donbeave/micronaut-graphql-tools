@@ -21,7 +21,7 @@ class GraphQLConnectionResultSpec extends Specification {
 
     def "a reason at the close frame limit is accepted"() {
         expect:
-        GraphQLConnectionResult.reject(4401, "a" * 123).reason().length() == 123
+        GraphQLConnectionResult.reject(4401, "a" * 123).reason.length() == 123
     }
 
     def "a reason over the close frame limit in UTF-8 bytes is rejected"() {

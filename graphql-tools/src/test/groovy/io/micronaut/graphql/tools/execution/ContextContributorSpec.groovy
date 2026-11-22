@@ -107,11 +107,11 @@ type Query {
 
         then:
         def request = SEEN.find { it instanceof GraphQLExecutionRequest } as GraphQLExecutionRequest
-        request.transport() == GraphQLTransport.HTTP
-        request.httpRequest() == null
-        !request.httpResponse().isPresent()
-        request.connectionAttributes().isEmpty()
-        request.executionInput().query.contains('value')
+        request.transport == GraphQLTransport.HTTP
+        request.httpRequest == null
+        !request.httpResponse.isPresent()
+        request.connectionAttributes.isEmpty()
+        request.executionInput.query.contains('value')
     }
 
     void "a GraphQLError thrown by a contributor is the only error and no resolver runs"() {

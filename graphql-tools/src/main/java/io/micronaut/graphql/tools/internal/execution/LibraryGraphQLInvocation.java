@@ -459,7 +459,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         void startCustomized(ContextView context) {
             try {
                 ExecutionInput input = baseInput();
-                Disposable subscription = Mono.from(customizer.customize(input, state.httpRequest(), (MutableHttpResponse<String>) state.response()))
+                Disposable subscription = Mono.from(customizer.customize(input, state.getHttpRequest(), (MutableHttpResponse<String>) state.response()))
                         .switchIfEmpty(Mono.error(() -> new IllegalStateException("The GraphQLExecutionInputCustomizer "
                                 + customizer.getClass().getName() + " published no ExecutionInput")))
                         .contextWrite(context)

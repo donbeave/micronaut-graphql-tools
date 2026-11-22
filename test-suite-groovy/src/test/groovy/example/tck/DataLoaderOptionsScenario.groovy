@@ -97,7 +97,7 @@ class PageLoader implements MappedBatchLoader<String, List<Page>> {
 class PageLoaderOptions implements DataLoaderOptionsCustomizer {
 
     @Override
-    String loaderName() {
+    String getLoaderName() {
         return 'pageLoader'
     }
 

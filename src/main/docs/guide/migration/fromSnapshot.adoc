@@ -55,6 +55,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-49 the observability module is split into `graphql-tools-micrometer` and `graphql-tools-opentelemetry` (#570) | `micronaut-graphql-tools-observability` does not exist: the metrics are in `micronaut-graphql-tools-micrometer` (package `io.micronaut.graphql.tools.micrometer`) and the spans in `micronaut-graphql-tools-opentelemetry`. `GraphQLObservability` is now `GraphQLMetrics`, with the same meter and tag constants. The configuration keys of BC-39 do not change. | Replace the one dependency with the module of each technology you use (the artifact was never published, so there is no relocation), and import `io.micronaut.graphql.tools.micrometer.GraphQLMetrics` where you used `GraphQLObservability`.
 | BC-41 binding failures are a `ConfigurationException` (#498) | `SchemaBindingException` extends `io.micronaut.context.exceptions.ConfigurationException`, not `RuntimeException`, and `code()` is renamed `getCode()`. The error codes and messages are the same. | Call `getCode()` (the `code` property in Groovy and Kotlin) where you called `code()`. A `catch (ConfigurationException)` now also catches the binding failures.
 | BC-47 `ResolverBeanCondition` is internal, `@GraphQLType.value()` is `Class<?>` (#501) | `io.micronaut.graphql.tools.annotation.ResolverBeanCondition` is now `io.micronaut.graphql.tools.internal.resolver.ResolverBeanCondition`, marked `@Internal` and no longer `@Introspected`. `@GraphQLType.value()` is declared `Class<?>`, not the raw `Class`. `GraphQLToolsConfiguration.SchemaConfiguration.DEFAULT_SCHEMA_LOCATION` and `BindingManifest.FORMAT` are constants of the public types and no longer refer to an `internal` package. | Nothing, unless you name the condition class in a `@Requires(condition = ...)` of your own: stop doing that, it is not API. A Kotlin or Groovy source that read `@GraphQLType.value` compiles as before.
+| BC-44 one accessor style in the public types (#504) | `GraphQLConnectionRequest` is a record (`payload()` and `httpRequest()` keep their names). The accessors of `GraphQLConnectionResult` (`getAttributes()`, `getCloseCode()`, `getReason()`), `GraphQLExecutionRequest` (`getHttpRequest()`, `getHttpResponse()`, `getTransport()`, `getConnectionAttributes()`, `getExecutionInput()`), `DataLoaderOptionsCustomizer` (`getLoaderName()`) and `DataLoaderBatchStatistics` (`getCounts()`) are renamed. | Rename the calls, and the method that a `DataLoaderOptionsCustomizer` overrides. In Groovy and Kotlin, read the properties (`request.httpRequest`, `request.transport`).
 |===
 
 == Entries for 1.0.0-M1
@@ -1065,3 +1066,29 @@ See the error reference.
 `io.micronaut.graphql.tools.annotation.ResolverBeanCondition` is now `io.micronaut.graphql.tools.internal.resolver.ResolverBeanCondition`, marked `@Internal` and no longer `@Introspected`. `@GraphQLType.value()` is declared `Class<?>`, not the raw `Class`. `GraphQLToolsConfiguration.SchemaConfiguration.DEFAULT_SCHEMA_LOCATION` and `BindingManifest.FORMAT` are constants of the public types and no longer refer to an `internal` package.
 
 Nothing needs to change, unless your code names the condition class in a `@Requires(condition = ...)`: stop doing that, it is not API. A Kotlin or Groovy source that reads `@GraphQLType.value` compiles as before.
+
+=== BC-44: one accessor style in the public types (#504)
+
+The public types of the `websocket`, `mapping`, `directive` and `execution` packages mixed record-style accessors (`payload()`, `httpRequest()`) with bean-style ones (`getName()`, `isAccepted()`), which behave differently for Groovy property access and Kotlin synthetic properties. The rule is now one: an interface or a class names its accessors `getX` and `isX`, and an immutable data carrier is a record. An architecture rule fails the build of the library when a public type of those packages declares another accessor.
+
+`GraphQLConnectionRequest` is a record, with the same accessors as before (`payload()`, `httpRequest()`) and the null checks in its constructor. The other renames:
+
+[cols="2,2"]
+|===
+| Before | Now
+
+| `GraphQLConnectionResult#attributes()`, `closeCode()`, `reason()` | `getAttributes()`, `getCloseCode()`, `getReason()`
+| `GraphQLExecutionRequest#httpRequest()`, `httpResponse()`, `transport()`, `connectionAttributes()`, `executionInput()` | `getHttpRequest()`, `getHttpResponse()`, `getTransport()`, `getConnectionAttributes()`, `getExecutionInput()`
+| `DataLoaderOptionsCustomizer#loaderName()` | `getLoaderName()`
+| `DataLoaderBatchStatistics#counts()` | `getCounts()`
+|===
+
+[source,java]
+----
+// Before
+request.httpRequest().getHeaders().get("X-Tenant", String.class);
+// Now
+request.getHttpRequest().getHeaders().get("X-Tenant", String.class);
+----
+
+In Groovy and Kotlin, `request.httpRequest` reads the property. A class that implements `DataLoaderOptionsCustomizer` renames `loaderName()` to `getLoaderName()` (in Kotlin, `override fun getLoaderName()`). Code that only calls `GraphQLConnectionRequest#payload()` or `httpRequest()` compiles as before.

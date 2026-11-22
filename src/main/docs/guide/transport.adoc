@@ -26,7 +26,7 @@ public class TenantContributor implements GraphQLContextContributor {
 
     @Override
     public void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
-        request.httpRequest().getHeaders().get("X-Tenant", String.class)
+        request.getHttpRequest().getHeaders().get("X-Tenant", String.class)
                 .ifPresent(tenant -> context.put("tenant", tenant));
     }
 }

@@ -71,7 +71,7 @@ public final class DataLoaderTable {
         OrderUtil.sort(sorted);
         Map<String, List<DataLoaderOptionsCustomizer>> customizersByName = new HashMap<>();
         for (DataLoaderOptionsCustomizer customizer : sorted) {
-            customizersByName.computeIfAbsent(String.valueOf(customizer.loaderName()), name -> new ArrayList<>()).add(customizer);
+            customizersByName.computeIfAbsent(String.valueOf(customizer.getLoaderName()), name -> new ArrayList<>()).add(customizer);
         }
         List<Entry> list = new ArrayList<>(kinds.size());
         Map<String, Entry> names = new HashMap<>();
@@ -98,7 +98,7 @@ public final class DataLoaderTable {
             String unknown = customizersByName.keySet().iterator().next();
             throw new ExecutionSetupException(BindingCode.DATA_LOADER_NOT_FOUND, "A DataLoaderOptionsCustomizer ("
                     + customizersByName.get(unknown).get(0).getClass().getName() + ") is for the loader '" + unknown
-                    + "', and no batch loader bean has that name. " + known(list) + " Fix: return the name of a loader from loaderName().");
+                    + "', and no batch loader bean has that name. " + known(list) + " Fix: return the name of a loader from getLoaderName().");
         }
         this.entries = list.toArray(new Entry[0]);
         this.byName = Map.copyOf(names);

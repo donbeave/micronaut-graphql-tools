@@ -44,7 +44,7 @@ public interface DataLoaderBatchStatistics {
      * @return the counts so far, by the name of the batch loader bean; a loader that dispatched no batch is not listed
      */
     @NonNull
-    Map<String, Counts> counts();
+    Map<String, Counts> getCounts();
 
     /**
      * @param batches how many batches the loader dispatched
