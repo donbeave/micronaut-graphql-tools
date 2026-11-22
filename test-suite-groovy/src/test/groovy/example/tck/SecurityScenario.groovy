@@ -18,6 +18,7 @@ package example.tck
 import graphql.GraphQLContext
 import graphql.language.OperationDefinition
 import groovy.transform.CompileStatic
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.async.publisher.Publishers
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -29,6 +30,8 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.filters.AuthenticationFetcher
 import io.micronaut.security.rules.SecurityRule
+import io.micronaut.security.token.DefaultRolesFinder
+import io.micronaut.security.token.RolesFinder
 import io.micronaut.security.utils.SecurityService
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
@@ -54,6 +57,52 @@ class HeaderAuthenticationFetcher implements AuthenticationFetcher<HttpRequest<?
         String roles = request.headers.get('X-Roles')
         List<String> granted = roles == null ? new ArrayList<String>() : roles.split(',').toList()
         Publishers.just(Authentication.build(user, granted))
+    }
+}
+
+// tag::roles-finder[]
+@CompileStatic
+@Singleton
+@Replaces(DefaultRolesFinder)
+@Requires(property = 'tck.scenario', value = 'security')
+@Requires(property = 'tck.security.finder', value = 'team')
+class TeamRolesFinder implements RolesFinder {
+
+    @Override
+    List<String> resolveRoles(Map<String, Object> attributes) {
+        []
+    }
+
+    @Override
+    boolean hasAnyRequiredRoles(List<String> requiredRoles, Collection<String> grantedRoles) {
+        List<String> mapped = grantedRoles.findAll { it != 'ROLE_ADMIN' }.collect { it == 'TEAM_OPS' ? 'ROLE_ADMIN' : it } as List<String>
+        mapped.any { requiredRoles.contains(it) }
+    }
+}
+// end::roles-finder[]
+
+@CompileStatic
+@Singleton
+@GraphQLRootResolver
+@Requires(property = 'tck.scenario', value = 'security')
+@Requires(property = 'tck.security.expression', notEquals = 'true')
+class SecurityGatedQueries {
+
+    String secGated() {
+        'gated'
+    }
+}
+
+@CompileStatic
+@Singleton
+@GraphQLRootResolver
+@Requires(property = 'tck.scenario', value = 'security')
+@Requires(property = 'tck.security.expression', value = 'true')
+class SecurityExpressionQueries {
+
+    @Secured('#{1 == 1}')
+    String secGated() {
+        'gated'
     }
 }
 

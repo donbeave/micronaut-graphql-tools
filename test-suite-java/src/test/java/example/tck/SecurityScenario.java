@@ -16,6 +16,7 @@
 package example.tck;
 
 import graphql.GraphQLContext;
+import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.async.publisher.Publishers;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
@@ -27,13 +28,18 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.filters.AuthenticationFetcher;
 import io.micronaut.security.rules.SecurityRule;
+import io.micronaut.security.token.DefaultRolesFinder;
+import io.micronaut.security.token.RolesFinder;
 import io.micronaut.security.utils.SecurityService;
 import graphql.language.OperationDefinition;
 import jakarta.inject.Singleton;
 import org.reactivestreams.Publisher;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -75,6 +81,56 @@ public final class SecurityScenario {
         }
     }
     // end::root-fields-hook[]
+
+    // tag::roles-finder[]
+    @Singleton
+    @Replaces(DefaultRolesFinder.class)
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    @Requires(property = "tck.security.finder", value = "team")
+    public static class TeamRolesFinder implements RolesFinder {
+
+        @Override
+        public List<String> resolveRoles(Map<String, Object> attributes) {
+            return List.of();
+        }
+
+        @Override
+        public boolean hasAnyRequiredRoles(List<String> requiredRoles, Collection<String> grantedRoles) {
+            List<String> mapped = new ArrayList<>();
+            for (String role : grantedRoles) {
+                if ("TEAM_OPS".equals(role)) {
+                    mapped.add("ROLE_ADMIN");
+                } else if (!"ROLE_ADMIN".equals(role)) {
+                    mapped.add(role);
+                }
+            }
+            return RolesFinder.super.hasAnyRequiredRoles(requiredRoles, mapped);
+        }
+    }
+    // end::roles-finder[]
+
+    @Singleton
+    @GraphQLRootResolver
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    @Requires(property = "tck.security.expression", notEquals = "true")
+    public static class SecurityGatedQueries {
+
+        public String secGated() {
+            return "gated";
+        }
+    }
+
+    @Singleton
+    @GraphQLRootResolver
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    @Requires(property = "tck.security.expression", value = "true")
+    public static class SecurityExpressionQueries {
+
+        @Secured("#{1 == 1}")
+        public String secGated() {
+            return "gated";
+        }
+    }
 
     @GraphQLType
     public static class SecMe {

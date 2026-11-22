@@ -17,6 +17,7 @@ package example.tck
 
 import graphql.GraphQLContext
 import graphql.language.OperationDefinition
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.async.publisher.Publishers
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -28,6 +29,8 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.filters.AuthenticationFetcher
 import io.micronaut.security.rules.SecurityRule
+import io.micronaut.security.token.DefaultRolesFinder
+import io.micronaut.security.token.RolesFinder
 import io.micronaut.security.utils.SecurityService
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
@@ -47,6 +50,41 @@ class HeaderAuthenticationFetcher : AuthenticationFetcher<HttpRequest<*>> {
         val roles = request.headers.get("X-Roles")
         return Publishers.just(Authentication.build(user, roles?.split(",") ?: emptyList()))
     }
+}
+
+// tag::roles-finder[]
+@Singleton
+@Replaces(DefaultRolesFinder::class)
+@Requires(property = "tck.scenario", value = "security")
+@Requires(property = "tck.security.finder", value = "team")
+class TeamRolesFinder : RolesFinder {
+
+    override fun resolveRoles(attributes: Map<String, Any>): List<String> = emptyList()
+
+    override fun hasAnyRequiredRoles(requiredRoles: List<String>, grantedRoles: Collection<String>): Boolean {
+        val mapped = grantedRoles.filter { it != "ROLE_ADMIN" }.map { if (it == "TEAM_OPS") "ROLE_ADMIN" else it }
+        return super.hasAnyRequiredRoles(requiredRoles, mapped)
+    }
+}
+// end::roles-finder[]
+
+@Singleton
+@GraphQLRootResolver
+@Requires(property = "tck.scenario", value = "security")
+@Requires(property = "tck.security.expression", notEquals = "true")
+class SecurityGatedQueries {
+
+    fun secGated(): String = "gated"
+}
+
+@Singleton
+@GraphQLRootResolver
+@Requires(property = "tck.scenario", value = "security")
+@Requires(property = "tck.security.expression", value = "true")
+class SecurityExpressionQueries {
+
+    @Secured("#{1 == 1}")
+    fun secGated(): String = "gated"
 }
 
 // tag::root-fields-hook[]
