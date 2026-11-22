@@ -1176,7 +1176,7 @@ wrap-all `everyElement` wiring. The library asks each decorator once for each fi
 fetcher it received for a field it does not select, so unselected fields and trivial property fetchers keep their base
 fetcher. A field without arguments and a property are not offered unless the decorator overrides
 `decoratesFieldsWithoutArguments()` or `decoratesTrivialFields()`. The `FieldDescriptor` carries the coordinates, the
-`FieldExecutionKind`, whether the field has arguments, the field executor and the annotation metadata. Decorators wrap
+`FieldExecutionKind`, whether the field has arguments, the field executor, the annotation metadata and a description of the resolver. Decorators wrap
 outermost: decorators (lowest order first), the async boundary, the `@ExecuteOn` hop, the adapters, the base fetcher. The
 guide has the details.
 

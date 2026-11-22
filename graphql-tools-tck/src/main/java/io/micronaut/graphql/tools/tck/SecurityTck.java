@@ -154,7 +154,7 @@ public final class SecurityTck {
             for (Throwable t = e; t != null; t = t.getCause()) {
                 messages.append(t.getMessage()).append('\n');
             }
-            expect(true, messages.toString().contains("Query.secGated") && messages.toString().contains("expression value"), messages.toString());
+            expect(true, messages.toString().contains("secGated()") && messages.toString().contains("Query.secGated") && messages.toString().contains("expression value"), messages.toString());
         }
     }
 

@@ -481,7 +481,8 @@ public final class GraphQLRuntimeWiringGenerator {
                 mappingContext.getFieldDefinition().getName(),
                 fieldDecorators.apply(new FieldDescriptor(coordinates(mappingContext),
                         FieldExecutionPlanner.kind(verdict, subscriptionField), hasArguments(mappingContext), fieldExecutor,
-                        executable.getAnnotationMetadata()), planned)
+                        executable.getAnnotationMetadata(),
+                        executable.getDeclaringType().getName() + " " + getExecutableMethodFullName(executable)), planned)
         );
     }
 
@@ -1020,7 +1021,8 @@ public final class GraphQLRuntimeWiringGenerator {
 
             typeRuntimeWiringBuilder.dataFetcher(fieldDefinition.getName(), fieldDecorators.apply(
                     new FieldDescriptor(coordinates(mappingContext), FieldExecutionKind.TRIVIAL, hasArguments(mappingContext), null,
-                            beanProperty.getAnnotationMetadata()),
+                            beanProperty.getAnnotationMetadata(),
+                            beanIntrospection.getBeanType().getName() + " " + getPropertyMethodName(beanProperty)),
                     new MicronautPropertyDataFetcher(beanProperty)));
 
             processFieldReturnType(beanProperty.asArgument(), fieldDefinition.getType(), mappingContext);

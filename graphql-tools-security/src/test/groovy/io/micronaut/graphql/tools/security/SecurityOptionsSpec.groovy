@@ -156,7 +156,7 @@ class SecurityOptionsSpec extends Specification {
         then:
         def e = thrown(Exception)
         def messages = causeMessages(e)
-        messages.any { it.contains('Query.gated') && it.contains('expression value') && it.contains('does not evaluate expressions') }
+        messages.any { it.contains('SecurityOptionsSpec\$ExpressionQueries gated()') && it.contains('Query.gated') && it.contains('expression value') && it.contains('does not evaluate expressions') }
     }
 
     void "with the module disabled an expression in @Secured is not looked at"() {
