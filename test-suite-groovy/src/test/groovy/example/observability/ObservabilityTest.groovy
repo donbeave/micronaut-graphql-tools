@@ -18,13 +18,14 @@ package example.observability
 import graphql.ExecutionInput
 import graphql.ExecutionResult
 import graphql.GraphQL
+import graphql.execution.instrumentation.Instrumentation
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.ApplicationContext
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import spock.lang.Specification
 
-// The Groovy suite runs on the JVM: the request timer and the spans of the observability module.
+// The Groovy suite runs on the JVM: the request timer of the Micrometer module and the spans of the OpenTelemetry module.
 class ObservabilityTest extends Specification {
 
     private static ExecutionResult execute(ApplicationContext context, String query, String operationName) {
@@ -148,4 +149,24 @@ class ObservabilityTest extends Specification {
         context.close()
     }
 
+    void 'the library has one Instrumentation bean whichever modules are on'() {
+        expect:
+        instrumentations(properties) == count
+
+        where:
+        properties                                                                                                  | count
+        [:]                                                                                                         | 1
+        ['micronaut.graphql.tools.tracing.enabled': false]                                                          | 1
+        ['micronaut.metrics.binders.graphql.enabled': false]                                                        | 1
+        ['micronaut.graphql.tools.tracing.enabled': false, 'micronaut.metrics.binders.graphql.enabled': false]      | 0
+    }
+
+    private static int instrumentations(Map<String, Object> properties) {
+        ApplicationContext context = ApplicationContext.run(properties, ObservabilityFixtures.OBSERVED)
+        try {
+            return context.getBeansOfType(Instrumentation).size()
+        } finally {
+            context.close()
+        }
+    }
 }
