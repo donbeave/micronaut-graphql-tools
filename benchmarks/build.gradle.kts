@@ -173,8 +173,8 @@ $ringRoots
 // The interface-heavy schema: fields / 10 object types of 10 fields, in groups of ten types. Every type implements the
 // interface Shared and the interface Group<g> of its group, which extends Shared, so the interfaces declare shared fields
 // and a field is declared by two interfaces. The group's types are linked in a ring through next, each group is reached
-// from a root field returning a list of its interface, and the type-mapping dictionary has an entry for every object
-// type: a quarter of them map to a Java interface, the rest to a class.
+// from a root field returning a list of its interface, and the type-mapping dictionary has an entry for the interface Shared (the
+// only way its class is found) and for every object type: a quarter of them map to a Java interface, the rest to a class.
 fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provider<org.gradle.api.file.Directory>,
                             typeCounts: List<Int>, unreturnedShared: Boolean = false) = tasks.register(name) {
     inputs.property("typeCounts", typeCounts)
@@ -220,7 +220,9 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
                     |}
                     |""")
             }
-            val dictionary = StringBuilder()
+            // Shared has no introspection, so the dictionary is the only way its class is found: without this entry the lookup of
+            // an interface that no field returns finds no class and skips the resolver-method search (LargeSchema.checkBound asserts it)
+            val dictionary = StringBuilder("\n                |            dictionary.registerType(\"Shared\", Shared.class);")
             for (i in 0 until types) {
                 val g = i % groups
                 val next = (i + groups) % types
@@ -326,6 +328,12 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
 $roots|}
                 |""")
             resourceDir.resolve("interface-schema-$fields.graphqls").writeText(sdl.toString())
+            if (unreturnedShared) {
+                // no resolver bean binds a field of Shared, so the strict check reports its dictionary entry as unused: accept that one
+                // finding (the returned build binds Shared and has none), instead of switching the check off for the whole run
+                resourceDir.resolve("application.properties").writeText(
+                    "micronaut.graphql.tools.allow.findings=!unused-dictionary-entry Shared = $pkg.Shared\n")
+            }
         }
     }
 }

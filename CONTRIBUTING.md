@@ -185,7 +185,7 @@ fields each. `BindingBenchmark` measures start-up: it starts a fresh application
 invocation per context. The `shape` parameter is `rings` (the schema above) or `interfaces`, a generated interface-heavy
 schema at 3,000 and 20,000 fields: object types of 10 fields in groups of ten, every type implementing a shared interface and the
 interface of its group (which extends the shared one, so interfaces declare shared fields), a root field per group, and a
-type-mapping dictionary with an entry for every type, a quarter of them mapped to a Java interface. It reaches the interface fixpoint,
+type-mapping dictionary with an entry for every object type and for the shared interface, a quarter of the object types mapped to a Java interface. It reaches the interface fixpoint,
 the dictionary validation and the registry lookups that the rings barely reach. `RetainedHeapBenchmark` takes the same parameters and reports the heap a started context keeps
 as the secondary result `retainedBytes`: the heap in use after a full collection with the context open, minus the heap
 in use before the start. JMH's text summary adds the forks up for a secondary result, so the figure per fork is read from
@@ -194,7 +194,7 @@ the JSON. Both are measured cold, one fresh JVM per sample, only by `scripts/sta
 
 The benchmark jar generates the 1,600-field ring schema only, as before, so the other start-up benchmarks bind the same
 schema as before. Each other size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build; add
-`-PlargeShape=interfaces` for the interface-heavy schema, 3,000 fields by default; `-PlargeUnreturnedShared=true` leaves its `shared` root field out, so the interface `Shared` is one that no field returns), so
+`-PlargeShape=interfaces` for the interface-heavy schema, 3,000 fields by default; `-PlargeUnreturnedShared=true` leaves its `shared` root field out, so the interface `Shared` is one that no field returns; the dictionary maps `Shared`, which has no introspection, and the benchmarks fail at start if it does not), so
 that the JVM of a size has no other size on its classpath. A jar packages one size and one shape, but JMH crosses every `@Param` value, so a direct run of the startup benchmarks passes `-p fields=<size> -p shape=<shape>` for the ones the jar was built with; `startup-report.py` does. `jmhSmokeTest` generates the 100 and 10,000-field schemas of both shapes in
 its own source set and runs those two sizes only. Measured: the 100-field context retained 14.4 MB with all three sizes on the
 classpath and 4.7 MB with the 100-field classes alone. The 10,000-field schema is 1,000 types in rings of 100 types, each reached from a root field of its own: graphql-java

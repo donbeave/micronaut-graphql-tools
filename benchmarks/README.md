@@ -146,16 +146,24 @@ about 0.22 us and about 1.0 KB of allocation (`selected` minus `observed`, divid
 
 #71: the cold-start binding cost of the interface-heavy schema at 20,000 fields with `Shared` returned by a root field (`returned`) and with that
 field left out (`unreturned`, `-PlargeUnreturnedShared=true`), so that every field of the 2,000 object types looks up the class of an interface that no field
-returns. Two jars, `python3 benchmarks/scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25 returned=returned.jar unreturned=unreturned.jar`, Temurin 25.0.5+8, graphql-java default leg, 10-core ARM64 laptop. The
-load average at fork start ranged from 3.6 to 8.7 (median 6.3): the forks of this script run back to back on an otherwise idle machine, so
-this is lighter than the other start-up figures but not as idle as the request-path run above.
+returns. `Shared` has no introspection, so the dictionary entry `registerType("Shared", Shared.class)` is the only way the lookup finds its class; both builds have the
+entry, and `LargeSchema.checkBound` fails every start-up benchmark that binds the interface shape when the dictionary does not map `Shared`. (An earlier figure of
+this section, +5.6 ms, came from jars without the entry: the lookup found no class and skipped the resolver-method search, so it timed nothing.) The strict check
+`unused-dictionary-entry` reports that entry when no resolver binds a field of `Shared`, so the `unreturned` jar accepts that one finding through
+`micronaut.graphql.tools.allow.findings`. Two jars, `python3 benchmarks/scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25 returned=returned.jar unreturned=unreturned.jar`,
+Temurin 25.0.5+8, graphql-java default leg, 10-core ARM64 laptop, no other Gradle job running. Two runs, the second started on a quiet machine: the one-minute
+load average at fork start ranged from 6.2 to 14.5 (median 8.4) in the first and from 1.9 to 7.8 (median 4.9) in the second.
 
-| Build | Median binding time | Quartiles | Range | Retained heap |
-| --- | --- | --- | --- | --- |
-| returned | 1498.6 ms | 1487.4 to 1518.8 | 1453.5 to 1597.4 | 23.33 MB |
-| unreturned | 1504.2 ms | 1484.5 to 1515.4 | 1465.9 to 1533.5 | 23.63 MB |
+| Run | Build | Median binding time | Quartiles | Range | Retained heap |
+| --- | --- | --- | --- | --- | --- |
+| 1 | returned | 1513.9 ms | 1489.2 to 1520.6 | 1466.6 to 1540.4 | 23.34 MB |
+| 1 | unreturned | 1524.8 ms | 1515.2 to 1545.5 | 1486.4 to 1563.1 | 23.33 MB |
+| 2 | returned | 1517.7 ms | 1497.5 to 1528.6 | 1479.7 to 1555.6 | 23.35 MB |
+| 2 | unreturned | 1529.2 ms | 1520.6 to 1538.7 | 1474.1 to 1546.9 | 23.38 MB |
 
-The difference is +5.6 ms (95 percent bootstrap interval -14.5 to +16.2): inside the noise. No resolver bean is bound to `Shared` in this schema, so the run
-measures the lookup that the unreturned-interface path adds, not the binding of a resolver method.
+The difference is +10.9 ms in run 1 (95 percent bootstrap interval +4.2 to +42.4) and +11.5 ms in run 2 (+2.4 to +31.4): about 0.7 percent, outside the noise in both
+runs, and retained heap is unchanged. That is the cost of the lookup when it is real: each of the 20,000 fields asks for the resolver methods of `Shared`, about 0.5 us a field.
+No resolver bean is bound to `Shared` in this schema, so the run measures the lookup that the unreturned-interface path adds, not the binding of a resolver method.
+A schema whose interfaces are all returned by a field never takes this path (the `returned` build).
 
 The full description, including the cold start procedure, is the "Benchmarks" section of `CONTRIBUTING.md`.
