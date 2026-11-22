@@ -30,7 +30,9 @@ import java.util.concurrent.Executor;
  * @param hasArguments       whether the schema declares arguments on the field
  * @param fieldExecutor      the executor that {@code @ExecuteOn} names when it differs from the executor of the operation, else null
  * @param annotationMetadata the annotation metadata of the method or property that serves the field
+ * @param resolver           the method or property that serves the field, as the declaring class, a space and the signature (for messages)
  */
 public record FieldDescriptor(@NonNull FieldCoordinates coordinates, @NonNull FieldExecutionKind kind, boolean hasArguments,
-                              @Nullable Executor fieldExecutor, @NonNull AnnotationMetadata annotationMetadata) {
+                              @Nullable Executor fieldExecutor, @NonNull AnnotationMetadata annotationMetadata,
+                              @NonNull String resolver) {
 }

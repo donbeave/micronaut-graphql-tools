@@ -93,6 +93,8 @@ type Box {
         !EVERYTHING_OFFERS.find { it.coordinates().fieldName == 'plain' }.hasArguments()
         EVERYTHING_OFFERS.find { it.coordinates().fieldName == 'echo' }.hasArguments()
         EVERYTHING_OFFERS.find { it.coordinates().fieldName == 'echo' }.annotationMetadata() != null
+        EVERYTHING_OFFERS.find { it.coordinates().fieldName == 'plain' }.resolver().endsWith(' plain()')
+        EVERYTHING_OFFERS.find { it.coordinates().fieldName == 'label' }.resolver().endsWith(' getLabel()')
     }
 
     void "the descriptor carries the execution kind and the field executor"() {
