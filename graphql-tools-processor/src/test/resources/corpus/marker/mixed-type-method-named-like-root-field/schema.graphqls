@@ -1,0 +1,13 @@
+schema {
+  query: Query
+}
+
+type Query {
+  crate: Crate
+  tag: String
+}
+
+type Crate {
+  id: ID!
+  tag: String
+}

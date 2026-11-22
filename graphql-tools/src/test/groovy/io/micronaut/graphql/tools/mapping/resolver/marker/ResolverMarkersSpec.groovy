@@ -188,6 +188,26 @@ type Book {
         ResolverMarkers.ContractMethod.decode(markers.contractMethods()[2].encode()) == markers.contractMethods()[2]
     }
 
+    void "a method of a mixed bean is a candidate on the side of the contract that declares it"() {
+        given:
+        def markers = new ResolverMarkers(['query'], null, [
+                new ResolverMarkers.ContractMethod(['query'], null, 'book', 1),
+                new ResolverMarkers.ContractMethod([], Book.name, 'summary', 1),
+                new ResolverMarkers.ContractMethod(['query'], Book.name, 'both', 1)])
+
+        expect:
+        markers.admitsRoot('book', 1)
+        !markers.admitsType('book', 1)
+        !markers.admitsRoot('summary', 1)
+        markers.admitsType('summary', 1)
+        markers.admitsRoot('both', 1)
+        markers.admitsType('both', 1)
+        !markers.admitsRoot('helper', 1)
+        !markers.admitsType('helper', 1)
+        ResolverMarkers.NONE.admitsRoot('any', 0)
+        ResolverMarkers.NONE.admitsType('any', 0)
+    }
+
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     static class BookQuery implements BookQueryContract {

@@ -28,7 +28,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The cost of the observability module on a request of {@code rootFields} root fields: with no instrumentation ({@code none}), with
+ * The cost of the metrics and tracing modules on a request of {@code rootFields} root fields: with no instrumentation ({@code none}), with
  * one that implements no hook ({@code empty}: what graphql-java charges for any instrumentation) and with the module's beans on
  * and no field selected for a span ({@code observed}). {@code observed} and {@code empty} should differ by a constant (the
  * timer, the request span), not by a cost that grows with {@code fields}. In {@code selected} every root field is selected for a
