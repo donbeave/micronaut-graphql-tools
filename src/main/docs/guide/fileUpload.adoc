@@ -54,14 +54,15 @@ Micronaut's Netty server decodes the multipart body on the event loop, chunk by 
 [[csrf]]
 == CSRF
 
-A `multipart/form-data` request is a simple request for a browser: a form on another site can post it to your endpoint with the cookies of the user, and the browser sends no preflight request first. CORS configuration therefore does not protect the multipart route, and the check that a JSON-only endpoint gets for free (a `Content-Type` of `application/json` forces a preflight) does not apply to it. If the endpoint authenticates with a cookie or any credential that the browser sends by itself, protect the route:
+A `multipart/form-data` request is a simple cross-site request: a page on another origin can submit a form to your endpoint, the browser attaches the user's cookies, and it sends no preflight request first. The multipart route therefore needs an explicit CSRF defence whenever the endpoint authenticates with a cookie or any other credential that the browser sends by itself. CORS does not provide that defence (see <<cors,CORS>>), and the protection that a JSON-only endpoint gets for free does not apply here, because a `Content-Type` of `application/json` forces a preflight. Protect the route with one of these:
 
-* Require a custom request header on it, for example `X-Requested-With` or the header of your CSRF token, in a Micronaut filter that matches the GraphQL path and the `multipart/form-data` content type. A page of another origin cannot add a custom header to a simple request, and adding one makes the request need a preflight, which CORS then refuses.
+* Require a custom request header on it, for example `X-Requested-With` or the header of your CSRF token, in a Micronaut filter that matches the GraphQL path and the `multipart/form-data` content type. A page of another origin cannot add a custom header to a simple request, and adding one makes the request need a preflight. The preflight succeeds only for an origin that the CORS policy allows, so restrict `micronaut.server.cors.*` to trusted origins, or check an unguessable token value rather than only the header's presence.
 * Or verify a CSRF token (a synchronizer or double-submit token) on every multipart request, as for any form post.
 * Set `SameSite=Lax` or `SameSite=Strict` on the session cookie, and check the `Origin` header against the origins you serve.
-* An endpoint that authenticates with an `Authorization` header that the application adds itself (a bearer token) is not exposed, because a cross-site form cannot set it.
 
-A mutation that takes an `Upload` changes state, so treat the route as you treat any other state-changing `POST`.
+An endpoint that authenticates only with an `Authorization` header that the application adds itself (a bearer token) needs none of these, because a cross-site form cannot set that header.
+
+A mutation that takes an `Upload` changes state, so treat the route as you treat any other state-changing `POST`. The transport's `POST` route consumes every content type, so a JSON operation sent with `Content-Type: text/plain` reaches it as a simple request too. A cookie-authenticated mutation needs the same defence on that route, or the server must reject every content type other than `application/json`.
 
 == Cost and limits
 
