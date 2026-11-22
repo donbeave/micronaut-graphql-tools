@@ -1,4 +1,4 @@
-The `micronaut-graphql-tools-upload` module accepts files in a GraphQL request. It implements the GraphQL multipart request specification for Micronaut 4: an `Upload` scalar, and a `multipart/form-data` route on the path of the GraphQL endpoint. It is available from the milestone after 1.0.0-M4.
+The `micronaut-graphql-tools-upload` module accepts files in a GraphQL request. It implements the GraphQL multipart request specification for Micronaut 4: an `Upload` scalar, and a `multipart/form-data` route on the path of the GraphQL endpoint. It is available since 1.0.0-M4.
 
 == The module
 
