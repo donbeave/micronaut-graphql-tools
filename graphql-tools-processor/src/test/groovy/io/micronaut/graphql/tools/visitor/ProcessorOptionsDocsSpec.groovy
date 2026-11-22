@@ -44,6 +44,20 @@ class ProcessorOptionsDocsSpec extends Specification {
                 "Only a deliberate decision with a tracker issue allows a gap: add it to docs-coverage-allowlist.txt."
     }
 
+    def "every processor option is dot-separated lowercase, and a retired name is not documented as an option"() {
+        given:
+        def retired = ProcessorOptions.RETIRED.keySet()
+        def camel = allOptions().findAll { !retired.contains(it) && !(it ==~ /micronaut(\.[a-z]+)+/) }
+        def tableRows = pageText.readLines().findAll { it.startsWith('|`micronaut.graphql.tools.processor.') }
+        def rowNames = tableRows.collect { (it =~ /^\|`([^`]+)`/)[0][1] }
+
+        expect:
+        assert camel.empty : "Micronaut -A options are dot-separated lowercase segments; rename ${camel.sort().join(', ')}."
+        rowNames.size() >= 6
+        rowNames.every { it ==~ /micronaut(\.[a-z]+)+/ }
+        rowNames.every { !retired.contains(it) }
+    }
+
     def "the allowlist has only live entries"() {
         given:
         def options = allOptions()
@@ -55,7 +69,7 @@ class ProcessorOptionsDocsSpec extends Specification {
     }
 
     private static Set<String> allOptions() {
-        new GraphQLToolsVisitor().supportedOptions
+        new GraphQLToolsVisitor().supportedOptions - ProcessorOptions.RETIRED.keySet()
     }
 
     private boolean isDocumented(String option) {

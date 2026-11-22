@@ -63,6 +63,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * The library's {@code graphql-transport-ws} handler. It replaces the one of {@code micronaut-graphql}, which on core
@@ -271,17 +272,17 @@ public class LibraryGraphQLWsHandler {
         AtomicBoolean failed = new AtomicBoolean();
         Mono<Void> operation = Flux.from(execute(data, state))
                 .flatMap(result -> result.getData() instanceof Publisher<?> events ? asResults(events).map(this::customizeErrors) : Flux.just(result))
-                .concatMap(result -> result(session, id, result, failed))
-                .then(Mono.defer(() -> failed.get() ? Mono.empty() : send(session, Map.of("id", id, "type", "complete"))));
+                .concatMap(result -> result(session, id, result, failed, () -> state.finished(id, handle)))
+                .then(Mono.defer(() -> failed.get() ? Mono.empty() : finish(state, id, handle, () -> send(session, Map.of("id", id, "type", "complete")))));
         handle.update(operation
                 .onErrorResume(SubscriptionFailure.class, failure -> {
                     List<Map<String, Object>> errors = customizeErrors(failure.errors()).stream().map(GraphQLError::toSpecification).toList();
                     // an error message carries at least one error: a customizer that drops them all ends the operation as completed
-                    return errors.isEmpty() ? send(session, Map.of("id", id, "type", "complete")) : send(session, error(id, errors));
+                    return finish(state, id, handle, () -> errors.isEmpty() ? send(session, Map.of("id", id, "type", "complete")) : send(session, error(id, errors)));
                 })
                 .onErrorResume(failure -> {
                     LOG.warn("The operation '{}' of a WebSocket connection failed: {}", id, failure.toString());
-                    return send(session, error(id, List.of(Map.of("message", GENERIC_FAILURE))));
+                    return finish(state, id, handle, () -> send(session, error(id, List.of(Map.of("message", GENERIC_FAILURE)))));
                 })
                 .doFinally(signal -> state.finished(id, handle))
                 .subscribe());
@@ -314,10 +315,20 @@ public class LibraryGraphQLWsHandler {
         });
     }
 
-    private Mono<Void> result(WebSocketSession session, String id, ExecutionResult result, AtomicBoolean failed) {
+    /**
+     * The id is free before the client can read the message that ends the operation: a client that starts the next
+     * operation under the same id on receiving it must not meet the finished one. {@code doFinally} still runs, and is
+     * a no-op by then.
+     */
+    private static Mono<Void> finish(WsSessionState state, String id, Disposable handle, Supplier<Mono<Void>> terminal) {
+        return Mono.fromRunnable(() -> state.finished(id, handle)).then(Mono.defer(terminal));
+    }
+
+    private Mono<Void> result(WebSocketSession session, String id, ExecutionResult result, AtomicBoolean failed, Runnable free) {
         if (!result.isDataPresent()) {
             // the operation did not execute (it does not parse or validate): an error message ends it, as the protocol says
             failed.set(true);
+            free.run();
             return send(session, error(id, result.getErrors().stream().map(GraphQLError::toSpecification).toList()));
         }
         Map<String, Object> next = new LinkedHashMap<>();
