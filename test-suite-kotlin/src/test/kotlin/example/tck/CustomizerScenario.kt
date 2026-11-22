@@ -18,7 +18,9 @@ package example.tck
 import graphql.ExecutionInput
 import io.micronaut.configuration.graphql.GraphQLExecutionInputCustomizer
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.graphql.tools.tck.TckContextElement
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
 import jakarta.inject.Singleton
@@ -39,6 +41,7 @@ class CustomizerCounters {
     val cancels = AtomicInteger()
     val trackedRuns = AtomicInteger()
     val seen = AtomicReference("none")
+    val context = AtomicReference("none")
 }
 
 @Singleton
@@ -77,8 +80,11 @@ class CustomizerQueries(private val counters: CustomizerCounters) {
 
     fun tracked(): String {
         counters.trackedRuns.incrementAndGet()
+        counters.context.set(PropagatedContext.getOrEmpty().find(TckContextElement::class.java).map { it.id }.orElse("none"))
         return "ran"
     }
+
+    fun trackedContext(): String = counters.context.get()
 
     fun trackedRuns(): Int = counters.trackedRuns.get()
 }

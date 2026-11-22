@@ -1,1 +1,1 @@
-{ customizerCalls customizerSubscribes customizerCancels customizerSeen trackedRuns }
+{ customizerCalls customizerSubscribes customizerCancels customizerSeen trackedRuns trackedContext }

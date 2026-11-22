@@ -469,7 +469,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                     completeExceptionally(e);
                 }
             } else {
-                executeCustomized(customized);
+                inContext(() -> executeCustomized(customized));
             }
         }
 

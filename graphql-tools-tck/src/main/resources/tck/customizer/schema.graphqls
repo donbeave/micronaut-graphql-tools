@@ -10,6 +10,8 @@ extend type Query {
   customizerSeen: String!
   # a field of the tracked operation, which counts how often it ran
   tracked: String!
+  # the id of the TckContextElement in the propagated context that tracked saw, or none
+  trackedContext: String!
   # how many times tracked ran
   trackedRuns: Int!
 }

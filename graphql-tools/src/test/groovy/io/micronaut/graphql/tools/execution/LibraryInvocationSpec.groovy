@@ -72,6 +72,7 @@ class LibraryInvocationSpec extends AbstractTest {
     static final List<String> CALLS = Collections.synchronizedList([])
     static final List<Thread> RESOLVER_THREADS = Collections.synchronizedList([])
     static final List<Object> SEEN = Collections.synchronizedList([])
+    static final List<Object> FETCH_MARKERS = Collections.synchronizedList([])
     static final List<Thread> CUSTOMIZER_THREADS = Collections.synchronizedList([])
 
     @Language('GraphQL')
@@ -95,6 +96,7 @@ type Child {
         CALLS.clear()
         RESOLVER_THREADS.clear()
         SEEN.clear()
+        FETCH_MARKERS.clear()
         CUSTOMIZER_THREADS.clear()
     }
 
@@ -281,6 +283,33 @@ type Child {
         PropagatedContext.getOrEmpty().findAll(MarkerElement).findFirst().isEmpty()
         result.errors.isEmpty()
         SEEN.contains(element)
+    }
+
+    void "the propagated context is captured when invoke is called, so a subscriber on another thread still sees it with a customizer and no executor"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.customizer', ['micronaut.graphql.tools.execution.executor': 'none'])
+        def element = new MarkerElement('request-3')
+        Publisher<ExecutionResult> publisher
+        ExecutionResult result
+
+        when: 'invoke is called with the context, and the publisher is subscribed later on a thread without it'
+        def scope = PropagatedContext.getOrEmpty().plus(element).propagate()
+        try {
+            publisher = invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)
+        } finally {
+            scope.close()
+        }
+        def pool = Executors.newSingleThreadExecutor()
+        try {
+            result = pool.submit({ Mono.from(publisher).block() } as java.util.concurrent.Callable<ExecutionResult>).get(10, TimeUnit.SECONDS)
+        } finally {
+            pool.shutdownNow()
+        }
+
+        then:
+        PropagatedContext.getOrEmpty().findAll(MarkerElement).findFirst().isEmpty()
+        result.errors.isEmpty()
+        FETCH_MARKERS.contains(element)
     }
 
     void "an executor that rejects the hop gives one EXECUTION_REJECTED error with data null"() {
@@ -540,6 +569,7 @@ type Child {
     static class CustomizedQuery {
         String hello(DataFetchingEnvironment environment) {
             CALLS << 'fetch'
+            FETCH_MARKERS << PropagatedContext.getOrEmpty().findAll(MarkerElement).findFirst().orElse(null)
             SEEN << ExecutionState.of(environment.graphQlContext)
             'world'
         }

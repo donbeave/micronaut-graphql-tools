@@ -19,7 +19,9 @@ import graphql.ExecutionInput
 import groovy.transform.CompileStatic
 import io.micronaut.configuration.graphql.GraphQLExecutionInputCustomizer
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.graphql.tools.tck.TckContextElement
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
 import jakarta.inject.Singleton
@@ -42,6 +44,7 @@ class CustomizerCounters {
     final AtomicInteger cancels = new AtomicInteger()
     final AtomicInteger trackedRuns = new AtomicInteger()
     final AtomicReference<String> seen = new AtomicReference<>('none')
+    final AtomicReference<String> context = new AtomicReference<>('none')
 }
 
 @CompileStatic
@@ -101,7 +104,12 @@ class CustomizerQueries {
 
     String tracked() {
         counters.trackedRuns.incrementAndGet()
+        counters.context.set(PropagatedContext.getOrEmpty().find(TckContextElement).map { TckContextElement e -> e.id() }.orElse('none'))
         return 'ran'
+    }
+
+    String trackedContext() {
+        return counters.context.get()
     }
 
     int trackedRuns() {

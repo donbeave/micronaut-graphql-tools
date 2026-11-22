@@ -19,6 +19,7 @@ import graphql.ExecutionResult;
 import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.core.propagation.PropagatedContext;
 import org.reactivestreams.Publisher;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
@@ -27,12 +28,16 @@ import reactor.util.context.Context;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The checks of the execution-input customizer path, run by each example suite against its own fixtures of the scenario
  * {@code customizer}: the customizer runs only when the returned publisher is subscribed, it sees the Reactor context of
- * the subscriber, and cancelling the subscription cancels the publisher of the customizer and stops the execution. The
+ * the subscriber, the propagated context of the {@code invoke} call reaches the resolvers when another thread subscribes, and cancelling the subscription cancels the publisher of the customizer and stops the execution. The
  * checks call the {@code GraphQLInvocation} bean directly, because an HTTP request always subscribes and carries no Reactor
  * context. The fixture customizer acts only on an operation whose variables hold {@code track: true}, so the operations
  * that read the counters do not count themselves. Each check starts the application of its own.
@@ -40,13 +45,15 @@ import java.util.concurrent.TimeUnit;
 public final class CustomizerTck {
 
     private static final String TRACKED = "{ tracked }";
-    private static final String COUNTS = "{ customizerCalls customizerSubscribes customizerCancels customizerSeen trackedRuns }";
+    private static final String COUNTS = "{ customizerCalls customizerSubscribes customizerCancels customizerSeen trackedRuns trackedContext }";
+    private static final String CONTEXT_ID = "captured-at-invoke";
     private static final String CONTEXT_KEY = "tck-key";
     private static final long SECONDS = 10;
 
     private static final List<String> CHECKS = List.of(
             "customizer-runs-only-on-subscription",
             "customizer-sees-reactor-context",
+            "propagated-context-captured-at-invoke",
             "cancel-stops-execution");
 
     private CustomizerTck() {
@@ -73,6 +80,7 @@ public final class CustomizerTck {
             switch (check) {
                 case "customizer-runs-only-on-subscription" -> runsOnlyOnSubscription(invocation);
                 case "customizer-sees-reactor-context" -> seesReactorContext(invocation);
+                case "propagated-context-captured-at-invoke" -> capturedAtInvoke(invocation);
                 default -> cancelStopsExecution(invocation);
             }
         } catch (InterruptedException e) {
@@ -97,6 +105,24 @@ public final class CustomizerTck {
                 .contextWrite(Context.of(CONTEXT_KEY, "from-subscriber")).block(Duration.ofSeconds(SECONDS));
         expect(true, result != null && result.getErrors().isEmpty(), "the operation succeeds: " + result);
         expect("from-subscriber", data(invocation).get("customizerSeen"), "the Reactor context entry the customizer saw");
+    }
+
+    private static void capturedAtInvoke(GraphQLInvocation invocation) throws InterruptedException {
+        Publisher<ExecutionResult> publisher;
+        try (PropagatedContext.Scope ignored = PropagatedContext.getOrEmpty().plus(new TckContextElement(CONTEXT_ID)).propagate()) {
+            publisher = invoke(invocation, TRACKED, Map.of("track", true));
+        }
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            ExecutionResult result = pool.submit(() -> Mono.from(publisher).block(Duration.ofSeconds(SECONDS)))
+                    .get(SECONDS, TimeUnit.SECONDS);
+            expect(true, result != null && result.getErrors().isEmpty(), "the operation succeeds: " + result);
+        } catch (ExecutionException | TimeoutException e) {
+            throw new AssertionError("the subscriber on another thread failed", e);
+        } finally {
+            pool.shutdownNow();
+        }
+        expect(CONTEXT_ID, data(invocation).get("trackedContext"), "the propagated context element the resolver saw");
     }
 
     private static void cancelStopsExecution(GraphQLInvocation invocation) throws InterruptedException {

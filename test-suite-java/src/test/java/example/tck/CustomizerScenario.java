@@ -18,7 +18,9 @@ package example.tck;
 import graphql.ExecutionInput;
 import io.micronaut.configuration.graphql.GraphQLExecutionInputCustomizer;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.core.propagation.PropagatedContext;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+import io.micronaut.graphql.tools.tck.TckContextElement;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 import jakarta.inject.Singleton;
@@ -49,6 +51,7 @@ public final class CustomizerScenario {
         final AtomicInteger cancels = new AtomicInteger();
         final AtomicInteger trackedRuns = new AtomicInteger();
         final AtomicReference<String> seen = new AtomicReference<>("none");
+        final AtomicReference<String> context = new AtomicReference<>("none");
     }
 
     @Singleton
@@ -107,7 +110,12 @@ public final class CustomizerScenario {
 
         public String tracked() {
             counters.trackedRuns.incrementAndGet();
+            counters.context.set(PropagatedContext.getOrEmpty().find(TckContextElement.class).map(TckContextElement::id).orElse("none"));
             return "ran";
+        }
+
+        public String trackedContext() {
+            return counters.context.get();
         }
 
         public int trackedRuns() {
