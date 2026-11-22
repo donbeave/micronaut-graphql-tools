@@ -1,0 +1,1 @@
+unbound-resolver-method example.BookQuery#books$strict_kotlin_internal_method_field() -

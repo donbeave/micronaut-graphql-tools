@@ -16,6 +16,7 @@
 package example.fileupload
 
 import io.micronaut.context.ApplicationContext
+import io.micronaut.graphql.tools.upload.GraphQLUpload
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.MediaType
@@ -32,7 +33,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 // Runs on the JVM and as a native binary (nativeTest): a real multipart request, from the client to the resolver.
-// The error code is a literal: a reference to the constants class of the module in this source set makes KSP drop the introspections that ExternalModelTest needs.
 class UploadTest {
 
     private val server = mapOf(
@@ -141,7 +141,7 @@ class UploadTest {
             val parsed = embedded.applicationContext.getBean(JsonMapper::class.java)
                 .readValue(failure.response.getBody(String::class.java).orElseThrow(), Map::class.java)
             val error = (parsed["errors"] as List<*>)[0] as Map<*, *>
-            assertEquals("INVALID_MULTIPART_REQUEST", (error["extensions"] as Map<*, *>)["code"])
+            assertEquals(GraphQLUpload.INVALID_REQUEST_CODE, (error["extensions"] as Map<*, *>)["code"])
             assertTrue(error["message"].toString().contains("no such part"))
         }
     }

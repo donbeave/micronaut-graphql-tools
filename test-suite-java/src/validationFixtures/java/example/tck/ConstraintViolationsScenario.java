@@ -176,6 +176,18 @@ public final class ConstraintViolationsScenario {
         }
     }
 
+    public static final class Tray<T> {
+        private final List<T> items;
+
+        public Tray(List<T> items) {
+            this.items = items;
+        }
+
+        public List<T> getItems() {
+            return items;
+        }
+    }
+
     @Singleton
     @Requires(property = "tck.scenario", value = "constraint-violations")
     public static class BagExtractor implements ValueExtractor<Bag<@ExtractedValue ?>> {
@@ -184,6 +196,18 @@ public final class ConstraintViolationsScenario {
             int index = 0;
             for (Object item : bag.getItems()) {
                 receiver.indexedValue("item", index++, item);
+            }
+        }
+    }
+
+    @Singleton
+    @Requires(property = "tck.scenario", value = "constraint-violations")
+    public static class TrayExtractor implements ValueExtractor<Tray<@ExtractedValue ?>> {
+        @Override
+        public void extractValues(Tray<?> tray, ValueReceiver receiver) {
+            int index = 0;
+            for (Object item : tray.getItems()) {
+                receiver.indexedValue("<tray item>", index++, item);
             }
         }
     }
@@ -235,6 +259,16 @@ public final class ConstraintViolationsScenario {
                 List<Object> items = new java.util.ArrayList<>();
                 ((List<?>) input.get("items")).forEach(items::add);
                 return new Bag<>(items);
+            });
+        }
+
+        @Bean
+        @Singleton
+        GraphQLScalarMapping tray() {
+            return scalar("Tray", Tray.class, input -> {
+                List<Object> items = new java.util.ArrayList<>();
+                ((List<?>) input.get("items")).forEach(items::add);
+                return new Tray<>(items);
             });
         }
 
@@ -325,6 +359,10 @@ public final class ConstraintViolationsScenario {
 
         public String pack(Bag<@Positive Integer> pack) {
             return String.valueOf(pack.getItems().size());
+        }
+
+        public String tray(Tray<@Positive Integer> tray) {
+            return String.valueOf(tray.getItems().size());
         }
 
         public String several(@NotBlank String name, @Positive int count, @Valid Cart cart) {

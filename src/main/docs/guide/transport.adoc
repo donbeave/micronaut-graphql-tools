@@ -49,7 +49,9 @@ graphql:
 * The library's handler serves the endpoint. It keeps the operations of each connection apart, runs the events of a subscription off the event loop and cancels the stream when the client sends `complete` or closes the connection. See <<subscriptions,Subscriptions>>.
 * `GraphQLConnectionInterceptor` beans accept or reject a connection at `connection_init`.
 
-The deprecated Apollo sub-protocol has its own keys: `graphql.graphql-apollo-ws.enabled` (default `false`), `.path`, `.keep-alive-enabled` and `.keep-alive-interval`. The keep-alive sender of `micronaut-graphql` depends only on `keep-alive-enabled`, which defaults to `true`, so an application that does not use the Apollo sub-protocol, and especially one that has no WebSocket server, sets `graphql.graphql-apollo-ws.keep-alive-enabled=false` to switch the sender off.
+The deprecated Apollo sub-protocol has its own keys: `graphql.graphql-apollo-ws.enabled` (default `false`), `.path`, `.keep-alive-enabled` and `.keep-alive-interval`. The library sets the `enabled` default itself, so the keep-alive sender of `micronaut-graphql` is not a bean, and an application with no WebSocket server starts without an error, until the application sets `graphql.graphql-apollo-ws.enabled=true` (see <<subscriptions,Subscriptions>>). With the Apollo support on, `graphql.graphql-apollo-ws.keep-alive-enabled=false` switches the sender off.
+
+A connection that sends no `connection_init` within `connection-init-wait-timeout` is closed with code `4408`. A session owns its operations: an operation that completes by itself leaves the session, its id can be used again on the same connection, and a close or a dropped connection cancels the operations that still run.
 
 == Protection and cancellation
 
@@ -59,7 +61,7 @@ The deprecated Apollo sub-protocol has its own keys: `graphql.graphql-apollo-ws.
 
 Each example suite starts an embedded server and talks to it with a real client:
 
-* `HttpTck` (GET and POST, variables and operation name, the context of each request, and 400 concurrent requests with distinct contexts and DataLoader registries that never see each other's data);
-* `WebSocketTck` (subscriptions, the connection interceptor, cancellation, the thread of the events, and concurrent subscriptions that keep their own context);
+* `HttpTck` (GET and POST, variables and operation name, a moved `graphql.path`, the context of each request, and 400 concurrent requests with distinct contexts and DataLoader registries that never see each other's data);
+* `WebSocketTck` (subscriptions with variables and an operation name, a moved `graphql.graphql-ws.path` and the configured initialisation timeout, the connection interceptor, the cleanup of a session on complete, close, a dropped connection and a finished operation, the thread of the events, and concurrent subscriptions that keep their own context);
 * `DisconnectTck` (the cancellation on an HTTP disconnect);
 * the scenarios `http`, `websocket` and `protection` of the TCK, whose responses are compared as JSON.

@@ -54,11 +54,22 @@ public final class HttpTck {
             "get-query",
             "get-query-with-variables-and-operation-name",
             "context-per-request",
+            "configured-path",
             "concurrent-requests-are-isolated");
 
     private static final Argument<Map<String, Object>> OBJECT = Argument.mapOf(String.class, Object.class);
 
+    private static final String CONFIGURED_PATH = "/api/graphql";
+
     private HttpTck() {
+    }
+
+    private static Map<String, Object> properties(String check) {
+        Map<String, Object> properties = Tck.applicationProperties("http");
+        if ("configured-path".equals(check)) {
+            properties.put("graphql.path", CONFIGURED_PATH);
+        }
+        return properties;
     }
 
     /**
@@ -77,14 +88,15 @@ public final class HttpTck {
         if (!CHECKS.contains(check)) {
             throw new IllegalArgumentException("No such check: " + check);
         }
-        try (ApplicationContext context = ApplicationContext.builder().properties(Tck.applicationProperties("http")).start();
+        try (ApplicationContext context = ApplicationContext.builder().properties(properties(check)).start();
              HttpClient client = HttpClient.newHttpClient()) {
             EmbeddedServer server = context.getBean(EmbeddedServer.class).start();
-            Env env = new Env(client, context.getBean(JsonMapper.class), "http://" + server.getHost() + ":" + server.getPort() + "/graphql");
+            Env env = new Env(client, context.getBean(JsonMapper.class), "http://" + server.getHost() + ":" + server.getPort() + ("configured-path".equals(check) ? CONFIGURED_PATH : "/graphql"));
             switch (check) {
                 case "get-query" -> getQuery(env);
                 case "get-query-with-variables-and-operation-name" -> getWithVariablesAndOperationName(env);
                 case "context-per-request" -> contextPerRequest(env);
+                case "configured-path" -> configuredPath(env, "http://" + server.getHost() + ":" + server.getPort());
                 default -> concurrentRequestsAreIsolated(env);
             }
         } catch (AssertionError | RuntimeException e) {
@@ -109,6 +121,17 @@ public final class HttpTck {
         body = env.get("query First($v: String!) { httpEcho(value: $v) } query Second { httpEcho(value: \"two\") }",
                 "{\"v\":\"one\"}", "Second");
         expect("two", data(body).get("httpEcho"), body);
+    }
+
+    // graphql.path moves the endpoint: GET and POST work on the configured path, and the default path is not served.
+    private static void configuredPath(Env env, String base) throws Exception {
+        Map<String, Object> get = env.get("{ httpEcho(value: \"get\") }", null, null);
+        expect("get", data(get).get("httpEcho"), get);
+        expect("alpha", data(env.post("{ tenant }", "alpha")).get("tenant"), "a POST on the configured path");
+        HttpResponse<String> old = env.client.send(HttpRequest.newBuilder(URI.create(base + "/graphql"))
+                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString("{\"query\":\"{ tenant }\"}")).build(),
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        expect(404, old.statusCode(), "the default path after graphql.path moved the endpoint: " + old.body());
     }
 
     // A header of the request reaches the resolvers of that request only; a request without the header sees nothing.

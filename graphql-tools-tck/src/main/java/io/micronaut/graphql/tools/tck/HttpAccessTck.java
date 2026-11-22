@@ -38,7 +38,12 @@ public final class HttpAccessTck {
             "request-header-over-http",
             "request-header-over-websocket",
             "optional-response-over-websocket",
-            "plain-response-over-websocket");
+            "plain-response-over-websocket",
+            "request-is-the-upgrade-request-over-websocket",
+            "request-is-shared-by-the-operations-of-a-connection",
+            "anonymous-principal-over-websocket",
+            "mutation-parameters-over-websocket",
+            "subscription-parameters-over-websocket");
 
     private HttpAccessTck() {
     }
@@ -86,6 +91,40 @@ public final class HttpAccessTck {
                 case "optional-response-over-websocket" -> {
                     Map<String, Object> payload = Wire.websocket(client, json, authority, tck, "{ haOptionalResponse }");
                     expect(false, path(payload, "data", "haOptionalResponse"), payload);
+                }
+                case "request-is-the-upgrade-request-over-websocket" -> {
+                    Wire.Reply http = Wire.post(client, json, authority, Map.of(), "{ haRequestPath }");
+                    expect("/graphql", path(http.body(), "data", "haRequestPath"), http.body());
+                    Map<String, Object> payload = Wire.websocket(client, json, authority, tck, "{ haRequestPath }");
+                    expect("/graphql-ws", path(payload, "data", "haRequestPath"), payload);
+                }
+                case "request-is-shared-by-the-operations-of-a-connection" -> {
+                    String query = "{ haRequestIdentity }";
+                    List<Map<String, Object>> same = Wire.websocket(client, json, authority, tck, List.of(query, query, query));
+                    Object first = path(same.get(0), "data", "haRequestIdentity");
+                    expect(first, path(same.get(1), "data", "haRequestIdentity"), same);
+                    expect(first, path(same.get(2), "data", "haRequestIdentity"), same);
+                }
+                case "anonymous-principal-over-websocket" -> {
+                    Map<String, Object> payload = Wire.websocket(client, json, authority, tck, "{ haPrincipal }");
+                    expect("none", path(payload, "data", "haPrincipal"), payload);
+                }
+                case "mutation-parameters-over-websocket" -> {
+                    Map<String, Object> payload = Wire.websocket(client, json, authority, tck,
+                            "mutation { haMutationRequestHeader haMutationOptionalResponse }");
+                    expect("hello", path(payload, "data", "haMutationRequestHeader"), payload);
+                    expect(false, path(payload, "data", "haMutationOptionalResponse"), payload);
+                    Map<String, Object> plain = Wire.websocket(client, json, authority, tck, "mutation { haMutationResponse }");
+                    expect("HTTP_RESPONSE_UNAVAILABLE", path(plain, "errors", 0, "extensions", "code"), plain);
+                }
+                case "subscription-parameters-over-websocket" -> {
+                    Map<String, Object> header = Wire.websocket(client, json, authority, tck, "subscription { haSubscriptionRequestHeader }");
+                    expect("hello", path(header, "data", "haSubscriptionRequestHeader"), header);
+                    Map<String, Object> optional = Wire.websocket(client, json, authority, tck,
+                            "subscription { haSubscriptionOptionalResponse }");
+                    expect(false, path(optional, "data", "haSubscriptionOptionalResponse"), optional);
+                    Map<String, Object> plain = Wire.websocket(client, json, authority, tck, "subscription { haSubscriptionResponse }");
+                    expect("HTTP_RESPONSE_UNAVAILABLE", path(plain, "errors", 0, "extensions", "code"), plain);
                 }
                 default -> {
                     Map<String, Object> payload = Wire.websocket(client, json, authority, tck, "{ haResponse haOptionalResponse }");

@@ -103,6 +103,16 @@ class BagExtractor : ValueExtractor<Bag<@ExtractedValue Any>> {
     }
 }
 
+class Tray<T>(val items: List<T>)
+
+@Singleton
+@Requires(property = "tck.scenario", value = "constraint-violations")
+class TrayExtractor : ValueExtractor<Tray<@ExtractedValue Any>> {
+    override fun extractValues(tray: Tray<Any>, receiver: ValueExtractor.ValueReceiver) {
+        tray.items.forEachIndexed { index, item -> receiver.indexedValue("<tray item>", index, item) }
+    }
+}
+
 @Factory
 @Requires(property = "tck.scenario", value = "constraint-violations")
 class ConstraintViolationsScalars {
@@ -145,6 +155,10 @@ class ConstraintViolationsScalars {
     @Singleton
     fun pack(): GraphQLScalarMapping = scalar("Pack", Bag::class.java) { input -> Bag((input["items"] as List<*>).filterNotNull()) }
 
+    @Bean
+    @Singleton
+    fun tray(): GraphQLScalarMapping = scalar("Tray", Tray::class.java) { input -> Tray((input["items"] as List<*>).filterNotNull()) }
+
     @Suppress("UNCHECKED_CAST")
     private fun scalar(name: String, type: Class<*>, parse: (Map<String, Any>) -> Any): GraphQLScalarMapping =
         GraphQLScalarMapping.builder(
@@ -184,6 +198,8 @@ open class ConstraintViolationsQueries {
     open fun tally(tally: ConcurrentMap<Region, @Positive Int>): String = tally.size.toString()
 
     open fun pack(pack: Bag<@Positive Int>): String = pack.items.size.toString()
+
+    open fun tray(tray: Tray<@Positive Int>): String = tray.items.size.toString()
 
     open fun several(@NotBlank name: String, @Positive count: Int, @Valid cart: Cart): String = name
 }
