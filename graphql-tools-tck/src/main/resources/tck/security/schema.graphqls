@@ -7,6 +7,8 @@ extend type Query {
   secAdmin: String
   # @Secured(denyAll())
   secNobody: String
+  # @Secured with an expression when the application sets tck.security.expression, a plain field otherwise
+  secGated: String
   # the identity of the caller, resolved in a child field after an async parent
   secMe: SecMe!
   # the root fields that the hook saw for this operation
