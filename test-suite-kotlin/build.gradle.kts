@@ -124,6 +124,7 @@ dependencies {
     "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
     "kspValidationFixtures"("io.micronaut:micronaut-inject-kotlin")
     "kspValidationFixtures"("io.micronaut.validation:micronaut-validation-processor")
+    "kspValidationFixtures"(projects.micronautGraphqlToolsProcessor)
     testImplementation(validationFixtures.output)
     testImplementation("io.micronaut.validation:micronaut-validation")
 }

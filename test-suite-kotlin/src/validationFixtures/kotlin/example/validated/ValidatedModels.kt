@@ -34,6 +34,24 @@ class AgainModels
 @Introspected(classes = [Direct::class])
 class DirectList
 
+@GraphQLModels(classes = [FieldAccess::class])
+@Introspected(accessKind = [Introspected.AccessKind.FIELD])
+class DeclaredAccess
+
+@GraphQLModels(classes = [Filtered::class])
+@Introspected(includes = ["a", "b"], excludes = ["b"])
+class DeclaredFilter
+
+@GraphQLModels(classes = [Together::class])
+@Introspected(packages = ["example.validated.mixed"], includedAnnotations = [ExternalModel::class])
+class MixedModels
+
+class Together(var name: String = "")
+
+class FieldAccess(var a: String = "")
+
+class Filtered(var a: String = "", var b: String = "", var c: String = "")
+
 class Plain(var name: String = "")
 
 class Listed(var label: String = "")
