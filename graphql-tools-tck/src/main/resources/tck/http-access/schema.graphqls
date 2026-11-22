@@ -9,3 +9,28 @@ extend type Query {
   # whether the response is present: true over HTTP, false over WebSocket
   haOptionalResponse: Boolean!
 }
+extend type Query {
+  # the path of the request: /graphql over HTTP, the path of the upgrade request over WebSocket
+  haRequestPath: String
+  # the identity of the request object, to tell whether two operations share it
+  haRequestIdentity: Int!
+  # the name of the principal, "none" when the parameter is null
+  haPrincipal: String!
+}
+
+extend type Mutation {
+  haMutationRequestHeader: String
+  haMutationOptionalResponse: Boolean!
+  haMutationResponse: Boolean
+}
+
+# The example schema has a schema definition, which does not name a subscription type.
+extend schema {
+  subscription: Subscription
+}
+
+type Subscription {
+  haSubscriptionRequestHeader: String
+  haSubscriptionOptionalResponse: Boolean!
+  haSubscriptionResponse: Boolean
+}

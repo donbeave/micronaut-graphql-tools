@@ -41,7 +41,8 @@ public class MarkerFixtures {
     TypeDefinitionRegistryCustomizer markersSchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "type Shelf { id: ID! slots: Int! label: String! }\n"
-                        + "extend type Query { shelf: Shelf stock: String! }\n"
+                        + "type Crate { id: ID! tag: String! }\n"
+                        + "extend type Query { shelf: Shelf stock: String! crate: Crate tag: String! }\n"
                         + "extend type Mutation { stock: String! }\n"));
     }
 
@@ -132,5 +133,51 @@ public class MarkerFixtures {
 
     }
     // end::implementations[]
+
+    @GraphQLType
+    public static class Crate {
+
+        public String getId() {
+            return "7";
+        }
+
+    }
+
+    public interface CrateQueryContract extends QueryResolver {
+
+        Crate crate();
+
+        String tag();
+
+    }
+
+    public interface CrateTagContract extends TypeResolver<Crate> {
+
+        String tag(Crate crate);
+
+    }
+
+    // one bean with a root contract and a type contract: each method binds on the side of the contract that declares it,
+    // although the root field and the type field share the name tag
+    @Singleton
+    @Requires(env = MARKERS)
+    public static class CrateResolvers implements CrateQueryContract, CrateTagContract {
+
+        @Override
+        public Crate crate() {
+            return new Crate();
+        }
+
+        @Override
+        public String tag() {
+            return "root tag";
+        }
+
+        @Override
+        public String tag(Crate crate) {
+            return "tag of " + crate.getId();
+        }
+
+    }
 
 }

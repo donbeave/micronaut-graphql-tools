@@ -21,6 +21,9 @@ import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
 import io.micronaut.http.cookie.Cookie
 import jakarta.inject.Singleton
+import org.reactivestreams.Publisher
+import reactor.core.publisher.Flux
+import java.security.Principal
 import java.util.Optional
 
 // The fixtures of the TCK scenario `http-access`: resolvers that set a cookie and a header on the response, read a header of
@@ -43,5 +46,24 @@ class HttpAccessQueries {
     fun haResponse(response: MutableHttpResponse<*>): Boolean = true
 
     fun haOptionalResponse(response: Optional<MutableHttpResponse<*>>): Boolean = response.isPresent
+
+    fun haRequestPath(request: HttpRequest<*>): String = request.path
+
+    fun haRequestIdentity(request: HttpRequest<*>): Int = System.identityHashCode(request)
+
+    fun haPrincipal(principal: Principal?): String = principal?.name ?: "none"
+
+    fun haMutationRequestHeader(request: HttpRequest<*>): String? = request.headers.get("X-Tck")
+
+    fun haMutationOptionalResponse(response: Optional<MutableHttpResponse<*>>): Boolean = response.isPresent
+
+    fun haMutationResponse(response: MutableHttpResponse<*>): Boolean = true
+
+    fun haSubscriptionRequestHeader(request: HttpRequest<*>): Publisher<String?> = Flux.just(request.headers.get("X-Tck"))
+
+    fun haSubscriptionOptionalResponse(response: Optional<MutableHttpResponse<*>>): Publisher<Boolean> =
+        Flux.just(response.isPresent)
+
+    fun haSubscriptionResponse(response: MutableHttpResponse<*>): Publisher<Boolean> = Flux.just(true)
 }
 // end::http-access[]
