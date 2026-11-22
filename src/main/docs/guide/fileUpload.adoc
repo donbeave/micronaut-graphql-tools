@@ -4,7 +4,7 @@ The `micronaut-graphql-tools-upload` module accepts files in a GraphQL request. 
 
 [source,groovy]
 ----
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-upload:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-upload:$graphqlToolsVersion")
 ----
 
 The module reads JSON with the `JsonMapper` API of Micronaut (Micronaut Serialization or any other mapper you have) and uses no Jackson type. The key `micronaut.graphql.tools.upload.enabled` (default `true`) switches the scalar and the route off.

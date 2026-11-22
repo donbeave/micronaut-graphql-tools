@@ -6,10 +6,10 @@ Add the module of the technology you use, or both, and the Micronaut integration
 
 [source,groovy]
 ----
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer:$graphqlToolsVersion")
 implementation("io.micronaut.micrometer:micronaut-micrometer-core")
 
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry:$graphqlToolsVersion")
 implementation("io.micronaut.tracing:micronaut-tracing-opentelemetry")
 ----
 

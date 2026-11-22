@@ -8,7 +8,7 @@ The module is available from 1.0.0-M4; earlier milestones do not include it. Add
 
 [source,groovy]
 ----
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-scalars:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-scalars:$graphqlToolsVersion")
 ----
 
 The module registers one `GraphQLScalarMapping` bean for each scalar of the table below. A mapping only takes effect for a scalar that the schema declares: a schema that does not declare `Duration` never uses the `Duration` mapping. The beans are discovered at compile time like any other Micronaut bean, so the module needs no reflection and works in a native image.

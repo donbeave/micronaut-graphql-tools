@@ -4,7 +4,7 @@ The `micronaut-graphql-tools-security` module integrates Micronaut Security: the
 
 [source,groovy]
 ----
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-security:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-security:$graphqlToolsVersion")
 implementation("io.micronaut.security:micronaut-security")
 ----
 
