@@ -123,7 +123,15 @@ final class ElementTypeModel implements TypeModel {
      * @return whether it is a concrete class, which a factory method can expose as a bean without a scope annotation of its own
      */
     static boolean isConcreteClass(ClassElement element) {
-        return !element.isInterface() && !element.isAbstract() && !element.isEnum() && !element.isRecord();
+        return !element.isInterface() && !element.isAbstract() && !element.isEnum();
+    }
+
+    /**
+     * @param method a method of a {@code @Factory} class
+     * @return whether the method defines a bean: it carries a bean-defining annotation of its own
+     */
+    static boolean isBeanFactoryMethod(MethodElement method) {
+        return !method.isPrivate() && !method.isStatic() && BEAN_DEFINING.stream().anyMatch(method::hasDeclaredStereotype);
     }
 
     /**

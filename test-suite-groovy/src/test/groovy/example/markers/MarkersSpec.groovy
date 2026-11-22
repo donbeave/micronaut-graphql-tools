@@ -44,6 +44,17 @@ class MarkersSpec extends Specification {
         context.close()
     }
 
+    void 'a bean that mixes a root marker and a type resolver binds each method on its side'() {
+        given:
+        def context = ApplicationContext.run([:], MarkerFixtures.MARKERS)
+
+        expect:
+        run(context, '{ crate { id tag } tag }') == [crate: [id: '7', tag: 'tag of 7'], tag: 'root tag']
+
+        cleanup:
+        context.close()
+    }
+
     void 'an implementation without a scope annotation is not a bean'() {
         given:
         def context = ApplicationContext.run([:], MarkerFixtures.MARKERS)
