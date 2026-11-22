@@ -42,12 +42,12 @@ final class JavaCaseCompiler implements CheckedCaseCompiler {
     /** The runtime key of a case that the visitor reads as an option of its own. */
     static final String ACCESSOR_PREFIXES_CONFIG = 'micronaut.graphql.tools.resolver-accessor-prefixes'
 
-    static final String ACCESSOR_PREFIXES = 'micronaut.graphql.tools.processor.resolverAccessorPrefixes'
+    static final String ACCESSOR_PREFIXES = 'micronaut.graphql.tools.processor.resolver.accessor.prefixes'
 
     /** The runtime key of a case that the visitor reads as an option of its own. */
     static final String TYPE_CLASS_CONVENTION_CONFIG = 'micronaut.graphql.tools.type-class-convention'
 
-    static final String TYPE_CLASS_CONVENTION = 'micronaut.graphql.tools.processor.typeClassConvention'
+    static final String TYPE_CLASS_CONVENTION = 'micronaut.graphql.tools.processor.type.class.convention'
 
     static final String CHECKS_OFF = 'micronaut.graphql.tools.processor.checks=false'
 
