@@ -66,6 +66,7 @@ type Query {
   emptyPath: String
   withPath: String
   invalid: String
+  invalidElements: String
 }
 """
 
@@ -200,6 +201,20 @@ type Query {
         def positive = result.errors.find { it.message == 'must be positive' }
         positive.extensions.argument == 'count'
         positive.extensions.inputPath == []
+    }
+
+    void "a container element keeps the label of a custom extractor, without angle brackets, and drops the names of the built-in ones"() {
+        given:
+        startContext(SCHEMA, SPEC)
+
+        when:
+        ExecutionResult result = executeQuery('{ invalidElements }')
+
+        then:
+        result.errors.size() == 3
+        result.errors.find { it.message == 'plain' }.extensions.inputPath == ['item', 1]
+        result.errors.find { it.message == 'bracketed' }.extensions.inputPath == ['crate item', 2]
+        result.errors.find { it.message == 'built in' }.extensions.inputPath == [0]
     }
 
     void "details on sends the message and the class of an exception without a mapper"() {
@@ -374,6 +389,17 @@ type Query {
             throw new ConstraintViolationException(
                     [violation('must not be blank', [node('invalid', ElementKind.METHOD), node('book', ElementKind.PARAMETER), node('title', ElementKind.PROPERTY)]),
                      violation('must be positive', [node('invalid', ElementKind.METHOD), node('count', ElementKind.PARAMETER)])] as LinkedHashSet)
+        }
+
+        String invalidElements() {
+            throw new ConstraintViolationException(
+                    [violation('plain', [node('m', ElementKind.METHOD), node('bag', ElementKind.PARAMETER), element('item', 1)]),
+                     violation('bracketed', [node('m', ElementKind.METHOD), node('crate', ElementKind.PARAMETER), element('<crate item>', 2)]),
+                     violation('built in', [node('m', ElementKind.METHOD), node('list', ElementKind.PARAMETER), element('<list element>', 0)])] as LinkedHashSet)
+        }
+
+        private static Path.Node element(String name, int index) {
+            [getName: { name }, getKind: { ElementKind.CONTAINER_ELEMENT }, isInIterable: { true }, getIndex: { index }, getKey: { null }] as Path.Node
         }
 
         private static ConstraintViolation<?> violation(String message, List<Path.Node> nodes) {
