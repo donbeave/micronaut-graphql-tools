@@ -83,12 +83,19 @@ final class LargeSchema {
         }
     }
 
-    /** Throws when the large schema of the context is not bound. */
+    /**
+     * Throws when the large schema of the context is not bound. Cheap enough for a timed invocation; the dictionary check
+     * of {@link #checkSharedMapped(ApplicationContext, String)} is not.
+     */
     static void checkBound(ApplicationContext context, String shape) {
         String type = INTERFACES.equals(shape) ? "Obj0" : "Node0";
         if (context.getBean(GraphQL.class).getGraphQLSchema().getObjectType(type) == null) {
             throw new IllegalStateException("The large schema was not bound");
         }
+    }
+
+    /** Throws when the interface shape has no dictionary entry for {@code Shared}; {@code shape} other than that passes. */
+    static void checkSharedMapped(ApplicationContext context, String shape) {
         if (INTERFACES.equals(shape)) {
             checkSharedMapped(context);
         }

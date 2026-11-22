@@ -145,9 +145,9 @@ about 0.22 us and about 1.0 KB of allocation (`selected` minus `observed`, divid
 ## Measured start-up cost of an interface that no field returns
 
 #71: the cold-start binding cost of the interface-heavy schema at 20,000 fields with `Shared` returned by a root field (`returned`) and with that
-field left out (`unreturned`, `-PlargeUnreturnedShared=true`), so that every field of the 2,000 object types looks up the class of an interface that no field
+field left out (`unreturned`, `-PlargeUnreturnedShared=true`), so that the `id` and `name` of each of the 2,000 object types (the 4,000 fields `Shared` declares) look up the class of an interface that no field
 returns. `Shared` has no introspection, so the dictionary entry `registerType("Shared", Shared.class)` is the only way the lookup finds its class; both builds have the
-entry, and `LargeSchema.checkBound` fails every start-up benchmark that binds the interface shape when the dictionary does not map `Shared`. (An earlier figure of
+entry, and `LargeSchema.checkSharedMapped` fails every start-up benchmark that binds the interface shape when the dictionary does not map `Shared` (`BindingBenchmark` runs it after the measurement, in `@TearDown`, so the timed invocation does not include it). (An earlier figure of
 this section, +5.6 ms, came from jars without the entry: the lookup found no class and skipped the resolver-method search, so it timed nothing.) The strict check
 `unused-dictionary-entry` reports that entry when no resolver binds a field of `Shared`, so the `unreturned` jar accepts that one finding through
 `micronaut.graphql.tools.allow.findings`. Two jars, `python3 benchmarks/scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25 returned=returned.jar unreturned=unreturned.jar`,
@@ -162,7 +162,7 @@ load average at fork start ranged from 6.2 to 14.5 (median 8.4) in the first and
 | 2 | unreturned | 1529.2 ms | 1520.6 to 1538.7 | 1474.1 to 1546.9 | 23.38 MB |
 
 The difference is +10.9 ms in run 1 (95 percent bootstrap interval +4.2 to +42.4) and +11.5 ms in run 2 (+2.4 to +31.4): about 0.7 percent, outside the noise in both
-runs, and retained heap is unchanged. That is the cost of the lookup when it is real: each of the 20,000 fields asks for the resolver methods of `Shared`, about 0.5 us a field.
+runs, and retained heap is unchanged. That is the cost of the lookup when it is real: each of the 4,000 fields that `Shared` declares (`id` and `name` of 2,000 object types; the other 16,000 fields are declared by no unreturned interface) asks for the resolver methods of `Shared`, about 2.8 us a lookup (+11 ms over 4,000 lookups).
 No resolver bean is bound to `Shared` in this schema, so the run measures the lookup that the unreturned-interface path adds, not the binding of a resolver method.
 A schema whose interfaces are all returned by a field never takes this path (the `returned` build).
 

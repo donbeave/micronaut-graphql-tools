@@ -21,12 +21,14 @@ import io.micronaut.context.ApplicationContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -65,6 +67,15 @@ public class BindingBenchmark {
                         + record);
             }
             return schema;
+        }
+    }
+
+    // The dictionary check re-applies every mapping customizer, so it runs once after the last measured invocation, on a
+    // context of its own, and never inside the timed one
+    @TearDown(Level.Trial)
+    public void checkShared() {
+        try (ApplicationContext context = start()) {
+            LargeSchema.checkSharedMapped(context, shape);
         }
     }
 

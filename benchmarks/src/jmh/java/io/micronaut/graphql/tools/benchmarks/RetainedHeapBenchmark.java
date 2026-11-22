@@ -73,6 +73,7 @@ public class RetainedHeapBenchmark {
         try (ApplicationContext context = start()) {
             retained.retainedBytes = usedHeapAfterGc() - before;
             LargeSchema.checkBound(context, shape);
+            LargeSchema.checkSharedMapped(context, shape);
             if (LargeSchema.manifestAvailable(context) != record) {
                 throw new IllegalStateException("The manifest is " + (record ? "not " : "") + "recorded, but record is "
                         + record);

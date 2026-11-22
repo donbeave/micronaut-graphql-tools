@@ -221,7 +221,7 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
                     |""")
             }
             // Shared has no introspection, so the dictionary is the only way its class is found: without this entry the lookup of
-            // an interface that no field returns finds no class and skips the resolver-method search (LargeSchema.checkBound asserts it)
+            // an interface that no field returns finds no class and skips the resolver-method search (LargeSchema.checkSharedMapped asserts it)
             val dictionary = StringBuilder("\n                |            dictionary.registerType(\"Shared\", Shared.class);")
             for (i in 0 until types) {
                 val g = i % groups
