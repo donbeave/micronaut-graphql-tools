@@ -43,6 +43,7 @@ class ScalarConfigurationSpec extends Specification {
         'local-date.name'      | 'Local-Date'
         'local-date.name'      | '__Date'
         'local-date.name'      | ' '
+        'local-date.name'      | ''
         'local-date.format'    | 'not a pattern {'
         'local-date.format'    | ' '
         'duration.format'      | 'dd/MM/yyyy'
@@ -50,6 +51,67 @@ class ScalarConfigurationSpec extends Specification {
         'json.format'          | 'iso'
         'uuid.format'          | 'iso'
         'positive-int.format'  | 'iso'
+    }
+
+    void "an unknown scalar id lists the valid ids"() {
+        when:
+        def context = ApplicationContext.run(['micronaut.graphql.tools.scalars.local-dat.enabled': false,
+                                              'micronaut.graphql.tools.eager-init': false], 'test')
+        try {
+            context.getBeansOfType(GraphQLScalarMapping)
+        } finally {
+            context.close()
+        }
+
+        then:
+        def e = thrown(Exception)
+        e.message.contains('micronaut.graphql.tools.scalars.local-dat')
+        StandardScalar.values().every { e.message.contains(it.id()) }
+    }
+
+    void "the configuration binds enabled, name and format of each scalar"() {
+        when:
+        def context = ApplicationContext.run(['micronaut.graphql.tools.scalars.local-date.name'   : 'Date',
+                                              'micronaut.graphql.tools.scalars.local-date.format' : 'dd/MM/yyyy',
+                                              'micronaut.graphql.tools.scalars.uuid.enabled'      : false,
+                                              'micronaut.graphql.tools.eager-init'                : false], 'test')
+        ScalarsConfiguration configuration = context.getBean(ScalarsConfiguration)
+        def names
+        try {
+            names = context.getBeansOfType(GraphQLScalarMapping)*.name
+        } finally {
+            context.close()
+        }
+
+        then:
+        configuration.enabled
+        configuration.scalars.keySet() == ['local-date', 'uuid'] as Set
+        configuration.get(StandardScalar.LOCAL_DATE).name == 'Date'
+        configuration.get(StandardScalar.LOCAL_DATE).format == 'dd/MM/yyyy'
+        !configuration.get(StandardScalar.UUID).enabled
+        configuration.get(StandardScalar.INSTANT) == null
+        names.contains('Date')
+        !names.contains('UUID')
+        !names.contains('LocalDate')
+        names.size() == StandardScalar.values().size() - 1
+    }
+
+    void "the master switch turns the module off"() {
+        when:
+        def context = ApplicationContext.run(['micronaut.graphql.tools.scalars.enabled': false,
+                                              'micronaut.graphql.tools.eager-init': false], 'test')
+        ScalarsConfiguration configuration = context.getBean(ScalarsConfiguration)
+        def mappings
+        try {
+            mappings = context.getBeansOfType(GraphQLScalarMapping)
+        } finally {
+            context.close()
+        }
+
+        then:
+        !configuration.enabled
+        mappings.empty
+        ScalarsConfiguration.ENABLED_CONFIG == 'micronaut.graphql.tools.scalars.enabled'
     }
 
     void "the formats of the scalars that accept the keyword iso accept it, in any case"() {
