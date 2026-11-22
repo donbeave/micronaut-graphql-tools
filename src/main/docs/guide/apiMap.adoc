@@ -22,8 +22,9 @@ This page tells you which package holds what, which packages you may import from
 |Turn an exception of a resolver into an error with a message and extensions |`io.micronaut.graphql.tools.error` (`GraphQLExceptionMapper`)
 |Map a custom scalar, or a union member to a Java type |`io.micronaut.graphql.tools.mapping` (`GraphQLScalarMapping`, `SchemaMappingDictionary`)
 |Use the standard scalars (`java.time`, JSON, extended scalars) |`io.micronaut.graphql.tools.scalars` (`StandardScalar`; the module `graphql-tools-scalars`)
-|Name the request metrics and tags of the observability module |`io.micronaut.graphql.tools.observability` (`GraphQLObservability`; the module `graphql-tools-observability`)
+|Name the request metrics and tags of the Micrometer module |`io.micronaut.graphql.tools.micrometer` (`GraphQLMetrics`; the module `graphql-tools-micrometer`)
 |Name the `Upload` scalar and the error code of an invalid multipart request |`io.micronaut.graphql.tools.upload` (`GraphQLUpload`; the module `graphql-tools-upload`)
+|Name the context key of the authentication, the error codes of a secured field, and see the root fields of an operation |`io.micronaut.graphql.tools.security` (`GraphQLSecurity`, `RootFieldsHook`; the module `graphql-tools-security`)
 |Tell an omitted argument from an explicit `null` |`io.micronaut.graphql.tools.input` (`ArgumentValue`)
 |Accept or reject a `graphql-transport-ws` connection, with attributes |`io.micronaut.graphql.tools.websocket` (`GraphQLConnectionInterceptor`, `GraphQLConnectionRequest`, `GraphQLConnectionResult`)
 |Wire a directive |`io.micronaut.graphql.tools.directive` (`SchemaDirective`)
@@ -36,7 +37,7 @@ Do not import any type annotated `@Internal`, and nothing from a package named `
 
 == Current layout
 
-This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-observability` the request metrics and traces, `graphql-tools-upload` the file upload and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
 
 [cols="5,2,2,6", options="header"]
 |===
@@ -72,7 +73,9 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.internal.execution` |graphql-tools |Internal |The library's GraphQL invocation: the executor hop, the per-execution state, the lazy DataLoader registry, the wrapper of a subscription stream and the step-aside rules
 |`io.micronaut.graphql.tools.internal.execution.disconnect` |graphql-tools |Internal |The watcher that tells an execution its client disconnected, and its Netty implementation, active only when the Netty server classes are on the classpath
 |`io.micronaut.graphql.tools.internal.ws` |graphql-tools |Internal |The `graphql-transport-ws` handler and the state of its connections
-|`io.micronaut.graphql.tools.internal.kotlin` |graphql-tools |Internal |Kotlin `suspend` resolvers: the bean that starts the coroutine, active only when the Kotlin coroutine classes are on the classpath
+|`io.micronaut.graphql.tools.internal.observer` |graphql-tools |Internal |The observer SPI of the request hooks (`RequestObserver`), which the Micrometer and OpenTelemetry modules implement, and the one `Instrumentation` bean that calls the observers
+|`io.micronaut.graphql.tools.internal.protection` |graphql-tools |Internal |The cache of parsed documents of the protection settings
+|`io.micronaut.graphql.tools.internal.kotlin` |graphql-tools |Internal |Kotlin `suspend` resolvers and `Flow` subscriptions: the beans that start the coroutine and adapt the flow, active only when the Kotlin coroutine classes (and kotlinx-coroutines-reactive for a `Flow`) are on the classpath
 |`io.micronaut.graphql.tools.internal.input` |graphql-tools |Internal |The conversion of argument and input values, and the input type binder
 |`io.micronaut.graphql.tools.internal.checks` |graphql-tools |Internal |The startup checks and validators: strict mode, unreachable types, schema coordinates, the directive wiring check and the mapping dictionary
 |`io.micronaut.graphql.tools.internal.manifest` |graphql-tools |Internal |Recording and writing the binding manifest at startup
@@ -89,10 +92,13 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.scalars.internal` |graphql-tools-scalars |Internal |The factory that registers a mapping for each scalar, the reader of the configuration and the shared coercion
 |`io.micronaut.graphql.tools.scalars.internal.json` |graphql-tools-scalars |Internal |The JSON scalar
 |`io.micronaut.graphql.tools.scalars.internal.time` |graphql-tools-scalars |Internal |The `java.time` scalars and the builder that picks one from its format
-|`io.micronaut.graphql.tools.observability` |graphql-tools-observability |Public API |`GraphQLObservability`, the names of the meters and tags
-|`io.micronaut.graphql.tools.observability.internal` |graphql-tools-observability |Internal |The instrumentation, the Micrometer and OpenTelemetry observers, the field span decorator and the configuration of the metrics and of the tracing
+|`io.micronaut.graphql.tools.micrometer` |graphql-tools-micrometer |Public API |`GraphQLMetrics`, the names of the meters and tags
+|`io.micronaut.graphql.tools.micrometer.internal` |graphql-tools-micrometer |Internal |The Micrometer observer, the cap on operation names and the configuration of the metrics
+|`io.micronaut.graphql.tools.opentelemetry.internal` |graphql-tools-opentelemetry |Internal |The request span observer, the field span decorator and the wrapper that traces a field, the propagated context element and the configuration of the tracing
 |`io.micronaut.graphql.tools.upload` |graphql-tools-upload |Public API |`GraphQLUpload`, the name of the `Upload` scalar, the configuration key and the error code of an invalid multipart request
 |`io.micronaut.graphql.tools.upload.internal` |graphql-tools-upload |Internal |The multipart route, the reader of the `operations` and `map` parts and the `Upload` scalar
+|`io.micronaut.graphql.tools.security` |graphql-tools-security |Public API |`GraphQLSecurity`, the configuration prefix, the context key of the authentication and the error codes of a secured field, and `RootFieldsHook`
+|`io.micronaut.graphql.tools.security.internal` |graphql-tools-security |Internal |The context contributor, the decorator and fetcher of the secured fields and the instrumentation of the hook
 |`io.micronaut.graphql.tools.visitor` |graphql-tools-processor |Compiler plug-in |The compile-time `TypeElementVisitor`, loaded by the compiler and never imported
 |`io.micronaut.graphql.tools.tck` |graphql-tools-tck |Test helper |The TCK runner; not published
 |===

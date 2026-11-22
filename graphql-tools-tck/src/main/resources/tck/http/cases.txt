@@ -1,0 +1,4 @@
+variables
+operation-name
+parse-error
+validation-error

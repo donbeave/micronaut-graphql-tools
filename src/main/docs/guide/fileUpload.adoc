@@ -29,7 +29,7 @@ snippet::example.fileupload.UploadTest[project-base="test-suite", source="test",
 
 snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="input-object", indent="0"]
 
-A batch (an `operations` part that is an array) is not supported. A request that does not follow the specification is answered with `400 Bad Request` and a body with one error, whose `extensions.code` is `INVALID_MULTIPART_REQUEST` (`GraphQLUpload.INVALID_REQUEST_CODE`): there is no `operations` or `map` part, a part is not valid JSON, the map names a part that the request does not have, a path does not exist in the variables, or a part is sent twice.
+A batch (an `operations` part that is an array) is not supported. A request that does not follow the specification is answered with `400 Bad Request` and a body with one error, whose `extensions.code` is `INVALID_MULTIPART_REQUEST` (`GraphQLUpload.INVALID_REQUEST_CODE`): there is no `operations` or `map` part, a part is not valid JSON, the `operations` part has no `query`, the map names a part that the request does not have, a path does not exist in the variables, a path has no `null` placeholder in the variables (the key must be there with the value `null`, as the specification requires), or a part is sent twice.
 
 snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="invalid", indent="0"]
 
@@ -46,6 +46,22 @@ The route carries no `@ExecuteOn`. It reads the parts, then calls the `GraphQLIn
 snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="executor", indent="0"]
 
 With `executor: none` the operation runs on the thread that completes the request body, as it does for a JSON request.
+
+=== Decoding on the event loop
+
+Micronaut's Netty server decodes the multipart body on the event loop, chunk by chunk as the bytes arrive, and the module does not move that step. It was measured, not assumed: a 160 MB file posted to a local server (Oracle GraalVM 25, Apple M1 Max, the client in the same JVM, so the client competes for the CPU), with a probe request to the same server every 5 ms while the upload ran. With `micronaut.server.multipart.mixed` the probe latency was 4.2 ms at the median and 45 ms at the 99th percentile during the upload, against 3.6 ms and 16 ms when idle; with `micronaut.server.multipart.disk` it was 3.9 ms and 40 ms, against 3.3 ms and 25 ms. The worst probe stayed below 130 ms, so the event loop is never held for the length of the upload: the decoder takes one chunk at a time and returns to the loop between chunks. The cost that remains is the copy of each chunk, and the write to disk when a part goes to disk. If you accept very large files on a server that must keep a tight latency for other requests, put the route behind a limit with `micronaut.server.max-request-size`, and keep the parts on disk so that they are not held in memory.
+
+[[csrf]]
+== CSRF
+
+A `multipart/form-data` request is a simple request for a browser: a form on another site can post it to your endpoint with the cookies of the user, and the browser sends no preflight request first. CORS configuration therefore does not protect the multipart route, and the check that a JSON-only endpoint gets for free (a `Content-Type` of `application/json` forces a preflight) does not apply to it. If the endpoint authenticates with a cookie or any credential that the browser sends by itself, protect the route:
+
+* Require a custom request header on it, for example `X-Requested-With` or the header of your CSRF token, in a Micronaut filter that matches the GraphQL path and the `multipart/form-data` content type. A page of another origin cannot add a custom header to a simple request, and adding one makes the request need a preflight, which CORS then refuses.
+* Or verify a CSRF token (a synchronizer or double-submit token) on every multipart request, as for any form post.
+* Set `SameSite=Lax` or `SameSite=Strict` on the session cookie, and check the `Origin` header against the origins you serve.
+* An endpoint that authenticates with an `Authorization` header that the application adds itself (a bearer token) is not exposed, because a cross-site form cannot set it.
+
+A mutation that takes an `Upload` changes state, so treat the route as you treat any other state-changing `POST`.
 
 == Cost and limits
 

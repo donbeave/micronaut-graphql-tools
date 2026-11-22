@@ -18,3 +18,7 @@ type PageStats {
   batches: Int!
   keys: Int!
 }
+
+extend type Query {
+  batchContext: String!
+}

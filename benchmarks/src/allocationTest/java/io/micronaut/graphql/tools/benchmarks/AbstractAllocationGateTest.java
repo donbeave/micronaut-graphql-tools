@@ -37,6 +37,9 @@ abstract class AbstractAllocationGateTest {
     private static final int UNUSED_LOADERS = 50;
     // what the async boundary adds to a field whose future completes on another thread (#428)
     private static final double ASYNC_BOUNDARY_BUDGET_BYTES = 128;
+    // a request of 10 root fields allocates over 100 KB through graphql-java; a Mono that is built and not subscribed
+    // allocates tens of bytes, so a figure below this means that the query did not run
+    static final double MINIMUM_EXECUTED_QUERY_BYTES = 8192;
 
     private static BenchmarkCases cases;
     private static Baselines baselines;
@@ -70,7 +73,25 @@ abstract class AbstractAllocationGateTest {
         double invoked = AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.invokeOp(fields)), 200_000 / Math.max(1, fields / 10), 20_000 / Math.max(1, fields / 10), 5);
         double direct = AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.directOp(fields)), 200_000 / Math.max(1, fields / 10), 20_000 / Math.max(1, fields / 10), 5);
         System.out.printf("allocation invoke %d fields = %.2f B/op, direct = %.2f B/op%n", fields, invoked, direct);
+        requireExecuted(fields + " fields invoked", invoked);
+        requireExecuted(fields + " fields direct", direct);
+        requireNotBelow("The invocation of " + fields + " fields", invoked, "the direct execution it wraps", direct);
         return invoked - direct;
+    }
+
+    /** Fails when a measured query allocated too little to have run. */
+    static void requireExecuted(String what, double bytes) {
+        assertTrue(bytes >= MINIMUM_EXECUTED_QUERY_BYTES, String.format(java.util.Locale.ROOT,
+                "The query of %s allocates %.2f B/op, below the %.0f B/op that a query that ran needs: the benchmarked operation "
+                        + "does not run the query (a Mono that is not subscribed to does no work).", what, bytes,
+                MINIMUM_EXECUTED_QUERY_BYTES));
+    }
+
+    /** Fails when the wrapping measure is below what it wraps: a negative overhead is not a measurement. */
+    static void requireNotBelow(String what, double bytes, String floorWhat, double floor) {
+        assertTrue(bytes >= floor, String.format(java.util.Locale.ROOT,
+                "%s allocates %.2f B/op, below %s at %.2f B/op: a negative overhead of %.2f B/op.", what, bytes, floorWhat,
+                floor, bytes - floor));
     }
 
     /**
@@ -87,7 +108,7 @@ abstract class AbstractAllocationGateTest {
     }
 
     /**
-     * The bytes per field that a request allocates with the observability module on and no field traced, beyond the same request
+     * The bytes per field that a request allocates with the metrics and tracing modules on and no field traced, beyond the same request
      * with an instrumentation that implements no hook: the overhead of a query of 1,000 fields minus that of 10 fields. The empty
      * instrumentation is the control, because graphql-java 21 chains any instrumentation with its own and that costs each field
      * whatever the instrumentation is. A slope of 0 B per field leaves 0.
@@ -108,6 +129,8 @@ abstract class AbstractAllocationGateTest {
         double with = AllocationMeter.bytesPerOperation(observed.op(op), measured, warmup, 5);
         double control = AllocationMeter.bytesPerOperation(empty.op(op), measured, warmup, 5);
         System.out.printf("allocation %d fields: observed = %.2f B/op, empty instrumentation = %.2f B/op%n", fields, with, control);
+        requireExecuted(fields + " fields with observability", with);
+        requireExecuted(fields + " fields with the empty instrumentation", control);
         return with - control;
     }
 

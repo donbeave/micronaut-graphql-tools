@@ -47,6 +47,8 @@ public final class ReturnTypes {
     // what a Completable emits: nothing, so the field is null
     private static final Argument<Void> NO_VALUE = Argument.of(Void.class);
 
+    private static final String FLOW = "kotlinx.coroutines.flow.Flow";
+
     private ReturnTypes() {
     }
 
@@ -85,6 +87,22 @@ public final class ReturnTypes {
         return false;
     }
 
+    // by name: the library links no Kotlin type, and a Flow is an interface that the declared type can inherit
+    public static boolean isFlow(Class<?> type) {
+        if (type == null || type == Object.class) {
+            return false;
+        }
+        if (FLOW.equals(type.getName())) {
+            return true;
+        }
+        for (Class<?> inherited : type.getInterfaces()) {
+            if (isFlow(inherited)) {
+                return true;
+            }
+        }
+        return isFlow(type.getSuperclass());
+    }
+
     public static String convertedTypeName(Argument<?> declaredType, boolean subscription, boolean returnType,
                                            boolean singleResult) {
         Argument<?> result = declaredType;
@@ -92,7 +110,7 @@ public final class ReturnTypes {
             result = result.getFirstTypeVariable().orElse(result);
         }
         boolean singleType = !subscription && isSingleValue(result.getType());
-        if (Publisher.class.isAssignableFrom(result.getType()) || singleType) {
+        if (Publisher.class.isAssignableFrom(result.getType()) || singleType || subscription && isFlow(result.getType())) {
             boolean many = !subscription && returnType && !singleType && !singleResult;
             result = result.getFirstTypeVariable().orElse(singleType ? NO_VALUE : result);
             if (many) {

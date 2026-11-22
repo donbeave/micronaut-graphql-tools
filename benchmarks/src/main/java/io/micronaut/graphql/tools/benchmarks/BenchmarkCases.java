@@ -43,6 +43,7 @@ import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.ApplicationContextBuilder;
+import io.micronaut.graphql.tools.internal.execution.ExecutionState;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Circle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Item;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.PlainItem;
@@ -91,7 +92,7 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String INVOCATION_OVERHEAD = "invocationOverhead";
     public static final String INVOCATION_SLOPE = "invocationSlope";
     public static final String LOADER_OVERHEAD = "loaderOverhead";
-    /** What the observability module adds per field to a request: the invocation slope with it on, less the one with an empty instrumentation. */
+    /** What the metrics and tracing modules add per field to a request: the invocation slope with them on, less the one with an empty instrumentation. */
     public static final String OBSERVED_INVOCATION_SLOPE = "observedInvocationSlope";
     public static final String QUERY_1K = "query1kObjects";
     public static final String QUERY_10K = "query10kObjects";
@@ -172,9 +173,9 @@ public final class BenchmarkCases implements AutoCloseable {
         NONE,
         /** One that implements no hook: what any instrumentation costs graphql-java, with nothing of ours in it. */
         EMPTY,
-        /** The observability module's, with a meter registry and the OpenTelemetry SDK of Micronaut Tracing, and no field selected for a span. */
+        /** The metrics and tracing modules', with a meter registry and the OpenTelemetry SDK of Micronaut Tracing, and no field selected for a span. */
         OBSERVABILITY,
-        /** The observability module's, with every {@code Query.ping} selected for a span by the field decorator. */
+        /** The metrics and tracing modules', with every {@code Query.ping} selected for a span by the field decorator. */
         OBSERVABILITY_SELECTED
     }
 
@@ -241,7 +242,7 @@ public final class BenchmarkCases implements AutoCloseable {
         switch (instrumented) {
             case NONE -> { }
             case EMPTY -> builder.singletons(new SimplePerformantInstrumentation());
-            // the beans of the observability module, with no field selected for a span
+            // the beans of the metrics and tracing modules, with no field selected for a span
             case OBSERVABILITY, OBSERVABILITY_SELECTED -> builder.singletons(new SimpleMeterRegistry());
         }
         context = builder
@@ -257,7 +258,7 @@ public final class BenchmarkCases implements AutoCloseable {
                     case OBSERVABILITY_SELECTED -> Map.of("micronaut.graphql.tools.tracing.fields", List.of("Query.ping"));
                     case OBSERVABILITY -> Map.<String, Object>of();
                     // Micronaut Micrometer and Micronaut Tracing are on the classpath and would create a registry and an
-                    // OpenTelemetry bean, which switches the observability module on in the cases that must have none of it
+                    // OpenTelemetry bean, which switches the metrics and tracing modules on in the cases that must have none of it
                     default -> Map.<String, Object>of("micronaut.metrics.enabled", false, "micronaut.otel.enabled", false);
                 })
                 .singletons(registry)
@@ -298,7 +299,7 @@ public final class BenchmarkCases implements AutoCloseable {
                 Map.of("line", Map.of("label", "l", "point", point("a", 1, 2), "tags", List.of("x", "y")))));
         ops.put(DIRECTIVE_WRAPPED_FETCHER, fetch("Query", "guarded", null, Map.of()));
         ops.put(ASYNC_BOUNDARY_DONE, fetch("Query", "asyncDone", null, Map.of()));
-        ops.put(ASYNC_BOUNDARY_OTHER_THREAD, fetch("Query", "asyncPending", null, Map.of()));
+        ops.put(ASYNC_BOUNDARY_OTHER_THREAD, pendingFetch("Query", "asyncPending"));
         Resolvers.Query resolver = new Resolvers.Query();
         ops.put(ASYNC_PENDING_SOURCE, resolver::asyncPending);
         ops.put(UNION_RESOLUTION, resolve(schema.getType("Shape"), new Circle(), new Square()));
@@ -348,6 +349,32 @@ public final class BenchmarkCases implements AutoCloseable {
                 definition);
         DataFetchingEnvironment environment = environment(parent, definition, source, arguments);
         return () -> fetcher.get(environment);
+    }
+
+    private static final int PENDING_STAGES_PER_EXECUTION = 4_096;
+
+    // A pending stage stays registered with its execution until the execution ends, and this operation never completes it, so
+    // the operation starts a new execution after a number of calls, as the requests of a server do, instead of letting one
+    // execution collect every stage of the run
+    private Op pendingFetch(String type, String field) {
+        GraphQLObjectType parent = schema.getObjectType(type);
+        GraphQLFieldDefinition definition = parent.getFieldDefinition(field);
+        DataFetcher<?> fetcher = schema.getCodeRegistry().getDataFetcher(FieldCoordinates.coordinates(type, field), definition);
+        DataFetchingEnvironment environment = environment(parent, definition, null, Map.of());
+        return new Op() {
+            private int calls;
+
+            @Override
+            public Object run() throws Exception {
+                if (++calls == PENDING_STAGES_PER_EXECUTION) {
+                    calls = 0;
+                    ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
+                    new ExecutionState(state.propagatedContext(), state.transport(), state.httpRequest(), null,
+                            state.connectionAttributes(), state.requestExecutor(), null).storeIn(environment.getGraphQlContext());
+                }
+                return fetcher.get(environment);
+            }
+        };
     }
 
     // What a request does with the scalar: parse the variable, then write the value that a resolver returns from it
@@ -414,16 +441,27 @@ public final class BenchmarkCases implements AutoCloseable {
         return query.append(" }").toString();
     }
 
-    // the invocation runs on the calling thread (executor none), so the result future is complete when it returns; the
-    // Mono that the transport subscribes to is built and not subscribed, because its subscription is the transport's
+    // The invocation returns a Mono that does no work until it is subscribed to, so the operation subscribes and waits
+    // (the way a transport does); the query runs on the calling thread (executor none). It fails when the query did not run.
     private Op invoke(int fields) {
         GraphQLInvocationData data = new GraphQLInvocationData(fieldsQuery(fields), null, Map.of());
-        return () -> invocation.invoke(data, null, null);
+        return () -> executed(Mono.from(invocation.invoke(data, null, null)).block());
     }
 
     private Op direct(int fields) {
         String query = fieldsQuery(fields);
-        return () -> graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build());
+        return () -> executed(graphQL.executeAsync(ExecutionInput.newExecutionInput().query(query).build()).join());
+    }
+
+    private static ExecutionResult executed(ExecutionResult result) {
+        if (result == null || !result.getErrors().isEmpty()) {
+            throw new IllegalStateException("The benchmarked query did not run: " + (result == null ? "no result" : result.getErrors()));
+        }
+        Map<String, Object> data = result.getData();
+        if (data == null || data.isEmpty() || !"pong".equals(data.get("f0"))) {
+            throw new IllegalStateException("The benchmarked query returned no data: " + data);
+        }
+        return result;
     }
 
     /**

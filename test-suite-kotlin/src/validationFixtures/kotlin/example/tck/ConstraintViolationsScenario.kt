@@ -20,13 +20,27 @@ import graphql.schema.GraphQLScalarType
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.AnnotationValue
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping
 import jakarta.inject.Singleton
+import io.micronaut.validation.validator.constraints.ConstraintValidator
+import io.micronaut.validation.validator.constraints.ConstraintValidatorContext
+import jakarta.validation.Constraint
+import jakarta.validation.Payload
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
+import jakarta.validation.valueextraction.ExtractedValue
+import jakarta.validation.valueextraction.ValueExtractor
+import java.util.NavigableMap
+import java.util.SortedMap
+import java.util.TreeMap
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+import kotlin.reflect.KClass
 
 // The fixtures of the TCK scenario `constraint-violations`: resolvers with constrained parameters and constrained input
 // classes, validated by a real Micronaut Validation run (#468).
@@ -54,22 +68,94 @@ class Cart {
 }
 // end::constrained-input[]
 
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+@Constraint(validatedBy = [])
+annotation class OrderedSpan(
+    val message: String = "min must not exceed max",
+    val groups: Array<KClass<*>> = [],
+    val payload: Array<KClass<out Payload>> = []
+)
+
+@GraphQLInput
+@OrderedSpan
+class Span {
+    var min: Int = 0
+    var max: Int = 0
+}
+
+@Singleton
+@Requires(property = "tck.scenario", value = "constraint-violations")
+class OrderedSpanValidator : ConstraintValidator<OrderedSpan, Span> {
+    override fun isValid(value: Span?, annotation: AnnotationValue<OrderedSpan>, context: ConstraintValidatorContext): Boolean =
+        value == null || value.min <= value.max
+}
+
+enum class Region { NORTH, SOUTH }
+
+class Bag<T>(val items: List<T>)
+
+@Singleton
+@Requires(property = "tck.scenario", value = "constraint-violations")
+class BagExtractor : ValueExtractor<Bag<@ExtractedValue Any>> {
+    override fun extractValues(bag: Bag<Any>, receiver: ValueExtractor.ValueReceiver) {
+        bag.items.forEachIndexed { index, item -> receiver.indexedValue("item", index, item) }
+    }
+}
+
 @Factory
 @Requires(property = "tck.scenario", value = "constraint-violations")
 class ConstraintViolationsScalars {
 
     @Bean
     @Singleton
-    fun limits(): GraphQLScalarMapping =
+    fun limits(): GraphQLScalarMapping = scalar("Limits", Map::class.java) { it }
+
+    @Bean
+    @Singleton
+    fun spans(): GraphQLScalarMapping = scalar("Spans", NavigableMap::class.java) { input ->
+        val spans: NavigableMap<String, Span> = TreeMap()
+        input.forEach { (key, value) ->
+            val bounds = value as Map<*, *>
+            spans[key] = Span().apply {
+                min = (bounds["min"] as Number).toInt()
+                max = (bounds["max"] as Number).toInt()
+            }
+        }
+        spans
+    }
+
+    @Bean
+    @Singleton
+    fun weights(): GraphQLScalarMapping = scalar("Weights", SortedMap::class.java) { input ->
+        val weights: SortedMap<UUID, Int> = TreeMap()
+        input.forEach { (key, value) -> weights[UUID.fromString(key)] = (value as Number).toInt() }
+        weights
+    }
+
+    @Bean
+    @Singleton
+    fun tally(): GraphQLScalarMapping = scalar("Tally", ConcurrentMap::class.java) { input ->
+        val tally: ConcurrentMap<Region, Int> = ConcurrentHashMap()
+        input.forEach { (key, value) -> tally[Region.valueOf(key)] = (value as Number).toInt() }
+        tally
+    }
+
+    @Bean
+    @Singleton
+    fun pack(): GraphQLScalarMapping = scalar("Pack", Bag::class.java) { input -> Bag((input["items"] as List<*>).filterNotNull()) }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun scalar(name: String, type: Class<*>, parse: (Map<String, Any>) -> Any): GraphQLScalarMapping =
         GraphQLScalarMapping.builder(
-            GraphQLScalarType.newScalar().name("Limits").coercing(object : Coercing<Any, Any> {
+            GraphQLScalarType.newScalar().name(name).coercing(object : Coercing<Any, Any> {
                 override fun serialize(value: Any): Any = value
 
-                override fun parseValue(value: Any): Any = value
+                override fun parseValue(value: Any): Any = parse(value as Map<String, Any>)
 
                 override fun parseLiteral(value: Any): Any = throw UnsupportedOperationException()
             }).build()
-        ).outputClasses(Map::class.java).inputClasses(Map::class.java).build()
+        ).outputClasses(type).inputClasses(type).build()
 }
 
 @Singleton
@@ -88,6 +174,16 @@ open class ConstraintViolationsQueries {
     open fun restock(@Valid lines: List<Line>): String = lines.size.toString()
 
     open fun cap(limits: Map<String, @Positive Int>): String = limits.toString()
+
+    open fun spans(@Valid spans: List<Span>): String = spans.size.toString()
+
+    open fun spanMap(spans: NavigableMap<String, @Valid Span>): String = spans.size.toString()
+
+    open fun weights(weights: SortedMap<UUID, @Positive Int>): String = weights.size.toString()
+
+    open fun tally(tally: ConcurrentMap<Region, @Positive Int>): String = tally.size.toString()
+
+    open fun pack(pack: Bag<@Positive Int>): String = pack.items.size.toString()
 
     open fun several(@NotBlank name: String, @Positive count: Int, @Valid cart: Cart): String = name
 }

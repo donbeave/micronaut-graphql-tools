@@ -18,6 +18,7 @@ package example.observability;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.execution.instrumentation.Instrumentation;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micronaut.context.ApplicationContext;
@@ -34,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// Runs on the JVM and as a native binary (nativeTest): the request timer and the spans of the observability module.
+// Runs on the JVM and as a native binary (nativeTest): the request timer of the Micrometer module and the spans of the OpenTelemetry module.
 class ObservabilityTest {
 
     private static ExecutionResult execute(ApplicationContext context, String query, String operationName) {
@@ -135,6 +136,21 @@ class ObservabilityTest {
             long operations = context.getBean(MeterRegistry.class).find("graphql.request").timers().stream()
                     .map(timer -> timer.getId().getTag("operation")).distinct().count();
             assertEquals(3, operations);
+        }
+    }
+
+    @Test
+    void theLibraryHasOneInstrumentationBeanWhicheverModulesAreOn() {
+        assertEquals(1, instrumentations(Map.of()));
+        assertEquals(1, instrumentations(Map.of("micronaut.graphql.tools.tracing.enabled", false)));
+        assertEquals(1, instrumentations(Map.of("micronaut.metrics.binders.graphql.enabled", false)));
+        assertEquals(0, instrumentations(Map.of("micronaut.graphql.tools.tracing.enabled", false,
+                "micronaut.metrics.binders.graphql.enabled", false)));
+    }
+
+    private static int instrumentations(Map<String, Object> properties) {
+        try (ApplicationContext context = ApplicationContext.run(properties, ObservabilityFixtures.OBSERVED)) {
+            return context.getBeansOfType(Instrumentation.class).size();
         }
     }
 

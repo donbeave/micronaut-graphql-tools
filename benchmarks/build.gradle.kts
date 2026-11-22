@@ -17,8 +17,9 @@ dependencies {
     implementation(projects.micronautGraphqlTools)
     // the coercions of the standard scalars (#46) are benchmarked next to the argument conversion
     implementation(projects.micronautGraphqlToolsScalars)
-    // a request with the observability module on and no field traced is gated against the same request without it (#24)
-    implementation(projects.micronautGraphqlToolsObservability)
+    // a request with the metrics and tracing modules on and no field traced is gated against the same request without them (#24)
+    implementation(projects.micronautGraphqlToolsMicrometer)
+    implementation(projects.micronautGraphqlToolsOpentelemetry)
     implementation(mnMicrometer.micronaut.micrometer.core)
     implementation(mnTracing.micronaut.tracing.opentelemetry)
     implementation(mn.micronaut.inject)

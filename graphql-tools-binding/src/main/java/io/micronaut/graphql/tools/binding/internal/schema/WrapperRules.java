@@ -72,6 +72,14 @@ public final class WrapperRules {
     }
 
     /**
+     * @return the sentence for a Kotlin {@code Flow} on a field outside the subscription type, or inside a list
+     */
+    public static String flowOutsideSubscription() {
+        return "a Kotlin Flow can only be returned by a field of the subscription type, which streams. Fix: return the "
+                + "value with a suspend function, or a Publisher<T> or CompletionStage<T>, or move the field to the subscription type.";
+    }
+
+    /**
      * @return the sentence for a Kotlin {@code suspend} function on a field of the subscription type
      */
     public static String suspendOnSubscription() {

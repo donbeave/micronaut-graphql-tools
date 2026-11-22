@@ -173,6 +173,25 @@ public final class GraphQLResolversRegistry {
                 methods.length == 0 ? null : Arrays.stream(methods).map(ResolverMarkers.ContractMethod::decode).toList());
     }
 
+    // a marker bean that the build did not process has no executable method that the registry is told about, so the startup
+    // asks the bean context for the beans of each marker interface and reads what the build recorded for them
+    private void findUnrecordedMarkerBeans() {
+        for (Class<?> marker : List.of(QueryResolver.class, MutationResolver.class, SubscriptionResolver.class)) {
+            for (BeanDefinition<?> beanDefinition : beanContext.getBeanDefinitions(marker)) {
+                if (!beanDefinition.isAbstract() && markersOf(beanDefinition).operations().isEmpty()
+                        && !unreadableRootMarkers.contains(beanDefinition)) {
+                    unreadableRootMarkers.add(beanDefinition);
+                }
+            }
+        }
+        for (BeanDefinition<?> beanDefinition : beanContext.getBeanDefinitions(TypeResolver.class)) {
+            if (!beanDefinition.isAbstract() && typeResolverContractReader.apply(beanDefinition).isEmpty()
+                    && !unreadableTypeResolverContracts.contains(beanDefinition)) {
+                unreadableTypeResolverContracts.add(beanDefinition);
+            }
+        }
+    }
+
     private static boolean implementsRootMarker(Class<?> beanType) {
         return QueryResolver.class.isAssignableFrom(beanType) || MutationResolver.class.isAssignableFrom(beanType)
                 || SubscriptionResolver.class.isAssignableFrom(beanType);
@@ -412,15 +431,24 @@ public final class GraphQLResolversRegistry {
                 .anyMatch(it -> !it.getName().equals("groovy.lang.GroovyObject"));
     }
 
-    public void verifyTypeResolverContracts() {
-        registerIntroductionBeans();
-        resolveTypeResolverMethods();
-
+    /**
+     * Fails when a bean implements a root marker interface and the build did not record its operation. It runs before the
+     * check for a root resolver, because such a bean is not a root resolver for the registry without that record.
+     */
+    public void verifyRootMarkersRecorded() {
+        findUnrecordedMarkerBeans();
         unreadableRootMarkers.stream()
                 .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))
                 .ifPresent(beanDefinition -> {
                     throw TypeResolverContractsNotFoundException.forRootMarker(getUserBeanType(beanDefinition));
                 });
+    }
+
+    public void verifyTypeResolverContracts() {
+        registerIntroductionBeans();
+        resolveTypeResolverMethods();
+        findUnrecordedMarkerBeans();
+        verifyRootMarkersRecorded();
 
         unreadableTypeResolverContracts.stream()
                 .min(Comparator.comparing((BeanDefinition<?> it) -> getUserBeanType(it).getName()))

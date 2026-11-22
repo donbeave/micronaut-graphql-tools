@@ -56,6 +56,7 @@ Each package has a `package-info.java`. The [API map](../src/main/docs/guide/api
 | `io.micronaut.graphql.tools.internal.wiring` | Internal | The runtime wiring generator, the wiring factory, the interface field binder and the directive wirings |
 | `io.micronaut.graphql.tools.internal.checks` | Internal | The startup checks and validators |
 | `io.micronaut.graphql.tools.internal.manifest` | Internal | Recording and writing the binding manifest |
+| `io.micronaut.graphql.tools.internal.observer` | Internal | The observer SPI of the request hooks (`RequestObserver`) and the one `Instrumentation` bean that calls the observers; the Micrometer and OpenTelemetry modules contribute the observers |
 | `io.micronaut.graphql.tools.internal.model` | Internal | The runtime registries and models of the beans and types |
 
 ## Who uses it

@@ -21,8 +21,10 @@ and test it.
 | [`graphql-tools`](graphql-tools/README.md) | `:micronaut-graphql-tools` | The runtime library that applications depend on. |
 | [`graphql-tools-binding`](graphql-tools-binding/README.md) | `:micronaut-graphql-tools-binding` | The binding rules used by the runtime library. |
 | [`graphql-tools-scalars`](graphql-tools-scalars/README.md) | `:micronaut-graphql-tools-scalars` | The standard scalars: `java.time`, JSON and extended scalars, as beans. |
-| [`graphql-tools-observability`](graphql-tools-observability/README.md) | `:micronaut-graphql-tools-observability` | Request metrics (Micrometer) and traces (OpenTelemetry), optional. |
+| [`graphql-tools-micrometer`](graphql-tools-micrometer/README.md) | `:micronaut-graphql-tools-micrometer` | Request metrics (Micrometer), optional. |
+| [`graphql-tools-opentelemetry`](graphql-tools-opentelemetry/README.md) | `:micronaut-graphql-tools-opentelemetry` | Request and field spans (OpenTelemetry), optional. |
 | [`graphql-tools-upload`](graphql-tools-upload/README.md) | `:micronaut-graphql-tools-upload` | File upload: the `Upload` scalar and the multipart request route, optional. |
+| [`graphql-tools-security`](graphql-tools-security/README.md) | `:micronaut-graphql-tools-security` | Micronaut Security: the principal in resolvers, `@Secured` on resolver methods and the root fields hook, optional. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
@@ -872,7 +874,12 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.strict` | `true` \| `false` | The shorthand for the severity of every check that has no `checks` entry: `true` leaves every check at `fail`, `false` makes every check `warn` (the findings are logged and listed in the manifest). It does not change `precedence`. See [Strict mode](#strict-mode). |
 | `micronaut.graphql.tools.checks` | map of check code to `fail` \| `warn` \| `ignore` (empty) | The severity of single checks, for example `checks.unwired-directive: ignore`: `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`, `unreachable-type`, `unreachable-value-type`, `unused-dictionary-entry`, `interface-read-through-implementation`, `unwired-directive`. An entry wins over `strict`. An unknown code or severity fails the startup. The five compile-time checks (`unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`) are not relaxed at compile time. |
 | `micronaut.graphql.tools.eager-init` | `true` \| `false` | Bind the schema when the application context starts, so that a broken binding fails the startup (also when the application defines its own `GraphQL` bean) and the first request does no binding work. `false` binds it when the first bean that needs the `GraphQLSchema` is created. |
-| `micronaut.graphql.tools.execution.data-loader-statistics` | `false` \| `true` | Whether the library counts the batches that each batch loader bean dispatches in an execution (`DataLoaderBatchStatistics` in the GraphQL context); the [observability module](#observability) turns the counts into DataLoader metrics. Off by default: counting adds two atomic increments to each batch. |
+| `micronaut.graphql.tools.execution.data-loader-statistics` | `false` \| `true` | Whether the library counts the batches that each batch loader bean dispatches in an execution (`DataLoaderBatchStatistics` in the GraphQL context); the [Micrometer module](#observability) turns the counts into DataLoader metrics. Off by default: counting adds two atomic increments to each batch. |
+| `micronaut.graphql.tools.execution.timeout` | duration, default none | How long an operation may take until its result is ready. When it runs out the client gets an `EXECUTION_TIMEOUT` error and the execution is cancelled, so later async fields abort; a running resolver is not interrupted. The timer exists only when the key is set. |
+| `micronaut.graphql.tools.protection.document-cache-size` | `1000` | How many parsed and validated documents are kept, keyed by the query text (least recently used); `0` turns the cache off. |
+| `micronaut.graphql.tools.protection.max-depth` | `0` (no limit) | The deepest selection nesting that an operation may have; a deeper one is rejected with a GraphQL error. |
+| `micronaut.graphql.tools.protection.max-complexity` | `0` (no limit) | The highest complexity (every selected field counts 1) that an operation may have; a higher one is rejected with a GraphQL error. |
+| `micronaut.graphql.tools.protection.introspection` | `true` \| `false` | Whether `__schema` and `__type` can be queried; off, they fail validation. |
 | `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded. The checks run the same either way. |
 | `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
 | `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path one line is logged at INFO and the manifest lines at DEBUG. |
@@ -1262,12 +1269,14 @@ public GraphQLBuilderCustomizer tracing(MyTracingInstrumentation instrumentation
 
 ## Observability
 
-The `micronaut-graphql-tools-observability` module records request metrics with Micrometer and traces with OpenTelemetry.
-Neither library is a dependency of the module: add the one you use, with a `MeterRegistry` bean (Micronaut Micrometer) or an
-`OpenTelemetry` bean (Micronaut Tracing), and the module's instrumentation appears.
+Two modules, each named after its technology, record request metrics and spans: `micronaut-graphql-tools-micrometer` records
+metrics with Micrometer and `micronaut-graphql-tools-opentelemetry` records traces with OpenTelemetry. Neither library is a
+dependency of its module: add the module of the one you use, with a `MeterRegistry` bean (Micronaut Micrometer) or an
+`OpenTelemetry` bean (Micronaut Tracing). Whichever are on, the library adds one `Instrumentation` bean.
 
 ```groovy
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-observability:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer:1.0.0-M4")
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry:1.0.0-M4")
 ```
 
 - `graphql.request` is a timer of each request, tagged with `operation` (the operation name, capped at
@@ -1299,6 +1308,25 @@ parameter or the property as `CompletedFileUpload` (or `CompletedPart`). The rou
 library's invocation, so the resolver runs on the executor of the library, not on the event loop. An invalid request is a
 `400` with an error whose `extensions.code` is `INVALID_MULTIPART_REQUEST`. `micronaut.graphql.tools.upload.enabled`
 (default `true`) turns the module off. The guide page on file upload has the details.
+
+## Security
+
+The `micronaut-graphql-tools-security` module integrates Micronaut Security. Micronaut Security stays the application's own
+dependency; the core library has none.
+
+```groovy
+implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-security:1.0.0-M4")
+implementation("io.micronaut.security:micronaut-security")
+```
+
+A resolver declares `Principal` or `Authentication` as a parameter and gets the principal of the request, also in a field
+that runs after an async hop and over WebSocket (the principal of the upgrade request). `@Secured` on a resolver method
+guards its field: an anonymous call gets an `UNAUTHENTICATED` error of the field, a call without the role a `FORBIDDEN`
+one, and a field without `@Secured` keeps its fetcher. A `RootFieldsHook` bean sees the root fields of an operation after
+parsing, so an application need not parse the body in a filter. `micronaut.graphql.tools.security.enabled` (default `true`)
+turns the module off. A resolver also reads the HTTP request and changes the response (a header, a cookie) with the
+`HttpRequest` and `MutableHttpResponse` parameters. The guide pages on security and on the HTTP request and response have
+the details.
 
 ## Error handling
 
@@ -1397,8 +1425,10 @@ To build or test against a role locally:
 | Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
 | Binding rules (internal, pulled in by the library) | `io.micronaut.graphql.tools:micronaut-graphql-tools-binding` |
 | Standard scalars ([`java.time`, JSON and extended scalars](#standard-scalars)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
-| Observability ([Micrometer metrics and OpenTelemetry traces](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-observability` |
+| Metrics ([Micrometer](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer` |
+| Tracing ([OpenTelemetry](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry` |
 | File upload ([`Upload` scalar and multipart route](#file-upload)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-upload` |
+| Security ([principal, `@Secured` and the root fields hook](#security)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-security` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 
