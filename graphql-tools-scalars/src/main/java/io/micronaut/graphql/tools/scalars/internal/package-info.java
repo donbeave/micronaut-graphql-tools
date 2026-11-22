@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 /**
- * The beans of the module: the factory that registers one {@code GraphQLScalarMapping} for each scalar, the reader of
- * its configuration and the code that builds a mapping from a scalar and its settings.
+ * The beans of the module: the factory that registers one {@code GraphQLScalarMapping} for each scalar, and the
+ * code that builds a mapping from a scalar and its configuration.
  *
  * <p><b>Audience.</b> Internal. Not API.</p>
  */

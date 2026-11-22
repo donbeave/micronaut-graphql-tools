@@ -25,6 +25,7 @@ import io.micronaut.json.JsonMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -84,6 +85,50 @@ class ScalarsTest {
         }
     }
     // end::renamed[]
+
+    // tag::configured[]
+    @Test
+    fun aScalarCanBeEnabledRenamedAndDisabledByProperties() {
+        val properties = mapOf(
+            "micronaut.graphql.tools.scalars.offset-date-time.enabled" to true,
+            "micronaut.graphql.tools.scalars.local-date.name" to "Date",
+            "micronaut.graphql.tools.scalars.uuid.enabled" to false
+        )
+        ApplicationContext.run(properties, SCALARS_CONFIGURED).use { context ->
+            val schema = context.getBean(GraphQLSchema::class.java)
+            assertTrue(schema.getType("Date") is GraphQLScalarType)
+            assertNull(schema.getType("LocalDate"))
+            assertTrue(schema.getType("OffsetDateTime") is GraphQLScalarType)
+            assertEquals(OWN_UUID, (schema.getType("UUID") as GraphQLScalarType).description)
+            val result = execute(
+                context,
+                "{ bookedOn(date: \"2026-12-24\")" +
+                    " bookedAt(time: \"2026-12-24T10:15:30+01:00\")" +
+                    " ticket(id: \"123e4567-e89b-12d3-a456-426614174000\") }"
+            )
+            assertTrue(result.errors.isEmpty(), result.errors.toString())
+            assertEquals(
+                mapOf(
+                    "bookedOn" to "2026-12-25",
+                    "bookedAt" to "2026-12-24T11:15:30+01:00",
+                    "ticket" to "123e4567-e89b-12d3-a456-426614174000"
+                ),
+                result.getData<Any>()
+            )
+        }
+    }
+    // end::configured[]
+
+    @Test
+    fun anUnknownScalarIdFailsTheStartup() {
+        val properties = mapOf("micronaut.graphql.tools.scalars.local-dat.enabled" to false)
+        val failure = assertThrows(Exception::class.java) {
+            ApplicationContext.run(properties, SCALARS_DEFAULTS).close()
+        }
+        val messages = generateSequence<Throwable>(failure) { it.cause }.joinToString("\n") { it.message ?: "" }
+        assertTrue(messages.contains("micronaut.graphql.tools.scalars.local-dat"), failure.toString())
+        assertTrue(messages.contains("local-date"), failure.toString())
+    }
 
     @Test
     fun anInvalidValueIsAnErrorThatNamesTheScalar() {

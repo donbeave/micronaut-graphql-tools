@@ -83,7 +83,7 @@
             <arg>-Amicronaut.graphql.tools.processor.checks=${graphql.checks}</arg>
             <!-- end::checks[] -->
             <!-- tag::loose-nullability[] -->
-            <arg>-Amicronaut.graphql.tools.processor.looseNullability=${graphql.looseNullability}</arg>
+            <arg>-Amicronaut.graphql.tools.processor.loose.nullability=${graphql.looseNullability}</arg>
             <!-- end::loose-nullability[] -->
           </compilerArgs>
         </configuration>

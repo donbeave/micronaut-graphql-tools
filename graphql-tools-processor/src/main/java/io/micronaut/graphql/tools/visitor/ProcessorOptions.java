@@ -33,12 +33,13 @@ import java.util.TreeSet;
 
 /**
  * The options of the visitor, read from the options of the compilation: {@code -A} under javac and kapt, {@code arg}
- * under KSP, system properties under the Groovy compiler. There are five, all under {@code micronaut.graphql.tools.processor.},
+ * under KSP, system properties under the Groovy compiler. There are six, all under {@code micronaut.graphql.tools.processor.},
  * a segment that no runtime key uses, so that the visitor rejects an unknown key there without failing on a runtime key that
  * happens to be a system property.
  *
  * @param schemaDirs the directories to read the schema from, empty when the option is absent
- * @param moduleDir  the directory of the module that sets {@code schema.dirs}, null when the option is absent; the output of
+ * @param moduleDir  the directory of the module that sets {@code schema.dirs}, null when the option is absent (the visitor then
+ *                   uses the project directory that the compiler reports, when there is one); the output of
  *                   the compilation must lie inside it, or the options are those of an earlier compilation of the same JVM
  * @param checks     whether the checks run
  * @param accessorPrefixes whether a resolver method {@code getX} or {@code isX} also binds the field {@code x}, as
@@ -61,25 +62,42 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
     static final String MODULE_DIR = PREFIX + "module.dir";
 
-    static final String ACCESSOR_PREFIXES = PREFIX + "resolverAccessorPrefixes";
+    static final String ACCESSOR_PREFIXES = PREFIX + "resolver.accessor.prefixes";
 
-    static final String LOOSE_NULLABILITY = PREFIX + "looseNullability";
+    static final String LOOSE_NULLABILITY = PREFIX + "loose.nullability";
 
-    static final String TYPE_CLASS_CONVENTION = PREFIX + "typeClassConvention";
+    static final String TYPE_CLASS_CONVENTION = PREFIX + "type.class.convention";
 
     static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY,
             TYPE_CLASS_CONVENTION);
+
+    static final String RETIRED_ACCESSOR_PREFIXES = PREFIX + "resolverAccessorPrefixes";
+
+    static final String RETIRED_LOOSE_NULLABILITY = PREFIX + "looseNullability";
+
+    static final String RETIRED_TYPE_CLASS_CONVENTION = PREFIX + "typeClassConvention";
 
     /** The key that an earlier version of the processor read; it is an error now and names {@link #SCHEMA_DIRS}. */
     static final String REMOVED_SDL_DIR = "micronaut.graphql.tools.sdlDir";
 
     /**
-     * The keys the visitor tells the compiler it knows: the five options and the retired key. A build that keeps the retired key
+     * The retired option names and the names that replace them. A build that passes one with the checks on fails with the
+     * rename; {@code -A} accepts dot-separated lowercase segments only, as every Micronaut processing option does.
+     */
+    static final Map<String, String> RETIRED = Map.of(
+            REMOVED_SDL_DIR, SCHEMA_DIRS,
+            RETIRED_ACCESSOR_PREFIXES, ACCESSOR_PREFIXES,
+            RETIRED_LOOSE_NULLABILITY, LOOSE_NULLABILITY,
+            RETIRED_TYPE_CLASS_CONVENTION, TYPE_CLASS_CONVENTION);
+
+    /**
+     * The keys the visitor tells the compiler it knows: the options and the retired names. A build that keeps a retired name
      * with {@code checks=false} must not get javac's "no processor claimed the option" warning, which {@code -Werror} turns into an error.
-     * The retired key is not an option: {@link #NAMES} stays the options.
+     * The retired names are not options: {@link #NAMES} stays the options.
      */
     static final Set<String> ADVERTISED = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY,
-            TYPE_CLASS_CONVENTION, REMOVED_SDL_DIR);
+            TYPE_CLASS_CONVENTION, REMOVED_SDL_DIR, RETIRED_ACCESSOR_PREFIXES, RETIRED_LOOSE_NULLABILITY,
+            RETIRED_TYPE_CLASS_CONVENTION);
 
     ProcessorOptions {
         schemaDirs = List.copyOf(schemaDirs);
@@ -89,7 +107,7 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
     static ProcessorOptions read(Map<String, String> options) {
         List<Finding> errors = new ArrayList<>();
         options.keySet().stream().sorted().forEach(key -> {
-            if (key.startsWith(PREFIX) && !NAMES.contains(key)) {
+            if (key.startsWith(PREFIX) && !NAMES.contains(key) && !RETIRED.containsKey(key)) {
                 errors.add(error(BindingCode.PROCESSOR_OPTION_UNKNOWN, "the option " + key + " is not known; the options are "
                         + new TreeSet<>(NAMES)));
             }
@@ -109,9 +127,14 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
             }
         }
         // with the checks off nothing reads a schema directory, so a leftover retired key does no harm
-        if (checks && options.containsKey(REMOVED_SDL_DIR)) {
-            errors.add(error(BindingCode.PROCESSOR_OPTION_REMOVED, REMOVED_SDL_DIR + " was renamed to " + SCHEMA_DIRS
-                    + ": pass the schema directories there (several are joined with the path separator)"));
+        if (checks) {
+            RETIRED.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(retired -> {
+                if (options.containsKey(retired.getKey())) {
+                    errors.add(error(BindingCode.PROCESSOR_OPTION_REMOVED, retired.getKey() + " was renamed to " + retired.getValue()
+                            + (retired.getKey().equals(REMOVED_SDL_DIR) ? ": pass the schema directories there (several are joined "
+                            + "with the path separator)" : "")));
+                }
+            });
         }
 
         List<Path> directories = new ArrayList<>();

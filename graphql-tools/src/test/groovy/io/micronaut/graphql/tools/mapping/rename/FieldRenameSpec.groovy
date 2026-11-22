@@ -210,7 +210,7 @@ type Slip {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Slip.title (line 11, column 3)")
         e.cause.message.contains("${ClashSlip.name} getTitle()")
         e.cause.message.contains("${ClashSlip.name} heading()")
@@ -225,7 +225,7 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Slip.title (line 11, column 3)")
         e.cause.message.contains("${TwoRenamedSlip.name} first()")
         e.cause.message.contains("${TwoRenamedSlip.name} second()")
@@ -240,7 +240,7 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message.contains("GraphQL coordinate: Slip.title")
     }
 
@@ -253,7 +253,7 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message.contains("GraphQL coordinate: Slip.title")
     }
 
@@ -290,7 +290,7 @@ type Slip {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message.contains("GraphQL coordinate: Slip.title")
     }
 
@@ -432,7 +432,7 @@ type Query {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Parcel.class")
         e.cause.message.contains("${DuplicateCoordinateResolver.name} kind(${CoordinateParcel.name} parcel)")
         e.cause.message.contains("${DuplicateCoordinateResolver.name} type(${CoordinateParcel.name} parcel)")
@@ -538,7 +538,7 @@ type Parcel {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Parcel.author")
     }
 }

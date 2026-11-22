@@ -97,7 +97,7 @@ input Filter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNREACHABLE_TYPE
+        e.cause.getCode() == BindingCode.UNREACHABLE_TYPE
         e.cause.typeNames == ['Lonely', 'Orphan', 'Shape', 'Stray']
         e.cause.message == """[unreachable-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Lonely (type), Orphan (type), Shape (interface), Stray (union).
   Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks.unreachable-type to warn or ignore."""
@@ -135,7 +135,7 @@ type Archive {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNREACHABLE_TYPE
+        e.cause.getCode() == BindingCode.UNREACHABLE_TYPE
         e.cause.typeNames == ['Archive', 'Volume']
     }
 
@@ -185,7 +185,7 @@ type Item implements Node {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNREACHABLE_TYPE
+        e.cause.getCode() == BindingCode.UNREACHABLE_TYPE
         e.cause.typeNames == ['Lonely', 'Orphan', 'Shape', 'Stray']
     }
 
@@ -199,7 +199,7 @@ type Item implements Node {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNREACHABLE_TYPE
+        e.cause.getCode() == BindingCode.UNREACHABLE_TYPE
         e.cause.typeNames == ['Lonely', 'Shape']
     }
 
@@ -245,7 +245,7 @@ enum Size {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_ALLOW_UNREACHABLE
+        e.cause.getCode() == BindingCode.INVALID_ALLOW_UNREACHABLE
         e.cause.notUnreachableTypeNames == ['Item', 'Query', 'Size', 'String']
         e.cause.message.contains('Item (is reachable), Query (is reachable), Size (is used by a directive), String (is a built-in scalar)')
     }
@@ -332,7 +332,7 @@ type Note {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_ALLOW_UNREACHABLE
+        e.cause.getCode() == BindingCode.INVALID_ALLOW_UNREACHABLE
         e.cause.undefinedTypeNames == ['Missing']
         e.cause.notUnreachableTypeNames == ['Item', 'String']
         e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Missing (not defined in the schema), Item (is reachable), String (is a built-in scalar).

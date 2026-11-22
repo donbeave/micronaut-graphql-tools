@@ -100,7 +100,7 @@ input RegistrationInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INPUT_FIELD_NOT_SETTABLE
+        e.cause.getCode() == BindingCode.INPUT_FIELD_NOT_SETTABLE
         e.cause.message.startsWith('[input-field-not-settable] The input field RegistrationInput.displayName cannot be set')
     }
 

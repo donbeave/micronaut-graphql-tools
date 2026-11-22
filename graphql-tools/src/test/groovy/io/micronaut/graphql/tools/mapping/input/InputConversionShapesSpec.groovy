@@ -265,7 +265,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.BINDING_FAILURES
+        e.cause.getCode() == BindingCode.BINDING_FAILURES
         e.cause.message.contains('2 errors')
         e.cause.message.count('[class-not-introspected]') == 2
     }
@@ -278,7 +278,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.BINDING_FAILURES
+        e.cause.getCode() == BindingCode.BINDING_FAILURES
         e.cause.message.contains('2 errors')
     }
 
@@ -302,7 +302,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNSUPPORTED_INPUT_TYPE
+        e.cause.getCode() == BindingCode.UNSUPPORTED_INPUT_TYPE
         e.cause.reason.contains(ArrayDeque.name)
     }
 

@@ -98,7 +98,7 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains("GraphQL coordinate: Query.book")
         e.cause.message.contains("${OriginalQuery.name} book(java.lang.String id)")
         e.cause.message.contains("${TestOnlyQuery.name} book(java.lang.String id)")

@@ -54,7 +54,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
+        e.cause.getCode() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The field is mapped to the incorrect class.
   GraphQL coordinate: User.username (line 11, column 3)
   Mapped class: ${User.name}
@@ -94,7 +94,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
+        e.cause.getCode() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The field is mapped to the incorrect class.
   GraphQL coordinate: User.username (line 11, column 3)
   Mapped class: ${User.name}

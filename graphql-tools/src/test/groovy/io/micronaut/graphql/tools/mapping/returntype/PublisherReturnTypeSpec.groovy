@@ -112,7 +112,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
+        e.cause.getCode() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 WrapperRules.multiValuePublisherNeedsList('Int'))
         e.cause.mappingContext.graphQlObjectType == objectType
@@ -170,7 +170,7 @@ type Subscription {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
+        e.cause.getCode() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: a field of the subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found ${Integer.name}. Fix: change the return type to Publisher<T> (for example Flux<T>).
   GraphQL coordinate: Subscription.ticks (line 12, column 3)
   Mapped class: ${NotPublisherSubscription.name}
@@ -202,7 +202,7 @@ type Subscription {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
+        e.cause.getCode() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: a field of the subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found ${List.name}. Fix: change the return type to Publisher<T> (for example Flux<T>).
   GraphQL coordinate: Subscription.ticks (line 12, column 3)
   Mapped class: ${InListSubscription.name}
@@ -229,7 +229,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
+        e.cause.getCode() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message == """[unsupported-return-type] The return type of the method or property is not supported for this field: ${WrapperRules.publisherInList()}
   GraphQL coordinate: Query.numbers (line 7, column 3)
   Mapped class: ${QueryListOfPublishers.name}
@@ -261,7 +261,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
+        e.cause.getCode() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: " +
                 WrapperRules.multiValuePublisherNeedsList('Int'))
         e.cause.mappingContext.graphQlObjectType == 'Item'
@@ -294,7 +294,7 @@ type Subscription {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
+        e.cause.getCode() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.startsWith("[unsupported-return-type] The return type of the method or property is not supported for this field: a field of the " +
                 "subscription type must return ${Publisher.name} (optionally inside a CompletionStage), found " +
                 "${DataFetcherResult.name}.")

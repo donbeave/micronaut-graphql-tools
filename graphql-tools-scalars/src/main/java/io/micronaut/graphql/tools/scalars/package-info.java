@@ -16,7 +16,8 @@
 /**
  * The scalars that the module registers: {@link io.micronaut.graphql.tools.scalars.StandardScalar} lists them with their
  * ids, default names and Java classes. The configuration under {@code micronaut.graphql.tools.scalars} renames a scalar, changes
- * the wire format of a {@code java.time} scalar or turns a scalar off.
+ * the wire format of a {@code java.time} scalar or turns a scalar off; {@link io.micronaut.graphql.tools.scalars.ScalarsConfiguration}
+ * and {@link io.micronaut.graphql.tools.scalars.ScalarConfiguration} bind it.
  *
  * <p><b>Audience.</b> Public API. An application reads the enum; it never calls into the implementation.</p>
  */

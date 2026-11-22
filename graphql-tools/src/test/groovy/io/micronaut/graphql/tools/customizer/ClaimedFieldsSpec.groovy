@@ -161,7 +161,7 @@ interface Node {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+        e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == [
                 "data fetcher of Query.hello, through the code registry (${ReplacesBoundAndClaims.name})".toString()
         ]
@@ -178,7 +178,7 @@ interface Node {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_CLAIMED_FIELDS
+        e.cause.getCode() == BindingCode.INVALID_CLAIMED_FIELDS
         e.cause.problems == [
                 "Book.price: Book defines no field price (${StaleClaims.name})".toString(),
                 "Missing.field: the schema defines no type Missing (${StaleClaims.name})".toString(),

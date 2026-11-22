@@ -113,7 +113,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `quantity` not found in ${ItemWithoutQuantity.name}'s input.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
   Mapped class: ${ItemWithoutQuantity.name}"""
@@ -127,7 +127,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.mappingContext.graphQlInputObjectType == 'ItemInput'
         e.cause.methodName == 'quantity'
     }
@@ -140,7 +140,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.mappingContext.graphQlInputObjectType == 'ItemInput'
         e.cause.methodName == 'quantity'
     }
@@ -153,7 +153,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.mappingContext.graphQlInputObjectType == 'ItemInput'
         e.cause.methodName == 'quantity'
     }
@@ -168,7 +168,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNMAPPED_INPUT_PROPERTY
+        e.cause.getCode() == BindingCode.UNMAPPED_INPUT_PROPERTY
         e.cause.message == """[unmapped-input-property] Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.checks.unmapped-input-property to warn or ignore to accept them):
   GraphQL input object type: BasketInput, mapped class: ${ExtraBasket.name}, properties: giftWrap
   GraphQL input object type: ItemInput, mapped class: ${ExtraItem.name}, properties: discount, legacyCode"""
@@ -184,7 +184,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNMAPPED_INPUT_PROPERTY
+        e.cause.getCode() == BindingCode.UNMAPPED_INPUT_PROPERTY
         e.cause.unmappedProperties.keySet() == ['BasketInput', 'ItemInput'] as Set
     }
 
@@ -208,7 +208,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INPUT_FIELD_NOT_SETTABLE
+        e.cause.getCode() == BindingCode.INPUT_FIELD_NOT_SETTABLE
         e.cause.message == """[input-field-not-settable] The input field ItemInput.quantity cannot be set: the property `quantity` of ${ReadOnlyItem.name} has no setter and is not a constructor parameter.
   GraphQL coordinate: ItemInput.quantity (line 12, column 3)
   Mapped class: ${ReadOnlyItem.name}

@@ -143,7 +143,7 @@ public final class ArgumentPlanner {
             String named = parameter.getAnnotationMetadata().stringValue(AnnotationUtil.NAMED).orElse(null);
             return beanContext.getBean(DataLoaderTable.class).resolve(named, types[0], types[1], location);
         } catch (ExecutionSetupException e) {
-            throw new InjectedParameterException(e.code(), e.getMessage(), mappingContext);
+            throw new InjectedParameterException(e.getCode(), e.getMessage(), mappingContext);
         }
     }
 
@@ -156,7 +156,7 @@ public final class ArgumentPlanner {
         try {
             ExecutionContextAvailability.require(beanContext, location(parameter, executable, mappingContext), need);
         } catch (ExecutionSetupException e) {
-            throw new InjectedParameterException(e.code(), e.getMessage(), mappingContext);
+            throw new InjectedParameterException(e.getCode(), e.getMessage(), mappingContext);
         }
     }
 

@@ -55,7 +55,7 @@ input HelloInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `lastName` not found in ${HelloInput.name}'s input.
   GraphQL coordinate: HelloInput.lastName (line 12, column 3)
   Mapped class: ${HelloInput.name}"""

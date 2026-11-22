@@ -14,6 +14,14 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ProtectionConfiguration.adoc[]
 
+== Scalars
+
+The keys of the `micronaut-graphql-tools-scalars` module are under `micronaut.graphql.tools.scalars`: `enabled` switches the module, and `<id>.enabled`, `<id>.name` and `<id>.format` configure one scalar. An id that is not a standard scalar fails the startup. See <<scalars,Scalars>>.
+
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.scalars.ScalarsConfiguration.adoc[]
+
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.scalars.ScalarConfiguration.adoc[]
+
 == Execution
 
 `micronaut.graphql.tools.execution.executor` names the executor that every operation hops to once, before graphql-java runs: `blocking` (the default), `io`, `virtual` (JDK 21 and later), an executor you configure under `micronaut.executors`, or `none` to run on the thread that receives the operation. An unknown name fails the startup with `[unknown-executor]`. See <<execution,Execution>>.
@@ -30,7 +38,7 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 `micronaut.graphql.tools.precedence` decides a field that a member of the Java type (a property or a `@GraphQLField` method) and a type resolver method can both bind. One rule covers object and interface fields: `fail` (the default) fails the startup with `[precedence-ambiguity]`, `resolver-first` binds the resolver method, and `property-first` binds the member; the lenient values log the ambiguity at WARN and write a `!precedence-ambiguity` line to the binding manifest. A resolver directive, a type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate`, or `@GraphQLIgnore` on the member says which side binds one field, and the setting is not consulted. `precedence` is independent of `strict` and is not a `checks.<code>` entry. The value `strict`, the former name of `fail`, is rejected (BC-29).
 
-`micronaut.graphql.tools.type-class-convention` (default none) is the naming convention that derives the class of a union member or an interface implementation that the dictionary does not name: a pattern with `{Type}` once, such as `{Type}Graph`. See <<typeDictionary,the classes of union members and interface implementations>>. The compile-time checks take the same value as the processor option `micronaut.graphql.tools.processor.typeClassConvention`.
+`micronaut.graphql.tools.type-class-convention` (default none) is the naming convention that derives the class of a union member or an interface implementation that the dictionary does not name: a pattern with `{Type}` once, such as `{Type}Graph`. See <<typeDictionary,the classes of union members and interface implementations>>. The compile-time checks take the same value as the processor option `micronaut.graphql.tools.processor.type.class.convention`.
 
 [[renaming]]
 == Binding a field to a differently named member
@@ -39,7 +47,7 @@ A member binds the field of its own name unless it says otherwise. There are thr
 
 * `@GraphQLField("name")` on a method of a `@GraphQLType` class, or on a property (its field, its getter, or the Kotlin or Groovy property), binds the field `name`. A renamed member binds the new name only. A renamed member and another member for one field, or two members renamed to one field, fail the startup with `[multiple-methods-found]` and the coordinate of the field. A member marked `@GraphQLIgnore` binds nothing.
 * `@GraphQLSchemaCoordinate("Type.field")` on a resolver method binds that field whatever the name of the method is. Before, the startup failed with `[unknown-schema-coordinate]` when the names differed. The coordinate rules of the annotation hold: only the methods of a bean that declare a coordinate bind, and two methods with one coordinate fail with `[multiple-methods-found]`.
-* `micronaut.graphql.tools.resolver-accessor-prefixes: true` lets a resolver method named `getX` or `isX` bind the field `x` as well, for resolvers written for other tools (`getAuthor(Book)` for `author`). It is off by default. `getAuthor` and `author` in one class both bind the field and fail the startup. The compile-time checks take the same setting as the processor option `micronaut.graphql.tools.processor.resolverAccessorPrefixes`; without it they do not judge a method that only a prefix could bind.
+* `micronaut.graphql.tools.resolver-accessor-prefixes: true` lets a resolver method named `getX` or `isX` bind the field `x` as well, for resolvers written for other tools (`getAuthor(Book)` for `author`). It is off by default. `getAuthor` and `author` in one class both bind the field and fail the startup. The compile-time checks take the same setting as the processor option `micronaut.graphql.tools.processor.resolver.accessor.prefixes`; without it they do not judge a method that only a prefix could bind.
 
 The names are resolved once at startup and by the compile-time checks, with the same rules; a request does no name lookup.
 
@@ -65,4 +73,4 @@ Each strict check has a code, from the code registry (`BindingCode` in `graphql-
 * `interface-read-through-implementation`
 * `unwired-directive`
 
-A precedence ambiguity under `precedence: fail` is a binding failure with the code `precedence-ambiguity`, not a check. Its message names the field coordinate, both members and the ways out. Match on `SchemaBindingException#code()`; <<exceptions,the error reference>> lists every code of the registry.
+A precedence ambiguity under `precedence: fail` is a binding failure with the code `precedence-ambiguity`, not a check. Its message names the field coordinate, both members and the ways out. Match on `SchemaBindingException#getCode()`; <<exceptions,the error reference>> lists every code of the registry.

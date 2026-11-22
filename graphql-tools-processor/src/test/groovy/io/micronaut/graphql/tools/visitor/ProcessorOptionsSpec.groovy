@@ -81,6 +81,34 @@ public class QueryResolver {
         compilation().option('micronaut.graphql.tools.sdlDir', '/x').option(ProcessorOptions.CHECKS, 'false').compile().success
     }
 
+    def "a retired camel case key is an error that names the dotted key, and the compiler is told the retired key is known"() {
+        when:
+        def result = compilation().option(old, 'x').compile()
+
+        then:
+        !result.success
+        result.findings == ['[processor-option-removed] -']
+        result.errors[0].contains("${old} was renamed to ${replacement}".toString())
+        new GraphQLToolsVisitor().supportedOptions.contains(old)
+
+        and: 'with the checks off nothing reads it'
+        compilation().option(old, 'x').option(ProcessorOptions.CHECKS, 'false').compile().success
+
+        where:
+        old                                                      | replacement
+        'micronaut.graphql.tools.processor.resolverAccessorPrefixes' | ProcessorOptions.ACCESSOR_PREFIXES
+        'micronaut.graphql.tools.processor.looseNullability'         | ProcessorOptions.LOOSE_NULLABILITY
+        'micronaut.graphql.tools.processor.typeClassConvention'      | ProcessorOptions.TYPE_CLASS_CONVENTION
+    }
+
+    def "every option is dot-separated lowercase, as a Micronaut processing option is"() {
+        expect:
+        ProcessorOptions.NAMES.every { it ==~ /micronaut(\.[a-z]+)+/ }
+        ProcessorOptions.RETIRED.values().every { ProcessorOptions.NAMES.contains(it) }
+        ProcessorOptions.ADVERTISED.containsAll(ProcessorOptions.NAMES)
+        ProcessorOptions.ADVERTISED.containsAll(ProcessorOptions.RETIRED.keySet())
+    }
+
     def "a value that is not a boolean is an error"() {
         when:
         def result = compilation().option(ProcessorOptions.CHECKS, 'maybe').compile()
