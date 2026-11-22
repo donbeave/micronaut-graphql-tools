@@ -97,7 +97,7 @@ final class SecuredFieldDecorator implements FieldFetcherDecorator {
     }
 
     private static void rejectExpression(FieldDescriptor field) {
-        throw new ConfigurationException("@Secured on the resolver method of " + field.coordinates() + " has an expression value "
+        throw new ConfigurationException("@Secured on the resolver method " + field.resolver() + " (field " + field.coordinates() + ") has an expression value "
                 + "(one that starts with #{). Micronaut Security evaluates an expression against the HTTP route, and a GraphQL "
                 + "field has none, so the module does not evaluate expressions. Use SecurityRule.IS_AUTHENTICATED, "
                 + "SecurityRule.IS_ANONYMOUS, SecurityRule.DENY_ALL or role names");
