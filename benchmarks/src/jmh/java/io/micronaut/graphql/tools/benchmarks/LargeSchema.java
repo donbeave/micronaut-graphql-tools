@@ -19,7 +19,9 @@ import graphql.GraphQL;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
 import io.micronaut.graphql.tools.manifest.BindingManifest;
+import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -81,11 +83,31 @@ final class LargeSchema {
         }
     }
 
-    /** Throws when the large schema of the context is not bound. */
+    /**
+     * Throws when the large schema of the context is not bound. Cheap enough for a timed invocation; the dictionary check
+     * of {@link #checkSharedMapped(ApplicationContext, String)} is not.
+     */
     static void checkBound(ApplicationContext context, String shape) {
         String type = INTERFACES.equals(shape) ? "Obj0" : "Node0";
         if (context.getBean(GraphQL.class).getGraphQLSchema().getObjectType(type) == null) {
             throw new IllegalStateException("The large schema was not bound");
+        }
+    }
+
+    /** Throws when the interface shape has no dictionary entry for {@code Shared}; {@code shape} other than that passes. */
+    static void checkSharedMapped(ApplicationContext context, String shape) {
+        if (INTERFACES.equals(shape)) {
+            checkSharedMapped(context);
+        }
+    }
+
+    // Shared has no introspection: the dictionary entry is the only way the lookup of an interface that no field returns finds a
+    // class, and without it that lookup is skipped, so a measurement of it would time nothing (#71)
+    private static void checkSharedMapped(ApplicationContext context) {
+        SchemaMappingDictionary dictionary = new SchemaMappingDictionary();
+        context.getBeansOfType(SchemaMappingDictionaryCustomizer.class).forEach(it -> it.customize(dictionary));
+        if (dictionary.getTypes().get("Shared") == null) {
+            throw new IllegalStateException("The dictionary has no entry for the interface Shared");
         }
     }
 
