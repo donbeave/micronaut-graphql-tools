@@ -167,8 +167,10 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             }
             ClassElement exposed = method.getReturnType();
             if (exposed != null && ElementTypeModel.isConcreteClass(exposed) && !ElementTypeModel.isBeanClass(exposed)
-                    && isCheckable(exposed) && current.factoryChecked.add(exposed.getName())) {
+                    && isCheckable(exposed) && !current.factoryChecked.contains(exposed.getName())) {
+                // remembered after the check only: a postponed check is retried in a later round
                 checkSafely(current, exposed, context);
+                current.factoryChecked.add(exposed.getName());
             }
         }
     }

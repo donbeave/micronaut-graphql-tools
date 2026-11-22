@@ -570,7 +570,7 @@ public final class ResolverClassRules {
                 if (coordinate.indexOf('.') > 0 && !contradictsOperation(schema, resolver, method, coordinate)) {
                     coordinates.add(coordinate);
                 }
-            } else if (root) {
+            } else if (root && resolver.markers().admitsRoot(method.name(), method.parameters().size())) {
                 List<String> names = FieldNames.ofResolverMethod(method.name(), accessorPrefixes);
                 new TreeSet<>(operationTypes(schema, resolver, method)).forEach(type -> names.forEach(name -> {
                     if (field(schema, type, name) != null) {
