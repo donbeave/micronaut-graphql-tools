@@ -21,7 +21,7 @@
  * <p>This package holds the types the library throws. The SPI that maps the exceptions of resolvers to GraphQL errors is
  * {@code io.micronaut.graphql.tools.error}.</p>
  *
- * <p><b>Audience.</b> Public API. Match on {@code SchemaBindingException#code()}. The classes that build each failure are
+ * <p><b>Audience.</b> Public API. Match on {@code SchemaBindingException#getCode()}. The classes that build each failure are
  * internal.</p>
  */
 package io.micronaut.graphql.tools.exceptions;

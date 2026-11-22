@@ -51,5 +51,5 @@ Tagged `1.0.0-M4` and published to GitHub Packages. The breaking changes are lis
 
 Not released yet. The changes below follow the last tagged milestone, 1.0.0-M4.
 
-* #498 (BC-41): `SchemaBindingException` now extends Micronaut's `ConfigurationException` (it extended `RuntimeException`), and `code()` is renamed `getCode()`. Codes and messages do not change. Replace `e.code()` with `e.getCode()` (`e.code` in Groovy and Kotlin). See the migration page, entries for 1.0.0-M4.
-* #501 (BC-47): `ResolverBeanCondition` moved from `io.micronaut.graphql.tools.annotation` to `io.micronaut.graphql.tools.internal.resolver` and is `@Internal`, and `@GraphQLType.value()` is declared `Class<?>`. An application does not name either. See the migration page, entries for 1.0.0-M4.
+* #498 (BC-41): `SchemaBindingException` now extends Micronaut's `ConfigurationException` (it extended `RuntimeException`), and `code()` is renamed `getCode()`. Codes and messages do not change. Replace `e.code()` with `e.getCode()` (`e.code` in Groovy and Kotlin). See the migration page, entries for 1.0.0-M5.
+* #501 (BC-47): `ResolverBeanCondition` moved from `io.micronaut.graphql.tools.annotation` to `io.micronaut.graphql.tools.internal.resolver` and is `@Internal`, and `@GraphQLType.value()` is declared `Class<?>`. An application does not name either. See the migration page, entries for 1.0.0-M5.
