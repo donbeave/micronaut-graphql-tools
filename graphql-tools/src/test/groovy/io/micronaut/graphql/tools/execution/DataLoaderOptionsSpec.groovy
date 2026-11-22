@@ -205,7 +205,7 @@ type Author {
         then:
         def e = thrown(Exception)
         def cause = causeOf(e)
-        cause.code() == BindingCode.DATA_LOADER_NOT_FOUND
+        cause.getCode() == BindingCode.DATA_LOADER_NOT_FOUND
         cause.message.contains("'missingLoader'")
         cause.message.contains('chunkedLoader')
         cause.message.contains('loaderName()')

@@ -26,7 +26,7 @@ import java.util.Map;
  * The one registry of the codes of the library: the strict checks and the startup and compile-time failures. A code is
  * the token in {@code [code]} at the start of a diagnostic (at compile time and at startup), the name of a
  * check in the {@code checks} and {@code allow.findings} settings, the kind of a {@code !} line of the binding manifest, and the value
- * of {@code SchemaBindingException#code()}.
+ * of {@code SchemaBindingException#getCode()}.
  *
  * <p>A code is a lower-case kebab-case word. {@link #compileTime()} says whether the compile-time check reports it; the
  * others are found only at startup, because they need the whole program (the bean set and code-defined wiring).</p>

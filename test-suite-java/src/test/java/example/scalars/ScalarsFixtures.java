@@ -15,12 +15,17 @@
  */
 package example.scalars;
 
+import graphql.scalars.ExtendedScalars;
+import graphql.schema.GraphQLScalarType;
 import graphql.schema.idl.SchemaParser;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
 import jakarta.inject.Singleton;
+
+import java.util.UUID;
 
 @Factory
 public class ScalarsFixtures {
@@ -29,6 +34,10 @@ public class ScalarsFixtures {
     public static final String DEFAULTS = "scalars-default";
     // The same fields with a renamed scalar and a configured format
     public static final String RENAMED = "scalars-renamed";
+    // The description of the UUID scalar that the application registers itself
+    public static final String OWN_UUID = "The UUID of the application";
+    // The same fields with scalars enabled, renamed and disabled by properties, and the application's own UUID mapping
+    public static final String CONFIGURED = "scalars-configured";
 
     // tag::schema[]
     @Bean
@@ -70,6 +79,34 @@ public class ScalarsFixtures {
                         + "  ticket(id: UUID!): UUID!\n"
                         + "  homepage(url: Url!): Url!\n"
                         + "}\n"));
+    }
+
+    @Bean
+    @Singleton
+    @Requires(env = CONFIGURED)
+    TypeDefinitionRegistryCustomizer configuredScalars() {
+        return registry -> registry.merge(new SchemaParser().parse(
+                "scalar Date\n"
+                        + "scalar OffsetDateTime\n"
+                        + "scalar Duration\n"
+                        + "scalar UUID\n"
+                        + "scalar Url\n"
+                        + "extend type Query {\n"
+                        + "  bookedOn(date: Date!): Date!\n"
+                        + "  bookedAt(time: OffsetDateTime!): OffsetDateTime!\n"
+                        + "  elapsed(spent: Duration!): Duration!\n"
+                        + "  payload(data: JSON): JSON\n"
+                        + "  ticket(id: UUID!): UUID!\n"
+                        + "  homepage(url: Url!): Url!\n"
+                        + "}\n"));
+    }
+
+    @Bean
+    @Singleton
+    @Requires(env = CONFIGURED)
+    GraphQLScalarMapping ownUuid() {
+        return GraphQLScalarMapping.of(
+                GraphQLScalarType.newScalar(ExtendedScalars.UUID).description(OWN_UUID).build(), UUID.class);
     }
 
 }

@@ -55,7 +55,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MULTIPLE_IMPLEMENTATIONS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_IMPLEMENTATIONS_FOUND
         e.cause.message == """[multiple-implementations-found] Found multiple implementations for the interface ${User.name}. Annotate the interface with @GraphQLType, so that its own bean introspection reads every implementation.
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}

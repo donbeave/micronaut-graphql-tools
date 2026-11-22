@@ -42,7 +42,7 @@ class ExecuteOnFailureTest {
     fun `an unknown executor fails the startup and lists the executor beans`() {
         val e = failure(EXECUTE_ON_UNKNOWN)
         val message = e.message!!
-        assertEquals(BindingCode.UNKNOWN_EXECUTOR, e.code())
+        assertEquals(BindingCode.UNKNOWN_EXECUTOR, e.getCode())
         assertTrue(message.startsWith("[unknown-executor] ") && message.contains("@ExecuteOn(\"no-such-executor\")") &&
             message.contains("Query.slowLookup"), message)
         assertTrue(message.contains("The executor beans are:") && message.contains("io"), message)
@@ -53,7 +53,7 @@ class ExecuteOnFailureTest {
     fun `@ExecuteOn on a property fails the startup and says how to fix it`() {
         val e = failure(EXECUTE_ON_PROPERTY)
         val message = e.message!!
-        assertEquals(BindingCode.EXECUTE_ON_PROPERTY, e.code())
+        assertEquals(BindingCode.EXECUTE_ON_PROPERTY, e.getCode())
         assertTrue(message.startsWith("[execute-on-property] "), message)
         assertTrue(message.contains("@GraphQLField method") && message.contains("type resolver"), message)
     }

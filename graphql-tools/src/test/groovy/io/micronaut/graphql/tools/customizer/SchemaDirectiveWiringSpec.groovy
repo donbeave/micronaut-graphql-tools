@@ -115,7 +115,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNWRAPPED_DIRECTIVE_WIRING
+        e.cause.getCode() == BindingCode.UNWRAPPED_DIRECTIVE_WIRING
         e.cause.beans == ["${UpperWiring.name} (Definition: ${UnwrappedFactory.name})".toString()]
         e.cause.message == "[unwrapped-directive-wiring] SchemaDirectiveWiring beans that no SchemaDirective bean wraps: ${e.cause.beans[0]}.\n" +
                 "  The library applies a wiring only through a SchemaDirective: wrap each one in " +
@@ -147,7 +147,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNWRAPPED_DIRECTIVE_WIRING
+        e.cause.getCode() == BindingCode.UNWRAPPED_DIRECTIVE_WIRING
         e.cause.beans.size() == 1
         e.cause.beans[0].startsWith(PrototypeUpperWiring.name)
     }
@@ -206,7 +206,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
+        e.cause.getCode() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
         e.cause.message == "[duplicate-directive-wiring] More than one SchemaDirective bean wires directive @upper: ${UpperWiring.name}, ${UpperWiring.name}. Keep one.".toString()
     }
 
@@ -220,7 +220,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
+        e.cause.getCode() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
         e.cause.directiveNames == ['upper']
         e.cause.message == ("[duplicate-directive-wiring] Directive @upper is wired by both a named and an every-element SchemaDirective bean, "
                 + "so it would take effect twice: named ${UpperWiring.name}, every element ${BangWiring.name}. "
@@ -237,7 +237,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+        e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == ["directive wiring @upper (${ReplaceUpper.name})".toString()]
     }
 

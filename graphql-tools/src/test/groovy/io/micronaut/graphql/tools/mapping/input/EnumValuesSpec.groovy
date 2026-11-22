@@ -181,7 +181,7 @@ enum Shade {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
+        e.cause.getCode() == BindingCode.CLASS_NOT_INTROSPECTED
         e.cause.message.startsWith("[class-not-introspected] The class ${Shade.name} is not introspected. " +
                 "Ensure the class is annotated with ${Introspected.name}.")
     }
@@ -196,7 +196,7 @@ enum Shade {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+        e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == ["enum values provider of Color (${ReplaceValues.name})".toString()]
     }
 

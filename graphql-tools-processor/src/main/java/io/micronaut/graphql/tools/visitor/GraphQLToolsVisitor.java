@@ -113,7 +113,8 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     public void start(VisitorContext context) {
         Compilation started = new Compilation(ProcessorOptions.read(context.getOptions()));
         compilation = started;
-        started.foreignOutput = ModuleOwnership.foreignOutput(started.options.moduleDir(), context);
+        started.moduleDir = started.options.moduleDir() != null ? started.options.moduleDir() : ModuleOwnership.projectDir(context);
+        started.foreignOutput = ModuleOwnership.foreignOutput(started.moduleDir, context);
         started.options.errors().forEach(it -> report(context, it, null));
         if (started.options.checks() && started.options.errors().isEmpty()) {
             started.schema.missingDirectories().forEach(it -> {
@@ -417,7 +418,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             current.failed = true;
             report(context, new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_CONFIGURED.code(), null,
                     "the schema directory is not configured for this module: " + ProcessorOptions.SCHEMA_DIRS + " and "
-                    + ProcessorOptions.MODULE_DIR + " belong to the module in " + current.options.moduleDir()
+                    + ProcessorOptions.MODULE_DIR + " belong to the module in " + current.moduleDir
                     + ", an earlier compilation of the same JVM, and this compilation writes to " + current.foreignOutput,
                     null, null, null, "set " + ProcessorOptions.SCHEMA_DIRS + " and " + ProcessorOptions.MODULE_DIR
                     + " in this module (see the compile-time checks of the guide for the setting of each build tool); if they are set and "
@@ -511,6 +512,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         final ElementTypeModel model = new ElementTypeModel(coverage);
         // the warnings that a @GraphQLModels visited later can still remove
         final List<Pending> pending = new ArrayList<>();
+        @Nullable Path moduleDir;
         @Nullable Path foreignOutput;
         boolean failed;
         boolean noted;

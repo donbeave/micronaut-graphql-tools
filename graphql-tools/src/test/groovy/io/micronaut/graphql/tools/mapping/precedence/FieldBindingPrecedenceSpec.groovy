@@ -112,7 +112,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message == """[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: Item.price (line 16, column 3)
   Members:
@@ -131,7 +131,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message.contains('GraphQL coordinate: Item.price ')
         e.cause.message.contains("${Item.name} getPrice()")
         e.cause.message.contains("${ItemResolver.name} price(${Item.name} item)")
@@ -145,7 +145,7 @@ type Item {
         then:
         def e = thrown(Exception)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.REMOVED_CONFIGURATION_KEY
+        e.cause.getCode() == BindingCode.REMOVED_CONFIGURATION_KEY
         generateMessage(e).contains('micronaut.graphql.tools.precedence')
         generateMessage(e).contains('strict')
         generateMessage(e).contains('fail')
@@ -161,7 +161,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message.contains('GraphQL coordinate: Item.price ')
         e.cause.message.contains("${Item.name} getPrice()")
         e.cause.message.contains("${ItemResolver.name} price(${Item.name} item)")
@@ -308,7 +308,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message.contains('GraphQL coordinate: Item.price ')
         e.cause.message.contains("${Item.name} getPrice()")
         e.cause.message.contains("${ItemResolver.name} price(${Item.name} item)")
@@ -349,7 +349,7 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RESOLVER_REQUIRED
+        e.cause.getCode() == BindingCode.RESOLVER_REQUIRED
         e.cause.message == """[resolver-required] The GraphQL field carries @computed, so a type resolver method must bind it, but none does.
   GraphQL coordinate: Item.price (line 16, column 3)
   Not bound:
@@ -401,7 +401,7 @@ type Label {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message.contains('GraphQL coordinate: Label.text ')
         e.cause.message.contains("1) ${Label.name} text(java.lang.Boolean upper)")
         e.cause.message.contains("2) ${LabelResolver.name} text(${Label.name} label, java.lang.Boolean upper)")

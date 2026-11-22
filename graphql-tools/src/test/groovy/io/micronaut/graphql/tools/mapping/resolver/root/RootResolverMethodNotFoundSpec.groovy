@@ -49,7 +49,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
   GraphQL coordinate: Query.hello (line 7, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'Query'
@@ -78,7 +78,7 @@ type Mutation {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The method `hello` not found in any root resolvers: [${Query1.name}, ${Query2.name}].
   GraphQL coordinate: Mutation.hello (line 7, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'Mutation'

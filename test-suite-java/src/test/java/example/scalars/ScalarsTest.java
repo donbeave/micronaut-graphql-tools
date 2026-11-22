@@ -30,6 +30,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // Runs on the JVM and as a native binary (nativeTest): the standard scalars of the scalars module, from the schema to the
@@ -83,6 +84,46 @@ class ScalarsTest {
         }
     }
     // end::renamed[]
+
+    // tag::configured[]
+    @Test
+    void aScalarCanBeEnabledRenamedAndDisabledByProperties() {
+        Map<String, Object> properties = Map.of(
+                "micronaut.graphql.tools.scalars.offset-date-time.enabled", true,
+                "micronaut.graphql.tools.scalars.local-date.name", "Date",
+                "micronaut.graphql.tools.scalars.uuid.enabled", false);
+        try (ApplicationContext context = ApplicationContext.run(properties, ScalarsFixtures.CONFIGURED)) {
+            GraphQLSchema schema = context.getBean(GraphQLSchema.class);
+            assertTrue(schema.getType("Date") instanceof GraphQLScalarType);
+            assertNull(schema.getType("LocalDate"));
+            assertTrue(schema.getType("OffsetDateTime") instanceof GraphQLScalarType);
+            assertEquals(ScalarsFixtures.OWN_UUID, ((GraphQLScalarType) schema.getType("UUID")).getDescription());
+            ExecutionResult result = execute(context, "{ bookedOn(date: \"2026-12-24\")"
+                    + " bookedAt(time: \"2026-12-24T10:15:30+01:00\")"
+                    + " ticket(id: \"123e4567-e89b-12d3-a456-426614174000\") }", Map.of());
+            assertTrue(result.getErrors().isEmpty(), result.getErrors().toString());
+            assertEquals(Map.of("bookedOn", "2026-12-25", "bookedAt", "2026-12-24T11:15:30+01:00",
+                    "ticket", "123e4567-e89b-12d3-a456-426614174000"), result.getData());
+        }
+    }
+    // end::configured[]
+
+    @Test
+    void anUnknownScalarIdFailsTheStartup() {
+        Map<String, Object> properties = Map.of("micronaut.graphql.tools.scalars.local-dat.enabled", false);
+        Exception failure = assertThrows(Exception.class,
+                () -> ApplicationContext.run(properties, ScalarsFixtures.DEFAULTS).close());
+        assertTrue(rootMessages(failure).contains("micronaut.graphql.tools.scalars.local-dat"), failure.toString());
+        assertTrue(rootMessages(failure).contains("local-date"), failure.toString());
+    }
+
+    private static String rootMessages(Throwable failure) {
+        StringBuilder messages = new StringBuilder();
+        for (Throwable t = failure; t != null; t = t.getCause()) {
+            messages.append(t.getMessage()).append('\n');
+        }
+        return messages.toString();
+    }
 
     @Test
     void anInvalidValueIsAnErrorThatNamesTheScalar() {

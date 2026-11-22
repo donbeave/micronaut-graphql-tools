@@ -18,6 +18,7 @@ package example.precedence
 import graphql.GraphQL
 import graphql.schema.GraphQLSchema
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.exceptions.ConfigurationException
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import spock.lang.Specification
@@ -63,7 +64,7 @@ class PrecedenceSpec extends Specification {
         failure(properties, PrecedenceFixtures.AMBIGUOUS) instanceof SchemaBindingException
         failure(properties, PrecedenceFixtures.AMBIGUOUS).message.startsWith('[precedence-ambiguity]')
         // a failure about one field names its schema coordinate and is no aggregate
-        failure(properties, PrecedenceFixtures.AMBIGUOUS).code() == BindingCode.PRECEDENCE_AMBIGUITY
+        failure(properties, PrecedenceFixtures.AMBIGUOUS).getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         failure(properties, PrecedenceFixtures.AMBIGUOUS).coordinate == 'Gadget.label'
         failure(properties, PrecedenceFixtures.AMBIGUOUS).mappingContext.coordinate == 'Gadget.label'
         failure(properties, PrecedenceFixtures.AMBIGUOUS).failures.empty
@@ -71,6 +72,27 @@ class PrecedenceSpec extends Specification {
 
         where:
         properties << [[:], ['micronaut.graphql.tools.strict': false]]
+    }
+
+    void 'a broken binding fails the startup with a ConfigurationException in the cause chain'() {
+        when:
+        run([:], PrecedenceFixtures.AMBIGUOUS, '{ __typename }')
+
+        then:
+        Throwable thrown = thrown(Exception)
+        ConfigurationException e = causes(thrown).find { it instanceof ConfigurationException } as ConfigurationException
+        e != null
+        e instanceof SchemaBindingException
+        e.code == BindingCode.PRECEDENCE_AMBIGUITY
+        e.message.startsWith('[precedence-ambiguity]')
+    }
+
+    private static List<Throwable> causes(Throwable e) {
+        List<Throwable> chain = []
+        for (Throwable cause = e; cause != null && !chain.contains(cause); cause = cause.cause) {
+            chain << cause
+        }
+        return chain
     }
 
     void 'the lenient settings decide the field'() {
