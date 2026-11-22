@@ -140,7 +140,7 @@ public class GraphQLToolsConfiguration {
      * {@code SchemaMappingDictionary} does not name: the simple name of the class is the convention with {@code {Type}}
      * replaced by the name of the object type, for example {@code {Type}Graph} for {@code BookGraph}. The class must be
      * introspected, and a class that declares a name with {@code @GraphQLType(name)} is matched by that name only. It
-     * is decided once at startup. The compile-time checks read the processor option {@code typeClassConvention}.
+     * is decided once at startup. The compile-time checks read the processor option {@code micronaut.graphql.tools.processor.type.class.convention}.
      * Default: none.
      *
      * @param typeClassConvention a pattern with {@code {Type}} exactly once, or {@code null}

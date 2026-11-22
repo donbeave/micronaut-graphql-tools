@@ -34,7 +34,8 @@ final class ModuleOwnership {
     }
 
     /**
-     * @param moduleDir the value of {@code module.dir}, null when the option is absent
+     * @param moduleDir the directory of the module: {@code module.dir}, else the project directory that the compiler reports,
+     *                  null when there is neither
      * @param context   the context of this compilation
      * @return the output directory of this compilation when it lies outside {@code moduleDir}, null when it lies inside or when
      *         the compiler gives no output directory (kapt and KSP do not), so that the check does not apply
@@ -50,6 +51,18 @@ final class ModuleOwnership {
             return null;
         }
         return output == null || real(output).startsWith(real(moduleDir)) ? null : output;
+    }
+
+    /**
+     * @param context the context of this compilation
+     * @return the project directory that the compiler reports, null when it reports none
+     */
+    static @Nullable Path projectDir(VisitorContext context) {
+        try {
+            return context.getProjectDir().map(it -> it.toAbsolutePath().normalize()).orElse(null);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     // a symbolic link in one of the two paths (a temporary directory under /var on macOS) must not make them differ

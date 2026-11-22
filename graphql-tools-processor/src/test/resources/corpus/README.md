@@ -42,7 +42,7 @@ it. The startup runs with every module on the classpath. A language directory ho
 
 Case names are the relative paths. `tags` are free `key:value` words; `lang:all` means the case has a Java, a Groovy and
 a Kotlin directory. `config.<key>` is runtime configuration (`config.micronaut.graphql.tools.strict=false`); the checks-on compilation also gets
-`config.micronaut.graphql.tools.resolver-accessor-prefixes` as the visitor option `micronaut.graphql.tools.processor.resolverAccessorPrefixes`.
+`config.micronaut.graphql.tools.resolver-accessor-prefixes` as the visitor option `micronaut.graphql.tools.processor.resolver.accessor.prefixes`.
 
 A case that says `compile.processor=absent` is compiled without the processor on the compiler path, as a build that never registered it: Java and Groovy compile in a class loader whose class path has no output of the processor module, and the Kotlin batch leaves the visitor out of the unchecked subproject and builds no checked one. Such a case has no compile-time verdict (`expected/compile.txt` is a layout problem), and its `runtime.txt` is what the startup says about classes that the build did not record (`marker/no-processor-type-resolver`, `marker/no-processor-root-markers`).
 

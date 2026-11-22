@@ -55,7 +55,7 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   the same in both. Each state is also built from scratch in a copy, and must pass: an incremental build never fails where a clean
   build passes. A schema edit that drifts the resolver fails the incremental build with the code and the coordinate, and the repair
   passes. The specs record the clean and incremental times, with the JDK and the machine load, in `outcomes.txt`; they assert no time.
-  `KotlinKspLooseNullabilityTest` and `JavaMavenLooseNullabilityTest` cover the processor option `looseNullability`: the `kotlin-ksp`
+  `KotlinKspLooseNullabilityTest` and `JavaMavenLooseNullabilityTest` cover the processor option `loose.nullability`: the `kotlin-ksp`
   sample (`-PgraphqlLooseNullability`) passes by default and with `warn` and fails with `fail` on `Query.book`, a non-null return type at a nullable
   field; the `java-maven` sample (`-Dgraphql.looseNullability`) accepts every value and fails on a bad one. Maven cannot show the effect: kapt reads
   Kotlin classes as Java stubs. The guide page of the options includes their tagged snippets.
