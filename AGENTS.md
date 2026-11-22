@@ -34,6 +34,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |
 | Benchmarks | `./gradlew :benchmarks:check` | Hot path, allocation or startup changes |
 | Workflow lint | `mise exec -- jactionlint` and `python3 .github/scripts/check-gate.py` | Any change under `.github/` |
+| Module lists | `python3 .github/scripts/check-modules.py` | Adding or renaming a module, or editing a list of modules (the `actionlint` job runs it) |
 
 - Leg values are roles (`floor`, `default`, `ceiling`, `latest`). The floor and ceiling versions are in
   `gradle/libs.versions.toml`; the default leg takes the graphql-java that micronaut-graphql manages; `latest` is resolved in `build.gradle.kts`.

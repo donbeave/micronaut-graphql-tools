@@ -286,6 +286,8 @@ jobs:
         run: jactionlint --color
       - name: Check that every job is gated and every event runs the same jobs
         run: python3 .github/scripts/check-gate.py
+      - name: Check that the module lists agree with settings.gradle.kts
+        run: python3 .github/scripts/check-modules.py
       - name: Test the download retry wrapper
         run: .github/scripts/test-retry-on-download-failure.sh
 
