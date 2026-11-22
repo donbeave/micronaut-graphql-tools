@@ -25,7 +25,7 @@ Not in this module: the `Instrumentation` bean and the observer interface, and t
 
 ## Packages
 
-Each package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
+Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
 
 | Package | Audience | Holds |
 | --- | --- | --- |

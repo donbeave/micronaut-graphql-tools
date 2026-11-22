@@ -27,7 +27,7 @@ Not in this module:
 
 ## Packages
 
-Each package has a `package-info.java`. The [API map](../src/main/docs/guide/apiMap.adoc) says which packages are public API and which are internal, and the target layout.
+Each package has a `package-info.java`. The [API map](../CONTRIBUTING.md#api-map) says which packages are public API and which are internal, and the target layout.
 
 | Package | Audience | Holds |
 | --- | --- | --- |

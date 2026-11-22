@@ -30,7 +30,7 @@ and stay in their own modules.
 
 ## Packages
 
-Each package has a `package-info.java`. All packages below `internal` are implementation; see the [API map](../src/main/docs/guide/apiMap.adoc).
+Each package has a `package-info.java`. All packages below `internal` are implementation; see the [API map](../CONTRIBUTING.md#api-map).
 
 | Package | Audience | Holds |
 | --- | --- | --- |

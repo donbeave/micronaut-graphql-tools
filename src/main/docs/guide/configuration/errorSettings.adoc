@@ -1,0 +1,1 @@
+`micronaut.graphql.tools.errors.details` (default `false`) sends the message and the class of an exception that has no mapper to the client, and `micronaut.graphql.tools.errors.stack-traces` (default `false`) adds the stack trace to its log entry. See <<errors,Errors>>.

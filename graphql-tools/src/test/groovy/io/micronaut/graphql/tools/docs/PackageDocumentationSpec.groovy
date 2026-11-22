@@ -27,7 +27,7 @@ import java.util.stream.Stream
 
 /**
  * Every Java package of the library, binding, processor, scalars, micrometer, opentelemetry, upload and TCK modules is documented by a package-info.java, is small
- * enough to have one responsibility, and is listed in the API map (src/main/docs/guide/apiMap.adoc) with an audience that
+ * enough to have one responsibility, and is listed in the API map (CONTRIBUTING.md, section API map) with an audience that
  * agrees with the @Internal marker of the package. The checks read the sources, so they hold on every JDK.
  */
 class PackageDocumentationSpec extends Specification {
@@ -129,13 +129,13 @@ class PackageDocumentationSpec extends Specification {
     }
 
     private Map<String, List<String>> apiRows() {
-        def page = Files.readString(root.resolve('src/main/docs/guide/apiMap.adoc'))
-        def section = page.split('(?m)^== ').find { it.startsWith('Current layout') }
+        def page = Files.readString(root.resolve('CONTRIBUTING.md'))
+        def section = page.split('(?m)^#{2,3} ').find { it.startsWith('Current layout') }
         assert section: 'The API map has no "Current layout" section'
-        def rows = section.readLines().findAll { it.startsWith('|`io.micronaut.') }
+        def rows = section.readLines().findAll { it.startsWith('| `io.micronaut.') }
         rows.collectEntries {
-            def cells = it.substring(1).split(/ \|/)
-            [(cells[0].replace('`', '').trim()): cells.toList()]
+            def cells = it.replaceFirst(/^\|\s*/, '').replaceFirst(/\s*\|\s*$/, '').split(/\s*\|\s*/).toList()
+            [(cells[0].replace('`', '').trim()): cells]
         }
     }
 

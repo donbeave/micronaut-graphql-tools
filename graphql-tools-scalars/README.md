@@ -30,7 +30,7 @@ Not in this module: the scalar SPI (`GraphQLScalarMapping`) and the binding of s
 
 ## Packages
 
-Each package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
+Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
 
 | Package | Audience | Holds |
 | --- | --- | --- |

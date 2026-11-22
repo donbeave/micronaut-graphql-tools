@@ -57,7 +57,7 @@ repositories {
 }
 
 dependencies {
-    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M3")
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M4")
 }
 ```
 
@@ -77,7 +77,7 @@ Maven (the repository goes in the POM, the credentials in `~/.m2/settings.xml`, 
     <dependency>
         <groupId>io.micronaut.graphql.tools</groupId>
         <artifactId>micronaut-graphql-tools</artifactId>
-        <version>1.0.0-M3</version>
+        <version>1.0.0-M4</version>
     </dependency>
 </dependencies>
 ```
@@ -419,7 +419,7 @@ methods that do bind, and two methods that declare one coordinate fail with `mul
 method of a bean without coordinates named `getX` or `isX` (an upper-case letter after the prefix) also binds the field
 `x`, besides the field named like the method. That lets resolvers written for other tools (`getAuthor(Book)`) bind
 without renaming. `getAuthor` and `author` in one class both bind `author` and fail the startup. Off, `getAuthor`
-binds the field `getAuthor` only. The compile-time checks read `micronaut.graphql.tools.processor.resolverAccessorPrefixes`: set it in the build when the
+binds the field `getAuthor` only. The compile-time checks read `micronaut.graphql.tools.processor.resolver.accessor.prefixes`: set it in the build when the
 runtime key is set, so that the checks judge the arguments and the return type of those methods. Without it they leave
 a method that only a prefix could bind unreported.
 

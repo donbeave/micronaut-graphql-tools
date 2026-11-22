@@ -34,6 +34,11 @@ public class TenantContributor implements GraphQLContextContributor {
 
 State that belongs to one request lives in that context, never in a singleton: a singleton is shared by all concurrent requests. The example applications read the user of a request from the `X-User` header in a contributor for that reason.
 
+[[cors]]
+=== CORS
+
+The library does not configure CORS. Micronaut's HTTP server does, under `micronaut.server.cors.*`, and it decides which origins a browser lets read a response. CORS is not a defence against cross-site requests: a simple request (a `GET`, or a `POST` with a form, `text/plain` or multipart content type) is sent before any check, so a state-changing route that a browser authenticates with a cookie or another ambient credential needs a CSRF defence of its own (see <<csrf,CSRF>> in the File Upload guide). A read-only route, or one that authenticates only with a bearer token that the application adds itself, does not.
+
 == WebSocket
 
 [source,yaml]

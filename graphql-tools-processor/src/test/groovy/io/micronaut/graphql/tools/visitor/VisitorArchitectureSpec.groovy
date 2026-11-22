@@ -53,7 +53,7 @@ class VisitorArchitectureSpec extends Specification {
 
     // calls by method name, whatever the receiver: the lookups and the writes of Micronaut's visitor API, and File writes
     static final Set<String> FORBIDDEN_METHODS = [
-            'getProjectDir', 'getClassesOutputPath', 'getClasspathResources', 'getClassElement', 'getClassElements',
+            'getClassesOutputPath', 'getClasspathResources', 'getClassElement', 'getClassElements',
             'getRequiredClassElement', 'visitMetaInfFile', 'visitGeneratedFile', 'visitGeneratedSourceFile',
             'visitServiceDescriptor', 'addGeneratedResource', 'createNewFile', 'mkdir', 'mkdirs', 'renameTo', 'deleteOnExit',
     ] as Set
@@ -89,7 +89,7 @@ class VisitorArchitectureSpec extends Specification {
         violations(parse(files().collect { new FileSource(it) })) == []
     }
 
-    def "the isolating visitor claims exactly the six annotations, the six options and the retired key"() {
+    def "the isolating visitor claims exactly the six annotations, the six options and the retired keys"() {
         expect:
         visitor.visitorKind == TypeElementVisitor.VisitorKind.ISOLATING
         visitor.supportedAnnotationNames == [
@@ -100,6 +100,9 @@ class VisitorArchitectureSpec extends Specification {
                 'io.micronaut.graphql.tools.annotation.GraphQLType', 'io.micronaut.core.annotation.Introspected'] as Set
         visitor.supportedOptions == ['micronaut.graphql.tools.processor.schema.dirs', 'micronaut.graphql.tools.processor.module.dir',
                                      'micronaut.graphql.tools.processor.checks',
+                                     'micronaut.graphql.tools.processor.resolver.accessor.prefixes',
+                                     'micronaut.graphql.tools.processor.loose.nullability',
+                                     'micronaut.graphql.tools.processor.type.class.convention',
                                      'micronaut.graphql.tools.processor.resolverAccessorPrefixes',
                                      'micronaut.graphql.tools.processor.looseNullability',
                                      'micronaut.graphql.tools.processor.typeClassConvention',
@@ -116,7 +119,7 @@ class VisitorArchitectureSpec extends Specification {
 
         where:
         source                                                                                   | expected
-        'class Bad { void m(Object c) { c\n.getProjectDir(); } }'                                | 'getProjectDir'
+        'class Bad { void m(Object c) { c\n.getClasspathResources(); } }'                         | 'getClasspathResources'
         'class Bad { void m(Object c) { c.getClassElement ( "x" ); } }'                          | 'getClassElement'
         'class Bad { void m(Object c) { c.visitMetaInfFile("x"); } }'                            | 'visitMetaInfFile'
         'class Bad { String m() { return System\n.getProperty("x"); } }'                         | 'System.getProperty'
