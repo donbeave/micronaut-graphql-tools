@@ -17,7 +17,8 @@ A scalar has a configurable name and, for `java.time`, a configurable wire forma
 - The coercions of the `java.time` scalars (ISO-8601 by default, `epoch-seconds`, `epoch-millis`, `seconds`, `millis` or a
   `DateTimeFormatter` pattern) and of the JSON scalar.
 - The configuration under `micronaut.graphql.tools.scalars`: `enabled`, and `<id>.enabled`, `<id>.name` and `<id>.format`
-  for each scalar. A value that a scalar cannot use fails the startup with a message that names the key.
+  for each scalar, bound to `ScalarsConfiguration` and `ScalarConfiguration`. A value that a scalar cannot use, or a key
+  that is not the id of a scalar, fails the startup with a message that names the key.
 - The JSON scalar converts a value that is not JSON yet with the application's `JsonMapper` (Micronaut Serialization in an
   application that uses it). The module uses no Jackson and brings no JSON implementation.
   It rejects a number that is not finite (NaN, infinity) at any depth of a map or a list, in output and in variables, and a
@@ -33,8 +34,8 @@ Each package has a `package-info.java`. See the [API map](../src/main/docs/guide
 
 | Package | Audience | Holds |
 | --- | --- | --- |
-| `io.micronaut.graphql.tools.scalars` | Public API | `StandardScalar`: the ids, default names and Java classes |
-| `...scalars.internal` | Internal | The factory of the mapping beans, the reader of the configuration, the shared coercion |
+| `io.micronaut.graphql.tools.scalars` | Public API | `StandardScalar`: the ids, default names and Java classes; `ScalarsConfiguration` and `ScalarConfiguration`: the configuration |
+| `...scalars.internal` | Internal | The factory of the mapping beans, the shared coercion |
 | `...scalars.internal.json` | Internal | The JSON scalar |
 | `...scalars.internal.time` | Internal | The `java.time` scalars and the builder that picks one from its format |
 
