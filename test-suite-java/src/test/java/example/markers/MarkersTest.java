@@ -51,6 +51,14 @@ class MarkersTest {
     }
 
     @Test
+    void aBeanThatMixesARootMarkerAndATypeResolverBindsEachMethodOnItsSide() {
+        try (ApplicationContext context = ApplicationContext.run(Map.of(), MarkerFixtures.MARKERS)) {
+            assertEquals(Map.of("crate", Map.of("id", "7", "tag", "tag of 7"), "tag", "root tag"),
+                    run(context, "{ crate { id tag } tag }"));
+        }
+    }
+
+    @Test
     void anImplementationWithoutAScopeAnnotationIsNotABean() {
         try (ApplicationContext context = ApplicationContext.run(Map.of(), MarkerFixtures.MARKERS)) {
             assertFalse(context.containsBean(MarkerFixtures.UnscopedShelfQuery.class));
