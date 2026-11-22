@@ -623,4 +623,31 @@ public class Models { }''').compile()
         then:
         result.warnings.every { !it.contains('@GraphQLModels on example.Models') }
     }
+
+    def "a package repeated in @GraphQLModels and in a declared @Introspected does not crash and raises no mixed-source warning"() {
+        when:
+        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+                .source('example.Fields', FIELDS)
+                .source('example.Models', HEADER + '''
+@GraphQLModels(classes = Fields.class, packages = {"example", "example"}, includedAnnotations = Deprecated.class)
+@io.micronaut.core.annotation.Introspected(packages = {"example", "example"}, includedAnnotations = Deprecated.class)
+public class Models { }''').compile()
+
+        then:
+        result.success
+        result.warnings.every { !it.contains('declared @Introspected') }
+    }
+
+    def "a class name of a declared @Introspected counts as a class in the mixed-source warning"() {
+        when:
+        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+                .source('example.Fields', FIELDS)
+                .source('example.Models', HEADER + '''
+@GraphQLModels(packages = "example", includedAnnotations = Deprecated.class)
+@io.micronaut.core.annotation.Introspected(classNames = {"example.Fields", "example.Fields"})
+public class Models { }''').compile()
+
+        then:
+        result.warnings.any { it.contains('@GraphQLModels on example.Models lists packages') && it.contains('declared @Introspected') }
+    }
 }
