@@ -53,7 +53,7 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
     CompiledCase compile(CorpusCase corpusCase, Path work) {
         List<Path> outputs = []
         for (SourceUnit unit : corpusCase.units(Language.GROOVY)) {
-            CompiledCase compiled = compileUnit(unit, work.resolve('unit-' + outputs.size()), outputs, [(PREFIX + 'checks'): 'false'])
+            CompiledCase compiled = compileUnit(unit, work.resolve('unit-' + outputs.size()), outputs, [(PREFIX + 'checks'): 'false'], corpusCase.processorAbsent())
             if (!compiled.success) {
                 return new CompiledCase(false, outputs.empty ? compiled.classes : outputs.first(), compiled.errors, outputs.drop(1))
             }
@@ -93,29 +93,61 @@ final class GroovyCaseCompiler implements CheckedCaseCompiler {
         return new CompiledCase(success, classes, errors, [], warnings)
     }
 
-    private CompiledCase compileUnit(SourceUnit source, Path work, List<Path> dependencies, Map<String, String> options) {
+    private CompiledCase compileUnit(SourceUnit source, Path work, List<Path> dependencies, Map<String, String> options, boolean processorless = false) {
         Path classes = Files.createDirectories(work.resolve('classes'))
+        List<String> sources = source.sources.collect { it.toString() }
+        List<String> classpath = dependencies.collect { it.toString() }
+        List<Object> result
+        if (processorless) {
+            result = compileWithoutProcessor(sources, classes.toString(), classpath, options)
+        } else {
+            result = run(sources, classes.toString(), classpath, options)
+        }
+        return new CompiledCase((boolean) result[0], classes, (List<String>) result[1], [], (List<String>) result[2])
+    }
+
+    /**
+     * Runs {@link #run} in the copy of this class that a {@link ProcessorlessLoader} loads, so that the Groovy compiler, Micronaut's
+     * transformation and the visitors it finds are the ones of a class path without the processor.
+     */
+    private static List<Object> compileWithoutProcessor(List<String> sources, String classes, List<String> classpath, Map<String, String> options) {
+        URLClassLoader isolated = ProcessorlessLoader.create()
+        Thread thread = Thread.currentThread()
+        ClassLoader previous = thread.contextClassLoader
+        try {
+            thread.contextClassLoader = isolated
+            return (List<Object>) isolated.loadClass(GroovyCaseCompiler.name)
+                    .getMethod('run', List, String, List, Map)
+                    .invoke(null, sources, classes, classpath, options)
+        } finally {
+            thread.contextClassLoader = previous
+            isolated.close()
+        }
+    }
+
+    /** @return {@code [success, errors, warnings]}, with JDK types only, so that a copy of this class in another loader can answer */
+    static List<Object> run(List<String> sources, String classes, List<String> dependencies, Map<String, String> options) {
         Properties saved = (Properties) System.properties.clone()
         PrintStream savedErr = System.err
         ByteArrayOutputStream captured = new ByteArrayOutputStream()
-        GroovyClassLoader loader = new GroovyClassLoader(getClass().classLoader)
-        dependencies.each { loader.addClasspath(it.toString()) }
+        GroovyClassLoader loader = new GroovyClassLoader(GroovyCaseCompiler.classLoader)
+        dependencies.each { loader.addClasspath(it) }
         forgetVisitors()
         try {
             System.properties.stringPropertyNames().findAll { it.startsWith(PREFIX) }.each { System.clearProperty(it) }
             options.each { String name, String value -> System.setProperty(name, value) }
             System.setErr(new PrintStream(captured, true, 'UTF-8'))
             CompilerConfiguration configuration = new CompilerConfiguration()
-            configuration.targetDirectory = classes.toFile()
+            configuration.targetDirectory = new File(classes)
             CompilationUnit unit = new CompilationUnit(configuration, null, loader)
-            source.sources.each { unit.addSource(it.toFile()) }
+            sources.each { unit.addSource(new File(it)) }
             try {
                 unit.compile(Phases.OUTPUT)
             } catch (CompilationFailedException e) {
                 List<String> errors = ((List<Message>) (e.unit?.errorCollector?.errors ?: [])).collect { text(it) }
-                return new CompiledCase(false, classes, errors.empty ? [e.message] : errors, [], warnings(captured))
+                return [false, errors.empty ? [e.message] : errors, warnings(captured)]
             }
-            return new CompiledCase(true, classes, [], [], warnings(captured))
+            return [true, [], warnings(captured)]
         } finally {
             System.setErr(savedErr)
             loader.close()

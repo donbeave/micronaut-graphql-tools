@@ -1,0 +1,2 @@
+query First { httpEcho(value: "one") }
+query Second { httpEcho(value: "two") }

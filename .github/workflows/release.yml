@@ -187,5 +187,6 @@ jobs:
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-upload:${TAG}"
+            echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-security:${TAG}"
             echo "- io.micronaut.graphql.tools:micronaut-graphql-tools-bom:${TAG}"
           } >> "$GITHUB_STEP_SUMMARY"

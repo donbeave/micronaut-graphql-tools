@@ -32,7 +32,7 @@ import java.util.stream.Stream
  */
 class PackageDocumentationSpec extends Specification {
 
-    static final List<String> MODULES = ['graphql-tools', 'graphql-tools-binding', 'graphql-tools-processor', 'graphql-tools-scalars', 'graphql-tools-micrometer', 'graphql-tools-opentelemetry', 'graphql-tools-upload', 'graphql-tools-tck']
+    static final List<String> MODULES = ['graphql-tools', 'graphql-tools-binding', 'graphql-tools-processor', 'graphql-tools-scalars', 'graphql-tools-micrometer', 'graphql-tools-opentelemetry', 'graphql-tools-upload', 'graphql-tools-security', 'graphql-tools-tck']
     static final int MAX_TYPES = 15
 
     /** A package over the limit needs an entry here, with the reason and the issue that removes it. */

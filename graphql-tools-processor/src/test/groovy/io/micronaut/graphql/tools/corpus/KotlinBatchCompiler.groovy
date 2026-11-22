@@ -195,7 +195,7 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
         Files.createDirectories(buildDir)
         String only = CorpusFixtures.only()
         List<CorpusCase> cases = corpus.cases.findAll { covers(processor, it) && (only == null || it.name ==~ only) }
-        List<String> projects = cases.collectMany { [projectName(it), checkedName(it)] }
+        List<String> projects = cases.collectMany { it.processorAbsent() ? [projectName(it)] : [projectName(it), checkedName(it)] }
         // `a-b/c` and `a/b-c` would share the project `a-b-c`: refuse instead of mixing two cases
         Set<String> seen = new HashSet<>()
         projects.findAll { !seen.add(it) }.each {
@@ -218,8 +218,9 @@ plugins {
     id("org.jetbrains.kotlin.kapt") version "${KOTLIN}" apply false
 }
 """)
-        // kapt: one JVM per compilation, so that the options of one case cannot stay in the system properties of the next (javac
-        // copies a micronaut option there and the first value stays)
+        // kapt: a worker process of its own (the worker JVM arguments of each project are unique, see writeProject), so that the
+        // options of one case cannot stay in the system properties of the next (javac copies a micronaut option there and the first
+        // value stays)
         // the build runs every case in one daemon, whose default heap of 512 MiB runs out at about 80 cases
         Files.writeString(buildDir.resolve('gradle.properties'),
                 'kapt.workers.isolation=process\norg.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=1g\n')
@@ -229,11 +230,16 @@ plugins {
         String classpath = libraries().collect { "        \"${it.replace('\\', '/')}\"," }.join('\n')
         String path = visitorPath.collect { "        \"${it}\"," }.join('\n')
         cases.each { CorpusCase c ->
-            writeProject(c, projectName(c), false, classpath, path)
-            writeProject(c, checkedName(c), true, classpath, path)
+            writeProject(c, projectName(c), false, classpath, c.processorAbsent() ? '' : path)
+            if (!c.processorAbsent()) {
+                writeProject(c, checkedName(c), true, classpath, path)
+            }
         }
         long start = System.nanoTime()
-        List<String> tasks = cases.collectMany { [":${projectName(it)}:compileKotlin".toString(), ":${checkedName(it)}:${processor.task}".toString()] }
+        List<String> tasks = cases.collectMany {
+            it.processorAbsent() ? [":${projectName(it)}:compileKotlin".toString()]
+                    : [":${projectName(it)}:compileKotlin".toString(), ":${checkedName(it)}:${processor.task}".toString()]
+        }
         GradleRunner runner = GradleRunner.create()
                 .withProjectDir(buildDir.toFile())
                 .withArguments(['--continue', '--parallel', '--console=plain', '--stacktrace'] + tasks)
@@ -309,7 +315,19 @@ plugins {
         List<String> arguments = values.findAll { it.value != null }.collect { String key, String value ->
             "arg(\"${key}\", \"${value.replace('\\', '/')}\")".toString()
         }
-        String options = processor == Processor.KSP ? "ksp {\n    ${arguments.join('\n    ')}\n}" : "kapt {\n    arguments {\n        ${arguments.join('\n        ')}\n    }\n}"
+        // Gradle reuses an idle worker process for the next task that asks for the same JVM arguments, so a kapt worker that served
+        // one compilation also serves a later one, with the micronaut options of the first still in its system properties (javac
+        // copies them there and the first value wins). A JVM argument of its own for every compilation gives each one a fresh process.
+        String options = processor == Processor.KSP ? "ksp {\n    ${arguments.join('\n    ')}\n}" : """\
+kapt {
+    arguments {
+        ${arguments.join('\n        ')}
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.internal.KaptWithoutKotlincTask>().configureEach {
+    kaptProcessJvmArgs.add("-Dcorpus.kapt.worker=${name}")
+}"""
         Files.writeString(project.resolve('build.gradle.kts'), """\
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -345,10 +363,7 @@ ${classpath}
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     ${processor.configuration}(platform("io.micronaut.platform:micronaut-platform:${micronaut}"))
     ${processor.configuration}("${processor.micronaut}")
-    ${processor.configuration}(files(
-${path}
-    ))
-}
+${path.empty ? '' : "    ${processor.configuration}(files(\n${path}\n    ))\n"}}
 
 ${options}
 """)

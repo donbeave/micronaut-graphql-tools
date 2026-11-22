@@ -19,12 +19,14 @@ import jakarta.inject.Singleton
 import example.ElapsedTime
 import example.data.AuthenticationService
 import example.data.User
+import graphql.schema.DataFetchingEnvironment
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
 @Singleton
 @GraphQLRootResolver
-open class CurrentUserQuery(private val authenticationService: AuthenticationService) {
+open class CurrentUserQuery {
 
     @ElapsedTime
-    open fun currentUser(): User? = authenticationService.currentUser
+    open fun currentUser(environment: DataFetchingEnvironment): User? =
+        environment.graphQlContext.get<User>(AuthenticationService.CURRENT_USER)
 }

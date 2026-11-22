@@ -15,8 +15,7 @@ def repositoryUrl = 'https://github.com/donbeave/micronaut-graphql-tools'
 // scalars module, the Micrometer module, the OpenTelemetry module, the upload module and the BOM.
 // Test suites, benchmarks and anything added later are never published unless they are listed here.
 def publishable = ['micronaut-graphql-tools', 'micronaut-graphql-tools-processor', 'micronaut-graphql-tools-binding',
-                   'micronaut-graphql-tools-scalars', 'micronaut-graphql-tools-micrometer', 'micronaut-graphql-tools-opentelemetry',
-                   'micronaut-graphql-tools-upload', 'micronaut-graphql-tools-bom'] as Set
+                   'micronaut-graphql-tools-scalars', 'micronaut-graphql-tools-micrometer', 'micronaut-graphql-tools-opentelemetry', 'micronaut-graphql-tools-upload', 'micronaut-graphql-tools-security', 'micronaut-graphql-tools-bom'] as Set
 
 // A milestone (1.0.0-M<n>) or a final release (1.0.0). Snapshots and any other string are refused.
 def versionPattern = ~/^[0-9]+\.[0-9]+\.[0-9]+(-M[0-9]+)?$/

@@ -21,6 +21,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArgumentUtils;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaLocation;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ public class GraphQLToolsConfiguration {
     private ManifestConfiguration manifest = new ManifestConfiguration();
     private ExecutionConfiguration execution = new ExecutionConfiguration();
     private ErrorsConfiguration errors = new ErrorsConfiguration();
+    private ProtectionConfiguration protection = new ProtectionConfiguration();
 
     /**
      * @return how a field is bound when both a member of its Java type (a property or a {@code @GraphQLField} method)
@@ -271,6 +273,22 @@ public class GraphQLToolsConfiguration {
     }
 
     /**
+     * @return the options that protect the server from expensive operations, under {@value #PREFIX}.protection
+     */
+    @NonNull
+    public ProtectionConfiguration getProtection() {
+        return protection;
+    }
+
+    /**
+     * @param protection the options that protect the server from expensive operations
+     */
+    public void setProtection(@NonNull ProtectionConfiguration protection) {
+        ArgumentUtils.requireNonNull("protection", protection);
+        this.protection = protection;
+    }
+
+    /**
      * Options of the handling of the exceptions that resolvers throw, under
      * {@value GraphQLToolsConfiguration#PREFIX}{@code .errors}.
      */
@@ -316,6 +334,106 @@ public class GraphQLToolsConfiguration {
          */
         public void setStackTraces(boolean stackTraces) {
             this.stackTraces = stackTraces;
+        }
+
+    }
+
+    /**
+     * Options that protect the server from expensive operations, under
+     * {@value GraphQLToolsConfiguration#PREFIX}{@code .protection}. They apply to the {@code GraphQL} bean of the library;
+     * an application that builds its own {@code GraphQL} sets its own limits.
+     */
+    @ConfigurationProperties("protection")
+    public static class ProtectionConfiguration {
+
+        /** The default of {@link #getDocumentCacheSize()}. */
+        public static final int DEFAULT_DOCUMENT_CACHE_SIZE = 1000;
+
+        private int documentCacheSize = DEFAULT_DOCUMENT_CACHE_SIZE;
+        private int maxDepth;
+        private int maxComplexity;
+        private boolean introspection = true;
+
+        /**
+         * @return the number of parsed and validated documents that are kept, {@code 0} for none
+         */
+        public int getDocumentCacheSize() {
+            return documentCacheSize;
+        }
+
+        /**
+         * Sets how many parsed and validated documents the library keeps, keyed by the text of the query. A query text
+         * that is in the cache is neither parsed nor validated again; the least recently used document goes when the cache is
+         * full, so the memory is bounded by this many documents. Variables and the operation name are not part of the key.
+         * {@code 0} turns the cache off. Default: {@code 1000}.
+         *
+         * @param documentCacheSize the maximum number of documents
+         */
+        public void setDocumentCacheSize(int documentCacheSize) {
+            if (documentCacheSize < 0) {
+                throw new IllegalArgumentException(PREFIX + ".protection.document-cache-size must not be negative: " + documentCacheSize);
+            }
+            this.documentCacheSize = documentCacheSize;
+        }
+
+        /**
+         * @return the deepest selection nesting that an operation may have, {@code 0} for no limit
+         */
+        public int getMaxDepth() {
+            return maxDepth;
+        }
+
+        /**
+         * Sets the deepest selection nesting that an operation may have. An operation over the limit is rejected before
+         * any resolver runs, with a GraphQL error. Introspection queries nest deeply, so a low limit rejects them too.
+         * {@code 0} means no limit. Default: {@code 0}.
+         *
+         * @param maxDepth the maximum depth
+         */
+        public void setMaxDepth(int maxDepth) {
+            if (maxDepth < 0) {
+                throw new IllegalArgumentException(PREFIX + ".protection.max-depth must not be negative: " + maxDepth);
+            }
+            this.maxDepth = maxDepth;
+        }
+
+        /**
+         * @return the highest complexity that an operation may have, {@code 0} for no limit
+         */
+        public int getMaxComplexity() {
+            return maxComplexity;
+        }
+
+        /**
+         * Sets the highest complexity that an operation may have, where every field that the operation selects counts
+         * {@code 1}. An operation over the limit is rejected before any resolver runs, with a GraphQL error. {@code 0} means
+         * no limit. Default: {@code 0}.
+         *
+         * @param maxComplexity the maximum complexity
+         */
+        public void setMaxComplexity(int maxComplexity) {
+            if (maxComplexity < 0) {
+                throw new IllegalArgumentException(PREFIX + ".protection.max-complexity must not be negative: " + maxComplexity);
+            }
+            this.maxComplexity = maxComplexity;
+        }
+
+        /**
+         * @return whether {@code __schema} and {@code __type} can be queried
+         */
+        public boolean isIntrospection() {
+            return introspection;
+        }
+
+        /**
+         * Sets whether clients can query {@code __schema} and {@code __type}. Off, such a query is rejected by validation
+         * with a GraphQL error, and the schema is not listed to the client; {@code __typename} keeps working. Turning it
+         * off replaces any field visibility that the application set on the schema. Default: {@code true}.
+         *
+         * @param introspection whether introspection is available
+         */
+        public void setIntrospection(boolean introspection) {
+            this.introspection = introspection;
         }
 
     }
@@ -367,6 +485,33 @@ public class GraphQLToolsConfiguration {
 
         private String executor = DEFAULT_EXECUTOR;
         private boolean dataLoaderStatistics;
+        @Nullable
+        private Duration timeout;
+
+        /**
+         * @return how long an operation may take until its result is ready, or {@code null} for no limit
+         */
+        @Nullable
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        /**
+         * Sets how long an operation may take, from the moment it arrives until graphql-java has its result. When the time
+         * is up, the execution is marked cancelled, so that a later async field completes with an
+         * {@link graphql.execution.AbortExecutionException}, and the client gets an error with the code
+         * {@code EXECUTION_TIMEOUT} at once. Synchronous code that is running is not interrupted. A subscription is
+         * covered until its stream is established, not for the events. The timer is scheduled only when this is set.
+         * A duration such as {@code 5s}. Default: none.
+         *
+         * @param timeout the duration, which must be positive, or {@code null} for no limit
+         */
+        public void setTimeout(@Nullable Duration timeout) {
+            if (timeout != null && (timeout.isNegative() || timeout.isZero())) {
+                throw new IllegalArgumentException(PREFIX + ".execution.timeout must be positive: " + timeout);
+            }
+            this.timeout = timeout;
+        }
 
         /**
          * @return whether the batches of each batch loader bean are counted
@@ -396,9 +541,10 @@ public class GraphQLToolsConfiguration {
         }
 
         /**
-         * Sets the executor that runs every operation. The operation hops to it once, before graphql-java parses the
-         * query, so parsing, validation, the {@code GraphQLExecutionInputCustomizer} and every synchronous resolver
-         * run on it. {@code blocking} (Micronaut's blocking executor: virtual threads on JDK 21 and later, the
+         * Sets the executor that runs every operation. The operation hops to it once, after the
+         * {@code GraphQLExecutionInputCustomizer} has answered and before graphql-java parses the query, so parsing,
+         * validation and every synchronous resolver run on it. The customizer does not: it runs on the subscribing
+         * thread, which is the HTTP event loop for an HTTP request, so it must not block. {@code blocking} (Micronaut's blocking executor: virtual threads on JDK 21 and later, the
          * {@code io} pool on JDK 17) is the default; {@code none} runs the operation on the thread that receives it,
          * which is the Netty event loop over HTTP and WebSocket; {@code io}, {@code virtual} (JDK 21 and later) or the
          * name of an executor configured under {@code micronaut.executors} choose that executor. {@code scheduled} is

@@ -287,6 +287,34 @@ class TracingSpec extends AbstractOpenTelemetrySpec {
         child.parentSpanId == field.spanId
     }
 
+    void "a @NewSpan resolver on an @ExecuteOn field under a selected field is a child of the field span"() {
+        given:
+        start('OpenTelemetryTracing', [(FIELDS): ['Query.tracedOnExecutor']])
+
+        when:
+        def result = run('query T { tracedOnExecutor }')
+
+        then:
+        result.data == [tracedOnExecutor: 'hopped']
+        def request = finished().find { it.name == 'query' }
+        def field = finished().find { it.name == 'Query.tracedOnExecutor' }
+        def child = finished().find { it.name.endsWith('#resolver.hopped') }
+        field.parentSpanId == request.spanId
+        child.parentSpanId == field.spanId
+    }
+
+    void "a @NewSpan resolver on an @ExecuteOn field that is not selected is a child of the request span"() {
+        given:
+        start('OpenTelemetryTracing')
+
+        when:
+        run('query T { tracedOnExecutor }')
+
+        then:
+        def request = finished().find { it.name == 'query' }
+        finished().find { it.name.endsWith('#resolver.hopped') }.parentSpanId == request.spanId
+    }
+
     void "a batch loader that runs after the resolver returned still sees the request span"() {
         given:
         start('OpenTelemetryTracing')

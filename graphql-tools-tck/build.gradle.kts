@@ -22,6 +22,10 @@ dependencies {
     // The runner starts the application of the suite that runs it, so the suite provides the server and the JSON stack.
     api(mn.micronaut.runtime)
     api(mn.micronaut.json.core)
+    // CustomizerTck calls the GraphQLInvocation bean of the suite and subscribes to its publisher, so it needs the transport's
+    // interface and Reactor; the suite provides both at run time.
+    compileOnly(mnGraphql.micronaut.graphql)
+    compileOnly(mn.reactor)
 
     testImplementation(platform(libs.micronaut.platform))
     testImplementation("org.junit.jupiter:junit-jupiter")

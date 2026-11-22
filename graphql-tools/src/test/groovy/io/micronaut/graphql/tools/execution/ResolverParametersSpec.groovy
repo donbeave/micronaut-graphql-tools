@@ -146,16 +146,33 @@ type Query {
         response.header('X-Resolver') == 'set'
     }
 
-    void "without a request the request, the response and the principal are null and the optional response is empty"() {
+    void "without a request the request and the principal are null and the optional response is empty"() {
         given:
         startContext(SCHEMA, SPEC + '.kinds')
 
         when:
-        def result = run('{ request response optionalResponse principal }')
+        def result = run('{ request optionalResponse principal }')
 
         then:
         result.errors.isEmpty()
-        result.data == [request: null, response: 'false', optionalResponse: false, principal: null]
+        result.data == [request: null, optionalResponse: false, principal: null]
+    }
+
+    void "a plain response parameter without a response is a field error that names the Optional form"() {
+        given:
+        startContext(SCHEMA, SPEC + '.kinds')
+
+        when:
+        def result = run('{ response optionalResponse }')
+
+        then:
+        result.errors.size() == 1
+        result.errors[0].extensions.code == 'HTTP_RESPONSE_UNAVAILABLE'
+        result.errors[0].message.contains('Query.response')
+        result.errors[0].message.contains('Optional<MutableHttpResponse<?>>')
+        result.errors[0].path == ['response']
+        result.data.response == null
+        result.data.optionalResponse == false
     }
 
     void "injected parameters bind by type in any position and the others still bind by name"() {

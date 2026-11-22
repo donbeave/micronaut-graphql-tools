@@ -49,6 +49,7 @@ type Query {
   book: Book
   loaded: String
   traced: String
+  tracedOnExecutor: String
   tagged(value: String): String
   later: Book
 }

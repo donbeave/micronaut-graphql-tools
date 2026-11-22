@@ -1,2 +1,3 @@
 pages-load-in-batches-of-two
 stats-after-one-request
+batch-loader-reads-the-context

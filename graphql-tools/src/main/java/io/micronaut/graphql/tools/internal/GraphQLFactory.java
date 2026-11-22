@@ -17,8 +17,11 @@ package io.micronaut.graphql.tools.internal;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
+import graphql.analysis.MaxQueryComplexityInstrumentation;
+import graphql.analysis.MaxQueryDepthInstrumentation;
 import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.visibility.NoIntrospectionGraphqlFieldVisibility;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaDirectiveWiring;
 import graphql.schema.idl.SchemaGenerator;
@@ -43,6 +46,7 @@ import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import io.micronaut.graphql.tools.internal.checks.DirectiveWiringCheck;
+import io.micronaut.graphql.tools.internal.protection.DocumentCache;
 import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestHolder;
 import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry;
@@ -68,6 +72,9 @@ import java.util.Objects;
  * {@code GraphQLBuilderCustomizer} beans run after that. The one bean that the library adds itself is
  * {@code ObserverInstrumentation}, which exists when a module contributes a {@code RequestObserver} bean (the metrics and
  * the tracing modules do), however many observers there are.</p>
+ *
+ * <p>The bean also applies the {@code protection} settings: the parsed-document cache, the depth and complexity limits (two
+ * more instrumentations) and the introspection switch.</p>
  *
  * @author Alexey Zhokhov
  */
@@ -144,13 +151,30 @@ public final class GraphQLFactory {
     @Primary
     @Requires(condition = LibraryBeanSelection.NoCompetingGraphQL.class)
     public GraphQL graphQL(GraphQLSchema graphQLSchema, List<GraphQLBuilderCustomizer> graphQLBuilderCustomizers,
-                           LibraryDataFetcherExceptionHandler exceptionHandler, List<Instrumentation> instrumentations) {
+                           LibraryDataFetcherExceptionHandler exceptionHandler, List<Instrumentation> instrumentations,
+                           GraphQLToolsConfiguration configuration) {
+        GraphQLToolsConfiguration.ProtectionConfiguration protection = configuration.getProtection();
+        if (!protection.isIntrospection()) {
+            GraphQLSchema bound = graphQLSchema;
+            graphQLSchema = bound.transform(schema -> schema.codeRegistry(bound.getCodeRegistry()
+                    .transform(registry -> registry.fieldVisibility(NoIntrospectionGraphqlFieldVisibility.NO_INTROSPECTION_FIELD_VISIBILITY))));
+        }
         GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema)
                 .defaultDataFetcherExceptionHandler(exceptionHandler);
-        if (instrumentations.size() == 1) {
-            builder.instrumentation(instrumentations.get(0));
-        } else if (!instrumentations.isEmpty()) {
-            builder.instrumentation(new ChainedInstrumentation(instrumentations));
+        if (protection.getDocumentCacheSize() > 0) {
+            builder.preparsedDocumentProvider(new DocumentCache(protection.getDocumentCacheSize()));
+        }
+        List<Instrumentation> chain = new ArrayList<>(instrumentations);
+        if (protection.getMaxDepth() > 0) {
+            chain.add(new MaxQueryDepthInstrumentation(protection.getMaxDepth()));
+        }
+        if (protection.getMaxComplexity() > 0) {
+            chain.add(new MaxQueryComplexityInstrumentation(protection.getMaxComplexity()));
+        }
+        if (chain.size() == 1) {
+            builder.instrumentation(chain.get(0));
+        } else if (!chain.isEmpty()) {
+            builder.instrumentation(new ChainedInstrumentation(chain));
         }
         graphQLBuilderCustomizers.forEach(customizer -> customizer.customize(builder));
         return builder.build();

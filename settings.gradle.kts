@@ -20,6 +20,7 @@ include("graphql-tools-scalars")
 include("graphql-tools-micrometer")
 include("graphql-tools-opentelemetry")
 include("graphql-tools-upload")
+include("graphql-tools-security")
 include("graphql-tools-processor")
 include("benchmarks")
 include("graphql-tools-tck")
@@ -34,6 +35,7 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     importMicronautCatalog("micronaut-graphql")
     importMicronautCatalog("micronaut-micrometer")
     importMicronautCatalog("micronaut-tracing")
+    importMicronautCatalog("micronaut-security")
 }
 
 gradle.settingsEvaluated {

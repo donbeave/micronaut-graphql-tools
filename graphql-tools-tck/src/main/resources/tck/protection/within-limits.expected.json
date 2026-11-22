@@ -1,0 +1,10 @@
+{
+  "data": {
+    "protectedChain": {
+      "name": "a",
+      "next": {
+        "name": "b"
+      }
+    }
+  }
+}
