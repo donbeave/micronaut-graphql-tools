@@ -18,7 +18,6 @@ package io.micronaut.graphql.tools.internal;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
 import io.micronaut.configuration.graphql.DefaultGraphQLInvocation;
-import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.Qualifier;
@@ -33,7 +32,6 @@ import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.value.PropertyCatalog;
-import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.BeanDefinitionReference;
 import io.micronaut.inject.qualifiers.Qualifiers;
@@ -103,43 +101,13 @@ public final class LibraryBeanSelection {
         return provided(context, type, false, new Visits());
     }
 
-    /**
-     * The invocations that are not the application's: the library's own, whose condition calls this class, and the
-     * transport's default, which the library's invocation replaces.
-     */
-    private static boolean isInvocationOfLibraryOrTransport(BeanDefinition<?> definition) {
-        Class<?> beanType = definition.getBeanType();
-        return beanType == LibraryGraphQLInvocation.class
-                || beanType == DefaultGraphQLInvocation.class && definition.getDeclaringType().isEmpty();
-    }
-
-    /**
-     * The application's {@code GraphQLInvocation} that makes the library's invocation step aside: a bean that is
-     * {@code @Primary} (a factory method that returns {@code DefaultGraphQLInvocation} included) or that declares {@code @Replaces(DefaultGraphQLInvocation.class)}, the two ways the transport
-     * documents to bring an invocation of one's own.
-     *
-     * @param context the bean context to search
-     * @return the application's invocation, or null
-     */
-    @Nullable
-    public static Provided invocationCompetitor(BeanContext context) {
-        for (Provided bean : provided(context, GraphQLInvocation.class, false, new Visits())) {
-            AnnotationValue<Replaces> replaces = bean.definition().getAnnotation(Replaces.class);
-            if (bean.primary() || replaces != null
-                    && replaces.classValue("bean").filter(DefaultGraphQLInvocation.class::equals).isPresent()) {
-                return bean;
-            }
-        }
-        return null;
-    }
-
     private static List<Provided> provided(BeanContext context, Class<?> type, boolean withLibrary, Visits visits) {
         List<BeanDefinition<?>> enabled = new ArrayList<>();
         for (BeanDefinitionReference<?> reference : context.getBeanDefinitionReferences()) {
             if (type.isAssignableFrom(reference.getBeanType()) && reference.isPresent()) {
                 BeanDefinition<?> definition = reference.load();
                 // the library's own references are never asked isEnabled, which would evaluate its condition again
-                if (definition != null && !isInvocationOfLibraryOrTransport(definition) && (isLibrary(definition)
+                if (definition != null && (isLibrary(definition)
                         ? withLibrary && libraryEnabled(context, reference, definition, visits)
                         : reference.isEnabled(context))) {
                     enabled.add(definition);
@@ -243,6 +211,14 @@ public final class LibraryBeanSelection {
         return definition.getDeclaringType().filter(GraphQLFactory.class::equals).isPresent();
     }
 
+    /**
+     * @param definition the bean definition
+     * @return the description of an unqualified bean of this definition
+     */
+    public static String describe(BeanDefinition<?> definition) {
+        return describe(new Provided(definition));
+    }
+
     public static String describe(Provided bean) {
         BeanDefinition<?> definition = bean.definition();
         String origin = definition.getDeclaringType()
@@ -295,24 +271,36 @@ public final class LibraryBeanSelection {
         }
     }
 
-    /** Matches when the application brings no {@code GraphQLInvocation} of its own. */
-    public static final class NoCompetingInvocation implements Condition {
-        @Override
-        public boolean matches(ConditionContext context) {
-            Provided competitor = invocationCompetitor(context.getBeanContext());
-            if (competitor == null) {
-                return true;
-            }
-            context.fail("the application provides " + describe(competitor));
-            return false;
-        }
-    }
-
     /** Matches when no application bean of {@code GraphQL} competes with the library's engine. */
     public static final class NoCompetingGraphQL implements Condition {
         @Override
         public boolean matches(ConditionContext context) {
             return noCompetitor(context, graphql.GraphQL.class);
+        }
+    }
+
+    /**
+     * Matches unless the application declares its own {@code DefaultGraphQLInvocation} bean through a factory, for
+     * example a {@code @Primary} factory method. The library's invocation replaces the transport's
+     * {@code DefaultGraphQLInvocation} by type, which would also replace that bean, so it steps aside. The transport's
+     * own bean is a class bean, declared by itself.
+     */
+    public static final class NoApplicationDefaultInvocation implements Condition {
+        @Override
+        public boolean matches(ConditionContext context) {
+            for (BeanDefinitionReference<?> reference : context.getBeanContext().getBeanDefinitionReferences()) {
+                if (reference.getBeanType() == DefaultGraphQLInvocation.class && reference.isPresent()) {
+                    BeanDefinition<?> definition = reference.load();
+                    if (definition != null
+                            && definition.getDeclaringType().filter(declaring -> declaring != DefaultGraphQLInvocation.class).isPresent()
+                            && reference.isEnabled(context.getBeanContext())) {
+                        context.fail("the application declares " + definition.getDeclaringType().get().getName()
+                                + "#DefaultGraphQLInvocation, which the library's invocation would replace");
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
     }
 

@@ -30,6 +30,7 @@ import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.context.annotation.Secondary;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.convert.value.ConvertibleValues;
@@ -37,8 +38,8 @@ import io.micronaut.core.propagation.PropagatedContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer;
-import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.ExecutionConfiguration;
 import io.micronaut.graphql.tools.internal.LibraryBeanSelection;
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.ExecutionConfiguration;
 import io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics;
 import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
@@ -90,14 +91,17 @@ import java.util.function.BiConsumer;
  * It is captured when {@link #execute} is called, not when the returned publisher is subscribed, so a subscriber on
  * another thread does not lose it.</p>
  *
- * <p>The bean steps aside when the application declares a {@code GraphQLInvocation} that is {@code @Primary} or
- * {@code @Replaces(DefaultGraphQLInvocation.class)}.</p>
+ * <p>The bean is {@code @Secondary}: an application {@code GraphQLInvocation} of any kind (a bean without a qualifier,
+ * a {@code @Primary} one, or one that declares {@code @Replaces(DefaultGraphQLInvocation.class)}) is the one an
+ * unqualified injection point gets, and this bean stays registered beside it. It steps aside only when the
+ * application declares a {@code DefaultGraphQLInvocation} bean through a factory, because it replaces that type.</p>
  */
 @Internal
 @Singleton
+@Secondary
 @Replaces(DefaultGraphQLInvocation.class)
 @Requires(property = "graphql.enabled", notEquals = "false")
-@Requires(condition = LibraryBeanSelection.NoCompetingInvocation.class)
+@Requires(condition = LibraryBeanSelection.NoApplicationDefaultInvocation.class)
 public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
     private static final Logger LOG = LoggerFactory.getLogger(LibraryGraphQLInvocation.class);
