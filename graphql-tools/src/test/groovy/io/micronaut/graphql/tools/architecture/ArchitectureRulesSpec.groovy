@@ -37,8 +37,8 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 
 /**
- * The bytecode of the library and the binding module (not the processor, which runs at compile time) obeys four rules:
- * no reflection outside a short allowlist, no Jackson, no internal type in the signature of the public API, and no dependency of a public package on an internal one. The rules
+ * The bytecode of the library and the binding module (not the processor, which runs at compile time) obeys five rules:
+ * no reflection outside a short allowlist, no Jackson, no internal type in the signature of the public API, no dependency of a public package on an internal one, and one accessor style in the public types of the websocket, mapping, directive and execution packages. The rules
  * keep the native image free of reflection metadata and the public API free of types that can change in any release.
  */
 class ArchitectureRulesSpec extends Specification {
@@ -62,6 +62,11 @@ class ArchitectureRulesSpec extends Specification {
             'getRecordComponents', 'getClasses', 'getDeclaredClasses', 'getNestMembers', 'getNestHost', 'getPermittedSubclasses', 'getEnclosingMethod',
             'getEnclosingConstructor', 'getGenericSuperclass', 'getTypeParameters', 'getGenericInterfaces',
     ] as Set
+
+    static final Set<String> ACCESSOR_RULE_PACKAGES = ['websocket', 'mapping', 'directive', 'execution'].collect { "$ROOT.$it".toString() } as Set
+
+    /** Methods without a parameter that return a value but are not accessors of state. */
+    static final Set<String> ACCESSOR_RULE_EXEMPT = ['hashCode', 'toString', 'build'] as Set
 
     @Shared JavaClasses classes = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
@@ -140,6 +145,29 @@ class ArchitectureRulesSpec extends Specification {
         result.failureReport.details.any { it.contains('io.micronaut.graphql.tools.internal') }
     }
 
+    void "no public class or interface declares a record-style accessor"() {
+        expect:
+        classes().that(publicApi()).and(DescribedPredicate.describe('in websocket, mapping, directive or execution, and not a record, an enum or an annotation', { JavaClass c ->
+            c.packageName in ACCESSOR_RULE_PACKAGES && !c.record && !c.enum && !c.annotation
+        })).should(declareNoRecordStyleAccessor())
+                .because('a public interface or class names its accessors getX and isX; only a record, which is the immutable data carrier, uses the component name (BC-44)')
+                .check(classes)
+    }
+
+    void "the accessor rule fails on a class with a record-style accessor and names it"() {
+        given:
+        def result = classes().should(declareNoRecordStyleAccessor()).evaluate(new ClassFileImporter().importClasses(RecordStyleFixture))
+
+        expect:
+        result.hasViolation()
+        result.failureReport.details.any { it.contains('RecordStyleFixture.payload') }
+    }
+
+    static class RecordStyleFixture {
+        String payload() { 'x' }
+        String getName() { 'x' }
+    }
+
     /** The reflective accesses of a class: the key (owner.member or the type used) with a message for each. */
     private static Map<String, List<String>> reflectiveAccesses(JavaClass item) {
         Map<String, List<String>> found = [:].withDefault { [] }
@@ -185,6 +213,22 @@ class ArchitectureRulesSpec extends Specification {
     /** A public annotation names its internal condition class in @Requires(condition), as the Micronaut annotations do. */
     private static boolean conditionOfAnnotation(JavaClass origin, JavaClass target) {
         origin.annotation && target.isAssignableTo('io.micronaut.context.condition.Condition')
+    }
+
+    private static ArchCondition<JavaClass> declareNoRecordStyleAccessor() {
+        new ArchCondition<JavaClass>('declare no public method without parameters that returns a value under a name that is not getX or isX') {
+            @Override
+            void check(JavaClass item, ConditionEvents events) {
+                item.methods.findAll { JavaMethod m ->
+                    m.modifiers.contains(JavaModifier.PUBLIC) && !m.modifiers.contains(JavaModifier.STATIC) &&
+                            !m.modifiers.contains(JavaModifier.SYNTHETIC) && !m.modifiers.contains(JavaModifier.BRIDGE) &&
+                            m.parameters.empty && m.rawReturnType.name != 'void' && !(m.name in ACCESSOR_RULE_EXEMPT) &&
+                            !(m.name =~ /^(get|is)[A-Z]/) && !(m.name =~ /^(to|decorates)[A-Z]/)
+                }.each { JavaMethod m ->
+                    events.add(SimpleConditionEvent.violated(m, "${m.fullName} is a record-style accessor in a class or interface"))
+                }
+            }
+        }
     }
 
     private static DescribedPredicate<JavaClass> inPublicPackage() {

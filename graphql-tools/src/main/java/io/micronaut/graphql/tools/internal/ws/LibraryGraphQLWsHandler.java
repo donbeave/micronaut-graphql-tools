@@ -226,7 +226,7 @@ public class LibraryGraphQLWsHandler {
                 if (!result.isAccepted()) {
                     return result;
                 }
-                attributes.putAll(result.attributes());
+                attributes.putAll(result.getAttributes());
             }
         } catch (RuntimeException e) {
             LOG.warn("A GraphQLConnectionInterceptor failed, so the connection is rejected: {}", e.toString());
@@ -240,10 +240,10 @@ public class LibraryGraphQLWsHandler {
             return;
         }
         if (!result.isAccepted()) {
-            session.close(new CloseReason(result.closeCode(), result.reason()));
+            session.close(new CloseReason(result.getCloseCode(), result.getReason()));
             return;
         }
-        state.acknowledge(result.attributes());
+        state.acknowledge(result.getAttributes());
         send(session, Map.of("type", "connection_ack")).subscribe();
     }
 

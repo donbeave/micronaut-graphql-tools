@@ -25,7 +25,7 @@ import io.micronaut.core.annotation.NonNull;
  * {@link io.micronaut.core.annotation.Order @Order} on the bean class or of {@link io.micronaut.core.order.Ordered#getOrder()},
  * lowest first, until one rejects. The attributes of the accepting interceptors are merged (a later one overrides an earlier
  * one) and are available to every operation of the connection: a {@code GraphQLContextContributor}
- * reads them as {@code connectionAttributes()} and puts what resolvers need in the GraphQL context.</p>
+ * reads them as {@code getConnectionAttributes()} and puts what resolvers need in the GraphQL context.</p>
  *
  * <p>The call is on the execution executor ({@code micronaut.graphql.tools.execution.executor}), so an interceptor may
  * block, for example to validate a token. An exception that it throws rejects the connection with the close code

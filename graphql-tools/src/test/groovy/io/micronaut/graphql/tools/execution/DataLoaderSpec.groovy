@@ -694,7 +694,7 @@ type Query {
     static class RegisteringContributor implements GraphQLContextContributor {
         @Override
         void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
-            request.executionInput().dataLoaderRegistry.register('contributed', DataLoaderFactory.newDataLoader({ List<String> keys ->
+            request.executionInput.dataLoaderRegistry.register('contributed', DataLoaderFactory.newDataLoader({ List<String> keys ->
                 CONTRIBUTED_BATCHES.incrementAndGet()
                 CompletableFuture.completedFuture(keys.collect { 'contributed:' + it })
             } as BatchLoader<String, String>))

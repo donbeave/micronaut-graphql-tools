@@ -116,7 +116,7 @@ public final class DataLoaderOptionsScenario {
     public static class PageLoaderOptions implements DataLoaderOptionsCustomizer {
 
         @Override
-        public String loaderName() {
+        public String getLoaderName() {
             return "pageLoader";
         }
 

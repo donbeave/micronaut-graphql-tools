@@ -44,7 +44,7 @@ class LoaderRegisteringContributor implements GraphQLContextContributor {
         BatchLoader<String, String> batch = { List<String> keys ->
             CompletableFuture.completedFuture(keys.collect { String key -> "contributed:${key}:${keys.size()}" as String })
         } as BatchLoader<String, String>
-        request.executionInput().dataLoaderRegistry.register('contributed', DataLoaderFactory.newDataLoader(batch))
+        request.executionInput.dataLoaderRegistry.register('contributed', DataLoaderFactory.newDataLoader(batch))
     }
 }
 // end::contributor-loader[]

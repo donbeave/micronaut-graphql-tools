@@ -369,8 +369,8 @@ public final class BenchmarkCases implements AutoCloseable {
                 if (++calls == PENDING_STAGES_PER_EXECUTION) {
                     calls = 0;
                     ExecutionState state = ExecutionState.of(environment.getGraphQlContext());
-                    new ExecutionState(state.propagatedContext(), state.transport(), state.httpRequest(), null,
-                            state.connectionAttributes(), state.requestExecutor(), null).storeIn(environment.getGraphQlContext());
+                    new ExecutionState(state.propagatedContext(), state.getTransport(), state.getHttpRequest(), null,
+                            state.getConnectionAttributes(), state.requestExecutor(), null).storeIn(environment.getGraphQlContext());
                 }
                 return fetcher.get(environment);
             }

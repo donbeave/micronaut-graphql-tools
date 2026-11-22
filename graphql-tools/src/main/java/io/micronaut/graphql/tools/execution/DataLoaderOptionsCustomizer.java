@@ -24,7 +24,7 @@ import org.dataloader.DataLoaderOptions;
  * <p>The loader is named as in the {@code DataLoaderRegistry}: the {@code @Named} qualifier of the loader bean, or else its
  * simple class name with a lower-case first letter. The customizer applies to that loader and to no other. Several
  * customizers of one loader run in the order of {@link #getOrder()}, lowest first, and each gets the options that the
- * previous one returned. A customizer whose {@link #loaderName()} names no loader bean fails the startup.</p>
+ * previous one returned. A customizer whose {@link #getLoaderName()} names no loader bean fails the startup.</p>
  *
  * <p>The options that the first customizer gets already hold the library's default for the operation: caching is off in a
  * loader that a subscription operation creates. A customizer may change that.</p>
@@ -41,7 +41,7 @@ public interface DataLoaderOptionsCustomizer extends Ordered {
     /**
      * @return the name of the loader that this customizer applies to
      */
-    String loaderName();
+    String getLoaderName();
 
     /**
      * Customizes the options of one loader.

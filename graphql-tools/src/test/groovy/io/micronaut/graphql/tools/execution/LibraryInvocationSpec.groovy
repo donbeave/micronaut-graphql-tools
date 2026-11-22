@@ -191,7 +191,7 @@ type Child {
         CALLS == ['customizer', 'fetch']
         and: 'it saw the base input with the state in its context, on the subscribing thread'
         SEEN[0] instanceof ExecutionState
-        SEEN[0].transport() == GraphQLTransport.HTTP
+        SEEN[0].transport == GraphQLTransport.HTTP
         SEEN[1] == Thread.currentThread()
         and: 'the resolver found the state in the context of the fresh input'
         SEEN[2] instanceof ExecutionState

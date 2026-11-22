@@ -188,9 +188,9 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
             case SELECTION_SET -> environment.getSelectionSet();
             case LOCALE -> environment.getLocale();
             case PRINCIPAL -> principal(state, principalTypes[index]);
-            case REQUEST -> state == null ? null : state.httpRequest();
+            case REQUEST -> state == null ? null : state.getHttpRequest();
             case RESPONSE -> response(state);
-            case OPTIONAL_RESPONSE -> state == null ? Optional.empty() : state.httpResponse();
+            case OPTIONAL_RESPONSE -> state == null ? Optional.empty() : state.getHttpResponse();
             case DATA_LOADER -> {
                 // by index, from the registry of this execution: no string lookup, and the loader is created on first use
                 if (environment.getDataLoaderRegistry() instanceof LazyDataLoaderRegistry registry) {
@@ -225,7 +225,7 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
 
     @Nullable
     private static Object principal(@Nullable ExecutionState state, Class<? extends Principal> type) {
-        HttpRequest<?> request = state == null ? null : state.httpRequest();
+        HttpRequest<?> request = state == null ? null : state.getHttpRequest();
         return request == null ? null : request.getUserPrincipal(type).orElse(null);
     }
 
@@ -233,7 +233,7 @@ public final class MicronautExecutableMethodDataFetcher implements DataFetcher<O
                                                                  @Nullable ExecutionState state) {
         String coordinate = ((GraphQLNamedType) environment.getParentType()).getName() + "."
                 + environment.getFieldDefinition().getName();
-        String transport = state == null ? "this call" : switch (state.transport()) {
+        String transport = state == null ? "this call" : switch (state.getTransport()) {
             case WEBSOCKET -> "a WebSocket operation";
             case DIRECT -> "a call without a request";
             default -> "this operation";

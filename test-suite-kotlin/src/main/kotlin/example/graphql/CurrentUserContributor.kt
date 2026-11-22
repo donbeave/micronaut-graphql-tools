@@ -30,7 +30,7 @@ import jakarta.inject.Singleton
 class CurrentUserContributor(private val authenticationService: AuthenticationService) : GraphQLContextContributor {
 
     override fun contribute(context: GraphQLContext, request: GraphQLExecutionRequest) {
-        val username = request.httpRequest()?.headers?.get(HEADER, String::class.java)?.orElse(null) ?: return
+        val username = request.httpRequest?.headers?.get(HEADER, String::class.java)?.orElse(null) ?: return
         authenticationService.find(username)?.let { context.put(AuthenticationService.CURRENT_USER, it) }
     }
 

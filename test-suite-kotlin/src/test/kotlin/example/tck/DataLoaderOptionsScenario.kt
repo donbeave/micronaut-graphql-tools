@@ -66,7 +66,7 @@ class PageLoader : MappedBatchLoader<String, List<Page>> {
 @Singleton
 class PageLoaderOptions : DataLoaderOptionsCustomizer {
 
-    override fun loaderName(): String = "pageLoader"
+    override fun getLoaderName(): String = "pageLoader"
 
     // at most two keys in a batch; maxBatchSize() exists in java-dataloader 3.x and 6.x
     override fun customize(options: DataLoaderOptions): DataLoaderOptions = object : DataLoaderOptions() {

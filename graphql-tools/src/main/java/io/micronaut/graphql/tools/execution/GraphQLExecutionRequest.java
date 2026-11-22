@@ -34,31 +34,31 @@ public interface GraphQLExecutionRequest {
      * @return the HTTP request, or the upgrade request of a WebSocket connection; {@code null} for a direct call
      */
     @Nullable
-    HttpRequest<?> httpRequest();
+    HttpRequest<?> getHttpRequest();
 
     /**
      * @return the HTTP response, which a contributor may change (for example to add a header); empty when the transport
      * has none, as on a WebSocket connection
      */
     @NonNull
-    Optional<MutableHttpResponse<?>> httpResponse();
+    Optional<MutableHttpResponse<?>> getHttpResponse();
 
     /**
      * @return how the operation arrived
      */
     @NonNull
-    GraphQLTransport transport();
+    GraphQLTransport getTransport();
 
     /**
      * @return the attributes of the WebSocket connection; empty on every other transport
      */
     @NonNull
-    ConvertibleValues<Object> connectionAttributes();
+    ConvertibleValues<Object> getConnectionAttributes();
 
     /**
      * @return the input of the execution, as the {@code GraphQLExecutionInputCustomizer} left it
      */
     @NonNull
-    ExecutionInput executionInput();
+    ExecutionInput getExecutionInput();
 
 }

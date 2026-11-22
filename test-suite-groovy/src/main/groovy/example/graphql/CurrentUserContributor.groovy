@@ -43,7 +43,7 @@ class CurrentUserContributor implements GraphQLContextContributor {
 
     @Override
     void contribute(GraphQLContext context, GraphQLExecutionRequest request) {
-        HttpRequest<?> http = request.httpRequest()
+        HttpRequest<?> http = request.httpRequest
         String username = http?.headers?.get(HEADER, String)?.orElse(null)
         if (username == null) {
             return

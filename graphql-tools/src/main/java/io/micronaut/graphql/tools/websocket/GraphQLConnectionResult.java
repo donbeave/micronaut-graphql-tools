@@ -104,14 +104,14 @@ public final class GraphQLConnectionResult {
      * @return the attributes of an accepted connection; empty for a rejection
      */
     @NonNull
-    public Map<String, Object> attributes() {
+    public Map<String, Object> getAttributes() {
         return attributes;
     }
 
     /**
      * @return the close code of a rejection, {@code 0} for an accepted connection
      */
-    public int closeCode() {
+    public int getCloseCode() {
         return closeCode;
     }
 
@@ -119,7 +119,7 @@ public final class GraphQLConnectionResult {
      * @return the close reason of a rejection, empty for an accepted connection
      */
     @NonNull
-    public String reason() {
+    public String getReason() {
         return reason;
     }
 

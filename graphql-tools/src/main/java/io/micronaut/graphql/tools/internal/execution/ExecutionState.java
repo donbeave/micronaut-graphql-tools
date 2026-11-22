@@ -149,18 +149,18 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     }
 
     @Override
-    public GraphQLTransport transport() {
+    public GraphQLTransport getTransport() {
         return transport;
     }
 
     @Override
     @Nullable
-    public HttpRequest<?> httpRequest() {
+    public HttpRequest<?> getHttpRequest() {
         return request;
     }
 
     @Override
-    public Optional<MutableHttpResponse<?>> httpResponse() {
+    public Optional<MutableHttpResponse<?>> getHttpResponse() {
         return Optional.ofNullable(response);
     }
 
@@ -173,7 +173,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     }
 
     @Override
-    public ConvertibleValues<Object> connectionAttributes() {
+    public ConvertibleValues<Object> getConnectionAttributes() {
         return connectionAttributes;
     }
 
@@ -320,7 +320,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
     }
 
     @Override
-    public ExecutionInput executionInput() {
+    public ExecutionInput getExecutionInput() {
         return executionInput;
     }
 
