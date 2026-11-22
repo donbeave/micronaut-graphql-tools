@@ -49,6 +49,9 @@ java {
 }
 
 graalvmNative.toolchainDetection = false
+// Netty 4.2 on Java 25 releases direct buffers through a shared arena. An image without shared-arena support throws on the event-loop
+// thread that releases a buffer, and that thread never terminates (#568).
+graalvmNative.binaries.configureEach { buildArgs.add("-H:+SharedArenaSupport") }
 
 micronaut {
     // The platform version: micronaut-build reads `micronaut` as the core BOM version, which has no platform of the same number.
