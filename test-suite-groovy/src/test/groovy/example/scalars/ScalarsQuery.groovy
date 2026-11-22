@@ -26,7 +26,7 @@ import java.time.OffsetDateTime
 
 // tag::resolver[]
 @CompileStatic
-@Requires(env = [ScalarsFixtures.DEFAULTS, ScalarsFixtures.RENAMED])
+@Requires(env = [ScalarsFixtures.DEFAULTS, ScalarsFixtures.RENAMED, ScalarsFixtures.CONFIGURED])
 @Singleton
 @GraphQLRootResolver
 class ScalarsQuery {

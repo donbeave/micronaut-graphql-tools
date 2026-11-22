@@ -26,7 +26,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 // tag::resolver[]
-@Requires(env = {ScalarsFixtures.DEFAULTS, ScalarsFixtures.RENAMED})
+@Requires(env = {ScalarsFixtures.DEFAULTS, ScalarsFixtures.RENAMED, ScalarsFixtures.CONFIGURED})
 @Singleton
 @GraphQLRootResolver
 public class ScalarsQuery {

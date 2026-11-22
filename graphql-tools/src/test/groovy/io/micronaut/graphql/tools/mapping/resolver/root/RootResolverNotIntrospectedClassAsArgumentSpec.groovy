@@ -54,12 +54,12 @@ input PriceInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
+        e.cause.getCode() == BindingCode.CLASS_NOT_INTROSPECTED
         e.cause.message == """[class-not-introspected] The class ${PriceInput.name} is not introspected. Ensure the class is annotated with ${GraphQLInput.name}. A class that cannot carry it, such as a generated or external one, is listed (or its package) in @GraphQLModels.
   GraphQL coordinate: PriceInput (line 10, column 1)
   Mapped class: ${PriceInput.name}
   Reached from: Query.price(input:) (line 7, column 9)"""
-        e.cause.code() == BindingCode.CLASS_NOT_INTROSPECTED
+        e.cause.getCode() == BindingCode.CLASS_NOT_INTROSPECTED
         e.cause.mappingContext.coordinate == 'PriceInput'
         e.cause.mappingContext.mappedClass == PriceInput
     }

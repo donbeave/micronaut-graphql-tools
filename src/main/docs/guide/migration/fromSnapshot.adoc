@@ -32,7 +32,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time visitor applies the same rule (#15); it is the real build's check once #291 registers it. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
 | BC-20 `@Named("graphql-tools")` mapper seam (#173) | The `graphql-tools` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Input conversion is not configurable through a public bean. | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion; it is not supported. Its replacement is BC-23 (#37): `TypeConverter` beans and the scalar mapping.
 | BC-21 enums need a bean introspection (#33) | Startup fails with `[class-not-introspected]` for a bound Java enum without a bean introspection. Enum arguments now arrive as the Java constants from the schema's enum values, not as names converted by Jackson. | Annotate the enum with `@Introspected`.
-| BC-22 one code system (#237) | Every startup message starts with `[code]`. The `!` lines of the binding manifest are named by the code (`!unbound` is `!unbound-resolver-method`, `!unbound-enum-constant` or `!unmapped-input-property`; `!unusedDictionary` is `!unused-dictionary-entry`; `!ambiguous` is `!precedence-ambiguity`; `!unreachable` is `!unreachable-type` or `!unreachable-value-type`; `!unwiredDirective` is `!unwired-directive`). The labels of `[binding-failures]` are `[unknown-schema-coordinate]` and `[strict-findings]` (were `[invalid-schema-coordinate]` and `[strict]`). | Match on `SchemaBindingException#code()`, not on message text. Read the new kinds from the manifest. New in 1.0.0-M3, no opt-out.
+| BC-22 one code system (#237) | Every startup message starts with `[code]`. The `!` lines of the binding manifest are named by the code (`!unbound` is `!unbound-resolver-method`, `!unbound-enum-constant` or `!unmapped-input-property`; `!unusedDictionary` is `!unused-dictionary-entry`; `!ambiguous` is `!precedence-ambiguity`; `!unreachable` is `!unreachable-type` or `!unreachable-value-type`; `!unwiredDirective` is `!unwired-directive`). The labels of `[binding-failures]` are `[unknown-schema-coordinate]` and `[strict-findings]` (were `[invalid-schema-coordinate]` and `[strict]`). | Match on `SchemaBindingException#getCode()`, not on message text. Read the new kinds from the manifest. New in 1.0.0-M3, no opt-out.
 | BC-23 input conversion from `BeanIntrospection` (#37) | Arguments and input objects are converted by converters that startup builds from the bean introspection, not by Jackson. Jackson annotations, naming strategies, `FAIL_ON_UNKNOWN_PROPERTIES` and an `ObjectMapper` bean stop being the input contract. A list is converted into `List`, `Collection`, `Iterable`, `Set`, `SortedSet`, `Deque` or `Queue` only. `[input-field-not-settable]` has a new message. | Name the properties and constructor parameters of an input class like the input fields. Use a `TypeConverter` bean for a conversion of your own, and the scalar mapping for custom scalars.
 | BC-24 schema files are `*.graphqls` (#17) | The compile-time processor no longer reads `*.graphql` files of its schema directory, so a schema kept in one is missing at compile time. | Rename the schema files to `.graphqls`. Client operation files may stay `.graphql`; they are never read.
 | BC-25 binding manifest format 2 (#90) | The manifest is written in format version 2: ASCII separators (` -> ` and ` ; ` replace the arrow and the middle dot), a `scalar` line names the scalar (not the `Coercing` class), characters outside ASCII are escaped, and the schema hash does not depend on the order of the files and the extensions. The first line is `# graphql-binding-manifest 2`. | Regenerate checked-in manifests. A reader checks the version on the first line. New in 1.0.0-M3, no opt-out.
@@ -40,7 +40,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-27 per-check severity (#86) | `checks.<code>` sets `fail`, `warn` or `ignore` for each of the ten checks, and `strict: false` is `warn` for every check, including unreachable object, interface and union types. Six keys are removed and fail the startup with `[removed-configuration-key]`: `unreachable-types`, `allow-unreachable`, `input.unmapped-properties`, `inert-directives`, `schema-customizer-directives` and `unwired-directives`. | Use the replacement keys: see BC-27 below. No opt-out for the removal.
 | BC-28 `ArgumentValue` needs no option (#159) | The option `input.detect-omission` is removed, and so is the compile-time option `input.detectOmission`. A declared `ArgumentValue` is detected on its own, including an `ArgumentValue` property that the input type does not define: it is set to `omitted()`, where it kept its initial value without the option. | Delete the key. An application that set it to `true` behaves as before. New in 1.0.0-M3, no opt-out.
 | BC-29 one precedence rule (#105) | The value `strict` of `micronaut.graphql.tools.precedence` is named `fail` and `strict` is rejected with `[removed-configuration-key]`. A type resolver method that declares its coordinate with `@GraphQLSchemaCoordinate` wins over a getter or a `@GraphQLField` method, for object and interface fields, whatever the setting is. | Write `precedence: fail`, or delete the line (it is the default). To let a resolver win for one field, declare its coordinate or put a resolver directive on the field.
-| BC-30 smaller public API (#109) | `SchemaBindingException` is the only public exception class. The 43 classes that stood for single failures (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnwiredDirectivesException`, `StrictModeException`, `BindingFailuresException`, `AmbiguousBindingException` and the others) moved to `io.micronaut.graphql.tools.internal.exceptions` and are internal. The getters that belonged to one of them (`getProblems()`, `getTypeNames()`, `getMembers()`, `getMissingValues()` and so on) are not public API any more; `SchemaBindingException` keeps `code()`, `getCoordinate()`, `getMappingContext()`, `getFailures()` and `getCodes()`. The implementation types of `io.micronaut.graphql.tools` (`GraphQLFactory`, `GraphQLResolversRegistry`, `BindingManifestHolder`, `JavaTypeNames` and the others annotated `@Internal`) moved to `io.micronaut.graphql.tools.internal`, and the runtime package `io.micronaut.graphql.tools.processor` is `io.micronaut.graphql.tools.internal.registry`. | Catch `SchemaBindingException` and match on `code()`. Read the schema element from `getCoordinate()` and the rest from the message. Do not import from an `internal` package; a logger configuration that names a moved class by its full name uses the new name.
+| BC-30 smaller public API (#109) | `SchemaBindingException` is the only public exception class. The 43 classes that stood for single failures (`MethodNotFoundException`, `MultipleMethodsFoundException`, `IncorrectClassMappingException`, `UnwiredDirectivesException`, `StrictModeException`, `BindingFailuresException`, `AmbiguousBindingException` and the others) moved to `io.micronaut.graphql.tools.internal.exceptions` and are internal. The getters that belonged to one of them (`getProblems()`, `getTypeNames()`, `getMembers()`, `getMissingValues()` and so on) are not public API any more; `SchemaBindingException` keeps `getCode()`, `getCoordinate()`, `getMappingContext()`, `getFailures()` and `getCodes()`. The implementation types of `io.micronaut.graphql.tools` (`GraphQLFactory`, `GraphQLResolversRegistry`, `BindingManifestHolder`, `JavaTypeNames` and the others annotated `@Internal`) moved to `io.micronaut.graphql.tools.internal`, and the runtime package `io.micronaut.graphql.tools.processor` is `io.micronaut.graphql.tools.internal.registry`. | Catch `SchemaBindingException` and match on `getCode()`. Read the schema element from `getCoordinate()` and the rest from the message. Do not import from an `internal` package; a logger configuration that names a moved class by its full name uses the new name.
 | BC-31 role packages for the public API (#354) | The 15 public types of `io.micronaut.graphql.tools` moved to role packages: `GraphQLToolsConfiguration` to `config`; the five `*Customizer` interfaces to `customizer`; `SchemaMappingDictionary`, `GraphQLScalarMapping`, `MappingContext`, `TypeMappingContext` and `InputMappingContext` to `mapping`; `SchemaDirective` and `CustomWiring` to `directive`; `ArgumentValue` to `input`; `BindingManifest` to `manifest`. The root package holds no types. The names, members and behaviour are unchanged. | Change the imports (`io.micronaut.graphql.tools.X` becomes `io.micronaut.graphql.tools.<package>.X`), and any full class name in a configuration file or a logger setting. `@ConfigurationProperties` prefixes (`micronaut.graphql.tools.*`) are unchanged.
 | BC-32 compile-time options renamed (#291) | The build runs the visitor, not the earlier annotation processor. `micronaut.graphql.tools.sdlDir` is replaced by `micronaut.graphql.tools.processor.schema.dirs`, `micronaut.graphql.tools.processor.checks` switches the checks off, and a build that passes `sdlDir` fails with `[processor-option-removed]`. The binding manifest has no accessor file, so the member of a property is written `Class#property`. | Rename the option, and put the processor on the path of your compiler (see the Compile-Time Verification page). Regenerate a checked-in manifest.
 | BC-33 inherited type resolver contracts (#34) | A bean that is a type resolver only through an inherited `@GraphQLTypeResolver` (a class that implements an annotated interface) needs the processor on the compiler path: the visitor records its contracts, and the startup no longer reads class annotations by reflection. Without it the startup fails with `[type-resolver-contracts-not-found]`. | Add `micronaut-graphql-tools-processor` to `annotationProcessor`, `ksp` or `kapt`, or `compileOnly` (Groovy); `micronaut.graphql.tools.processor.checks=false` keeps the checks off and still records the contracts. A bean annotated directly needs nothing.
@@ -50,7 +50,10 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 
 | BC-37 unhandled exceptions are hidden (#32) | The message of an exception that a resolver throws is no longer sent to the client: the error is `Internal server error` with `extensions.code` `INTERNAL_ERROR`. Before, graphql-java's handler sent `Exception while fetching data (/path) : <message>`, and logged each error at WARN with a stack trace; now one ERROR line without a stack trace is logged. A client that matched on that message text, or a test that asserts it, fails. | Add a `GraphQLExceptionMapper` bean for each exception whose message the client may see, throw a `GraphQLError` exception, or turn on `micronaut.graphql.tools.errors.details` in a development environment. A `DataFetcherExceptionHandler` of your own set in a `GraphQLBuilderCustomizer` keeps working.
 | BC-39 observability follows the Micronaut metrics and tracing conventions (#495) | The configuration keys of the observability module moved, and the span layout changed. `micronaut.graphql.tools.observability.enabled` is removed, `.metrics.enabled` and `.metrics.max-operations` are `micronaut.metrics.binders.graphql.enabled` and `.max-operations`, and `.tracing.enabled` and `.tracing.fields` are `micronaut.graphql.tools.tracing.enabled` and `.fields`. The request span is named `query`, `mutation` or `subscription`, not `query <operation>`. A field span has `graphql.field.path` and no `graphql.field.parent`. `GraphQLObservability.PREFIX` and the four span attribute constants are removed. The request span is now current in the propagated context, so a span started in a resolver is its child, not its sibling. | Rename the keys (the old ones are ignored, with no warning). Set `micronaut.graphql.tools.tracing.add-operation-name-to-span-name: true` to keep the operation name in the span name, and change a dashboard or a test that reads `graphql.field.parent` to read `graphql.field.name` and `graphql.field.path`. Use the attribute names as strings in place of the removed constants.
+| BC-40 scalars configuration is bound to a typed class (#497) | `micronaut.graphql.tools.scalars.*` is bound to `ScalarsConfiguration` and `ScalarConfiguration` instead of being read key by key. A key under `micronaut.graphql.tools.scalars` that is not the id of a standard scalar, or not `enabled`, now fails the startup with a message that names the key and lists the valid ids. Before it was ignored. The documented keys (`enabled`, `<id>.enabled`, `<id>.name`, `<id>.format`) keep their names and meaning. | Fix or remove a misspelled or unknown scalar key, such as `local-dat.enabled`. See the scalars page for the valid ids.
 | BC-49 the observability module is split into `graphql-tools-micrometer` and `graphql-tools-opentelemetry` (#570) | `micronaut-graphql-tools-observability` does not exist: the metrics are in `micronaut-graphql-tools-micrometer` (package `io.micronaut.graphql.tools.micrometer`) and the spans in `micronaut-graphql-tools-opentelemetry`. `GraphQLObservability` is now `GraphQLMetrics`, with the same meter and tag constants. The configuration keys of BC-39 do not change. | Replace the one dependency with the module of each technology you use (the artifact was never published, so there is no relocation), and import `io.micronaut.graphql.tools.micrometer.GraphQLMetrics` where you used `GraphQLObservability`.
+| BC-41 binding failures are a `ConfigurationException` (#498) | `SchemaBindingException` extends `io.micronaut.context.exceptions.ConfigurationException`, not `RuntimeException`, and `code()` is renamed `getCode()`. The error codes and messages are the same. | Call `getCode()` (the `code` property in Groovy and Kotlin) where you called `code()`. A `catch (ConfigurationException)` now also catches the binding failures.
+| BC-47 `ResolverBeanCondition` is internal, `@GraphQLType.value()` is `Class<?>` (#501) | `io.micronaut.graphql.tools.annotation.ResolverBeanCondition` is now `io.micronaut.graphql.tools.internal.resolver.ResolverBeanCondition`, marked `@Internal` and no longer `@Introspected`. `@GraphQLType.value()` is declared `Class<?>`, not the raw `Class`. `GraphQLToolsConfiguration.SchemaConfiguration.DEFAULT_SCHEMA_LOCATION` and `BindingManifest.FORMAT` are constants of the public types and no longer refer to an `internal` package. | Nothing, unless you name the condition class in a `@Requires(condition = ...)` of your own: stop doing that, it is not API. A Kotlin or Groovy source that read `@GraphQLType.value` compiles as before.
 |===
 
 == Entries for 1.0.0-M1
@@ -508,7 +511,7 @@ public enum Color { RED, GREEN }
 
 === BC-22: one code system for checks and errors (#237)
 
-Every strict check, every startup failure and every compile-time diagnostic has one code, from the `BindingCode` enum of `graphql-tools-binding`. The code is the same token in four places: the `[code]` at the start of the message, `SchemaBindingException#code()`, the word after `!` in a binding manifest line, and the check name that `checks.<code>` and `allow.findings` use. The list is in the error reference.
+Every strict check, every startup failure and every compile-time diagnostic has one code, from the `BindingCode` enum of `graphql-tools-binding`. The code is the same token in four places: the `[code]` at the start of the message, `SchemaBindingException#getCode()`, the word after `!` in a binding manifest line, and the check name that `checks.<code>` and `allow.findings` use. The list is in the error reference.
 
 What breaks for code that read the old forms:
 
@@ -516,7 +519,7 @@ What breaks for code that read the old forms:
 * The manifest `!` lines changed their first word, as the summary table lists. Code that reads `!unbound`, `!unusedDictionary`, `!ambiguous`, `!unreachable` or `!unwiredDirective` lines reads the codes now.
 * The failures that gather several (`[binding-failures]` and `[strict-findings]`) tag each finding with its own code. `SchemaBindingException#getCodes()` returns the check code of each strict finding, and `getFailures()` lists the failures of `[binding-failures]`.
 
-Fix: match on `exception.code()` (or on the `[code]` token), and read the manifest kinds from the table in the error reference.
+Fix: match on `exception.getCode()` (or on the `[code]` token), and read the manifest kinds from the table in the error reference.
 
 [source,java]
 ----
@@ -524,7 +527,7 @@ try {
     applicationContext.getBean(GraphQL.class);
 } catch (BeanInstantiationException e) {
     if (e.getCause() instanceof SchemaBindingException failure
-            && failure.code() == BindingCode.UNBOUND_ENUM_CONSTANT) {
+            && failure.getCode() == BindingCode.UNBOUND_ENUM_CONSTANT) {
         // ...
     }
 }
@@ -683,7 +686,7 @@ try {
     applicationContext.getBean(GraphQLSchema.class);
 } catch (BeanInstantiationException e) {
     if (e.getCause() instanceof SchemaBindingException failure
-            && failure.code() == BindingCode.PRECEDENCE_AMBIGUITY) {
+            && failure.getCode() == BindingCode.PRECEDENCE_AMBIGUITY) {
         log.error("{} binds twice", failure.getCoordinate());
     }
 }
@@ -959,6 +962,30 @@ micronaut:
 
 See the observability page for the span layout, `@NewSpan` and `@Timed` on resolvers, and the configuration.
 
+=== BC-40: the scalars configuration is bound to a typed class (#497)
+
+The scalars module read `micronaut.graphql.tools.scalars.<id>.name` and `.format` key by key and gave each scalar a condition on `<id>.enabled`, so a key that no scalar used was ignored. The keys are now bound to `ScalarsConfiguration` (`@ConfigurationProperties`, `Toggleable`, with the public `PREFIX` and `ENABLED_CONFIG` constants) and `ScalarConfiguration` (`enabled`, `name`, `format`, one for each id). The keys keep their names, and a blank `name`, an invalid `name` and an invalid `format` still fail the startup with a message that names the key.
+
+What changes: a key under `micronaut.graphql.tools.scalars` whose first segment is neither `enabled` nor the id of a standard scalar fails the startup with a `ConfigurationException` that names the key and lists the valid ids. Before, it did nothing.
+
+[source,yaml]
+----
+# Before: ignored, so local-date stayed enabled
+micronaut:
+  graphql:
+    tools:
+      scalars:
+        local-dat:
+          enabled: false
+# Now: fix the id
+micronaut:
+  graphql:
+    tools:
+      scalars:
+        local-date:
+          enabled: false
+----
+
 === BC-49: the observability module is split into graphql-tools-micrometer and graphql-tools-opentelemetry (#570)
 
 `observability` is not the name of a Micronaut module: the official modules are named after their technology, such as `micronaut-micrometer-core` and `micronaut-tracing-opentelemetry-http`, and none ships metrics and tracing in one artifact. The module is now two, each named after its technology:
@@ -983,3 +1010,31 @@ implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry
 ----
 
 See the observability page.
+
+== Entries for 1.0.0-M5
+
+Not released yet. The entries below follow the last tagged milestone, 1.0.0-M4.
+
+=== BC-41: binding failures are a ConfigurationException (#498)
+
+Every failure of the binding happens while the application wires itself at startup, which is what Micronaut calls a configuration failure. `SchemaBindingException` is now a `io.micronaut.context.exceptions.ConfigurationException`, so Micronaut's startup error reporting and the unwrapping of `BeanInstantiationException` treat it like the exceptions of Micronaut itself. The scalars module already threw `ConfigurationException`, so the whole library uses one hierarchy. `SchemaBindingException` stays the one public exception class; the concrete classes stay internal and are caught through the base type. The error codes and messages do not change.
+
+The accessor that returns the failure code follows the bean naming convention:
+
+[source,java]
+----
+// Before
+if (failure.code() == BindingCode.FIELD_NOT_BOUND) { ... }
+// Now
+if (failure.getCode() == BindingCode.FIELD_NOT_BOUND) { ... }
+----
+
+In Groovy and Kotlin, `failure.code` reads the property. A `catch (ConfigurationException e)` or a `catch (RuntimeException e)` that already caught the failure keeps working; a handler that caught `ConfigurationException` for another reason now also sees binding failures, so match on `SchemaBindingException` first when the two need different handling.
+
+See the error reference.
+
+=== BC-47: `ResolverBeanCondition` is internal, `@GraphQLType.value()` is `Class<?>` (#501)
+
+`io.micronaut.graphql.tools.annotation.ResolverBeanCondition` is now `io.micronaut.graphql.tools.internal.resolver.ResolverBeanCondition`, marked `@Internal` and no longer `@Introspected`. `@GraphQLType.value()` is declared `Class<?>`, not the raw `Class`. `GraphQLToolsConfiguration.SchemaConfiguration.DEFAULT_SCHEMA_LOCATION` and `BindingManifest.FORMAT` are constants of the public types and no longer refer to an `internal` package.
+
+Nothing needs to change, unless your code names the condition class in a `@Requires(condition = ...)`: stop doing that, it is not API. A Kotlin or Groovy source that reads `@GraphQLType.value` compiles as before.

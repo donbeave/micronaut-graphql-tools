@@ -14,6 +14,14 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ProtectionConfiguration.adoc[]
 
+== Scalars
+
+The keys of the `micronaut-graphql-tools-scalars` module are under `micronaut.graphql.tools.scalars`: `enabled` switches the module, and `<id>.enabled`, `<id>.name` and `<id>.format` configure one scalar. An id that is not a standard scalar fails the startup. See <<scalars,Scalars>>.
+
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.scalars.ScalarsConfiguration.adoc[]
+
+include::{includedir}/configurationProperties/io.micronaut.graphql.tools.scalars.ScalarConfiguration.adoc[]
+
 == Execution
 
 `micronaut.graphql.tools.execution.executor` names the executor that every operation hops to once, before graphql-java runs: `blocking` (the default), `io`, `virtual` (JDK 21 and later), an executor you configure under `micronaut.executors`, or `none` to run on the thread that receives the operation. An unknown name fails the startup with `[unknown-executor]`. See <<execution,Execution>>.
@@ -65,4 +73,4 @@ Each strict check has a code, from the code registry (`BindingCode` in `graphql-
 * `interface-read-through-implementation`
 * `unwired-directive`
 
-A precedence ambiguity under `precedence: fail` is a binding failure with the code `precedence-ambiguity`, not a check. Its message names the field coordinate, both members and the ways out. Match on `SchemaBindingException#code()`; <<exceptions,the error reference>> lists every code of the registry.
+A precedence ambiguity under `precedence: fail` is a binding failure with the code `precedence-ambiguity`, not a check. Its message names the field coordinate, both members and the ways out. Match on `SchemaBindingException#getCode()`; <<exceptions,the error reference>> lists every code of the registry.

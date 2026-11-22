@@ -57,7 +57,7 @@ enum Month {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MAPPING_CONFLICT
+        e.cause.getCode() == BindingCode.MAPPING_CONFLICT
         e.cause.message == """[mapping-conflict] Unable to map GraphQL enum `Month` to ${AnotherMonth.name}, as it is already mapped to ${Month.name}.
   GraphQL coordinate: Query.nextMonth (line 8, column 3)
   Mapped class: ${Query.name}

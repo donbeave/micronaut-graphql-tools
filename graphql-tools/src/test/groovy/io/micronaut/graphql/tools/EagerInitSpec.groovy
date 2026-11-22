@@ -76,7 +76,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         rootCause(e) instanceof SchemaBindingException
-        rootCause(e).code() == BindingCode.FIELD_NOT_BOUND
+        rootCause(e).getCode() == BindingCode.FIELD_NOT_BOUND
         rootCause(e).message.contains("Query.missing")
         applicationContext == null
     }
@@ -88,7 +88,7 @@ type Query {
         then: 'the library has no GraphQL bean here, but the schema is still bound'
         def e = thrown(BeanInstantiationException)
         rootCause(e) instanceof SchemaBindingException
-        rootCause(e).code() == BindingCode.FIELD_NOT_BOUND
+        rootCause(e).getCode() == BindingCode.FIELD_NOT_BOUND
         rootCause(e).message.contains("Query.missing")
     }
 
@@ -131,7 +131,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         rootCause(e) instanceof SchemaBindingException
-        rootCause(e).code() == BindingCode.FIELD_NOT_BOUND
+        rootCause(e).getCode() == BindingCode.FIELD_NOT_BOUND
     }
 
     void "with eager-init false a valid schema is bound on first use"() {

@@ -83,7 +83,7 @@ type User implements Node {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message.contains('GraphQL coordinate: User.id ')
     }
 

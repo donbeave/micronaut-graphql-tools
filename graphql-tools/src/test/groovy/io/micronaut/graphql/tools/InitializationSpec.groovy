@@ -32,7 +32,7 @@ class InitializationSpec extends AbstractTest {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.SCHEMA_NOT_FOUND
+        e.cause.getCode() == BindingCode.SCHEMA_NOT_FOUND
         e.cause.message.startsWith("[schema-not-found] No GraphQL schema files found for micronaut.graphql.tools.schema.locations=[classpath:graphql/**/*.graphqls]")
     }
 

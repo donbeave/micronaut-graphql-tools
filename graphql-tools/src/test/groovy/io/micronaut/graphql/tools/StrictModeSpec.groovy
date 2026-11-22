@@ -69,7 +69,7 @@ enum Color {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.getCode() == BindingCode.STRICT_FINDINGS
         e.cause.message == """[strict-findings] The strict checks found problems in the binding of the schema:
   1) [unbound-resolver-method] The resolver method ${ItemResolver.name}#legacyName(${Item.name}) binds no schema field. Remove it, make it private, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
   2) [unbound-resolver-method] The resolver method ${Query.name}#helper(java.lang.String) binds no schema field. Remove it, make it private, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
@@ -77,7 +77,7 @@ enum Color {
   4) [unused-dictionary-entry] The SchemaMappingDictionary maps Ghost to ${Item.name}, but the schema binds no type Ghost. Remove the entry or correct its name.
   Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore."""
         e.cause.problems.size() == 4
-        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.getCode() == BindingCode.STRICT_FINDINGS
         e.cause.codes == [BindingCode.UNBOUND_RESOLVER_METHOD, BindingCode.UNBOUND_RESOLVER_METHOD,
                           BindingCode.UNBOUND_ENUM_CONSTANT, BindingCode.UNUSED_DICTIONARY_ENTRY]
     }
@@ -92,7 +92,7 @@ enum Color {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.getCode() == BindingCode.STRICT_FINDINGS
     }
 
     void "with strict false the schema binds as before and the findings are only listed in the manifest"() {
@@ -123,7 +123,7 @@ enum Color {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.getCode() == BindingCode.STRICT_FINDINGS
         e.cause.problems.size() == 4
     }
 
@@ -260,7 +260,7 @@ type Draft {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.getCode() == BindingCode.STRICT_FINDINGS
         e.cause.problems == ["The resolver method ${DraftResolver.name}#note(${Draft.name}) binds no schema field. Remove it, make it private, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.".toString()]
     }
 
@@ -367,7 +367,7 @@ input Filter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNREACHABLE_TYPE
+        e.cause.getCode() == BindingCode.UNREACHABLE_TYPE
         e.cause.typeNames == ['Filter', 'Long', 'Orphan', 'Size']
         e.cause.message.startsWith('[unreachable-type] The schema defines types that no field reachable from a root operation type ' +
                 'returns, so nothing binds them: Filter (input), Long (scalar), Orphan (type), Size (enum).')
@@ -397,7 +397,7 @@ input Filter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_ALLOW_UNREACHABLE
+        e.cause.getCode() == BindingCode.INVALID_ALLOW_UNREACHABLE
         e.cause.message == """[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Color (is reachable).
   Remove them from the list."""
     }
@@ -461,7 +461,7 @@ type Note {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.getCode() == BindingCode.STRICT_FINDINGS
         e.cause.problems == ["The type Note is mapped to the interface ${PlainNote.name}, which has no bean introspection of its own, so its properties are read from the implementation ${PlainNoteImpl.name}. Annotate the interface with @GraphQLType or @Introspected.".toString()]
     }
 
@@ -640,7 +640,7 @@ type Mutation {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.getCode() == BindingCode.STRICT_FINDINGS
         e.cause.problems == ["The root resolver method ${SharedPing.name}#ping() binds fields of several operation types: Mutation.ping, Query.ping. Give each operation type its own method with @GraphQLSchemaCoordinate(\"Type.field\").".toString()]
     }
 
@@ -743,7 +743,7 @@ input Nested {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNREACHABLE_TYPE
+        e.cause.getCode() == BindingCode.UNREACHABLE_TYPE
         e.cause.typeNames == ['Size', 'Stray']
     }
 
@@ -758,7 +758,7 @@ input Nested {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INVALID_ALLOW_UNREACHABLE
+        e.cause.getCode() == BindingCode.INVALID_ALLOW_UNREACHABLE
         e.cause.undefinedTypeNames == ['Missing']
         e.cause.notUnreachableTypeNames == ['Query']
     }

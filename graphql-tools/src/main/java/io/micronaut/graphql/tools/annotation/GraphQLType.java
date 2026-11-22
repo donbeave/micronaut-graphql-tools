@@ -42,7 +42,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Introspected
 public @interface GraphQLType {
 
-    Class value() default Void.class;
+    Class<?> value() default Void.class;
 
     /**
      * @return the name of the GraphQL object type that this class represents, or an empty string for none. A class

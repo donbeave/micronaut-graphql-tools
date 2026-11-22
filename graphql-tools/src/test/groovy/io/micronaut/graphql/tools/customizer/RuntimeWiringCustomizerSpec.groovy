@@ -134,10 +134,10 @@ scalar Long
         then:
         def e = thrown(BeanInstantiationException)
         if (BUILDER_REJECTS_REPLACEMENTS) {
-            assert e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+            assert e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
             assert e.cause.replacements == ["data fetcher of Query.hello (${ReplaceFetchers.name})".toString()]
         } else {
-            assert e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+            assert e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
             assert e.cause.replacements == [
                     "data fetcher of Query.hello (${ReplaceFetchers.name})".toString(),
                     "default data fetcher of Item (${ReplaceFetchers.name})".toString(),
@@ -165,7 +165,7 @@ scalar Long
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+        e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == [
                 "data fetcher of Item.name, through the code registry (${ReplaceThroughCodeRegistry.name})".toString(),
                 "data fetcher of Query.hello, through the code registry (${ReplaceThroughCodeRegistry.name})".toString(),
@@ -196,7 +196,7 @@ scalar Long
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+        e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == [
                 "data fetcher of Item.name (${ShadowBoundField.name})".toString()
         ]
@@ -214,7 +214,7 @@ scalar Long
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+        e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == [
                 "data fetcher of Item.name (${JavaShadowingCustomizer.name})".toString()
         ]
@@ -257,7 +257,7 @@ scalar Long
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RUNTIME_WIRING_OVERRIDE
+        e.cause.getCode() == BindingCode.RUNTIME_WIRING_OVERRIDE
         e.cause.replacements == ["wiring factory (${ReplaceWiringFactory.name})".toString()]
     }
 

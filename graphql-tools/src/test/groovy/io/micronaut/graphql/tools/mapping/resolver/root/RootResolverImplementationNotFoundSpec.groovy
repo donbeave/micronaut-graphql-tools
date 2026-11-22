@@ -55,7 +55,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.IMPLEMENTATION_NOT_FOUND
+        e.cause.getCode() == BindingCode.IMPLEMENTATION_NOT_FOUND
         e.cause.message == """[implementation-not-found] Can not find implementation class for the interface ${User.name}. Annotate the interface with @GraphQLType, or one implementation class with @GraphQLType(${User.simpleName}.class).
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}

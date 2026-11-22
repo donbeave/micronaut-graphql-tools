@@ -25,7 +25,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 // tag::resolver[]
-@Requires(env = [SCALARS_DEFAULTS, SCALARS_RENAMED])
+@Requires(env = [SCALARS_DEFAULTS, SCALARS_RENAMED, SCALARS_CONFIGURED])
 @Singleton
 @GraphQLRootResolver
 open class ScalarsQuery {

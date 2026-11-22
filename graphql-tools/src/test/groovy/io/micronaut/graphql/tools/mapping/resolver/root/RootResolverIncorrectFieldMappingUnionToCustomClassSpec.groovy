@@ -62,7 +62,7 @@ type ValidationError {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
+        e.cause.getCode() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The field is mapped to a custom class, when required an interface.
   GraphQL coordinate: Query.testUnion (line 7, column 3)
   Mapped class: ${Query.name}

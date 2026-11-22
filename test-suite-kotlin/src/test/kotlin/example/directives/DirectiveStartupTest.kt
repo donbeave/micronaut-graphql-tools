@@ -36,7 +36,7 @@ class DirectiveStartupTest {
     fun aDirectiveWiredByANamedAndAnEveryElementSchemaDirectiveFailsTheStartup() {
         val e = assertInstanceOf(SchemaBindingException::class.java, failure(emptyMap(), DirectiveFixtures.CONFLICT))
 
-        assertEquals(BindingCode.DUPLICATE_DIRECTIVE_WIRING, e.code())
+        assertEquals(BindingCode.DUPLICATE_DIRECTIVE_WIRING, e.getCode())
         assertTrue(
             e.message!!.startsWith("[duplicate-directive-wiring] Directive @upper is wired by both a named and an every-element SchemaDirective bean"),
             e.message,
@@ -47,7 +47,7 @@ class DirectiveStartupTest {
     fun anAppliedDirectiveWithoutAWiringFailsTheStartupByDefault() {
         val e = assertInstanceOf(SchemaBindingException::class.java, failure(emptyMap(), DirectiveFixtures.UNWIRED))
 
-        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.code())
+        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.getCode())
         assertTrue(e.message!!.startsWith("[unwired-directive] The schema applies directives that have no wiring: @legacy (Book)"), e.message)
     }
 
@@ -74,7 +74,7 @@ class DirectiveStartupTest {
             failure(mapOf(UNWIRED_DIRECTIVES to "fail", STRICT to false), DirectiveFixtures.UNWIRED),
         )
 
-        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.code())
+        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.getCode())
     }
 
     @Test
@@ -99,7 +99,7 @@ class DirectiveStartupTest {
             failure(mapOf(SCHEMA_CUSTOMIZER_DIRECTIVES to listOf("other")), DirectiveFixtures.SCHEMA_UNLISTED),
         )
 
-        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.code())
+        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.getCode())
         assertTrue(e.message!!.contains("@audit (schema definition)"), e.message)
     }
 

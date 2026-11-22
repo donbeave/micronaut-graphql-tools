@@ -21,6 +21,8 @@ import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
+import io.micronaut.graphql.tools.scalars.ScalarConfiguration;
+import io.micronaut.graphql.tools.scalars.ScalarsConfiguration;
 import io.micronaut.graphql.tools.scalars.StandardScalar;
 import io.micronaut.graphql.tools.scalars.internal.json.JsonCoercing;
 import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
@@ -44,17 +46,17 @@ final class StandardMappings {
 
     /**
      * @param scalar the scalar
-     * @param settings the configuration
+     * @param configuration the configuration of the scalar, or {@code null} when it has none
      * @param mapper the source of the {@link JsonMapper}, for the JSON scalar only
      * @return the mapping
      */
-    static GraphQLScalarMapping create(StandardScalar scalar, ScalarSettings settings, @Nullable Supplier<JsonMapper> mapper) {
-        String name = settings.name(scalar);
+    static GraphQLScalarMapping create(StandardScalar scalar, @Nullable ScalarConfiguration configuration, @Nullable Supplier<JsonMapper> mapper) {
+        String name = configuration == null ? scalar.defaultName() : configuration.getName();
+        String format = configuration == null ? null : configuration.getFormat();
         switch (scalar.group()) {
             case JAVA_TIME:
-                return timeMapping(scalar, name, settings.format(scalar));
+                return timeMapping(scalar, name, format);
             case JSON:
-                settings.format(scalar);
                 GraphQLScalarType json = GraphQLScalarType.newScalar().name(name).description(JSON_DESCRIPTION)
                         .coercing(new JsonCoercing(name, mapper)).build();
                 return GraphQLScalarMapping.builder(json)
@@ -63,7 +65,6 @@ final class StandardMappings {
                                 BigInteger.class, Double.class)
                         .build();
             default:
-                settings.format(scalar);
                 return extended(scalar, name);
         }
     }
@@ -75,7 +76,7 @@ final class StandardMappings {
                     .coercing(TimeScalars.coercing(scalar, name, format)).build();
             return GraphQLScalarMapping.of(type, scalar.javaClass());
         } catch (IllegalArgumentException e) {
-            throw new ConfigurationException("The format '" + format + "' of " + ScalarSettings.PREFIX + scalar.id()
+            throw new ConfigurationException("The format '" + format + "' of " + ScalarsConfiguration.PREFIX + "." + scalar.id()
                     + ".format is not valid: " + e.getMessage(), e);
         }
     }

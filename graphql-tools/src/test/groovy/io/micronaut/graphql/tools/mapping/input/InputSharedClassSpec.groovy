@@ -88,7 +88,7 @@ input CreateInput { name: String! }
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNMAPPED_INPUT_PROPERTY
+        e.cause.getCode() == BindingCode.UNMAPPED_INPUT_PROPERTY
         e.cause.unmappedProperties.values()*.value.flatten() == ['id']
         e.cause.unmappedProperties.values()*.key == [SharedDto]
         e.cause.message.contains("mapped class: ${SharedDto.name}, properties: id")

@@ -19,6 +19,7 @@ import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 import org.junit.jupiter.api.Test;
@@ -64,13 +65,26 @@ class PrecedenceTest {
     void anAmbiguousFieldFailsTheStartupByDefaultAndStrictFalseDoesNotChangeIt() {
         SchemaBindingException e = assertFails(Map.of(), PrecedenceFixtures.AMBIGUOUS, "precedence-ambiguity");
         // a failure about one field names its schema coordinate and is no aggregate
-        assertEquals(BindingCode.PRECEDENCE_AMBIGUITY, e.code());
+        assertEquals(BindingCode.PRECEDENCE_AMBIGUITY, e.getCode());
         assertEquals("Gadget.label", e.getCoordinate());
         assertEquals("Gadget.label", e.getMappingContext().getCoordinate());
         assertTrue(e.getFailures().isEmpty());
         assertTrue(e.getCodes().isEmpty());
         assertFails(Map.of("micronaut.graphql.tools.strict", false), PrecedenceFixtures.AMBIGUOUS,
                 "precedence-ambiguity");
+    }
+
+    @Test
+    void aBrokenBindingFailsTheStartupWithAConfigurationExceptionInTheCauseChain() {
+        Throwable e = assertThrows(Exception.class,
+                () -> run(Map.of(), PrecedenceFixtures.AMBIGUOUS, "{ __typename }"));
+        while (!(e instanceof ConfigurationException) && e.getCause() != null && e.getCause() != e) {
+            e = e.getCause();
+        }
+        assertTrue(e instanceof ConfigurationException, e.toString());
+        assertTrue(e instanceof SchemaBindingException);
+        assertEquals(BindingCode.PRECEDENCE_AMBIGUITY, ((SchemaBindingException) e).getCode());
+        assertTrue(e.getMessage().startsWith("[precedence-ambiguity]"), e.getMessage());
     }
 
     @Test

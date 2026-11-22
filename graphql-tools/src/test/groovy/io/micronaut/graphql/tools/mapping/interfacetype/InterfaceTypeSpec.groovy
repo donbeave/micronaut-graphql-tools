@@ -206,7 +206,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
+        e.cause.getCode() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The field is mapped to a custom class, when required an interface.
   GraphQL coordinate: Book.sections (line 13, column 3)
   Mapped class: ${ConcreteSectionsResolver.name}
@@ -233,7 +233,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INTERFACE_TYPE_MAPPING_NOT_PROVIDED
+        e.cause.getCode() == BindingCode.INTERFACE_TYPE_MAPPING_NOT_PROVIDED
         e.cause.message == """[interface-type-mapping-not-provided] Can not detect representation class for type MediaSection, implementation of Section interface. Ensure the representation class is registered via ${SchemaMappingDictionary.name}, declared with @GraphQLType(name) or named by micronaut.graphql.tools.type-class-convention.
   GraphQL coordinate: Book.sections (line 13, column 3)
   Mapped class: ${NotRegisteredSectionsResolver.name}
@@ -270,7 +270,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `title` not found in ${UntitledSection.name}'s type.
   GraphQL coordinate: MediaSection.title (line 29, column 3)"""
     }

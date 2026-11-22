@@ -73,7 +73,7 @@ All keys are under `micronaut.graphql.tools.scalars`.
 [cols="3,2,4", options="header"]
 |===
 | Key | Default | Meaning
-| `enabled` | `true` | `false` turns every scalar of the module off. The module then registers no mapping.
+| `enabled` | `true` | `false` turns every scalar of the module off. The module then registers no mapping. The key is `ScalarsConfiguration.ENABLED_CONFIG`.
 | `<id>.enabled` | `true` | `false` turns one scalar off, for example when the application registers its own mapping with the same name.
 | `<id>.name` | the name in the table | The name of the scalar in the schema. A schema that declares the scalar under this name binds; one that still uses the default name fails the startup with `[scalar-mapping-not-provided]`.
 | `<id>.format` | `iso` | The wire format of a `java.time` scalar: `iso`, a keyword of the scalar (`epoch-seconds`, `epoch-millis`, `seconds`, `millis`), or a `java.time.format.DateTimeFormatter` pattern. The pattern is read with `Locale.ROOT`.
@@ -81,7 +81,11 @@ All keys are under `micronaut.graphql.tools.scalars`.
 
 snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="renamed", indent="0"]
 
-A value that a scalar cannot use fails the startup with a message that names the key: a name that is not a GraphQL name, a pattern that `DateTimeFormatter` rejects, a `format` for a scalar that has one format only (`period`, `json` and the extended scalars), or an empty value.
+The keys bind to `ScalarsConfiguration` (`@ConfigurationProperties` under `micronaut.graphql.tools.scalars`, `Toggleable`, with `PREFIX` and `ENABLED_CONFIG` constants) and, for each scalar, to a `ScalarConfiguration` (`enabled`, `name` and `format`), which `ScalarsConfiguration#getScalars()` returns by id. The generated reference is on the configuration page. The same properties enable, rename and disable scalars:
+
+snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="configured", indent="0"]
+
+A value that a scalar cannot use fails the startup with a message that names the key: a name that is not a GraphQL name, a pattern that `DateTimeFormatter` rejects, a `format` for a scalar that has one format only (`period`, `json` and the extended scalars), or an empty value. A key under `micronaut.graphql.tools.scalars` that is not the id of a scalar, such as the typo `local-dat.enabled`, fails the startup with a message that names the key and lists the valid ids.
 
 == Your own scalars
 

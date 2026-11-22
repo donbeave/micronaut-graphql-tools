@@ -397,7 +397,7 @@ type Child {
         then:
         def e = thrown(BeanInstantiationException)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.UNKNOWN_EXECUTOR
+        cause.getCode() == BindingCode.UNKNOWN_EXECUTOR
         cause.message.startsWith('[unknown-executor] ')
         cause.message.contains("'nowhere'")
         cause.message.contains('blocking')
@@ -411,7 +411,7 @@ type Child {
 
         then:
         def e = thrown(BeanInstantiationException)
-        causeOfType(e, SchemaBindingException).code() == BindingCode.UNKNOWN_EXECUTOR
+        causeOfType(e, SchemaBindingException).getCode() == BindingCode.UNKNOWN_EXECUTOR
         causeOfType(e, SchemaBindingException).message.contains('scheduled')
     }
 
@@ -424,7 +424,7 @@ type Child {
         then:
         def e = thrown(BeanInstantiationException)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.UNKNOWN_EXECUTOR
+        cause.getCode() == BindingCode.UNKNOWN_EXECUTOR
         cause.message.contains('JDK 21')
         cause.message.contains("'blocking'")
     }
@@ -467,7 +467,7 @@ type Child {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
+        e.getCode() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
         e.message.startsWith('[execution-context-unavailable] Query.book')
         e.message.contains('ReplacingInvocation')
 

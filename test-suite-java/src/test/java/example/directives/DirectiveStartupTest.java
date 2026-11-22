@@ -47,7 +47,7 @@ class DirectiveStartupTest {
         Throwable cause = rootFailure(Map.of(), DirectiveFixtures.CONFLICT);
 
         SchemaBindingException e = assertInstanceOf(SchemaBindingException.class, cause);
-        assertEquals(BindingCode.DUPLICATE_DIRECTIVE_WIRING, e.code());
+        assertEquals(BindingCode.DUPLICATE_DIRECTIVE_WIRING, e.getCode());
         assertTrue(e.getMessage().startsWith("[duplicate-directive-wiring] Directive @upper is wired by both a named and an every-element SchemaDirective bean"), e.getMessage());
     }
 
@@ -56,7 +56,7 @@ class DirectiveStartupTest {
         SchemaBindingException e = assertInstanceOf(SchemaBindingException.class,
                 rootFailure(Map.of(), DirectiveFixtures.UNWIRED));
 
-        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.code());
+        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.getCode());
         assertTrue(e.getMessage().startsWith("[unwired-directive] The schema applies directives that have no wiring: @legacy (Book)"), e.getMessage());
     }
 
@@ -81,7 +81,7 @@ class DirectiveStartupTest {
         Map<String, Object> properties = Map.of(UNWIRED_DIRECTIVES, "fail", STRICT, false);
 
         assertEquals(BindingCode.UNWIRED_DIRECTIVE,
-                assertInstanceOf(SchemaBindingException.class, rootFailure(properties, DirectiveFixtures.UNWIRED)).code());
+                assertInstanceOf(SchemaBindingException.class, rootFailure(properties, DirectiveFixtures.UNWIRED)).getCode());
     }
 
     @Test
@@ -106,7 +106,7 @@ class DirectiveStartupTest {
         SchemaBindingException e = assertInstanceOf(SchemaBindingException.class,
                 rootFailure(properties, DirectiveFixtures.SCHEMA_UNLISTED));
 
-        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.code());
+        assertEquals(BindingCode.UNWIRED_DIRECTIVE, e.getCode());
         assertTrue(e.getMessage().contains("@audit (schema definition)"), e.getMessage());
     }
 

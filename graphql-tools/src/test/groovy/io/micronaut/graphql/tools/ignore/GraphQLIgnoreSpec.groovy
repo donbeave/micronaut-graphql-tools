@@ -114,7 +114,7 @@ input Filter {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.STRICT_FINDINGS
+        e.cause.getCode() == BindingCode.STRICT_FINDINGS
         e.cause.problems == ["The resolver method ${UnboundQuery.name}#stray(java.lang.String) binds no schema field. Remove it, make it private, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.".toString()]
     }
 
@@ -136,7 +136,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
     }
 
     void "an ignored getter does not bind the field of its name, and the precedence fails only on a real ambiguity"() {
@@ -161,8 +161,8 @@ type Item {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() in [BindingCode.BINDING_FAILURES, BindingCode.FIELD_NOT_BOUND]
-        e.cause.code() != BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() in [BindingCode.BINDING_FAILURES, BindingCode.FIELD_NOT_BOUND]
+        e.cause.getCode() != BindingCode.PRECEDENCE_AMBIGUITY
     }
 
     void "an ignored method that carries a coordinate does not switch its bean to coordinate-only binding"() {

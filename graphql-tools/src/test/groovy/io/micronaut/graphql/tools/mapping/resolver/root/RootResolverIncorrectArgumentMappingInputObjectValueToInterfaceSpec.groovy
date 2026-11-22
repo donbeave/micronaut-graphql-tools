@@ -55,7 +55,7 @@ input PriceInput {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INCORRECT_CLASS_MAPPING
+        e.cause.getCode() == BindingCode.INCORRECT_CLASS_MAPPING
         e.cause.message == """[incorrect-class-mapping] The argument is mapped to an interface, when required a custom class.
   GraphQL coordinate: Query.price(input:) (line 7, column 9)
   GraphQL argument: input
