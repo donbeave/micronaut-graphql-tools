@@ -48,6 +48,7 @@ import io.micronaut.core.convert.value.ConvertibleValues
 import io.micronaut.graphql.tools.execution.GraphQLTransport
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
 import io.micronaut.http.HttpRequest
+import io.micronaut.scheduling.TaskExecutors
 import io.micronaut.http.MutableHttpResponse
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -59,7 +60,10 @@ import spock.lang.IgnoreIf
 import spock.lang.Requires as SpockRequires
 
 import java.util.concurrent.AbstractExecutorService
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ExecutorService
@@ -224,6 +228,20 @@ type Child {
 
         cleanup:
         ProbeCustomizer.NEVER = false
+    }
+
+    void "a customizer that never completes is disposed when the timeout fires before its subscription is stored"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.window', ['micronaut.graphql.tools.execution.timeout': '50ms'])
+
+        when:
+        def result = Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)).block(java.time.Duration.ofSeconds(10))
+
+        then:
+        WindowCustomizer.TIMER_RAN.await(0, TimeUnit.SECONDS)
+        result.errors[0].extensions.code == 'EXECUTION_TIMEOUT'
+        WindowCustomizer.CANCELLED.await(5, TimeUnit.SECONDS)
+        CALLS.isEmpty()
     }
 
     void "a returned publisher that is never subscribed starts no execution"() {
@@ -564,7 +582,7 @@ type Child {
     }
 
     @Singleton
-    @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(customizer|subclass|probe)')
+    @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(customizer|subclass|probe|window)')
     @GraphQLRootResolver
     static class CustomizedQuery {
         String hello(DataFetchingEnvironment environment) {
@@ -615,6 +633,41 @@ type Child {
                 Mono.just(executionInput)
             }
             input.doOnSubscribe { SUBSCRIBED.incrementAndGet() }.doOnCancel { CANCELLED.incrementAndGet() }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.window')
+    @Singleton
+    static class WindowCustomizer implements GraphQLExecutionInputCustomizer {
+        static final CountDownLatch TIMER_RAN = new CountDownLatch(1)
+        static final CountDownLatch CANCELLED = new CountDownLatch(1)
+
+        @Override
+        Publisher<ExecutionInput> customize(ExecutionInput executionInput, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
+            Mono.<ExecutionInput> never()
+                    .doOnSubscribe { assert TIMER_RAN.await(10, TimeUnit.SECONDS) }
+                    .doOnCancel { CANCELLED.countDown() }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.window')
+    @Singleton
+    @Replaces(value = ExecutorService, named = TaskExecutors.SCHEDULED)
+    @Named(TaskExecutors.SCHEDULED)
+    static class RecordingScheduler extends ScheduledThreadPoolExecutor {
+        RecordingScheduler() {
+            super(1)
+        }
+
+        @Override
+        ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            super.schedule({
+                try {
+                    command.run()
+                } finally {
+                    WindowCustomizer.TIMER_RAN.countDown()
+                }
+            } as Runnable, delay, unit)
         }
     }
 

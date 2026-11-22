@@ -128,6 +128,28 @@ class BagExtractor implements ValueExtractor<Bag<@ExtractedValue ?>> {
 }
 
 @CompileStatic
+final class Tray<T> {
+    final List<T> items
+
+    Tray(List<T> items) {
+        this.items = items
+    }
+}
+
+@CompileStatic
+@Singleton
+@Requires(property = 'tck.scenario', value = 'constraint-violations')
+class TrayExtractor implements ValueExtractor<Tray<@ExtractedValue ?>> {
+    @Override
+    void extractValues(Tray<?> tray, ValueExtractor.ValueReceiver receiver) {
+        int index = 0
+        for (Object item : tray.items) {
+            receiver.indexedValue('<tray item>', index++, item)
+        }
+    }
+}
+
+@CompileStatic
 @Factory
 @Requires(property = 'tck.scenario', value = 'constraint-violations')
 class ConstraintViolationsScalars {
@@ -170,6 +192,14 @@ class ConstraintViolationsScalars {
     GraphQLScalarMapping pack() {
         return scalar('Pack', Bag) { Map<String, Object> input ->
             return new Bag<Object>(new ArrayList<Object>((List<Object>) input.get('items')))
+        }
+    }
+
+    @Bean
+    @Singleton
+    GraphQLScalarMapping tray() {
+        return scalar('Tray', Tray) { Map<String, Object> input ->
+            return new Tray<Object>(new ArrayList<Object>((List<Object>) input.get('items')))
         }
     }
 
@@ -260,6 +290,10 @@ class ConstraintViolationsQueries {
 
     String pack(Bag<@Positive Integer> pack) {
         return pack.items.size().toString()
+    }
+
+    String tray(Tray<@Positive Integer> tray) {
+        return tray.items.size().toString()
     }
 
     String several(@NotBlank String name, @Positive int count, @Valid Cart cart) {

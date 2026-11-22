@@ -32,6 +32,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Maps a {@code ConstraintViolationException} (Micronaut Validation on a resolver method or an input class) to one error
@@ -45,6 +46,14 @@ import java.util.Map;
 final class ConstraintViolationExceptionMapper implements GraphQLExceptionMapper<ConstraintViolationException>, Ordered {
 
     static final String CODE = "CONSTRAINT_VIOLATION";
+
+    /**
+     * The names that Jakarta Validation and Micronaut Validation give the elements of their own containers. A container
+     * element with another name, even one in angle brackets, comes from a custom {@code ValueExtractor}, and the label
+     * is part of the path.
+     */
+    private static final Set<String> STANDARD_ELEMENT_NAMES = Set.of("<list element>", "<iterable element>", "<map key>",
+            "<map value>", "<array element>", "<completion stage element>", "<publisher element>");
 
     private static final Comparator<Located> ORDER = Comparator
             .<Located>comparingInt(located -> located.parameterIndex)
@@ -99,9 +108,9 @@ final class ConstraintViolationExceptionMapper implements GraphQLExceptionMapper
                 continue;
             }
             boolean element = node.getKind() == ElementKind.CONTAINER_ELEMENT;
-            boolean named = name != null && (!element || !isStandardElementName(name));
+            boolean named = name != null && (!element || !STANDARD_ELEMENT_NAMES.contains(name));
             if (element && named) {
-                inputPath.add(name);
+                inputPath.add(unbracketed(name));
             }
             if (node.isInIterable()) {
                 if (node.getIndex() != null) {
@@ -118,11 +127,14 @@ final class ConstraintViolationExceptionMapper implements GraphQLExceptionMapper
     }
 
     /**
-     * The names that Jakarta Validation gives the elements of its own containers, such as {@code <list element>}. A
-     * container element with another name comes from a custom {@code ValueExtractor}, and the name is part of the path.
+     * The label of a container element that a custom {@code ValueExtractor} gave it, without the angle brackets that
+     * some extractors put around the name, so that no extractor name appears in the path with them.
      */
-    private static boolean isStandardElementName(String name) {
-        return name.startsWith("<");
+    private static String unbracketed(String name) {
+        if (name.length() > 2 && name.startsWith("<") && name.endsWith(">")) {
+            return name.substring(1, name.length() - 1);
+        }
+        return name;
     }
 
     private static int comparePaths(List<Object> left, List<Object> right) {

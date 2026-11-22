@@ -359,7 +359,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
         private final GraphQLInvocationData data;
         private final ExecutionState state;
-        private Disposable customizerSubscription;
+        private volatile Disposable customizerSubscription;
 
         Execution(GraphQLInvocationData data, ExecutionState state) {
             this.data = data;
@@ -369,16 +369,29 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
             // the subscriber cancels after it has the result too, and a result that is done has nothing left to stop
-            if (!isDone()) {
+            boolean live = !isDone();
+            if (live) {
                 state.cancel();
                 // a pending stage may never complete, so nothing else would stop the watch of the connection
                 state.finished();
-                Disposable subscription = customizerSubscription;
-                if (subscription != null) {
-                    subscription.dispose();
-                }
             }
-            return super.cancel(mayInterruptIfRunning);
+            boolean cancelled = super.cancel(mayInterruptIfRunning);
+            if (live) {
+                disposeCustomizer();
+            }
+            return cancelled;
+        }
+
+        /**
+         * Disposes the customizer subscription if it is stored. The caller has already made this future done, and
+         * {@link #startCustomized} checks that after it stores the subscription, so whichever of the two comes second
+         * disposes it, and a customizer that never completes is not left subscribed.
+         */
+        private void disposeCustomizer() {
+            Disposable subscription = customizerSubscription;
+            if (subscription != null) {
+                subscription.dispose();
+            }
         }
 
         /** The timer of {@code execution.timeout} fired: cancel the execution and answer the client now. */
@@ -389,10 +402,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             }
             state.cancel();
             state.finished();
-            Disposable subscription = customizerSubscription;
-            if (subscription != null) {
-                subscription.dispose();
-            }
+            disposeCustomizer();
         }
 
         @Override
@@ -449,11 +459,15 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         void startCustomized(ContextView context) {
             try {
                 ExecutionInput input = baseInput();
-                customizerSubscription = Mono.from(customizer.customize(input, state.httpRequest(), (MutableHttpResponse<String>) state.response()))
+                Disposable subscription = Mono.from(customizer.customize(input, state.httpRequest(), (MutableHttpResponse<String>) state.response()))
                         .switchIfEmpty(Mono.error(() -> new IllegalStateException("The GraphQLExecutionInputCustomizer "
                                 + customizer.getClass().getName() + " published no ExecutionInput")))
                         .contextWrite(context)
                         .subscribe(this::customized, this::completeExceptionally);
+                customizerSubscription = subscription;
+                if (isDone()) {
+                    subscription.dispose();
+                }
             } catch (Throwable e) {
                 completeExceptionally(e);
             }

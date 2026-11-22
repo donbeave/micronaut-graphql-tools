@@ -1,0 +1,3 @@
+query ($tray: Tray!) {
+  tray(tray: $tray)
+}
