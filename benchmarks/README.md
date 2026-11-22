@@ -117,7 +117,7 @@ At 20,000 fields the saving is about 38 ms, which is the roughly 42 ms the snaps
 `FieldDecoratorBenchmark` (one query of 1,050 fields) and `ObservabilityBenchmark` (a request of 10 and of 1,000 root fields),
 rerun for #532 on an idle machine. Command: `./gradlew :benchmarks:jmhJar`, then
 `java -jar benchmarks/build/libs/benchmarks-1.0.0-SNAPSHOT-jmh.jar 'FieldDecoratorBenchmark|ObservabilityBenchmark' -f 5 -wi 5 -i 10 -w 1s -r 1s -prof gc`.
-Temurin 25.0.5+8, graphql-java default leg, Apple M1 Max (10 cores), 5 forks, 50 samples per case. The machine was idle: the one-minute load average
+Temurin 25.0.5+8, graphql-java default leg, 10-core ARM64 laptop, 5 forks, 50 samples per case. The machine was idle: the one-minute load average
 was 2.4 at the start and 2.7 at the end of the 15-minute run (about 91 percent CPU idle before the start), and no other Gradle, native or benchmark job ran.
 The score is the mean with the 99.9 percent error that JMH prints.
 
@@ -146,7 +146,7 @@ about 0.22 us and about 1.0 KB of allocation (`selected` minus `observed`, divid
 
 #71: the cold-start binding cost of the interface-heavy schema at 20,000 fields with `Shared` returned by a root field (`returned`) and with that
 field left out (`unreturned`, `-PlargeUnreturnedShared=true`), so that every field of the 2,000 object types looks up the class of an interface that no field
-returns. Two jars, `scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25`, Temurin 25.0.5+8, graphql-java default leg, Apple M1 Max. The
+returns. Two jars, `python3 benchmarks/scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25 returned=returned.jar unreturned=unreturned.jar`, Temurin 25.0.5+8, graphql-java default leg, 10-core ARM64 laptop. The
 load average at fork start ranged from 3.6 to 8.7 (median 6.3): the forks of this script run back to back on an otherwise idle machine, so
 this is lighter than the other start-up figures but not as idle as the request-path run above.
 
