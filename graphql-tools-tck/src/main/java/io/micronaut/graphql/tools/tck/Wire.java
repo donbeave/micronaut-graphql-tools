@@ -25,6 +25,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -70,6 +71,15 @@ final class Wire {
      */
     static Map<String, Object> websocket(HttpClient client, JsonMapper json, String authority, Map<String, String> headers,
                                          String query) throws Exception {
+        return websocket(client, json, authority, headers, List.of(query)).get(0);
+    }
+
+    /**
+     * Opens one connection with the headers on the upgrade request, runs the operations one after the other on it, and
+     * returns the {@code payload} of the first {@code next} message of each.
+     */
+    static List<Map<String, Object>> websocket(HttpClient client, JsonMapper json, String authority, Map<String, String> headers,
+                                               List<String> queries) throws Exception {
         BlockingQueue<String> received = new LinkedBlockingQueue<>();
         WebSocket.Listener listener = new WebSocket.Listener() {
             private final StringBuilder buffer = new StringBuilder();
@@ -94,15 +104,26 @@ final class Wire {
             if (!"connection_ack".equals(ack.get("type"))) {
                 throw new AssertionError("expected connection_ack but received " + ack);
             }
-            socket.sendText(json.writeValueAsString(Map.of("id", "1", "type", "subscribe", "payload", Map.of("query", query))), true)
-                    .get(SECONDS, TimeUnit.SECONDS);
-            Map<String, Object> next = json.readValue(poll(received), OBJECT);
-            if (!"next".equals(next.get("type"))) {
-                throw new AssertionError("expected next but received " + next);
+            List<Map<String, Object>> payloads = new ArrayList<>();
+            for (int i = 0; i < queries.size(); i++) {
+                String id = String.valueOf(i + 1);
+                socket.sendText(json.writeValueAsString(Map.of("id", id, "type", "subscribe", "payload", Map.of("query", queries.get(i)))), true)
+                        .get(SECONDS, TimeUnit.SECONDS);
+                Map<String, Object> next = json.readValue(poll(received), OBJECT);
+                while ("complete".equals(next.get("type")) && !id.equals(next.get("id"))) {
+                    next = json.readValue(poll(received), OBJECT);
+                }
+                if (!"next".equals(next.get("type")) || !id.equals(next.get("id"))) {
+                    throw new AssertionError("expected next of operation " + id + " but received " + next);
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> payload = (Map<String, Object>) next.get("payload");
+                if (payload == null) {
+                    throw new AssertionError("the next message of operation " + id + " has no payload: " + next);
+                }
+                payloads.add(payload);
             }
-            @SuppressWarnings("unchecked")
-            Map<String, Object> payload = (Map<String, Object>) next.get("payload");
-            return payload;
+            return payloads;
         } finally {
             socket.sendClose(WebSocket.NORMAL_CLOSURE, "done");
         }

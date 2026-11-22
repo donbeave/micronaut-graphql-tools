@@ -38,7 +38,10 @@ public final class SecurityTck {
             "anonymous-call-rejected",
             "role-required",
             "root-fields-hook",
-            "websocket-upgrade-authentication");
+            "websocket-upgrade-authentication",
+            "disabled-module-runs-no-hook",
+            "replaced-roles-finder",
+            "expression-rejected");
 
     private SecurityTck() {
     }
@@ -59,7 +62,19 @@ public final class SecurityTck {
         if (!CHECKS.contains(check)) {
             throw new IllegalArgumentException("No such check: " + check);
         }
-        try (ApplicationContext context = ApplicationContext.builder().properties(Tck.applicationProperties("security")).start();
+        Map<String, Object> properties = Tck.applicationProperties("security");
+        switch (check) {
+            case "disabled-module-runs-no-hook" -> properties.put("micronaut.graphql.tools.security.enabled", "false");
+            case "replaced-roles-finder" -> properties.put("tck.security.finder", "team");
+            case "expression-rejected" -> properties.put("tck.security.expression", "true");
+            default -> {
+            }
+        }
+        if (check.equals("expression-rejected")) {
+            expectStartupFailure(properties);
+            return;
+        }
+        try (ApplicationContext context = ApplicationContext.builder().properties(properties).start();
              HttpClient client = HttpClient.newHttpClient()) {
             EmbeddedServer server = context.getBean(EmbeddedServer.class).start();
             JsonMapper json = context.getBean(JsonMapper.class);
@@ -96,6 +111,20 @@ public final class SecurityTck {
                             "query Q { first: secOpen ...Roots secRoots } fragment Roots on Query { secOpen again: secOpen }");
                     expect("secOpen,secRoots", path(reply.body(), "data", "secRoots"), reply.body());
                 }
+                case "disabled-module-runs-no-hook" -> {
+                    Wire.Reply reply = Wire.post(client, json, authority, Map.of(), "{ secOpen secAdmin secRoots }");
+                    expect(true, reply.body().get("data") == null, reply.body());
+                    expect("secRoots", path(reply.body(), "errors", 0, "path", 0), reply.body());
+                    Wire.Reply unguarded = Wire.post(client, json, authority, Map.of(), "{ secOpen secAdmin }");
+                    expect("admin", path(unguarded.body(), "data", "secAdmin"), unguarded.body());
+                    expect(true, unguarded.body().get("errors") == null, unguarded.body());
+                }
+                case "replaced-roles-finder" -> {
+                    Wire.Reply team = Wire.post(client, json, authority, Map.of("X-User", "ops", "X-Roles", "TEAM_OPS"), "{ secAdmin }");
+                    expect("admin", path(team.body(), "data", "secAdmin"), team.body());
+                    Wire.Reply admin = Wire.post(client, json, authority, Map.of("X-User", "root", "X-Roles", "ROLE_ADMIN"), "{ secAdmin }");
+                    expect("FORBIDDEN", path(admin.body(), "errors", 0, "extensions", "code"), admin.body());
+                }
                 default -> {
                     Map<String, Object> payload = Wire.websocket(client, json, authority, alice, "{ secAuthenticated secMe { principal service } }");
                     expect("authenticated", path(payload, "data", "secAuthenticated"), payload);
@@ -112,6 +141,20 @@ public final class SecurityTck {
             throw new AssertionError(check + ": interrupted", e);
         } catch (Exception e) {
             throw new AssertionError(check + ": " + e, e);
+        }
+    }
+
+    private static void expectStartupFailure(Map<String, Object> properties) {
+        try (ApplicationContext context = ApplicationContext.builder().properties(properties).start()) {
+            throw new AssertionError("expression-rejected: the application started although @Secured has an expression");
+        } catch (AssertionError e) {
+            throw e;
+        } catch (RuntimeException e) {
+            StringBuilder messages = new StringBuilder();
+            for (Throwable t = e; t != null; t = t.getCause()) {
+                messages.append(t.getMessage()).append('\n');
+            }
+            expect(true, messages.toString().contains("Query.secGated") && messages.toString().contains("expression value"), messages.toString());
         }
     }
 

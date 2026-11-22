@@ -17,7 +17,8 @@ library does not depend on it and the beans of the module exist only when the ap
   `isAnonymous()`, keeps the fetcher it was offered. A guarded field gets a fetcher that rejects an anonymous call with
   `UNAUTHENTICATED` and a call without the role with `FORBIDDEN`, as an error of the field.
 - `RootFieldsHook`: a bean interface, run by one `Instrumentation` that exists only when a hook bean does.
-- `micronaut.graphql.tools.security.enabled` switches the contributor and the decorator off.
+- `micronaut.graphql.tools.security.enabled` switches the contributor, the decorator and the instrumentation of the hook off.
+- The decorator checks roles through the `RolesFinder` bean of the context, so a replaced bean decides; an expression in `@Secured` is rejected at startup with a `ConfigurationException` that names the field.
 
 Not in this module: authentication itself (Micronaut Security), the principal and request parameters of a resolver
 (`graphql-tools`, see the guide page on resolver parameters) and the URL rules of the GraphQL path.

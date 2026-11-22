@@ -67,6 +67,9 @@ kotlin {
 }
 
 graalvmNative.toolchainDetection = false
+// Netty 4.2 on Java 25 releases direct buffers through a shared arena. An image without shared-arena support throws on the event-loop
+// thread that releases a buffer, and that thread never terminates (#568).
+graalvmNative.binaries.configureEach { buildArgs.add("-H:+SharedArenaSupport") }
 
 micronaut {
     // The platform version: micronaut-build reads `micronaut` as the core BOM version, which has no platform of the same number.
@@ -92,6 +95,10 @@ val graphqlSchemaDirs = files("src/main/resources")
 configurations.matching { it.name == "kspTest" }.configureEach {
     val processor = project(projects.micronautGraphqlToolsProcessor.path)
     exclude(group = processor.group.toString(), module = processor.name)
+}
+// The directory of the KSP output of the test source set, which IntrospectionEntriesTest checks (#566).
+tasks.withType<Test>().configureEach {
+    systemProperty("ksp.test.output", layout.buildDirectory.dir("generated/ksp/test").get().asFile.absolutePath)
 }
 ksp {
     arg("micronaut.graphql.tools.processor.schema.dirs", graphqlSchemaDirs.files.joinToString(File.pathSeparator) { it.absolutePath })

@@ -11,3 +11,4 @@ class-level-in-map
 uuid-map-key
 enum-map-key
 custom-extractor-element
+bracketed-extractor-element

@@ -22,7 +22,9 @@ import graphql.schema.DataFetchingEnvironment;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.security.GraphQLSecurity;
 import io.micronaut.security.authentication.Authentication;
+import io.micronaut.security.token.RolesFinder;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,6 +39,8 @@ final class SecuredDataFetcher implements DataFetcher<Object> {
     private final String coordinates;
     private final boolean authenticated;
     private final Set<String> roles;
+    private final List<String> requiredRoles;
+    private final RolesFinder rolesFinder;
 
     /**
      * @param delegate      the fetcher of the field
@@ -44,12 +48,17 @@ final class SecuredDataFetcher implements DataFetcher<Object> {
      * @param authenticated whether any authenticated caller may call the field
      * @param roles         the roles of which a caller needs one; empty with {@code authenticated} for no role requirement and
      *                      empty without it for a field that nobody may call
+     * @param rolesFinder   the {@code RolesFinder} that decides whether the roles of a caller satisfy the required ones, or
+     *                      null for the default one, which is a plain membership test
      */
-    SecuredDataFetcher(DataFetcher<Object> delegate, String coordinates, boolean authenticated, Set<String> roles) {
+    SecuredDataFetcher(DataFetcher<Object> delegate, String coordinates, boolean authenticated, Set<String> roles,
+                       RolesFinder rolesFinder) {
         this.delegate = delegate;
         this.coordinates = coordinates;
         this.authenticated = authenticated;
         this.roles = roles;
+        this.requiredRoles = List.copyOf(roles);
+        this.rolesFinder = rolesFinder;
     }
 
     @Override
@@ -70,6 +79,9 @@ final class SecuredDataFetcher implements DataFetcher<Object> {
     private boolean allows(Authentication authentication) {
         if (authenticated) {
             return true;
+        }
+        if (rolesFinder != null) {
+            return !requiredRoles.isEmpty() && rolesFinder.hasAnyRequiredRoles(requiredRoles, authentication.getRoles());
         }
         for (String role : authentication.getRoles()) {
             if (roles.contains(role)) {

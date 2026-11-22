@@ -56,6 +56,8 @@ The example applications are three separate Gradle projects with the same schema
 
 Each native test takes about 5 to 7 minutes and 5 GB of memory: run them one after another.
 
+Two build settings of the suites come from past failures. The suites build their native images with `-H:+SharedArenaSupport`: Netty 4.2 on Java 25 releases direct buffers through a shared arena, and without the flag the event-loop thread that releases a buffer fails and never terminates (`EventLoopShutdownTest` in `test-suite-java` and `test-suite-kotlin` checks it). `gradle.properties` sets `ksp.incremental=false`: an incremental KSP run (a source file added since the last run) dropped the `BeanIntrospectionReference` entries of introspections generated for classes of another module, so `ExternalModelTest` failed until a clean build, and the build cache could restore that output (`IntrospectionEntriesTest` in `test-suite-kotlin` checks it).
+
 #### Native coverage
 
 `nativeTest` runs every JUnit 5 test of the suite as a native binary, so the table below is the list of feature categories that must keep a test in the Java and Kotlin suites (the Groovy example has the native smoke test). A category that runs a TCK scenario names it: the scenario is written once and `example.tck.GraphQLToolsTckTest` runs it in both suites, so the native run covers what the JVM run covers. `checkNativeCoverage` (part of `check`) fails when a row names a test class that is missing from a suite it lists, or a scenario that `scenarios.txt` does not list. Add a row when you add a feature category, and keep the table in step with the native page of the guide.

@@ -31,6 +31,7 @@ import graphql.language.Selection;
 import graphql.language.SelectionSet;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.security.GraphQLSecurity;
 import io.micronaut.graphql.tools.security.RootFieldsHook;
 import jakarta.inject.Singleton;
 
@@ -47,6 +48,7 @@ import java.util.Set;
 @Internal
 @Singleton
 @Requires(beans = RootFieldsHook.class)
+@Requires(property = GraphQLSecurity.PREFIX + ".enabled", value = "true", defaultValue = "true")
 final class RootFieldsInstrumentation extends SimplePerformantInstrumentation {
 
     private final RootFieldsHook[] hooks;

@@ -4,6 +4,7 @@ scalar Spans
 scalar Weights
 scalar Tally
 scalar Pack
+scalar Tray
 
 input Line {
   sku: String!
@@ -32,5 +33,6 @@ extend type Query {
   weights(weights: Weights!): String
   tally(tally: Tally!): String
   pack(pack: Pack!): String
+  tray(tray: Tray!): String
   several(name: String!, count: Int!, cart: Cart!): String
 }

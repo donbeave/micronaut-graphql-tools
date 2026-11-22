@@ -58,6 +58,29 @@ class KotlinCorpusSpec extends Specification {
         }
     }
 
+    @Unroll
+    void "the visitor reports the JVM name of the internal method of #caseName as the startup does"() {
+        given:
+        CorpusCase corpusCase = corpus.byName(caseName)
+        String suffix = '$' + KotlinBatchCompiler.moduleName(corpusCase).replace('-', '_') + '('
+
+        when:
+        List<String> compile = unbound(corpusCase.expected(Language.KOTLIN, kotlin.compileVerdictFile(corpusCase)))
+        List<String> runtime = unbound(corpusCase.expected(Language.KOTLIN, 'runtime.txt'))
+
+        then:
+        !compile.empty
+        compile == runtime
+        compile.every { it.contains(suffix) }
+
+        where:
+        caseName << ['strict/kotlin-internal-method', 'strict/kotlin-internal-method-field']
+    }
+
+    private static List<String> unbound(String verdict) {
+        return verdict.readLines().findAll { it.startsWith('unbound-resolver-method ') }
+    }
+
     void "the batch ran and stays within the budget"() {
         expect:
         !runner.units().empty

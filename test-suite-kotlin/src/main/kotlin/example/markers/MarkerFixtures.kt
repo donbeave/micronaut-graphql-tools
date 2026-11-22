@@ -42,7 +42,8 @@ class MarkerFixtures {
         registry.merge(
             SchemaParser().parse(
                 "type Shelf { id: ID! slots: Int! label: String! }\n" +
-                    "extend type Query { shelf: Shelf stock: String! }\n" +
+                    "type Crate { id: ID! tag: String! }\n" +
+                    "extend type Query { shelf: Shelf stock: String! crate: Crate tag: String! }\n" +
                     "extend type Mutation { stock: String! }\n"
             )
         )
@@ -107,3 +108,33 @@ open class UnscopedShelfQuery : ShelfQueryContract {
     override fun shelf(): Shelf = Shelf()
 }
 // end::implementations[]
+
+@GraphQLType
+class Crate {
+    val id: String = "7"
+}
+
+interface CrateQueryContract : QueryResolver {
+
+    fun crate(): Crate
+
+    fun tag(): String
+}
+
+interface CrateTagContract : TypeResolver<Crate> {
+
+    fun tag(crate: Crate): String
+}
+
+// one bean with a root contract and a type contract: each method binds on the side of the contract that declares it,
+// although the root field and the type field share the name tag
+@Singleton
+@Requires(env = [MARKERS])
+open class CrateResolvers : CrateQueryContract, CrateTagContract {
+
+    override fun crate(): Crate = Crate()
+
+    override fun tag(): String = "root tag"
+
+    override fun tag(crate: Crate): String = "tag of " + crate.id
+}

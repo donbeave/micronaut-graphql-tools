@@ -10,6 +10,8 @@ The response is the one of the GraphQL request: the library creates it before th
 
 An operation of a `graphql-transport-ws` connection has the upgrade request as its request: a resolver reads the headers and the attributes of the handshake with the `HttpRequest` parameter, and the principal of the connection with a `Principal` parameter. A WebSocket operation has no HTTP response, because the upgrade response was sent when the connection opened.
 
+The upgrade request is the request of the connection, not of one message. Every operation of the connection, whether a query, a mutation or a subscription, gets the same `HttpRequest` object, so its path is the path of the upgrade request (`/graphql-ws` by default, not `/graphql`), and a header or a principal that the client sends later does not appear in it. The parameters behave the same on the three operation types.
+
 * `Optional<MutableHttpResponse<?>>` is empty over WebSocket and present over HTTP. Use it in code that serves both transports.
 * A plain `MutableHttpResponse<?>` or `HttpResponse<?>` parameter over WebSocket is an error of the field, with `extensions.code` `HTTP_RESPONSE_UNAVAILABLE` and a message that says to declare the `Optional` form. It is not a `NullPointerException`, and the other fields of the operation still run. A call without a request (a direct call of the invocation) has no response either and gets the same error.
 

@@ -4,9 +4,16 @@ type Shelf {
   label: String!
 }
 
+type Crate {
+  id: ID!
+  tag: String!
+}
+
 extend type Query {
   shelf: Shelf
   stock: String!
+  crate: Crate
+  tag: String!
 }
 
 extend type Mutation {
