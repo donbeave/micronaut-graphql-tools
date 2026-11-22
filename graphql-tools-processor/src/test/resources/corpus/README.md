@@ -78,7 +78,8 @@ the soundness rule compares one name (option (b) of #439: the product keeps one 
 case, the checked and the unchecked one, the same module name, the project name of the case, in `KotlinBatchCompiler`). A coordinate in a
 `compile.txt` or `runtime.txt` therefore carries the module of its case, as in `strict/kotlin-internal-method`. No normalizing rule strips the
 suffix, so a real difference between the two sides still shows. An internal method never binds a field by its Kotlin name, because the name
-it carries is another one.
+it carries is another one: `strict/kotlin-internal-method-field` has an `internal fun` named like a field that a public method binds, and both sides report the
+internal method as unbound under its JVM name. `KotlinCorpusSpec` asserts that the two verdicts of both cases carry the same JVM name.
 
 A compile line that starts with `warning ` is a warning of the compiler, not an error: the build passes. A check that cannot
 prove its fact from one class reports it so (`class-not-introspected`: another class can make a class introspected with
