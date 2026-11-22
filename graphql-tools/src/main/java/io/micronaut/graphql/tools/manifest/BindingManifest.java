@@ -17,7 +17,6 @@ package io.micronaut.graphql.tools.manifest;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.graphql.tools.binding.internal.manifest.ManifestRenderer;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -39,7 +38,8 @@ import java.util.function.Supplier;
  */
 public final class BindingManifest {
 
-    public static final String FORMAT = ManifestRenderer.FORMAT;
+    /** The first line of the manifest, which names the format and its version. */
+    public static final String FORMAT = "# graphql-binding-manifest 2";
 
     private Supplier<Map.Entry<List<String>, List<String>>> renderer;
     private volatile Content content;

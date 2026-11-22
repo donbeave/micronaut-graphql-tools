@@ -51,7 +51,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.input` |graphql-tools |Public API |`ArgumentValue`
 |`io.micronaut.graphql.tools.manifest` |graphql-tools |Public API |`BindingManifest`
 |`io.micronaut.graphql.tools.execution` |graphql-tools |Public API |`GraphQLContextContributor`, the read-only `GraphQLExecutionRequest` that it receives, the `GraphQLTransport` kinds, the `DataLoaderBatchStatistics` of an execution, the `DataLoaderOptionsCustomizer` of one batch loader, and `FieldFetcherDecorator` with its `FieldDescriptor` and `FieldExecutionKind`
-|`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes, and `ResolverBeanCondition`, the bean condition behind the resolver annotations (an application never refers to it)
+|`io.micronaut.graphql.tools.annotation` |graphql-tools |Public API |The annotations of resolver classes, methods, parameters and input classes
 |`io.micronaut.graphql.tools.resolver` |graphql-tools |Public API |The marker interfaces of resolver contracts: `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>`
 |`io.micronaut.graphql.tools.websocket` |graphql-tools |Public API |The connection hook of the `graphql-transport-ws` endpoint: `GraphQLConnectionInterceptor`, the request it receives and the result it returns
 |`io.micronaut.graphql.tools.exceptions` |graphql-tools |Public API |The startup failure: `SchemaBindingException`, the one exception to catch
@@ -66,7 +66,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 |`io.micronaut.graphql.tools.internal` |graphql-tools |Internal |The entry points of the binding: the factories, the eager binding, the bean selection and the shared helpers
 |`io.micronaut.graphql.tools.internal.registry` |graphql-tools |Internal |The runtime method processors that register the resolvers (not the compile-time processor module)
 |`io.micronaut.graphql.tools.internal.discovery` |graphql-tools |Internal |Schema discovery: reads the schema files into the type registry
-|`io.micronaut.graphql.tools.internal.resolver` |graphql-tools |Internal |The data fetchers and the type resolvers, and the planning of resolver arguments
+|`io.micronaut.graphql.tools.internal.resolver` |graphql-tools |Internal |The data fetchers and the type resolvers, the planning of resolver arguments, and the bean condition behind the resolver annotations
 |`io.micronaut.graphql.tools.internal.wiring` |graphql-tools |Internal |The runtime wiring generator, the wiring factory that picks the data fetcher and the type resolver of each field and type, the interface field binder and the directive wirings
 |`io.micronaut.graphql.tools.binding` |graphql-tools-binding |Public API |`BindingCode`, the registry of the error codes
 |`io.micronaut.graphql.tools.internal.error` |graphql-tools |Internal |The default `DataFetcherExceptionHandler` that hides messages and runs the exception mappers, and the mapper of `ConstraintViolationException`
@@ -108,7 +108,7 @@ Kotlin and Groovy sources need no `package-info`; the library modules are Java.
 [[plannedLayout]]
 == Planned layout
 
-The public API is split into its role packages (`config`, `customizer`, `mapping`, `directive`, `input` and `manifest`), and the root package `io.micronaut.graphql.tools` holds no types. The implementation side is split by responsibility too: `internal` holds the factories, the eager binding and the shared helpers, and `internal.exceptions` holds the base failure classes with one sub-package for each kind of failure. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, only `visitor` remains. Each change that moves a public type gets an entry in <<breaks,Breaking Changes>> and in the migration page.
+The public API is split into its role packages (`annotation`, `config`, `customizer`, `directive`, `error`, `exceptions`, `execution`, `input`, `manifest`, `mapping`, `resolver` and `websocket`), and the root package `io.micronaut.graphql.tools` holds no types. The implementation side is split by responsibility too: `internal` holds the factories, the eager binding and the shared helpers, and `internal.exceptions` holds the base failure classes with one sub-package for each kind of failure. The packages of `graphql-tools-binding` already follow the convention and stay; whether `BindingCode` stays public is decided with the exception shrink. In `graphql-tools-processor`, only `visitor` remains. Each change that moves a public type gets an entry in <<breaks,Breaking Changes>> and in the migration page.
 
 == How the build keeps this true
 
