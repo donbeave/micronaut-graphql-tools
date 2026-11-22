@@ -16,6 +16,7 @@
 package example.validated
 
 import example.validated.generated.Generated
+import example.validated.mixed.Mixed
 import io.micronaut.core.beans.BeanIntrospection
 import io.micronaut.core.beans.BeanIntrospector
 import spock.lang.Specification
@@ -47,5 +48,16 @@ class ValidatedModelsSpec extends Specification {
     def "a class listed twice is introspected once"() {
         expect:
         introspections(Twice) == 1
+    }
+
+    def "a declared accessKind, includes and excludes survive the listing"() {
+        expect:
+        BeanIntrospection.getIntrospection(FieldAccess).beanProperties*.name as Set == ['a'] as Set
+    }
+
+    def "classes and packages of one class are merged and only the classes are introspected"() {
+        expect:
+        introspections(Together) == 1
+        introspections(Mixed) == 0
     }
 }

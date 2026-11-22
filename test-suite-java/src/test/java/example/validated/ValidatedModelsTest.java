@@ -16,13 +16,19 @@
 package example.validated;
 
 import example.validated.ValidatedModels.Direct;
+import example.validated.ValidatedModels.FieldAccess;
 import example.validated.ValidatedModels.Listed;
 import example.validated.ValidatedModels.Plain;
+import example.validated.ValidatedModels.Together;
 import example.validated.ValidatedModels.Twice;
 import example.validated.generated.Generated;
+import example.validated.mixed.Mixed;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import org.junit.jupiter.api.Test;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,6 +60,19 @@ class ValidatedModelsTest {
     @Test
     void aClassListedTwiceIsIntrospectedOnce() {
         assertEquals(1, introspections(Twice.class));
+    }
+
+    @Test
+    void aDeclaredAccessKindIncludesAndExcludesSurviveTheListing() {
+        Set<String> names = BeanIntrospection.getIntrospection(FieldAccess.class).getBeanProperties().stream()
+                .map(property -> property.getName()).collect(Collectors.toSet());
+        assertEquals(Set.of("a"), names);
+    }
+
+    @Test
+    void classesAndPackagesOfOneClassAreMergedAndOnlyTheClassesAreIntintrospected() {
+        assertEquals(1, introspections(Together.class));
+        assertEquals(0, introspections(Mixed.class));
     }
 
 }

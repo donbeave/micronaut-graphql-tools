@@ -16,6 +16,7 @@
 package example.validated
 
 import example.validated.generated.Generated
+import example.validated.mixed.Mixed
 import io.micronaut.core.beans.BeanIntrospection
 import io.micronaut.core.beans.BeanIntrospector
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -48,5 +49,21 @@ class ValidatedModelsTest {
     @Test
     fun `a class listed twice is introspected once`() {
         assertEquals(1, introspections(Twice::class.java))
+    }
+
+    @Test
+    fun `a declared accessKind survives the listing`() {
+        assertEquals(emptySet<String>(), BeanIntrospection.getIntrospection(FieldAccess::class.java).beanProperties.map { it.name }.toSet())
+    }
+
+    @Test
+    fun `declared includes and excludes survive the listing`() {
+        assertEquals(setOf("a"), BeanIntrospection.getIntrospection(Filtered::class.java).beanProperties.map { it.name }.toSet())
+    }
+
+    @Test
+    fun `classes and packages of one class are merged and only the classes are introspected`() {
+        assertEquals(1, introspections(Together::class.java))
+        assertEquals(0, introspections(Mixed::class.java))
     }
 }

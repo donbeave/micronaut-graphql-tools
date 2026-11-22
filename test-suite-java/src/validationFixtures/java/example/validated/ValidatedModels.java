@@ -42,6 +42,34 @@ public final class ValidatedModels {
     public static class DirectList {
     }
 
+    @GraphQLModels(classes = FieldAccess.class)
+    @Introspected(accessKind = Introspected.AccessKind.FIELD, includes = {"a", "b"}, excludes = {"b"})
+    public static class DeclaredAccess {
+    }
+
+    public static class FieldAccess {
+        public String a;
+        public String b;
+        public String c;
+    }
+
+    @GraphQLModels(classes = Together.class)
+    @Introspected(packages = "example.validated.mixed", includedAnnotations = ExternalModel.class)
+    public static class Mixed {
+    }
+
+    public static class Together {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
     public static class Direct {
         private String name;
 

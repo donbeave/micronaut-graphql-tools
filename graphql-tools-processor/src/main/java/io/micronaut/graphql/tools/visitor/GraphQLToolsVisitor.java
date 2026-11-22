@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.visitor;
 
 import io.micronaut.core.annotation.AnnotationClassValue;
+import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
@@ -71,6 +72,9 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     private static final String UNPROVEN = BindingCode.CLASS_NOT_INTROSPECTED.code();
 
     private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
+
+    // the members of @Introspected that introspectModels merges with those of @GraphQLModels; it carries the others over as declared
+    private static final Set<String> MERGED_MEMBERS = Set.of("classes", "includedAnnotations", "packages");
 
     private static final String FACTORY = "io.micronaut.context.annotation.Factory";
 
@@ -130,10 +134,10 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
         Compilation current = compilation;
         if (element.hasDeclaredAnnotation(AnnotationNames.MODELS)) {
-            introspectModels(element);
             if (current != null) {
                 recordModels(current, element, context);
             }
+            introspectModels(element);
         }
         if (current != null && current.options.checks()) {
             recordTypeClass(current, element);
@@ -217,9 +221,10 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     }
 
     // Another processor can re-annotate the class with @Introspected after Micronaut resolved @GraphQLModels into it and keep only
-    // its own members (Micronaut Validation's processor does), so the listed classes and packages are put back on the
-    // declared @Introspected here, together with what it carries already. This runs after the visitors that annotate before it
-    // (see getOrder); the members are set, not added, so a class listed twice is introspected once.
+    // its own members (Micronaut Validation's processor does), so the listed classes
+    // and packages are put back on the declared @Introspected here, together with what it carries already, and every other
+    // member it declares (accessKind, includes, excludes, indexed and the rest) is carried over unchanged. This runs after the
+    // visitors that annotate before it (see getOrder); the members are set, not added, so a class listed twice is introspected once.
     private static void introspectModels(ClassElement element) {
         var models = element.getAnnotationMetadata().findAnnotation(AnnotationNames.MODELS).orElse(null);
         if (models == null) {
@@ -227,6 +232,11 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
         var introspected = element.getAnnotationMetadata().findDeclaredAnnotation(INTROSPECTED).orElse(null);
         element.annotate(INTROSPECTED, builder -> {
+            if (introspected != null) {
+                Map<CharSequence, Object> declared = new LinkedHashMap<>(introspected.getValues());
+                declared.keySet().removeAll(MERGED_MEMBERS);
+                builder.members(declared);
+            }
             for (String member : List.of("classes", "includedAnnotations")) {
                 AnnotationClassValue<?>[] listed = union(models.annotationClassValues(member),
                         introspected == null ? new AnnotationClassValue<?>[0] : introspected.annotationClassValues(member));
@@ -239,12 +249,6 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
                     .distinct().toArray(String[]::new);
             if (packages.length > 0) {
                 builder.member("packages", packages);
-            }
-            if (introspected != null) {
-                var indexed = introspected.getAnnotations("indexed");
-                if (!indexed.isEmpty()) {
-                    builder.member("indexed", indexed.toArray(io.micronaut.core.annotation.AnnotationValue[]::new));
-                }
             }
         });
     }
@@ -282,10 +286,35 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
                     + "@Introspected generates only one of the two for one annotation; use one annotation for the classes "
                     + "and another for the packages", element);
         }
+        warnOnMixedAnnotations(current, element, annotation, context);
         // the classes the annotation lists, and the classes of its packages that carry one of the annotations it names
         List<String> markers = Arrays.stream(annotation.annotationClassValues("includedAnnotations"))
                 .map(AnnotationClassValue::getName).toList();
         current.coverage.add(classes, packages, markers);
+    }
+
+    // @GraphQLModels and a declared @Introspected on one class end up in one annotation, and Micronaut generates only the classes
+    // or only the packages of one annotation: classes from one and packages from the other are merged, and the packages are
+    // then not introspected. It is a warning (the build still passes, as for classes and packages of @GraphQLModels alone).
+    private static void warnOnMixedAnnotations(Compilation current, ClassElement element, AnnotationValue<?> models, VisitorContext context) {
+        var declared = element.getAnnotationMetadata().findDeclaredAnnotation(INTROSPECTED).orElse(null);
+        if (declared == null || !current.options.checks()) {
+            return;
+        }
+        Set<String> modelClasses = Arrays.stream(models.annotationClassValues("classes")).map(AnnotationClassValue::getName)
+                .collect(java.util.stream.Collectors.toSet());
+        // annotation arrays may repeat a value, which Set.of rejects
+        Set<String> modelPackages = new java.util.HashSet<>(Arrays.asList(models.stringValues("packages")));
+        boolean packagesAdded = !modelClasses.isEmpty() && !modelPackages.containsAll(List.of(declared.stringValues("packages")));
+        boolean classesAdded = !modelPackages.isEmpty() && !modelClasses.containsAll(java.util.stream.Stream.concat(
+                Arrays.stream(declared.annotationClassValues("classes")).map(AnnotationClassValue::getName),
+                Arrays.stream(declared.stringValues("classNames"))).toList());
+        if (packagesAdded || classesAdded) {
+            context.warn(TAG + "@GraphQLModels on " + element.getName() + " lists " + (packagesAdded ? "classes" : "packages")
+                    + " and the declared @Introspected on the same class lists " + (packagesAdded ? "packages" : "classes")
+                    + "; the two end up in one annotation, and Micronaut's @Introspected generates only one of the two for one "
+                    + "annotation; use separate classes for them", element);
+        }
     }
 
     @Override
