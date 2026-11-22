@@ -303,10 +303,12 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
         Set<String> modelClasses = Arrays.stream(models.annotationClassValues("classes")).map(AnnotationClassValue::getName)
                 .collect(java.util.stream.Collectors.toSet());
-        Set<String> modelPackages = Set.of(models.stringValues("packages"));
+        // annotation arrays may repeat a value, which Set.of rejects
+        Set<String> modelPackages = new java.util.HashSet<>(Arrays.asList(models.stringValues("packages")));
         boolean packagesAdded = !modelClasses.isEmpty() && !modelPackages.containsAll(List.of(declared.stringValues("packages")));
-        boolean classesAdded = !modelPackages.isEmpty() && !modelClasses.containsAll(Arrays.stream(declared.annotationClassValues("classes"))
-                .map(AnnotationClassValue::getName).toList());
+        boolean classesAdded = !modelPackages.isEmpty() && !modelClasses.containsAll(java.util.stream.Stream.concat(
+                Arrays.stream(declared.annotationClassValues("classes")).map(AnnotationClassValue::getName),
+                Arrays.stream(declared.stringValues("classNames"))).toList());
         if (packagesAdded || classesAdded) {
             context.warn(TAG + "@GraphQLModels on " + element.getName() + " lists " + (packagesAdded ? "classes" : "packages")
                     + " and the declared @Introspected on the same class lists " + (packagesAdded ? "packages" : "classes")
