@@ -25,7 +25,7 @@ Not in this module: authentication itself (Micronaut Security), the principal an
 
 ## Packages
 
-Each package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
+Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
 
 | Package | Audience | Holds |
 | --- | --- | --- |

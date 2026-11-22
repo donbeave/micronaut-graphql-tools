@@ -23,7 +23,7 @@ under `example/tck`.
 
 ## Packages
 
-The package has a `package-info.java`. See the [API map](../src/main/docs/guide/apiMap.adoc).
+The package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api-map).
 
 | Package | Audience | Holds |
 | --- | --- | --- |
