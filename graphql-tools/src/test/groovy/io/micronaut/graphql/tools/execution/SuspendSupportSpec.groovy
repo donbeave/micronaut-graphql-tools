@@ -56,7 +56,7 @@ class SuspendSupportSpec extends Specification {
 
         then:
         SchemaBindingException e = thrown()
-        e.code() == BindingCode.SUSPEND_WITHOUT_COROUTINES
+        e.getCode() == BindingCode.SUSPEND_WITHOUT_COROUTINES
         e.message.startsWith('[suspend-without-coroutines]')
         e.message.contains('Query.find')
         e.message.contains('org.jetbrains.kotlinx:kotlinx-coroutines-core')

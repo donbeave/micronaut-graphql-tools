@@ -206,7 +206,7 @@ type Query {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.ARGUMENT_MISMATCH
+        cause.getCode() == BindingCode.ARGUMENT_MISMATCH
         cause.message.contains('Query.hello')
         cause.message.contains("'count'")
         cause.message.contains('primitive')
@@ -219,7 +219,7 @@ type Query {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.ARGUMENT_MISMATCH
+        cause.getCode() == BindingCode.ARGUMENT_MISMATCH
         cause.message.contains("'other'")
     }
 
@@ -231,7 +231,7 @@ type Query {
         then:
         def e = thrown(Exception)
         def cause = causeOfType(e, SchemaBindingException)
-        cause.code() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
+        cause.getCode() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
         cause.message.contains(need)
         cause.message.contains('Query.hello')
         cause.message.contains(form == 'replaced' ? 'OwnInvocation' : 'PrimaryInvocation')

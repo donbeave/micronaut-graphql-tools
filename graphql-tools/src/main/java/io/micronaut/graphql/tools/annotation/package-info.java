@@ -20,8 +20,7 @@
  * {@link io.micronaut.graphql.tools.annotation.GraphQLArgument}, {@link io.micronaut.graphql.tools.annotation.GraphQLContextValue}, {@link io.micronaut.graphql.tools.annotation.GraphQLIgnore},
  * {@link io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate} and {@link io.micronaut.graphql.tools.annotation.GraphQLType}.
  *
- * <p><b>Audience.</b> Public API. Application code imports the annotations of this package. The one other type,
- * {@link io.micronaut.graphql.tools.annotation.ResolverBeanCondition}, is the bean condition behind the resolver annotations; an
- * application never refers to it.</p>
+ * <p><b>Audience.</b> Public API. Application code imports the annotations of this package. The bean condition behind the resolver
+ * annotations is internal.</p>
  */
 package io.micronaut.graphql.tools.annotation;

@@ -127,7 +127,7 @@ class SchemaDiscoverySpec extends Specification {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.SCHEMA_NOT_FOUND
+        e.getCode() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains('discovery/gone.graphqls')
     }
 
@@ -137,7 +137,7 @@ class SchemaDiscoverySpec extends Specification {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.SCHEMA_NOT_FOUND
+        e.getCode() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains(SchemaIndex.RESOURCE)
     }
 
@@ -147,7 +147,7 @@ class SchemaDiscoverySpec extends Specification {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.SCHEMA_NOT_FOUND
+        e.getCode() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains('classpath:nothing-here/**/*.graphqls')
         e.message.contains('TypeDefinitionRegistry bean')
     }
@@ -162,7 +162,7 @@ class SchemaDiscoverySpec extends Specification {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.SCHEMA_NOT_FOUND
+        e.getCode() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains('client.graphqls')
         e.message.contains('empty.graphqls')
     }
@@ -173,7 +173,7 @@ class SchemaDiscoverySpec extends Specification {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.SCHEMA_NOT_FOUND
+        e.getCode() == BindingCode.SCHEMA_NOT_FOUND
         e.message.contains(part)
 
         where:
@@ -192,7 +192,7 @@ class SchemaDiscoverySpec extends Specification {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.SCHEMA_INVALID
+        e.getCode() == BindingCode.SCHEMA_INVALID
         e.message.contains('broken.graphqls')
     }
 

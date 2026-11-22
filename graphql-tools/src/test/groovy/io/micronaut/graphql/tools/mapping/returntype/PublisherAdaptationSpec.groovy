@@ -209,7 +209,7 @@ type Holder {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNSUPPORTED_RETURN_TYPE
+        e.cause.getCode() == BindingCode.UNSUPPORTED_RETURN_TYPE
         e.cause.message.contains(WrapperRules.publisherOnProperty())
     }
 

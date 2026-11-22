@@ -55,7 +55,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.INCORRECT_IMPLEMENTATION
+        e.cause.getCode() == BindingCode.INCORRECT_IMPLEMENTATION
         e.cause.message == """[incorrect-implementation] The annotated implementation class is not implementing the ${User.name} interface.
   GraphQL coordinate: Query.user (line 7, column 3)
   Mapped class: ${Query.name}

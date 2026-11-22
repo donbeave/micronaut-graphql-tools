@@ -94,7 +94,7 @@ type $second {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.AMBIGUOUS_TYPE_CLASS
+        e.cause.getCode() == BindingCode.AMBIGUOUS_TYPE_CLASS
         e.cause.message.contains('Epsilon')
         e.cause.message.contains(EpsilonGraph.name)
         e.cause.message.contains(EpsilonModel.name)
@@ -123,7 +123,7 @@ type $second {
 
         then:
         def e = thrown(BeanInstantiationException)
-        e.cause.code() == BindingCode.INVALID_TYPE_CLASS_CONVENTION
+        e.cause.getCode() == BindingCode.INVALID_TYPE_CLASS_CONVENTION
     }
 
     void "a union whose Java type is sealed takes its members from the permitted subclasses"() {
@@ -181,7 +181,7 @@ type Nu implements SealedNode {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.UNION_TYPE_MAPPING_NOT_PROVIDED
+        e.cause.getCode() == BindingCode.UNION_TYPE_MAPPING_NOT_PROVIDED
         e.cause.message.contains('Xi')
     }
 

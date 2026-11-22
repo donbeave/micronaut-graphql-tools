@@ -73,7 +73,7 @@ type Extra implements Labeled {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message.contains('GraphQL coordinate: Extra.label')
     }
 

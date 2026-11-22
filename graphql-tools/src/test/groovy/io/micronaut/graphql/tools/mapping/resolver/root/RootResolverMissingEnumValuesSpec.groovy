@@ -56,7 +56,7 @@ enum Month {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MISSING_ENUM_VALUES
+        e.cause.getCode() == BindingCode.MISSING_ENUM_VALUES
         e.cause.message == """[missing-enum-values] Some enum values are missing in class ${Month.name}.
   GraphQL coordinate: Query.month (line 7, column 3)
   Mapped class: ${Query.name}

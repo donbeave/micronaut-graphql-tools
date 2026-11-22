@@ -130,7 +130,7 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+        e.cause.getCode() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.cause.beanType == BookResolver
     }
 
@@ -147,7 +147,7 @@ type Book {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+        e.getCode() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
         e.message.contains('TypeResolver<T>')
         e.beanType == BookResolver
     }
@@ -166,7 +166,7 @@ type Book {
 
         then:
         def e = thrown(SchemaBindingException)
-        e.code() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
+        e.getCode() == BindingCode.TYPE_RESOLVER_CONTRACTS_NOT_FOUND
     }
 
     void "a contract method is matched by its name and its number of parameters"() {

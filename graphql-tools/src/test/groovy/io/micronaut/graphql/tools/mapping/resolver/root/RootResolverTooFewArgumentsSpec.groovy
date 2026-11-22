@@ -49,7 +49,7 @@ type Query {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
+        e.cause.getCode() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message == """[argument-mismatch] The method has too few arguments, provided: 0, required 1 arg(s): username(ID uid)
   GraphQL coordinate: Query.username (line 7, column 3)
   Mapped class: ${Query1.name}

@@ -55,7 +55,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.ARGUMENT_MISMATCH
+        e.cause.getCode() == BindingCode.ARGUMENT_MISMATCH
         e.cause.message == """[argument-mismatch] The method has too many arguments, provided: 1, required 0 arg(s).
   GraphQL coordinate: User.username (line 11, column 3)
   Mapped class: ${User.name}

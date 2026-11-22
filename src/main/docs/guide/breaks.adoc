@@ -38,7 +38,7 @@ Issue #15 (BC-19, resolver parameters bound by name): its runtime half is listed
 
 == 1.0.0-M4
 
-Not tagged yet. Entries for a change that is on `master` are listed here; the fix is on the migration page, entries for 1.0.0-M4.
+Tagged `1.0.0-M4` and published to GitHub Packages. The breaking changes are listed below with the numbers of the release notes of 1.0.0-M4. See the migration page, entries for 1.0.0-M4, for the fix of each one.
 
 * #49 (BC-35): resolvers run on the blocking executor by default, not on the Netty event loop; `micronaut.graphql.tools.execution.executor: none` keeps the old behaviour. See the migration page, entries for 1.0.0-M4.
 * #20 (BC-36): a `DataLoaderRegistry` bean fails the startup with `[data-loader-registry-bean]`; register the loaders as `BatchLoader` beans (the library creates the registry of each execution), add them in a `GraphQLContextContributor`, or provide your own `GraphQLInvocation`. See the migration page, entries for 1.0.0-M4.
@@ -47,3 +47,10 @@ Not tagged yet. Entries for a change that is on `master` are listed here; the fi
 * #495 (BC-39): the observability module follows the Micronaut metrics and tracing conventions. The keys moved (`micronaut.metrics.binders.graphql.*` for the metrics, `micronaut.graphql.tools.tracing.*` for the tracing, no master switch), the request span is named `query`, `mutation` or `subscription`, a field span has `graphql.field.path` and no `graphql.field.parent`, the public `PREFIX` and span attribute constants are removed, and the request span is current in the propagated context. See the migration page, entries for 1.0.0-M4.
 * #497 (BC-40): the scalars configuration is bound to a typed class, `ScalarsConfiguration`, and a key under `micronaut.graphql.tools.scalars` that is not the id of a standard scalar (a typo such as `local-dat.enabled`) now fails the startup; before it was ignored. The documented keys keep their names. See the migration page, entries for 1.0.0-M4.
 * #570 (BC-49): the observability module is split into `micronaut-graphql-tools-micrometer` (the metrics, `GraphQLObservability` is now `GraphQLMetrics` in `io.micronaut.graphql.tools.micrometer`) and `micronaut-graphql-tools-opentelemetry` (the spans). The keys do not change, and the library still adds one `Instrumentation` bean for both. See the migration page, entries for 1.0.0-M4.
+
+== 1.0.0-M5
+
+Not released yet. The changes below follow the last tagged milestone, 1.0.0-M4.
+
+* #498 (BC-41): `SchemaBindingException` now extends Micronaut's `ConfigurationException` (it extended `RuntimeException`), and `code()` is renamed `getCode()`. Codes and messages do not change. Replace `e.code()` with `e.getCode()` (`e.code` in Groovy and Kotlin). See the migration page, entries for 1.0.0-M5.
+* #501 (BC-47): `ResolverBeanCondition` moved from `io.micronaut.graphql.tools.annotation` to `io.micronaut.graphql.tools.internal.resolver` and is `@Internal`, and `@GraphQLType.value()` is declared `Class<?>`. An application does not name either. See the migration page, entries for 1.0.0-M5.

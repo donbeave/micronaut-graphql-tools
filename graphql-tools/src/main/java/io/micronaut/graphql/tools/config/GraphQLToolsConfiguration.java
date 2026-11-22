@@ -19,7 +19,6 @@ import io.micronaut.context.annotation.ConfigurationProperties;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArgumentUtils;
-import io.micronaut.graphql.tools.binding.internal.schema.SchemaLocation;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -444,7 +443,10 @@ public class GraphQLToolsConfiguration {
     @ConfigurationProperties("schema")
     public static class SchemaConfiguration {
 
-        private List<String> locations = List.of(SchemaLocation.DEFAULT);
+        /** The default of {@link #getLocations()}: every {@code .graphqls} file under {@code graphql} on the classpath. */
+        public static final String DEFAULT_SCHEMA_LOCATION = "classpath:graphql/**/*.graphqls";
+
+        private List<String> locations = List.of(DEFAULT_SCHEMA_LOCATION);
 
         /**
          * @return where the schema files are read from when the application provides no {@code TypeDefinitionRegistry} bean

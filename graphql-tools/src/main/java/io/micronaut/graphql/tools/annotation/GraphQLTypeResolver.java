@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.annotation;
 
 import io.micronaut.context.annotation.Executable;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.graphql.tools.internal.resolver.ResolverBeanCondition;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -34,7 +35,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * {@code @Singleton}, and one that implements an annotated interface or extends an annotated class is not a bean unless it
  * has one. The marker interface {@code TypeResolver} names the source type by a type argument instead.</p>
  *
- * <p>The annotation is {@link Inherited}: it may sit on an interface (for example a generated resolver contract) or a
+ * <p>The annotation is {@link Inherited} on purpose, like {@code GraphQLRootResolver}: it may sit on an interface (for example a generated resolver contract) or a
  * superclass, and every bean implementing or extending it is a type resolver without an annotation of its own. Methods
  * that carry {@link GraphQLSchemaCoordinate} restrict and validate the binding, see there.</p>
  *

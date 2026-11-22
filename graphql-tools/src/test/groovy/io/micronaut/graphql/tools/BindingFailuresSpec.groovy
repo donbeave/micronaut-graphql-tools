@@ -63,13 +63,13 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.BINDING_FAILURES
+        e.cause.getCode() == BindingCode.BINDING_FAILURES
 
         SchemaBindingException failures = e.cause
         failures.failures*.coordinate == ['Book.isbn', 'Query.count', 'Query.missing']
         failures.cause.is(failures.failures[0])
-        failures.code() == BindingCode.BINDING_FAILURES
-        failures.failures*.code() == [BindingCode.FIELD_NOT_BOUND, BindingCode.INCORRECT_CLASS_MAPPING, BindingCode.FIELD_NOT_BOUND]
+        failures.getCode() == BindingCode.BINDING_FAILURES
+        failures.failures*.getCode() == [BindingCode.FIELD_NOT_BOUND, BindingCode.INCORRECT_CLASS_MAPPING, BindingCode.FIELD_NOT_BOUND]
         failures.suppressed.toList() == failures.failures.drop(1)
         failures.message == """[binding-failures] The schema cannot be bound: 3 errors.
   1) [field-not-bound] The property or method `isbn` not found in ${Book.name}'s type.
@@ -94,7 +94,7 @@ type Book {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.mappingContext.coordinate == 'Book.isbn'
         e.cause.mappingContext.sourceLocation.line == 12
         e.cause.mappingContext.sourceLocation.column == 3
@@ -168,7 +168,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.BINDING_FAILURES
+        e.cause.getCode() == BindingCode.BINDING_FAILURES
         e.cause.failures*.coordinate ==
                 ['MediaSection.summary', 'TextSection.summary']
     }

@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.exceptions;
 
+import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.mapping.MappingContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
@@ -22,7 +23,7 @@ import io.micronaut.graphql.tools.binding.BindingCode;
 import java.util.List;
 
 /**
- * The failure of the binding at startup: the one exception to catch. {@link #code()} is the registry code of the
+ * The failure of the binding at startup: the one exception to catch. {@link #getCode()} is the registry code of the
  * failure, the same token that the message starts with as {@code [code]}, that a binding manifest {@code !} line and
  * the {@code checks} setting use. The guide page "Exceptions" lists every code.
  *
@@ -31,7 +32,7 @@ import java.util.List;
  * {@link BindingCode#STRICT_FINDINGS}) lists them in {@link #getFailures()} and {@link #getCodes()}, and each of them
  * carries its own code. The library creates the exceptions; an application only catches them.</p>
  */
-public abstract class SchemaBindingException extends RuntimeException {
+public abstract class SchemaBindingException extends ConfigurationException {
 
     private final BindingCode code;
     private final transient MappingContext mappingContext;
@@ -71,7 +72,7 @@ public abstract class SchemaBindingException extends RuntimeException {
     /**
      * @return the code of the failure
      */
-    public final BindingCode code() {
+    public final BindingCode getCode() {
         return code;
     }
 

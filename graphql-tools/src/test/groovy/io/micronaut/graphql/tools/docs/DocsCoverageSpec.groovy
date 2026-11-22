@@ -62,6 +62,20 @@ class DocsCoverageSpec extends Specification {
         failures('exception', names, 'the error reference: src/main/docs/guide/exceptions.adoc (or README.md)').empty
     }
 
+    def "the error reference names the base class and the accessor of the code"() {
+        given:
+        def page = Files.readString(root.resolve(GUIDE + '/exceptions.adoc'))
+
+        expect:
+        SchemaBindingException.superclass == io.micronaut.context.exceptions.ConfigurationException
+        SchemaBindingException.declaredMethods*.name.contains('getCode')
+        !SchemaBindingException.declaredMethods*.name.contains('code')
+        page.contains('ConfigurationException')
+        page.contains('SchemaBindingException#getCode()')
+        Files.readString(root.resolve(GUIDE + '/migration/fromSnapshot.adoc')).contains('BC-41')
+        Files.readString(root.resolve(GUIDE + '/breaks.adoc')).contains('BC-41')
+    }
+
     def "the configuration reference lists every check code"() {
         given:
         def page = Files.readString(root.resolve(GUIDE + '/configuration.adoc'))

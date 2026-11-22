@@ -54,7 +54,7 @@ type User {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.FIELD_NOT_BOUND
+        e.cause.getCode() == BindingCode.FIELD_NOT_BOUND
         e.cause.message == """[field-not-bound] The property or method `username` not found in ${User.name}'s type.
   GraphQL coordinate: User.username (line 11, column 3)"""
         e.cause.mappingContext.graphQlObjectType == 'User'

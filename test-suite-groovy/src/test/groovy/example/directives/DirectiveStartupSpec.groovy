@@ -37,7 +37,7 @@ class DirectiveStartupSpec extends Specification {
 
         then:
         e instanceof SchemaBindingException
-        e.code() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
+        e.getCode() == BindingCode.DUPLICATE_DIRECTIVE_WIRING
         e.message.startsWith('[duplicate-directive-wiring] Directive @upper is wired by both a named and an every-element SchemaDirective bean')
     }
 
@@ -47,7 +47,7 @@ class DirectiveStartupSpec extends Specification {
 
         then:
         e instanceof SchemaBindingException
-        e.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.message.startsWith('[unwired-directive] The schema applies directives that have no wiring: @legacy (Book)')
     }
 
@@ -77,7 +77,7 @@ class DirectiveStartupSpec extends Specification {
 
     def 'unwired-directives fail fails the startup even with strict off'() {
         expect:
-        failure([(UNWIRED_DIRECTIVES): 'fail', (STRICT): false], DirectiveFixtures.UNWIRED).code() == BindingCode.UNWIRED_DIRECTIVE
+        failure([(UNWIRED_DIRECTIVES): 'fail', (STRICT): false], DirectiveFixtures.UNWIRED).getCode() == BindingCode.UNWIRED_DIRECTIVE
     }
 
     def 'strict off alone starts and records the directive in the manifest'() {
@@ -109,7 +109,7 @@ class DirectiveStartupSpec extends Specification {
 
         then:
         e instanceof SchemaBindingException
-        e.code() == BindingCode.UNWIRED_DIRECTIVE
+        e.getCode() == BindingCode.UNWIRED_DIRECTIVE
         e.message.contains('@audit (schema definition)')
     }
 

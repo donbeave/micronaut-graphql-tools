@@ -149,7 +149,7 @@ type Mutation {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.MULTIPLE_METHODS_FOUND
+        e.cause.getCode() == BindingCode.MULTIPLE_METHODS_FOUND
         e.cause.message.contains('GraphQL coordinate: Subscription.ticks')
         e.cause.message.contains(SubscriptionTicks.name)
         e.cause.message.contains(DuplicateSubscriptionTicks.name)

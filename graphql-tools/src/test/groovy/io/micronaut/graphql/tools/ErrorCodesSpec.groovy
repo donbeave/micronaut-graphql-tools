@@ -55,22 +55,22 @@ class ErrorCodesSpec extends Specification {
         def failure = new UnreachableTypesException([Orphan: 'type'])
 
         expect:
-        failure.code() == BindingCode.UNREACHABLE_TYPE
+        failure.getCode() == BindingCode.UNREACHABLE_TYPE
         failure.message.startsWith('[unreachable-type] ')
     }
 
     void "unreachable enum, input and scalar types have the value-type code"() {
         expect:
-        new UnreachableTypesException([Size: 'enum', Filter: 'input']).code() == BindingCode.UNREACHABLE_VALUE_TYPE
-        new UnreachableTypesException([Size: 'enum', Orphan: 'type']).code() == BindingCode.UNREACHABLE_TYPE
+        new UnreachableTypesException([Size: 'enum', Filter: 'input']).getCode() == BindingCode.UNREACHABLE_VALUE_TYPE
+        new UnreachableTypesException([Size: 'enum', Orphan: 'type']).getCode() == BindingCode.UNREACHABLE_TYPE
     }
 
     void "an exception that holds one check has the code of that check"() {
         expect:
-        new UnmappedInputPropertiesException([:]).code() == BindingCode.UNMAPPED_INPUT_PROPERTY
-        new UnwiredDirectivesException([auth: ['Query.me']], [:]).code() == BindingCode.UNWIRED_DIRECTIVE
-        new UnwiredDirectivesException([:], [gone: 'not declared']).code() == BindingCode.INVALID_INERT_DIRECTIVES
-        new UnwiredDirectivesException([:], [:], [gone: 'not declared']).code() == BindingCode.INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES
+        new UnmappedInputPropertiesException([:]).getCode() == BindingCode.UNMAPPED_INPUT_PROPERTY
+        new UnwiredDirectivesException([auth: ['Query.me']], [:]).getCode() == BindingCode.UNWIRED_DIRECTIVE
+        new UnwiredDirectivesException([:], [gone: 'not declared']).getCode() == BindingCode.INVALID_INERT_DIRECTIVES
+        new UnwiredDirectivesException([:], [:], [gone: 'not declared']).getCode() == BindingCode.INVALID_SCHEMA_CUSTOMIZER_DIRECTIVES
     }
 
     void "an aggregate has a code of its own and tags each finding with the code of the finding"() {
@@ -80,11 +80,11 @@ class ErrorCodesSpec extends Specification {
         def failures = new BindingFailuresException([strict, new UnreachableTypesException([Orphan: 'type'])])
 
         expect:
-        strict.code() == BindingCode.STRICT_FINDINGS
+        strict.getCode() == BindingCode.STRICT_FINDINGS
         strict.message.contains('\n  1) [unbound-enum-constant] The enum constant a#B has no value.')
         strict.message.contains('\n  2) [unused-dictionary-entry] The entry maps Ghost.')
-        failures.code() == BindingCode.BINDING_FAILURES
-        failures.failures*.code() == [BindingCode.STRICT_FINDINGS, BindingCode.UNREACHABLE_TYPE]
+        failures.getCode() == BindingCode.BINDING_FAILURES
+        failures.failures*.getCode() == [BindingCode.STRICT_FINDINGS, BindingCode.UNREACHABLE_TYPE]
         failures.message.contains('\n  2) [unreachable-type] ')
         strict.codes == [BindingCode.UNBOUND_ENUM_CONSTANT, BindingCode.UNUSED_DICTIONARY_ENTRY]
         failures.failures.size() == 2

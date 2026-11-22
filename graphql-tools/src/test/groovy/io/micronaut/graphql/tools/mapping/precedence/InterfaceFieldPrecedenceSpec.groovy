@@ -72,7 +72,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.PRECEDENCE_AMBIGUITY
+        e.cause.getCode() == BindingCode.PRECEDENCE_AMBIGUITY
         e.cause.message.startsWith("""[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
   GraphQL coordinate: TextSection.summary (line ${line}, column 3)
   Members:
@@ -206,7 +206,7 @@ type MediaSection implements Section {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
-        e.cause.code() == BindingCode.RESOLVER_REQUIRED
+        e.cause.getCode() == BindingCode.RESOLVER_REQUIRED
         e.cause.message.startsWith("""[resolver-required] The GraphQL field carries @computed, so a type resolver method must bind it, but none does.
   GraphQL coordinate: TextSection.summary (line 20, column 3)
   Not bound:
