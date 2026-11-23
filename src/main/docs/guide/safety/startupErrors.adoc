@@ -2,11 +2,12 @@ Binding the schema is the one step that can reject an application. The schema is
 
 == Error categories
 
-Every failure is a `SchemaBindingException` with a code, and the message starts with that code in square brackets. <<exceptions,The error reference>> lists every code, and how to catch one.
+Every binding failure that the library produces is a `SchemaBindingException` with a code, and the message starts with that code in square brackets. A failure that graphql-java throws itself carries neither: with a `RuntimeWiringCustomizer` that replaces a default wiring, the startup fails with graphql-java's `StrictModeWiringException` (see <<strictMode,Strict Mode>>). <<exceptions,The error reference>> lists every code, and how to catch one.
 
 * *A single failure* has its own code: `[field-not-bound]`, `[multiple-methods-found]`, `[incorrect-class-mapping]` and the others. The message names the schema coordinate, the Java element and the way out.
 * *Several field failures* are thrown together as one `[binding-failures]`, sorted by schema coordinate. The binding does not stop at the first field that cannot be bound, and an unexpected exception of one field is reported with the others under the coordinate of that field.
-* *The checks that need a complete binding* (the unreachable types, the `@GraphQLSchemaCoordinate` bindings and the strict checks) run only when no field failed. When more than one of them finds a problem, the startup fails once with `[binding-failures]` that lists each finding under the code of its check, in that order. A single finding is thrown as it is. The strict findings of one run are one `[strict-findings]` failure, and each finding carries the code of its check.
+* *`nullable-primitive`* is the exception among the strict checks: it runs while an input type binds each of its fields, so its finding can be reported together with the failures of unrelated fields in one `[binding-failures]`.
+* *The other checks that need a complete binding* (the unreachable types, the `@GraphQLSchemaCoordinate` bindings and the nine other strict checks) run only when no field failed. When more than one of them finds a problem, the startup fails once with `[binding-failures]` that lists each finding under the code of its check, in that order. A single finding is thrown as it is. The strict findings of one run are one `[strict-findings]` failure, and each finding carries the code of its check.
 * *A precedence ambiguity* under `precedence: fail` is a binding failure with the code `[precedence-ambiguity]`, not a check, so no severity setting relaxes it (see <<precedence,Precedence>>).
 * *A setting that is not valid* fails with the code of the setting: `[invalid-check-setting]` for an unknown check code or a severity other than `fail`, `warn` or `ignore`, `[removed-configuration-key]` for a key that was removed, and `[invalid-allow-findings]` for an `allow.findings` entry that matches no finding. See <<strictMode,Strict Mode>>.
 
@@ -22,7 +23,7 @@ A message looks like this, with the text of the ways out shortened:
        Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore.
 ----
 
-Each failure names the coordinate (`Type.field`, `Type.field(argument:)` or `InputType.field`), and the schema file and line when the schema was parsed with a source name. `getMappingContext()` of the exception gives the Java class and method, the argument and the source location to code.
+Each failure names the coordinate (`Type.field`, `Type.field(argument:)` or `InputType.field`), and the schema file and line when the schema was parsed with a source name. For a failure about one schema element, `getMappingContext()` of the exception gives the Java class and method, the argument and the source location to code. It is `null` when the failure is about no single element: the setting failures, `[binding-failures]` and `[strict-findings]` (read `getFailures()` for the failures inside) and a check such as `unreachable-type`.
 
 == The same fault in the build
 

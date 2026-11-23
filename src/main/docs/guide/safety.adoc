@@ -24,11 +24,14 @@ The compile-time checks never relax a finding that a runtime setting relaxes: th
 
 An existing application can fail many checks at once. Relax them, collect the findings, and tighten again:
 
-. Set `strict: false` and `precedence: resolver-first`. Every check is then a warning, and a field that a property and a resolver method can both bind goes to the resolver method.
+CAUTION: `strict: false` turns every check into a warning, `unwired-directive` included. An application that relies on a custom directive for authorization would serve its annotated fields without the directive while the recipe runs. Keep `checks.unwired-directive: fail` in that case (an explicit `checks.<code>` entry wins over `strict`), or run the migration on an instance that no client can reach.
+
+. Set `strict: false` and `precedence: resolver-first`. Every check that has no `checks.<code>` entry is then a warning (see the caution above), and a field that a property and a resolver method can both bind goes to the resolver method.
 . Set `manifest.enabled: true` and a `manifest.path`, and start the application. Each finding is a line that starts with `!` in the manifest.
-. Fix, annotate or allow each `!` line: fix the code or the schema, put `@GraphQLIgnore` on a member that binds no field on purpose, or list the line in `allow.findings`.
+. Fix, annotate or allow each `!` line: fix the code or the schema, put `@GraphQLIgnore` on a member that binds no field on purpose, or list the line of a check in `allow.findings`. A `!precedence-ambiguity` line is not a check, so `allow.findings` rejects it with `[invalid-allow-findings]`: resolve it with a `@GraphQLSchemaCoordinate`, a `@GraphQLIgnore` or a resolver directive, or keep `precedence: resolver-first` as the decision.
 . Remove `strict: false`, and then `precedence: resolver-first` when no field needs it.
-. Add `micronaut-graphql-tools-processor` once the findings of the startup are fixed (see <<compileTimeSetup,Set up the build>>). A class that the checks reject at compile time was already a finding of the startup.
+. Add `micronaut-graphql-tools-processor` once the findings of the startup are fixed (see <<compileTimeSetup,Set up the build>>). A class that the checks reject at compile time was in general already a finding of the startup, with documented exceptions that fail the build only (for example a `RuntimeWiringCustomizer` that claims a field, or a Kotlin nullability mismatch, which only the compiler sees; see <<compileTime,The soundness rule>>). Fix them in the code, or compile that module with `micronaut.graphql.tools.processor.checks=false`.
+
 
 [configuration]
 ----
@@ -37,6 +40,8 @@ micronaut:
     tools:
       strict: false
       precedence: resolver-first
+      checks:
+        unwired-directive: fail # keep it when a directive guards access
       manifest:
         enabled: true
         path: build/graphql-binding-manifest.txt
