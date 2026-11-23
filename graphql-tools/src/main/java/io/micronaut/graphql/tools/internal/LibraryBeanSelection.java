@@ -18,6 +18,7 @@ package io.micronaut.graphql.tools.internal;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
 import io.micronaut.configuration.graphql.DefaultGraphQLInvocation;
+import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.BeanContext;
 import io.micronaut.context.Qualifier;
@@ -218,6 +219,11 @@ public final class LibraryBeanSelection {
         }
     }
 
+    private static boolean replacesDefault(BeanDefinition<?> definition) {
+        AnnotationValue<Replaces> replaces = definition.getAnnotation(Replaces.class);
+        return replaces != null && replaces.classValue("bean").filter(DefaultGraphQLInvocation.class::equals).isPresent();
+    }
+
     static boolean isLibrary(BeanDefinition<?> definition) {
         return definition.getDeclaringType().filter(GraphQLFactory.class::equals).isPresent();
     }
@@ -299,10 +305,16 @@ public final class LibraryBeanSelection {
     public static final class NoApplicationDefaultInvocation implements Condition {
         @Override
         public boolean matches(ConditionContext context) {
-            // a template (@EachProperty, @EachBean) counts by the beans it expands to, none when the configuration has none
-            for (Provided bean : provided(context.getBeanContext(), DefaultGraphQLInvocation.class, false, new Visits())) {
-                Optional<Class<?>> declaring = bean.definition().getDeclaringType();
-                if (declaring.isPresent() && declaring.get() != DefaultGraphQLInvocation.class) {
+            // every invocation is read, so that a bean that replaces the factory's default is seen; a template
+            // (@EachProperty, @EachBean) counts by the beans it expands to
+            for (Provided bean : provided(context.getBeanContext(), GraphQLInvocation.class, false, new Visits())) {
+                BeanDefinition<?> definition = bean.definition();
+                Optional<Class<?>> declaring = definition.getDeclaringType();
+                // only a bean that outranks the transport's class bean (@Primary) or replaces it makes the library's
+                // invocation step aside; an unqualified one does not, and the library's invocation replaces both
+                if (definition.getBeanType() == DefaultGraphQLInvocation.class
+                        && declaring.isPresent() && declaring.get() != DefaultGraphQLInvocation.class
+                        && (bean.primary() || replacesDefault(definition))) {
                     context.fail("the application declares " + declaring.get().getName()
                             + "#DefaultGraphQLInvocation, which the library's invocation would replace");
                     return false;

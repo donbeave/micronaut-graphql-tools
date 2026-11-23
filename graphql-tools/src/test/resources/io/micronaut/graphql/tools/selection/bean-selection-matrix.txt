@@ -54,3 +54,6 @@ plain,eachInvocation | graphql | STARTUP-ERROR NonUniqueBeanException Multiple p
 eachInvocation | schema | STARTUP-ERROR CircularDependencyException Failed to inject value for parameter [invocation] of class: graphql.schema.GraphQLSchema  Message: Circular dependency detected Path Taken: @i.m.c.a.EachBean g.
 eachInvocation | graphql | STARTUP-ERROR CircularDependencyException Failed to inject value for parameter [invocation] of class: graphql.GraphQL  Message: Circular dependency detected Path Taken: @i.m.c.a.EachBean g.GraphQL i.m.g
 eachDefaultEmpty | invocation | LibraryGraphQLInvocation | all=LibraryGraphQLInvocation
+plainDefault | invocation | LibraryGraphQLInvocation | all=LibraryGraphQLInvocation
+replacesDefault | invocation | DefaultGraphQLInvocation | all=DefaultGraphQLInvocation
+replacedDefault | invocation | inv_replacing | all=LibraryGraphQLInvocation,inv_replacing

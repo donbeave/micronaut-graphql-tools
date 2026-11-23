@@ -62,11 +62,13 @@ type Query { hello: String }
             'none', 'plain', 'primary', 'named', 'replacesLibrary', 'replacedPlain', 'eachProperty',
             'eachPropertyPrimary', 'eachBean', 'requiresOn', 'requiresOff', 'primaryDefault',
             'named,plain', 'named,primary', 'named,requiresOn', 'plain,primary', 'named,eachProperty',
-            'secondary', 'plain,secondary', 'plain,eachInvocation', 'eachInvocation', 'eachDefaultEmpty'
+            'secondary', 'plain,secondary', 'plain,eachInvocation', 'eachInvocation', 'eachDefaultEmpty',
+            'plainDefault', 'replacesDefault', 'replacedDefault'
     ]
     static final Map<String, List<String>> ONLY = [
             primaryDefault: ['invocation'], secondary: ['invocation'], 'plain,secondary': ['invocation'],
-            'plain,eachInvocation': ['schema', 'graphql'], eachInvocation: ['schema', 'graphql'], eachDefaultEmpty: ['invocation']
+            'plain,eachInvocation': ['schema', 'graphql'], eachInvocation: ['schema', 'graphql'], eachDefaultEmpty: ['invocation'],
+            plainDefault: ['invocation'], replacesDefault: ['invocation'], replacedDefault: ['invocation']
     ]
     static final List<String> TARGETS = ['schema', 'graphql', 'invocation']
 
@@ -323,7 +325,7 @@ type Query { hello: String }
         GraphQLInvocation invocation() { new AppInvocation('flagged') }
     }
 
-    @Requires(property = 'matrix.kind', value = 'primaryDefault')
+    @Requires(property = 'matrix.kind', pattern = 'primaryDefault|replacedDefault')
     @Factory
     static class PrimaryDefaultFactory {
         @Bean @Primary @Singleton @Requires(property = 'matrix.target', value = 'invocation')
@@ -352,6 +354,30 @@ type Query { hello: String }
     static class EachDefaultEmptyFactory {
         @Bean @EachProperty('matrix.nothing') @Requires(property = 'matrix.target', value = 'invocation')
         DefaultGraphQLInvocation invocation(@Parameter String name) { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'plainDefault')
+    @Factory
+    static class PlainDefaultFactory {
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacesDefault')
+    @Factory
+    static class ReplacesDefaultFactory {
+        @Bean @Singleton @Replaces(DefaultGraphQLInvocation) @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacedDefault')
+    @Requires(property = 'matrix.target', value = 'invocation')
+    @Singleton
+    @Replaces(DefaultGraphQLInvocation)
+    static class ReplacingDefaultInvocation extends AppInvocation {
+        ReplacingDefaultInvocation() {
+            super('replacing')
+        }
     }
 
 }
