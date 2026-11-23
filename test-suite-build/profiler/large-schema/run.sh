@@ -2,7 +2,8 @@
 # Measures graphql-java inside javac, KSP and the Groovy compiler on a synthetic schema of 2,000 types and 250 operation documents
 # (#665). Each run is one clean build of a tiny project with the probe on the processor path of its compiler, in a fresh
 # Gradle JVM (--no-daemon) of its own, so the schema build and the first validation pass are cold. Usage: run.sh [runs] [output-file]
-# The graphql-java version is -PgraphqlJavaVersion in gradle.properties; run with the JDK of the build (mise exec -- ./run.sh).
+# The versions are read from gradle.properties; overriding them on the command line is rejected, so the header is exact.
+# Run with the JDK of the build (mise exec -- ./run.sh).
 set -euo pipefail
 
 runs="${1:-5}"
@@ -11,8 +12,19 @@ output="${2:-$here/timings.txt}"
 root="$(cd "$here/../../.." && pwd)"
 raw="$(mktemp)"
 export LARGE_SCHEMA_OUT="$raw"
-graphql_java="$(sed -n 's/^graphqlJavaVersion=//p' "$here/gradle.properties")"
+version() { sed -n "s/^$1=//p" "$here/gradle.properties"; }
+graphql_java="$(version graphqlJavaVersion)"
+kotlin="$(version kotlinVersion)"
+ksp="$(version kspVersion)"
+groovy="$(version groovyVersion)"
 extra=("${@:3}")
+for arg in ${extra[@]+"${extra[@]}"}; do
+  case "$arg" in
+    *graphqlJavaVersion*|*kotlinVersion*|*kspVersion*|*groovyVersion*)
+      echo "run.sh: the versions come from gradle.properties; remove the override: $arg" >&2
+      exit 1 ;;
+  esac
+done
 gradle=("$root/gradlew" -p "$here" --no-daemon --no-build-cache -Pkotlin.compiler.execution.strategy=in-process ${extra[@]+"${extra[@]}"})
 
 load_before="$(uptime | sed 's/.*load averages*: //')"
@@ -29,9 +41,9 @@ for ((i = 0; i < runs; i++)); do
 done
 load_after="$(uptime | sed 's/.*load averages*: //')"
 
-python3 -I - "$raw" "$output" "$graphql_java" "$load_before" "$load_after" "$runs" <<'PY'
+python3 -I - "$raw" "$output" "$graphql_java" "$kotlin" "$ksp" "$groovy" "$load_before" "$load_after" "$runs" <<'PY'
 import statistics, subprocess, sys
-raw, output, graphql_java, before, after, runs = sys.argv[1:7]
+raw, output, graphql_java, kotlin, ksp, groovy, before, after, runs = sys.argv[1:10]
 rows = {}
 for line in open(raw):
     fields = dict(item.split("=", 1) for item in line.split())
@@ -41,7 +53,7 @@ java = subprocess.run(["java", "-version"], capture_output=True, text=True).stde
 with open(output, "w") as out:
     out.write("# Large-schema timings (#665): median of %s clean builds per compiler, all values in milliseconds.\n" % runs)
     out.write("# command: mise exec -- test-suite-build/profiler/large-schema/run.sh %s\n" % runs)
-    out.write("# JDK: %s\n# graphql-java: %s, Gradle: see ./gradlew --version, Kotlin 2.1.21, KSP 2.1.21-2.0.2, Groovy 4.0.33\n" % (java, graphql_java))
+    out.write("# JDK: %s\n# graphql-java: %s, Gradle: see ./gradlew --version, Kotlin %s, KSP %s, Groovy %s\n" % (java, graphql_java, kotlin, ksp, groovy))
     out.write("# load average before/after: %s / %s\n" % (before, after))
     out.write("# workload: %s types, %s documents, %s validation errors\n" % (rows["javac"][0]["types"], rows["javac"][0]["documents"], rows["javac"][0]["errors"]))
     out.write("# budgets (#665): cold schema build (schema-parse + schema-build) at most 2000 ms; warm validation of 250 documents (warm-validate) at most 100 ms\n")
