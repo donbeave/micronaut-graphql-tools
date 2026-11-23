@@ -1,0 +1,6 @@
+// A published module that does not use Micronaut injection: the Micronaut module convention minus the standard `micronaut-inject`
+// dependency, as the modules of Micronaut Core that have no injection use it. The module declares what it needs itself.
+plugins {
+    id "io.micronaut.build.internal.base-module"
+    id "io.micronaut.build.internal.graphql-tools-common"
+}

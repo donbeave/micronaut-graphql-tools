@@ -1,15 +1,6 @@
 plugins {
-    id("java")
+    id("io.micronaut.build.internal.graphql-tools-test-module")
     id("me.champeau.jmh") version "0.7.4"
-}
-
-repositories {
-    mavenCentral()
-}
-
-java {
-    sourceCompatibility = JavaVersion.toVersion("21")
-    targetCompatibility = JavaVersion.toVersion("21")
 }
 
 dependencies {
@@ -455,5 +446,3 @@ tasks.named<Jar>("jmhJar") {
         attributes["Main-Class"] = "io.micronaut.graphql.tools.benchmarks.BenchmarkJarMain"
     }
 }
-
-apply(from = rootProject.file("config/spotless.license.gradle"))

@@ -137,7 +137,7 @@ OpenTelemetry publishes `opentelemetry-graphql-java` (`GraphQLTelemetry`), an al
 
 With the modules on and no field selected, a request adds a constant cost (a timer, a span and a small state object), and no cost per field: the instrumentation implements no field hook, and no data fetcher is replaced. The allocation gate of the benchmarks (`observedInvocationSlope`) keeps this: the bytes per field of a request with both modules on equal those of the same request with an `Instrumentation` bean that implements no hook, on every graphql-java leg. One thing is graphql-java's, not the module's: graphql-java 21 chains any `Instrumentation` with its own, and that chain allocates for each field (about 550 bytes) whatever the instrumentation does. graphql-java 22 and later do not. If a request of many fields matters more to you than the metrics, stay on graphql-java 22 or later.
 
-A selected field pays for its span (a cost of the OpenTelemetry module only; the field-wrapping code is in no other module): one `Instrumenter` call, a propagated-context scope and a few allocations for each call. The `benchmarks` module measures it next to the cost of a decorator that does nothing.
+A selected field pays for its span (a cost of the OpenTelemetry module only; the field-wrapping code is in no other module): one `Instrumenter` call, a propagated-context scope and a few allocations for each call. The `test-suite-benchmarks` module measures it next to the cost of a decorator that does nothing.
 
 == Configuration
 

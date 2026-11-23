@@ -2,10 +2,6 @@ plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
 
-// The quality plugin checks the headers of src/main only; this checks the test sources.
-extra["licenseSourceSets"] = "test"
-apply(from = rootProject.file("config/spotless.license.gradle"))
-
 // Request and field spans (OpenTelemetry) of the executions. OpenTelemetry is not a dependency of the module's consumers: it is
 // compile-only here, and the beans that use it exist only when the application has it and an OpenTelemetry bean. The versions
 // come from the micronaut-tracing catalog. The micrometer module is a test dependency only, to test both modules together.
@@ -32,12 +28,6 @@ dependencies {
     testAnnotationProcessor(mnTracing.micronaut.tracing.opentelemetry.annotation)
     testRuntimeOnly(mn.micronaut.jackson.databind)
     testRuntimeOnly("ch.qos.logback:logback-classic")
-}
-
-micronautBuild {
-    binaryCompatibility {
-        enabled.set(false)
-    }
 }
 
 // DocsPageSpec reads the guide page of the module behind Gradle's back, so it is a declared input.

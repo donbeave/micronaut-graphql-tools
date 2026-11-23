@@ -1,5 +1,5 @@
 plugins {
-    id("java-library")
+    id("io.micronaut.build.internal.graphql-tools-test-module")
 }
 
 // The execution-behaviour TCK (#53): the scenarios (schema, operations, expected responses) and the runner that the
@@ -7,16 +7,6 @@ plugins {
 //   src/main/resources/tck   the scenarios, one directory each; see CONTRIBUTING.md ("Adding a TCK scenario")
 //   src/main/java            the runner: it starts the suite's application per scenario and compares raw HTTP responses
 //   src/test                 checks of the scenario files themselves (well-formed, complete, listed)
-
-repositories {
-    mavenCentral()
-}
-
-// Compiled for Java 21 like the test-suite-* modules that run it.
-java {
-    sourceCompatibility = JavaVersion.toVersion("21")
-    targetCompatibility = JavaVersion.toVersion("21")
-}
 
 dependencies {
     // The runner starts the application of the suite that runs it, so the suite provides the server and the JSON stack.
@@ -37,5 +27,3 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
-
-apply(from = rootProject.file("config/spotless.license.gradle"))

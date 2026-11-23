@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Keeps the lists of modules equal to the modules of settings.gradle.kts (see MAINTAINING.md, "Module lists").
 
-settings.gradle.kts is the one source. A module is published unless it is a test suite, the benchmarks or the TCK
-(NOT_PUBLISHED below); the published modules other than the BOM are the library modules, which compile to release 17.
+settings.gradle.kts is the one source. A module is published unless it is a test suite (the benchmarks and the TCK are test suites too)
+(NOT_PUBLISHED_PREFIX below); the published modules other than the BOM are the library modules, which compile to release 17.
 Fails when one of these lists names a different set of modules:
   1. the publish init script (`publishable`) and the summary of release.yml: every published module and the BOM;
   2. the JDK 17 `check` command in gradle.yml, AGENTS.md and CONTRIBUTING.md, and the module lists of the comments and rules around it;
   3. the BOM README and the module list of the root README (table and artifact coordinates);
   4. the module layout of MAINTAINING.md and the module list of PackageDocumentationSpec.
-Adding a module needs one edit in settings.gradle.kts, plus one in NOT_PUBLISHED when it is not published; this script then
+Adding a module needs one edit in settings.gradle.kts, plus none when it is a `test-suite-*` module; this script then
 names every list that is stale.
 """
 import re
@@ -16,7 +16,6 @@ import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent.parent
-NOT_PUBLISHED = {"benchmarks", "graphql-tools-tck"}
 NOT_PUBLISHED_PREFIX = "test-suite-"
 BOM = "graphql-tools-bom"
 problems = []
@@ -37,7 +36,7 @@ if not modules:
 for folder in modules:
     if not (root / folder).is_dir():
         problems.append(f"settings.gradle.kts includes `{folder}`, which is not a folder")
-published = [m for m in modules if m not in NOT_PUBLISHED and not m.startswith(NOT_PUBLISHED_PREFIX)]
+published = [m for m in modules if not m.startswith(NOT_PUBLISHED_PREFIX)]
 libraries = [m for m in published if m != BOM]
 if BOM not in published:
     problems.append(f"settings.gradle.kts does not include `{BOM}`")
@@ -124,7 +123,7 @@ compare("MAINTAINING.md", bullets, libraries, "module layout")
 
 spec = read("graphql-tools/src/test/groovy/io/micronaut/graphql/tools/docs/PackageDocumentationSpec.groovy")
 m = re.search(r"MODULES = \[(.*?)\]", spec)
-compare("PackageDocumentationSpec.groovy", re.findall(r"'([^']+)'", m.group(1)) if m else [], libraries + ["graphql-tools-tck"], "`MODULES` list")
+compare("PackageDocumentationSpec.groovy", re.findall(r"'([^']+)'", m.group(1)) if m else [], libraries + ["test-suite-tck"], "`MODULES` list")
 
 if problems:
     for p in problems:
