@@ -2,10 +2,6 @@ plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
 
-// The quality plugin checks the headers of src/main only; this checks the test sources.
-extra["licenseSourceSets"] = "test"
-apply(from = rootProject.file("config/spotless.license.gradle"))
-
 // The Upload scalar and the multipart route of the GraphQL multipart request specification. The module depends on the JSON API
 // (to read the operations and the map) and on the HTTP server API (the multipart types); no JSON implementation and never Jackson.
 dependencies {
@@ -28,12 +24,6 @@ dependencies {
     testAnnotationProcessor("io.micronaut.serde:micronaut-serde-processor")
     testAnnotationProcessor(mn.micronaut.inject.java)
     testRuntimeOnly("ch.qos.logback:logback-classic")
-}
-
-micronautBuild {
-    binaryCompatibility {
-        enabled.set(false)
-    }
 }
 
 // DocsPageSpec reads the guide page of the module behind Gradle's back, so it is a declared input.

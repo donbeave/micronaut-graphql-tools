@@ -55,7 +55,7 @@ Applications that use `micronaut-graphql-tools` and have `java.time`, JSON or ex
   that `micronaut-graphql` manages) and on `micronaut-json-core` (`api`) for the `JsonMapper`.
 - The test suites (`test-suite-java`, `-kotlin`, `-groovy`) depend on it and test the scalars from the schema to the JSON
   of the response, on the JVM and, for Java and Kotlin, as a native binary.
-- `graphql-tools-bom` manages its version. `benchmarks` measures the allocation of its coercions.
+- `graphql-tools-bom` manages its version. `test-suite-benchmarks` measures the allocation of its coercions.
 - It is published to GitHub Packages with the other library modules.
 
 ## Build and test

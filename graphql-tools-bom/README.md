@@ -20,7 +20,7 @@ Library users who want one version for all the artifacts.
 
 ## Public and internal
 
-The BOM is public. It lists the eight artifacts above; the test suites, the benchmarks and `graphql-tools-tck` are not
+The BOM is public. It lists the eight artifacts above; the test suites, the benchmarks and `test-suite-tck` are not
 in it.
 
 ## Relation to other modules

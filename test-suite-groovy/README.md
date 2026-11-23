@@ -20,7 +20,7 @@ as a native executable instead.
 - `src/nativeSmoke/groovy/NativeSmoke.groovy`: the native smoke test. It starts the native executable, posts the queries of
   the Java and Kotlin smoke tests to `/graphql`, asserts the bodies and stops the process.
 
-Not in this module: the library (`graphql-tools`), the shared scenarios (`graphql-tools-tck`) and the compile-time checks
+Not in this module: the library (`graphql-tools`), the shared scenarios (`test-suite-tck`) and the compile-time checks
 (`graphql-tools-processor`, which this suite does not use).
 
 ## Packages
@@ -43,7 +43,7 @@ Nothing here is a library API. Do not import from `example.*` in application cod
 
 ## Relation to other modules
 
-- Depends on `micronaut-graphql-tools` (`implementation`) and `graphql-tools-tck` (`testImplementation`).
+- Depends on `micronaut-graphql-tools` (`implementation`) and `test-suite-tck` (`testImplementation`).
 - Does not depend on `test-suite-java` or `test-suite-kotlin`; their schemas are compared with this one by
   `checkSuiteSchemaParity`.
 

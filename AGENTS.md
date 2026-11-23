@@ -32,7 +32,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Kotlin cases of the binding corpus | `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` | Changes to the visitor or to a corpus case with a `kotlin/` directory (JDK 25, needs the network; CI job `build tools`; `-Pcorpus.kotlin.processor=kapt` is the nightly variant) |
 | Compile-time budget | `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>` | Changes to the compile-time checks or to `test-suite-build/profiler` (JDK 25, needs a gradle-profiler install; CI job `compile-time budget`, gated) |
 | Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |
-| Benchmarks | `./gradlew :benchmarks:check` | Hot path, allocation or startup changes |
+| Benchmarks | `./gradlew :test-suite-benchmarks:check` | Hot path, allocation or startup changes |
 | Workflow lint | `mise exec -- jactionlint` and `python3 .github/scripts/check-gate.py` | Any change under `.github/` |
 | Module lists | `python3 .github/scripts/check-modules.py` | Adding or renaming a module, or editing a list of modules (the `actionlint` job runs it) |
 
@@ -45,11 +45,11 @@ Run the checks that cover what you changed, and before you push run the full bui
   missing. CI fails on the log, so run this after `docs`:
   `grep -E 'NO FILE FOUND|not found in include file|include file not found|unexpected end tag|detected unclosed tag|mismatched end tag|unterminated .* block|Unresolved directive' docs.log`
   It must print nothing (grep exits 1 when there is no match, so read the output, not the status).
-- Benchmarks: `:benchmarks:check` runs a JMH smoke test and `allocationTest`, which fails when an operation allocates more
-  than its baseline in `benchmarks/allocation-baselines.properties`. A change that allocates more on purpose updates the
-  baselines for the three legs on JDK 21 and 25 (`./gradlew :benchmarks:allocationTest -Pallocation.update
-  -PgraphqlJavaLeg=<leg>`) and commits the file. Wall-clock numbers come from `./gradlew :benchmarks:jmh`, or from the
-  cold-start run that `CONTRIBUTING.md` describes (`:benchmarks:jmhJar`), with the JDK, leg and JMH output quoted. Never claim a speedup without one.
+- Benchmarks: `:test-suite-benchmarks:check` runs a JMH smoke test and `allocationTest`, which fails when an operation allocates more
+  than its baseline in `test-suite-benchmarks/allocation-baselines.properties`. A change that allocates more on purpose updates the
+  baselines for the three legs on JDK 21 and 25 (`./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update
+  -PgraphqlJavaLeg=<leg>`) and commits the file. Wall-clock numbers come from `./gradlew :test-suite-benchmarks:jmh`, or from the
+  cold-start run that `CONTRIBUTING.md` describes (`:test-suite-benchmarks:jmhJar`), with the JDK, leg and JMH output quoted. Never claim a speedup without one.
 
 ## Rules
 
@@ -78,6 +78,7 @@ Run the checks that cover what you changed, and before you push run the full bui
   one. Exceptions: the licence header in `config/HEADER`, and the links the guides already use (DCO, mise, Conventional
   Commits, Checkstyle).
 - **Java 17 target.** Library modules (`graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`, `graphql-tools-micrometer`, `graphql-tools-opentelemetry`, `graphql-tools-upload`, `graphql-tools-security`) compile with `--release 17` (set in `buildSrc`). Do not use newer Java language or API features in library code.
+- **Gradle build logic is Kotlin DSL only.** Build scripts are `*.gradle.kts` files, Kotlin precompiled script plugins in `buildSrc`, and `*.init.gradle.kts` files. Do not add or edit a Groovy DSL Gradle file (`*.gradle`), except to migrate it to the Kotlin DSL. The rule covers build scripts only: Groovy stays a test language (the Spock specs and the Groovy example suite).
 
 ## Pull requests
 

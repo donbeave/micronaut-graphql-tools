@@ -49,7 +49,7 @@ Applications that use `micronaut-graphql-tools` and want request and field spans
   `graphql-tools-micrometer`, which is a test dependency only, to test both modules together.
 - The test suites (`test-suite-java`, `-kotlin`, `-groovy`) depend on it and test the spans from the schema to the span
   exporter, on the JVM and, for Java and Kotlin, as a native binary.
-- `graphql-tools-bom` manages its version. `benchmarks` measures the per-field cost of a request with the module on.
+- `graphql-tools-bom` manages its version. `test-suite-benchmarks` measures the per-field cost of a request with the module on.
 - It is published to GitHub Packages with the other library modules.
 
 ## Build and test

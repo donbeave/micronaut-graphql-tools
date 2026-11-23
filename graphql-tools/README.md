@@ -86,7 +86,7 @@ Application code should not import an internal class.
 
 It depends on `graphql-tools-binding`, `micronaut-graphql`, `micronaut-jackson-databind` and
 `graphql-java-extended-scalars` (all `api`). `graphql-tools-bom` manages its version. `graphql-tools-processor` uses it in
-its tests only. `benchmarks` and the three `test-suite-*` modules use it as the application library.
+its tests only. `test-suite-benchmarks` and the three `test-suite-*` modules use it as the application library.
 
 ## Build and test
 
