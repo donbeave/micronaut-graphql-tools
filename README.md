@@ -1374,9 +1374,8 @@ public GraphQL graphQL(GraphQLSchema schema, MyInstrumentation instrumentation) 
 `TypeDefinitionRegistry`, consumes only the library's `GraphQLSchema` and builds its own `GraphQL` with its own
 instrumentation, which then serves the HTTP requests.
 
-The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and its HTTP controller serves
-whichever `GraphQL` bean exists. The library's own code does not use it, so an application with its own transport
-can exclude that dependency.
+The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and the library's HTTP endpoint (which
+replaces the controller of that dependency) serves whichever `GraphQL` bean exists.
 
 ## Examples
 
