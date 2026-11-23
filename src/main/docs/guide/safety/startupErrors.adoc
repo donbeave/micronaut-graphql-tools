@@ -2,10 +2,10 @@ Binding the schema is the step that rejects most faults. The library binds the s
 
 == Error categories
 
-A binding failure that the library produces is a `SchemaBindingException` with a code, and the message starts with that code in square brackets. Two failures are not: graphql-java's own `StrictModeWiringException` (see <<strictMode,Strict Mode>>) and the Micronaut `ConfigurationException` for a `resolver-directives` entry that names a directive the schema does not declare. <<exceptions,The error reference>> lists every code, and how to catch one.
+By default, a binding failure that the library produces is a `SchemaBindingException` with a code, and the message starts with that code in square brackets. Some failures are not: graphql-java's own exceptions (`StrictModeWiringException`, and `SchemaProblem` from its schema validation) and the Micronaut `ConfigurationException` for a `resolver-directives` entry that names an undeclared directive. <<exceptions,The error reference>> lists the codes and how to catch one. See <<safetyLimits,What the safety net does not cover>>.
 
 * *A single failure* has its own code (`[field-not-bound]`, `[multiple-methods-found]` and the others). The message gives the way out. A failure about one schema element names it; some failures are about no single element.
-* *Several field failures* are thrown together as one `[binding-failures]`, sorted by schema coordinate. The binding does not stop at the first field that cannot be bound, and an unexpected exception of one field is reported with the others under the coordinate of that field.
+* *Several field failures* are thrown together as one `[binding-failures]`, sorted by schema coordinate. The binding does not stop at the first field that cannot be bound.
 * *The strict checks and the other checks of a complete binding* are reported after the fields are bound. Several findings of one run can be thrown together, and a check can also throw on its own; the code and the order of each are in the <<exceptions,error reference>>.
 * *A precedence ambiguity* under `precedence: fail` is a binding failure with the code `[precedence-ambiguity]`, not a check, so no severity setting relaxes it (see <<precedence,Precedence>>).
 * *A setting that is not valid* fails the startup with the code of the setting. See <<strictMode,Strict Mode>> and the <<exceptions,error reference>>.

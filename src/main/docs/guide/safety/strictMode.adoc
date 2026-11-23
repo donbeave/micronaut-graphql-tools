@@ -7,7 +7,7 @@ Each check has one of three severities, set with `micronaut.graphql.tools.checks
 [cols="1,4", options="header"]
 |===
 |Severity |What the check does with a finding
-|`fail` (the default of every check) |Fails the startup. All findings of the check are reported together.
+|`fail` (the default) |Fails the startup. The findings of the check are reported together.
 |`warn` |Logs one warning per check that lists the findings, and goes on. The findings are in the manifest.
 |`ignore` |Skips the check: it does no work and writes no manifest line.
 |===
@@ -24,7 +24,7 @@ micronaut:
 
 `strict` is the shorthand for the checks that have no entry: `true` (the default) leaves them at `fail`, and `false` makes them `warn`. An explicit `checks.<code>` entry wins over `strict`. See the <<checkSeverity,configuration reference>>.
 
-The severity settings apply to the startup only. The compile-time checks never read `strict`, `checks.<code>` or `allow.*`; a finding that they report is suppressed by an annotation only (see <<strictModeEscape,Accept a finding>>). `precedence` is not a check and `strict` does not relax it.
+The severity settings apply to the startup only. The compile-time checks do not read `strict`, `checks.<code>` or `allow.*`; a finding that they report is suppressed by an annotation only (see <<strictModeEscape,Accept a finding>>). `precedence` is not a check and `strict` does not relax it.
 
 === Two settings are called strict
 
@@ -39,7 +39,7 @@ The severity settings apply to the startup only. The compile-time checks never r
 |`root-method-several-operations` (compile time) |A root resolver method that binds the field of its name on more than one operation type. |Give each operation type its own method with `@GraphQLSchemaCoordinate`.
 |`unbound-enum-constant` (compile time) |A Java enum constant that has no value in the schema enum. |Add the value to the schema, remove the constant, or put `@GraphQLIgnore` on it.
 |`unmapped-input-property` (compile time) |A settable property of an input class that the GraphQL input type does not define. |Add the field to the input type, remove the property, or put `@GraphQLIgnore` on it.
-|`nullable-primitive` (compile time) |A primitive argument or input property for a nullable built-in scalar: a `null` cannot reach it. |Use the wrapper class, or make the GraphQL type non-null.
+|`nullable-primitive` (compile time) |A primitive argument or input property for a nullable built-in scalar: a `null` does not fit it. |Use the wrapper class, or make the GraphQL type non-null.
 |`unreachable-type` |An object, interface or union type that the binding does not reach. |Bind it through a field, remove it from the schema, or list it in `allow.unreachable`.
 |`unreachable-value-type` |An enum, input or scalar type that nothing uses. |The same.
 |`unused-dictionary-entry` |A `SchemaMappingDictionary` entry for a type that the schema does not bind. |Remove the entry or bind the type.
@@ -55,7 +55,7 @@ The definitions, such as which methods, types and properties count, are in <<com
 A member that binds no field on purpose does not need to relax a check for the whole application:
 
 * `@GraphQLIgnore` on a member that binds no field on purpose. The member is not reported, and the manifest records it, so a review sees what was set aside.
-* `allow.findings` lists one finding by its manifest line, exactly as the manifest writes it. An entry that no longer matches a finding fails the startup, so the list cannot go stale. Use it, and the `allow.*` lists below, only for findings that carry no access decision, never for an authorization directive.
+* `allow.findings` lists one finding by its manifest line, exactly as the manifest writes it. An entry that no longer matches a finding fails the startup, so the list does not go stale. The processor ignores `allow.*`, so fix or annotate a finding that it reports. Use `allow.*` only for findings that carry no access decision, and not for an authorization directive.
 * `allow.unreachable`, `allow.inert-directives` and `allow.schema-customizer-directives` accept a type or a directive; see the <<checkSeverity,configuration reference>>.
 
 [configuration]

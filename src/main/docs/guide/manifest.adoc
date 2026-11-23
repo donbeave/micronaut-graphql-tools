@@ -171,7 +171,7 @@ The examples of this page are tested: the build parses each block and checks the
 
 == Diffing a manifest
 
-The body is sorted and has one line for each coordinate, so a change of binding is a change of a line, and `diff` of two manifests is the review of the change. Write the manifest to a generated file (`manifest.path`, for example under `build/`), start the application, and compare it with a baseline that the repository tracks, copying the generated file over the baseline when the change is intended. The header lines of a manifest name the library, the graphql-java version and the schema hash, so they change with an upgrade or a schema edit; the body is what a binding change moves. A finding is a line that starts with `!`, and it sorts before every entry, so the findings of a manifest are the first lines of its body.
+The body is sorted, so a change of binding is a change of a line, and `diff` of two manifests is the review of the change. Write the manifest to a generated file (`manifest.path`, for example under `build/`), start the application, and compare it with a baseline that the repository tracks, copying the generated file over the baseline when the change is intended. The header lines of a manifest name the library, the graphql-java version and the schema hash, so they change with an upgrade or a schema edit; the body is what a binding change moves. A finding is a line that starts with `!`, and it sorts before every entry, so the findings of a manifest are the first lines of its body.
 
 [source,shell]
 ----
