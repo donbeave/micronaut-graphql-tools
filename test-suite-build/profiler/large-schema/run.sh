@@ -44,13 +44,14 @@ with open(output, "w") as out:
     out.write("# JDK: %s\n# graphql-java: %s, Gradle: see ./gradlew --version, Kotlin 2.1.21, KSP 2.1.21-2.0.2, Groovy 4.0.33\n" % (java, graphql_java))
     out.write("# load average before/after: %s / %s\n" % (before, after))
     out.write("# workload: %s types, %s documents, %s validation errors\n" % (rows["javac"][0]["types"], rows["javac"][0]["documents"], rows["javac"][0]["errors"]))
+    out.write("# budgets (#665): cold schema build (schema-parse + schema-build) at most 2000 ms; warm validation of 250 documents (warm-validate) at most 100 ms\n")
     out.write("# schema-build = SchemaParser.parse (schema-parse) + UnExecutableSchemaGenerator (schema-build); cold = first call in the compiler JVM;\n")
     out.write("# warm = median of 30 passes after the cold pass in the same JVM; validate = Validator over all documents; doc-parse = Parser over all documents\n")
     out.write("%-8s %s\n" % ("compiler", " ".join("%18s" % m for m in metrics)))
     for host in ("javac", "ksp", "groovy"):
         values = [statistics.median(float(r[m]) for r in rows[host]) for m in metrics]
         out.write("%-8s %s\n" % (host, " ".join("%18.1f" % v for v in values)))
-    out.write("\n# worst run of the schema build (schema-parse + schema-build), the figure the 2 s budget is judged against when the machine is busy\n")
+    out.write("\n# worst run of the schema build (schema-parse + schema-build), the cold schema build figure judged against the 2000 ms budget\n")
     for host in ("javac", "ksp", "groovy"):
         out.write("%-8s %18.1f\n" % (host, max(float(r["schema-parse-ms"]) + float(r["schema-build-ms"]) for r in rows[host])))
     out.write("\n# every run\n")

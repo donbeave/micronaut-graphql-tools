@@ -4,6 +4,7 @@
 # graphql-java: 22.4, Gradle: see ./gradlew --version, Kotlin 2.1.21, KSP 2.1.21-2.0.2, Groovy 4.0.33
 # load average before/after: 37.67 32.05 24.59 / 30.10 31.18 25.35
 # workload: 2000 types, 250 documents, 0 validation errors
+# budgets (#665): cold schema build (schema-parse + schema-build) at most 2000 ms; warm validation of 250 documents (warm-validate) at most 100 ms
 # schema-build = SchemaParser.parse (schema-parse) + UnExecutableSchemaGenerator (schema-build); cold = first call in the compiler JVM;
 # warm = median of 30 passes after the cold pass in the same JVM; validate = Validator over all documents; doc-parse = Parser over all documents
 compiler    schema-parse-ms    schema-build-ms  cold-doc-parse-ms   cold-validate-ms  warm-doc-parse-ms   warm-validate-ms
@@ -11,7 +12,7 @@ javac                 173.8              388.4               43.1               
 ksp                   178.0              396.2               42.6               95.8               13.8               16.2
 groovy                195.1              403.5               45.9               92.5               13.2               13.7
 
-# worst run of the schema build (schema-parse + schema-build), the figure the 2 s budget is judged against when the machine is busy
+# worst run of the schema build (schema-parse + schema-build), the cold schema build figure judged against the 2000 ms budget
 javac                 647.7
 ksp                   615.9
 groovy                695.1

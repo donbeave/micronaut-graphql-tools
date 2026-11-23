@@ -19,7 +19,8 @@ attempts=3
 budget=${RETRY_BUDGET_SECONDS:-900}
 unit=${RETRY_WAIT_SECONDS:-60}
 log=$(mktemp)
-trap 'rm -f "$log"' EXIT
+filtered=$(mktemp)
+trap 'rm -f "$log" "$filtered"' EXIT
 start=$SECONDS
 refresh=()
 for attempt in $(seq 1 "$attempts"); do
@@ -29,8 +30,10 @@ for attempt in $(seq 1 "$attempts"); do
     exit 0
   fi
   wait=$((unit * attempt))
-  if [ "$attempt" -eq "$attempts" ] || [ $((SECONDS - start + wait)) -ge "$budget" ] || grep -v 'Execution failed for task [^ ]*checkPom' "$log" | grep -qE \
-    'There were failing tests|Execution failed for task .*([Tt]est|check)|^.* > .* FAILED$|[0-9]+ tests completed, [0-9]+ failed' || ! grep -qE \
+  # Filter into a file first: with pipefail, grep -q closing a pipe early would make the left grep die of SIGPIPE.
+  grep -v 'Execution failed for task [^ ]*checkPom' "$log" >"$filtered" || true
+  if [ "$attempt" -eq "$attempts" ] || [ $((SECONDS - start + wait)) -ge "$budget" ] || grep -qE \
+    'There were failing tests|Execution failed for task .*([Tt]est|check)|^.* > .* FAILED$|[0-9]+ tests completed, [0-9]+ failed' "$filtered" || ! grep -qE \
     'Could not (GET|HEAD|download|transfer|resolve) |declares a non-resolvable dependency' "$log"; then
     exit "$status"
   fi

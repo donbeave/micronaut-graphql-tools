@@ -77,7 +77,8 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   `groovy` are tiny projects with the probe on the processor path of their compiler. `run.sh [runs]` builds each in a Gradle JVM of its own
   and writes `timings.txt` (medians, the worst schema build, every run, the JDK and the machine load). It needs the network once for the
   Kotlin and KSP plugins: `mise exec -- test-suite-build/profiler/large-schema/run.sh 5`. It asserts nothing; the budgets it is read against are
-  in the issue and in `timings.txt`.
+  in #665 (cold schema build at most 2 s, warm validation of 250 documents at most 100 ms). The committed `timings.txt` is one run on a busy
+  machine (load average about 30 to 38), so read it as a sample of that run, not as a general result; rerun `run.sh` on an idle machine to compare.
 - The samples resolve the library from `build/repo`, as published, so the processor jar they use is the real one: it registers the visitor and only the visitor.
 
 Not in this module: the visitor and its options (`graphql-tools-processor`), the binding corpus, and the example applications.
