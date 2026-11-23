@@ -2,39 +2,41 @@ This page says what the library needs in a native image and which of its behavio
 
 == What the library needs
 
-A native image of an application that uses the library needs the following, and nothing more is configured by the example suites:
+A native image of an application that uses the library needs the following. The example suites add one more build argument, described in <<nativeSettings,Build settings of the example suites>>, and no other configuration of their own:
 
 * The annotation processor on the compiler path (`micronaut-graphql-tools-processor`; see <<compileTime,Compile-Time Verification>>). The binding is built from the compile-time metadata (bean introspection, the resolver contracts the processor records, the binding manifest), so the startup reads no class reflectively.
-* The Micronaut Gradle plugin with `runtime("netty")` or another runtime. The plugin builds the image with the GraalVM reachability metadata repository: the native image command of the suites passes the repository's entry for graphql-java as a configuration directory.
+* The Micronaut Gradle plugin with `runtime("netty")` or another runtime. The example suites do not configure the GraalVM reachability metadata repository; the native-image build reads it for the graphql-java entry (see <<graphqlJavaMetadata,graphql-java>>).
 * A schema index, when the schema location is a wildcard (see <<schema,Schema>>). A native image cannot list a classpath directory.
 * The `META-INF/MANIFEST.MF` and `META-INF/micronaut-graphql-tools/*` resources, which the library registers itself (`resource-config.json` of the `micronaut-graphql-tools` jar), so the version header of the binding manifest and the schema index are found.
 
 The library module `micronaut-graphql-tools-security` adds one build argument for its own jar, `--initialize-at-build-time=io.micronaut.security.authentication.AuthenticationMode`: Micronaut Security keeps `AuthenticationMode` constants in the annotation metadata of its conditions, and the image heap needs the enum initialized at build time. Nothing else of the library ships a `native-image.properties`.
 
+[[graphqlJavaMetadata]]
 == graphql-java
 
 graphql-java reads its message bundles (`i18n.General`, `i18n.Parsing`, `i18n.Scalars` and `i18n.Validation`) and a few of its classes reflectively. The GraalVM reachability metadata repository covers both: its entry for `com.graphql-java:graphql-java` registers the four bundles and the reflective access to the relay classes (`DefaultConnection`, `DefaultEdge`, `DefaultPageInfo`, `DefaultConnectionCursor`) and the public methods of the schema element classes (`GraphQLArgument`, `GraphQLDirective`, `GraphQLEnumValueDefinition`, `GraphQLFieldDefinition`, `GraphQLInputObjectField`, `GraphQLOutputType`). The library adds no configuration for graphql-java.
 
-The repository's only graphql-java entry is `19.2`, and the example suites run newer versions: the default leg runs the version that `micronaut-graphql` manages (22.4) and the `ceiling` leg 26.2. On the default leg the native image command passes the `19.2` entry as a configuration directory, and the native tests pass on both legs in CI. Metadata for a graphql-java feature that no native test runs, such as the relay connection classes, is not proven by this page.
+The metadata entry the native-image build uses for graphql-java may be older than the version the example suites run: the default leg runs the version that `micronaut-graphql` manages (22.4) and the `ceiling` leg runs 26.2 (`gradle/libs.versions.toml`). The native tests of these two legs are the evidence that the entry covers what the suites use. Metadata for a graphql-java feature that no native test runs, such as the relay connection classes, is not shown by the tests.
 
+[[nativeSettings]]
 == Build settings of the example suites
 
-Both suites build their images with `-H:+SharedArenaSupport`:
+The Java, Kotlin and Groovy example suites build their images with `-H:+SharedArenaSupport`:
 
 [source,kotlin]
 ----
 graalvmNative.binaries.configureEach { buildArgs.add("-H:+SharedArenaSupport") }
 ----
 
-Netty 4.2 on Java 25 releases direct buffers through a shared arena. Without the flag the event-loop thread that releases a buffer fails and never terminates; `EventLoopShutdownTest` of the Java and the Kotlin suite checks that the thread ends. An application that runs Netty 4.2 on Java 25 needs the same flag.
+Netty 4.2 on Java 25 releases direct buffers through a shared arena. Without the flag the event-loop thread that releases a buffer fails and does not terminate; `EventLoopShutdownTest` of the Java and the Kotlin suite checks that the thread ends. An application that runs Netty 4.2 on Java 25 should pass the same flag.
 
 == Reflection
 
-The library and `graphql-tools-binding` do not look up a class, member or annotation reflectively: `ArchitectureRulesSpec` fails the build otherwise. The input conversion, the enum values, the type resolver contracts and the marker interfaces are read from the bean introspection and the annotation metadata that the processor writes. The reflective reads of graphql-java are covered by the reachability metadata above, and the Groovy runtime needs the metadata of the Groovy example. The reflective reads of other libraries of an application need their own metadata. The native tests are the evidence for the library's own code: a read that is missing from the image fails them, and a code path that no native test runs is not proven by this page.
+`ArchitectureRulesSpec` fails the build when a library class looks up a class, member or annotation reflectively; its allowlist of such reads is empty. The input conversion, the enum values, the type resolver contracts and the marker interfaces are read from the bean introspection and the annotation metadata that the processor writes. The reflective reads of graphql-java are covered by the reachability metadata above, and the Groovy runtime needs the metadata of the Groovy example. The reflective reads of other libraries of an application need their own metadata. The native tests are the evidence for the library's own code: a read that is missing from the image fails them, and a code path that no native test runs is not proven by this page.
 
 == What the native tests cover
 
-The native image tests (`./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest`) run the JUnit 5 tests of the Java and the Kotlin example suites as native binaries. The tests that exercise the native-sensitive paths are the same ones that run on the JVM, and most of them are the scenarios of the execution-behaviour TCK, which are written once and run in both suites, so the native run covers what the JVM run covers. Every category below has a test in the Java suite and in the Kotlin suite (the Kotlin `suspend` category is Kotlin only):
+The native image tests (`./gradlew :test-suite-java:nativeTest :test-suite-kotlin:nativeTest`) run the JUnit 5 tests of the Java and the Kotlin example suites as native binaries. The native run executes the same JUnit 5 tests that run on the JVM. Several categories run scenarios of the execution-behaviour TCK, which are written once and run in both suites. Each category below has a test in the Java suite and in the Kotlin suite (the Kotlin `suspend` category is Kotlin only):
 
 * inputs, including input errors
 * enums
@@ -46,7 +48,7 @@ The native image tests (`./gradlew :test-suite-java:nativeTest :test-suite-kotli
 * error handling and error mapping
 * the binding manifest, with the detection of `Object` methods in strict mode
 * schema discovery by index
-* the execution thread: a resolver does not run on an event-loop thread (the test asserts that the thread is not `NonBlocking`, not its name)
+* the execution thread: a resolver does not run on an event-loop thread
 * context propagation, including the per-execution context contributors
 * async returns
 * Kotlin `suspend` functions
@@ -56,7 +58,7 @@ Groovy has no native test, because Spock cannot run natively: the Groovy example
 
 == Build and run the native tests
 
-Each native test needs Oracle GraalVM 25 and about 5 GB of memory, and takes about 5 to 7 minutes; run them one after another:
+Each native test needs Oracle GraalVM 25 and about 5 GB of memory; run them one after another:
 
 [source,bash]
 ----
