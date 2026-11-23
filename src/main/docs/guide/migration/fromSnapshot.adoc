@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of the 1.0.0-M1 release notes, `BC-20` is the one of the 1.0.0-M2 release notes, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-33` follow it, then the changes of 1.0.0-M4. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
+The numbers `BC-01` to `BC-19` are the ones of 1.0.0-M1, `BC-20` is the one of 1.0.0-M2, `BC-21` is the first of 1.0.0-M3, and `BC-22` to `BC-33` follow it, then the changes of 1.0.0-M4. Other later breaking changes are named by their issue number until they get a number. Each change is either on `master` now or marked _pending_ with the issue that will make it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
@@ -120,7 +120,7 @@ Before, the build required Java 21, and the published POM declared extended-scal
 
 Now the library compiles to Java 17 bytecode (`--release 17`). The project's CI builds it on JDK 21 and 25. Nothing is published to Maven Central or to a snapshot repository.
 
-Status: not covered by #79; the release notes list it.
+Status: not covered by #79.
 
 Fix: run the library on Java 17 or newer. Build the full project, including `graphql-tools-processor`, on JDK 21 or newer; on JDK 17 only the library module can be checked. To use the library, build and publish it to a local or private repository. If you pin `graphql-java-extended-scalars`, pin the version your build resolves: check it with `./gradlew dependencies`.
 
