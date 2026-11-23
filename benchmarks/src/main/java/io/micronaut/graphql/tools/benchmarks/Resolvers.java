@@ -44,6 +44,7 @@ import io.micronaut.graphql.tools.benchmarks.Fixtures.StockInput;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Triangle;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
+import io.micronaut.security.annotation.Secured;
 import jakarta.inject.Singleton;
 
 import java.security.Principal;
@@ -148,6 +149,11 @@ public final class Resolvers {
         }
 
         public String guarded() {
+            return "pong";
+        }
+
+        @Secured("ROLE_USER")
+        public String secured() {
             return "pong";
         }
 

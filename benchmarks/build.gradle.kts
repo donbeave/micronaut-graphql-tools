@@ -21,6 +21,10 @@ dependencies {
     implementation(projects.micronautGraphqlToolsMicrometer)
     implementation(projects.micronautGraphqlToolsOpentelemetry)
     implementation(mnMicrometer.micronaut.micrometer.core)
+    // an unsecured field with the security module installed is gated against the same field without it (#595); the module has
+    // Micronaut Security as compile-only, so the application, here the benchmarks, supplies it
+    implementation(projects.micronautGraphqlToolsSecurity)
+    implementation(mnSecurity.micronaut.security)
     implementation(mnTracing.micronaut.tracing.opentelemetry)
     implementation(mn.micronaut.inject)
     // the per-class binding rules in the form the compiler runs them (#417): the processor's element adapter over compiler class elements,
