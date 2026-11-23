@@ -196,7 +196,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             }
             Execution execution = new Execution(data, state);
             if (scheduler != null) {
-                ScheduledFuture<?> timer = scheduler.schedule(execution::timeOut, timeout.toNanos(), TimeUnit.NANOSECONDS);
+                ScheduledFuture<?> timer = scheduler.scheduleTimeout(execution::timeOutInContext, timeout.toNanos());
                 execution.whenComplete((r, failure) -> timer.cancel(false));
             }
             if (customizer != null) {
@@ -396,6 +396,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             if (subscription != null) {
                 subscription.dispose();
             }
+        }
+
+        void timeOutInContext() {
+            inContext(this::timeOut);
         }
 
         /** The timer of {@code execution.timeout} fired: cancel the execution and answer the client now. */
