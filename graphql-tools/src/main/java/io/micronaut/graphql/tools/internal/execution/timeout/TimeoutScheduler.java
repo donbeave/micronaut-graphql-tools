@@ -19,19 +19,19 @@ import io.micronaut.core.annotation.Internal;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
  * The scheduler of the operation timeout timers. It is the library's own and removes a cancelled timer from its queue at
  * once ({@code removeOnCancelPolicy}), which the shared {@code scheduled} executor of Micronaut does not: an operation
  * that finishes in time cancels its timer, and a long timeout would otherwise keep every such timer queued until its
- * deadline. The timer thread only hands a fired timeout to a small pool of workers, so an application callback that
- * blocks while an execution is cancelled delays no other timeout. The bean is always present and starts no thread until
+ * deadline. The timer thread completes the result of a timed-out operation and hands the cancellation, which runs
+ * application callbacks that may block, to an executor made for blocking work, so one blocked callback delays no other
+ * timeout. The bean is always present and starts no thread until
  * the first timer is scheduled, which happens only when an execution timeout is configured; its threads are daemon
  * threads that end after a minute without work.
  */
@@ -39,14 +39,10 @@ import java.util.concurrent.TimeUnit;
 @Singleton
 public class TimeoutScheduler extends ScheduledThreadPoolExecutor {
 
-    private static final int WORKERS = 16;
-
-    private final ThreadPoolExecutor workers = new ThreadPoolExecutor(WORKERS, WORKERS, 1, TimeUnit.MINUTES,
-            new LinkedBlockingQueue<>(), runnable -> daemon(runnable, "graphql-tools-timeout-worker"));
+    private final ExecutorService blocking = Executors.newCachedThreadPool(runnable -> daemon(runnable, "graphql-tools-timeout-worker"));
 
     public TimeoutScheduler() {
         super(1, runnable -> daemon(runnable, "graphql-tools-timeout"));
-        workers.allowCoreThreadTimeOut(true);
         setRemoveOnCancelPolicy(true);
         setKeepAliveTime(1, TimeUnit.MINUTES);
         allowCoreThreadTimeOut(true);
@@ -59,18 +55,21 @@ public class TimeoutScheduler extends ScheduledThreadPoolExecutor {
     }
 
     /**
-     * @param action the work to run when the timeout is reached, on a worker and not on the timer thread
+     * @param action the timeout of one operation, which runs on the timer thread: it completes the result and hands
+     *               everything that may block to {@link #blocking}
      * @param nanos  the timeout
      * @return the timer, which removes itself from the queue when cancelled
      */
     public ScheduledFuture<?> scheduleTimeout(Runnable action, long nanos) {
-        return schedule(() -> {
-            try {
-                workers.execute(action);
-            } catch (RejectedExecutionException e) {
-                // the context is closing
-            }
-        }, nanos, TimeUnit.NANOSECONDS);
+        return schedule(action, nanos, TimeUnit.NANOSECONDS);
+    }
+
+    /**
+     * @return an executor for work that may block, such as a cancellation callback of the application: it starts a
+     *         thread when none is idle, so one blocked callback holds back no other
+     */
+    public ExecutorService blocking() {
+        return blocking;
     }
 
     /**
@@ -78,7 +77,7 @@ public class TimeoutScheduler extends ScheduledThreadPoolExecutor {
      */
     @PreDestroy
     void stop() {
-        workers.shutdownNow();
+        blocking.shutdownNow();
         shutdownNow();
     }
 }

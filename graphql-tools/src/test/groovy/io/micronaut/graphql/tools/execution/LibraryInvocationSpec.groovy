@@ -245,6 +245,27 @@ type Child {
         scheduler.queue.size() == 0
     }
 
+    void "twenty operations time out together while each cancellation callback blocks, and every client gets its answer (#exec)"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.blocker', ['micronaut.graphql.tools.execution.timeout': '100ms',
+                                                      'micronaut.graphql.tools.execution.executor': exec])
+        def futures = (1..20).collect { i ->
+            Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello' + (' ' * i) + '}', null, [:]), null, null)).toFuture()
+        }
+
+        when:
+        def results = futures.collect { it.get(5, TimeUnit.SECONDS) }
+
+        then:
+        results.every { it.errors[0].extensions.code == 'EXECUTION_TIMEOUT' }
+
+        cleanup:
+        BlockingCustomizer.RELEASE.countDown()
+
+        where:
+        exec << ['blocking', 'none']
+    }
+
     void "a cancellation callback that blocks does not delay the timeout of another operation"() {
         given:
         startContext(SCHEMA, SPEC_NAME + '.blocker', ['micronaut.graphql.tools.execution.timeout': '100ms'])
@@ -699,7 +720,7 @@ type Child {
         @Override
         Publisher<ExecutionInput> customize(ExecutionInput executionInput, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
             Mono<ExecutionInput> never = Mono.<ExecutionInput> never()
-            if (executionInput.query == '{ hello }') {
+            if (executionInput.query.startsWith('{ hello')) {
                 never = never.doOnCancel {
                     ENTERED.countDown()
                     RELEASE.await(30, TimeUnit.SECONDS)

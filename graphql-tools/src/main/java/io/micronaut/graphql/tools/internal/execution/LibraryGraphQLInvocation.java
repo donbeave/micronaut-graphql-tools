@@ -196,7 +196,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             }
             Execution execution = new Execution(data, state);
             if (scheduler != null) {
-                ScheduledFuture<?> timer = scheduler.scheduleTimeout(execution::timeOutInContext, timeout.toNanos());
+                ScheduledFuture<?> timer = scheduler.scheduleTimeout(execution::timeOut, timeout.toNanos());
                 execution.whenComplete((r, failure) -> timer.cancel(false));
             }
             if (customizer != null) {
@@ -398,16 +398,26 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             }
         }
 
-        void timeOutInContext() {
-            inContext(this::timeOut);
+        /**
+         * The timer of {@code execution.timeout} fired, on the timer thread: answer the client now, then cancel the
+         * execution on an executor for blocking work, because the cancellation runs callbacks of the application.
+         */
+        void timeOut() {
+            inContext(() -> {
+                // the answer first: cancelling the state aborts the pending stages, and the execution would finish with their partial data
+                if (!complete(timedOut(timeout))) {
+                    return;
+                }
+                Runnable cancellation = () -> inContext(this::cancelAfterTimeOut);
+                try {
+                    (executor == null ? scheduler.blocking() : executor).execute(cancellation);
+                } catch (RejectedExecutionException e) {
+                    scheduler.blocking().execute(cancellation);
+                }
+            });
         }
 
-        /** The timer of {@code execution.timeout} fired: cancel the execution and answer the client now. */
-        void timeOut() {
-            // the answer first: cancelling the state aborts the pending stages, and the execution would finish with their partial data
-            if (!complete(timedOut(timeout))) {
-                return;
-            }
+        private void cancelAfterTimeOut() {
             state.cancel();
             state.finished();
             disposeCustomizer();
