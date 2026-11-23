@@ -78,6 +78,7 @@ Run the checks that cover what you changed, and before you push run the full bui
   one. Exceptions: the licence header in `config/HEADER`, and the links the guides already use (DCO, mise, Conventional
   Commits, Checkstyle).
 - **Java 17 target.** Library modules (`graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`, `graphql-tools-micrometer`, `graphql-tools-opentelemetry`, `graphql-tools-upload`, `graphql-tools-security`) compile with `--release 17` (set in `buildSrc`). Do not use newer Java language or API features in library code.
+- **Gradle build logic is Kotlin DSL only.** Build scripts are `*.gradle.kts` files, Kotlin precompiled script plugins in `buildSrc`, and `*.init.gradle.kts` files. Do not add or edit a Groovy DSL Gradle file (`*.gradle`), except to migrate it to the Kotlin DSL. The rule covers build scripts only: Groovy stays a test language (the Spock specs and the Groovy example suite).
 
 ## Pull requests
 
