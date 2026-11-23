@@ -6,7 +6,7 @@ The library checks that the code and the schema agree, and it fails early when t
 
 == When a fault fails
 
-*With the compile-time checks*, a fault that one class decides fails the build, with the code of the finding. A finding about a schema element also names its coordinate; one about a Java member (`unbound-resolver-method`, `unbound-enum-constant`, `unmapped-input-property`) names the member, and `root-method-several-operations` concerns the fields of several operation types. The five strict checks `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property` and `nullable-primitive` and the per-class failures belong to it (see <<compileTime,Compile-Time Verification>>). A fault that needs the whole program passes the build and fails at startup.
+*With the compile-time checks*, a fault that one class decides fails the build, with the code of the finding. Which checks run in the build, and what each finding names, is in <<compileTime,Compile-Time Verification>>. A fault that needs the whole program passes the build and fails at startup.
 
 *Without them*, the same fault fails when the schema is bound. By default (`micronaut.graphql.tools.eager-init: true`) that is when the application context starts, so the application, and the embedded server with it, does not start. The first request does no binding work. With `eager-init: false` the schema is bound when the first bean that needs the `GraphQLSchema` is created. See <<startupErrors,Startup Errors>>.
 
@@ -14,8 +14,8 @@ The compile-time checks never relax a finding that a runtime setting relaxes: th
 
 == The pages
 
-* <<startupErrors,Startup Errors>>: the error categories, the shape of a message and the order in which the checks report.
-* <<strictMode,Strict Mode>>: the ten checks with the fix for each, their severity, `strict`, and what each setting restores.
+* <<startupErrors,Startup Errors>>: the error categories and the shape of a message.
+* <<strictMode,Strict Mode>>: the checks with the fix for each, and how to accept a finding.
 * <<manifest,Binding Manifest>>: the format, and how to diff it.
 * <<checkSeverity,Check Severity>>: the settings, in the configuration reference.
 * <<exceptions,Exceptions>>: every code.
@@ -26,12 +26,13 @@ An existing application can fail many checks at once. Relax them, collect the fi
 
 CAUTION: `strict: false` turns every check into a warning, `unwired-directive` included. An application that relies on a custom directive for authorization would serve its annotated fields without the directive while the recipe runs. Keep `checks.unwired-directive: fail` in that case (an explicit `checks.<code>` entry wins over `strict`), or run the migration on an instance that no client can reach.
 
-. Set `strict: false` and `precedence: resolver-first`. Every check that has no `checks.<code>` entry is then a warning (see the caution above), and a field that a property and a resolver method can both bind goes to the resolver method.
-. Set `manifest.enabled: true` and a `manifest.path`, and start the application. Each finding is a line that starts with `!` in the manifest.
-. Fix, annotate or allow each `!` line: fix the code or the schema, put `@GraphQLIgnore` on a member that binds no field on purpose, or list the line of a check in `allow.findings`. A `!precedence-ambiguity` line is not a check, so `allow.findings` rejects it with `[invalid-allow-findings]`: resolve it with a `@GraphQLSchemaCoordinate`, a `@GraphQLIgnore` or a resolver directive, or keep `precedence: resolver-first` as the decision.
-. Remove `strict: false`, and then `precedence: resolver-first` when no field needs it.
-. Add `micronaut-graphql-tools-processor` once the findings of the startup are fixed (see <<compileTimeSetup,Set up the build>>). A class that the checks reject at compile time was in general already a finding of the startup, with documented exceptions that fail the build only (for example a `RuntimeWiringCustomizer` that claims a field, or a Kotlin nullability mismatch, which only the compiler sees; see <<compileTime,The soundness rule>>). Fix them in the code, or compile that module with `micronaut.graphql.tools.processor.checks=false`.
+CAUTION: Do not switch `precedence` to collect findings. A lenient setting changes which member serves a field, and a security annotation such as `@Secured` applies to the member that is chosen, not to the one that is passed over. Review every ambiguity under the default setting (see <<precedence,Precedence>>) and keep the member that carries the policy.
 
+. Set `strict: false`.
+. Set `manifest.enabled: true` and a `manifest.path` under `build/`, and start the application. A finding is a line that starts with `!` in the manifest (see <<manifest,Binding Manifest>>).
+. Fix, annotate or allow each finding: fix the code or the schema, put `@GraphQLIgnore` on a member that binds no field on purpose, or list the line in `allow.findings` (see <<strictModeEscape,Accept a finding>>).
+. Remove `strict: false`.
+. Add `micronaut-graphql-tools-processor` (see <<compileTimeSetup,Set up the build>>). A few findings are reported by the compiler only; the soundness rule in <<compileTime,Compile-Time Verification>> lists them.
 
 [configuration]
 ----
@@ -39,12 +40,9 @@ micronaut:
   graphql:
     tools:
       strict: false
-      precedence: resolver-first
       checks:
         unwired-directive: fail # keep it when a directive guards access
       manifest:
         enabled: true
         path: build/graphql-binding-manifest.txt
 ----
-
-`strict: false` does not relax a binding failure: every schema field must be bound (`[field-not-bound]`) in every mode.

@@ -171,11 +171,11 @@ The examples of this page are tested: the build parses each block and checks the
 
 == Diffing a manifest
 
-The body is sorted and has one line for each coordinate, so a change of binding is a change of a line, and `diff` of two manifests is the review of the change. Write the manifest to a file that the repository tracks (`manifest.path`), start the application, and commit the file with the change. The header lines of a manifest name the library, the graphql-java version and the schema hash, so they change with an upgrade or a schema edit; the body is what a binding change moves. A finding is a line that starts with `!`, and it sorts before every entry, so the findings of a manifest are the first lines of its body.
+The body is sorted and has one line for each coordinate, so a change of binding is a change of a line, and `diff` of two manifests is the review of the change. Write the manifest to a generated file (`manifest.path`, for example under `build/`), start the application, and compare it with a baseline that the repository tracks, copying the generated file over the baseline when the change is intended. The header lines of a manifest name the library, the graphql-java version and the schema hash, so they change with an upgrade or a schema edit; the body is what a binding change moves. A finding is a line that starts with `!`, and it sorts before every entry, so the findings of a manifest are the first lines of its body.
 
 [source,shell]
 ----
-diff -u expected-manifest.txt build/graphql-binding-manifest.txt
+diff -u src/test/resources/expected-manifest.txt build/graphql-binding-manifest.txt
 ----
 
 The text is the same on the JVM and in a native image, so one expected file serves both. Code can read the same text from the `BindingManifest` bean (set `manifest.record` to `true`).

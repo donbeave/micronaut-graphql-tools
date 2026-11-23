@@ -4,11 +4,11 @@ Binding the schema is the step that rejects most faults. The library binds the s
 
 A binding failure that the library produces is a `SchemaBindingException` with a code, and the message starts with that code in square brackets. Two failures are not: graphql-java's own `StrictModeWiringException` (see <<strictMode,Strict Mode>>) and the Micronaut `ConfigurationException` for a `resolver-directives` entry that names a directive the schema does not declare. <<exceptions,The error reference>> lists every code, and how to catch one.
 
-* *A single failure* has its own code: `[field-not-bound]`, `[multiple-methods-found]`, `[incorrect-class-mapping]` and the others. A failure about one schema element names its coordinate and the Java element, and the message gives the way out; a failure such as `[root-resolver-not-found]` or `[schema-not-found]` has no coordinate.
+* *A single failure* has its own code (`[field-not-bound]`, `[multiple-methods-found]` and the others). The message gives the way out. A failure about one schema element names it; some failures are about no single element.
 * *Several field failures* are thrown together as one `[binding-failures]`, sorted by schema coordinate. The binding does not stop at the first field that cannot be bound, and an unexpected exception of one field is reported with the others under the coordinate of that field.
-* *The order of the checks.* The checks that need a complete binding run after the fields are bound, and one of them can throw on its own before the others are evaluated (`unmapped-input-property`, then `unwired-directive` after the runtime wiring is built). `nullable-primitive` runs while the fields of an input type are bound, so it can appear together with the failures of unrelated fields. The checks that run together are reported in one `[binding-failures]` that lists each finding under the code of its check; the strict findings of a run are one `[strict-findings]`. The rest is in the <<exceptions,error reference>>.
+* *The strict checks and the other checks of a complete binding* are reported after the fields are bound. Several findings of one run can be thrown together, and a check can also throw on its own; the code and the order of each are in the <<exceptions,error reference>>.
 * *A precedence ambiguity* under `precedence: fail` is a binding failure with the code `[precedence-ambiguity]`, not a check, so no severity setting relaxes it (see <<precedence,Precedence>>).
-* *A setting that is not valid* fails with the code of the setting: `[invalid-check-setting]` for an unknown check code or a severity other than `fail`, `warn` or `ignore`, `[removed-configuration-key]` for a key that was removed, and `[invalid-allow-findings]` for an `allow.findings` entry that matches no finding. See <<strictMode,Strict Mode>>.
+* *A setting that is not valid* fails the startup with the code of the setting. See <<strictMode,Strict Mode>> and the <<exceptions,error reference>>.
 
 A message looks like this, with the text of the ways out shortened:
 
@@ -22,7 +22,7 @@ A message looks like this, with the text of the ways out shortened:
        Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore.
 ----
 
-A failure about a schema element names its coordinate (`Type.field`, `Type.field(argument:)` or `InputType.field`), and the schema file and line when the schema was parsed with a source name; a failure about a Java member names the member. For a failure about one schema element, `getMappingContext()` of the exception gives the Java class and method, the argument and the source location to code. It is `null` when the failure is about no single element: the setting failures, `[binding-failures]`, `[strict-findings]` and a check such as `unreachable-type`. For `[binding-failures]`, `getFailures()` lists the failures inside. `[strict-findings]` has no nested exceptions: read `getCodes()` for its codes and the message for the findings.
+`getMappingContext()` of the exception gives the Java class and method, the argument and the source location of a failure about one element, and is `null` for a failure about none. `getFailures()` lists the failures inside a `[binding-failures]`; `[strict-findings]` has no nested exceptions, so read its `getCodes()`. See the <<exceptions,error reference>>.
 
 == The same fault in the build
 
