@@ -47,8 +47,8 @@ import io.micronaut.graphql.tools.internal.execution.ExecutionState
 import io.micronaut.core.convert.value.ConvertibleValues
 import io.micronaut.graphql.tools.execution.GraphQLTransport
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
+import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutScheduler
 import io.micronaut.http.HttpRequest
-import io.micronaut.scheduling.TaskExecutors
 import io.micronaut.http.MutableHttpResponse
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -63,7 +63,6 @@ import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ExecutorService
@@ -228,6 +227,18 @@ type Child {
 
         cleanup:
         ProbeCustomizer.NEVER = false
+    }
+
+    void "operations that finish before a long timeout leave no cancelled timer in the scheduler queue"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.execution.timeout': '1h'])
+        def scheduler = applicationContext.getBean(TimeoutScheduler)
+
+        when:
+        200.times { run('{ hello }') }
+
+        then:
+        scheduler.queue.size() == 0
     }
 
     void "a customizer that never completes is disposed when the timeout fires before its subscription is stored"() {
@@ -652,12 +663,8 @@ type Child {
 
     @Requires(property = 'spec.name', value = SPEC_NAME + '.window')
     @Singleton
-    @Replaces(value = ExecutorService, named = TaskExecutors.SCHEDULED)
-    @Named(TaskExecutors.SCHEDULED)
-    static class RecordingScheduler extends ScheduledThreadPoolExecutor {
-        RecordingScheduler() {
-            super(1)
-        }
+    @Replaces(TimeoutScheduler)
+    static class RecordingScheduler extends TimeoutScheduler {
 
         @Override
         ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {

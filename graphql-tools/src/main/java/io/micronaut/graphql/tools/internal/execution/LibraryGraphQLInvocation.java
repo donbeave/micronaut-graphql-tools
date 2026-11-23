@@ -44,10 +44,10 @@ import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
 import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
+import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutScheduler;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.context.ServerHttpRequestContext;
-import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.executor.ExecutorSelector;
 import jakarta.inject.Singleton;
@@ -67,7 +67,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -101,7 +100,6 @@ import java.util.function.BiConsumer;
 public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
     private static final Logger LOG = LoggerFactory.getLogger(LibraryGraphQLInvocation.class);
-    private static final String TIMEOUT_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.timeout";
     private static final String EXECUTOR_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.executor";
 
     private final GraphQL graphQL;
@@ -123,7 +121,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     @Nullable
     private final Duration timeout;
     @Nullable
-    private final ScheduledExecutorService scheduler;
+    private final TimeoutScheduler scheduler;
 
     LibraryGraphQLInvocation(GraphQL graphQL, GraphQLExecutionInputCustomizer customizer, GraphQLToolsConfiguration configuration,
                              ExecutorSelector executorSelector, BeanContext beanContext, DataLoaderTable loaders,
@@ -141,16 +139,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         this.executorName = configuration.getExecution().getExecutor();
         this.executor = resolveExecutor(executorName, executorSelector, beanContext);
         this.timeout = configuration.getExecution().getTimeout();
-        this.scheduler = timeout == null ? null : scheduler(beanContext);
-    }
-
-    private static ScheduledExecutorService scheduler(BeanContext beanContext) {
-        ExecutorService scheduled = beanContext.getBean(ExecutorService.class, Qualifiers.byName(TaskExecutors.SCHEDULED));
-        if (scheduled instanceof ScheduledExecutorService service) {
-            return service;
-        }
-        throw new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR, TIMEOUT_KEY + " is set, but the '" + TaskExecutors.SCHEDULED
-                + "' executor is a " + scheduled.getClass().getName() + ", which cannot schedule the timer.");
+        this.scheduler = timeout == null ? null : beanContext.getBean(TimeoutScheduler.class);
     }
 
     /**

@@ -65,7 +65,7 @@ With `introspection: false`, a query for `+__schema+` or `+__type+` fails valida
 * the execution is marked cancelled, as it is when a client disconnects (see <<execution,Execution>>), so the continuation of an async field that completes later is aborted with graphql-java's `AbortExecutionException`, and no later async field starts;
 * a resolver that is already running is not interrupted.
 
-A subscription is covered until its stream is established; the events that follow are not timed. The timer is scheduled on Micronaut's `scheduled` executor, and only when the key is set: without it an operation pays nothing.
+A subscription is covered until its stream is established; the events that follow are not timed. The timer is scheduled on a scheduler of the library with one daemon thread, and only when the key is set: without it an operation pays nothing and no thread exists. An operation that finishes in time cancels its timer, and the scheduler drops a cancelled timer from its queue at once, so a long timeout does not pile up dead timers under many fast requests.
 
 == Evidence
 
