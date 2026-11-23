@@ -68,6 +68,27 @@ if [ "$(cat "$work/gradlew.count")" -ne 2 ] || ! grep -qF "retried with: build -
 else
   echo "ok   missing"
 fi
+cat > "$work/bin/gradlew" <<STUB
+#!/usr/bin/env bash
+echo \$(( \$(cat "$work/checkpom.count" 2>/dev/null || echo 0) + 1 )) > "$work/checkpom.count"
+if [ "\$(cat "$work/checkpom.count")" -eq 1 ]; then
+  echo "> Task :micronaut-graphql-tools:checkPom FAILED"
+  echo "Execution failed for task ':micronaut-graphql-tools:checkPom'."
+  echo "> POM micronaut-graphql-tools-1.0.0.pom declares a non-resolvable dependency io.micronaut:micronaut-core:4.0.0"
+  exit 1
+fi
+echo "retried with: \$*"
+STUB
+out=$("$script" "$work/bin/gradlew" build 2>&1)
+if [ "$(cat "$work/checkpom.count")" -ne 2 ] || ! grep -qF "retried with: build --refresh-dependencies" <<<"$out"; then
+  echo "FAIL checkpom: $out"
+  failures=$((failures + 1))
+else
+  echo "ok   checkpom"
+fi
+stub checkpomtest "Execution failed for task ':x:test'.
+> POM x.pom declares a non-resolvable dependency a:b:1" 1
+expect checkpomtest 1 1 "Execution failed"
 cat > "$work/always" <<STUB
 #!/usr/bin/env bash
 echo \$(( \$(cat "$work/always.count" 2>/dev/null || echo 0) + 1 )) > "$work/always.count"
