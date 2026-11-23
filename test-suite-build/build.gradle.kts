@@ -91,7 +91,7 @@ val prepareCompileTimeProfile by tasks.registering(Sync::class) {
     description = "Copies the profiled samples with the properties and the init script that the scenarios need."
     dependsOn(publishLibrary)
     profiledSamples.forEach { from(samples.dir(it)) { into(it) } }
-    profiledSamples.forEach { from(profilerDir.file("profiler.init.gradle")) { into(it) } }
+    profiledSamples.forEach { from(profilerDir.file("profiler.init.gradle.kts")) { into(it) } }
     into(profilerProjects)
     doLast {
         profiledSamples.forEach {

@@ -1,8 +1,8 @@
 // A helper module of this repository that is not published (the benchmarks and the TCK), named test-suite-*, which the
 // standardized project names do not prefix. Compiled for Java 21 like the test suites that run it.
 plugins {
-    id "java-library"
-    id "io.micronaut.build.internal.graphql-tools-license"
+    `java-library`
+    id("io.micronaut.build.internal.graphql-tools-license")
 }
 
 repositories {
