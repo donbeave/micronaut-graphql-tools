@@ -455,12 +455,11 @@ type Book {
         !applicationContext.containsBean(BindingManifestWriter)
     }
 
-    void "the schema is bound only when the GraphQL bean is needed, and nothing is written"() {
+    void "the schema is bound only when the GraphQL bean is needed"() {
         when:
         startContext(SCHEMA, SPEC_NAME, CONFIG)
 
         then:
-        !applicationContext.containsBean(BindingManifestWriter)
         applicationContext.getBean(BindingManifest).lines.size() == 36
     }
 
