@@ -1,1 +1,58 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+The library checks that the code and the schema agree, and it fails early when they do not. Three layers do it, from the earliest to the latest:
+
+. The <<compileTime,compile-time checks>> reject, in the build, the faults that one resolver class decides on its own.
+. By default, the startup binds the schema fields and runs the strict checks, and a fault fails the start of the application. See <<safetyLimits,What the safety net does not cover>> for the exceptions.
+. The <<manifest,binding manifest>> records what the binding did, so that a review can see a change of binding as a change of a line.
+
+== When a fault fails
+
+*With the compile-time checks*, a fault that one class decides fails the build, with the code of the finding. Which checks run in the build, and what each finding names, is in <<compileTime,Compile-Time Verification>>. A fault that needs the whole program passes the build and fails at startup.
+
+*Without them*, the same fault fails when the schema is bound. By default (`micronaut.graphql.tools.eager-init: true`) that is when the application context starts, so the application, and the embedded server with it, does not start. The first request does no binding work. With `eager-init: false` the schema is bound when the first bean that needs the `GraphQLSchema` is created. See <<startupErrors,Startup Errors>>.
+
+The compile-time checks ignore `strict`, `checks.<code>` and `allow.*`. A finding that they report is suppressed by an annotation only.
+
+[[safetyLimits]]
+== What the safety net does not cover
+
+The statements of these pages hold by default. They do not cover:
+
+* *graphql-java's schema validation.* When the schema is built, graphql-java reports its own problems (an object that omits a field of an interface it implements, for example) with its own exception type and no code of this library. See <<exceptions,Exceptions>>.
+* *A `GraphQLSchemaCustomizer`.* It runs after the binding and the checks, and the library does not check what it changes.
+* *An application-owned schema.* An application that supplies its own `GraphQLSchema` bean (an unqualified or `@Primary` one) replaces the library's `GraphQLFactory`: nothing is bound, no strict check runs and no manifest is written for it.
+* *Runtime `allow.*` settings in the build.* The processor ignores them, so a finding that only a runtime setting accepts still fails the build.
+
+== The pages
+
+* <<startupErrors,Startup Errors>>: the error categories and the shape of a message.
+* <<strictMode,Strict Mode>>: the checks with the fix for each, and how to accept a finding.
+* <<manifest,Binding Manifest>>: the format, and how to diff it.
+* <<checkSeverity,Check Severity>>: the settings, in the configuration reference.
+* <<exceptions,Exceptions>>: the codes.
+
+== Migrating an application that fails the checks
+
+An existing application can fail many checks at once. Relax them, collect the findings, and tighten again:
+
+CAUTION: `strict: false` turns the checks without a `checks.<code>` entry into warnings, `unwired-directive` included. An application that relies on a custom directive for authorization would serve its annotated fields without the directive while the recipe runs. Keep `checks.unwired-directive: fail` in that case (an explicit `checks.<code>` entry wins over `strict`), or run the migration on an instance that no client can reach.
+
+CAUTION: Do not switch `precedence` to collect findings. A lenient setting changes which member serves a field, and a security annotation such as `@Secured` applies to the member that is chosen, not to the one that is passed over. Review every ambiguity under the default setting (see <<precedence,Precedence>>) and keep the member that carries the policy.
+
+. Set `strict: false`.
+. Set `manifest.enabled: true` and a `manifest.path` under `build/`, and start the application. A finding is a line that starts with `!` in the manifest (see <<manifest,Binding Manifest>>).
+. Fix or annotate each finding: fix the code or the schema, or put `@GraphQLIgnore` on a member that binds no field on purpose. List a finding in `allow.findings` only when no processor will see it (see <<strictModeEscape,Accept a finding>>): the processor ignores the runtime `allow.*` settings.
+. Remove `strict: false`.
+. Add `micronaut-graphql-tools-processor` (see <<compileTimeSetup,Set up the build>>). A few findings are reported by the compiler only; the soundness rule in <<compileTime,Compile-Time Verification>> lists them.
+
+[configuration]
+----
+micronaut:
+  graphql:
+    tools:
+      strict: false
+      checks:
+        unwired-directive: fail # keep it when a directive guards access
+      manifest:
+        enabled: true
+        path: build/graphql-binding-manifest.txt
+----

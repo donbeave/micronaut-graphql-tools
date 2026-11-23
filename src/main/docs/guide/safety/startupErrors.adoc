@@ -1,0 +1,29 @@
+Binding the schema is the step that rejects most faults. The library binds the schema when the application context starts, if the library creates the `GraphQLSchema`; an application that supplies a competing unqualified or `@Primary` `GraphQLSchema` bean is not bound, checked or recorded in the manifest by the library. A field that cannot be bound fails the start of the `ApplicationContext` and of the embedded server, and the first request does no binding work. `micronaut.graphql.tools.eager-init: false` binds the schema when the first bean that needs the `GraphQLSchema` is created instead, for a test that expects the failure on a bean lookup.
+
+== Error categories
+
+By default, a binding failure that the library produces is a `SchemaBindingException` with a code, and the message starts with that code in square brackets. Some failures are not: graphql-java's own exceptions (`StrictModeWiringException`, and `SchemaProblem` from its schema validation) and the Micronaut `ConfigurationException` for a `resolver-directives` entry that names an undeclared directive. <<exceptions,The error reference>> lists the codes and how to catch one. See <<safetyLimits,What the safety net does not cover>>.
+
+* *A single failure* has its own code (`[field-not-bound]`, `[multiple-methods-found]` and the others). The message gives the way out. A failure about one schema element names it; some failures are about no single element.
+* *Several field failures* are thrown together as one `[binding-failures]`, sorted by schema coordinate. The binding does not stop at the first field that cannot be bound.
+* *The strict checks and the other checks of a complete binding* are reported after the fields are bound. Several findings of one run can be thrown together, and a check can also throw on its own; the code and the order of each are in the <<exceptions,error reference>>.
+* *A precedence ambiguity* under `precedence: fail` is a binding failure with the code `[precedence-ambiguity]`, not a check, so no severity setting relaxes it (see <<precedence,Precedence>>).
+* *A setting that is not valid* fails the startup with the code of the setting. See <<strictMode,Strict Mode>> and the <<exceptions,error reference>>.
+
+A message looks like this, with the text of the ways out shortened:
+
+----
+[binding-failures] The schema cannot be bound: 3 errors.
+  1) [unreachable-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Draft (type).
+     Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks.unreachable-type to warn or ignore.
+  2) [unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations: ...
+  3) [strict-findings] The strict checks found problems in the binding of the schema:
+       1) [unbound-resolver-method] The resolver method example.BookQuery#helper(java.lang.String) binds no schema field. Remove it, ...
+       Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore.
+----
+
+`getMappingContext()` of the exception gives the Java class and method, the argument and the source location of a failure about one element, and is `null` for a failure about none. `getFailures()` lists the failures inside a `[binding-failures]`; `[strict-findings]` has no nested exceptions, so read its `getCodes()`. See the <<exceptions,error reference>>.
+
+== The same fault in the build
+
+A fault that one class decides is reported at compile time with the same code, and the same coordinate when the finding has one, when the processor is on the path of the compiler, and the build fails before the startup does. See <<compileTime,Compile-Time Verification>> for what is decided at compile time, and what only the startup can prove.
