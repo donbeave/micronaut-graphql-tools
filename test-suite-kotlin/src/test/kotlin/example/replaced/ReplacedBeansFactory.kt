@@ -34,10 +34,10 @@ const val REPLACED_INVOCATION = "replaced-invocation"
 @Factory
 class ReplacedBeansFactory {
 
+    @Requires(env = [REPLACED_SCHEMA])
     // tag::schema[]
     @Bean
     @Singleton
-    @Requires(env = [REPLACED_SCHEMA])
     fun applicationSchema(): GraphQLSchema = SchemaGenerator().makeExecutableSchema(
         SchemaParser().parse("schema { query: Query } type Query { owner: String }"),
         RuntimeWiring.newRuntimeWiring()
@@ -46,10 +46,10 @@ class ReplacedBeansFactory {
     )
     // end::schema[]
 
+    @Requires(env = [REPLACED_INVOCATION])
     // tag::invocation[]
     @Bean
     @Singleton
-    @Requires(env = [REPLACED_INVOCATION])
     fun applicationInvocation(): GraphQLInvocation = GraphQLInvocation { _, _, _ ->
         Mono.just(ExecutionResultImpl.newExecutionResult().data(mapOf("owner" to "application invocation")).build())
     }

@@ -36,10 +36,10 @@ public class ReplacedBeansFactory {
     public static final String SCHEMA = "replaced-schema";
     public static final String INVOCATION = "replaced-invocation";
 
+    @Requires(env = SCHEMA)
     // tag::schema[]
     @Bean
     @Singleton
-    @Requires(env = SCHEMA)
     GraphQLSchema applicationSchema() {
         return new SchemaGenerator().makeExecutableSchema(
                 new SchemaParser().parse("schema { query: Query } type Query { owner: String }"),
@@ -49,10 +49,10 @@ public class ReplacedBeansFactory {
     }
     // end::schema[]
 
+    @Requires(env = INVOCATION)
     // tag::invocation[]
     @Bean
     @Singleton
-    @Requires(env = INVOCATION)
     GraphQLInvocation applicationInvocation() {
         return (data, request, response) -> Mono.just(ExecutionResultImpl.newExecutionResult()
                 .data(Map.of("owner", "application invocation"))
