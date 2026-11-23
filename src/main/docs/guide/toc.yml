@@ -28,7 +28,10 @@ execution: Execution
 protection: Protection
 transport: Transports
 customization: Customization
-safety: Safety
+safety:
+  title: Safety
+  startupErrors: Startup Errors
+  strictMode: Strict Mode
 manifest: Binding Manifest
 compileTime:
   title: Compile-Time Verification

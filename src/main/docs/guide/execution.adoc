@@ -84,7 +84,7 @@ The state is also the read-only `GraphQLExecutionRequest` that the context contr
 
 == Your own invocation
 
-An application that declares its own `GraphQLInvocation` with `@Replaces(DefaultGraphQLInvocation.class)` or `@Primary` wins, and so does a `@Primary` factory method that returns `DefaultGraphQLInvocation`: the library creates no invocation, logs one INFO line at startup, and the operations run as your invocation decides. A resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`, and the message names the application's invocation.
+An application that declares its own `GraphQLInvocation` wins: a bean without a qualifier, a `@Primary` bean, a bean with `@Replaces(DefaultGraphQLInvocation.class)`, or a `@Primary` factory method that returns `DefaultGraphQLInvocation`. The library's invocation is `@Secondary`, so an unqualified injection point gets yours, and the operations run as your invocation decides. The library's invocation stays registered beside yours, so `List<GraphQLInvocation>` and `getBeansOfType(GraphQLInvocation.class)` include it (BC-42). A resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`, and the message names the application's invocation. See <<customization,Customization>>.
 
 == Async resolvers
 

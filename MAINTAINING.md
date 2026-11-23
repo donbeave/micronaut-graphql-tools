@@ -9,6 +9,7 @@ This is not an official Micronaut module yet. This file describes how this repos
 - The only required status check is `required checks`, the gate job in `.github/workflows/gradle.yml`. It is green only when every job it lists under `needs:` succeeded. A new gated job goes into that `needs:` list, never into the ruleset: renaming a job or adding a graphql-java leg needs no ruleset edit.
 - There is no admin bypass. A red, cancelled, pending or missing check blocks the merge. Review conversations must be resolved.
 - The native image jobs (`native (GraalVM 25, graphql-java default|ceiling)`) and `native Groovy smoke` are in the gate like every other job of `gradle.yml`.
+- Gradle build logic is Kotlin DSL only: `*.gradle.kts` files, Kotlin precompiled script plugins in `buildSrc`, and `*.init.gradle.kts` files. A pull request does not add or edit a Groovy DSL Gradle file (`*.gradle`), except one that migrates it to the Kotlin DSL. The rule covers build scripts only; the Groovy tests (the Spock specs and the Groovy example suite) are not affected.
 
 ## One gate: the pull request check is the master check
 
@@ -85,7 +86,7 @@ Renovate is configured in `.github/renovate.json`. Review its pull requests like
 
 ## Dependency downloads
 
-Maven Central and the Gradle plugin portal sometimes answer HTTP 429. Gradle retries that a few times within a fraction of a second, so `gradle.properties` raises the retry count and backoff, and the Gradle steps of `gradle.yml` and the read-only steps of `canary.yml` and the `verify` job of `release.yml` run through `.github/scripts/retry-on-download-failure.sh`. It runs the build again (up to three attempts, none after 15 minutes) only when the output shows a download failure, keeps the exit code and output of the last attempt, and never retries a run that also failed a test or check, or failed on anything but a download (`test-retry-on-download-failure.sh` tests this in the `actionlint` job). The publish step of `release.yml` is not wrapped: a publish is never retried automatically. The Maven samples retry 429 themselves, with more attempts than Maven's default.
+Maven Central and the Gradle plugin portal sometimes answer HTTP 429. Gradle retries that a few times within a fraction of a second, so `gradle.properties` raises the retry count and backoff, and the Gradle steps of `gradle.yml` and the read-only steps of `canary.yml` and the `verify` job of `release.yml` run through `.github/scripts/retry-on-download-failure.sh`. It runs the build again (up to three attempts, none after 15 minutes) only when the output shows a download failure (or the `checkPom` message "declares a non-resolvable dependency", which a runner repository access failure also produces; a failed `checkPom` task does not count as a failed check), keeps the exit code and output of the last attempt, and never retries a run that also failed a test or check, or failed on anything but a download (`test-retry-on-download-failure.sh` tests this in the `actionlint` job). The publish step of `release.yml` is not wrapped: a publish is never retried automatically. The Maven samples retry 429 themselves, with more attempts than Maven's default.
 
 ## Releases
 
