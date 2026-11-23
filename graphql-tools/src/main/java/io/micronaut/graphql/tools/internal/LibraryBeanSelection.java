@@ -32,6 +32,7 @@ import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.value.PropertyCatalog;
+import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.BeanDefinitionReference;
 import io.micronaut.inject.qualifiers.Qualifiers;
@@ -101,13 +102,23 @@ public final class LibraryBeanSelection {
         return provided(context, type, false, new Visits());
     }
 
+    /**
+     * The invocations that are not the application's: the library's own, and the transport's default, which the
+     * library's invocation replaces. An {@code @EachBean(GraphQLInvocation.class)} template is not judged by them.
+     */
+    private static boolean isInvocationOfLibraryOrTransport(BeanDefinition<?> definition) {
+        Class<?> beanType = definition.getBeanType();
+        return beanType == LibraryGraphQLInvocation.class
+                || beanType == DefaultGraphQLInvocation.class && definition.getDeclaringType().isEmpty();
+    }
+
     private static List<Provided> provided(BeanContext context, Class<?> type, boolean withLibrary, Visits visits) {
         List<BeanDefinition<?>> enabled = new ArrayList<>();
         for (BeanDefinitionReference<?> reference : context.getBeanDefinitionReferences()) {
             if (type.isAssignableFrom(reference.getBeanType()) && reference.isPresent()) {
                 BeanDefinition<?> definition = reference.load();
                 // the library's own references are never asked isEnabled, which would evaluate its condition again
-                if (definition != null && (isLibrary(definition)
+                if (definition != null && !isInvocationOfLibraryOrTransport(definition) && (isLibrary(definition)
                         ? withLibrary && libraryEnabled(context, reference, definition, visits)
                         : reference.isEnabled(context))) {
                     enabled.add(definition);
@@ -288,16 +299,13 @@ public final class LibraryBeanSelection {
     public static final class NoApplicationDefaultInvocation implements Condition {
         @Override
         public boolean matches(ConditionContext context) {
-            for (BeanDefinitionReference<?> reference : context.getBeanContext().getBeanDefinitionReferences()) {
-                if (reference.getBeanType() == DefaultGraphQLInvocation.class && reference.isPresent()) {
-                    BeanDefinition<?> definition = reference.load();
-                    if (definition != null
-                            && definition.getDeclaringType().filter(declaring -> declaring != DefaultGraphQLInvocation.class).isPresent()
-                            && reference.isEnabled(context.getBeanContext())) {
-                        context.fail("the application declares " + definition.getDeclaringType().get().getName()
-                                + "#DefaultGraphQLInvocation, which the library's invocation would replace");
-                        return false;
-                    }
+            // a template (@EachProperty, @EachBean) counts by the beans it expands to, none when the configuration has none
+            for (Provided bean : provided(context.getBeanContext(), DefaultGraphQLInvocation.class, false, new Visits())) {
+                Optional<Class<?>> declaring = bean.definition().getDeclaringType();
+                if (declaring.isPresent() && declaring.get() != DefaultGraphQLInvocation.class) {
+                    context.fail("the application declares " + declaring.get().getName()
+                            + "#DefaultGraphQLInvocation, which the library's invocation would replace");
+                    return false;
                 }
             }
             return true;

@@ -31,6 +31,7 @@ import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Secondary
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.internal.GraphQLFactory
@@ -60,7 +61,12 @@ type Query { hello: String }
     static final List<String> KINDS = [
             'none', 'plain', 'primary', 'named', 'replacesLibrary', 'replacedPlain', 'eachProperty',
             'eachPropertyPrimary', 'eachBean', 'requiresOn', 'requiresOff', 'primaryDefault',
-            'named,plain', 'named,primary', 'named,requiresOn', 'plain,primary', 'named,eachProperty'
+            'named,plain', 'named,primary', 'named,requiresOn', 'plain,primary', 'named,eachProperty',
+            'secondary', 'plain,secondary', 'plain,eachInvocation', 'eachInvocation', 'eachDefaultEmpty'
+    ]
+    static final Map<String, List<String>> ONLY = [
+            primaryDefault: ['invocation'], secondary: ['invocation'], 'plain,secondary': ['invocation'],
+            'plain,eachInvocation': ['schema', 'graphql'], eachInvocation: ['schema', 'graphql'], eachDefaultEmpty: ['invocation']
     ]
     static final List<String> TARGETS = ['schema', 'graphql', 'invocation']
 
@@ -71,7 +77,7 @@ type Query { hello: String }
         when:
         for (String kind : KINDS) {
             for (String target : TARGETS) {
-                if (kind == 'primaryDefault' && target != 'invocation') {
+                if (ONLY.containsKey(kind) && !ONLY[kind].contains(target)) {
                     continue
                 }
                 lines << (kind + ' | ' + target + ' | ' + observe(kind, target))
@@ -322,6 +328,30 @@ type Query { hello: String }
     static class PrimaryDefaultFactory {
         @Bean @Primary @Singleton @Requires(property = 'matrix.target', value = 'invocation')
         DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?secondary(,.*)?')
+    @Factory
+    static class SecondaryFactory {
+        @Bean @Singleton @Secondary @Requires(property = 'matrix.target', value = 'invocation')
+        GraphQLInvocation invocation() { new AppInvocation('secondary') }
+    }
+
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?eachInvocation(,.*)?')
+    @Factory
+    static class EachInvocationFactory {
+        @Bean @EachBean(GraphQLInvocation) @Requires(property = 'matrix.target', value = 'schema')
+        GraphQLSchema schema(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.schema('eachi') }
+
+        @Bean @EachBean(GraphQLInvocation) @Requires(property = 'matrix.target', value = 'graphql')
+        GraphQL graphQL(GraphQLInvocation invocation) { engine('eachi') }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'eachDefaultEmpty')
+    @Factory
+    static class EachDefaultEmptyFactory {
+        @Bean @EachProperty('matrix.nothing') @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation(@Parameter String name) { new DefaultGraphQLInvocation(null, null, null) }
     }
 
 }
