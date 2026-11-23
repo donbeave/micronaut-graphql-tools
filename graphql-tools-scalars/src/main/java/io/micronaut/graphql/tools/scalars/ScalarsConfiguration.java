@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.scalars;
 
 import io.micronaut.context.annotation.ConfigurationProperties;
+import io.micronaut.context.env.Environment;
 import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
@@ -25,13 +26,14 @@ import jakarta.inject.Inject;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * The configuration of the standard scalars, under {@value #PREFIX}. {@code enabled} switches the whole module; each scalar is
- * configured under its id, see {@link ScalarConfiguration}. A key under the prefix that is not the id of a {@link StandardScalar}
- * fails the startup.
+ * configured under its id, see {@link ScalarConfiguration}. A key under the prefix that is not the id of a {@link StandardScalar},
+ * and a key under the id of a scalar that is not one of its properties, fails the startup.
  *
  * @since 1.0.0
  */
@@ -48,6 +50,7 @@ public class ScalarsConfiguration implements Toggleable {
     public static final boolean DEFAULT_ENABLED = true;
 
     private static final String ENABLED_KEY = "enabled";
+    private static final List<String> SCALAR_KEYS = List.of(ENABLED_KEY, "name", "format");
 
     private boolean enabled = DEFAULT_ENABLED;
     private Map<String, ScalarConfiguration> scalars = Map.of();
@@ -80,14 +83,18 @@ public class ScalarsConfiguration implements Toggleable {
     /**
      * Receives the scalars that the application configures. The entry named {@code enabled} is the switch of the module and is
      * skipped; any other key that is not the id of a {@link StandardScalar} fails the startup with a message that lists the valid ids.
+     * A key under the id of a scalar that is not {@code enabled}, {@code name} or {@code format}, a misspelling such as
+     * {@code local-date.nmae}, fails the startup with a message that names the whole key and lists those three.
      *
-     * @param configured the configuration of each scalar that has a key
+     * @param configured  the configuration of each scalar that has a key
+     * @param environment the environment that holds the keys
      */
     @Inject
-    void setScalars(Collection<ScalarConfiguration> configured) {
+    void setScalars(Collection<ScalarConfiguration> configured, Environment environment) {
         Map<String, ScalarConfiguration> byId = new LinkedHashMap<>();
         for (ScalarConfiguration scalar : configured) {
             if (scalar.isKnown()) {
+                rejectUnknownKeys(scalar, environment);
                 byId.put(scalar.getId(), scalar);
             } else if (scalar.isConfigured() || !ENABLED_KEY.equals(scalar.getId())) {
                 throw new ConfigurationException("The key " + PREFIX + "." + scalar.getId() + " is not a standard scalar. The valid ids are: "
@@ -95,6 +102,16 @@ public class ScalarsConfiguration implements Toggleable {
             }
         }
         this.scalars = Map.copyOf(byId);
+    }
+
+    private static void rejectUnknownKeys(ScalarConfiguration scalar, Environment environment) {
+        String prefix = PREFIX + "." + scalar.getId();
+        for (String key : environment.getPropertyEntries(prefix)) {
+            if (!SCALAR_KEYS.contains(key)) {
+                throw new ConfigurationException("The key " + prefix + "." + key + " is not a property of the scalar " + scalar.getId()
+                        + ". The valid properties are: " + String.join(", ", SCALAR_KEYS) + ".");
+            }
+        }
     }
 
     /**

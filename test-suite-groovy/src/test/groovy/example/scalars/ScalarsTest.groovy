@@ -126,6 +126,17 @@ class ScalarsTest extends Specification {
         messages.contains('local-date')
     }
 
+    void 'a misspelled property of a known scalar fails the startup'() {
+        when:
+        ApplicationContext.run(['micronaut.graphql.tools.scalars.local-date.nmae': 'Date'], ScalarsFixtures.DEFAULTS).close()
+
+        then:
+        def failure = thrown(Exception)
+        def messages = generateMessages(failure)
+        messages.contains('micronaut.graphql.tools.scalars.local-date.nmae')
+        messages.contains('enabled, name, format')
+    }
+
     private static String generateMessages(Throwable failure) {
         StringBuilder messages = new StringBuilder()
         for (Throwable t = failure; t != null; t = t.cause) {
