@@ -15,10 +15,6 @@
  */
 package io.micronaut.graphql.tools.manifest
 
-import ch.qos.logback.classic.Level
-import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.core.read.ListAppender
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.aop.Around
@@ -43,7 +39,6 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import org.reactivestreams.Publisher
-import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 
 import java.lang.annotation.ElementType
@@ -443,52 +438,25 @@ type Book {
         path.toFile().delete()
     }
 
-    void "with manifest.enabled and no path a summary of the manifest is logged at INFO"() {
-        given:
-        ListAppender<ILoggingEvent> appender = new ListAppender<>()
-        appender.start()
-        Logger logger = (Logger) LoggerFactory.getLogger(BindingManifestWriter)
-        logger.addAppender(appender)
-
+    void "with manifest.enabled and no path the manifest is recorded and nothing is written"() {
         when:
         startContext(SCHEMA, SPEC_NAME, CONFIG + ['micronaut.graphql.tools.manifest.enabled': true])
 
         then:
-        appender.list*.level == [Level.INFO]
-        appender.list*.formattedMessage == [
-                'GraphQL binding manifest recorded. '
-                        + 'Set micronaut.graphql.tools.manifest.path to write it to a file, or enable DEBUG for '
-                        + 'io.micronaut.graphql.tools.internal.manifest.BindingManifestWriter to log its lines.'
-        ]
-
-        cleanup:
-        logger.detachAppender(appender)
+        !applicationContext.containsBean(BindingManifestWriter)
+        applicationContext.getBean(BindingManifest).lines.size() == 36
     }
 
-    void "with manifest.enabled and no path the manifest lines are logged at DEBUG, and not at INFO"() {
-        given:
-        ListAppender<ILoggingEvent> appender = new ListAppender<>()
-        appender.start()
-        Logger logger = (Logger) LoggerFactory.getLogger(BindingManifestWriter)
-        Level previous = logger.level
-        logger.level = Level.DEBUG
-        logger.addAppender(appender)
-
+    void "without manifest.enabled the manifest is not recorded, whatever the path"() {
         when:
-        startContext(SCHEMA, SPEC_NAME, CONFIG + ['micronaut.graphql.tools.manifest.enabled': true])
+        startContext(SCHEMA, SPEC_NAME, CONFIG + ['micronaut.graphql.tools.manifest.enabled': false,
+                'micronaut.graphql.tools.manifest.path': File.createTempFile('manifest', '.txt').absolutePath])
 
         then:
-        appender.list.findAll { it.level == Level.DEBUG }*.formattedMessage == [
-                'GraphQL binding manifest:\n' + applicationContext.getBean(BindingManifest).render()
-        ]
-        appender.list.findAll { it.level == Level.INFO }*.formattedMessage.every { !it.contains('# graphql-binding-manifest') }
-
-        cleanup:
-        logger.detachAppender(appender)
-        logger.level = previous
+        !applicationContext.containsBean(BindingManifestWriter)
     }
 
-    void "by default nothing is written and the schema is bound only when the GraphQL bean is needed"() {
+    void "the schema is bound only when the GraphQL bean is needed, and nothing is written"() {
         when:
         startContext(SCHEMA, SPEC_NAME, CONFIG)
 

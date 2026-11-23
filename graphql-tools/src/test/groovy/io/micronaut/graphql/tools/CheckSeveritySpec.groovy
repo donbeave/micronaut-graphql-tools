@@ -23,6 +23,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.binding.BindingCode
+import io.micronaut.graphql.tools.config.CheckSeverity
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.binding.internal.finding.DefaultSeverities
 import io.micronaut.graphql.tools.binding.internal.finding.Severity
 import org.slf4j.LoggerFactory
@@ -293,5 +295,61 @@ class CheckSeveritySpec extends AbstractTest {
 
         then:
         failure == null
+    }
+
+    void "the severity binds to the enum in several spellings (#spelling)"() {
+        when:
+        startContext(StrictModeSpec.SCHEMA, SPEC_NAME, [(PREFIX + 'checks.unbound-resolver-method'): spelling])
+
+        then:
+        applicationContext.getBean(GraphQLToolsConfiguration).checks == ['unbound-resolver-method': expected]
+
+        where:
+        spelling | expected
+        'FAIL'   | CheckSeverity.FAIL
+        'fail'   | CheckSeverity.FAIL
+        'Warn'   | CheckSeverity.WARN
+        'ignore' | CheckSeverity.IGNORE
+    }
+
+    void "the precedence binds to the enum in several spellings (#spelling)"() {
+        when:
+        startContext(StrictModeSpec.SCHEMA, SPEC_NAME, [(PREFIX + 'precedence'): spelling])
+
+        then:
+        applicationContext.getBean(GraphQLToolsConfiguration).precedence == expected
+
+        where:
+        spelling         | expected
+        'FAIL'           | GraphQLToolsConfiguration.Precedence.FAIL
+        'property-first' | GraphQLToolsConfiguration.Precedence.PROPERTY_FIRST
+        'PROPERTY_FIRST' | GraphQLToolsConfiguration.Precedence.PROPERTY_FIRST
+        'resolver_first' | GraphQLToolsConfiguration.Precedence.RESOLVER_FIRST
+    }
+
+    void "an invalid precedence fails the startup with the property and the valid values"() {
+        when:
+        startContext(StrictModeSpec.SCHEMA, SPEC_NAME, [(PREFIX + 'precedence'): 'sometimes'])
+        getGraphQLBean()
+
+        then:
+        def e = thrown(Exception)
+        def messages = []
+        for (Throwable t = e; t != null; t = t.cause) {
+            messages << t.message
+        }
+        def message = messages.join('\n')
+        message.contains('micronaut.graphql.tools.precedence')
+        message.contains('fail, resolver-first or property-first')
+    }
+
+    void "manifest.record is removed and fails the startup with its replacement"() {
+        when:
+        def failure = startFailure([(PREFIX + 'manifest.record'): true])
+
+        then:
+        failure instanceof SchemaBindingException
+        failure.getCode() == BindingCode.REMOVED_CONFIGURATION_KEY
+        failure.message.contains('micronaut.graphql.tools.manifest.record was removed; use micronaut.graphql.tools.manifest.enabled')
     }
 }

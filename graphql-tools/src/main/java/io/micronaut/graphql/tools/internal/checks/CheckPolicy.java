@@ -16,8 +16,11 @@
 package io.micronaut.graphql.tools.internal.checks;
 
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.convert.ConversionService;
+import io.micronaut.core.type.Argument;
 import io.micronaut.core.naming.NameUtils;
 import io.micronaut.core.value.PropertyResolver;
+import io.micronaut.graphql.tools.config.CheckSeverity;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.DefaultSeverities;
@@ -25,13 +28,16 @@ import io.micronaut.graphql.tools.binding.internal.finding.Severity;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.InvalidConfigurationException;
 import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +51,9 @@ public final class CheckPolicy {
     private static final Logger LOG = LoggerFactory.getLogger(GraphQLRuntimeWiringGenerator.class);
     private static final String PREFIX = GraphQLToolsConfiguration.PREFIX + ".";
 
+    private static final String SEVERITIES = Arrays.stream(CheckSeverity.values())
+            .map(it -> it.name().toLowerCase(Locale.ROOT)).collect(Collectors.joining(", "));
+
     private static final Map<String, String> REMOVED = new LinkedHashMap<>();
 
     static {
@@ -56,6 +65,8 @@ public final class CheckPolicy {
         REMOVED.put("inert-directives", use("allow.inert-directives"));
         REMOVED.put("schema-customizer-directives", use("allow.schema-customizer-directives"));
         REMOVED.put("unwired-directives", use("checks.unwired-directive"));
+        REMOVED.put("manifest.record", "use " + PREFIX + "manifest.enabled, which records the manifest and writes it at "
+                + "startup");
         REMOVED.put("input.detect-omission", "declare ArgumentValue on the resolver parameter or the input property; "
                 + "that is the only opt-in");
     }
@@ -91,24 +102,29 @@ public final class CheckPolicy {
         });
         if (!removed.isEmpty()) {
             throw new InvalidConfigurationException(BindingCode.REMOVED_CONFIGURATION_KEY,
-                    "The configuration uses keys that were removed in 1.0.0-M3 (BC-27, BC-28):", removed);
+                    "The configuration uses keys that were removed (BC-27, BC-28, BC-45):", removed);
         }
 
         Map<BindingCode, Severity> explicit = new EnumMap<>(BindingCode.class);
         List<String> problems = new ArrayList<>();
-        configuration.getChecks().forEach((key, value) -> {
+        Map<String, Object> entries = new LinkedHashMap<>();
+        configuration.getChecks().forEach((key, value) -> entries.put(key, value));
+        Map<String, Object> raw = resolver.getProperty(PREFIX + "checks", Argument.mapOf(String.class, Object.class))
+                .orElse(Map.of());
+        entries.putAll(raw);
+        entries.forEach((key, value) -> {
             String name = NameUtils.hyphenate(key.replace('.', '-').replace('_', '-'));
             BindingCode code = BindingCode.fromCode(name);
-            Severity severity = Severity.fromToken(value);
+            CheckSeverity severity = ConversionService.SHARED.convert(value, CheckSeverity.class).orElse(null);
             if (code == null || !code.check()) {
                 problems.add(PREFIX + "checks." + key + ": "
                         + (code == null ? "not a code of the registry" : "a failure code, not a check")
                         + "; the checks are " + checkNames() + ".");
             } else if (severity == null) {
                 problems.add(PREFIX + "checks." + key + ": \"" + value + "\" is not a severity; use "
-                        + Severity.tokens() + ".");
+                        + SEVERITIES + ".");
             } else {
-                explicit.put(code, severity);
+                explicit.put(code, Severity.valueOf(severity.name()));
             }
         });
         if (!problems.isEmpty()) {

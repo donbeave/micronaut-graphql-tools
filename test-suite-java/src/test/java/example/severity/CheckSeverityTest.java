@@ -92,4 +92,17 @@ class CheckSeverityTest {
         assertFails(Map.of(PREFIX + "checks.no-such-check", "warn"), "invalid-check-setting");
     }
 
+    @Test
+    void theSeverityAcceptsTheSpellingsOfTheEnumConversion() {
+        assertNotNull(start(Map.of(PREFIX + "checks.unreachable-type", "WARN")));
+        assertNotNull(start(Map.of(PREFIX + "checks.unreachable-type", "Ignore")));
+    }
+
+    @Test
+    void anInvalidSeverityFailsTheStartupWithThePropertyAndTheValidValues() {
+        SchemaBindingException e = assertFails(Map.of(PREFIX + "checks.unreachable-type", "sometimes"), "invalid-check-setting");
+        assertTrue(e.getMessage().contains(PREFIX + "checks.unreachable-type"), e.getMessage());
+        assertTrue(e.getMessage().contains("fail, warn, ignore"), e.getMessage());
+    }
+
 }

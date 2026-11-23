@@ -98,7 +98,7 @@ public class RetainedHeapBenchmark {
 
     private ApplicationContext start() {
         Map<String, Object> properties = new HashMap<>(LargeSchema.properties(shape, fields));
-        properties.put("micronaut.graphql.tools.manifest.record", record);
+        properties.put("micronaut.graphql.tools.manifest.enabled", record);
         return ApplicationContext.builder()
                 .properties(properties)
                 .singletons(registry)

@@ -138,6 +138,6 @@ class DirectiveStartupSpec extends Specification {
     }
 
     private static ApplicationContext start(Map<String, Object> properties, String environment) {
-        ApplicationContext.run(EmbeddedServer, properties + ['micronaut.server.port': -1, 'micronaut.graphql.tools.manifest.record': true], environment).applicationContext
+        ApplicationContext.run(EmbeddedServer, properties + ['micronaut.server.port': -1, 'micronaut.graphql.tools.manifest.enabled': true], environment).applicationContext
     }
 }

@@ -83,7 +83,7 @@ public class BindingBenchmark {
     // what the checks cost: the default is every check at fail
     private ApplicationContext start() {
         Map<String, Object> properties = new HashMap<>(LargeSchema.properties(shape, fields));
-        properties.put("micronaut.graphql.tools.manifest.record", record);
+        properties.put("micronaut.graphql.tools.manifest.enabled", record);
         if ("ignore".equals(System.getProperty("benchmarks.checks"))) {
             for (BindingCode code : BindingCode.values()) {
                 if (code.check()) {

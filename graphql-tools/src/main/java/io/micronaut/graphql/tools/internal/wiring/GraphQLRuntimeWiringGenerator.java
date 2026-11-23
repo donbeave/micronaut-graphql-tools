@@ -266,7 +266,7 @@ public final class GraphQLRuntimeWiringGenerator {
         this.configuration = configuration;
         this.checkPolicy = CheckPolicy.of(configuration, applicationContext);
         this.extensionFields = extensionFields;
-        this.manifestRecorder = new BindingManifestRecorder(configuration.getManifest().isRecorded());
+        this.manifestRecorder = new BindingManifestRecorder(configuration.getManifest().isEnabled());
         this.coordinateValidator = new SchemaCoordinateValidator(typeDefinitionRegistry, graphQLResolversRegistry,
                 graphQLBeanIntrospectionRegistry, checkPolicy);
         this.dictionaryValidator = new DictionaryValidator(typeDefinitionRegistry, schemaMappingDictionary);
