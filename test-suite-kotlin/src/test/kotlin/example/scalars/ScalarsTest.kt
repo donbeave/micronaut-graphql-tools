@@ -131,6 +131,17 @@ class ScalarsTest {
     }
 
     @Test
+    fun aMisspelledPropertyOfAKnownScalarFailsTheStartup() {
+        val properties = mapOf("micronaut.graphql.tools.scalars.local-date.nmae" to "Date")
+        val failure = assertThrows(Exception::class.java) {
+            ApplicationContext.run(properties, SCALARS_DEFAULTS).close()
+        }
+        val messages = generateSequence<Throwable>(failure) { it.cause }.joinToString("\n") { it.message ?: "" }
+        assertTrue(messages.contains("micronaut.graphql.tools.scalars.local-date.nmae"), failure.toString())
+        assertTrue(messages.contains("enabled, name, format"), failure.toString())
+    }
+
+    @Test
     fun anInvalidValueIsAnErrorThatNamesTheScalar() {
         ApplicationContext.run(emptyMap<String, Any>(), SCALARS_DEFAULTS).use { context ->
             val result = execute(context, "{ bookedOn(date: \"next week\") }")
