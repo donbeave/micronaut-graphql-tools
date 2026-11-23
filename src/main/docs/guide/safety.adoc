@@ -1,12 +1,12 @@
 The library checks that the code and the schema agree, and it fails early when they do not. Three layers do it, from the earliest to the latest:
 
 . The <<compileTime,compile-time checks>> reject, in the build, the faults that one resolver class decides on its own.
-. The startup binds every schema field and runs the strict checks. A fault fails the start of the application, so a broken binding never serves a request.
+. The startup of the library-created schema binds every schema field and runs the strict checks. A fault fails the start of the application, so the library does not serve a schema that it could not bind. An application that supplies its own `GraphQLSchema` bean (an unqualified or `@Primary` one) replaces the library's `GraphQLFactory`: nothing is bound, no strict check runs and no manifest is written for it.
 . The <<manifest,binding manifest>> records what the binding did, so that a review can see a change of binding as a change of a line.
 
 == When a fault fails
 
-*With the compile-time checks*, a fault that one class decides fails the build, with the code and the schema coordinate of the finding. The five strict checks `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property` and `nullable-primitive` and the per-class failures belong to it (see <<compileTime,Compile-Time Verification>>). A fault that needs the whole program passes the build and fails at startup.
+*With the compile-time checks*, a fault that one class decides fails the build, with the code of the finding. A finding about a schema element also names its coordinate; one about a Java member (`unbound-resolver-method`, `unbound-enum-constant`, `unmapped-input-property`) names the member, and `root-method-several-operations` concerns the fields of several operation types. The five strict checks `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property` and `nullable-primitive` and the per-class failures belong to it (see <<compileTime,Compile-Time Verification>>). A fault that needs the whole program passes the build and fails at startup.
 
 *Without them*, the same fault fails when the schema is bound. By default (`micronaut.graphql.tools.eager-init: true`) that is when the application context starts, so the application, and the embedded server with it, does not start. The first request does no binding work. With `eager-init: false` the schema is bound when the first bean that needs the `GraphQLSchema` is created. See <<startupErrors,Startup Errors>>.
 
