@@ -452,26 +452,14 @@ type Child {
         RESOLVER_THREADS.every { it.isVirtual() }
     }
 
-    void "an application invocation with @Replaces wins, the library logs one INFO line and a context-bound resolver fails"() {
-        given:
-        def appender = captureInfo()
-
+    void "an application invocation with @Replaces wins, the library's stays registered and a context-bound resolver fails"() {
         when:
         startContext(SCHEMA, SPEC_NAME + '.replaces')
 
         then:
-        !applicationContext.findBean(LibraryGraphQLInvocation).isPresent()
         applicationContext.getBean(GraphQLInvocation) instanceof ReplacingInvocation
-        applicationContext.getBeansOfType(GraphQLInvocation).size() == 1
+        applicationContext.getBeanDefinitions(GraphQLInvocation).collect { it.beanType } as Set == [LibraryGraphQLInvocation, ReplacingInvocation] as Set
         !ExecutionContextAvailability.isAvailable(applicationContext)
-
-        when: 'the startup logged the choice once'
-        def lines = appender.list.findAll { it.formattedMessage.contains('does not create its GraphQLInvocation bean') }
-
-        then:
-        lines.size() == 1
-        lines[0].level == Level.INFO
-        lines[0].formattedMessage.contains('ReplacingInvocation')
 
         when:
         ExecutionContextAvailability.require(applicationContext, 'Query.book (parameter request of Books#book)', 'the HTTP request')
@@ -481,47 +469,46 @@ type Child {
         e.getCode() == BindingCode.EXECUTION_CONTEXT_UNAVAILABLE
         e.message.startsWith('[execution-context-unavailable] Query.book')
         e.message.contains('ReplacingInvocation')
+    }
 
-        cleanup:
-        infoLogger().detachAppender(appender)
+    void "an unselected library invocation ignores the executor and timeout settings and fails fast when called"() {
+        when:
+        startContext(SCHEMA, SPEC_NAME + '.primary', ['micronaut.graphql.tools.execution.executor': 'nowhere',
+                                                       'micronaut.graphql.tools.execution.timeout': '5s',
+                                                       'micronaut.graphql.tools.eager-init': eager])
+        def all = applicationContext.getBeansOfType(GraphQLInvocation)
+
+        then:
+        all.size() == 2
+
+        when:
+        (all.find { it instanceof LibraryGraphQLInvocation } as LibraryGraphQLInvocation).invoke(null, null, null)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains("not the one that serves the transport")
+
+        where:
+        eager << [true, false]
     }
 
     void "an application invocation that is @Primary wins as well"() {
-        given:
-        def appender = captureInfo()
-
         when:
         startContext(SCHEMA, SPEC_NAME + '.primary')
 
         then:
-        !applicationContext.findBean(LibraryGraphQLInvocation).isPresent()
         applicationContext.getBean(GraphQLInvocation) instanceof PrimaryInvocation
         !ExecutionContextAvailability.isAvailable(applicationContext)
-
-        then:
-        appender.list.count { it.formattedMessage.contains('does not create its GraphQLInvocation bean') } == 1
-
-        cleanup:
-        infoLogger().detachAppender(appender)
     }
 
-    void "an application @Primary factory method that returns DefaultGraphQLInvocation wins, with the INFO line"() {
-        given:
-        def appender = captureInfo()
-
+    void "an application @Primary factory method that returns DefaultGraphQLInvocation wins and the library's steps aside"() {
         when:
         startContext(SCHEMA, SPEC_NAME + '.factory')
 
         then:
-        !applicationContext.findBean(LibraryGraphQLInvocation).isPresent()
         applicationContext.getBean(GraphQLInvocation) instanceof DefaultGraphQLInvocation
+        !applicationContext.containsBean(LibraryGraphQLInvocation)
         !ExecutionContextAvailability.isAvailable(applicationContext)
-
-        then:
-        appender.list.count { it.formattedMessage.contains('does not create its GraphQLInvocation bean') } == 1
-
-        cleanup:
-        infoLogger().detachAppender(appender)
     }
 
     void "with the library's invocation the execution context is available and nothing fails"() {
@@ -569,7 +556,7 @@ type Child {
     }
 
     @Singleton
-    @Requires(property = 'spec.name', pattern = 'LibraryInvocationSpec(\\.recording)?')
+    @Requires(property = 'spec.name', pattern = 'LibraryInvocationSpec(\\.(recording|primary))?')
     @GraphQLRootResolver
     static class Query {
         String hello(DataFetchingEnvironment environment) {

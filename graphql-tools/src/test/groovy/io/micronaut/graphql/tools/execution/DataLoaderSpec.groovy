@@ -39,6 +39,7 @@ import io.micronaut.core.annotation.Order
 import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.core.propagation.PropagatedContextElement
 import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -333,6 +334,31 @@ type Author {
         cause.message.contains('@Replaces(DefaultGraphQLInvocation.class)')
     }
 
+    void "a DataLoaderRegistry bean beside an application invocation does not fail a collection of invocations"() {
+        when:
+        startContext(SCHEMA2, SPEC + '.registry', ['registry.app.invocation': 'true', 'micronaut.graphql.tools.eager-init': eager])
+        def all = applicationContext.getBeansOfType(GraphQLInvocation)
+        def list = applicationContext.getBean(GraphQLInvocation)
+
+        then:
+        all.size() == 2
+        all.any { it instanceof LibraryGraphQLInvocation }
+        list instanceof RegistryAppInvocation
+
+        where:
+        eager << [true, false]
+    }
+
+    void "the library's invocation still fails with data-loader-registry-bean when it is selected and not eager"() {
+        when:
+        startContext(SCHEMA2, SPEC + '.registry', ['micronaut.graphql.tools.eager-init': false])
+        applicationContext.getBean(GraphQLInvocation)
+
+        then:
+        def e = thrown(Exception)
+        causeOfType(e, SchemaBindingException).getCode() == BindingCode.DATA_LOADER_REGISTRY_BEAN
+    }
+
     void "two loaders with one name fail the startup with duplicate-data-loader"() {
         when:
         startContext(SCHEMA2, SPEC + '.duplicate', ['micronaut.graphql.tools.eager-init': true])
@@ -606,6 +632,17 @@ type Query {
         @Singleton
         DataLoaderRegistry registry() {
             new DataLoaderRegistry()
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC + '.registry')
+    @Requires(property = 'registry.app.invocation', value = 'true')
+    @Singleton
+    @Primary
+    static class RegistryAppInvocation implements GraphQLInvocation {
+        @Override
+        Publisher<ExecutionResult> invoke(GraphQLInvocationData data, HttpRequest request, MutableHttpResponse<String> response) {
+            Mono.empty()
         }
     }
 

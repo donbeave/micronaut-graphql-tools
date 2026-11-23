@@ -29,6 +29,7 @@ The task `driftFixtureTest` of `test-suite-java`, `test-suite-kotlin` and `test-
 
 snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="by-name", indent="0"]
 
+[[compileTimeSetup]]
 == Set up the build
 
 Add the processor to the path that the compiler of the language reads Micronaut's processors from, and pass `micronaut.graphql.tools.processor.schema.dirs`. Each snippet below is a tagged part of a sample build under `test-suite-build/samples`, and the sample is built by a test, so a documented snippet is one that has run.
@@ -292,7 +293,7 @@ Maven does not track the schema directory. The compiler plugin of a Java project
 
 == Native image
 
-The compile-time checks run in the compiler and add nothing to the application at runtime: the processor goes on the compiler path (`annotationProcessor`, `ksp`, `kapt`, `compileOnly`, or Maven's `provided`), not on the runtime classpath, and the module depends on no runtime class. The visitor writes no file. It writes the type resolver contracts that a bean class inherits into the annotation metadata of the class (`@ResolverContracts`), which the startup reads from the bean definition without reflection, so a bean that is a type resolver only through an inherited annotation binds the same way on the JVM and in a native image. A build that does not run the processor fails such a bean at startup with `[type-resolver-contracts-not-found]`, which names the processor. The rule that the library uses no reflection is enforced by `ArchitectureRulesSpec` (see <<nativeImage,Native Image>>).
+The compile-time checks run in the compiler and add nothing to the application at runtime: the processor goes on the compiler path (`annotationProcessor`, `ksp`, `kapt`, `compileOnly`, or Maven's `provided`), not on the runtime classpath, and the module depends on no runtime class. The visitor writes no file. It writes the type resolver contracts that a bean class inherits into the annotation metadata of the class (`@ResolverContracts`), which the startup reads from the bean definition without reflection, so a bean that is a type resolver only through an inherited annotation binds the same way on the JVM and in a native image. A build that does not run the processor fails such a bean at startup with `[type-resolver-contracts-not-found]`, which names the processor. The rule that the library uses no reflection is enforced by `ArchitectureRulesSpec` (see "Architecture rules" in `CONTRIBUTING.md`).
 
 == Troubleshooting
 
