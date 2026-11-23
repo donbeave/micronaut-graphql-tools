@@ -37,7 +37,7 @@ graphql:
 |`400`
 |===
 
-The library never sends `294`. A status that a `GraphQLExecutionInputCustomizer` sets on the response is kept.
+Under `application/graphql-response+json` the library changes only a `200` to `400`: a status that a `GraphQLExecutionInputCustomizer` sets on the response is kept.
 
 Every operation runs on the executor of `micronaut.graphql.tools.execution.executor`, never on the event loop unless that is `none` (see <<execution,Execution>>). To reach the request in a resolver, use a `GraphQLContextContributor`, which reads the request once and puts what the resolvers need in the GraphQL context of that execution:
 
