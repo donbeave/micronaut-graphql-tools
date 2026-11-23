@@ -125,7 +125,7 @@ public final class LibraryGraphQLController {
                                                            @Nullable Map<String, Object> variables, HttpRequest<?> request) {
         MediaType type = GraphQLHttpResponses.negotiate(request);
         if (type == null) {
-            return Flux.just(HttpResponse.status(HttpStatus.NOT_ACCEPTABLE));
+            return Flux.just(GraphQLHttpResponses.notAcceptable());
         }
         MutableHttpResponse<String> response = HttpResponse.status(HttpStatus.OK);
         @SuppressWarnings({"rawtypes", "unchecked"})

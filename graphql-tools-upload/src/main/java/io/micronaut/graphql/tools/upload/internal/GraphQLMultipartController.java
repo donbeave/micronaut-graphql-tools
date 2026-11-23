@@ -88,7 +88,7 @@ public final class GraphQLMultipartController {
     public Publisher<MutableHttpResponse<String>> post(@Body MultipartBody body, HttpRequest<?> request) {
         MediaType type = GraphQLHttpResponses.negotiate(request);
         if (type == null) {
-            return Mono.just(HttpResponse.status(HttpStatus.NOT_ACCEPTABLE));
+            return Mono.just(GraphQLHttpResponses.notAcceptable());
         }
         return Mono.defer(() -> {
             List<CompletedPart> received = new ArrayList<>();
@@ -117,7 +117,7 @@ public final class GraphQLMultipartController {
     private MutableHttpResponse<String> invalid(InvalidMultipartRequestException e, MediaType type) {
         Map<String, Object> error = GraphqlErrorBuilder.newError().message(e.getMessage())
                 .extensions(Map.of("code", GraphQLUpload.INVALID_REQUEST_CODE)).build().toSpecification();
-        return HttpResponse.<String>status(HttpStatus.BAD_REQUEST).contentType(type).body(serializer.serialize(Map.of("errors", List.of(error))));
+        return HttpResponse.<String>status(HttpStatus.BAD_REQUEST).contentType(type).header("Vary", "Accept").body(serializer.serialize(Map.of("errors", List.of(error))));
     }
 
     private static void discard(List<CompletedPart> parts) {

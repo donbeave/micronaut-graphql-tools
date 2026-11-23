@@ -20,9 +20,12 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.MutableHttpResponse;
+
+import java.util.List;
 
 /**
  * The media type and the status of a GraphQL response over HTTP. A request names the types it accepts in {@code Accept}; the
@@ -60,7 +63,8 @@ public final class GraphQLHttpResponses {
      */
     @Nullable
     public static MediaType negotiate(HttpRequest<?> request) {
-        return negotiate(request.getHeaders().get(HttpHeaders.ACCEPT));
+        List<String> fields = request.getHeaders().getAll(HttpHeaders.ACCEPT);
+        return negotiate(fields.size() < 2 ? (fields.isEmpty() ? null : fields.get(0)) : String.join(",", fields));
     }
 
     /**
@@ -85,26 +89,20 @@ public final class GraphQLHttpResponses {
         int position = 0;
         int start = 0;
         while (start <= length) {
-            int end = accept.indexOf(',', start);
-            if (end < 0) {
-                end = length;
-            }
-            int typeEnd = accept.indexOf(';', start);
-            if (typeEnd < 0 || typeEnd > end) {
-                typeEnd = end;
-            }
+            int end = indexOf(accept, ',', start, length);
+            int typeEnd = indexOf(accept, ';', start, end);
             int from = skipSpaces(accept, start, typeEnd);
             int to = trimEnd(accept, from, typeEnd);
             if (to > from) {
                 int q = typeEnd < end ? quality(accept, typeEnd + 1, end) : FULL_Q;
                 int json = specificity(accept, from, to, JSON);
-                if (json > jsonSpecificity) {
+                if (json > jsonSpecificity || json == jsonSpecificity && json >= 0 && q > jsonQ) {
                     jsonSpecificity = json;
                     jsonQ = q;
                     jsonPosition = position;
                 }
                 int graphQL = specificity(accept, from, to, GRAPHQL_RESPONSE_JSON);
-                if (graphQL > graphQLSpecificity) {
+                if (graphQL > graphQLSpecificity || graphQL == graphQLSpecificity && graphQL >= 0 && q > graphQLQ) {
                     graphQLSpecificity = graphQL;
                     graphQLQ = q;
                     graphQLPosition = position;
@@ -155,11 +153,44 @@ public final class GraphQLHttpResponses {
      * @return the response
      */
     public static <T> MutableHttpResponse<T> prepare(MutableHttpResponse<T> response, MediaType type, boolean dataPresent) {
-        response.contentType(type);
+        response.contentType(type).header(HttpHeaders.VARY, HttpHeaders.ACCEPT);
         if (!dataPresent && type == GRAPHQL_RESPONSE_JSON_TYPE && response.status() == HttpStatus.OK) {
             response.status(HttpStatus.BAD_REQUEST);
         }
         return response;
+    }
+
+    /**
+     * @return the response of a request whose {@code Accept} lists neither media type
+     */
+    public static MutableHttpResponse<String> notAcceptable() {
+        return HttpResponse.<String>status(HttpStatus.NOT_ACCEPTABLE).header(HttpHeaders.VARY, HttpHeaders.ACCEPT);
+    }
+
+    /**
+     * @param s     the header value
+     * @param ch    the delimiter
+     * @param from  where to start
+     * @param to    where to stop
+     * @return the index of the first {@code ch} in {@code [from, to)} outside a quoted string, or {@code to}
+     */
+    private static int indexOf(String s, char ch, int from, int to) {
+        boolean quoted = false;
+        for (int i = from; i < to; i++) {
+            char c = s.charAt(i);
+            if (quoted) {
+                if (c == '\\') {
+                    i++;
+                } else if (c == '"') {
+                    quoted = false;
+                }
+            } else if (c == '"') {
+                quoted = true;
+            } else if (c == ch) {
+                return i;
+            }
+        }
+        return to;
     }
 
     private static int specificity(String accept, int from, int to, String type) {
@@ -180,10 +211,7 @@ public final class GraphQLHttpResponses {
         int i = from;
         while (i < to) {
             i = skipSpaces(accept, i, to);
-            int paramEnd = accept.indexOf(';', i);
-            if (paramEnd < 0 || paramEnd > to) {
-                paramEnd = to;
-            }
+            int paramEnd = indexOf(accept, ';', i, to);
             if (paramEnd - i >= 2 && (accept.charAt(i) == 'q' || accept.charAt(i) == 'Q') && accept.charAt(i + 1) == '=') {
                 return parseQuality(accept, i + 2, trimEnd(accept, i + 2, paramEnd));
             }

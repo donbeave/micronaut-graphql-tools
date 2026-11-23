@@ -63,6 +63,15 @@ class GraphQLHttpResponsesSpec extends Specification {
         'text/*'                                                                | null
         'application/json;q=0, application/graphql-response+json;q=0'           | null
         '*/*;q=0'                                                               | null
+        'application/json;q=0, application/json;q=1'                            | JSON
+        'application/json;profile="a,b";q=0, application/graphql-response+json' | GRAPHQL
+    }
+
+    void "a negotiated response varies on Accept, also a 406"() {
+        expect:
+        GraphQLHttpResponses.prepare(HttpResponse.status(HttpStatus.OK), GraphQLHttpResponses.GRAPHQL_RESPONSE_JSON_TYPE, true)
+                .header('Vary') == 'Accept'
+        GraphQLHttpResponses.notAcceptable().with { it.status() == HttpStatus.NOT_ACCEPTABLE && it.header('Vary') == 'Accept' }
     }
 
     void "a status 200 becomes 400 only under graphql-response+json and only without data"() {
