@@ -27,8 +27,10 @@ import io.micronaut.context.annotation.EachBean;
 import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Replaces;
+import io.micronaut.context.annotation.Secondary;
 import io.micronaut.context.condition.Condition;
 import io.micronaut.context.condition.ConditionContext;
+import io.micronaut.core.annotation.AnnotationClassValue;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
@@ -155,7 +157,8 @@ public final class LibraryBeanSelection {
 
     private static boolean replaces(AnnotationValue<Replaces> replaces, BeanDefinition<?> replacing, Provided candidate) {
         Class<?> replaced = replaces.classValue("bean").orElse(replacing.getBeanType());
-        if (replaces.annotationClassValue("qualifier").isPresent()) {
+        Optional<AnnotationClassValue<?>> qualifier = replaces.annotationClassValue("qualifier");
+        if (qualifier.isPresent() && !candidate.definition().hasStereotype(qualifier.get().getName())) {
             return false;
         }
         Optional<Class<?>> factory = replaces.classValue("factory").map(type -> (Class<?>) type);
@@ -226,6 +229,53 @@ public final class LibraryBeanSelection {
         return replaces != null && replaces.classValue("bean").filter(DefaultGraphQLInvocation.class::equals).isPresent()
                 && replaces.classValue("factory").isEmpty() && replaces.stringValue("named").isEmpty()
                 && replaces.annotationClassValue("qualifier").isEmpty();
+    }
+
+    /**
+     * The enabled application templates that create a {@code GraphQLSchema} or {@code GraphQL} for every
+     * {@code GraphQLInvocation}. The library's invocation is one of those, and it needs the engine that such a template
+     * needs the invocation of, so the context cannot be built.
+     *
+     * @param context the bean context to search
+     * @return the description of each such template
+     */
+    public static List<String> eachInvocationTemplates(BeanContext context) {
+        List<String> templates = new ArrayList<>();
+        for (BeanDefinitionReference<?> reference : context.getBeanDefinitionReferences()) {
+            Class<?> beanType = reference.getBeanType();
+            if ((GraphQLSchema.class.isAssignableFrom(beanType) || GraphQL.class.isAssignableFrom(beanType)) && reference.isPresent()) {
+                BeanDefinition<?> definition = reference.load();
+                if (definition != null && !isLibrary(definition) && definition.hasStereotype(EachBean.class)
+                        && definition.classValue(EachBean.class).filter(target -> target.isAssignableFrom(LibraryGraphQLInvocation.class)).isPresent()
+                        && reference.isEnabled(context)) {
+                    templates.add(describe(definition));
+                }
+            }
+        }
+        return templates;
+    }
+
+    /**
+     * The application invocations that tie with the library's: every enabled application invocation is
+     * {@code @Secondary}, like the library's, so an unqualified injection point finds no single bean. An application
+     * invocation that is not {@code @Secondary} outranks the library's, and then nothing ties.
+     *
+     * @param context the bean context to search
+     * @return the description of each tying invocation, empty when none ties
+     */
+    public static List<String> secondaryInvocations(BeanContext context) {
+        List<String> secondary = new ArrayList<>();
+        for (Provided bean : applicationBeans(context, GraphQLInvocation.class)) {
+            BeanDefinition<?> definition = bean.definition();
+            if (definition.getBeanType() == DefaultGraphQLInvocation.class && definition.getDeclaringType().filter(type -> type != DefaultGraphQLInvocation.class).isEmpty()) {
+                continue;
+            }
+            if (!definition.hasStereotype(Secondary.class)) {
+                return List.of();
+            }
+            secondary.add(describe(bean));
+        }
+        return secondary;
     }
 
     static boolean isLibrary(BeanDefinition<?> definition) {

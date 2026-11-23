@@ -21,8 +21,11 @@ import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
+import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
+
+import java.util.List;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.internal.execution.ExecutionContextAvailability;
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
@@ -49,10 +52,31 @@ public final class EagerBinding implements ApplicationEventListener<StartupEvent
 
     @Override
     public void onApplicationEvent(StartupEvent event) {
+        rejectAmbiguousInvocation();
         schema.get();
         // an executor key that names no executor fails the startup too
         if (ExecutionContextAvailability.isAvailable(beanContext)) {
             invocation.ifPresent(bean -> { });
+        }
+    }
+
+    private void rejectAmbiguousInvocation() {
+        if (beanContext.findBeanDefinition(LibraryGraphQLInvocation.class).isEmpty()) {
+            return;
+        }
+        List<String> templates = LibraryBeanSelection.eachInvocationTemplates(beanContext);
+        if (!templates.isEmpty()) {
+            throw new ConfigurationException("The application declares " + String.join(", ", templates)
+                    + " with @EachBean(GraphQLInvocation.class), which the library's own invocation matches too, and that"
+                    + " invocation needs the GraphQL engine that such a bean provides. Fix: target the application's own bean"
+                    + " type instead of GraphQLInvocation, or declare a GraphQLSchema or GraphQL bean without @EachBean.");
+        }
+        List<String> secondary = LibraryBeanSelection.secondaryInvocations(beanContext);
+        if (!secondary.isEmpty()) {
+            throw new ConfigurationException("The application's only GraphQLInvocation beans are @Secondary: "
+                    + String.join(", ", secondary) + ". The library's own invocation is @Secondary too, so an unqualified"
+                    + " GraphQLInvocation injection point finds two equal candidates. Fix: remove @Secondary from the"
+                    + " application's invocation, or make it @Primary.");
         }
     }
 
