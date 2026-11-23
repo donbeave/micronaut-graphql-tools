@@ -460,6 +460,27 @@ type Child {
         e.message.contains('ReplacingInvocation')
     }
 
+    void "an unselected library invocation ignores the executor and timeout settings and fails fast when called"() {
+        when:
+        startContext(SCHEMA, SPEC_NAME + '.primary', ['micronaut.graphql.tools.execution.executor': 'nowhere',
+                                                       'micronaut.graphql.tools.execution.timeout': '5s',
+                                                       'micronaut.graphql.tools.eager-init': eager])
+        def all = applicationContext.getBeansOfType(GraphQLInvocation)
+
+        then:
+        all.size() == 2
+
+        when:
+        (all.find { it instanceof LibraryGraphQLInvocation } as LibraryGraphQLInvocation).invoke(null, null, null)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains("not the one that serves the transport")
+
+        where:
+        eager << [true, false]
+    }
+
     void "an application invocation that is @Primary wins as well"() {
         when:
         startContext(SCHEMA, SPEC_NAME + '.primary')
@@ -524,7 +545,7 @@ type Child {
     }
 
     @Singleton
-    @Requires(property = 'spec.name', pattern = 'LibraryInvocationSpec(\\.recording)?')
+    @Requires(property = 'spec.name', pattern = 'LibraryInvocationSpec(\\.(recording|primary))?')
     @GraphQLRootResolver
     static class Query {
         String hello(DataFetchingEnvironment environment) {

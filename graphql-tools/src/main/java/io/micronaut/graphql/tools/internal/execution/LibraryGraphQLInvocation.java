@@ -108,6 +108,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     private static final String TIMEOUT_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.timeout";
     private static final String EXECUTOR_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.executor";
 
+    private final boolean selected;
     private final GraphQL graphQL;
     @Nullable
     private final GraphQLExecutionInputCustomizer customizer;
@@ -138,17 +139,19 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         this.graphQL = graphQL;
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
         this.customizerName = this.customizer == null ? null : this.customizer.getClass().getName();
-        // only when this bean is the one that serves the transport: beside an application invocation it is an unused
-        // member of a collection, which must not fail
-        if (ExecutionContextAvailability.isAvailable(beanContext)) {
+        // The setup that can fail on configuration (the registry bean, the executor, the timer) runs only when this bean
+        // is the one that serves the transport. Beside an application invocation it is an unused member of a collection
+        // of invocations, which must not fail, so it stays inert and fails fast if it is ever called.
+        this.selected = ExecutionContextAvailability.isAvailable(beanContext);
+        if (selected) {
             rejectRegistryBean(beanContext);
         }
         // no loader bean and no contributor, no registry: graphql-java keeps its empty registry and selects its no-op dispatch strategy
         this.loaders = loaders.isEmpty() ? null : loaders;
         this.contributors = contributors.isEmpty() ? null : contributors.toArray(new GraphQLContextContributor[0]);
         this.executorName = configuration.getExecution().getExecutor();
-        this.executor = resolveExecutor(executorName, executorSelector, beanContext);
-        this.timeout = configuration.getExecution().getTimeout();
+        this.executor = selected ? resolveExecutor(executorName, executorSelector, beanContext) : null;
+        this.timeout = selected ? configuration.getExecution().getTimeout() : null;
         this.scheduler = timeout == null ? null : scheduler(beanContext);
     }
 
@@ -188,6 +191,10 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     public Publisher<ExecutionResult> execute(GraphQLInvocationData data, GraphQLTransport transport,
                                               @Nullable HttpRequest<?> request, @Nullable MutableHttpResponse<?> response,
                                               ConvertibleValues<Object> attributes) {
+        if (!selected) {
+            throw new IllegalStateException("The library's GraphQLInvocation is not the one that serves the transport: the application "
+                    + "provides its own GraphQLInvocation, so this bean was not set up. Call the application's invocation instead.");
+        }
         PropagatedContext propagated = PropagatedContext.getOrEmpty();
         if (request != null && propagated.find(ServerHttpRequestContext.class).isEmpty()) {
             propagated = propagated.plus(new ServerHttpRequestContext(request));
