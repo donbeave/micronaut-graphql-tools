@@ -32,7 +32,7 @@ import java.util.function.Function;
  * query that failed to parse or validate is cached too, so that a repeated invalid query is cheap. The key is the text
  * only: variables and the operation name do not change the document, and the depth and complexity limits run after the
  * cache, on every execution. Concurrent first misses for one text share one parse: the first caller parses and the
- * others receive its result. Every later request receives the same {@link PreparsedDocumentEntry}, so the parsed
+ * others receive its result. While an entry stays in the cache, later requests receive the same {@link PreparsedDocumentEntry}, so the parsed
  * document is shared across requests and must be treated as read-only.
  */
 @Internal

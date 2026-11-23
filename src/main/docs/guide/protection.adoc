@@ -47,9 +47,9 @@ Parsing and validating the text of a query is often the largest cost of a small 
 
 Parsing and validation on a miss run on the executor of the operation, after the hop (see <<execution,Execution>>), never on the event loop. The depth and complexity limits run on every execution, after the cache, so a cached document is judged again by the current limits.
 
-Requests that arrive at the same time with a text that is not yet cached share one parse: the first request parses and validates, and the others wait for its result instead of parsing the same text again. A parse that throws is not kept, and its failure reaches the requests that waited for it.
+Requests that arrive at the same time with a text that is not yet cached share one parse: the first request parses and validates, and the others receive its result instead of parsing the same text again. A parse that throws is not kept, and its failure reaches the requests that shared it.
 
-The cached entry is shared across requests. Every request with the same text receives the same parsed `Document` instance, not a copy, so an `Instrumentation` or a `GraphQLBuilderCustomizer` must treat the document as read-only: do not mutate it, and do not keep per-request state in a structure keyed on the document or its nodes, because two requests see the same key. Keep per-request state in the `InstrumentationState` or in the execution context instead.
+The cached entry is shared across requests. While the entry stays in the cache, every request with the same text receives the same parsed `Document` instance, not a copy (after an eviction a later request parses a new one), so an `Instrumentation` or a `GraphQLBuilderCustomizer` must treat the document as read-only: do not mutate it, and do not keep per-request state in a structure keyed on the document or its nodes, because two requests see the same key. Keep per-request state in the `InstrumentationState` or in the execution context instead.
 
 Clients that send the same text with different literals fill the cache with distinct documents. Send values as variables, so that the text is stable.
 
