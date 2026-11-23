@@ -117,6 +117,16 @@ class ScalarsTest {
         assertTrue(rootMessages(failure).contains("local-date"), failure.toString());
     }
 
+    @Test
+    void aMisspelledPropertyOfAKnownScalarFailsTheStartup() {
+        Map<String, Object> properties = Map.of("micronaut.graphql.tools.scalars.local-date.nmae", "Date");
+        Exception failure = assertThrows(Exception.class,
+                () -> ApplicationContext.run(properties, ScalarsFixtures.DEFAULTS).close());
+        String messages = rootMessages(failure);
+        assertTrue(messages.contains("micronaut.graphql.tools.scalars.local-date.nmae"), failure.toString());
+        assertTrue(messages.contains("enabled, name, format"), failure.toString());
+    }
+
     private static String rootMessages(Throwable failure) {
         StringBuilder messages = new StringBuilder();
         for (Throwable t = failure; t != null; t = t.getCause()) {

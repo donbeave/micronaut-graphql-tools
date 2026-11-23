@@ -69,6 +69,25 @@ class ScalarConfigurationSpec extends Specification {
         StandardScalar.values().every { e.message.contains(it.id()) }
     }
 
+    @Unroll
+    void "the misspelled property #key under a valid scalar id fails the startup and is named with the valid ones"() {
+        when:
+        def context = ApplicationContext.run([('micronaut.graphql.tools.scalars.' + key): 'x', 'micronaut.graphql.tools.eager-init': false], 'test')
+        try {
+            context.getBeansOfType(GraphQLScalarMapping)
+        } finally {
+            context.close()
+        }
+
+        then:
+        def e = thrown(Exception)
+        e.message.contains('micronaut.graphql.tools.scalars.' + key)
+        ['enabled', 'name', 'format'].every { e.message.contains(it) }
+
+        where:
+        key << ['local-date.nmae', 'uuid.enable', 'json.fromat', 'instant.formats']
+    }
+
     void "the configuration binds enabled, name and format of each scalar"() {
         when:
         def context = ApplicationContext.run(['micronaut.graphql.tools.scalars.local-date.name'   : 'Date',
