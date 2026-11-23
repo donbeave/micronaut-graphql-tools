@@ -42,6 +42,8 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.graphql.tools.security.GraphQLSecurity;
+import io.micronaut.security.authentication.Authentication;
 import io.micronaut.context.ApplicationContextBuilder;
 import io.micronaut.graphql.tools.internal.execution.ExecutionState;
 import io.micronaut.graphql.tools.internal.http.GraphQLHttpResponses;
@@ -97,6 +99,10 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String LOADER_OVERHEAD = "loaderOverhead";
     /** What the metrics and tracing modules add per field to a request: the invocation slope with them on, less the one with an empty instrumentation. */
     public static final String OBSERVED_INVOCATION_SLOPE = "observedInvocationSlope";
+    /** An unsecured field with the security module installed: it must allocate what the same field allocates without the module. */
+    public static final String SECURITY_UNSECURED_FIELD = "securityUnsecuredField";
+    /** A field of {@code @Secured} that the caller may call, with the security module installed. */
+    public static final String SECURITY_SECURED_FIELD_PASSES = "securitySecuredFieldPasses";
     public static final String QUERY_1K = "query1kObjects";
     public static final String QUERY_10K = "query10kObjects";
 
@@ -142,6 +148,7 @@ public final class BenchmarkCases implements AutoCloseable {
               shape(circle: Boolean!): Shape
               figure(triangle: Boolean!): Figure
               guarded: String @guard
+              secured: String
               asyncDone: String
               asyncPending: String
               captured: String
@@ -239,6 +246,16 @@ public final class BenchmarkCases implements AutoCloseable {
      * @param decorators   which {@code FieldFetcherDecorator} bean the application has
      */
     public BenchmarkCases(int loaders, Instrumented instrumented, Decorators decorators) {
+        this(loaders, instrumented, decorators, false);
+    }
+
+    /**
+     * @param loaders      how many batch loader beans no operation uses: 0, 1 or 50
+     * @param instrumented which {@code Instrumentation} bean the application has
+     * @param decorators   which {@code FieldFetcherDecorator} bean the application has
+     * @param security     whether the security module is installed: its context contributor and its decorator of {@code @Secured} fields
+     */
+    public BenchmarkCases(int loaders, Instrumented instrumented, Decorators decorators, boolean security) {
         TypeDefinitionRegistry registry = new SchemaParser().parse(SCHEMA);
         // no transport: the benchmarks call the GraphQL bean, and the websocket keep-alive task would run beside them
         ApplicationContextBuilder builder = ApplicationContext.builder();
@@ -255,6 +272,8 @@ public final class BenchmarkCases implements AutoCloseable {
                         "micronaut.graphql.tools.scalars.enabled", false,
                         // the invocation gates measure the calling thread, so the operation must not hop
                         "micronaut.graphql.tools.execution.executor", "none",
+                        // off in every case but the ones that measure the module: it is on the classpath for them
+                        "micronaut.graphql.tools.security.enabled", security,
                         "benchmarks.loaders", loaders,
                         "benchmarks.decorator", decorators.property))
                 .properties(switch (instrumented) {
@@ -300,6 +319,11 @@ public final class BenchmarkCases implements AutoCloseable {
                 Map.of("stock", Map.of("sku", "a", "quantity", 3, "weight", 2.5d))));
         ops.put(NESTED_INPUT_ARGUMENT, fetch("Query", "line", null,
                 Map.of("line", Map.of("label", "l", "point", point("a", 1, 2), "tags", List.of("x", "y")))));
+        if (security) {
+            Resolvers.capturedContext().put(GraphQLSecurity.AUTHENTICATION_KEY, Authentication.build("user", List.of("ROLE_USER")));
+        }
+        ops.put(SECURITY_UNSECURED_FIELD, fetch("Query", "ping", null, Map.of()));
+        ops.put(SECURITY_SECURED_FIELD_PASSES, fetch("Query", "secured", null, Map.of()));
         ops.put(DIRECTIVE_WRAPPED_FETCHER, fetch("Query", "guarded", null, Map.of()));
         ops.put(ASYNC_BOUNDARY_DONE, fetch("Query", "asyncDone", null, Map.of()));
         String[] accepts = {null, "*/*", "application/json", "application/graphql-response+json",

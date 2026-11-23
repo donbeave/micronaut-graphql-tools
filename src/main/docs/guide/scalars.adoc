@@ -87,7 +87,7 @@ The keys bind to `ScalarsConfiguration` (`@ConfigurationProperties` under `micro
 
 snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="configured", indent="0"]
 
-A value that a scalar cannot use fails the startup with a message that names the key: a name that is not a GraphQL name, a pattern that `DateTimeFormatter` rejects, a `format` for a scalar that has one format only (`period`, `json` and the extended scalars), or an empty value. A key under `micronaut.graphql.tools.scalars` that is not the id of a scalar, such as the typo `local-dat.enabled`, fails the startup with a message that names the key and lists the valid ids.
+A value that a scalar cannot use fails the startup with a message that names the key: a name that is not a GraphQL name, a pattern that `DateTimeFormatter` rejects, a `format` for a scalar that has one format only (`period`, `json` and the extended scalars), or an empty value. A key under `micronaut.graphql.tools.scalars` that is not the id of a scalar, such as the typo `local-dat.enabled`, fails the startup with a message that names the key and lists the valid ids. A key under the id of a scalar that is not one of its three properties, a typo such as `local-date.nmae`, fails the startup the same way: the message names the whole key and lists `enabled`, `name` and `format`. Without that check a misspelled property would be ignored and the setting would never take effect.
 
 == Your own scalars
 
