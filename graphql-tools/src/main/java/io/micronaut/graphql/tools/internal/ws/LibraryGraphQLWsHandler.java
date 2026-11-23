@@ -353,16 +353,38 @@ public class LibraryGraphQLWsHandler {
             return Mono.empty();
         }
         try {
-            return Mono.from(session.send(json.writeValueAsString(tree(message)))).then();
+            return Mono.from(session.send(write(message))).then();
         } catch (IOException e) {
             return Mono.error(e);
         }
     }
 
     /**
-     * The message as a tree. The mapper omits a null map value and then the map that holds nothing else, so a data
-     * object with only a null field would lose its payload; a tree keeps every null.
+     * The mapper may omit a null map value, and then the map that holds nothing else, so a data object with only a null
+     * field would lose its payload. A message that holds a null map value is written as a tree, which keeps every null;
+     * any other message goes to the mapper as it is, without a copy.
      */
+    private String write(Map<String, Object> message) throws IOException {
+        return json.writeValueAsString(holdsNullMapValue(message) ? tree(message) : message);
+    }
+
+    private static boolean holdsNullMapValue(@Nullable Object value) {
+        if (value instanceof Map<?, ?> map) {
+            for (Object entry : map.values()) {
+                if (entry == null || holdsNullMapValue(entry)) {
+                    return true;
+                }
+            }
+        } else if (value instanceof List<?> list) {
+            for (Object item : list) {
+                if (holdsNullMapValue(item)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private JsonNode tree(@Nullable Object value) throws IOException {
         if (value == null) {
             return JsonNode.nullNode();
@@ -380,15 +402,6 @@ public class LibraryGraphQLWsHandler {
                 items.add(tree(item));
             }
             return JsonNode.createArrayNode(items);
-        }
-        if (value instanceof String string) {
-            return JsonNode.createStringNode(string);
-        }
-        if (value instanceof Boolean flag) {
-            return JsonNode.createBooleanNode(flag);
-        }
-        if (value instanceof Number number) {
-            return JsonNode.createNumberNodeImpl(number);
         }
         return json.writeValueToTree(value);
     }

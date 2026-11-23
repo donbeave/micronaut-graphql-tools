@@ -29,7 +29,6 @@ import io.micronaut.graphql.tools.internal.ws.LibraryGraphQLWsHandler
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
 import io.micronaut.json.JsonMapper
-import io.micronaut.json.tree.JsonNode
 import io.micronaut.scheduling.TaskScheduler
 import io.micronaut.scheduling.executor.ExecutorSelector
 import io.micronaut.websocket.CloseReason
@@ -47,21 +46,11 @@ class OperationIdReuseSpec extends Specification {
 
     private static final String SUBSCRIBE = '{"id":"1","type":"subscribe","payload":{"query":"subscription { ticks }"}}'
 
-    private static Object plain(JsonNode node) {
-        if (node.isObject()) {
-            return node.entries().collectEntries { [(it.key): plain(it.value)] }
-        }
-        if (node.isArray()) {
-            return node.values().collect { plain(it) }
-        }
-        return node.value
-    }
-
     def "the id of a finished operation is free when its completion is sent"() {
         given:
         JsonMapper json = Mock(JsonMapper)
         json.readValue(_ as String, _ as Argument) >> { String text, Argument type -> new JsonSlurper().parseText(text) }
-        json.writeValueAsString(_) >> { JsonNode tree -> JsonOutput.toJson(plain(tree)) }
+        json.writeValueAsString(_) >> { Object value -> JsonOutput.toJson(value) }
         GraphQLToolsConfiguration configuration = new GraphQLToolsConfiguration()
         configuration.execution.executor = 'none'
         GraphQLInvocation invocation = new GraphQLInvocation() {
