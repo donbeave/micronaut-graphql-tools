@@ -1,0 +1,86 @@
+Strict mode is a set of ten checks that fail the startup on a binding that works but is probably a mistake. Each check has a code. The code is the key under `micronaut.graphql.tools.checks`, the word in an `allow.findings` line, the token at the start of the startup error and the word after `!` in a line of the <<manifest,binding manifest>>. The settings themselves are in the <<checkSeverity,configuration reference>>; this page says what each check finds and how to fix it.
+
+== Severity
+
+Each check has one of three severities, set with `micronaut.graphql.tools.checks.<code>`:
+
+[cols="1,4", options="header"]
+|===
+|Severity |What the check does with a finding
+|`fail` (the default of every check) |Fails the startup. All findings of the check are reported together.
+|`warn` |Logs one warning per check that lists the findings, and goes on. The findings are in the manifest.
+|`ignore` |Skips the check: it does no work and writes no manifest line.
+|===
+
+[configuration]
+----
+micronaut:
+  graphql:
+    tools:
+      checks:
+        unreachable-value-type: warn
+        unwired-directive: ignore
+----
+
+`strict` is the shorthand for the checks that have no entry: `true` (the default) leaves every check at `fail`, and `false` makes every check `warn`, including `unreachable-type` for object, interface and union types. An explicit `checks.<code>` entry wins over `strict`. An unknown code or a severity other than the three fails the startup with `[invalid-check-setting]`.
+
+The severity settings apply to the startup only. `precedence` is independent of `strict` and is not a check: a precedence ambiguity under `precedence: fail` stays a binding failure whatever `strict` says. The compile-time checks never read `strict`, `checks.<code>` or `allow.*`: five checks also run at compile time (marked below), and relaxing one at startup does not relax the compile error. A finding that the compile-time check reports is suppressed by an annotation only (see <<strictModeEscape,Accept a finding>>).
+
+=== Two settings are called strict
+
+`micronaut.graphql.tools.strict` is the shorthand above. It is unrelated to the strict mode of graphql-java's `RuntimeWiring` builder, which is not a setting of this library: on graphql-java 25 the builder itself rejects a `RuntimeWiringCustomizer` that replaces a default data fetcher, a type resolver or a scalar, and the startup then fails with `StrictModeWiringException` instead of `[runtime-wiring-override]` (see <<exceptions,the error reference>>). `strict: false` does not relax that failure.
+
+== The checks
+
+[cols="3,4,4", options="header"]
+|===
+|Code |What it finds |The fix
+|`unbound-resolver-method` (compile time) |A public method of a `@GraphQLRootResolver` or `@GraphQLTypeResolver` bean that binds no field. On a bean that uses `@GraphQLSchemaCoordinate`, only the annotated methods count. Overrides of `Object`, and the methods annotated `@EventListener`, `@Scheduled` or `@PreDestroy`, do not count. |Remove the method, make it bind a field, or put `@GraphQLIgnore` on it.
+|`root-method-several-operations` (compile time) |A root resolver method without a coordinate that binds the field of its name on more than one operation type (`Query.ping` and `Mutation.ping`). |Give each operation type its own method with `@GraphQLSchemaCoordinate`.
+|`unbound-enum-constant` (compile time) |A Java enum constant that has no value in the schema enum: it cannot be returned and never arrives as an argument. |Add the value to the schema, remove the constant, or put `@GraphQLIgnore` on it (the enum needs a bean introspection, `@Introspected`).
+|`unmapped-input-property` (compile time) |A property of an input class that the class can set (a setter or the constructor) but the GraphQL input type does not define, so no request can set it. |Add the field to the input type, remove the property, or put `@GraphQLIgnore` on it.
+|`nullable-primitive` (compile time) |An argument or an input class property that is a primitive (`int`, `boolean`, ...) for a nullable built-in scalar (`Int`, `Boolean`, ...): a `null` cannot reach it. |Use the wrapper class, or make the GraphQL type non-null.
+|`unreachable-type` |An object, interface or union type that no field reachable from a root operation type returns. At `warn` or `ignore` the type stays in the schema with graphql-java's default data fetchers. |Bind it through a field, remove it from the schema, or list it in `allow.unreachable`.
+|`unreachable-value-type` |An enum, input or scalar type that no bound field, argument or input field uses. |The same.
+|`unused-dictionary-entry` |A `SchemaMappingDictionary` entry for a type that the schema does not bind, except an allowed unreachable type. |Remove the entry or bind the type.
+|`interface-read-through-implementation` |An object type mapped to a Java interface that has no bean introspection of its own, so it is read through the introspection of its one implementation and a getter that only the implementation declares binds silently. |Annotate the interface with `@GraphQLType` or `@Introspected`, and declare the getter on it.
+|`unwired-directive` |A directive that the schema applies and no `SchemaDirective` bean, `RuntimeWiringCustomizer` or `resolver-directives` entry implements. |Add a wiring, or list the directive in `allow.inert-directives`.
+|===
+
+The findings of `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unused-dictionary-entry` and `interface-read-through-implementation` are reported in one `[strict-findings]` failure; the other checks have a failure of their own code. Every schema field must be bound in every mode (`[field-not-bound]`).
+
+[[strictModeEscape]]
+== Accept a finding
+
+A member that binds no field on purpose does not need to relax a check for the whole application:
+
+* `@GraphQLIgnore` on a resolver method, a getter or property, or an enum constant. Nothing binds the member, and it is not reported. Every ignored member the binding meets is a `~ignored Class#member` line of the manifest, so a review sees what was set aside. The compile-time checks read the same annotation.
+* `allow.findings` lists one finding by its manifest line, exactly as the manifest writes it. The finding then neither fails the startup nor is logged, and the manifest does not list it. An entry that is not the line of a check, whose check is `ignore`, or that matches no finding fails with `[invalid-allow-findings]`, so the list cannot go stale. A precedence ambiguity cannot be allowed here.
+* `allow.unreachable`, `allow.inert-directives` and `allow.schema-customizer-directives` accept a type or a directive. An allowed type also covers the enum, input and scalar types that it uses. Each entry is validated at startup, and one that no longer applies fails it.
+
+[configuration]
+----
+micronaut:
+  graphql:
+    tools:
+      allow:
+        findings:
+          - "!unbound-resolver-method example.BookQuery#helper(java.lang.String)"
+----
+
+== The removed keys
+
+Six keys of 1.0.0-M2 and earlier are removed (BC-27, 1.0.0-M3) with no alias. A key that is set fails the startup with `[removed-configuration-key]`, and the message names its replacement:
+
+[cols="2,3", options="header"]
+|===
+|Removed key |Replacement
+|`unreachable-types` |`checks.unreachable-type` and `checks.unreachable-value-type` (the old `ignore` is `warn`)
+|`input.unmapped-properties` |`checks.unmapped-input-property`
+|`allow-unreachable` |`allow.unreachable`
+|`inert-directives` |`allow.inert-directives`
+|`schema-customizer-directives` |`allow.schema-customizer-directives`
+|`unwired-directives` |`checks.unwired-directive`
+|===
+
+All of them are under `micronaut.graphql.tools`. The <<migration,migration page>> lists the change as BC-27.

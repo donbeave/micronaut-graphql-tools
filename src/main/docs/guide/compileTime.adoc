@@ -29,6 +29,7 @@ The task `driftFixtureTest` of `test-suite-java`, `test-suite-kotlin` and `test-
 
 snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="by-name", indent="0"]
 
+[[compileTimeSetup]]
 == Set up the build
 
 Add the processor to the path that the compiler of the language reads Micronaut's processors from, and pass `micronaut.graphql.tools.processor.schema.dirs`. Each snippet below is a tagged part of a sample build under `test-suite-build/samples`, and the sample is built by a test, so a documented snippet is one that has run.
