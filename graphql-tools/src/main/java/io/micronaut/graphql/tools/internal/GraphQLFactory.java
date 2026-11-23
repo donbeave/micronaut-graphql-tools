@@ -67,6 +67,13 @@ import java.util.Objects;
  * {@code @Named("admin")}) does not make them step aside; the library's beans are {@code @Primary}, so an unqualified
  * injection point still gets them.
  *
+ * <p>The selection is the library's own ({@code LibraryBeanSelection}) and not {@code @Secondary} with
+ * {@code @Requires(missingBeans)}, because {@code missingBeans} counts a qualified bean: with one
+ * {@code @Named("admin")} schema the library's schema would disappear and every unqualified injection point would get the
+ * admin schema, and with {@code @EachProperty} or {@code @EachBean} beans the first injection would fail with a
+ * {@code NonUniqueBeanException}. Revisit when Micronaut's {@code missingBeans} can ignore qualified beans. The
+ * {@code GraphQLInvocation} needs no such rule and uses {@code @Secondary}.</p>
+ *
  * <p>The {@code GraphQL} bean installs the application's {@code Instrumentation} beans: none when there is no bean, the bean
  * itself when there is one, and a {@code ChainedInstrumentation} in bean order when there are several. The
  * {@code GraphQLBuilderCustomizer} beans run after that. The one bean that the library adds itself is

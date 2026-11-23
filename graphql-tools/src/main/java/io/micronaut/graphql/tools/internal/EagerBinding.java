@@ -17,12 +17,14 @@ package io.micronaut.graphql.tools.internal;
 
 import graphql.schema.GraphQLSchema;
 import io.micronaut.context.BeanProvider;
+import io.micronaut.context.BeanContext;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import io.micronaut.core.annotation.Internal;
 import jakarta.inject.Singleton;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
+import io.micronaut.graphql.tools.internal.execution.ExecutionContextAvailability;
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 
 /**
@@ -37,16 +39,21 @@ public final class EagerBinding implements ApplicationEventListener<StartupEvent
     private final BeanProvider<GraphQLSchema> schema;
     private final BeanProvider<LibraryGraphQLInvocation> invocation;
 
-    EagerBinding(BeanProvider<GraphQLSchema> schema, BeanProvider<LibraryGraphQLInvocation> invocation) {
+    private final BeanContext beanContext;
+
+    EagerBinding(BeanProvider<GraphQLSchema> schema, BeanProvider<LibraryGraphQLInvocation> invocation, BeanContext beanContext) {
         this.schema = schema;
         this.invocation = invocation;
+        this.beanContext = beanContext;
     }
 
     @Override
     public void onApplicationEvent(StartupEvent event) {
         schema.get();
         // an executor key that names no executor fails the startup too
-        invocation.ifPresent(bean -> { });
+        if (ExecutionContextAvailability.isAvailable(beanContext)) {
+            invocation.ifPresent(bean -> { });
+        }
     }
 
 }

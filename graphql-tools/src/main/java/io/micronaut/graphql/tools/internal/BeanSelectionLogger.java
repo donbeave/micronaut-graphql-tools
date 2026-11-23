@@ -21,8 +21,6 @@ import io.micronaut.context.BeanContext;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
-import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,23 +49,6 @@ public final class BeanSelectionLogger implements ApplicationEventListener<Start
         if (LOG.isInfoEnabled()) {
             log(GraphQLSchema.class);
             log(GraphQL.class);
-            logInvocation();
-        }
-    }
-
-    private void logInvocation() {
-        LibraryBeanSelection.Provided competitor = LibraryBeanSelection.invocationCompetitor(beanContext);
-        if (competitor != null) {
-            LOG.info("The library does not create its GraphQLInvocation bean: the application provides {}, so operations run on the "
-                    + "thread that receives them and a resolver that needs the execution context (a DataLoader, the request, the "
-                    + "response or the principal) fails the startup with [execution-context-unavailable]",
-                    LibraryBeanSelection.describe(competitor));
-        } else {
-            // containsBean reads the bean definitions: the invocation is not created here, so a binding failure stays lazy
-            if (beanContext.containsBean(LibraryGraphQLInvocation.class)) {
-                LOG.info("The library's GraphQLInvocation runs every operation on the executor '{}' (micronaut.graphql.tools.execution.executor)",
-                        beanContext.getBean(GraphQLToolsConfiguration.class).getExecution().getExecutor());
-            }
         }
     }
 
