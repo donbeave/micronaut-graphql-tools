@@ -40,6 +40,7 @@ import io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest;
 import io.micronaut.graphql.tools.websocket.GraphQLConnectionResult;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.json.JsonMapper;
+import io.micronaut.json.tree.JsonNode;
 import io.micronaut.scheduling.TaskScheduler;
 import io.micronaut.scheduling.executor.ExecutorSelector;
 import io.micronaut.websocket.CloseReason;
@@ -57,6 +58,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -351,10 +353,44 @@ public class LibraryGraphQLWsHandler {
             return Mono.empty();
         }
         try {
-            return Mono.from(session.send(json.writeValueAsString(message))).then();
+            return Mono.from(session.send(json.writeValueAsString(tree(message)))).then();
         } catch (IOException e) {
             return Mono.error(e);
         }
+    }
+
+    /**
+     * The message as a tree. The mapper omits a null map value and then the map that holds nothing else, so a data
+     * object with only a null field would lose its payload; a tree keeps every null.
+     */
+    private JsonNode tree(@Nullable Object value) throws IOException {
+        if (value == null) {
+            return JsonNode.nullNode();
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, JsonNode> fields = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                fields.put(String.valueOf(entry.getKey()), tree(entry.getValue()));
+            }
+            return JsonNode.createObjectNode(fields);
+        }
+        if (value instanceof List<?> list) {
+            List<JsonNode> items = new ArrayList<>(list.size());
+            for (Object item : list) {
+                items.add(tree(item));
+            }
+            return JsonNode.createArrayNode(items);
+        }
+        if (value instanceof String string) {
+            return JsonNode.createStringNode(string);
+        }
+        if (value instanceof Boolean flag) {
+            return JsonNode.createBooleanNode(flag);
+        }
+        if (value instanceof Number number) {
+            return JsonNode.createNumberNodeImpl(number);
+        }
+        return json.writeValueToTree(value);
     }
 
     private static void invalid(WebSocketSession session) {
