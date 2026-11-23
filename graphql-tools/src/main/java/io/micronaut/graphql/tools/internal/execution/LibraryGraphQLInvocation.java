@@ -45,10 +45,11 @@ import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
 import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
+import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutClaim;
+import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutScheduler;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.http.context.ServerHttpRequestContext;
-import io.micronaut.inject.qualifiers.Qualifiers;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.executor.ExecutorSelector;
 import jakarta.inject.Singleton;
@@ -68,7 +69,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -105,7 +105,6 @@ import java.util.function.BiConsumer;
 public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
     private static final Logger LOG = LoggerFactory.getLogger(LibraryGraphQLInvocation.class);
-    private static final String TIMEOUT_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.timeout";
     private static final String EXECUTOR_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.executor";
 
     private final boolean selected;
@@ -128,7 +127,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
     @Nullable
     private final Duration timeout;
     @Nullable
-    private final ScheduledExecutorService scheduler;
+    private final TimeoutScheduler scheduler;
 
     LibraryGraphQLInvocation(GraphQL graphQL, GraphQLExecutionInputCustomizer customizer, GraphQLToolsConfiguration configuration,
                              ExecutorSelector executorSelector, BeanContext beanContext, DataLoaderTable loaders,
@@ -152,16 +151,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         this.executorName = configuration.getExecution().getExecutor();
         this.executor = selected ? resolveExecutor(executorName, executorSelector, beanContext) : null;
         this.timeout = selected ? configuration.getExecution().getTimeout() : null;
-        this.scheduler = timeout == null ? null : scheduler(beanContext);
-    }
-
-    private static ScheduledExecutorService scheduler(BeanContext beanContext) {
-        ExecutorService scheduled = beanContext.getBean(ExecutorService.class, Qualifiers.byName(TaskExecutors.SCHEDULED));
-        if (scheduled instanceof ScheduledExecutorService service) {
-            return service;
-        }
-        throw new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR, TIMEOUT_KEY + " is set, but the '" + TaskExecutors.SCHEDULED
-                + "' executor is a " + scheduled.getClass().getName() + ", which cannot schedule the timer.");
+        this.scheduler = timeout == null ? null : beanContext.getBean(TimeoutScheduler.class);
     }
 
     /**
@@ -205,9 +195,9 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             if (disconnectWatcher != null && request != null && transport == GraphQLTransport.HTTP) {
                 state.disconnectWatcher(disconnectWatcher);
             }
-            Execution execution = new Execution(data, state);
+            Execution execution = new Execution(data, state, scheduler == null ? null : new TimeoutClaim());
             if (scheduler != null) {
-                ScheduledFuture<?> timer = scheduler.schedule(execution::timeOut, timeout.toNanos(), TimeUnit.NANOSECONDS);
+                ScheduledFuture<?> timer = scheduler.scheduleTimeout(execution::timeOut, timeout.toNanos());
                 execution.whenComplete((r, failure) -> timer.cancel(false));
             }
             if (customizer != null) {
@@ -375,10 +365,13 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         private final GraphQLInvocationData data;
         private final ExecutionState state;
         private volatile Disposable customizerSubscription;
+        @Nullable
+        private final TimeoutClaim claim;
 
-        Execution(GraphQLInvocationData data, ExecutionState state) {
+        Execution(GraphQLInvocationData data, ExecutionState state, @Nullable TimeoutClaim claim) {
             this.data = data;
             this.state = state;
+            this.claim = claim;
         }
 
         @Override
@@ -409,12 +402,56 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             }
         }
 
-        /** The timer of {@code execution.timeout} fired: cancel the execution and answer the client now. */
+        @Override
+        public boolean complete(ExecutionResult result) {
+            return (claim == null || claim.completes()) && super.complete(result);
+        }
+
+        @Override
+        public boolean completeExceptionally(Throwable failure) {
+            return (claim == null || claim.completes()) && super.completeExceptionally(failure);
+        }
+
+        /**
+         * The timer of {@code execution.timeout} fired, on the timer thread, which only submits. The claim decides
+         * once whether the timeout or the execution owns the outcome, and the loser does nothing. The winner of the
+         * timeout submits two independent tasks, to the executor of the operations or to the bounded pool of the
+         * scheduler: one completes the result, whose continuation is code of the application (errors customizers), and
+         * one cancels the execution, which runs callbacks of the application. Neither waits for the other. When no
+         * executor takes the completion, it runs on the timer thread, because the client must get its answer; a
+         * cancellation that no executor takes is dropped.
+         */
         void timeOut() {
-            // the answer first: cancelling the state aborts the pending stages, and the execution would finish with their partial data
-            if (!complete(timedOut(timeout))) {
+            if (claim == null || !claim.timesOut()) {
                 return;
             }
+            Runnable completion = () -> inContext(() -> super.complete(timedOut(timeout)));
+            if (!dispatch(completion)) {
+                completion.run();
+            }
+            if (!dispatch(() -> inContext(this::cancelAfterTimeOut))) {
+                LOG.warn("The cancellation of a timed-out operation was dropped, because no executor took it. Callbacks of the application that cancel the operation did not run.");
+            }
+        }
+
+        private boolean dispatch(Runnable task) {
+            if (executor != null) {
+                try {
+                    executor.execute(task);
+                    return true;
+                } catch (RuntimeException e) {
+                    LOG.debug("The executor of the operations did not take the timeout work: {}", e.toString());
+                }
+            }
+            try {
+                scheduler.blocking().execute(task);
+                return true;
+            } catch (RuntimeException e) {
+                return false;
+            }
+        }
+
+        private void cancelAfterTimeOut() {
             state.cancel();
             state.finished();
             disposeCustomizer();
