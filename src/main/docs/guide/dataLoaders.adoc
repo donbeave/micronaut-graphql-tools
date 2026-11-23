@@ -46,7 +46,7 @@ The library does not dispatch loaders itself: graphql-java does, and the library
 
 == Options of one loader
 
-A loader is created with the default `DataLoaderOptions`. To change the options of one loader, register a `DataLoaderOptionsCustomizer` bean: `getLoaderName()` names the loader (its `@Named` qualifier, or the class name with a lower-case first letter), and `customize` gets the options and returns the options that the loader uses.
+A loader is created with the default `DataLoaderOptions`. To change the options of one loader, register a `GraphQLDataLoaderOptionsCustomizer` bean: `getLoaderName()` names the loader (its `@Named` qualifier, or the class name with a lower-case first letter), and `customize` gets the options and returns the options that the loader uses.
 
 snippet::example.tck.DataLoaderOptionsScenario[project-base="test-suite", source="test", tags="options", indent="0"]
 
@@ -58,7 +58,7 @@ snippet::example.tck.DataLoaderOptionsScenario[project-base="test-suite", source
 
 == Caching in a subscription
 
-A loader that a subscription operation creates has caching off. The loader of a query keeps the default, caching on. The cache of a `DataLoader` lives as long as the loader, and a subscription lives as long as its connection, so a cache would serve the value of the first event to every later one. A `DataLoaderOptionsCustomizer` can turn caching back on for a loader. The options that it gets already hold the default of the library, so on java-dataloader 6.x, which copies the field values in `transform`, set the value that you want explicitly instead of relying on the options you received. Return new options that enable caching: on java-dataloader 3.x a customizer that only calls `setCachingEnabled(true)` on the options it was given is ignored in a subscription, because the options that the library passes keep caching off whatever the setter stores.
+A loader that a subscription operation creates has caching off. The loader of a query keeps the default, caching on. The cache of a `DataLoader` lives as long as the loader, and a subscription lives as long as its connection, so a cache would serve the value of the first event to every later one. A `GraphQLDataLoaderOptionsCustomizer` can turn caching back on for a loader. The options that it gets already hold the default of the library, so on java-dataloader 6.x, which copies the field values in `transform`, set the value that you want explicitly instead of relying on the options you received. Return new options that enable caching: on java-dataloader 3.x a customizer that only calls `setCachingEnabled(true)` on the options it was given is ignored in a subscription, because the options that the library passes keep caching off whatever the setter stores.
 
 == Batching in a subscription event
 
@@ -71,7 +71,7 @@ The library does not change this: the dispatch is graphql-java's, and the librar
 
 == The context of a batch function
 
-A `BatchLoaderWithContext` and a `MappedBatchLoaderWithContext` get the `GraphQLContext` of the execution from `BatchLoaderEnvironment#getContext()`, so a batch function reads the values that a `GraphQLContextContributor` added. A context that your own `DataLoaderOptionsCustomizer` provides with `setBatchLoaderContextProvider` wins.
+A `BatchLoaderWithContext` and a `MappedBatchLoaderWithContext` get the `GraphQLContext` of the execution from `BatchLoaderEnvironment#getContext()`, so a batch function reads the values that a `GraphQLContextContributor` added. A context that your own `GraphQLDataLoaderOptionsCustomizer` provides with `setBatchLoaderContextProvider` wins.
 
 == Replacing the registry
 

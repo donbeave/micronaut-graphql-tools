@@ -22,7 +22,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer
+import io.micronaut.graphql.tools.execution.GraphQLDataLoaderOptionsCustomizer
 import io.micronaut.graphql.tools.execution.GraphQLContextContributor
 import io.micronaut.graphql.tools.execution.GraphQLExecutionRequest
 import jakarta.inject.Singleton
@@ -94,7 +94,7 @@ class PageLoader implements MappedBatchLoader<String, List<Page>> {
 // tag::options[]
 @CompileStatic
 @Singleton
-class PageLoaderOptions implements DataLoaderOptionsCustomizer {
+class PageLoaderOptions implements GraphQLDataLoaderOptionsCustomizer {
 
     @Override
     String getLoaderName() {

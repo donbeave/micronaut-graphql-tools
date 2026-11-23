@@ -15,7 +15,7 @@
  */
 /**
  * The per-execution seam of the library's invocation: the beans that add values to the GraphQL context of each operation, the beans that change the options of one batch loader, the beans that decorate the fetchers of selected fields
- * and the read-only view of the operation that they receive. Key types: {@link io.micronaut.graphql.tools.execution.GraphQLContextContributor}, {@link io.micronaut.graphql.tools.execution.GraphQLExecutionRequest}, {@link io.micronaut.graphql.tools.execution.GraphQLTransport}, {@link io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics}, {@link io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer}, {@link io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator}, {@link io.micronaut.graphql.tools.execution.FieldDescriptor}.
+ * and the read-only view of the operation that they receive. Key types: {@link io.micronaut.graphql.tools.execution.GraphQLContextContributor}, {@link io.micronaut.graphql.tools.execution.GraphQLExecutionRequest}, {@link io.micronaut.graphql.tools.execution.GraphQLTransport}, {@link io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics}, {@link io.micronaut.graphql.tools.execution.GraphQLDataLoaderOptionsCustomizer}, {@link io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator}, {@link io.micronaut.graphql.tools.execution.FieldDescriptor}.
  *
  * <p><b>Audience.</b> Public API. An application implements {@code GraphQLContextContributor} or {@code GraphQLFieldFetcherDecorator} as a bean and reads the request view.</p>
  */
