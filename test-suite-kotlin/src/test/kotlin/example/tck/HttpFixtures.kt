@@ -25,7 +25,9 @@ import jakarta.inject.Singleton
 import org.dataloader.BatchLoader
 import org.dataloader.DataLoader
 import java.util.concurrent.CompletableFuture
+import java.util.IdentityHashMap
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.atomic.AtomicLong
 
 // The fixtures of the TCK scenario `http`: a field that echoes its argument, a context contributor that puts the header
 // X-Tenant of the request in the GraphQL context, and a batch loader whose values come from that tenant.
@@ -56,6 +58,9 @@ class TenantLoader : BatchLoader<String, String> {
 @Requires(property = "tck.scenario", value = "http")
 class HttpQueries {
 
+    private val loaderIds = IdentityHashMap<Any, Long>()
+    private val nextLoaderId = AtomicLong()
+
     fun httpEcho(value: String): String = value
 
     fun tenant(environment: DataFetchingEnvironment): String? = environment.graphQlContext.get<String>(TENANT)
@@ -63,5 +68,6 @@ class HttpQueries {
     fun tenantLoaded(loader: DataLoader<String, String>, environment: DataFetchingEnvironment): CompletionStage<String> =
         loader.load(requireNotNull(environment.graphQlContext.get<String>(TENANT)))
 
-    fun loaderId(loader: DataLoader<String, String>): String = Integer.toHexString(System.identityHashCode(loader))
+    fun loaderId(loader: DataLoader<String, String>): String =
+        synchronized(loaderIds) { loaderIds.getOrPut(loader) { nextLoaderId.incrementAndGet() } }.toString()
 }

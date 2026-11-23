@@ -25,9 +25,13 @@ import jakarta.inject.Singleton;
 import org.dataloader.BatchLoader;
 import org.dataloader.DataLoader;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The fixtures of the TCK scenario {@code http}: a field that echoes its argument, a context contributor that puts the
@@ -77,6 +81,10 @@ public final class HttpScenario {
     @Requires(property = "tck.scenario", value = SCENARIO)
     public static class Queries {
 
+        private final Map<Object, Long> loaderIds = Collections.synchronizedMap(new IdentityHashMap<>());
+
+        private final AtomicLong nextLoaderId = new AtomicLong();
+
         public String httpEcho(String value) {
             return value;
         }
@@ -90,7 +98,7 @@ public final class HttpScenario {
         }
 
         public String loaderId(DataLoader<String, String> loader) {
-            return Integer.toHexString(System.identityHashCode(loader));
+            return Long.toString(loaderIds.computeIfAbsent(loader, key -> nextLoaderId.incrementAndGet()));
         }
     }
 }
