@@ -443,7 +443,6 @@ type Book {
         startContext(SCHEMA, SPEC_NAME, CONFIG + ['micronaut.graphql.tools.manifest.enabled': true])
 
         then:
-        !applicationContext.containsBean(BindingManifestWriter)
         applicationContext.getBean(BindingManifest).lines.size() == 36
     }
 

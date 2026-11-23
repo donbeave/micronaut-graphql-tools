@@ -572,7 +572,7 @@ public class GraphQLToolsConfiguration {
         private String path;
 
         /**
-         * @return whether the binding manifest is recorded while the schema is bound and written at startup
+         * @return whether the binding manifest is recorded while the schema is bound
          */
         public boolean isEnabled() {
             return enabled;
@@ -580,9 +580,9 @@ public class GraphQLToolsConfiguration {
 
         /**
          * Sets whether the binding manifest is recorded while the schema is bound, so that the
-         * {@link io.micronaut.graphql.tools.manifest.BindingManifest} bean can be read, and written at startup: to
-         * {@link #getPath()}, or to the log when no path is set. Default: {@code false}: nothing is recorded, the bean
-         * cannot be created. The checks run the same either way: the manifest only lists what they find.
+         * {@link io.micronaut.graphql.tools.manifest.BindingManifest} bean can be read. It is also written at startup
+         * when {@link #getPath()} is set; without a path nothing is written or logged.
+         * Default: {@code false}: nothing is recorded, the bean cannot be created. The checks run the same either way: the manifest only lists what they find.
          *
          * @param enabled whether to record and write it
          */
@@ -591,7 +591,7 @@ public class GraphQLToolsConfiguration {
         }
 
         /**
-         * @return the file the binding manifest is written to, or {@code null} to log it
+         * @return the file the binding manifest is written to at startup, or {@code null} to write none
          */
         @Nullable
         public String getPath() {
@@ -600,7 +600,7 @@ public class GraphQLToolsConfiguration {
 
         /**
          * Sets the file the binding manifest is written to at startup; its directories are created. Default: none,
-         * the manifest is logged at INFO.
+         * nothing is written. It has an effect only with {@link #isEnabled()}.
          *
          * @param path the file
          */

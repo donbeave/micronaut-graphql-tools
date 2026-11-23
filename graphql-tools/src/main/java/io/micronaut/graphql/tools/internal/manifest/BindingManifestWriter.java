@@ -31,14 +31,13 @@ import io.micronaut.graphql.tools.manifest.BindingManifest;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 
 /**
- * Writes the {@link BindingManifest} to {@code micronaut.graphql.tools.manifest.path} at startup when
- * {@code micronaut.graphql.tools.manifest.enabled} is {@code true} and a path is set. This binds the schema at startup.
+ * Writes the {@link BindingManifest} to the configured {@code manifest.path} at startup when
+ * {@code micronaut.graphql.tools.manifest.enabled} is {@code true} and the configuration has a path, however it was set. This binds the schema at startup.
  * Without a path the manifest is recorded and read from its bean, and nothing is written.
  */
 @Internal
 @Singleton
 @Requires(property = GraphQLToolsConfiguration.PREFIX + ".manifest.enabled", value = "true")
-@Requires(property = GraphQLToolsConfiguration.PREFIX + ".manifest.path")
 public final class BindingManifestWriter implements ApplicationEventListener<StartupEvent> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BindingManifestWriter.class);
@@ -54,6 +53,9 @@ public final class BindingManifestWriter implements ApplicationEventListener<Sta
 
     @Override
     public void onApplicationEvent(StartupEvent event) {
+        if (configuration.getPath() == null) {
+            return;
+        }
         BindingManifest manifest = bindingManifest.get();
         Path path = Path.of(configuration.getPath());
         try {
