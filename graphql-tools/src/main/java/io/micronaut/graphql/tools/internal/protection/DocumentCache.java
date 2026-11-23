@@ -22,6 +22,8 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.util.clhm.ConcurrentLinkedHashMap;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 /**
@@ -29,12 +31,16 @@ import java.util.function.Function;
  * keyed by the text of the query. A document that is in the cache is neither parsed nor validated again. The entry of a
  * query that failed to parse or validate is cached too, so that a repeated invalid query is cheap. The key is the text
  * only: variables and the operation name do not change the document, and the depth and complexity limits run after the
- * cache, on every execution.
+ * cache, on every execution. Concurrent first misses for one text share one parse: the first caller parses and the
+ * others receive its result. Every later request receives the same {@link PreparsedDocumentEntry}, so the parsed
+ * document is shared across requests and must be treated as read-only.
  */
 @Internal
 public final class DocumentCache implements PreparsedDocumentProvider {
 
     private final ConcurrentLinkedHashMap<String, PreparsedDocumentEntry> documents;
+
+    private final ConcurrentMap<String, CompletableFuture<PreparsedDocumentEntry>> parsing = new ConcurrentHashMap<>();
 
     /**
      * @param size the most documents that are kept, at least 1
@@ -51,10 +57,32 @@ public final class DocumentCache implements PreparsedDocumentProvider {
         String query = executionInput.getQuery();
         PreparsedDocumentEntry entry = documents.get(query);
         if (entry == null) {
-            entry = parseAndValidate.apply(executionInput);
-            documents.put(query, entry);
+            return parseOnce(query, executionInput, parseAndValidate);
         }
         return CompletableFuture.completedFuture(entry);
+    }
+
+    private CompletableFuture<PreparsedDocumentEntry> parseOnce(String query, ExecutionInput executionInput,
+                                                                Function<ExecutionInput, PreparsedDocumentEntry> parseAndValidate) {
+        CompletableFuture<PreparsedDocumentEntry> mine = new CompletableFuture<>();
+        CompletableFuture<PreparsedDocumentEntry> other = parsing.putIfAbsent(query, mine);
+        if (other != null) {
+            return other;
+        }
+        try {
+            PreparsedDocumentEntry entry = documents.get(query);
+            if (entry == null) {
+                entry = parseAndValidate.apply(executionInput);
+                documents.put(query, entry);
+            }
+            mine.complete(entry);
+        } catch (Throwable t) {
+            mine.completeExceptionally(t);
+            throw t;
+        } finally {
+            parsing.remove(query);
+        }
+        return mine;
     }
 
     /**
