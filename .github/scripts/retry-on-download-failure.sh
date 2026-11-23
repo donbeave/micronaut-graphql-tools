@@ -10,13 +10,17 @@
 # The retries are bounded: at most 3 attempts, and none once RETRY_BUDGET_SECONDS (default 900) have passed since the start,
 # so a long build that fails late is not run again. A Gradle run that failed on "Could not find <artifact>" is retried with
 # --refresh-dependencies: Gradle remembers a missing artifact for 24 hours, so a transient 404 from Maven Central would otherwise
-# fail every retry at once, and, written into master's Gradle cache, would fail every later run until the entry expires. Usage: retry-on-download-failure.sh <command> [args...]
+# fail every retry at once, and, written into master's Gradle cache, would fail every later run until the entry expires.
+# The checkPom task reports a runner repository access failure as "declares a non-resolvable dependency" for an artifact that
+# exists; that message is retried like a download failure, with --refresh-dependencies, and a failed checkPom task does not
+# count as a failed test or check. Usage: retry-on-download-failure.sh <command> [args...]
 set -o pipefail
 attempts=3
 budget=${RETRY_BUDGET_SECONDS:-900}
 unit=${RETRY_WAIT_SECONDS:-60}
 log=$(mktemp)
-trap 'rm -f "$log"' EXIT
+filtered=$(mktemp)
+trap 'rm -f "$log" "$filtered"' EXIT
 start=$SECONDS
 refresh=()
 for attempt in $(seq 1 "$attempts"); do
@@ -26,12 +30,14 @@ for attempt in $(seq 1 "$attempts"); do
     exit 0
   fi
   wait=$((unit * attempt))
+  # Filter into a file first: with pipefail, grep -q closing a pipe early would make the left grep die of SIGPIPE.
+  grep -v 'Execution failed for task [^ ]*checkPom' "$log" >"$filtered" || true
   if [ "$attempt" -eq "$attempts" ] || [ $((SECONDS - start + wait)) -ge "$budget" ] || grep -qE \
-    'There were failing tests|Execution failed for task .*([Tt]est|check)|^.* > .* FAILED$|[0-9]+ tests completed, [0-9]+ failed' "$log" || ! grep -qE \
-    'Could not (GET|HEAD|download|transfer|resolve) ' "$log"; then
+    'There were failing tests|Execution failed for task .*([Tt]est|check)|^.* > .* FAILED$|[0-9]+ tests completed, [0-9]+ failed' "$filtered" || ! grep -qE \
+    'Could not (GET|HEAD|download|transfer|resolve) |declares a non-resolvable dependency' "$log"; then
     exit "$status"
   fi
-  if [ "$(basename "$1")" = gradlew ] && grep -qE 'Could not find [^ ]+' "$log"; then
+  if [ "$(basename "$1")" = gradlew ] && grep -qE 'Could not find [^ ]+|declares a non-resolvable dependency' "$log"; then
     refresh=(--refresh-dependencies)
   fi
   echo "::warning title=dependency download failed::Attempt $attempt of $attempts failed on a download; retrying in ${wait}s."
