@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """A/B start-up comparison of two builds on a noisy machine (#368): interleaved cold forks, medians and a bootstrap interval.
 
-Build one benchmark jar per checkout and case (`./gradlew :benchmarks:jmhJar -PlargeFields=<fields> -PlargeShape=<shape>`,
-then copy `benchmarks/build/libs/*-jmh.jar` away: the next build replaces it), then run
+Build one benchmark jar per checkout and case (`./gradlew :test-suite-benchmarks:jmhJar -PlargeFields=<fields> -PlargeShape=<shape>`,
+then copy `test-suite-benchmarks/build/libs/*-jmh.jar` away: the next build replaces it), then run
 
-  python3 benchmarks/scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25 base=base.jar branch=branch.jar
+  python3 test-suite-benchmarks/scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25 base=base.jar branch=branch.jar
 
 Each round starts one cold JVM per jar, in a rotating order, so every build takes every position and a slow stretch of the
 machine hits all builds alike. The report gives, per build, the median binding time with the quartiles and the range, the median

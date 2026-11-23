@@ -22,7 +22,7 @@ import org.junit.jupiter.api.TestFactory
 import java.util.stream.Stream
 
 /**
- * The execution-behaviour TCK (#53) in the Kotlin suite: every scenario of `graphql-tools-tck` against the fixtures in this
+ * The execution-behaviour TCK (#53) in the Kotlin suite: every scenario of `test-suite-tck` against the fixtures in this
  * package, with raw HTTP requests to the running application. The same scenarios run in the Java and Groovy suites.
  */
 class GraphQLToolsTckTest {

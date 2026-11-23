@@ -91,9 +91,9 @@ Responses keep their null fields (#45): `example.nullfields` sends raw HTTP requ
 
 ### The execution-behaviour TCK
 
-`graphql-tools-tck` holds the execution behaviour the library promises (argument binding, enums, null handling, return types, errors and `data: null`, error mapping through a `DataFetcherExceptionHandler`, abstract types, DataLoaders, bean scopes, introspection, variables, aliases, fragments) as scenarios that are written once and run in all three suites: `example.tck.GraphQLToolsTckTest` in `test-suite-java` and `test-suite-kotlin` (JUnit 5, also under `nativeTest`) and `example.tck.GraphQLToolsTckSpec` in `test-suite-groovy` (Spock, JVM only). `./gradlew :graphql-tools-tck:test` checks the scenario files themselves (listed, complete, well-formed JSON) without a suite; the three suites run the scenarios: `./gradlew :test-suite-java:test --tests 'example.tck.*'` (and the same for Kotlin and Groovy). The whole TCK (9 scenarios) takes about 1.5 to 7 seconds in each suite on a laptop, starting one application per scenario; the first scenario of a JVM carries about 4.7 seconds of warm-up, the others 0.1 to 0.4 seconds each.
+`test-suite-tck` holds the execution behaviour the library promises (argument binding, enums, null handling, return types, errors and `data: null`, error mapping through a `DataFetcherExceptionHandler`, abstract types, DataLoaders, bean scopes, introspection, variables, aliases, fragments) as scenarios that are written once and run in all three suites: `example.tck.GraphQLToolsTckTest` in `test-suite-java` and `test-suite-kotlin` (JUnit 5, also under `nativeTest`) and `example.tck.GraphQLToolsTckSpec` in `test-suite-groovy` (Spock, JVM only). `./gradlew :test-suite-tck:test` checks the scenario files themselves (listed, complete, well-formed JSON) without a suite; the three suites run the scenarios: `./gradlew :test-suite-java:test --tests 'example.tck.*'` (and the same for Kotlin and Groovy). The whole TCK (9 scenarios) takes about 1.5 to 7 seconds in each suite on a laptop, starting one application per scenario; the first scenario of a JVM carries about 4.7 seconds of warm-up, the others 0.1 to 0.4 seconds each.
 
-A scenario is a directory under `graphql-tools-tck/src/main/resources/tck/`:
+A scenario is a directory under `test-suite-tck/src/main/resources/tck/`:
 
 | File | Content |
 | --- | --- |
@@ -107,7 +107,7 @@ A scenario is a directory under `graphql-tools-tck/src/main/resources/tck/`:
 
 To add a scenario:
 
-1. Create the directory with the files above and list its id in `tck/scenarios.txt`. `./gradlew :graphql-tools-tck:test` fails on a missing, unlisted or malformed file.
+1. Create the directory with the files above and list its id in `tck/scenarios.txt`. `./gradlew :test-suite-tck:test` fails on a missing, unlisted or malformed file.
 2. In each suite add the fixtures (resolvers, types, loaders) in `src/test/{java,kotlin,groovy}/example/tck/<Scenario>Scenario.*`. Every fixture bean carries `@Requires(property = "tck.scenario", value = "<id>")`, so that only the scenario that runs has resolvers; classes of unions and interfaces are mapped by a `TckTypeMappings` bean with the same condition. Names stay unique across scenarios, because the fixtures of all scenarios are on one classpath.
 3. Run the three suites. A scenario without fixtures in a suite fails there when the application starts. A suite that cannot have the fixtures lists the id and a reason in `src/test/resources/tck-exemptions.txt` (`<id> <reason>`); the list only shrinks: the meta-test `exemptionsAreCurrent` fails on an id that is no scenario, and on one whose scenario passes. No suite has an exemption today.
 
@@ -215,7 +215,7 @@ Do not import any type annotated `@Internal`, and nothing from a package named `
 
 ### Current layout
 
-This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration and `graphql-tools-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration and `test-suite-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
 
 | Package | Module | Audience | Holds |
 | --- | --- | --- | --- |
@@ -277,7 +277,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.security` | graphql-tools-security | Public API | `GraphQLSecurity`, the configuration prefix, the context key of the authentication and the error codes of a secured field, and `RootFieldsHook` |
 | `io.micronaut.graphql.tools.security.internal` | graphql-tools-security | Internal | The context contributor, the decorator and fetcher of the secured fields and the instrumentation of the hook |
 | `io.micronaut.graphql.tools.visitor` | graphql-tools-processor | Compiler plug-in | The compile-time `TypeElementVisitor`, loaded by the compiler and never imported |
-| `io.micronaut.graphql.tools.tck` | graphql-tools-tck | Test helper | The TCK runner; not published |
+| `io.micronaut.graphql.tools.tck` | test-suite-tck | Test helper | The TCK runner; not published |
 
 Kotlin and Groovy sources need no `package-info`; the library modules are Java.
 
@@ -291,7 +291,7 @@ The public API is split into its role packages (`annotation`, `config`, `customi
 
 ## Benchmarks
 
-The `benchmarks` module measures the request hot path: a property fetch, a root method, a type resolver method
+The `test-suite-benchmarks` module measures the request hot path: a property fetch, a root method, a type resolver method
 with its source, the conversion of scalar, enum, input object and list-of-inputs arguments, union and interface
 resolution from four threads, a directive-wrapped fetcher, and a whole query over 1,000 and 10,000 objects with four
 fields each. `BindingBenchmark` measures start-up: it starts a fresh application context and binds a generated schema of
@@ -305,7 +305,7 @@ the dictionary validation and the registry lookups that the rings barely reach. 
 as the secondary result `retainedBytes`: the heap in use after a full collection with the context open, minus the heap
 in use before the start. JMH's text summary adds the forks up for a secondary result, so the figure per fork is read from
 the JSON. Both are measured cold, one fresh JVM per sample, only by `scripts/startup-report.py` (see below): the
-`./gradlew :benchmarks:jmh` task excludes them, because its warm-up would start contexts in the same JVM first.
+`./gradlew :test-suite-benchmarks:jmh` task excludes them, because its warm-up would start contexts in the same JVM first.
 
 The benchmark jar generates the 1,600-field ring schema only, as before, so the other start-up benchmarks bind the same
 schema as before. Each other size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build; add
@@ -318,7 +318,7 @@ thread stack of a cold JVM, and the benchmark JVMs run on the default thread sta
 stack (`DeepTypeChainSpec`). `ContextStartBenchmark`, `FirstRequestBenchmark` and
 `StartAndFirstRequestBenchmark` separate the binding at startup from the first request: the same schema with
 `micronaut.graphql.tools.eager-init` `true` or `false`, timing the context start, the first query after the start, and
-both together (`./gradlew :benchmarks:jmhJar`, then run the jar with `-f 10 -wi 0 -i 1 -bm ss` for a cold
+both together (`./gradlew :test-suite-benchmarks:jmhJar`, then run the jar with `-f 10 -wi 0 -i 1 -bm ss` for a cold
 JVM per sample; the jar leaves `BindingBenchmark` and `RetainedHeapBenchmark` out unless one is named, because it
 generates the 1,600-field schema only). None has an allocation gate: a whole context start is not a path the library owns. A gain is claimed
 only with a figure from these benchmarks.
@@ -344,10 +344,10 @@ attached to the measured operations. `jmhSmokeTest` runs every case.
 
 Two checks run on every `./gradlew check`:
 
-- `:benchmarks:jmhSmokeTest` runs every JMH benchmark once in the test JVM (no fork, single shot), so the benchmarks
+- `:test-suite-benchmarks:jmhSmokeTest` runs every JMH benchmark once in the test JVM (no fork, single shot), so the benchmarks
   compile and start. Its numbers mean nothing.
-- `:benchmarks:allocationTest` fails when an operation allocates more than its baseline in
-  `benchmarks/allocation-baselines.properties`. It measures the bytes the calling thread allocates per operation
+- `:test-suite-benchmarks:allocationTest` fails when an operation allocates more than its baseline in
+  `test-suite-benchmarks/allocation-baselines.properties`. It measures the bytes the calling thread allocates per operation
   (`getCurrentThreadAllocatedBytes`), discards the first round and takes the minimum of the others. Each operation runs
   in its own JVM, compiled by C1 only: the figure is every allocation the code performs, before the escape analysis of
   C2 removes some of them, so it does not change from one run, machine or JDK patch level to the next. (JMH's
@@ -362,18 +362,18 @@ Two checks run on every `./gradlew check`:
   selects the beans of `Loaders`): a registered but unused loader costs nothing, so the gate allows 0.5 B for each of the 49 and
   its baseline is 0. `injectedParameters` and `injectedStateParameters` gate a field with four and with three injected parameters (context, locale, context value, environment; request, optional response, principal): each allocates the argument array and nothing else (32 B).
 
-To measure, run `./gradlew :benchmarks:jmh` (two forks, the `gc` profiler; the allocation figure is
-`gc.alloc.rate.norm` in bytes per operation) or `./gradlew :benchmarks:jmh -Pjmh.profile=quick` for a short run. Narrow
+To measure, run `./gradlew :test-suite-benchmarks:jmh` (two forks, the `gc` profiler; the allocation figure is
+`gc.alloc.rate.norm` in bytes per operation) or `./gradlew :test-suite-benchmarks:jmh -Pjmh.profile=quick` for a short run. Narrow
 it with `-Pjmh.includes=<regex>`, and pick the graphql-java leg with `-PgraphqlJavaLeg=ceiling` (`floor`, `default` or `ceiling`). The results are in
-`benchmarks/build/results/jmh/`. Run on an idle machine with a JDK the CI uses (Temurin 21 or 25), and quote the figures with
+`test-suite-benchmarks/build/results/jmh/`. Run on an idle machine with a JDK the CI uses (Temurin 21 or 25), and quote the figures with
 the JDK, the graphql-java leg and the error that JMH prints.
 
-The start-up figures have one command. `python3 benchmarks/scripts/startup-report.py` builds one jar per schema size
+The start-up figures have one command. `python3 test-suite-benchmarks/scripts/startup-report.py` builds one jar per schema size
 and runs `BindingBenchmark` and `RetainedHeapBenchmark` on each, with ten cold JVMs per case (`--forks` changes that). It
 prints, for each case, the median binding time with the minimum and maximum, and the median `retainedBytes`, all taken
 over the per-fork values in the JMH JSON. `--json <file>` keeps the JSON, `--previous <file>` prints the change against
 an earlier JSON, and `--from <file>` reports a JSON without running anything. The report prints the JDK, so quote it with
-the figures. The last jar it builds is a one-size jar: run `./gradlew :benchmarks:jmhJar` again before the other benchmarks.
+the figures. The last jar it builds is a one-size jar: run `./gradlew :test-suite-benchmarks:jmhJar` again before the other benchmarks.
 
 The `Startup benchmark` workflow (`.github/workflows/startup-benchmark.yml`) runs the command every night and on demand
 (Actions, "Run workflow"). It archives the JSON as the `startup-benchmark` artifact (90 days), prints the medians and the
@@ -383,18 +383,18 @@ the spread of the forks as noise. To compare a change with master, run the comma
 pass the master JSON to `--previous`.
 
 To compare two builds on a machine that is not idle, build one jar per checkout and case, and run
-`python3 benchmarks/scripts/startup-ab.py --fields <fields> --shape <shape> --forks 25 base=<jar> branch=<jar>`. It starts the
+`python3 test-suite-benchmarks/scripts/startup-ab.py --fields <fields> --shape <shape> --forks 25 base=<jar> branch=<jar>`. It starts the
 builds in turn, one cold JVM each, in a rotating order, and prints the medians, the quartiles, the range, the retained heap
 and a 95 percent bootstrap interval of the median difference. A difference whose interval holds zero is inside the noise and
-is not reported as a gain. The measured results of the binding changes are in `benchmarks/README.md`.
+is not reported as a gain. The measured results of the binding changes are in `test-suite-benchmarks/README.md`.
 
 When an allocation changes on purpose, record the new baselines of the three legs (`floor`, `default`, `ceiling`) and commit the file; the diff is the
 review of the change:
 
 ```
-./gradlew :benchmarks:allocationTest -Pallocation.update
-./gradlew :benchmarks:allocationTest -Pallocation.update -PgraphqlJavaLeg=floor
-./gradlew :benchmarks:allocationTest -Pallocation.update -PgraphqlJavaLeg=ceiling
+./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update
+./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update -PgraphqlJavaLeg=floor
+./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update -PgraphqlJavaLeg=ceiling
 ```
 
 Baselines are keyed by operation, graphql-java leg and JDK feature version, and are recorded for JDK 21 and JDK 25 (the two

@@ -22,8 +22,8 @@ include("graphql-tools-opentelemetry")
 include("graphql-tools-upload")
 include("graphql-tools-security")
 include("graphql-tools-processor")
-include("benchmarks")
-include("graphql-tools-tck")
+include("test-suite-benchmarks")
+include("test-suite-tck")
 include("test-suite-java")
 include("test-suite-kotlin")
 include("test-suite-groovy")
@@ -36,9 +36,4 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     importMicronautCatalog("micronaut-micrometer")
     importMicronautCatalog("micronaut-tracing")
     importMicronautCatalog("micronaut-security")
-}
-
-gradle.settingsEvaluated {
-    rootProject.children.single { it.name == "micronaut-benchmarks" }.name = "benchmarks"
-    rootProject.children.single { it.name == "micronaut-graphql-tools-tck" }.name = "graphql-tools-tck"
 }

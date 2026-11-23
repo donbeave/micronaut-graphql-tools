@@ -60,7 +60,7 @@ final class Baselines {
     void write() throws IOException {
         try (Writer writer = Files.newBufferedWriter(file)) {
             writer.write("# Allocation baselines in bytes per operation, key: case@graphql-java leg@JDK feature version.\n");
-            writer.write("# Written by: ./gradlew :benchmarks:allocationTest -Pallocation.update\n");
+            writer.write("# Written by: ./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update\n");
             writer.write("# Review the diff: a higher number is an allocation the change added.\n");
             for (Map.Entry<String, String> entry : values.entrySet()) {
                 writer.write(entry.getKey() + "=" + entry.getValue() + "\n");

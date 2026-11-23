@@ -1,4 +1,5 @@
 plugins {
+    id("io.micronaut.build.internal.graphql-tools-license")
     id("io.micronaut.application")
     id("com.gradleup.shadow")
     id("io.micronaut.aot")
@@ -18,7 +19,7 @@ dependencies {
     implementation(libs.apollo.java.client)
     implementation(libs.apollo.java.rx3)
     implementation(libs.apollo.api) // the Java client 1.0.0 resolves apollo-api 5.0.1; keep the API at the plugin's version
-    testImplementation(projects.graphqlToolsTck) // the execution-behaviour TCK (#53)
+    testImplementation(projects.testSuiteTck) // the execution-behaviour TCK (#53)
     // The metrics and tracing modules and the libraries their tests observe with: the Micrometer and OpenTelemetry integrations of
     // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
     testImplementation(projects.micronautGraphqlToolsMicrometer)
@@ -242,4 +243,3 @@ val graphqlSchemaIndex = tasks.register("graphqlSchemaIndex") {
 sourceSets.test { resources.srcDir(graphqlSchemaIndex) }
 
 apply(from = rootProject.file("config/compile-time-report.gradle.kts"))
-apply(from = rootProject.file("config/spotless.license.gradle"))

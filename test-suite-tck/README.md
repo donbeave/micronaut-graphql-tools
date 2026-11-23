@@ -1,6 +1,6 @@
-# graphql-tools-tck
+# test-suite-tck
 
-Gradle project `:graphql-tools-tck`, folder `graphql-tools-tck/`. Not published.
+Gradle project `:test-suite-tck`, folder `test-suite-tck/`. Not published.
 
 ## Purpose
 
@@ -51,7 +51,7 @@ Nothing here is a library API. The package `io.micronaut.graphql.tools.tck` is a
 Check the scenario files (no application is started):
 
 ```
-./gradlew :graphql-tools-tck:test
+./gradlew :test-suite-tck:test
 ```
 
 Run the scenarios in a suite. The scenarios are in the `example.tck` package of each suite:
