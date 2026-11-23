@@ -9,6 +9,7 @@ This is not an official Micronaut module yet. This file describes how this repos
 - The only required status check is `required checks`, the gate job in `.github/workflows/gradle.yml`. It is green only when every job it lists under `needs:` succeeded. A new gated job goes into that `needs:` list, never into the ruleset: renaming a job or adding a graphql-java leg needs no ruleset edit.
 - There is no admin bypass. A red, cancelled, pending or missing check blocks the merge. Review conversations must be resolved.
 - The native image jobs (`native (GraalVM 25, graphql-java default|ceiling)`) and `native Groovy smoke` are in the gate like every other job of `gradle.yml`.
+- Gradle build logic is Kotlin DSL only: `*.gradle.kts` files, Kotlin precompiled script plugins in `buildSrc`, and `*.init.gradle.kts` files. A pull request does not add or edit a Groovy DSL Gradle file (`*.gradle`), except one that migrates it to the Kotlin DSL. The rule covers build scripts only; the Groovy tests (the Spock specs and the Groovy example suite) are not affected.
 
 ## One gate: the pull request check is the master check
 
