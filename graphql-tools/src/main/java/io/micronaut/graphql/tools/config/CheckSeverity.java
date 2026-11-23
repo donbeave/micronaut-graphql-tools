@@ -16,7 +16,7 @@
 package io.micronaut.graphql.tools.config;
 
 /**
- * What a check does with a finding, as a value of {@code micronaut.graphql.tools.checks.<code>}.
+ * What a check does with a finding, as a value of the {@code micronaut.graphql.tools.checks} map.
  */
 public enum CheckSeverity {
 
