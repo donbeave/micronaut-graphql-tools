@@ -21,6 +21,9 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import graphql.ExecutionInput
 import graphql.ExecutionResult
+import graphql.GraphQLError
+import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
+import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.configuration.graphql.DefaultGraphQLExecutionInputCustomizer
 import io.micronaut.configuration.graphql.DefaultGraphQLInvocation
@@ -47,8 +50,9 @@ import io.micronaut.graphql.tools.internal.execution.ExecutionState
 import io.micronaut.core.convert.value.ConvertibleValues
 import io.micronaut.graphql.tools.execution.GraphQLTransport
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
+import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutClaim
+import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutScheduler
 import io.micronaut.http.HttpRequest
-import io.micronaut.scheduling.TaskExecutors
 import io.micronaut.http.MutableHttpResponse
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -63,7 +67,7 @@ import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ExecutorService
@@ -97,6 +101,7 @@ type Child {
 
     void setup() {
         ProbeCustomizer.reset()
+        TimeoutContextCustomizer.SEEN_MARKERS.clear()
         CALLS.clear()
         RESOLVER_THREADS.clear()
         SEEN.clear()
@@ -228,6 +233,141 @@ type Child {
 
         cleanup:
         ProbeCustomizer.NEVER = false
+    }
+
+    void "operations that finish before a long timeout leave no cancelled timer in the scheduler queue"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.execution.timeout': '1h'])
+        def scheduler = applicationContext.getBean(TimeoutScheduler)
+
+        when:
+        200.times { run('{ hello }') }
+
+        then:
+        scheduler.queue.size() == 0
+    }
+
+    void "twenty operations time out together while each cancellation callback blocks, and every client gets its answer (#exec)"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.blocker', ['micronaut.graphql.tools.execution.timeout': '100ms',
+                                                      'micronaut.graphql.tools.execution.executor': exec])
+        def errorsCustomizer = applicationContext.getBean(BlockingErrorsCustomizer)
+        errorsCustomizer.together = new CountDownLatch(20)
+        def futures = (1..20).collect { i ->
+            Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello' + (' ' * i) + '}', null, [:]), null, null)).toFuture()
+        }
+
+        when:
+        def results = futures.collect { it.get(5, TimeUnit.SECONDS) }
+
+        then:
+        results.every { it.errors[0].extensions.code == 'EXECUTION_TIMEOUT' }
+        errorsCustomizer.together.count == 0
+
+        cleanup:
+        applicationContext.getBean(BlockingCustomizer).release.countDown()
+
+        where:
+        exec << ['blocking', 'none']
+    }
+
+    void "a timeout completes through the fallback pool when the executor of the operations throws on the timeout work"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.probe', ['micronaut.graphql.tools.execution.timeout': '100ms',
+                                                    'micronaut.graphql.tools.execution.executor': 'flaky'])
+        ProbeCustomizer.NEVER = true
+
+        when:
+        def result = Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null))
+                .block(java.time.Duration.ofSeconds(10))
+        for (int i = 0; i < 100 && ProbeCustomizer.CANCELLED.get() == 0; i++) {
+            Thread.sleep(50)
+        }
+
+        then:
+        result.errors[0].extensions.code == 'EXECUTION_TIMEOUT'
+        ProbeCustomizer.CANCELLED.get() == 1
+    }
+
+    void "the completion of an operation and its timeout never both win the outcome"() {
+        when:
+        def bothWon = 0
+        def neitherWon = 0
+        def pool = Executors.newFixedThreadPool(2)
+        try {
+            1000.times {
+                def claim = new TimeoutClaim()
+                def start = new CountDownLatch(1)
+                def completed = pool.submit({ start.await(); claim.completes() } as java.util.concurrent.Callable<Boolean>)
+                def timedOut = pool.submit({ start.await(); claim.timesOut() } as java.util.concurrent.Callable<Boolean>)
+                start.countDown()
+                def c = completed.get(5, TimeUnit.SECONDS)
+                def t = timedOut.get(5, TimeUnit.SECONDS)
+                if (c && t) {
+                    bothWon++
+                } else if (!c && !t) {
+                    neitherWon++
+                }
+            }
+        } finally {
+            pool.shutdownNow()
+        }
+
+        then:
+        bothWon == 0
+        neitherWon == 0
+    }
+
+    void "a cancellation callback that blocks does not delay the timeout of another operation"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.blocker', ['micronaut.graphql.tools.execution.timeout': '100ms'])
+        def first = Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)).subscribe()
+
+        when:
+        assert applicationContext.getBean(BlockingCustomizer).entered.await(10, TimeUnit.SECONDS)
+        def result = Mono.from(invocation().invoke(new GraphQLInvocationData('{ child { name } }', null, [:]), null, null))
+                .block(java.time.Duration.ofSeconds(5))
+
+        then:
+        result.errors[0].extensions.code == 'EXECUTION_TIMEOUT'
+
+        cleanup:
+        applicationContext.getBean(BlockingCustomizer).release.countDown()
+        first?.dispose()
+    }
+
+    void "the errors customizers see the propagated context of the caller when the timeout fires"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.probe', ['micronaut.graphql.tools.execution.timeout': '100ms'])
+        ProbeCustomizer.NEVER = true
+        def element = new MarkerElement('timeout-1')
+        Publisher<ExecutionResult> publisher
+        def scope = PropagatedContext.getOrEmpty().plus(element).propagate()
+        try {
+            publisher = invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)
+        } finally {
+            scope.close()
+        }
+
+        when:
+        def result = Mono.from(publisher).block(java.time.Duration.ofSeconds(10))
+
+        then:
+        result.errors[0].extensions.code == 'EXECUTION_TIMEOUT'
+        TimeoutContextCustomizer.SEEN_MARKERS == [element]
+    }
+
+    void "a timeout set on the configuration bean in code arms the timer"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME + '.probe', ['spec.timeout-config': 'true'])
+        ProbeCustomizer.NEVER = true
+
+        when:
+        def result = Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null))
+                .block(java.time.Duration.ofSeconds(10))
+
+        then:
+        result.errors[0].extensions.code == 'EXECUTION_TIMEOUT'
     }
 
     void "a customizer that never completes is disposed when the timeout fires before its subscription is stored"() {
@@ -569,7 +709,7 @@ type Child {
     }
 
     @Singleton
-    @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(customizer|subclass|probe|window)')
+    @Requires(property = 'spec.name', pattern = SPEC_NAME + '\\.(customizer|subclass|probe|window|blocker)')
     @GraphQLRootResolver
     static class CustomizedQuery {
         String hello(DataFetchingEnvironment environment) {
@@ -623,6 +763,84 @@ type Child {
         }
     }
 
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.blocker')
+    @Singleton
+    static class BlockingErrorsCustomizer implements GraphQLErrorsCustomizer {
+        volatile CountDownLatch together
+
+        @Override
+        List<GraphQLError> customize(List<GraphQLError> errors) {
+            CountDownLatch latch = together
+            if (latch != null) {
+                latch.countDown()
+                latch.await(10, TimeUnit.SECONDS)
+            }
+            errors
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.blocker')
+    @Singleton
+    static class BlockingCustomizer implements GraphQLExecutionInputCustomizer {
+        final CountDownLatch entered = new CountDownLatch(1)
+        final CountDownLatch release = new CountDownLatch(1)
+
+        @Override
+        Publisher<ExecutionInput> customize(ExecutionInput executionInput, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
+            Mono<ExecutionInput> never = Mono.<ExecutionInput> never()
+            if (executionInput.query.startsWith('{ hello')) {
+                never = never.doOnCancel {
+                    entered.countDown()
+                    release.await(30, TimeUnit.SECONDS)
+                }
+            }
+            never
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.probe')
+    @Factory
+    static class FlakyExecutors {
+        @Bean
+        @Singleton
+        @Named('flaky')
+        ExecutorService flaky() {
+            new ThreadPoolExecutor(1, 1, 1, TimeUnit.MINUTES, new java.util.concurrent.LinkedBlockingQueue<Runnable>()) {
+                private final AtomicInteger calls = new AtomicInteger()
+
+                @Override
+                void execute(Runnable command) {
+                    if (calls.incrementAndGet() > 1) {
+                        throw new IllegalStateException('the executor does not take more work')
+                    }
+                    super.execute(command)
+                }
+            }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.probe')
+    @Singleton
+    static class TimeoutContextCustomizer implements GraphQLErrorsCustomizer {
+        static final List<Object> SEEN_MARKERS = Collections.synchronizedList([])
+
+        @Override
+        List<GraphQLError> customize(List<GraphQLError> errors) {
+            SEEN_MARKERS.addAll(PropagatedContext.getOrEmpty().findAll(MarkerElement).toList())
+            errors
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.probe')
+    @Requires(property = 'spec.timeout-config')
+    @Singleton
+    @Replaces(GraphQLToolsConfiguration)
+    static class TimedConfiguration extends GraphQLToolsConfiguration {
+        TimedConfiguration() {
+            execution.timeout = java.time.Duration.ofMillis(100)
+        }
+    }
+
     @Requires(property = 'spec.name', value = SPEC_NAME + '.window')
     @Singleton
     static class WindowCustomizer implements GraphQLExecutionInputCustomizer {
@@ -639,12 +857,8 @@ type Child {
 
     @Requires(property = 'spec.name', value = SPEC_NAME + '.window')
     @Singleton
-    @Replaces(value = ExecutorService, named = TaskExecutors.SCHEDULED)
-    @Named(TaskExecutors.SCHEDULED)
-    static class RecordingScheduler extends ScheduledThreadPoolExecutor {
-        RecordingScheduler() {
-            super(1)
-        }
+    @Replaces(TimeoutScheduler)
+    static class RecordingScheduler extends TimeoutScheduler {
 
         @Override
         ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
