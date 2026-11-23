@@ -158,7 +158,8 @@ public final class LibraryBeanSelection {
     private static boolean replaces(AnnotationValue<Replaces> replaces, BeanDefinition<?> replacing, Provided candidate) {
         Class<?> replaced = replaces.classValue("bean").orElse(replacing.getBeanType());
         Optional<AnnotationClassValue<?>> qualifier = replaces.annotationClassValue("qualifier");
-        if (qualifier.isPresent() && !candidate.definition().hasStereotype(qualifier.get().getName())) {
+        if (qualifier.isPresent() && !candidate.definition().hasStereotype(qualifier.get().getName())
+                && (candidate.target() == null || !candidate.target().hasStereotype(qualifier.get().getName()))) {
             return false;
         }
         Optional<Class<?>> factory = replaces.classValue("factory").map(type -> (Class<?>) type);
@@ -202,7 +203,7 @@ public final class LibraryBeanSelection {
         PropertyCatalog catalog = template.enumValue(EachProperty.class, "catalog", PropertyCatalog.class).orElse(PropertyCatalog.NORMALIZED);
         boolean templatePrimary = template.hasStereotype(Primary.class);
         for (String key : applicationContext.getEnvironment().getPropertyEntries(prefix, catalog)) {
-            beans.add(new Provided(template, Qualifiers.byName(key), templatePrimary || key.equals(primary)));
+            beans.add(new Provided(template, Qualifiers.byName(key), templatePrimary || key.equals(primary), null));
         }
     }
 
@@ -214,7 +215,8 @@ public final class LibraryBeanSelection {
             try {
                 for (Provided targetBean : provided(context, target.get(), true, visits)) {
                     beans.add(new Provided(template, targetBean.qualifier(),
-                            template.hasStereotype(Primary.class) || targetBean.primary()));
+                            template.hasStereotype(Primary.class) || targetBean.primary(),
+                            targetBean.target() != null ? targetBean.target() : targetBean.definition()));
                 }
             } finally {
                 visits.expanding().remove(template);
@@ -240,16 +242,22 @@ public final class LibraryBeanSelection {
      * @return the description of each such template
      */
     public static List<String> eachInvocationTemplates(BeanContext context) {
-        List<String> templates = new ArrayList<>();
+        List<Provided> candidates = new ArrayList<>();
         for (BeanDefinitionReference<?> reference : context.getBeanDefinitionReferences()) {
             Class<?> beanType = reference.getBeanType();
             if ((GraphQLSchema.class.isAssignableFrom(beanType) || GraphQL.class.isAssignableFrom(beanType)) && reference.isPresent()) {
                 BeanDefinition<?> definition = reference.load();
-                if (definition != null && !isLibrary(definition) && definition.hasStereotype(EachBean.class)
-                        && definition.classValue(EachBean.class).filter(target -> target.isAssignableFrom(LibraryGraphQLInvocation.class)).isPresent()
-                        && reference.isEnabled(context)) {
-                    templates.add(describe(definition));
+                if (definition != null && !isLibrary(definition) && reference.isEnabled(context)) {
+                    candidates.add(new Provided(definition));
                 }
+            }
+        }
+        List<String> templates = new ArrayList<>();
+        for (Provided candidate : withoutReplaced(candidates)) {
+            BeanDefinition<?> definition = candidate.definition();
+            if (definition.hasStereotype(EachBean.class)
+                    && definition.classValue(EachBean.class).filter(target -> target.isAssignableFrom(LibraryGraphQLInvocation.class)).isPresent()) {
+                templates.add(describe(definition));
             }
         }
         return templates;
@@ -267,10 +275,11 @@ public final class LibraryBeanSelection {
         List<String> secondary = new ArrayList<>();
         for (Provided bean : applicationBeans(context, GraphQLInvocation.class)) {
             BeanDefinition<?> definition = bean.definition();
-            if (definition.getBeanType() == DefaultGraphQLInvocation.class && definition.getDeclaringType().filter(type -> type != DefaultGraphQLInvocation.class).isEmpty()) {
+            // the library's invocation replaces every DefaultGraphQLInvocation bean, the transport's and a factory's
+            if (definition.getBeanType() == DefaultGraphQLInvocation.class) {
                 continue;
             }
-            if (!definition.hasStereotype(Secondary.class)) {
+            if (bean.primary() || !definition.hasStereotype(Secondary.class)) {
                 return List.of();
             }
             secondary.add(describe(bean));
@@ -315,10 +324,12 @@ public final class LibraryBeanSelection {
      * @param definition the bean definition, or the template
      * @param qualifier  the qualifier of the bean, or null
      * @param primary    whether the bean is primary
+     * @param target     the definition an {@code @EachBean} expansion takes its qualifier from, or null
      */
-    public record Provided(BeanDefinition<?> definition, @Nullable Qualifier<?> qualifier, boolean primary) {
+    public record Provided(BeanDefinition<?> definition, @Nullable Qualifier<?> qualifier, boolean primary,
+                           @Nullable BeanDefinition<?> target) {
         Provided(BeanDefinition<?> definition) {
-            this(definition, definition.getDeclaredQualifier(), definition.hasStereotype(Primary.class));
+            this(definition, definition.getDeclaredQualifier(), definition.hasStereotype(Primary.class), null);
         }
     }
 

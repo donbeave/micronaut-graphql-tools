@@ -95,6 +95,30 @@ type Query { hello: String }
         rootConfiguration(e).message.contains('EachInvocationEngineFactory#GraphQL')
     }
 
+    void "a secondary invocation that is also primary starts"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.secondaryPrimary')
+
+        then:
+        ((Marked) applicationContext.getBean(GraphQLInvocation)).label == 'both'
+    }
+
+    void "a secondary factory default is replaced by the library's invocation and starts"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.secondaryDefault')
+
+        then:
+        applicationContext.getBean(GraphQLInvocation).getClass().simpleName == 'LibraryGraphQLInvocation'
+    }
+
+    void "a replaced schema template over every invocation does not fail the startup"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.eachInvocationReplaced')
+
+        then:
+        noExceptionThrown()
+    }
+
     static ConfigurationException rootConfiguration(Throwable e) {
         Throwable current = e
         while (current != null) {
@@ -157,6 +181,32 @@ type Query { hello: String }
     static class EachInvocationEngineFactory {
         @Bean @EachBean(GraphQLInvocation)
         GraphQL graphQL(GraphQLInvocation invocation) { null }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.secondaryPrimary')
+    @Factory
+    static class SecondaryPrimaryFactory {
+        @Bean @Singleton @Secondary @Primary
+        GraphQLInvocation invocation() { new Marked('both') }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.secondaryDefault')
+    @Factory
+    static class SecondaryDefaultFactory {
+        @Bean @Singleton @Secondary
+        io.micronaut.configuration.graphql.DefaultGraphQLInvocation invocation() {
+            new io.micronaut.configuration.graphql.DefaultGraphQLInvocation(null, null, null)
+        }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.eachInvocationReplaced')
+    @Factory
+    static class EachInvocationReplacedFactory {
+        @Bean @EachBean(GraphQLInvocation) @io.micronaut.context.annotation.Replaces(value = GraphQLSchema, factory = io.micronaut.graphql.tools.internal.GraphQLFactory)
+        GraphQLSchema schema(GraphQLInvocation invocation) { null }
+
+        @Bean @Singleton @io.micronaut.context.annotation.Replaces(value = GraphQLSchema, factory = EachInvocationReplacedFactory)
+        GraphQLSchema replacing() { BeanSelectionMatrixSpec.schema('replacing') }
     }
 
 }
