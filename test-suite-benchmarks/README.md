@@ -1,6 +1,6 @@
 # benchmarks
 
-Gradle project `:benchmarks`, folder `benchmarks/`. Not published.
+Gradle project `:test-suite-benchmarks`, folder `benchmarks/`. Not published.
 
 ## Purpose
 
@@ -32,7 +32,7 @@ runs, or when they claim a performance gain.
   (`ElementTypeModel`, package-private) through `BindingRulesAccess`, a public class of the processor that is documented as internal. `BindingRulesParityTest` (in `jmhSmokeTest`) shows that
   the rules give the same findings for the elements as for the classes that the sources compile to. The
   `generateLargeSchema` task writes the large schema that the start-up benchmarks bind to `build/generated/large-schema`.
-- `benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
+- `test-suite-benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
 
 ## Packages
 
@@ -63,20 +63,20 @@ Nothing here is a library API. The module is not in the BOM (`graphql-tools-bom`
 Run from the repository root. JDK 21 or 25.
 
 ```
-./gradlew :benchmarks:jmh
-./gradlew :benchmarks:jmh -Pjmh.profile=quick
-./gradlew :benchmarks:jmhSmokeTest
-./gradlew :benchmarks:allocationTest
+./gradlew :test-suite-benchmarks:jmh
+./gradlew :test-suite-benchmarks:jmh -Pjmh.profile=quick
+./gradlew :test-suite-benchmarks:jmhSmokeTest
+./gradlew :test-suite-benchmarks:allocationTest
 ```
 
-- `:benchmarks:jmh` runs two forks with the `gc` profiler. The allocation figure is `gc.alloc.rate.norm`. It excludes `BindingBenchmark` and
+- `:test-suite-benchmarks:jmh` runs two forks with the `gc` profiler. The allocation figure is `gc.alloc.rate.norm`. It excludes `BindingBenchmark` and
   `RetainedHeapBenchmark`. Its warm-up makes `ContextStartBenchmark`, `FirstRequestBenchmark` and
   `StartAndFirstRequestBenchmark` invalid as cold measurements: run the cold start-up benchmarks with
-  `benchmarks/scripts/startup-report.py` or the `jmhJar` jar as the "Benchmarks" section of `CONTRIBUTING.md` describes.
-- `:benchmarks:allocationTest -Pallocation.update` rewrites the baselines. Review the diff: a higher number is an
+  `test-suite-benchmarks/scripts/startup-report.py` or the `jmhJar` jar as the "Benchmarks" section of `CONTRIBUTING.md` describes.
+- `:test-suite-benchmarks:allocationTest -Pallocation.update` rewrites the baselines. Review the diff: a higher number is an
   allocation the change added. Use `-PgraphqlJavaLeg=floor` or `ceiling` for the other legs, which have their own
   baselines.
-- `:benchmarks:jmhJar` builds the benchmark jar.
+- `:test-suite-benchmarks:jmhJar` builds the benchmark jar.
 - `-PlargeFields=<fields>` generates the start-up schema of another size, one size per build; `-PlargeShape=interfaces` generates the interface-heavy schema instead of the rings; add `-PlargeUnreturnedShared=true` to leave the root field `shared` out of that schema, so that the interface `Shared`, which every object type implements, is one that no field returns.
 
 ## Measured start-up results
@@ -115,8 +115,8 @@ At 20,000 fields the saving is about 38 ms, which is the roughly 42 ms the snaps
 ## Measured request-path results of the field decorators
 
 `FieldDecoratorBenchmark` (one query of 1,050 fields) and `ObservabilityBenchmark` (a request of 10 and of 1,000 root fields),
-rerun for #532 on an idle machine. Command: `./gradlew :benchmarks:jmhJar`, then
-`java -jar benchmarks/build/libs/benchmarks-1.0.0-SNAPSHOT-jmh.jar 'FieldDecoratorBenchmark|ObservabilityBenchmark' -f 5 -wi 5 -i 10 -w 1s -r 1s -prof gc`.
+rerun for #532 on an idle machine. Command: `./gradlew :test-suite-benchmarks:jmhJar`, then
+`java -jar test-suite-benchmarks/build/libs/test-suite-benchmarks-1.0.0-SNAPSHOT-jmh.jar 'FieldDecoratorBenchmark|ObservabilityBenchmark' -f 5 -wi 5 -i 10 -w 1s -r 1s -prof gc`.
 Temurin 25.0.5+8, graphql-java default leg, 10-core ARM64 laptop, 5 forks, 50 samples per case. The machine was idle: the one-minute load average
 was 2.4 at the start and 2.7 at the end of the 15-minute run (about 91 percent CPU idle before the start), and no other Gradle, native or benchmark job ran.
 The score is the mean with the 99.9 percent error that JMH prints.
@@ -150,7 +150,7 @@ returns. `Shared` has no introspection, so the dictionary entry `registerType("S
 entry, and `LargeSchema.checkSharedMapped` fails every start-up benchmark that binds the interface shape when the dictionary does not map `Shared` (`BindingBenchmark` runs it after the measurement, in `@TearDown`, so the timed invocation does not include it). (An earlier figure of
 this section, +5.6 ms, came from jars without the entry: the lookup found no class and skipped the resolver-method search, so it timed nothing.) The strict check
 `unused-dictionary-entry` reports that entry when no resolver binds a field of `Shared`, so the `unreturned` jar accepts that one finding through
-`micronaut.graphql.tools.allow.findings`. Two jars, `python3 benchmarks/scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25 returned=returned.jar unreturned=unreturned.jar`,
+`micronaut.graphql.tools.allow.findings`. Two jars, `python3 test-suite-benchmarks/scripts/startup-ab.py --fields 20000 --shape interfaces --forks 25 returned=returned.jar unreturned=unreturned.jar`,
 Temurin 25.0.5+8, graphql-java default leg, 10-core ARM64 laptop, no other Gradle job running. Two runs, the second started on a quiet machine: the one-minute
 load average at fork start ranged from 6.2 to 14.5 (median 8.4) in the first and from 1.9 to 7.8 (median 4.9) in the second.
 

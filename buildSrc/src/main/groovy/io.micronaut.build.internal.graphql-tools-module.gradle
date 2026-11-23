@@ -1,30 +1,4 @@
 plugins {
     id "io.micronaut.build.internal.module"
-}
-
-// micronaut-build 7.6.6 sets only sourceCompatibility and targetCompatibility from micronautBuild.javaVersion
-// (default 17). Set `release` too, so the shipped modules cannot use APIs newer than that Java version.
-tasks.withType(JavaCompile).configureEach {
-    options.release = provider { micronautBuild.javaVersion.get() as Integer }
-}
-
-// logback and JUnit are managed by the Micronaut platform BOM, which the core BOM behind `mn` is not: tests only, so that
-// nothing published changes.
-dependencies {
-    testImplementation platform(libs.micronaut.platform)
-}
-
-// Gradle 9 does not put junit-platform-launcher on the test runtime classpath by itself.
-dependencies {
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-// The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x.
-configurations.configureEach {
-    resolutionStrategy.eachDependency { details ->
-        if (details.requested.group == 'org.apache.groovy') {
-            details.useVersion(libs.versions.groovy.get())
-            details.because('Groovy 4.0.33 reads JDK 27 class files; the BOM\'s 4.0.28 does not')
-        }
-    }
+    id "io.micronaut.build.internal.graphql-tools-common"
 }

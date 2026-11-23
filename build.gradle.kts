@@ -108,7 +108,7 @@ val checkNativeCoverage by tasks.registering {
     group = "verification"
     description = "Checks that every row of the native coverage table of CONTRIBUTING.md names existing tests and scenarios."
     val contributing = layout.projectDirectory.file("CONTRIBUTING.md")
-    val scenarios = layout.projectDirectory.file("graphql-tools-tck/src/main/resources/tck/scenarios.txt")
+    val scenarios = layout.projectDirectory.file("test-suite-tck/src/main/resources/tck/scenarios.txt")
     val sources = fileTree(layout.projectDirectory) {
         include("test-suite-java/src/test/**/*.java", "test-suite-kotlin/src/test/**/*.kt")
     }

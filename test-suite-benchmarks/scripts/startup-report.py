@@ -2,12 +2,12 @@
 """Start-up report (#39): binding time and retained heap per schema shape and size, as medians of cold JVMs.
 
 Run from anywhere. For each schema shape and size it builds a JMH jar that generates that case only (-PlargeFields,
--PlargeShape), then runs both start-up benchmarks on it, one fresh JVM per fork. The last jar built stays in benchmarks/build/libs, so run
-`./gradlew :benchmarks:jmhJar` again before the other benchmarks:
+-PlargeShape), then runs both start-up benchmarks on it, one fresh JVM per fork. The last jar built stays in test-suite-benchmarks/build/libs, so run
+`./gradlew :test-suite-benchmarks:jmhJar` again before the other benchmarks:
 
-  python3 benchmarks/scripts/startup-report.py                       run, print the medians
-  python3 benchmarks/scripts/startup-report.py --json run.json       also keep the JMH JSON in run.json
-  python3 benchmarks/scripts/startup-report.py --from run.json --previous old.json
+  python3 test-suite-benchmarks/scripts/startup-report.py                       run, print the medians
+  python3 test-suite-benchmarks/scripts/startup-report.py --json run.json       also keep the JMH JSON in run.json
+  python3 test-suite-benchmarks/scripts/startup-report.py --from run.json --previous old.json
                                                                      medians of run.json and the change against old.json
 
 The median is taken over the per-fork values in the JMH JSON (rawData). The JSON is the only input of the report, so
@@ -90,14 +90,14 @@ def run_jmh(json_path, forks):
         for shape, size in CASES:
             # A jar of an earlier build (another project version or size) must not be taken for this one: remove them
             # first, so that the build recreates the jar, and take the newest below in any case.
-            for stale in (ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"):
+            for stale in (ROOT / "test-suite-benchmarks" / "build" / "libs").glob("*-jmh.jar"):
                 stale.unlink()
-            subprocess.run([str(ROOT / "gradlew"), ":benchmarks:jmhJar", f"-PlargeFields={size}", f"-PlargeShape={shape}",
+            subprocess.run([str(ROOT / "gradlew"), ":test-suite-benchmarks:jmhJar", f"-PlargeFields={size}", f"-PlargeShape={shape}",
                             "--no-daemon"],
                            cwd=ROOT, check=True)
-            jars = sorted((ROOT / "benchmarks" / "build" / "libs").glob("*-jmh.jar"), key=lambda p: p.stat().st_mtime)
+            jars = sorted((ROOT / "test-suite-benchmarks" / "build" / "libs").glob("*-jmh.jar"), key=lambda p: p.stat().st_mtime)
             if not jars:
-                sys.exit("no benchmark jar in benchmarks/build/libs")
+                sys.exit("no benchmark jar in test-suite-benchmarks/build/libs")
             jar = Path(tmp) / f"jmh-{shape}-{size}.jar"
             part = Path(tmp) / f"jmh-{shape}-{size}.json"
             jar.write_bytes(jars[-1].read_bytes())

@@ -27,8 +27,8 @@ and test it.
 | [`graphql-tools-security`](graphql-tools-security/README.md) | `:micronaut-graphql-tools-security` | Micronaut Security: the principal in resolvers, `@Secured` on resolver methods and the root fields hook, optional. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
-| [`graphql-tools-tck`](graphql-tools-tck/README.md) | `:graphql-tools-tck` | The execution-behaviour scenarios that the example suites run. |
-| [`benchmarks`](benchmarks/README.md) | `:benchmarks` | JMH benchmarks and the allocation gate. |
+| [`test-suite-tck`](test-suite-tck/README.md) | `:test-suite-tck` | The execution-behaviour scenarios that the example suites run. |
+| [`test-suite-benchmarks`](test-suite-benchmarks/README.md) | `:test-suite-benchmarks` | JMH benchmarks and the allocation gate. |
 | [`test-suite-java`](test-suite-java/README.md) | `:test-suite-java` | The example application in Java, with its tests. |
 | [`test-suite-kotlin`](test-suite-kotlin/README.md) | `:test-suite-kotlin` | The example application in Kotlin, with its tests. |
 | [`test-suite-groovy`](test-suite-groovy/README.md) | `:test-suite-groovy` | The example application in Groovy, with its tests and a native smoke test. |
@@ -1489,7 +1489,7 @@ metadata) and the BOM. Consumers then
 add the repository and depend on `io.micronaut.graphql.tools:micronaut-graphql-tools:<version>`.
 
 The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the first version is released; see the
-`binaryCompatibility` block in the build files.
+module conventions in `buildSrc`.
 
 ## Why GraphQL Java Tools?
 

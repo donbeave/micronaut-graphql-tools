@@ -32,6 +32,6 @@ body:
     id: performance-impact
     attributes:
       label: Performance impact (hot path, startup, build)
-      description: The expected effect on the request hot path, on startup and on build time, and how it would be measured (JMH and allocation figures, see `benchmarks/`). Say so if there is no effect.
+      description: The expected effect on the request hot path, on startup and on build time, and how it would be measured (JMH and allocation figures, see `test-suite-benchmarks/`). Say so if there is no effect.
     validations:
       required: true
