@@ -28,6 +28,7 @@ import org.dataloader.DataLoader
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.atomic.AtomicLong
 
 // The fixtures of the TCK scenario `http`: a field that echoes its argument, a context contributor that puts the header
 // X-Tenant of the request in the GraphQL context, and a batch loader whose values come from that tenant.
@@ -61,6 +62,9 @@ class TenantLoader implements BatchLoader<String, String> {
 @Requires(property = 'tck.scenario', value = 'http')
 class HttpQueries {
 
+    private final Map<Object, Long> loaderIds = new IdentityHashMap<Object, Long>()
+    private final AtomicLong nextLoaderId = new AtomicLong()
+
     String httpEcho(String value) {
         return value
     }
@@ -74,6 +78,13 @@ class HttpQueries {
     }
 
     String loaderId(DataLoader<String, String> loader) {
-        return Integer.toHexString(System.identityHashCode(loader))
+        synchronized (loaderIds) {
+            Long id = loaderIds.get(loader)
+            if (id == null) {
+                id = nextLoaderId.incrementAndGet()
+                loaderIds.put(loader, id)
+            }
+            return id.toString()
+        }
     }
 }
