@@ -37,7 +37,7 @@ import java.util.concurrent.TimeoutException;
 /**
  * The checks of the execution-input customizer path, run by each example suite against its own fixtures of the scenario
  * {@code customizer}: the customizer runs only when the returned publisher is subscribed, it sees the Reactor context of
- * the subscriber, the propagated context of the {@code invoke} call reaches the resolvers when another thread subscribes, and cancelling the subscription cancels the publisher of the customizer and stops the execution. The
+ * the subscriber, the propagated context of the {@code invoke} call reaches the resolvers when another thread subscribes, with the default executor and with {@code execution.executor=none} (the resolvers then run on the subscribing thread), and cancelling the subscription cancels the publisher of the customizer and stops the execution. The
  * checks call the {@code GraphQLInvocation} bean directly, because an HTTP request always subscribes and carries no Reactor
  * context. The fixture customizer acts only on an operation whose variables hold {@code track: true}, so the operations
  * that read the counters do not count themselves. Each check starts the application of its own.
@@ -48,12 +48,15 @@ public final class CustomizerTck {
     private static final String COUNTS = "{ customizerCalls customizerSubscribes customizerCancels customizerSeen trackedRuns trackedContext }";
     private static final String CONTEXT_ID = "captured-at-invoke";
     private static final String CONTEXT_KEY = "tck-key";
+    private static final String EXECUTOR_PROPERTY = "micronaut.graphql.tools.execution.executor";
+    private static final String NO_EXECUTOR = "none";
     private static final long SECONDS = 10;
 
     private static final List<String> CHECKS = List.of(
             "customizer-runs-only-on-subscription",
             "customizer-sees-reactor-context",
             "propagated-context-captured-at-invoke",
+            "propagated-context-captured-at-invoke-no-executor",
             "cancel-stops-execution");
 
     private CustomizerTck() {
@@ -75,12 +78,17 @@ public final class CustomizerTck {
         if (!CHECKS.contains(check)) {
             throw new IllegalArgumentException("No such check: " + check);
         }
-        try (ApplicationContext context = ApplicationContext.builder().properties(Tck.applicationProperties("customizer")).start()) {
+        Map<String, Object> properties = Tck.applicationProperties("customizer");
+        if (check.endsWith("-no-executor")) {
+            properties.put(EXECUTOR_PROPERTY, NO_EXECUTOR);
+        }
+        try (ApplicationContext context = ApplicationContext.builder().properties(properties).start()) {
             GraphQLInvocation invocation = context.getBean(GraphQLInvocation.class);
             switch (check) {
                 case "customizer-runs-only-on-subscription" -> runsOnlyOnSubscription(invocation);
                 case "customizer-sees-reactor-context" -> seesReactorContext(invocation);
-                case "propagated-context-captured-at-invoke" -> capturedAtInvoke(invocation);
+                case "propagated-context-captured-at-invoke", "propagated-context-captured-at-invoke-no-executor" ->
+                        capturedAtInvoke(invocation);
                 default -> cancelStopsExecution(invocation);
             }
         } catch (InterruptedException e) {
