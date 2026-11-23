@@ -221,7 +221,11 @@ public final class LibraryBeanSelection {
 
     private static boolean replacesDefault(BeanDefinition<?> definition) {
         AnnotationValue<Replaces> replaces = definition.getAnnotation(Replaces.class);
-        return replaces != null && replaces.classValue("bean").filter(DefaultGraphQLInvocation.class::equals).isPresent();
+        // the transport's default is an unnamed, unqualified class bean with no factory, so a constraint (factory, named,
+        // qualifier) means the replacement targets another bean and leaves the transport's default in place
+        return replaces != null && replaces.classValue("bean").filter(DefaultGraphQLInvocation.class::equals).isPresent()
+                && replaces.classValue("factory").isEmpty() && replaces.stringValue("named").isEmpty()
+                && replaces.annotationClassValue("qualifier").isEmpty();
     }
 
     static boolean isLibrary(BeanDefinition<?> definition) {

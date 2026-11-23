@@ -57,3 +57,5 @@ eachDefaultEmpty | invocation | LibraryGraphQLInvocation | all=LibraryGraphQLInv
 plainDefault | invocation | LibraryGraphQLInvocation | all=LibraryGraphQLInvocation
 replacesDefault | invocation | DefaultGraphQLInvocation | all=DefaultGraphQLInvocation
 replacedDefault | invocation | inv_replacing | all=LibraryGraphQLInvocation,inv_replacing
+replacesDefaultOfFactory | invocation | LibraryGraphQLInvocation | all=LibraryGraphQLInvocation
+replacesDefaultNamed | invocation | LibraryGraphQLInvocation | all=LibraryGraphQLInvocation

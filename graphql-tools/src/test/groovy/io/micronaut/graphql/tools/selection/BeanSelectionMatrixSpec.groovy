@@ -63,12 +63,14 @@ type Query { hello: String }
             'eachPropertyPrimary', 'eachBean', 'requiresOn', 'requiresOff', 'primaryDefault',
             'named,plain', 'named,primary', 'named,requiresOn', 'plain,primary', 'named,eachProperty',
             'secondary', 'plain,secondary', 'plain,eachInvocation', 'eachInvocation', 'eachDefaultEmpty',
-            'plainDefault', 'replacesDefault', 'replacedDefault'
+            'plainDefault', 'replacesDefault', 'replacedDefault',
+            'replacesDefaultOfFactory', 'replacesDefaultNamed'
     ]
     static final Map<String, List<String>> ONLY = [
             primaryDefault: ['invocation'], secondary: ['invocation'], 'plain,secondary': ['invocation'],
             'plain,eachInvocation': ['schema', 'graphql'], eachInvocation: ['schema', 'graphql'], eachDefaultEmpty: ['invocation'],
-            plainDefault: ['invocation'], replacesDefault: ['invocation'], replacedDefault: ['invocation']
+            plainDefault: ['invocation'], replacesDefault: ['invocation'], replacedDefault: ['invocation'],
+            replacesDefaultOfFactory: ['invocation'], replacesDefaultNamed: ['invocation']
     ]
     static final List<String> TARGETS = ['schema', 'graphql', 'invocation']
 
@@ -378,6 +380,20 @@ type Query { hello: String }
         ReplacingDefaultInvocation() {
             super('replacing')
         }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacesDefaultOfFactory')
+    @Factory
+    static class ReplacesDefaultOfFactoryFactory {
+        @Bean @Singleton @Replaces(value = DefaultGraphQLInvocation, factory = ReplacedFirstFactory) @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacesDefaultNamed')
+    @Factory
+    static class ReplacesDefaultNamedFactory {
+        @Bean @Singleton @Replaces(value = DefaultGraphQLInvocation, named = 'other') @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
     }
 
 }
