@@ -249,6 +249,7 @@ type Child {
         given:
         startContext(SCHEMA, SPEC_NAME + '.blocker', ['micronaut.graphql.tools.execution.timeout': '100ms',
                                                       'micronaut.graphql.tools.execution.executor': exec])
+        BlockingErrorsCustomizer.TOGETHER = new CountDownLatch(20)
         def futures = (1..20).collect { i ->
             Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello' + (' ' * i) + '}', null, [:]), null, null)).toFuture()
         }
@@ -258,8 +259,10 @@ type Child {
 
         then:
         results.every { it.errors[0].extensions.code == 'EXECUTION_TIMEOUT' }
+        BlockingErrorsCustomizer.TOGETHER.count == 0
 
         cleanup:
+        BlockingErrorsCustomizer.TOGETHER = null
         BlockingCustomizer.RELEASE.countDown()
 
         where:
@@ -708,6 +711,22 @@ type Child {
                 Mono.just(executionInput)
             }
             input.doOnSubscribe { SUBSCRIBED.incrementAndGet() }.doOnCancel { CANCELLED.incrementAndGet() }
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME + '.blocker')
+    @Singleton
+    static class BlockingErrorsCustomizer implements GraphQLErrorsCustomizer {
+        static volatile CountDownLatch TOGETHER
+
+        @Override
+        List<GraphQLError> customize(List<GraphQLError> errors) {
+            CountDownLatch together = TOGETHER
+            if (together != null) {
+                together.countDown()
+                together.await(10, TimeUnit.SECONDS)
+            }
+            errors
         }
     }
 

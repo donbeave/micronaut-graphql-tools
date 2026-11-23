@@ -364,6 +364,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         private final GraphQLInvocationData data;
         private final ExecutionState state;
         private volatile Disposable customizerSubscription;
+        private volatile boolean timeoutClaimed;
 
         Execution(GraphQLInvocationData data, ExecutionState state) {
             this.data = data;
@@ -398,23 +399,38 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             }
         }
 
+        @Override
+        public boolean complete(ExecutionResult result) {
+            return !timeoutClaimed && super.complete(result);
+        }
+
+        @Override
+        public boolean completeExceptionally(Throwable failure) {
+            return !timeoutClaimed && super.completeExceptionally(failure);
+        }
+
         /**
-         * The timer of {@code execution.timeout} fired, on the timer thread: answer the client now, then cancel the
-         * execution on an executor for blocking work, because the cancellation runs callbacks of the application.
+         * The timer of {@code execution.timeout} fired, on the timer thread, which only submits. Once the timeout is
+         * claimed no other result completes the future, so the answer is the timeout whichever task runs first. Two
+         * independent tasks go to an executor for blocking work: one completes the result, whose continuation is code of
+         * the application (errors customizers), and one cancels the execution, which runs callbacks of the application.
+         * Neither waits for the other.
          */
         void timeOut() {
-            inContext(() -> {
-                // the answer first: cancelling the state aborts the pending stages, and the execution would finish with their partial data
-                if (!complete(timedOut(timeout))) {
-                    return;
-                }
-                Runnable cancellation = () -> inContext(this::cancelAfterTimeOut);
-                try {
-                    (executor == null ? scheduler.blocking() : executor).execute(cancellation);
-                } catch (RejectedExecutionException e) {
-                    scheduler.blocking().execute(cancellation);
-                }
-            });
+            if (isDone()) {
+                return;
+            }
+            timeoutClaimed = true;
+            submitBlocking(() -> inContext(() -> super.complete(timedOut(timeout))));
+            submitBlocking(() -> inContext(this::cancelAfterTimeOut));
+        }
+
+        private void submitBlocking(Runnable task) {
+            try {
+                (executor == null ? scheduler.blocking() : executor).execute(task);
+            } catch (RejectedExecutionException e) {
+                scheduler.blocking().execute(task);
+            }
         }
 
         private void cancelAfterTimeOut() {
