@@ -31,8 +31,8 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
@@ -40,17 +40,17 @@ import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class RuntimeWiringCustomizerSpec extends AbstractTest {
+class GraphQLRuntimeWiringCustomizerSpec extends AbstractTest {
 
-    static final String SPEC_NAME = "RuntimeWiringCustomizerSpec"
-    static final String SPEC_NAME_OVERRIDE = "RuntimeWiringCustomizerSpec.override"
-    static final String SPEC_NAME_WIRING_FACTORY = "RuntimeWiringCustomizerSpec.wiringFactory"
-    static final String SPEC_NAME_CODE_REGISTRY = "RuntimeWiringCustomizerSpec.codeRegistry"
-    static final String SPEC_NAME_CODE_REGISTRY_UNWIRED = "RuntimeWiringCustomizerSpec.codeRegistryUnwired"
-    static final String SPEC_NAME_SHADOW = "RuntimeWiringCustomizerSpec.shadow"
-    static final String SPEC_NAME_SHADOW_JAVA = "RuntimeWiringCustomizerSpec.shadowJava"
-    static final String SPEC_NAME_SHADOW_UNBOUND_TWICE = "RuntimeWiringCustomizerSpec.shadowUnboundTwice"
-    static final String SPEC_NAME_SHADOW_ALLOWED = "RuntimeWiringCustomizerSpec.shadowAllowed"
+    static final String SPEC_NAME = "GraphQLRuntimeWiringCustomizerSpec"
+    static final String SPEC_NAME_OVERRIDE = "GraphQLRuntimeWiringCustomizerSpec.override"
+    static final String SPEC_NAME_WIRING_FACTORY = "GraphQLRuntimeWiringCustomizerSpec.wiringFactory"
+    static final String SPEC_NAME_CODE_REGISTRY = "GraphQLRuntimeWiringCustomizerSpec.codeRegistry"
+    static final String SPEC_NAME_CODE_REGISTRY_UNWIRED = "GraphQLRuntimeWiringCustomizerSpec.codeRegistryUnwired"
+    static final String SPEC_NAME_SHADOW = "GraphQLRuntimeWiringCustomizerSpec.shadow"
+    static final String SPEC_NAME_SHADOW_JAVA = "GraphQLRuntimeWiringCustomizerSpec.shadowJava"
+    static final String SPEC_NAME_SHADOW_UNBOUND_TWICE = "GraphQLRuntimeWiringCustomizerSpec.shadowUnboundTwice"
+    static final String SPEC_NAME_SHADOW_ALLOWED = "GraphQLRuntimeWiringCustomizerSpec.shadowAllowed"
 
     // Some graphql-java lines make RuntimeWiring.Builder reject a replaced data fetcher itself, at the first one; others
     // accept it silently. Whether a class exists says nothing about that (StrictModeWiringException exists on 22.4,
@@ -145,13 +145,13 @@ scalar Long
                     "scalar Long (${ReplaceScalarAndTypeResolver.name})".toString(),
                     "type resolver of Payload (${ReplaceScalarAndTypeResolver.name})".toString(),
             ]
-            assert e.cause.message == """[runtime-wiring-override] RuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library wired:
+            assert e.cause.message == """[runtime-wiring-override] GraphQLRuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library wired:
   data fetcher of Query.hello (${ReplaceFetchers.name})
   default data fetcher of Item (${ReplaceFetchers.name})
   wiring factory (${ReplaceFetchers.name})
   scalar Long (${ReplaceScalarAndTypeResolver.name})
   type resolver of Payload (${ReplaceScalarAndTypeResolver.name})
-  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field with the customizer's own data fetcher by returning its coordinate from RuntimeWiringCustomizer#claimedFields() (or remove the registration to keep the library's binding), or change the built schema with a GraphQLSchemaCustomizer."""
+  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field with the customizer's own data fetcher by returning its coordinate from GraphQLRuntimeWiringCustomizer#claimedFields() (or remove the registration to keep the library's binding), or change the built schema with a GraphQLSchemaCustomizer."""
         }
     }
 
@@ -200,7 +200,7 @@ scalar Long
         e.cause.replacements == [
                 "data fetcher of Item.name (${ShadowBoundField.name})".toString()
         ]
-        e.cause.message.contains('RuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#claimedFields()')
         e.cause.message.contains('remove the registration')
     }
 
@@ -267,15 +267,15 @@ scalar Long
         @Bean
         @Singleton
         @Order(20)
-        RuntimeWiringCustomizer recordCall() {
-            return { RuntimeWiring.Builder builder -> CALLS << 'RecordCall' } as RuntimeWiringCustomizer
+        GraphQLRuntimeWiringCustomizer recordCall() {
+            return { RuntimeWiring.Builder builder -> CALLS << 'RecordCall' } as GraphQLRuntimeWiringCustomizer
         }
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     @Order(10)
-    static class BlockSecret implements RuntimeWiringCustomizer {
+    static class BlockSecret implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             CALLS << 'BlockSecret'
@@ -286,7 +286,7 @@ scalar Long
     @Requires(property = 'spec.name', value = SPEC_NAME_OVERRIDE)
     @Singleton
     @Order(1)
-    static class ReplaceFetchers implements RuntimeWiringCustomizer {
+    static class ReplaceFetchers implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.type('Query') { it.dataFetcher('hello', { 'hijacked' } as DataFetcher) }
@@ -298,7 +298,7 @@ scalar Long
     @Requires(property = 'spec.name', value = SPEC_NAME_OVERRIDE)
     @Singleton
     @Order(2)
-    static class ReplaceScalarAndTypeResolver implements RuntimeWiringCustomizer {
+    static class ReplaceScalarAndTypeResolver implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.scalar(GraphQLScalarType.newScalar()
@@ -311,7 +311,7 @@ scalar Long
 
     @Requires(property = 'spec.name', value = SPEC_NAME_CODE_REGISTRY)
     @Singleton
-    static class ReplaceThroughCodeRegistry implements RuntimeWiringCustomizer {
+    static class ReplaceThroughCodeRegistry implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.codeRegistry(GraphQLCodeRegistry.newCodeRegistry()
@@ -323,7 +323,7 @@ scalar Long
 
     @Requires(property = 'spec.name', value = SPEC_NAME_CODE_REGISTRY_UNWIRED)
     @Singleton
-    static class FetcherForUnwiredField implements RuntimeWiringCustomizer {
+    static class FetcherForUnwiredField implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.codeRegistry(GraphQLCodeRegistry.newCodeRegistry()
@@ -333,7 +333,7 @@ scalar Long
 
     @Requires(property = 'spec.name', value = SPEC_NAME_SHADOW)
     @Singleton
-    static class ShadowBoundField implements RuntimeWiringCustomizer {
+    static class ShadowBoundField implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.type('Item') { it.dataFetcher('name', new StaticDataFetcher('HIJACKED')) }
@@ -342,7 +342,7 @@ scalar Long
 
     @Requires(property = 'spec.name', value = SPEC_NAME_SHADOW_UNBOUND_TWICE)
     @Singleton
-    static class RegisterUnboundTwice implements RuntimeWiringCustomizer {
+    static class RegisterUnboundTwice implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.type('Orphan') { it.dataFetcher('id', new StaticDataFetcher('one')) }
@@ -352,7 +352,7 @@ scalar Long
 
     @Requires(property = 'spec.name', value = SPEC_NAME_SHADOW_ALLOWED)
     @Singleton
-    static class ClaimAndAddUnbound implements RuntimeWiringCustomizer {
+    static class ClaimAndAddUnbound implements GraphQLRuntimeWiringCustomizer {
         @Override
         Set<FieldCoordinates> claimedFields() {
             return [FieldCoordinates.coordinates('Item', 'label')] as Set
@@ -367,14 +367,14 @@ scalar Long
 
     @Requires(property = 'spec.name', value = SPEC_NAME_WIRING_FACTORY)
     @Singleton
-    static class ReplaceWiringFactory implements RuntimeWiringCustomizer {
+    static class ReplaceWiringFactory implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.wiringFactory(new WiringFactory() {})
         }
     }
 
-    @Requires(property = 'spec.name', pattern = 'RuntimeWiringCustomizerSpec.*')
+    @Requires(property = 'spec.name', pattern = 'GraphQLRuntimeWiringCustomizerSpec.*')
     @Singleton
     @GraphQLRootResolver
     static class Query {
@@ -412,12 +412,12 @@ scalar Long
         Integer code = 1
     }
 
-    @Requires(property = 'spec.name', pattern = 'RuntimeWiringCustomizerSpec.*')
+    @Requires(property = 'spec.name', pattern = 'GraphQLRuntimeWiringCustomizerSpec.*')
     @Factory
     static class DictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType('Item', Item.class)
                     .registerType('Other', Other.class)

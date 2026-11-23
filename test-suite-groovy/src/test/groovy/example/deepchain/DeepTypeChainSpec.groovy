@@ -21,7 +21,7 @@ import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -56,7 +56,7 @@ class DeepTypeChainSpec extends Specification {
 
     @Singleton
     @Requires(env = DeepTypeChainSpec.ENVIRONMENT)
-    static class Schema implements TypeDefinitionRegistryCustomizer {
+    static class Schema implements GraphQLTypeDefinitionRegistryCustomizer {
         @Override
         void customize(TypeDefinitionRegistry registry) {
             StringBuilder sdl = new StringBuilder('extend type Query { chainRoot: Node0 chainEcho(input: In0!): String! }\n')

@@ -35,9 +35,9 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 
 /** A field fetcher decorator is asked once for each field at startup, and wraps outermost. */
-class FieldFetcherDecoratorSpec extends AbstractTest {
+class GraphQLFieldFetcherDecoratorSpec extends AbstractTest {
 
-    static final String SPEC_NAME = 'FieldFetcherDecoratorSpec'
+    static final String SPEC_NAME = 'GraphQLFieldFetcherDecoratorSpec'
 
     /** A dedicated executor: 'io' is the operation's executor on some JDK lines, and a field on that executor does not hop. */
     static final Map EXECUTORS = ['micronaut.executors.decorated.type': 'fixed', 'micronaut.executors.decorated.nThreads': 1]
@@ -159,7 +159,7 @@ type Box {
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     @Order(1)
-    static class ArgumentDecorator implements FieldFetcherDecorator {
+    static class ArgumentDecorator implements GraphQLFieldFetcherDecorator {
 
         @Override
         DataFetcher<Object> decorate(FieldDescriptor field, DataFetcher<Object> fetcher) {
@@ -176,7 +176,7 @@ type Box {
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     @Order(2)
-    static class EverythingDecorator implements FieldFetcherDecorator {
+    static class EverythingDecorator implements GraphQLFieldFetcherDecorator {
 
         @Override
         boolean decoratesFieldsWithoutArguments() {

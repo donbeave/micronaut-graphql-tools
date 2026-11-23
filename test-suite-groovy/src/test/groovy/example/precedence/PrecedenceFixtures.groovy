@@ -25,8 +25,8 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -45,22 +45,22 @@ class PrecedenceFixtures {
     @Bean
     @Singleton
     @Requires(env = PrecedenceFixtures.RELAY)
-    TypeDefinitionRegistryCustomizer relaySchema() {
+    GraphQLTypeDefinitionRegistryCustomizer relaySchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'interface Gizmo { id: ID! }\n' +
                             'type Sprocket implements Gizmo { id: ID! name: String! }\n' +
                             'extend type Query { gizmo: Gizmo }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     // The example's mappings and the implementation of the interface
     @Bean
     @Singleton
     @Requires(env = PrecedenceFixtures.RELAY)
-    @Replaces(value = SchemaMappingDictionaryCustomizer, factory = GraphQLFactory)
-    SchemaMappingDictionaryCustomizer relayTypes() {
-        return new SchemaMappingDictionaryCustomizer() {
+    @Replaces(value = GraphQLSchemaMappingDictionaryCustomizer, factory = GraphQLFactory)
+    GraphQLSchemaMappingDictionaryCustomizer relayTypes() {
+        return new GraphQLSchemaMappingDictionaryCustomizer() {
             @Override
             void customize(SchemaMappingDictionary dictionary) {
                 dictionary
@@ -74,12 +74,12 @@ class PrecedenceFixtures {
     @Bean
     @Singleton
     @Requires(env = PrecedenceFixtures.AMBIGUOUS)
-    TypeDefinitionRegistryCustomizer ambiguousSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer ambiguousSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Gadget { name: String! label: String! }\n' +
                             'extend type Query { gadget: Gadget }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
 }

@@ -19,7 +19,7 @@ import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.annotation.Prototype
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.runtime.http.scope.RequestScope
 import jakarta.inject.Singleton
@@ -31,7 +31,7 @@ private val IDS = AtomicInteger()
 
 @Singleton
 @Requires(env = [SCOPES_ENVIRONMENT])
-class ExtendQuery : TypeDefinitionRegistryCustomizer {
+class ExtendQuery : GraphQLTypeDefinitionRegistryCustomizer {
     override fun customize(registry: TypeDefinitionRegistry) {
         registry.merge(
             SchemaParser().parse("extend type Query { singletonId: Int! prototypeId: Int! requestId: Int! }"),

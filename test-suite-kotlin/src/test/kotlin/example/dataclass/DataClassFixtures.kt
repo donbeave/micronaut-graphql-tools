@@ -22,7 +22,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.input.ArgumentValue
 import jakarta.inject.Singleton
 
@@ -36,7 +36,7 @@ class DataClassFixtures {
     @Bean
     @Singleton
     @Requires(env = [DATA_CLASSES])
-    fun schema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun schema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 """

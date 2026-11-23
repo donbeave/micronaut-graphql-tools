@@ -27,7 +27,7 @@ import io.micronaut.core.util.StringUtils;
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer;
 import io.micronaut.graphql.tools.execution.FieldDescriptor;
 import io.micronaut.graphql.tools.execution.FieldExecutionKind;
-import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
+import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.AttributesBuilder;
@@ -56,7 +56,7 @@ import java.util.List;
 @Requires(property = "micronaut.otel.enabled", notEquals = StringUtils.FALSE)
 @Requires(property = GraphQLTracingConfiguration.PREFIX + ".enabled", notEquals = StringUtils.FALSE)
 @Requires(property = GraphQLTracingConfiguration.PREFIX + ".fields")
-final class FieldSpanDecorator implements FieldFetcherDecorator, GraphQLSchemaCustomizer {
+final class FieldSpanDecorator implements GraphQLFieldFetcherDecorator, GraphQLSchemaCustomizer {
 
     private static final Logger LOG = LoggerFactory.getLogger(FieldSpanDecorator.class);
     private static final String KEY = GraphQLTracingConfiguration.PREFIX + ".fields";

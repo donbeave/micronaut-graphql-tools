@@ -22,7 +22,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.http.context.ServerRequestContext
 import jakarta.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -48,7 +48,7 @@ class FlowFixtures {
     @Bean
     @Singleton
     @Requires(env = [FLOW_SUBSCRIPTIONS])
-    fun flowSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun flowSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "extend schema { subscription: Subscription }\n" +
@@ -61,7 +61,7 @@ class FlowFixtures {
     @Bean
     @Singleton
     @Requires(env = [FLOW_ON_QUERY])
-    fun flowOnQuerySchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun flowOnQuerySchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(SchemaParser().parse("extend type Query { flowOnQuery: [String!]! }\n"))
     }
 }

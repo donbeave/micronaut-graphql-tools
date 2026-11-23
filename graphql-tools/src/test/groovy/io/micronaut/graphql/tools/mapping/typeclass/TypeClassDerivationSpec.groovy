@@ -23,7 +23,7 @@ import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.BindingCode
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
 
@@ -306,8 +306,8 @@ type Nu implements SealedNode {
     static class SealedOverrideDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer dictionary() {
-            return { it.registerType('Pi', PiExplicit) } as SchemaMappingDictionaryCustomizer
+        GraphQLSchemaMappingDictionaryCustomizer dictionary() {
+            return { it.registerType('Pi', PiExplicit) } as GraphQLSchemaMappingDictionaryCustomizer
         }
     }
 
@@ -414,8 +414,8 @@ type Nu implements SealedNode {
     static class OverrideDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer dictionary() {
-            return { it.registerType('Eta', EtaExplicit) } as SchemaMappingDictionaryCustomizer
+        GraphQLSchemaMappingDictionaryCustomizer dictionary() {
+            return { it.registerType('Eta', EtaExplicit) } as GraphQLSchemaMappingDictionaryCustomizer
         }
     }
 

@@ -25,8 +25,8 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.manifest.BindingManifest
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
@@ -137,7 +137,7 @@ interface Node {
         def e = thrown(BeanInstantiationException)
         e.cause.message.contains('GraphQL coordinate: Book.isbn')
         e.cause.message.contains('GraphQL coordinate: Query.version')
-        e.cause.message.contains('RuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#claimedFields()')
         e.cause.message.count('[field-not-bound]') == 2
         !e.cause.message.contains('[field-not-bound] [field-not-bound]')
 
@@ -165,7 +165,7 @@ interface Node {
         e.cause.replacements == [
                 "data fetcher of Query.hello, through the code registry (${ReplacesBoundAndClaims.name})".toString()
         ]
-        e.cause.message.contains('RuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#claimedFields()')
     }
 
     void "a stale claim fails the startup with the coordinate"() {
@@ -184,12 +184,12 @@ interface Node {
                 "Missing.field: the schema defines no type Missing (${StaleClaims.name})".toString(),
                 "Node.id: Node is not an object type: claim the field of each object type that implements it (${StaleClaims.name})".toString(),
         ]
-        e.cause.message.contains('RuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#claimedFields()')
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
-    static class ClaimingCustomizer implements RuntimeWiringCustomizer {
+    static class ClaimingCustomizer implements GraphQLRuntimeWiringCustomizer {
         @Override
         Set<FieldCoordinates> claimedFields() {
             return [FieldCoordinates.coordinates('Query', 'version'),
@@ -206,7 +206,7 @@ interface Node {
     @Requires(property = 'spec.name', value = SPEC_NAME_EXTENSION)
     @Requires(property = 'claim', value = 'true')
     @Singleton
-    static class ClaimingExtensionFields implements RuntimeWiringCustomizer {
+    static class ClaimingExtensionFields implements GraphQLRuntimeWiringCustomizer {
         @Override
         Set<FieldCoordinates> claimedFields() {
             return [FieldCoordinates.coordinates('Query', 'version'),
@@ -222,7 +222,7 @@ interface Node {
 
     @Requires(property = 'spec.name', value = SPEC_NAME_UNCLAIMED)
     @Singleton
-    static class ReplacesBoundAndClaims implements RuntimeWiringCustomizer {
+    static class ReplacesBoundAndClaims implements GraphQLRuntimeWiringCustomizer {
         @Override
         Set<FieldCoordinates> claimedFields() {
             return [FieldCoordinates.coordinates('Query', 'version'),
@@ -240,7 +240,7 @@ interface Node {
 
     @Requires(property = 'spec.name', value = SPEC_NAME_STALE)
     @Singleton
-    static class StaleClaims implements RuntimeWiringCustomizer {
+    static class StaleClaims implements GraphQLRuntimeWiringCustomizer {
         @Override
         Set<FieldCoordinates> claimedFields() {
             return [FieldCoordinates.coordinates('Query', 'version'),
@@ -277,7 +277,7 @@ interface Node {
     static class DictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer dictionary() {
+        GraphQLSchemaMappingDictionaryCustomizer dictionary() {
             return (dictionary) -> dictionary.registerType('Book', Book.class)
         }
     }

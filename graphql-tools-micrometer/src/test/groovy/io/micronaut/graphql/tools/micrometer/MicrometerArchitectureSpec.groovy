@@ -60,7 +60,7 @@ class MicrometerArchitectureSpec extends Specification {
     void "no class wraps a data fetcher: the field-wrapping classes live in the OpenTelemetry module"() {
         expect:
         noClasses().should().implement(graphql.schema.DataFetcher).check(classes)
-        noClasses().should().implement(io.micronaut.graphql.tools.execution.FieldFetcherDecorator).check(classes)
+        noClasses().should().implement(io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator).check(classes)
     }
 
     void "no class looks up a class, member or annotation by reflection"() {

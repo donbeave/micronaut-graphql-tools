@@ -28,7 +28,7 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLModels;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
 import jakarta.inject.Singleton;
 
 import java.util.List;
@@ -49,7 +49,7 @@ public class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = CLASSES)
-    TypeDefinitionRegistryCustomizer classesSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer classesSchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "type Atlas { title: String! region: Region! pages: Int! }\n"
                         + "type Region { name: String! }\n"
@@ -59,7 +59,7 @@ public class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = PACKAGE)
-    TypeDefinitionRegistryCustomizer packageSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer packageSchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "type Chart { label: String! axis: Axis! }\n"
                         + "type Axis { unit: String! }\n"
@@ -69,7 +69,7 @@ public class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = MISSING)
-    TypeDefinitionRegistryCustomizer missingSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer missingSchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "type Unlisted { name: String! }\n"
                         + "extend type Query { unlisted: Unlisted }\n"));
@@ -78,7 +78,7 @@ public class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = NESTED)
-    TypeDefinitionRegistryCustomizer nestedSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer nestedSchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "type Holder { label: String! inner: Inner! }\n"
                         + "type Inner { name: String! }\n"

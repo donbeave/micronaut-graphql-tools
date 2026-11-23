@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
@@ -195,7 +195,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
     static class WrappedDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Boxed", Boxed)
                     .registerType("Bagged", Bagged)
@@ -216,7 +216,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
     static class ExactDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Marked", Marked)
                     .registerType("Stamped", Stamped)
@@ -237,7 +237,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
     static class ChainDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Plain", PlainNote)
                     .registerType("Long", LongNote)

@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import graphql.parser.MultiSourceReader
 import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
@@ -201,7 +201,7 @@ type MediaSection implements Section {
     static class DictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (schemaMappingDictionary) -> schemaMappingDictionary
                     .registerType("TextSection", TextSection.class)
                     .registerType("MediaSection", MediaSection.class)

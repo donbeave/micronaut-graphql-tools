@@ -19,7 +19,7 @@ import graphql.language.Definition;
 import graphql.schema.idl.SchemaParser;
 import io.micronaut.context.annotation.Prototype;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.runtime.http.scope.RequestScope;
 import jakarta.inject.Singleton;
@@ -37,7 +37,7 @@ final class ScopedResolvers {
 
     @Singleton
     @Requires(env = ENVIRONMENT)
-    static class ExtendQuery implements TypeDefinitionRegistryCustomizer {
+    static class ExtendQuery implements GraphQLTypeDefinitionRegistryCustomizer {
         @Override
         public void customize(graphql.schema.idl.TypeDefinitionRegistry registry) {
             registry.merge(new SchemaParser().parse(

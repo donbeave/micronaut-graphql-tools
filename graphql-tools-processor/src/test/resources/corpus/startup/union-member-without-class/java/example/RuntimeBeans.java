@@ -3,7 +3,7 @@ package example;
 import graphql.schema.GraphQLScalarType;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
 import jakarta.inject.Singleton;
 
 import java.time.LocalDate;
@@ -12,7 +12,7 @@ import java.time.LocalDate;
 public class RuntimeBeans {
 
     @Singleton
-    SchemaMappingDictionaryCustomizer dictionary() {
+    GraphQLSchemaMappingDictionaryCustomizer dictionary() {
         return dictionary -> dictionary.registerType("Book", Book.class);
     }
 

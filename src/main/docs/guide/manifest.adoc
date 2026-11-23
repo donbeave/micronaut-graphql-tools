@@ -68,7 +68,7 @@ An entry has five parts. `-` stands for a part that has no value. Every entry th
 
 |`Type.field(argument: T): T`
 |`claimed`
-|the class name of the `RuntimeWiringCustomizer` that claims the field. An anonymous or lambda class is named by its enclosing class or its interface.
+|the class name of the `GraphQLRuntimeWiringCustomizer` that claims the field. An anonymous or lambda class is named by its enclosing class or its interface.
 |`-`, `-`
 
 |`Abstract/Member`

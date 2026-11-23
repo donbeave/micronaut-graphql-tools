@@ -145,6 +145,15 @@ class ArchitectureRulesSpec extends Specification {
         result.failureReport.details.any { it.contains('io.micronaut.graphql.tools.internal') }
     }
 
+    void "every public interface of the customizer package starts with GraphQL"() {
+        given:
+        def customizers = classes.findAll { it.packageName == 'io.micronaut.graphql.tools.customizer' && it.interface && it.modifiers.contains(JavaModifier.PUBLIC) }
+
+        expect:
+        customizers.size() >= 6
+        customizers.every { it.simpleName.startsWith('GraphQL') }
+    }
+
     void "no public class or interface declares a record-style accessor"() {
         expect:
         classes().that(publicApi()).and(DescribedPredicate.describe('in websocket, mapping, directive or execution, and not a record, an enum or an annotation', { JavaClass c ->

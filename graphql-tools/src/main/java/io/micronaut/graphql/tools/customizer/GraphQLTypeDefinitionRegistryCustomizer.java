@@ -29,7 +29,7 @@ import io.micronaut.core.annotation.NonNull;
  * any other.</p>
  */
 @FunctionalInterface
-public interface TypeDefinitionRegistryCustomizer {
+public interface GraphQLTypeDefinitionRegistryCustomizer {
 
     /**
      * Changes the registry in place.

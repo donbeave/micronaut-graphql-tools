@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import jakarta.inject.Singleton
 
 @CompileStatic
@@ -33,7 +33,7 @@ class UploadFixtures {
     @Bean
     @Singleton
     @Requires(env = UploadFixtures.UPLOAD)
-    TypeDefinitionRegistryCustomizer uploadSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer uploadSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'scalar Upload\n' +
@@ -47,7 +47,7 @@ class UploadFixtures {
                             '  cover: Upload!\n' +
                             '  pages: [Upload!]\n' +
                             '}\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
     // end::schema[]
 

@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -115,7 +115,7 @@ type Extra implements Labeled {
     static class DictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (schemaMappingDictionary) -> schemaMappingDictionary
                     .registerType("TextSection", TextSection.class)
         }
