@@ -138,7 +138,11 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         this.graphQL = graphQL;
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
         this.customizerName = this.customizer == null ? null : this.customizer.getClass().getName();
-        rejectRegistryBean(beanContext);
+        // only when this bean is the one that serves the transport: beside an application invocation it is an unused
+        // member of a collection, which must not fail
+        if (ExecutionContextAvailability.isAvailable(beanContext)) {
+            rejectRegistryBean(beanContext);
+        }
         // no loader bean and no contributor, no registry: graphql-java keeps its empty registry and selects its no-op dispatch strategy
         this.loaders = loaders.isEmpty() ? null : loaders;
         this.contributors = contributors.isEmpty() ? null : contributors.toArray(new GraphQLContextContributor[0]);
