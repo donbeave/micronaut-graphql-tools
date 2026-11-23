@@ -30,7 +30,7 @@ allprojects {
         val task = this
         val started = LongArray(1)
         val projectPath = project.path
-        mustRunAfter({ project.rootProject.allprojects.flatMap { listOf(it.tasks.findByName("editSchema"), it.tasks.findByName("editBody")) }.filterNotNull() })
+        mustRunAfter(java.util.concurrent.Callable { project.rootProject.allprojects.flatMap { listOf(it.tasks.findByName("editSchema"), it.tasks.findByName("editBody")) }.filterNotNull() })
         doFirst { started[0] = System.nanoTime() }
         doLast {
             if (logFile != null) {
