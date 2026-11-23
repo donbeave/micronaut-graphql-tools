@@ -45,6 +45,7 @@ import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
 import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSetupException;
 import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
+import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutClaim;
 import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutScheduler;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
@@ -194,7 +195,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             if (disconnectWatcher != null && request != null && transport == GraphQLTransport.HTTP) {
                 state.disconnectWatcher(disconnectWatcher);
             }
-            Execution execution = new Execution(data, state);
+            Execution execution = new Execution(data, state, scheduler == null ? null : new TimeoutClaim());
             if (scheduler != null) {
                 ScheduledFuture<?> timer = scheduler.scheduleTimeout(execution::timeOut, timeout.toNanos());
                 execution.whenComplete((r, failure) -> timer.cancel(false));
@@ -364,11 +365,13 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         private final GraphQLInvocationData data;
         private final ExecutionState state;
         private volatile Disposable customizerSubscription;
-        private volatile boolean timeoutClaimed;
+        @Nullable
+        private final TimeoutClaim claim;
 
-        Execution(GraphQLInvocationData data, ExecutionState state) {
+        Execution(GraphQLInvocationData data, ExecutionState state, @Nullable TimeoutClaim claim) {
             this.data = data;
             this.state = state;
+            this.claim = claim;
         }
 
         @Override
@@ -401,35 +404,50 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
         @Override
         public boolean complete(ExecutionResult result) {
-            return !timeoutClaimed && super.complete(result);
+            return (claim == null || claim.completes()) && super.complete(result);
         }
 
         @Override
         public boolean completeExceptionally(Throwable failure) {
-            return !timeoutClaimed && super.completeExceptionally(failure);
+            return (claim == null || claim.completes()) && super.completeExceptionally(failure);
         }
 
         /**
-         * The timer of {@code execution.timeout} fired, on the timer thread, which only submits. Once the timeout is
-         * claimed no other result completes the future, so the answer is the timeout whichever task runs first. Two
-         * independent tasks go to an executor for blocking work: one completes the result, whose continuation is code of
-         * the application (errors customizers), and one cancels the execution, which runs callbacks of the application.
-         * Neither waits for the other.
+         * The timer of {@code execution.timeout} fired, on the timer thread, which only submits. The claim decides
+         * once whether the timeout or the execution owns the outcome, and the loser does nothing. The winner of the
+         * timeout submits two independent tasks, to the executor of the operations or to the bounded pool of the
+         * scheduler: one completes the result, whose continuation is code of the application (errors customizers), and
+         * one cancels the execution, which runs callbacks of the application. Neither waits for the other. When no
+         * executor takes the completion, it runs on the timer thread, because the client must get its answer; a
+         * cancellation that no executor takes is dropped.
          */
         void timeOut() {
-            if (isDone()) {
+            if (claim == null || !claim.timesOut()) {
                 return;
             }
-            timeoutClaimed = true;
-            submitBlocking(() -> inContext(() -> super.complete(timedOut(timeout))));
-            submitBlocking(() -> inContext(this::cancelAfterTimeOut));
+            Runnable completion = () -> inContext(() -> super.complete(timedOut(timeout)));
+            if (!dispatch(completion)) {
+                completion.run();
+            }
+            if (!dispatch(() -> inContext(this::cancelAfterTimeOut))) {
+                LOG.warn("The cancellation of a timed-out operation was dropped, because no executor took it. Callbacks of the application that cancel the operation did not run.");
+            }
         }
 
-        private void submitBlocking(Runnable task) {
+        private boolean dispatch(Runnable task) {
+            if (executor != null) {
+                try {
+                    executor.execute(task);
+                    return true;
+                } catch (RuntimeException e) {
+                    LOG.debug("The executor of the operations did not take the timeout work: {}", e.toString());
+                }
+            }
             try {
-                (executor == null ? scheduler.blocking() : executor).execute(task);
-            } catch (RejectedExecutionException e) {
                 scheduler.blocking().execute(task);
+                return true;
+            } catch (RuntimeException e) {
+                return false;
             }
         }
 
