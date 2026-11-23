@@ -1,8 +1,36 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+This page says what the library needs in a native image and which of its behaviour the native tests of the repository run. The native tests run on Oracle GraalVM 25 (`mise install` installs it, see `mise.toml`); no other GraalVM version is tested. Java and Kotlin applications have a native test suite, Groovy has a smoke test (see <<groovyNative,Groovy>> below).
 
-== Architecture rules
+== What the library needs
 
-A native image needs configuration for every reflective access, so the build keeps the library free of it. `ArchitectureRulesSpec` fails when a class of the library or of `graphql-tools-binding` looks up a class, member or annotation reflectively (`Class.forName`, `getMethod`, `getDeclaredMethod`, `getDeclaredAnnotation`, `getEnumConstants`, `setAccessible`, `java.lang.reflect` types other than `Modifier`, `java.lang.invoke`), when it depends on Jackson, or when the public API exposes an internal type. The allowlist is empty: the type resolver contracts that a bean inherits are written by the compile-time visitor into the annotation metadata of the bean and read from the bean definition, so a class that is a type resolver only through an interface binds the same way on the JVM and in a native image (the build needs `micronaut-graphql-tools-processor`; see BC-33). The same holds for the marker interfaces of <<resolverContracts,Resolver Contracts>>: the processor records the root operation, the source type of `TypeResolver<T>` and the contract methods, and the registry reads no class annotation by reflection (BC-34).
+A native image of an application that uses the library needs the following, and nothing more is configured by the example suites:
+
+* The annotation processor on the compiler path (`micronaut-graphql-tools-processor`; see <<compileTime,Compile-Time Verification>>). The binding is built from the compile-time metadata (bean introspection, the resolver contracts the processor records, the binding manifest), so the startup reads no class reflectively.
+* The Micronaut Gradle plugin with `runtime("netty")` or another runtime. The plugin builds the image with the GraalVM reachability metadata repository: the native image command of the suites passes the repository's entry for graphql-java as a configuration directory.
+* A schema index, when the schema location is a wildcard (see <<schema,Schema>>). A native image cannot list a classpath directory.
+* The `META-INF/MANIFEST.MF` and `META-INF/micronaut-graphql-tools/*` resources, which the library registers itself (`resource-config.json` of the `micronaut-graphql-tools` jar), so the version header of the binding manifest and the schema index are found.
+
+The library module `micronaut-graphql-tools-security` adds one build argument for its own jar, `--initialize-at-build-time=io.micronaut.security.authentication.AuthenticationMode`: Micronaut Security keeps `AuthenticationMode` constants in the annotation metadata of its conditions, and the image heap needs the enum initialized at build time. Nothing else of the library ships a `native-image.properties`.
+
+== graphql-java
+
+graphql-java reads its message bundles (`i18n.General`, `i18n.Parsing`, `i18n.Scalars` and `i18n.Validation`) and a few of its classes reflectively. The GraalVM reachability metadata repository covers both: its entry for `com.graphql-java:graphql-java` registers the four bundles and the reflective access to the relay classes (`DefaultConnection`, `DefaultEdge`, `DefaultPageInfo`, `DefaultConnectionCursor`) and the public methods of the schema element classes (`GraphQLArgument`, `GraphQLDirective`, `GraphQLEnumValueDefinition`, `GraphQLFieldDefinition`, `GraphQLInputObjectField`, `GraphQLOutputType`). The library adds no configuration for graphql-java.
+
+The repository's only graphql-java entry is `19.2`, and the example suites run newer versions: the default leg runs the version that `micronaut-graphql` manages (22.4) and the `ceiling` leg 26.2. On the default leg the native image command passes the `19.2` entry as a configuration directory, and the native tests pass on both legs in CI. Metadata for a graphql-java feature that no native test runs, such as the relay connection classes, is not proven by this page.
+
+== Build settings of the example suites
+
+Both suites build their images with `-H:+SharedArenaSupport`:
+
+[source,kotlin]
+----
+graalvmNative.binaries.configureEach { buildArgs.add("-H:+SharedArenaSupport") }
+----
+
+Netty 4.2 on Java 25 releases direct buffers through a shared arena. Without the flag the event-loop thread that releases a buffer fails and never terminates; `EventLoopShutdownTest` of the Java and the Kotlin suite checks that the thread ends. An application that runs Netty 4.2 on Java 25 needs the same flag.
+
+== Reflection
+
+The library and `graphql-tools-binding` do not look up a class, member or annotation reflectively: `ArchitectureRulesSpec` fails the build otherwise. The input conversion, the enum values, the type resolver contracts and the marker interfaces are read from the bean introspection and the annotation metadata that the processor writes. The reflective reads of graphql-java are covered by the reachability metadata above, and the Groovy runtime needs the metadata of the Groovy example. The reflective reads of other libraries of an application need their own metadata. The native tests are the evidence for the library's own code: a read that is missing from the image fails them, and a code path that no native test runs is not proven by this page.
 
 == What the native tests cover
 
@@ -23,4 +51,17 @@ The native image tests (`./gradlew :test-suite-java:nativeTest :test-suite-kotli
 * async returns
 * Kotlin `suspend` functions
 
-Groovy has no native test, because Spock cannot run natively: the Groovy example runs its tests on the JVM and has a native smoke test of its own. The table of categories, with the test of each, is in the contributor guide (`CONTRIBUTING.md`) and `checkNativeCoverage` keeps it in step with the suites.
+[[groovyNative]]
+Groovy has no native test, because Spock cannot run natively: the Groovy example runs its tests on the JVM and has a native smoke test of its own, which builds the example's native executable, posts the queries of the Java and Kotlin smoke tests to `/graphql` and asserts the response bodies. Groovy 4.0.x ships no GraalVM metadata, so the Groovy example carries its own (`META-INF/native-image` of `test-suite-groovy`), keeps the code `@CompileStatic` and turns the `invokedynamic` call sites off; see <<groovy,the Groovy page>>. The table of categories, with the test of each, is in the contributor guide (`CONTRIBUTING.md`) and `checkNativeCoverage` keeps it in step with the suites.
+
+== Build and run the native tests
+
+Each native test needs Oracle GraalVM 25 and about 5 GB of memory, and takes about 5 to 7 minutes; run them one after another:
+
+[source,bash]
+----
+./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel
+./gradlew :test-suite-groovy:nativeSmokeTest --no-parallel
+----
+
+`nativeSerdeTest` runs the Java tests of the Micronaut Serialization stack as a native binary. Add `-PgraphqlJavaLeg=ceiling` to run on the newest tested graphql-java version. The CI jobs `native` and `native Groovy smoke` run the same tasks on the `default` and the `ceiling` leg.
