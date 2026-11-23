@@ -104,33 +104,13 @@ public final class LibraryBeanSelection {
     }
 
     /**
-     * The invocations that are not the application's: the library's own, whose condition calls this class, and the
-     * transport's default, which the library's invocation replaces.
+     * The invocations that are not the application's: the library's own, and the transport's default, which the
+     * library's invocation replaces. An {@code @EachBean(GraphQLInvocation.class)} template is not judged by them.
      */
     private static boolean isInvocationOfLibraryOrTransport(BeanDefinition<?> definition) {
         Class<?> beanType = definition.getBeanType();
         return beanType == LibraryGraphQLInvocation.class
                 || beanType == DefaultGraphQLInvocation.class && definition.getDeclaringType().isEmpty();
-    }
-
-    /**
-     * The application's {@code GraphQLInvocation} that makes the library's invocation step aside: a bean that is
-     * {@code @Primary} (a factory method that returns {@code DefaultGraphQLInvocation} included) or that declares {@code @Replaces(DefaultGraphQLInvocation.class)}, the two ways the transport
-     * documents to bring an invocation of one's own.
-     *
-     * @param context the bean context to search
-     * @return the application's invocation, or null
-     */
-    @Nullable
-    public static Provided invocationCompetitor(BeanContext context) {
-        for (Provided bean : provided(context, GraphQLInvocation.class, false, new Visits())) {
-            AnnotationValue<Replaces> replaces = bean.definition().getAnnotation(Replaces.class);
-            if (bean.primary() || replaces != null
-                    && replaces.classValue("bean").filter(DefaultGraphQLInvocation.class::equals).isPresent()) {
-                return bean;
-            }
-        }
-        return null;
     }
 
     private static List<Provided> provided(BeanContext context, Class<?> type, boolean withLibrary, Visits visits) {
@@ -239,8 +219,25 @@ public final class LibraryBeanSelection {
         }
     }
 
+    private static boolean replacesDefault(BeanDefinition<?> definition) {
+        AnnotationValue<Replaces> replaces = definition.getAnnotation(Replaces.class);
+        // the transport's default is an unnamed, unqualified class bean with no factory, so a constraint (factory, named,
+        // qualifier) means the replacement targets another bean and leaves the transport's default in place
+        return replaces != null && replaces.classValue("bean").filter(DefaultGraphQLInvocation.class::equals).isPresent()
+                && replaces.classValue("factory").isEmpty() && replaces.stringValue("named").isEmpty()
+                && replaces.annotationClassValue("qualifier").isEmpty();
+    }
+
     static boolean isLibrary(BeanDefinition<?> definition) {
         return definition.getDeclaringType().filter(GraphQLFactory.class::equals).isPresent();
+    }
+
+    /**
+     * @param definition the bean definition
+     * @return the description of an unqualified bean of this definition
+     */
+    public static String describe(BeanDefinition<?> definition) {
+        return describe(new Provided(definition));
     }
 
     public static String describe(Provided bean) {
@@ -295,24 +292,39 @@ public final class LibraryBeanSelection {
         }
     }
 
-    /** Matches when the application brings no {@code GraphQLInvocation} of its own. */
-    public static final class NoCompetingInvocation implements Condition {
-        @Override
-        public boolean matches(ConditionContext context) {
-            Provided competitor = invocationCompetitor(context.getBeanContext());
-            if (competitor == null) {
-                return true;
-            }
-            context.fail("the application provides " + describe(competitor));
-            return false;
-        }
-    }
-
     /** Matches when no application bean of {@code GraphQL} competes with the library's engine. */
     public static final class NoCompetingGraphQL implements Condition {
         @Override
         public boolean matches(ConditionContext context) {
             return noCompetitor(context, graphql.GraphQL.class);
+        }
+    }
+
+    /**
+     * Matches unless the application declares its own {@code DefaultGraphQLInvocation} bean through a factory, for
+     * example a {@code @Primary} factory method. The library's invocation replaces the transport's
+     * {@code DefaultGraphQLInvocation} by type, which would also replace that bean, so it steps aside. The transport's
+     * own bean is a class bean, declared by itself.
+     */
+    public static final class NoApplicationDefaultInvocation implements Condition {
+        @Override
+        public boolean matches(ConditionContext context) {
+            // every invocation is read, so that a bean that replaces the factory's default is seen; a template
+            // (@EachProperty, @EachBean) counts by the beans it expands to
+            for (Provided bean : provided(context.getBeanContext(), GraphQLInvocation.class, false, new Visits())) {
+                BeanDefinition<?> definition = bean.definition();
+                Optional<Class<?>> declaring = definition.getDeclaringType();
+                // only a bean that outranks the transport's class bean (@Primary) or replaces it makes the library's
+                // invocation step aside; an unqualified one does not, and the library's invocation replaces both
+                if (definition.getBeanType() == DefaultGraphQLInvocation.class
+                        && declaring.isPresent() && declaring.get() != DefaultGraphQLInvocation.class
+                        && (bean.primary() || replacesDefault(definition))) {
+                    context.fail("the application declares " + declaring.get().getName()
+                            + "#DefaultGraphQLInvocation, which the library's invocation would replace");
+                    return false;
+                }
+            }
+            return true;
         }
     }
 

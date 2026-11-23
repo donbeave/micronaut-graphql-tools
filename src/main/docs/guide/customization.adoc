@@ -1,1 +1,25 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+The library creates the beans that run a schema: the `GraphQLSchema`, the `GraphQL` engine and the `GraphQLInvocation`. An application replaces any of them by declaring its own bean of that type. This page says which application bean wins, and why the three types are not selected the same way.
+
+== Replacing the schema or the engine
+
+The library's `GraphQLSchema` and `GraphQL` beans are `@Primary`, and each one is created only when the application has no bean of that type that competes for an unqualified injection point: a bean without a qualifier, or a `@Primary` one. Such a bean wins, and the library does not create its own. A bean with a qualifier, such as `@Named("admin")`, is a secondary bean that is injected by its qualifier. It does not replace the library's bean, so an unqualified `GraphQLSchema` or `GraphQL` injection point still gets the library's.
+
+snippet::example.replaced.ReplacedBeansFactory[project-base="test-suite", source="test", tags="schema", indent="0"]
+
+A request is then served by that schema, and the library's binding does not run for it. At startup the library logs one INFO line for each of the two types, which names the bean that is used and the application's qualified beans that it ignores.
+
+An application that builds its own `GraphQL` keeps the library's `GraphQLSchema`, which is bound at startup. To change the library's `GraphQL` without replacing it, add a `GraphQLBuilderCustomizer`.
+
+=== Why the library selects these two itself
+
+Micronaut's own modules use `@Secondary` and `@Requires(missingBeans = ...)` for a default bean. The library does not, for `GraphQLSchema` and `GraphQL`, because `missingBeans` counts a qualified bean. With one `@Named("admin")` schema the library's schema would disappear, every unqualified injection point would get the admin schema, and with `@EachProperty` or `@EachBean` beans the first injection would fail with a `NonUniqueBeanException`. The library's selection ignores a qualified bean, which keeps the unqualified injection point on the library's bean. It reads the bean definitions, so it costs well under a millisecond at startup.
+
+`TypeDefinitionRegistry` is different: the library's registry (the one it discovers from the schema files) is `@Secondary` with `@Requires(missingBeans = TypeDefinitionRegistry.class)`, because a registry has no rule for a qualified bean. Any registry bean the application declares replaces it. Micronaut may one day offer a qualifier-aware `missingBeans`; the selection of the schema and the engine can then be replaced by it.
+
+== Replacing the invocation
+
+The library's `GraphQLInvocation` is `@Secondary`, and it declares `@Replaces(DefaultGraphQLInvocation.class)`, so it replaces the transport's default one. An application `GraphQLInvocation` of any kind is what an unqualified injection point gets: a bean without a qualifier, a `@Primary` bean, or a bean that declares `@Replaces(DefaultGraphQLInvocation.class)`. The library's invocation stays registered beside it and is not created unless something asks for it. It steps aside only for a factory method that returns `DefaultGraphQLInvocation` itself and that is `@Primary` or declares `@Replaces(DefaultGraphQLInvocation.class)` without a `factory`, `named` or `qualifier` constraint (a constrained replacement targets another bean and leaves the transport's default in place), because it would replace that bean; an unqualified one does not outrank the transport's default, so the library's invocation stays, and a factory default that another bean replaces is not counted. One exotic case is not handled: a `@Primary` factory default that another bean replaces with a `qualifier` constraint (`@Replaces(bean = DefaultGraphQLInvocation.class, qualifier = ...)`) still counts as live and makes the library's invocation step aside. Replace the default without a qualifier constraint, or provide your invocation as `@Primary` directly. A template (`@EachProperty` or `@EachBean`) on such a method counts by the beans it expands to, so with no configuration entry the library's invocation stays. Two limits follow from it staying registered. An application invocation that is itself `@Secondary` ties with the library's one, so an unqualified injection point fails with a `NonUniqueBeanException`; drop `@Secondary` or make it `@Primary`. A bean declared with `@EachBean(GraphQLInvocation.class)` is also created for the library's invocation, and a `GraphQL` or `GraphQLSchema` declared that way depends on the invocation that depends on it, so it fails with a circular dependency or, beside an application invocation, with a `NonUniqueBeanException`; target the application's own bean type instead.
+
+snippet::example.replaced.ReplacedBeansFactory[project-base="test-suite", source="test", tags="invocation", indent="0"]
+
+The operations then run as your invocation decides, and a resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`. See the Execution page.

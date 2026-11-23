@@ -31,6 +31,7 @@ import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Secondary
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.internal.GraphQLFactory
@@ -45,9 +46,10 @@ import spock.lang.Shared
 /**
  * The scenario matrix of the library's bean selection: what the application declares (rows) against what the
  * unqualified injection point of GraphQLSchema, GraphQL and GraphQLInvocation resolves to, and which beans of the type
- * exist. Every cell is observed on a real context. The current selection is asserted against the checked-in
- * expectation; setting the SELECTION_VARIANT environment variable to another name records the observed matrix to
- * build/bean-selection-matrix-VARIANT.txt without asserting, so that a candidate selection can be compared row by row.
+ * exist. Every cell is observed on a real context and asserted against bean-selection-matrix.txt, one line per cell:
+ * the application's declaration, the type, the bean an unqualified injection point resolves to, and every bean of the
+ * type (the library's invocation stays registered beside an application invocation). The observed matrix is also
+ * written to build/bean-selection-matrix.txt, so that a deliberate change of the selection is a copy of that file.
  */
 class BeanSelectionMatrixSpec extends AbstractTest {
 
@@ -59,41 +61,49 @@ type Query { hello: String }
     static final List<String> KINDS = [
             'none', 'plain', 'primary', 'named', 'replacesLibrary', 'replacedPlain', 'eachProperty',
             'eachPropertyPrimary', 'eachBean', 'requiresOn', 'requiresOff', 'primaryDefault',
-            'named,plain', 'named,primary', 'named,requiresOn', 'plain,primary', 'named,eachProperty'
+            'named,plain', 'named,primary', 'named,requiresOn', 'plain,primary', 'named,eachProperty',
+            'secondary', 'plain,secondary', 'plain,eachInvocation', 'eachInvocation', 'eachDefaultEmpty',
+            'plainDefault', 'replacesDefault', 'replacedDefault',
+            'replacesDefaultOfFactory', 'replacesDefaultNamed'
+    ]
+    static final Map<String, List<String>> ONLY = [
+            primaryDefault: ['invocation'], secondary: ['invocation'], 'plain,secondary': ['invocation'],
+            'plain,eachInvocation': ['schema', 'graphql'], eachInvocation: ['schema', 'graphql'], eachDefaultEmpty: ['invocation'],
+            plainDefault: ['invocation'], replacesDefault: ['invocation'], replacedDefault: ['invocation'],
+            replacesDefaultOfFactory: ['invocation'], replacesDefaultNamed: ['invocation']
     ]
     static final List<String> TARGETS = ['schema', 'graphql', 'invocation']
 
     @Shared
     List<String> lines = []
 
-    void "record the matrix"() {
+    void "every declaration resolves to the documented bean"() {
         when:
         for (String kind : KINDS) {
             for (String target : TARGETS) {
-                if (kind == 'primaryDefault' && target != 'invocation') {
+                if (ONLY.containsKey(kind) && !ONLY[kind].contains(target)) {
                     continue
                 }
                 lines << (kind + ' | ' + target + ' | ' + observe(kind, target))
             }
         }
-        def variant = (System.getenv('SELECTION_VARIANT') ?: 'today')
-        def out = new File('build/bean-selection-matrix-' + variant + '.txt')
+        def out = new File('build/bean-selection-matrix.txt')
         out.parentFile.mkdirs()
         out.text = lines.join('\n') + '\n'
 
         then:
-        variant != 'today' || lines == getClass().getResource('bean-selection-matrix-today.txt').readLines()
+        lines == getClass().getResource('bean-selection-matrix.txt').readLines()
     }
 
     String observe(String kind, String target) {
         long started = System.nanoTime()
-        Map config = ['spike.kind': kind, 'spike.target': target]
+        Map config = ['matrix.kind': kind, 'matrix.target': target]
         if (kind.contains('requiresOn')) {
-            config['spike.flag'] = 'on'
+            config['matrix.flag'] = 'on'
         }
         if (kind.contains('eachProperty') || kind.contains('eachBean')) {
-            config['spike.items.a.v'] = '1'
-            config['spike.items.b.v'] = '1'
+            config['matrix.items.a.v'] = '1'
+            config['matrix.items.b.v'] = '1'
         }
         try {
             startContext(SCHEMA, 'BeanSelectionMatrixSpec', config)
@@ -169,57 +179,57 @@ type Query { hello: String }
         }
     }
 
-    @Requires(property = 'spike.kind', pattern = '(.*,)?plain(,.*)?')
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?plain(,.*)?')
     @Factory
     static class PlainFactory {
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'schema')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema() { BeanSelectionMatrixSpec.schema('plain') }
 
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL() { engine('plain') }
 
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation() { new AppInvocation('plain') }
     }
 
-    @Requires(property = 'spike.kind', pattern = '(.*,)?primary(,.*)?')
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?primary(,.*)?')
     @Factory
     static class PrimaryFactory {
-        @Bean @Singleton @Primary @Requires(property = 'spike.target', value = 'schema')
+        @Bean @Singleton @Primary @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema() { BeanSelectionMatrixSpec.schema('primary') }
 
-        @Bean @Singleton @Primary @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @Singleton @Primary @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL() { engine('primary') }
 
-        @Bean @Singleton @Primary @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @Singleton @Primary @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation() { new AppInvocation('primary') }
     }
 
-    @Requires(property = 'spike.kind', pattern = '(.*,)?named(,.*)?')
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?named(,.*)?')
     @Factory
     static class NamedFactory {
-        @Bean @Singleton @Named('admin') @Requires(property = 'spike.target', value = 'schema')
+        @Bean @Singleton @Named('admin') @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema() { BeanSelectionMatrixSpec.schema('named') }
 
-        @Bean @Singleton @Named('admin') @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @Singleton @Named('admin') @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL() { engine('named') }
 
-        @Bean @Singleton @Named('admin') @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @Singleton @Named('admin') @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation() { new AppInvocation('named') }
     }
 
-    @Requires(property = 'spike.kind', value = 'replacesLibrary')
+    @Requires(property = 'matrix.kind', value = 'replacesLibrary')
     @Factory
     static class ReplacesLibraryFactory {
-        @Bean @Singleton @Replaces(value = GraphQLSchema, factory = GraphQLFactory) @Requires(property = 'spike.target', value = 'schema')
+        @Bean @Singleton @Replaces(value = GraphQLSchema, factory = GraphQLFactory) @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema() { BeanSelectionMatrixSpec.schema('replaces') }
 
-        @Bean @Singleton @Replaces(value = GraphQL, factory = GraphQLFactory) @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @Singleton @Replaces(value = GraphQL, factory = GraphQLFactory) @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL() { engine('replaces') }
     }
 
-    @Requires(property = 'spike.kind', value = 'replacesLibrary')
-    @Requires(property = 'spike.target', value = 'invocation')
+    @Requires(property = 'matrix.kind', value = 'replacesLibrary')
+    @Requires(property = 'matrix.target', value = 'invocation')
     @Singleton
     @Replaces(DefaultGraphQLInvocation)
     static class ReplacesInvocation extends AppInvocation {
@@ -228,60 +238,60 @@ type Query { hello: String }
         }
     }
 
-    @Requires(property = 'spike.kind', value = 'replacedPlain')
+    @Requires(property = 'matrix.kind', value = 'replacedPlain')
     @Factory
     static class ReplacedFirstFactory {
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'schema')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema() { BeanSelectionMatrixSpec.schema('first') }
 
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL() { engine('first') }
 
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation() { new AppInvocation('first') }
     }
 
-    @Requires(property = 'spike.kind', value = 'replacedPlain')
+    @Requires(property = 'matrix.kind', value = 'replacedPlain')
     @Factory
     static class ReplacedSecondFactory {
-        @Bean @Singleton @Named('second') @Replaces(value = GraphQLSchema, factory = ReplacedFirstFactory) @Requires(property = 'spike.target', value = 'schema')
+        @Bean @Singleton @Named('second') @Replaces(value = GraphQLSchema, factory = ReplacedFirstFactory) @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema() { BeanSelectionMatrixSpec.schema('second') }
 
-        @Bean @Singleton @Named('second') @Replaces(value = GraphQL, factory = ReplacedFirstFactory) @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @Singleton @Named('second') @Replaces(value = GraphQL, factory = ReplacedFirstFactory) @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL() { engine('second') }
 
-        @Bean @Singleton @Named('second') @Replaces(value = GraphQLInvocation, factory = ReplacedFirstFactory) @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @Singleton @Named('second') @Replaces(value = GraphQLInvocation, factory = ReplacedFirstFactory) @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation() { new AppInvocation('second') }
     }
 
-    @Requires(property = 'spike.kind', pattern = '(.*,)?eachProperty(,.*)?')
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?eachProperty(,.*)?')
     @Factory
     static class EachPropertyFactory {
-        @Bean @EachProperty('spike.items') @Requires(property = 'spike.target', value = 'schema')
+        @Bean @EachProperty('matrix.items') @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema(@Parameter String name) { BeanSelectionMatrixSpec.schema('each_' + name) }
 
-        @Bean @EachProperty('spike.items') @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @EachProperty('matrix.items') @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL(@Parameter String name) { engine('each_' + name) }
 
-        @Bean @EachProperty('spike.items') @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @EachProperty('matrix.items') @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation(@Parameter String name) { new AppInvocation('each_' + name) }
     }
 
-    @Requires(property = 'spike.kind', value = 'eachPropertyPrimary')
+    @Requires(property = 'matrix.kind', value = 'eachPropertyPrimary')
     @Factory
     static class EachPropertyPrimaryFactory {
-        @Bean @EachProperty(value = 'spike.items', primary = 'a') @Requires(property = 'spike.target', value = 'schema')
+        @Bean @EachProperty(value = 'matrix.items', primary = 'a') @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema(@Parameter String name) { BeanSelectionMatrixSpec.schema('eachp_' + name) }
 
-        @Bean @EachProperty(value = 'spike.items', primary = 'a') @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @EachProperty(value = 'matrix.items', primary = 'a') @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL(@Parameter String name) { engine('eachp_' + name) }
 
-        @Bean @EachProperty(value = 'spike.items', primary = 'a') @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @EachProperty(value = 'matrix.items', primary = 'a') @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation(@Parameter String name) { new AppInvocation('eachp_' + name) }
     }
 
-    @Requires(property = 'spike.kind', value = 'eachBean')
-    @EachProperty('spike.items')
+    @Requires(property = 'matrix.kind', value = 'eachBean')
+    @EachProperty('matrix.items')
     static class Item {
         final String name
 
@@ -290,37 +300,99 @@ type Query { hello: String }
         }
     }
 
-    @Requires(property = 'spike.kind', value = 'eachBean')
+    @Requires(property = 'matrix.kind', value = 'eachBean')
     @Factory
     static class EachBeanFactory {
-        @Bean @EachBean(Item) @Requires(property = 'spike.target', value = 'schema')
+        @Bean @EachBean(Item) @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema(Item item) { BeanSelectionMatrixSpec.schema('eachb_' + item.name) }
 
-        @Bean @EachBean(Item) @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @EachBean(Item) @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL(Item item) { engine('eachb_' + item.name) }
 
-        @Bean @EachBean(Item) @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @EachBean(Item) @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation(Item item) { new AppInvocation('eachb_' + item.name) }
     }
 
-    @Requires(property = 'spike.kind', pattern = '(.*,)?requires(On|Off)(,.*)?')
-    @Requires(property = 'spike.flag', value = 'on')
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?requires(On|Off)(,.*)?')
+    @Requires(property = 'matrix.flag', value = 'on')
     @Factory
     static class FlagFactory {
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'schema')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'schema')
         GraphQLSchema schema() { BeanSelectionMatrixSpec.schema('flagged') }
 
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'graphql')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'graphql')
         GraphQL graphQL() { engine('flagged') }
 
-        @Bean @Singleton @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'invocation')
         GraphQLInvocation invocation() { new AppInvocation('flagged') }
     }
 
-    @Requires(property = 'spike.kind', value = 'primaryDefault')
+    @Requires(property = 'matrix.kind', pattern = 'primaryDefault|replacedDefault')
     @Factory
     static class PrimaryDefaultFactory {
-        @Bean @Primary @Singleton @Requires(property = 'spike.target', value = 'invocation')
+        @Bean @Primary @Singleton @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?secondary(,.*)?')
+    @Factory
+    static class SecondaryFactory {
+        @Bean @Singleton @Secondary @Requires(property = 'matrix.target', value = 'invocation')
+        GraphQLInvocation invocation() { new AppInvocation('secondary') }
+    }
+
+    @Requires(property = 'matrix.kind', pattern = '(.*,)?eachInvocation(,.*)?')
+    @Factory
+    static class EachInvocationFactory {
+        @Bean @EachBean(GraphQLInvocation) @Requires(property = 'matrix.target', value = 'schema')
+        GraphQLSchema schema(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.schema('eachi') }
+
+        @Bean @EachBean(GraphQLInvocation) @Requires(property = 'matrix.target', value = 'graphql')
+        GraphQL graphQL(GraphQLInvocation invocation) { engine('eachi') }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'eachDefaultEmpty')
+    @Factory
+    static class EachDefaultEmptyFactory {
+        @Bean @EachProperty('matrix.nothing') @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation(@Parameter String name) { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'plainDefault')
+    @Factory
+    static class PlainDefaultFactory {
+        @Bean @Singleton @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacesDefault')
+    @Factory
+    static class ReplacesDefaultFactory {
+        @Bean @Singleton @Replaces(DefaultGraphQLInvocation) @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacedDefault')
+    @Requires(property = 'matrix.target', value = 'invocation')
+    @Singleton
+    @Replaces(DefaultGraphQLInvocation)
+    static class ReplacingDefaultInvocation extends AppInvocation {
+        ReplacingDefaultInvocation() {
+            super('replacing')
+        }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacesDefaultOfFactory')
+    @Factory
+    static class ReplacesDefaultOfFactoryFactory {
+        @Bean @Singleton @Replaces(value = DefaultGraphQLInvocation, factory = ReplacedFirstFactory) @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacesDefaultNamed')
+    @Factory
+    static class ReplacesDefaultNamedFactory {
+        @Bean @Singleton @Replaces(value = DefaultGraphQLInvocation, named = 'other') @Requires(property = 'matrix.target', value = 'invocation')
         DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
     }
 
