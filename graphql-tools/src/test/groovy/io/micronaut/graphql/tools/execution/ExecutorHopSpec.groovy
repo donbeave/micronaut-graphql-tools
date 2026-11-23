@@ -124,16 +124,14 @@ class ExecutorHopSpec extends Specification {
         CompletableFuture<Object> gate = new CompletableFuture<>()
         DataFetcher<Object> fetcher = new ExecutorHopDataFetcher(pool, { env -> gate } as DataFetcher<Object>)
         CompletableFuture<Object> field = (CompletableFuture) fetcher.get(environment(PropagatedContext.empty()))
-        String completedOn = null
-        field.thenAccept { completedOn = Thread.currentThread().name }
+        CompletableFuture<String> completedOn = new CompletableFuture<>()
+        field.thenAccept { completedOn.complete(Thread.currentThread().name) }
 
         when:
         other.submit { gate.complete('late') }.get(5, TimeUnit.SECONDS)
-        field.get(5, TimeUnit.SECONDS)
-        sleep(100)
 
         then:
-        completedOn == 'hop-pool'
+        completedOn.get(5, TimeUnit.SECONDS) == 'hop-pool'
 
         cleanup:
         other.shutdownNow()
