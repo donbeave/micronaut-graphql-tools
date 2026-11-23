@@ -1,0 +1,24 @@
+// Checks the license headers of the source sets named by `licenseSourceSets` (all of them when unset). The library modules set
+// it to `test`, because the micronaut-build quality plugin checks their src/main with its own rules. It adds no formatting rules.
+plugins {
+    id("com.diffplug.spotless")
+}
+
+spotless {
+    val header = rootProject.file("config/spotless.license.java")
+    val sets = findProperty("licenseSourceSets") ?: "*"
+    format("licenseJava") {
+        target("src/$sets/java/**/*.java")
+        // Spotless's own java license step skips these two as well
+        targetExclude("**/package-info.java", "**/module-info.java")
+        licenseHeaderFile(header, "(package|import|public|class|module)")
+    }
+    format("licenseGroovy") {
+        target("src/$sets/groovy/**/*.groovy")
+        licenseHeaderFile(header, "(package|import|public|class|module)")
+    }
+    format("licenseKotlin") {
+        target("src/$sets/kotlin/**/*.kt")
+        licenseHeaderFile(header, "(package |@file|import )")
+    }
+}

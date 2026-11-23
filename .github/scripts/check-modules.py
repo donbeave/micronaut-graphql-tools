@@ -76,9 +76,9 @@ def gradle_checks(text):
 library_artifacts = [artifact(m) for m in libraries]
 published_artifacts = [artifact(m) for m in published]
 
-init = read(".github/gradle/publish-github-packages.init.gradle")
-m = re.search(r"def publishable = \[(.*?)\]", init, re.S)
-compare("publish-github-packages.init.gradle", re.findall(r"'([^']+)'", m.group(1)) if m else [], published_artifacts, "`publishable` list")
+init = read(".github/gradle/publish-github-packages.init.gradle.kts")
+m = re.search(r"val publishable = setOf\((.*?)\)", init, re.S)
+compare("publish-github-packages.init.gradle.kts", re.findall(r'"([^"]+)"', m.group(1)) if m else [], published_artifacts, "`publishable` list")
 
 release = read(".github/workflows/release.yml")
 compare("release.yml", re.findall(r"echo \"- io\.micronaut\.graphql\.tools:(micronaut-graphql-tools(?:-[a-z]+)?):\$\{TAG\}", release), published_artifacts, "published-artifacts summary")
