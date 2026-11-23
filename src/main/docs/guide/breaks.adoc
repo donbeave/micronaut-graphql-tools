@@ -2,19 +2,19 @@ This page lists the breaking changes of each release. Each entry names the chang
 
 == 1.0.0-M1
 
-Tagged `1.0.0-M1` and published to GitHub Packages. The breaking changes are numbered `BC-01` to `BC-19`, as in the release notes. See the migration page for what breaks and how to fix it.
+Tagged `1.0.0-M1` and published to GitHub Packages. The breaking changes are numbered `BC-01` to `BC-19`. See the migration page for what breaks and how to fix it.
 
 * BC-01 to BC-19: see the migration page, entries for 1.0.0-M1.
 
 == 1.0.0-M2
 
-Tagged `1.0.0-M2` and published to GitHub Packages. The breaking changes are numbered from `BC-20`, as in the release notes of 1.0.0-M2.
+Tagged `1.0.0-M2` and published to GitHub Packages. The breaking changes are numbered from `BC-20`.
 
 * BC-20 (#173): the `graphql-tools` mapper seam is internal and no longer documented. See the migration page, entries for 1.0.0-M2.
 
 == 1.0.0-M3
 
-Tagged `1.0.0-M3` and published to GitHub Packages. The breaking changes are numbered `BC-21` to `BC-33`, as in the release notes of 1.0.0-M3. See the migration page, entries for 1.0.0-M3, for the fix of each one.
+Tagged `1.0.0-M3` and published to GitHub Packages. The breaking changes are numbered `BC-21` to `BC-33`. See the migration page, entries for 1.0.0-M3, for the fix of each one.
 
 * #33 (BC-21): a bound Java enum needs a bean introspection (`@Introspected`); the startup fails without one. See the migration page, entries for 1.0.0-M3.
 * #237 (BC-22): one code system for checks and errors. Messages start with `[code]`, and the `!` lines of the binding manifest are named by the code. See the migration page, entries for 1.0.0-M3.
@@ -38,7 +38,7 @@ Issue #15 (BC-19, resolver parameters bound by name): its runtime half is listed
 
 == 1.0.0-M4
 
-Tagged `1.0.0-M4` and published to GitHub Packages. The breaking changes are listed below with the numbers of the release notes of 1.0.0-M4. See the migration page, entries for 1.0.0-M4, for the fix of each one.
+Tagged `1.0.0-M4` and published to GitHub Packages. The breaking changes are listed below. See the migration page, entries for 1.0.0-M4, for the fix of each one.
 
 * #49 (BC-35): resolvers run on the blocking executor by default, not on the Netty event loop; `micronaut.graphql.tools.execution.executor: none` keeps the old behaviour. See the migration page, entries for 1.0.0-M4.
 * #20 (BC-36): a `DataLoaderRegistry` bean fails the startup with `[data-loader-registry-bean]`; register the loaders as `BatchLoader` beans (the library creates the registry of each execution), add them in a `GraphQLContextContributor`, or provide your own `GraphQLInvocation`. See the migration page, entries for 1.0.0-M4.
