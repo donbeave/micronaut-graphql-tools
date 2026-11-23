@@ -1,0 +1,40 @@
+# Large-schema timings (#665): median of 7 clean builds per compiler, all values in milliseconds.
+# command: mise exec -- test-suite-build/profiler/large-schema/run.sh 7
+# JDK: java version "25.0.5.0.3" 2026-10-25 LTS
+# graphql-java: 22.4, Gradle: see ./gradlew --version, Kotlin 2.1.21, KSP 2.1.21-2.0.2, Groovy 4.0.33
+# load average before/after: 37.67 32.05 24.59 / 30.10 31.18 25.35
+# workload: 2000 types, 250 documents, 0 validation errors
+# schema-build = SchemaParser.parse (schema-parse) + UnExecutableSchemaGenerator (schema-build); cold = first call in the compiler JVM;
+# warm = median of 30 passes after the cold pass in the same JVM; validate = Validator over all documents; doc-parse = Parser over all documents
+compiler    schema-parse-ms    schema-build-ms  cold-doc-parse-ms   cold-validate-ms  warm-doc-parse-ms   warm-validate-ms
+javac                 173.8              388.4               43.1               93.1               13.9               15.5
+ksp                   178.0              396.2               42.6               95.8               13.8               16.2
+groovy                195.1              403.5               45.9               92.5               13.2               13.7
+
+# worst run of the schema build (schema-parse + schema-build), the figure the 2 s budget is judged against when the machine is busy
+javac                 647.7
+ksp                   615.9
+groovy                695.1
+
+# every run
+host=javac schema-parse-ms=173.8 schema-build-ms=386.1 cold-doc-parse-ms=41.7 cold-validate-ms=100.8 warm-doc-parse-ms=13.8 warm-validate-ms=15.5
+host=javac schema-parse-ms=172.8 schema-build-ms=405.2 cold-doc-parse-ms=43.3 cold-validate-ms=94.7 warm-doc-parse-ms=14.3 warm-validate-ms=16.7
+host=javac schema-parse-ms=209.8 schema-build-ms=437.9 cold-doc-parse-ms=50.7 cold-validate-ms=89.6 warm-doc-parse-ms=14.2 warm-validate-ms=16.9
+host=javac schema-parse-ms=172.8 schema-build-ms=390.3 cold-doc-parse-ms=43.3 cold-validate-ms=91.6 warm-doc-parse-ms=13.9 warm-validate-ms=14.9
+host=javac schema-parse-ms=194.2 schema-build-ms=382.5 cold-doc-parse-ms=43.1 cold-validate-ms=93.1 warm-doc-parse-ms=14.0 warm-validate-ms=14.9
+host=javac schema-parse-ms=171.1 schema-build-ms=382.1 cold-doc-parse-ms=42.5 cold-validate-ms=94.5 warm-doc-parse-ms=13.8 warm-validate-ms=15.2
+host=javac schema-parse-ms=176.3 schema-build-ms=388.4 cold-doc-parse-ms=41.5 cold-validate-ms=84.9 warm-doc-parse-ms=13.4 warm-validate-ms=15.7
+host=ksp schema-parse-ms=180.2 schema-build-ms=406.2 cold-doc-parse-ms=42.6 cold-validate-ms=95.8 warm-doc-parse-ms=13.5 warm-validate-ms=15.6
+host=ksp schema-parse-ms=179.7 schema-build-ms=436.2 cold-doc-parse-ms=70.9 cold-validate-ms=94.7 warm-doc-parse-ms=13.3 warm-validate-ms=16.2
+host=ksp schema-parse-ms=185.9 schema-build-ms=414.4 cold-doc-parse-ms=81.5 cold-validate-ms=100.4 warm-doc-parse-ms=14.1 warm-validate-ms=17.0
+host=ksp schema-parse-ms=172.6 schema-build-ms=390.7 cold-doc-parse-ms=42.0 cold-validate-ms=98.4 warm-doc-parse-ms=14.7 warm-validate-ms=16.5
+host=ksp schema-parse-ms=176.1 schema-build-ms=396.2 cold-doc-parse-ms=40.3 cold-validate-ms=88.7 warm-doc-parse-ms=13.7 warm-validate-ms=15.4
+host=ksp schema-parse-ms=177.5 schema-build-ms=391.6 cold-doc-parse-ms=42.2 cold-validate-ms=96.0 warm-doc-parse-ms=13.8 warm-validate-ms=16.5
+host=ksp schema-parse-ms=178.0 schema-build-ms=385.5 cold-doc-parse-ms=42.6 cold-validate-ms=87.2 warm-doc-parse-ms=13.8 warm-validate-ms=16.1
+host=groovy schema-parse-ms=195.2 schema-build-ms=411.1 cold-doc-parse-ms=45.9 cold-validate-ms=95.2 warm-doc-parse-ms=12.4 warm-validate-ms=13.9
+host=groovy schema-parse-ms=198.0 schema-build-ms=497.1 cold-doc-parse-ms=46.9 cold-validate-ms=92.5 warm-doc-parse-ms=13.9 warm-validate-ms=13.6
+host=groovy schema-parse-ms=207.6 schema-build-ms=465.0 cold-doc-parse-ms=60.1 cold-validate-ms=118.8 warm-doc-parse-ms=12.7 warm-validate-ms=14.8
+host=groovy schema-parse-ms=195.1 schema-build-ms=395.8 cold-doc-parse-ms=42.9 cold-validate-ms=88.3 warm-doc-parse-ms=12.9 warm-validate-ms=13.8
+host=groovy schema-parse-ms=188.5 schema-build-ms=393.2 cold-doc-parse-ms=46.4 cold-validate-ms=87.9 warm-doc-parse-ms=13.4 warm-validate-ms=13.3
+host=groovy schema-parse-ms=187.3 schema-build-ms=397.4 cold-doc-parse-ms=42.3 cold-validate-ms=86.7 warm-doc-parse-ms=13.2 warm-validate-ms=13.6
+host=groovy schema-parse-ms=191.1 schema-build-ms=403.5 cold-doc-parse-ms=44.8 cold-validate-ms=94.7 warm-doc-parse-ms=13.2 warm-validate-ms=13.7

@@ -71,6 +71,13 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   `compile-time-budget.properties` is the budget; `CompileTimeBudget` compares the medians with it and writes the per-module report.
   `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>` runs all of it (CI job `compile-time budget`).
   `CompileTimeBudgetTest` runs in `buildToolsTest`: the scenario definitions and the budget check, with a measurement that exceeds its budget.
+- `profiler/large-schema/`: the large-schema spike (#665), a standalone Gradle build that is not part of `buildToolsTest`. `probe` holds one
+  workload (a generated schema of 2,000 types and 250 operation documents; graphql-java parses and builds the schema, then parses and validates
+  the documents) and three hosts for it: a javac processor, a KSP processor provider and a Groovy global AST transformation. `javac`, `ksp` and
+  `groovy` are tiny projects with the probe on the processor path of their compiler. `run.sh [runs]` builds each in a Gradle JVM of its own
+  and writes `timings.txt` (medians, the worst schema build, every run, the JDK and the machine load). It needs the network once for the
+  Kotlin and KSP plugins: `mise exec -- test-suite-build/profiler/large-schema/run.sh 5`. It asserts nothing; the budgets it is read against are
+  in the issue and in `timings.txt`.
 - The samples resolve the library from `build/repo`, as published, so the processor jar they use is the real one: it registers the visitor and only the visitor.
 
 Not in this module: the visitor and its options (`graphql-tools-processor`), the binding corpus, and the example applications.
