@@ -1,9 +1,7 @@
 plugins {
-    id("io.micronaut.build.internal.bom")
+    id("io.micronaut.build.internal.graphql-tools-bom")
 }
 
-micronautBuild {
-    binaryCompatibility {
-        enabled.set(false)
-    }
+micronautBom {
+    extraExcludedProjects.addAll("test-suite-*")
 }

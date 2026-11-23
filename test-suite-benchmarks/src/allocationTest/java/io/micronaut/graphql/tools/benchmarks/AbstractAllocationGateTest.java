@@ -180,7 +180,7 @@ abstract class AbstractAllocationGateTest {
         Assumptions.assumeTrue(baselines.hasJdk(JDK), "No allocation baselines are recorded for JDK " + JDK);
         Double baseline = baselines.get(key);
         assertNotNull(baseline, "No allocation baseline for " + key + ". Record it with "
-                + "./gradlew :benchmarks:allocationTest -Pallocation.update");
+                + "./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update");
 
         if (wholeQuery) {
             if (!LEG.equals(DEFAULT_LEG)) {
@@ -189,13 +189,13 @@ abstract class AbstractAllocationGateTest {
             double limit = baseline * QUERY_TOLERANCE_FACTOR;
             assertTrue(measured <= limit, String.format(java.util.Locale.ROOT,
                     "%s allocates %.2f B/op, over its baseline %.2f B/op x %.2f = %.2f. Remove the allocation, or if "
-                            + "it is intended run ./gradlew :benchmarks:allocationTest -Pallocation.update and "
+                            + "it is intended run ./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update and "
                             + "commit the new baseline.", key, measured, baseline, QUERY_TOLERANCE_FACTOR, limit));
         } else {
             double limit = baseline + LIBRARY_TOLERANCE_BYTES;
             assertTrue(measured <= limit, String.format(java.util.Locale.ROOT,
                     "%s allocates %.2f B/op, over its baseline %.2f B/op + %.1f = %.2f. Remove the allocation, or if "
-                            + "it is intended run ./gradlew :benchmarks:allocationTest -Pallocation.update and "
+                            + "it is intended run ./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update and "
                             + "commit the new baseline.", key, measured, baseline, LIBRARY_TOLERANCE_BYTES, limit));
         }
     }

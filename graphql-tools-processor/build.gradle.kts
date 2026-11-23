@@ -2,10 +2,6 @@ plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
 
-// The quality plugin checks the headers of src/main only; this checks the test sources.
-extra["licenseSourceSets"] = "test"
-apply(from = rootProject.file("config/spotless.license.gradle"))
-
 dependencies {
     // the schema rules shared with the runtime (SchemaSources): the compile-time checks read the same files
     implementation(projects.micronautGraphqlToolsBinding)
@@ -30,12 +26,6 @@ dependencies {
     // the Kotlin cases of the corpus with a suspend resolver start up with the library's suspend support, which needs these
     testRuntimeOnly(mn.kotlin.stdlib)
     testRuntimeOnly(mn.kotlinx.coroutines.core)
-}
-
-micronautBuild {
-    binaryCompatibility {
-        enabled.set(false)
-    }
 }
 
 // The binding corpus (#142): the cases are data under src/test/resources/corpus, read from the project directory.

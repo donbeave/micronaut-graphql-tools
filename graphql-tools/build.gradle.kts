@@ -2,10 +2,6 @@ plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
 
-// The quality plugin checks the headers of src/main only; this checks the test sources.
-extra["licenseSourceSets"] = "test"
-apply(from = rootProject.file("config/spotless.license.gradle"))
-
 dependencies {
     api(projects.micronautGraphqlToolsBinding)
     api(mnGraphql.micronaut.graphql)
@@ -41,7 +37,7 @@ dependencies {
     testImplementation(libs.graphql.java.datetime)
     testImplementation(libs.graphql.java.extended.validation)
     // SerdeInputMutationSpec: an input class with Micronaut Serialization, and no Jackson databind on the test classpath (#36).
-    // The Serde version comes from the Micronaut platform BOM, as in graphql-tools-tck.
+    // The Serde version comes from the Micronaut platform BOM, as in test-suite-tck.
     testImplementation(platform(libs.micronaut.platform))
     testAnnotationProcessor(platform(libs.micronaut.platform))
     testImplementation("io.micronaut.serde:micronaut-serde-api")
@@ -49,12 +45,6 @@ dependencies {
     testImplementation("io.micronaut.rxjava3:micronaut-rxjava3")
     testImplementation("io.micronaut.rxjava2:micronaut-rxjava2")
     testAnnotationProcessor("io.micronaut.serde:micronaut-serde-processor")
-}
-
-micronautBuild {
-    binaryCompatibility {
-        enabled.set(false)
-    }
 }
 
 // The inherited-resolver specs need the contracts that the visitor of the processor writes into the annotation metadata of a bean

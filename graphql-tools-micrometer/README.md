@@ -48,7 +48,7 @@ Applications that use `micronaut-graphql-tools` and want request metrics.
   `graphql-tools-opentelemetry`.
 - The test suites (`test-suite-java`, `-kotlin`, `-groovy`) depend on it and test the timer from the schema to the meter
   registry, on the JVM and, for Java and Kotlin, as a native binary.
-- `graphql-tools-bom` manages its version. `benchmarks` measures the per-field cost of a request with the module on.
+- `graphql-tools-bom` manages its version. `test-suite-benchmarks` measures the per-field cost of a request with the module on.
 - It is published to GitHub Packages with the other library modules.
 
 ## Build and test

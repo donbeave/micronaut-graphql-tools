@@ -78,11 +78,11 @@ class BindingRulesAllocationTest {
         Assumptions.assumeTrue(baselines.hasJdk(JDK), "No allocation baselines are recorded for JDK " + JDK);
         Double baseline = baselines.get(key);
         assertNotNull(baseline, "No allocation baseline for " + key + ". Record it with "
-                + "./gradlew :benchmarks:allocationTest -Pallocation.update");
+                + "./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update");
         double limit = baseline * TOLERANCE_FACTOR;
         assertTrue(measured <= limit, String.format(java.util.Locale.ROOT,
                 "%s allocates %.2f B/op, over its baseline %.2f B/op x %.2f = %.2f. Remove the allocation, or if it is intended run "
-                        + "./gradlew :benchmarks:allocationTest -Pallocation.update and commit the new baseline.",
+                        + "./gradlew :test-suite-benchmarks:allocationTest -Pallocation.update and commit the new baseline.",
                 key, measured, baseline, TOLERANCE_FACTOR, limit));
     }
 }

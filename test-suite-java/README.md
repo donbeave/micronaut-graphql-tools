@@ -13,13 +13,13 @@ of the JSON tests. The guide's code snippets come from the three suites (`snippe
 - `src/main/java/example`: the application: the schema (`src/main/resources/schema.graphqls`), resolvers, data classes and
   the `GraphQLFactory` bean. The `.graphql` operations used by the tests are in `src/main/graphql`.
 - `src/test/java/example`: JUnit tests by feature (`claimed`, `discovery`, `directives`, `eager`, `enums`, `graphql/query`, `manifest`, `nullfields`,
-  `scope`, `tck`, `host`, ...). `example.tck.GraphQLToolsTckTest` runs the scenarios of `graphql-tools-tck`.
+  `scope`, `tck`, `host`, ...). `example.tck.GraphQLToolsTckTest` runs the scenarios of `test-suite-tck`.
 - `src/serdeTest/java/example/nullfields`: the same null-field checks with Micronaut Serialization, in their own source
   set and task.
 - Build checks: `checkBindingManifest` and `checkSuiteSchemaParity`. The parity check fails when the schema of this suite
   differs from the copies in `test-suite-kotlin` and `test-suite-groovy`.
 
-Not in this module: the library itself (`graphql-tools`) and the shared scenarios (`graphql-tools-tck`).
+Not in this module: the library itself (`graphql-tools`) and the shared scenarios (`test-suite-tck`).
 
 ## Packages
 
@@ -41,7 +41,7 @@ Nothing here is a library API. Do not import from `example.*` in application cod
 
 ## Relation to other modules
 
-- Depends on `micronaut-graphql-tools` (`implementation`) and `graphql-tools-tck` (`testImplementation`).
+- Depends on `micronaut-graphql-tools` (`implementation`) and `test-suite-tck` (`testImplementation`).
 - Puts `micronaut-graphql-tools-processor` on its `annotationProcessor` path, so the compile-time checks run on this
   application. `src/driftFixture` holds a resolver that drifts from the schema on purpose, and `driftFixtureTest` (part of
   `check`) asserts that compiling it fails with `[argument-mismatch] Query.searchProfile`; it runs that compilation in a build

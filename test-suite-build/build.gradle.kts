@@ -1,4 +1,5 @@
 plugins {
+    id("io.micronaut.build.internal.graphql-tools-license")
     java
 }
 
@@ -134,7 +135,6 @@ tasks.test {
     enabled = false
 }
 
-apply(from = rootProject.file("config/spotless.license.gradle"))
 // The sample sources carry the header too; the standard targets cover src/ only.
 extensions.configure<com.diffplug.gradle.spotless.SpotlessExtension>("spotless") {
     format("samples") {
