@@ -19,11 +19,14 @@ import graphql.ExecutionInput;
 import graphql.execution.preparsed.PreparsedDocumentEntry;
 import graphql.execution.preparsed.PreparsedDocumentProvider;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.propagation.PropagatedContext;
+import io.micronaut.graphql.tools.internal.execution.ExecutionState;
 import io.micronaut.core.util.clhm.ConcurrentLinkedHashMap;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 /**
@@ -32,7 +35,8 @@ import java.util.function.Function;
  * query that failed to parse or validate is cached too, so that a repeated invalid query is cheap. The key is the text
  * only: variables and the operation name do not change the document, and the depth and complexity limits run after the
  * cache, on every execution. Concurrent first misses for one text share one parse: the first caller parses and the
- * others receive its result. While an entry stays in the cache, later requests receive the same {@link PreparsedDocumentEntry}, so the parsed
+ * others receive its result, each on a future of its own that completes under the propagated context and on the executor of
+ * its own request. While an entry stays in the cache, later requests receive the same {@link PreparsedDocumentEntry}, so the parsed
  * document is shared across requests and must be treated as read-only.
  */
 @Internal
@@ -67,7 +71,7 @@ public final class DocumentCache implements PreparsedDocumentProvider {
         CompletableFuture<PreparsedDocumentEntry> mine = new CompletableFuture<>();
         CompletableFuture<PreparsedDocumentEntry> other = parsing.putIfAbsent(query, mine);
         if (other != null) {
-            return other;
+            return resumeInOwnContext(other, executionInput);
         }
         try {
             PreparsedDocumentEntry entry = documents.get(query);
@@ -83,6 +87,41 @@ public final class DocumentCache implements PreparsedDocumentProvider {
             parsing.remove(query);
         }
         return mine;
+    }
+
+    /**
+     * Gives a waiter a future of its own, completed under the propagated context and on the executor of its request, so
+     * that the continuations graphql-java attaches run in the waiter's context and not in the one of the request that parses.
+     */
+    private static CompletableFuture<PreparsedDocumentEntry> resumeInOwnContext(CompletableFuture<PreparsedDocumentEntry> shared,
+                                                                                ExecutionInput executionInput) {
+        ExecutionState state = ExecutionState.of(executionInput.getGraphQLContext());
+        PropagatedContext captured = state != null ? state.propagatedContext() : PropagatedContext.getOrEmpty();
+        Executor executor = state != null ? state.requestExecutor() : null;
+        CompletableFuture<PreparsedDocumentEntry> own = new CompletableFuture<>();
+        shared.whenComplete((entry, failure) -> {
+            if (executor == null) {
+                completeIn(captured, own, entry, failure);
+                return;
+            }
+            try {
+                executor.execute(() -> completeIn(captured, own, entry, failure));
+            } catch (RuntimeException e) {
+                own.completeExceptionally(e);
+            }
+        });
+        return own;
+    }
+
+    private static void completeIn(PropagatedContext captured, CompletableFuture<PreparsedDocumentEntry> own,
+                                   PreparsedDocumentEntry entry, Throwable failure) {
+        try (PropagatedContext.Scope ignored = captured.propagate()) {
+            if (failure != null) {
+                own.completeExceptionally(failure);
+            } else {
+                own.complete(entry);
+            }
+        }
     }
 
     /**

@@ -18,8 +18,11 @@ package io.micronaut.graphql.tools.internal.protection
 import graphql.ExecutionInput
 import graphql.execution.preparsed.PreparsedDocumentEntry
 import graphql.language.Document
+import io.micronaut.core.propagation.PropagatedContext
+import io.micronaut.core.propagation.PropagatedContextElement
 import spock.lang.Specification
 
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -99,5 +102,50 @@ class DocumentCacheSpec extends Specification {
 
         then:
         first.is(second)
+    }
+
+    static final class Marker implements PropagatedContextElement {
+        final int id
+        Marker(int id) { this.id = id }
+    }
+
+    void "each waiter continues under its own propagated context, not the owner's"() {
+        given:
+        def cache = new DocumentCache(10)
+        def started = new CountDownLatch(1)
+        def release = new CountDownLatch(1)
+        Function<ExecutionInput, PreparsedDocumentEntry> parse = { ExecutionInput input ->
+            started.countDown()
+            release.await(10, TimeUnit.SECONDS)
+            new PreparsedDocumentEntry(Document.newDocument().build())
+        }
+        def seen = new ConcurrentHashMap<Integer, Integer>()
+        def pool = Executors.newFixedThreadPool(8)
+        def request = { int id ->
+            pool.submit {
+                try (def scope = PropagatedContext.empty().plus(new Marker(id)).propagate()) {
+                    def future = cache.getDocumentAsync(ExecutionInput.newExecutionInput('{ a }').build(), parse)
+                    future.thenApply { entry ->
+                        seen.put(id, PropagatedContext.get().find(Marker).map { it.id }.orElse(-1))
+                        entry
+                    }.get(10, TimeUnit.SECONDS)
+                }
+            }
+        }
+
+        when:
+        def futures = [request(0)]
+        started.await(10, TimeUnit.SECONDS)
+        futures += (1..6).collect { request(it) }
+        Thread.sleep(300)
+        release.countDown()
+        futures.each { it.get(10, TimeUnit.SECONDS) }
+
+        then:
+        seen.size() == 7
+        seen.every { id, found -> id == found }
+
+        cleanup:
+        pool.shutdownNow()
     }
 }
