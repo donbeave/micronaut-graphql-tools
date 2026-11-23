@@ -94,7 +94,7 @@ Only GitHub Packages milestone releases are published: milestone versions `1.0.0
 
 To cut a release:
 
-1. Check that `master` is green (`required checks`) at the commit to release, and that the release notes are ready.
+1. Check that `master` is green (`required checks`) at the commit to release, and that the `releaseHistory.adoc` section of the guide describes the release.
 2. Create and push an annotated tag on that commit: `git tag -a 1.0.0-M2 -m "1.0.0-M2" <sha>` and `git push origin 1.0.0-M2`. The tag must match `^[0-9]+\.[0-9]+\.[0-9]+(-M[0-9]+)?$`.
 3. The `Release` workflow (`.github/workflows/release.yml`) starts on the tag push. `verify` builds the tagged commit exactly like the default leg of `gradle.yml` and checks that the build version equals the tag; only then does `publish` upload the library, the annotation processor and the BOM. It publishes from the tag's own sources, so no version bump commit is needed: the tag name is the version (`-PprojectVersion`).
 4. To publish a tag that already exists and predates the workflow, run `gh workflow run release.yml --ref master -f tag=<tag>`. The workflow definition and the publishing setup (`.github/gradle/publish-github-packages.init.gradle.kts`) come from `master`, and the sources come from the tag.
