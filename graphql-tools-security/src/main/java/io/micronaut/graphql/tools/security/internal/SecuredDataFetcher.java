@@ -30,7 +30,8 @@ import java.util.Set;
 
 /**
  * Rejects the call of a secured field that the caller may not make, with an error of the field and no call to the resolver;
- * lets every other call through to the wrapped fetcher. A call that passes reads one context entry and allocates nothing.
+ * lets every other call through to the wrapped fetcher. A call that passes reads one context entry and checks the roles of the
+ * caller, which allocates the view that {@code Authentication.getRoles()} returns; the benchmarks gate that allocation.
  */
 @Internal
 final class SecuredDataFetcher implements DataFetcher<Object> {

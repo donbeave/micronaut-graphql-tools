@@ -134,6 +134,23 @@ abstract class AbstractAllocationGateTest {
         return with - control;
     }
 
+    /**
+     * The bytes that a field allocates with the security module installed. An unsecured field fails the gate when it is above what
+     * the same field allocates without the module, the root method of the base case. A secured field that passes has a baseline of
+     * its own: the role check iterates the view that {@code Authentication.getRoles()} of Micronaut Security returns, which allocates.
+     */
+    private static double withSecurityModule(String name) throws Exception {
+        try (BenchmarkCases secured = new BenchmarkCases(0, BenchmarkCases.Instrumented.NONE, BenchmarkCases.Decorators.UNSELECTIVE, true)) {
+            double with = AllocationMeter.bytesPerOperation(secured.op(name), 3_000_000, 1_000_000, 5);
+            double without = AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.ROOT_METHOD), 3_000_000, 1_000_000, 5);
+            System.out.printf("allocation %s with the security module = %.2f B/op, the same field without it = %.2f B/op%n", name, with, without);
+            assertTrue(!name.equals(BenchmarkCases.SECURITY_UNSECURED_FIELD) || with <= without + LIBRARY_TOLERANCE_BYTES, String.format(java.util.Locale.ROOT,
+                    "%s allocates %.2f B/op with the security module installed, over the %.2f B/op of the same field without it.",
+                    name, with, without));
+            return with;
+        }
+    }
+
     private void check(String name) throws Exception {
         boolean wholeQuery = BenchmarkCases.isWholeQuery(name);
 
@@ -144,6 +161,7 @@ abstract class AbstractAllocationGateTest {
                     - invocationOverhead(BenchmarkCases.SMALL_QUERY_FIELDS);
             case BenchmarkCases.LOADER_OVERHEAD -> loaderOverhead();
             case BenchmarkCases.OBSERVED_INVOCATION_SLOPE -> observedSlope();
+            case BenchmarkCases.SECURITY_UNSECURED_FIELD, BenchmarkCases.SECURITY_SECURED_FIELD_PASSES -> withSecurityModule(name);
             // the fetcher of an async field with a pending future, less the future that the resolver itself creates
             case BenchmarkCases.ASYNC_BOUNDARY_OTHER_THREAD -> AllocationMeter.bytesPerOperation(cases.op(name), 3_000_000, 1_000_000, 5)
                     - AllocationMeter.bytesPerOperation(cases.op(BenchmarkCases.ASYNC_PENDING_SOURCE), 3_000_000, 1_000_000, 5);
