@@ -10,6 +10,12 @@ micronaut-graphql = "4.8.0"
 micronaut-micrometer = "5.13.3"
 micronaut-tracing = "7.2.0"
 micronaut-security = "4.18.2"
+micronaut-serde = "2.16.2"
+micronaut-validation = "4.12.0"
+micronaut-rxjava2 = "2.9.0"
+micronaut-rxjava3 = "3.9.0"
+micronaut-kotlin = "4.7.0"
+micronaut-logging = "1.7.5"
 
 # Override of the BOM-managed Groovy 4.0.28, which cannot read JDK 27 class files: until the Micronaut BOM catches up. Applied
 # by resolutionStrategy (buildSrc convention plugin and the test-suite builds); the only override of a managed version.
@@ -56,6 +62,12 @@ micronaut-graphql = { module = "io.micronaut.graphql:micronaut-graphql-bom", ver
 micronaut-micrometer = { module = "io.micronaut.micrometer:micronaut-micrometer-bom", version.ref = "micronaut-micrometer" }
 micronaut-tracing = { module = "io.micronaut.tracing:micronaut-tracing-bom", version.ref = "micronaut-tracing" }
 micronaut-security = { module = "io.micronaut.security:micronaut-security-bom", version.ref = "micronaut-security" }
+micronaut-serde = { module = "io.micronaut.serde:micronaut-serde-bom", version.ref = "micronaut-serde" }
+micronaut-validation = { module = "io.micronaut.validation:micronaut-validation-bom", version.ref = "micronaut-validation" }
+micronaut-rxjava2 = { module = "io.micronaut.rxjava2:micronaut-rxjava2-bom", version.ref = "micronaut-rxjava2" }
+micronaut-rxjava3 = { module = "io.micronaut.rxjava3:micronaut-rxjava3-bom", version.ref = "micronaut-rxjava3" }
+micronaut-kotlin = { module = "io.micronaut.kotlin:micronaut-kotlin-bom", version.ref = "micronaut-kotlin" }
+micronaut-logging = { module = "io.micronaut.logging:micronaut-logging-bom", version.ref = "micronaut-logging" }
 
 graphql-java-extended-validation = { module = "com.graphql-java:graphql-java-extended-validation", version.ref = "graphql-java-extended-validation" }
 
