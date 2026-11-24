@@ -47,7 +47,30 @@ final class CorpusStartup {
 
     private static final String SCHEMA_COORDINATE = /@GraphQLSchemaCoordinate\("([^"]+)"\)/
 
+    private static final String TYPE_REF = 'kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } }'
+
+    private static final String INTROSPECTION = '{ __schema { queryType { name } mutationType { name } subscriptionType { name } ' +
+            'types { kind name interfaces { name } possibleTypes { name } enumValues(includeDeprecated: true) { name } ' +
+            "inputFields { name type { ${TYPE_REF} } } " +
+            "fields(includeDeprecated: true) { name type { ${TYPE_REF} } args { name type { ${TYPE_REF} } } } } } }"
+
     private CorpusStartup() {
+    }
+
+    private static Object normalize(Object value) {
+        if (value instanceof Map) {
+            Map<String, Object> sorted = new TreeMap<>()
+            ((Map<String, Object>) value).each { String key, Object item -> sorted.put(key, normalize(item)) }
+            return sorted
+        }
+        if (value instanceof List) {
+            List<Object> items = ((List<Object>) value).collect { normalize(it) }
+            if (!items.empty && items.every { it instanceof Map && ((Map) it).containsKey('name') && ((Map) it).get('name') != null }) {
+                items.sort { ((Map) it).get('name').toString() }
+            }
+            return items
+        }
+        return value
     }
 
     /**
@@ -65,6 +88,14 @@ final class CorpusStartup {
     }
 
     static Map<String, Object> start(Map<String, String> config, List<String> environments, List<String> schemaLocations) {
+        return start(config, environments, schemaLocations, false)
+    }
+
+    /**
+     * @param introspect also run the introspection query and report it, normalized (every list of named elements sorted by name), as
+     *                   {@code responses}: what the drift mutation runner compares between a schema and its equivalent
+     */
+    static Map<String, Object> start(Map<String, String> config, List<String> environments, List<String> schemaLocations, boolean introspect) {
         Map<String, Object> properties = properties(config, schemaLocations)
         Map<String, Object> result = new LinkedHashMap<>()
         List<List<String>> findings = []
@@ -73,7 +104,10 @@ final class CorpusStartup {
         try {
             // the start is guarded too: with eager-init=true the binding runs while the context starts
             context = ApplicationContext.builder(properties, environments as String[]).start()
-            context.getBean(GraphQL)
+            GraphQL graphQl = context.getBean(GraphQL)
+            if (introspect) {
+                result.put('responses', normalize(graphQl.execute(INTROSPECTION).toSpecification()).toString())
+            }
             // the manifest bean cannot be read when the case turns recording off: a bound startup then has no manifest
             if (String.valueOf(properties.get('micronaut.graphql.tools.manifest.enabled')) == 'true') {
                 String manifest = context.getBean(BindingManifest).render()
