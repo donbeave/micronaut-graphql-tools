@@ -347,14 +347,15 @@ public final class WebSocketTck {
     private static void finishedOperationIsNotCancelled(Env env) throws Exception {
         Socket socket = env.connect(Map.of());
         socket.init(TOKEN);
-        socket.subscribe("1", "subscription { ticks(count: 2) { number } }");
+        socket.subscribe("1", "subscription { tracked(count: 2, operation: \"1\") { number } }");
         expect("next", socket.next().get("type"), "the first event");
         expect("next", socket.next().get("type"), "the second event");
         expect("complete", socket.next().get("type"), "the completion");
-        socket.subscribe("2", "subscription { endless { number } }");
-        expect("next", socket.next().get("type"), "the first event of the endless stream");
+        socket.subscribe("2", "subscription { tracked(count: 1000000, operation: \"2\") { number } }");
+        expect("next", socket.next().get("type"), "the first event of the running stream");
+        expect(List.of(), cancelledOperations(env), "operations cancelled before the connection closes");
         socket.close();
-        awaitCancelled(env, 1);
+        awaitCancelledOperations(env, List.of("2"));
     }
 
     // The payload of a subscribe message carries variables and an operation name, as the HTTP body does.
@@ -528,6 +529,28 @@ public final class WebSocketTck {
                 .POST(HttpRequest.BodyPublishers.ofString("{\"query\":\"{ cancelledStreams }\"}")).build(), HttpResponse.BodyHandlers.ofString());
         Map<String, Object> body = env.json.readValue(response.body(), OBJECT);
         return ((Number) path(body, "data", "cancelledStreams")).intValue();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> cancelledOperations(Env env) throws IOException, InterruptedException {
+        HttpResponse<String> response = env.client.send(HttpRequest.newBuilder(URI.create("http://" + env.authority + "/graphql"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"query\":\"{ cancelledOperations }\"}")).build(), HttpResponse.BodyHandlers.ofString());
+        Map<String, Object> body = env.json.readValue(response.body(), OBJECT);
+        return (List<String>) path(body, "data", "cancelledOperations");
+    }
+
+    private static void awaitCancelledOperations(Env env, List<String> expected) throws IOException, InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(SECONDS);
+        List<String> actual = cancelledOperations(env);
+        while (!actual.equals(expected) && System.nanoTime() < deadline) {
+            Thread.sleep(50);
+            actual = cancelledOperations(env);
+        }
+        expect(expected, actual, "operations cancelled");
+        // nothing cancels twice and nothing else is cancelled late: the list stays
+        Thread.sleep(200);
+        expect(expected, cancelledOperations(env), "operations cancelled, a moment later");
     }
 
     private static void awaitCancelled(Env env, int expected) throws IOException, InterruptedException {

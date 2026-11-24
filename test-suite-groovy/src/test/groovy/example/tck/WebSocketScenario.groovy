@@ -40,6 +40,7 @@ import reactor.core.scheduler.NonBlocking
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -69,6 +70,7 @@ class TokenInterceptor implements GraphQLConnectionInterceptor {
 class CancelledStreams {
     final AtomicInteger count = new AtomicInteger()
     final AtomicInteger echoKeys = new AtomicInteger()
+    final List<String> operations = new CopyOnWriteArrayList<String>()
 }
 
 /** Counts the keys that reach its batch function. */
@@ -169,6 +171,10 @@ class WebSocketQueries {
         return cancelled.count.get()
     }
 
+    List<String> cancelledOperations() {
+        return new ArrayList<String>(cancelled.operations)
+    }
+
     int echoLoaderKeys() {
         return cancelled.echoKeys.get()
     }
@@ -206,6 +212,10 @@ class WebSocketSubscriptions {
                 .map { Long number -> new Tick(number.intValue(), Thread.currentThread() instanceof NonBlocking) }
     }
     // end::ws-subscription[]
+
+    Flux<Tick> tracked(int count, String operation) {
+        return ticks(count).doOnCancel { cancelled.operations.add(operation) }
+    }
 
     Flux<Tick> endless() {
         return Flux.interval(Duration.ofMillis(20))
