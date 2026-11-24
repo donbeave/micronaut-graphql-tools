@@ -1,12 +1,12 @@
-Micronaut GraphQL Tools is the schema-first approach for building GraphQL applications with Micronaut. You write the schema in the https://graphql.org/learn/schema/[GraphQL schema language] and bind it to your classes with annotations.
+Micronaut GraphQL Tools is a schema-first approach for building GraphQL applications with Micronaut. You write the schema in the https://graphql.org/learn/schema/[GraphQL schema language] and bind it to your classes with annotations. It takes its schema-first model from https://github.com/graphql-java-kickstart/graphql-java-tools[graphql-java-tools] and is built on Micronaut.
 
-NOTE: This is not an official Micronaut module yet: it is developed in https://github.com/donbeave/micronaut-graphql-tools[its own repository] and is intended for later contribution to the Micronaut Foundation. Milestone previews are published to the GitHub Packages Maven registry of that repository (see <<compatibility,Compatibility>>); nothing is published to Maven Central.
+NOTE: This is not an official Micronaut module yet: it is developed in https://github.com/donbeave/micronaut-graphql-tools[its own repository] and is intended for later contribution to the Micronaut Foundation. Milestone previews are published to the GitHub Packages Maven registry of that repository (see <<compatibility,Compatibility>>); nothing is published to Maven Central. Names and behaviour can change between milestones.
 
-== Why GraphQL Java Tools?
+== What it does
 
-* *Micronaut*: it leverages the Micronaut framework and avoids reflection, which can slow down applications. Binding uses Micronaut's compile-time bean and introspection metadata.
-* *Minimal boilerplate*: skip the manual configuration of GraphQL types, resolvers and options by using annotations such as `@GraphQLType` and `@GraphQLRootResolver`.
-* *Schema first*: use your schema directly instead of a code-driven approach.
-* *Class validation*: the library warns you about classes and types you provide that the schema does not need, and fails when you use the wrong Java class for a GraphQL type while the schema is built.
+* *Schema first*: the schema is the contract. The library reads `.graphqls` files (see <<schema,Schema>>) and binds each field to a method or a property of your classes.
+* *Micronaut metadata*: binding reads the bean definitions and the bean introspection that Micronaut generates at compile time. <<noReflection,No runtime reflection>> defines what that covers and what it does not.
+* *Minimal boilerplate*: annotations such as `@GraphQLType` and `@GraphQLRootResolver` replace the manual wiring of types and data fetchers.
+* *Checks*: the startup reports a schema field without a binding, a class the schema does not need, and a wrong Java class for a GraphQL type, each with a code (see <<exceptions,Exceptions>>). The compile-time checks report many of the same findings during the build (see <<compileTime,Compile-Time Verification>>).
 
-The examples in this guide are Java, Kotlin and Groovy, and each one is taken from a compiled application in the repository.
+The examples in this guide are Java, Kotlin and Groovy, and each one is taken from a compiled application in the repository. <<architecture,Architecture>> shows where the library sits, and <<quickStart,Quick Start>> goes from an empty application to a first query.

@@ -128,3 +128,266 @@ The codes that run at compile time and have no startup form (`processor-option-u
 `class-not-introspected` for the Java class of an input type or an enum has the schema type as its coordinate (`Filter`, `Color`), not the argument or field that reaches it, so that it is the same whichever use the startup binds the type from.
 
 The compile-time check reports the findings of the inputs and enums that a resolver class reaches through its parameters (and, for an enum, its return type) in the order of the startup: it stops where the startup stops, and it reports the strict checks (`unbound-enum-constant`, `unmapped-input-property`, `unbound-resolver-method`, `root-method-several-operations`) only for a class with no binding failure, because the startup runs them after a binding that failed nowhere. A class is introspected for the compile-time check when it carries `@Introspected` or an annotation that carries it (`@GraphQLInput`, `@GraphQLType`, `@Serdeable`); a class that a `@GraphQLModels` of the same compilation lists (see <<models,Model Classes>>) is seen as introspected too, wherever that annotation is declared, but a class that is introspected through `@Introspected(classes = ...)` or `(packages = ...)` on another class, or by a dependency, cannot be seen from one class. So `class-not-introspected` is the one finding that the compile-time check reports as a warning and never as an error: a compile error must also be a startup failure, and this class passes at startup. The startup decides. The warning goes away when the class carries `@Introspected` itself or a `@GraphQLModels` of the same compilation lists it; the compile-time check has no other switch for it, short of `micronaut.graphql.tools.processor.checks=false`. A build that turns compiler warnings into errors (`-Werror`) fails on this warning too, also for a class that is introspected elsewhere and binds at startup: annotate the class itself, list it in `@GraphQLModels`, or switch the checks off.
+
+[[examples]]
+== Entries with an example
+
+Each entry gives the cause, a message and the fix. The message is the text that the startup of a small Java case of the binding corpus reports, and `ErrorReferenceSpec` compares each block below with that text, so the examples are not written from memory. The line numbers are those of the schema of the case. A code without an entry here is described in the tables above.
+
+[[example-field-not-bound]]
+=== `field-not-bound`
+
+*Cause.* No property or method binds a field of a type or an input.
+
+// corpus: input/missing-property
+[source,text]
+----
+[field-not-bound] The property or method `genres` not found in example.BookFilter's input.
+  GraphQL coordinate: BookFilter.genres (schema.graphqls, line 22, column 3)
+  Mapped class: example.BookFilter
+----
+
+*Fix.* Add the member to the Java class, or remove the field from the schema. A member with another name is bound with `@GraphQLField("name")`.
+
+*See.* <<renaming,Binding a field to a differently named member>> and <<inputs,Inputs>>.
+
+[[example-argument-mismatch]]
+=== `argument-mismatch`
+
+*Cause.* A resolver parameter and a field argument cannot be matched by name.
+
+// corpus: argument/misnamed-parameter
+[source,text]
+----
+[argument-mismatch] The method parameter 'count' has no GraphQL argument with that name (arguments: [first, offset]). Rename the parameter, or bind it with @GraphQLArgument("<argument name>").
+  GraphQL coordinate: Query.page (schema.graphqls, line 6, column 3)
+  Mapped class: example.Query
+  Mapped method: page(java.lang.Integer count, java.lang.Integer first)
+----
+
+*Fix.* Rename the parameter to the argument name, or bind it with `@GraphQLArgument("name")`.
+
+*See.* <<resolverParameters,Resolver Parameters>>.
+
+[[example-incorrect-class-mapping]]
+=== `incorrect-class-mapping`
+
+*Cause.* The Java type of an argument or a field is not one of the classes that the GraphQL type supports.
+
+// corpus: argument/wrong-parameter-type
+[source,text]
+----
+[incorrect-class-mapping] The argument is mapped to the incorrect class.
+  GraphQL coordinate: Query.books(limit:) (schema.graphqls, line 7, column 9)
+  GraphQL argument: limit
+  Mapped class: example.BookQuery
+  Mapped method: books(java.lang.String limit)
+  Provided class: java.lang.String
+  Supported classes: int, java.lang.Integer
+----
+
+*Fix.* Change the Java type to one of the supported classes that the message lists.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-nullable-primitive]]
+=== `nullable-primitive`
+
+*Cause.* A primitive parameter sits at a nullable schema position.
+
+// corpus: input/nullable-primitive-argument
+[source,text]
+----
+[nullable-primitive] The argument is mapped to the primitive int, but the GraphQL type Int is nullable, so null cannot be passed. Use java.lang.Integer or make the GraphQL type non-null. The check nullable-primitive rejects this for built-in scalars too; with micronaut.graphql.tools.checks.nullable-primitive set to warn or ignore a null reaches the primitive as its default value or fails the request.
+  GraphQL coordinate: Query.twice(n:) (schema.graphqls, line 6, column 9)
+  GraphQL argument: n
+  Mapped class: example.Query
+  Mapped method: twice(int n)
+  Provided class: int
+  Supported classes: java.lang.Integer
+----
+
+*Fix.* Use the box type (`java.lang.Integer`), or make the schema type non-null.
+
+*See.* <<strictMode,Strict Mode>>.
+
+[[example-missing-enum-values]]
+=== `missing-enum-values`
+
+*Cause.* A schema enum value has no constant in the Java enum.
+
+// corpus: enum/missing-constant
+[source,text]
+----
+[missing-enum-values] Some enum values are missing in class example.Genre.
+  GraphQL coordinate: Book.genre (schema.graphqls, line 12, column 3)
+  Mapped class: example.Book
+  Mapped method: getGenre()
+  Missing values: POETRY
+----
+
+*Fix.* Add the constant to the Java enum, or remove the value from the schema.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-class-not-introspected]]
+=== `class-not-introspected`
+
+*Cause.* The Java class of an input or an enum has no bean introspection.
+
+// corpus: input/enum-class-not-introspected
+[source,text]
+----
+[class-not-introspected] The class example.Color is not introspected. Ensure the class is annotated with io.micronaut.core.annotation.Introspected. A class that cannot carry it, such as a generated or external one, is listed (or its package) in @GraphQLModels.
+  GraphQL coordinate: Color (schema.graphqls, line 9, column 1)
+  Mapped class: example.Color
+  Reached from: Query.paint(color:) (schema.graphqls, line 6, column 9)
+----
+
+*Fix.* Annotate the class with `@Introspected`, or list it in `@GraphQLModels`.
+
+*See.* <<models,Model Classes>>.
+
+[[example-scalar-mapping-not-provided]]
+=== `scalar-mapping-not-provided`
+
+*Cause.* A custom scalar of the schema has no mapping bean.
+
+// corpus: startup/scalar-without-mapping
+[source,text]
+----
+[scalar-mapping-not-provided] The GraphQL scalar Date has no mapping. Register a io.micronaut.graphql.tools.mapping.GraphQLScalarMapping bean with its graphql.schema.GraphQLScalarType and Java classes.
+  GraphQL coordinate: Query.today (schema.graphqls, line 7, column 3)
+  Mapped class: example.SearchQuery
+  Mapped method: today()
+----
+
+*Fix.* Register a `GraphQLScalarMapping` bean for the scalar.
+
+*See.* <<scalars,Scalars>>.
+
+[[example-precedence-ambiguity]]
+=== `precedence-ambiguity`
+
+*Cause.* A member of the Java type and a type resolver method can both bind one field.
+
+// corpus: precedence/object-fail
+[source,text]
+----
+[precedence-ambiguity] Both a member of the Java type and a type resolver method can bind one GraphQL field.
+  GraphQL coordinate: Item.label (schema.graphqls, line 11, column 3)
+  Members:
+  1) example.Item getLabel()
+  2) example.ItemResolver label(example.Item item)
+  Fix it for this field: put a directive listed in micronaut.graphql.tools.resolver-directives on the field, declare @GraphQLSchemaCoordinate on the type resolver method (the coordinate of the type, or of the interface that declares the field), or annotate the Java member with @GraphQLIgnore. Fix it for every field: set micronaut.graphql.tools.precedence to resolver-first or property-first. micronaut.graphql.tools.strict does not change this.
+----
+
+*Fix.* Pick one with a resolver directive, `@GraphQLSchemaCoordinate` or `@GraphQLIgnore`, or set `precedence` for every field.
+
+*See.* <<precedence,Precedence>>.
+
+[[example-unknown-schema-coordinate]]
+=== `unknown-schema-coordinate`
+
+*Cause.* A `@GraphQLSchemaCoordinate` value names a field that the schema does not have.
+
+// corpus: coordinate/unknown-field
+[source,text]
+----
+[unknown-schema-coordinate] Invalid @GraphQLSchemaCoordinate declarations:
+  1) @GraphQLSchemaCoordinate("Query.shelf") on example.BookQuery book(java.lang.String id): the type Query has no field shelf.
+----
+
+*Fix.* Correct the coordinate, or add the field to the schema.
+
+*See.* <<resolverContracts,Resolver Contracts>>.
+
+[[example-root-resolver-not-found]]
+=== `root-resolver-not-found`
+
+*Cause.* The schema has a root operation type and no resolver bean serves it.
+
+// corpus: options/no-class-to-check
+[source,text]
+----
+[root-resolver-not-found] No any root resolvers found. Create one or ensure the class is annotated with io.micronaut.graphql.tools.annotation.GraphQLRootResolver.
+----
+
+*Fix.* Add a bean annotated with `@GraphQLRootResolver` and a scope annotation such as `@Singleton`.
+
+*See.* <<quickStart,Quick Start>>.
+
+[[example-unbound-resolver-method]]
+=== `unbound-resolver-method`
+
+*Cause.* A resolver method binds no schema field. This is a strict check.
+
+// corpus: strict/unbound-resolver-method
+[source,text]
+----
+[strict-findings] The strict checks found problems in the binding of the schema:
+  1) [unbound-resolver-method] The resolver method example.Query#stray(java.lang.String) binds no schema field. Remove it, make it private, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
+  Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore.
+----
+
+*Fix.* Remove the method or make it private, or change `checks.unbound-resolver-method`.
+
+*See.* <<strictMode,Strict Mode>> and <<checkSeverity,Check severity>>.
+
+[[example-unbound-enum-constant]]
+=== `unbound-enum-constant`
+
+*Cause.* A Java enum constant has no value in the schema enum. This is a strict check.
+
+// corpus: strict/unbound-enum-constant
+[source,text]
+----
+[strict-findings] The strict checks found problems in the binding of the schema:
+  1) [unbound-enum-constant] The enum constant example.Color#BLUE has no value in the schema enum Color. Add the value to the schema or remove the constant.
+  Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore.
+----
+
+*Fix.* Add the value to the schema or remove the constant.
+
+*See.* <<strictMode,Strict Mode>>.
+
+[[example-unreachable-type]]
+=== `unreachable-type`
+
+*Cause.* The schema defines a type that no field reachable from a root operation type returns. This is a strict check.
+
+// corpus: strict/unreachable-type
+[source,text]
+----
+[unreachable-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Orphan (type).
+  Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks.unreachable-type to warn or ignore.
+----
+
+*Fix.* Bind the type through a field, remove it, or list it in `allow.unreachable`.
+
+*See.* <<checkSeverity,Check severity>>.
+
+[[example-binding-failures]]
+=== `binding-failures`
+
+*Cause.* Several fields or types cannot be bound. The message lists each failure with its own code and coordinate.
+
+// corpus: failure/three-binding-failures
+[source,text]
+----
+[binding-failures] The schema cannot be bound: 3 errors.
+  1) [field-not-bound] The property or method `isbn` not found in example.Book's type.
+     GraphQL coordinate: Book.isbn (schema.graphqls, line 13, column 3)
+  2) [incorrect-class-mapping] The field is mapped to the incorrect class.
+     GraphQL coordinate: Query.count (schema.graphqls, line 7, column 3)
+     Mapped class: example.Query
+     Mapped method: count()
+     Provided class: java.lang.String
+     Supported classes: int, java.lang.Integer
+  3) [field-not-bound] The method `missing` not found in any root resolvers: [example.Query].
+     GraphQL coordinate: Query.missing (schema.graphqls, line 8, column 3)
+----
+
+*Fix.* Fix the failures listed; each code has its own entry in the tables above.
+
+*See.* <<startupErrors,Startup Errors>>.
