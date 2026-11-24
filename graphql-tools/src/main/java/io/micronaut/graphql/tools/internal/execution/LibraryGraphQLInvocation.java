@@ -47,6 +47,7 @@ import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSet
 import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
 import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutClaim;
 import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutScheduler;
+import io.micronaut.graphql.tools.internal.protection.GetMutationGuard;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.scheduling.TaskExecutors;
@@ -133,7 +134,8 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                              List<GraphQLErrorsCustomizer> errorsCustomizers, @Nullable DisconnectWatcher disconnectWatcher) {
         this.disconnectWatcher = disconnectWatcher;
         this.errorsCustomizers = errorsCustomizers.isEmpty() ? null : errorsCustomizers.toArray(new GraphQLErrorsCustomizer[0]);
-        this.graphQL = graphQL;
+        this.graphQL = graphQL.getPreparsedDocumentProvider() instanceof GetMutationGuard ? graphQL
+                : graphQL.transform(guarded -> guarded.preparsedDocumentProvider(new GetMutationGuard(graphQL.getPreparsedDocumentProvider())));
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
         this.customizerName = this.customizer == null ? null : this.customizer.getClass().getName();
         // The setup that can fail on configuration (the registry bean, the executor, the timer) runs only when this bean

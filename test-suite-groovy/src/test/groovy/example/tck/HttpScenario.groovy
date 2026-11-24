@@ -28,6 +28,7 @@ import org.dataloader.DataLoader
 
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 // The fixtures of the TCK scenario `http`: a field that echoes its argument, a context contributor that puts the header
@@ -86,5 +87,23 @@ class HttpQueries {
             }
             return id.toString()
         }
+    }
+}
+
+@CompileStatic
+@Singleton
+@GraphQLRootResolver
+@Requires(property = 'tck.scenario', value = 'http')
+class HttpMutations {
+
+    private final AtomicInteger count = new AtomicInteger()
+
+    String httpMutate(String value) {
+        count.incrementAndGet()
+        return value
+    }
+
+    int httpMutationCount() {
+        return count.get()
     }
 }
