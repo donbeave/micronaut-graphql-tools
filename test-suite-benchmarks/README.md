@@ -33,6 +33,7 @@ runs, or when they claim a performance gain.
   the rules give the same findings for the elements as for the classes that the sources compile to. The
   `generateLargeSchema` task writes the large schema that the start-up benchmarks bind to `build/generated/large-schema`.
 - `test-suite-benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
+- `test-suite-benchmarks/scripts/jmh-compare.py`: compares two JMH JSON files (the nightly workflow's report) and flags a score that is worse by more than a threshold outside the reported error.
 
 ## Packages
 

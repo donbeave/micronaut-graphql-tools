@@ -1,0 +1,157 @@
+name: Performance nightly
+# The full JMH suite with the gc profiler, the cold-start benchmarks and the compile-time profile, recorded every night
+# against stored baselines. Report only: never on pull_request, never on a push and never in the `required checks` gate
+# of gradle.yml, and no figure is gated (the allocation gate is `allocationTest`, which gradle.yml runs). Each job archives
+# its JSON and prints the change against the last successful run in the job summary. Shared runners are noisy: read
+# the allocation and the retained heap first, and treat a time change inside the reported error as noise.
+# `ref` lists the lines to record. Before the 1.0.x branch is cut it holds `master` only; add `1.0.x` then.
+on:
+  schedule:
+    - cron: '37 3 * * *'
+  workflow_dispatch:
+    inputs:
+      forks:
+        description: Cold JVMs per start-up case
+        default: '10'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+jobs:
+  jmh:
+    name: jmh (${{ matrix.ref }}, Java 25, graphql-java default)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [master]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.ref }}
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Fetch the previous run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ matrix.ref }}
+        run: |
+          mkdir -p previous
+          run_id=$(gh run list --workflow perf-nightly.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --name "jmh-nightly-$REF" --dir previous || echo "No archived JSON in run $run_id"
+          fi
+      - name: Run the JMH suite
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-benchmarks:jmh -PgraphqlJavaLeg=default --no-daemon
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Compare with the previous run
+        env:
+          REF: ${{ matrix.ref }}
+        run: |
+          set -o pipefail
+          sha=$(git rev-parse HEAD)
+          cp test-suite-benchmarks/build/results/jmh/results.txt jmh.json
+          args=(jmh.json --note "ref $REF, commit $sha, graphql-java leg default, runner ${RUNNER_OS} ${RUNNER_ARCH} (${ImageOS:-unknown}), $(nproc) CPUs")
+          if [ -f previous/jmh.json ]; then args+=(--previous previous/jmh.json); fi
+          python3 test-suite-benchmarks/scripts/jmh-compare.py "${args[@]}" | tee jmh-report.md
+          cat jmh-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive the JSON
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: jmh-nightly-${{ matrix.ref }}
+          path: |
+            jmh.json
+            jmh-report.md
+          retention-days: 90
+          if-no-files-found: error
+
+  startup:
+    name: startup (${{ matrix.ref }}, Java 25, graphql-java default)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [master]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.ref }}
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Fetch the previous run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ matrix.ref }}
+        run: |
+          mkdir -p previous
+          run_id=$(gh run list --workflow perf-nightly.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --name "startup-nightly-$REF" --dir previous || echo "No archived JSON in run $run_id"
+          fi
+      - name: Run the benchmark
+        env:
+          FORKS: ${{ inputs.forks || '10' }}
+        run: |
+          set -o pipefail
+          case "$FORKS" in ''|*[!0-9]*|0) echo "::error::forks must be a positive integer, not '$FORKS'"; exit 1 ;; esac
+          args=(--forks "$FORKS" --json startup-benchmark.json)
+          if [ -f previous/startup-benchmark.json ]; then args+=(--previous previous/startup-benchmark.json); fi
+          python3 test-suite-benchmarks/scripts/startup-report.py "${args[@]}" | tee report.txt
+          { echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive the JSON
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: startup-nightly-${{ matrix.ref }}
+          path: |
+            startup-benchmark.json
+            report.txt
+          retention-days: 90
+          if-no-files-found: error
+
+  compile-time:
+    name: compile time (${{ matrix.ref }}, Java 25, graphql-java default)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [master]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.ref }}
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Install gradle-profiler
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/gradle-profiler.zip" https://github.com/gradle/gradle-profiler/releases/download/v0.26.0/gradle-profiler-0.26.0.zip
+          echo "c573cdaffac8ecfa60cdd0624274511f46cbdde77fbba39ce35eae0fae7c9877  $RUNNER_TEMP/gradle-profiler.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/gradle-profiler.zip" -d "$RUNNER_TEMP"
+      - name: Profile
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-build:compileTimeBudget --no-daemon -PgradleProfiler="$RUNNER_TEMP/gradle-profiler-0.26.0/bin/gradle-profiler"
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Report the compile time
+        if: always()
+        run: cat test-suite-build/build/reports/compile-time/report.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Archive the profile
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: compile-time-nightly-${{ matrix.ref }}
+          path: |
+            test-suite-build/build/profiler/output/
+            test-suite-build/build/reports/compile-time/
+          if-no-files-found: ignore
+          retention-days: 90
