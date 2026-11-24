@@ -1,0 +1,12 @@
+# The known gaps of the drift mutation tests: a kind of breaking mutant that the binders let through. One line per category, mutant
+# kind and language, with the reason. The list may only shrink; a line that no mutant of a full run falls under is stale.
+max-entries: 8
+
+silent toggle-nullability all by design: the startup of a Java or Groovy resolver reads no nullability (only Kotlin metadata, see looseNullability)
+silent toggle-nullability-argument all by design: the startup of a Java or Groovy resolver reads no nullability (only Kotlin metadata, see looseNullability)
+silent toggle-nullability-input-field all by design: the startup of a Java or Groovy resolver reads no nullability (only Kotlin metadata, see looseNullability)
+silent change-list-wrapping all gap: the startup does not compare the list wrapping of a field with the return type of its method
+silent retype-scalar all gap: the startup does not compare the scalar of a field with the return type of its method
+compile-missed toggle-nullability all gap: the startup reports an unsupported return type that the compile-time check does not
+unnamed change-list-wrapping all the failure is reported on a type that the changed field made unreachable or ambiguous, not on the field
+compile-extra add-unmapped-input-property all the compile-time check names the property of another input type that shares the class

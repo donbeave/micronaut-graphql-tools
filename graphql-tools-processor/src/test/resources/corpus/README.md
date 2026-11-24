@@ -175,3 +175,42 @@ in the pull request that added the checked variant (the Gradle build took 40 s u
 select the subset for pull requests and the nightly run would keep all of them. Under kapt, Gradle runs the annotation processing
 in a process of its own (`kapt.workers.isolation=process`), because javac copies a `micronaut.*` option into the system properties of
 its JVM and a later compilation in the same JVM would read the first value.
+
+## Drift mutations
+
+The drift mutation tests (issue #89) check the promise that any change that desynchronises the schema and the code fails, and that a change
+that only rewrites the schema does not. The mutator (`SchemaMutator`) changes the SDL of a corpus case and nothing else; the runner
+(`DriftMutationRunner`, `DriftMutationSpec`) takes as a base every Java or Groovy case that binds cleanly at startup and at compile
+time, compiles its sources once, and for each mutant restarts the application on those classes with the mutated schema and runs the
+checked compilation (the compile-time check reads the schema directory, so it compiles again).
+
+| mutant | kind | the verdict |
+|---|---|---|
+| `rename-field` | breaking | the startup fails and a finding names the field or the method; the compile-time check reports no error about another element |
+| `toggle-nullability`, `change-list-wrapping`, `retype-scalar` (on a field, an argument, an input field) | breaking | the same |
+| `drop-enum-value`, `add-unmapped-input-property` | breaking | the same |
+| `move-field-to-extension`, `reorder-arguments` | equivalent | the startup binds, the binding manifest and the introspection are the same as the unchanged case's, the compile-time check passes |
+| `shuffle-definitions`, `extensions-first`, `shuffle-files`, `shuffle-across-files` | equivalent | the same |
+
+A breaking mutant of an element that the unchanged case does not bind (an unreachable type, an ignored method) is skipped: it is no drift.
+A mutant whose schema is not a valid schema is counted as invalid. A breaking mutant that the startup binds is reported as a bug, and so is a
+startup finding of a per-class code that the compile-time check misses ([Parity](#what-the-runner-asserts) completeness). The manifest is
+compared with the arguments of each field in alphabetical order, because it prints the field as the schema writes it and the arguments bind by
+name. The "responses" of an equivalent mutant are the answer of the introspection query, with every list of named elements sorted: the corpus has no
+data queries.
+
+`corpus-mutation-gaps.txt` lists the kinds of breaking mutant that the binders let through, with the category (`silent`, `unnamed`,
+`compile-missed`, `compile-extra`), the language and the reason. `max-entries: N` is the ceiling and must equal the number of lines; a line
+that no mutant of a full run falls under is stale and fails, so the list may only shrink.
+
+```
+./gradlew :micronaut-graphql-tools-processor:test --tests '*DriftMutationSpec'          # a sample: whole cases up to 100 mutants
+./gradlew :micronaut-graphql-tools-processor:corpusMutation                              # every mutant, and the check of the list of gaps
+./gradlew :micronaut-graphql-tools-processor:corpusMutation -Pmutation.seed=7 -Pmutation.limit=300 -Pcorpus.only='input/.*'
+```
+
+`-Pmutation.seed` (default 89) seeds the choice of the sampled cases and the shuffles, and `-Pmutation.limit` is the size of the sample (`0`
+is every mutant; the default for `test` is 100, and for `corpusMutation` 0). The time per mutant is in `build/corpus/mutations.txt`, with
+its outcome (`ok`, `FAIL`, `invalid`, `skipped`). Time budget: a mutant takes about 0.7 s, so the sample takes about a minute and the full run
+(about 2,400 mutants of 150 units) about 30 minutes, which is why it runs nightly in the canary workflow and not in `test`. Like the corpus, it runs on
+the default graphql-java leg only.

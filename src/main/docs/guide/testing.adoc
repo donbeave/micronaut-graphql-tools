@@ -1,1 +1,52 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+The `micronaut-graphql-tools-testing` module runs a GraphQL document in the process of a test, against the schema and the resolvers of the application, and asserts on the response. There is no server and no HTTP client. It is available since 1.0.0-M5.
+
+== The module
+
+[source,groovy]
+----
+testImplementation("io.micronaut.graphql.tools:micronaut-graphql-tools-testing")
+----
+
+The version comes from the `micronaut-graphql-tools-bom` import of the quick start. The module is test-time code: it is not part of the application, and there is no native image test for it, because nothing of it is in a native executable. It has no dependency on a test framework: a failed assertion is a `java.lang.AssertionError`, which JUnit and Spock report as a failure.
+
+== Run a document
+
+`GraphQLTester` is a bean of the application. A `@MicronautTest` class injects it, calls `request(document)`, adds what the call needs and calls `execute()`. `GraphQLTestRequest` has `operationName`, `variable`, `variables`, `context`, `header` and `timeout`. `execute()` blocks the test thread until the operation completes (30 seconds at most, unless `timeout` says otherwise). `tester.execute(document)` is the short form for a document without variables.
+
+The call goes through the same invocation as an HTTP request: the executor hop, the `GraphQLContextContributor` beans, the customizers, the instrumentations and the error handling all run. The invocation gets a synthetic `POST /graphql` request, so the request scope works and a header is visible to a contributor or a resolver that reads the `HttpRequest`.
+
+snippet::example.tester.TesterTest[project-base="test-suite", source="test", tags="data", indent="0"]
+
+The example is in the three example suites, with the same class name and the same tags; the guide shows it in Java, Kotlin and Groovy. The fixtures that it runs against, a schema extension and one root resolver, are the same in each:
+
+snippet::example.tester.TesterFixtures[project-base="test-suite", source="test", tags="schema", indent="0"]
+
+snippet::example.tester.TesterQuery[project-base="test-suite", source="test", tags="resolver", indent="0"]
+
+== Read the response
+
+`GraphQLTestResponse` has `getData()` (a `Map`, or `null` when the operation produced no data), `getErrors()` (the graphql-java errors) and `getExtensions()`. `path(path)` and `path(path, type)` read one value of the data as an `Optional`. A path is a chain of response keys and list indexes, such as `book.authors[0].name`; an alias is the key.
+
+== Assert
+
+The assertions return the response, so they chain: `assertNoErrors`, `assertPath` (the value of a path), `assertPathNull`, `assertPathPresent`, `assertErrorCount`, `assertErrorMessage` (an error whose message contains the text), `assertErrorPath`, `assertErrorExtension` and `assertExtension`. A failure prints the expectation and the whole response.
+
+snippet::example.tester.TesterTest[project-base="test-suite", source="test", tags="errors", indent="0"]
+
+An error that the resolver causes, a validation error and a variable of the wrong type are all errors of the response; the call never throws for them.
+
+== Variables
+
+`variable(name, value)` takes a scalar, a `Map` for an input object or a `List`. The values go through the same coercion as the variables of an HTTP request, so a value of the wrong type is an error of the response.
+
+snippet::example.tester.TesterTest[project-base="test-suite", source="test", tags="variables", indent="0"]
+
+== Context and headers
+
+`context(key, value)` puts a value into the `GraphQLContext` of the execution, where a resolver reads it from the `DataFetchingEnvironment`; the module registers one `GraphQLContextContributor` that copies the values. `header(name, value)` sets a header of the synthetic request, for an application whose contributor reads a header (for example a user or a tenant). The tester assumes no security or tenancy setup: it only carries what the call gives it.
+
+snippet::example.tester.TesterTest[project-base="test-suite", source="test", tags="context", indent="0"]
+
+== What it does not do
+
+The tester does not start a server, so it does not test the transport (the route, the content types or the WebSocket protocol); use Micronaut's HTTP client for that. It runs one operation at a time and has no subscription support.

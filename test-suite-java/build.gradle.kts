@@ -31,6 +31,9 @@ dependencies {
     // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
     // itself does not depend on it.
     testImplementation(projects.micronautGraphqlToolsUpload)
+    // The in-process tester: runs documents against the application's GraphQL bean in a test. Test scope: the application itself does not depend
+    // on it, and as test-time code it has no native test.
+    testImplementation(projects.micronautGraphqlToolsTesting)
     // The security module and Micronaut Security: the principal in the context, @Secured on resolvers and the root fields hook, tested with
     // a real HTTP and WebSocket client. Test scope: the application itself does not depend on them.
     testImplementation(projects.micronautGraphqlToolsSecurity)
@@ -191,40 +194,6 @@ val checkSuiteSchemaParity by tasks.registering {
     }
 }
 tasks.named("check") { dependsOn(checkSuiteSchemaParity) }
-
-// The Micronaut Serialization stack has its own test source set and task: micronaut-serde-jackson makes its JsonMapper
-// win over Jackson databind, so the two stacks cannot share one test classpath. `check` runs it; its tests are raw-HTTP
-// checks that a response keeps its null fields (#45). `nativeSerdeTest` runs the same classes as a native binary.
-val serdeTest: SourceSet by sourceSets.creating {
-    compileClasspath += sourceSets.main.get().output
-    runtimeClasspath += sourceSets.main.get().output
-}
-configurations {
-    named(serdeTest.implementationConfigurationName) { extendsFrom(testImplementation.get()) }
-    named(serdeTest.runtimeOnlyConfigurationName) { extendsFrom(testRuntimeOnly.get()) }
-    named(serdeTest.annotationProcessorConfigurationName) { extendsFrom(testAnnotationProcessor.get()) }
-}
-dependencies {
-    "serdeTestImplementation"("io.micronaut.serde:micronaut-serde-jackson")
-    "serdeTestAnnotationProcessor"("io.micronaut.serde:micronaut-serde-processor")
-}
-val serdeTestTask = tasks.register<Test>("serdeTest") {
-    description = "Runs the tests on Micronaut Serialization (micronaut-serde-jackson)."
-    group = "verification"
-    testClassesDirs = serdeTest.output.classesDirs
-    classpath = serdeTest.runtimeClasspath
-    useJUnitPlatform()
-}
-tasks.named("check") { dependsOn(serdeTestTask) }
-graalvmNative {
-    registerTestBinary("serdeTest") {
-        usingSourceSet(serdeTest)
-        forTestTask(serdeTestTask)
-    }
-}
-// The native-image plugin builds every test binary's image classpath from `testRuntimeClasspath`, which has no
-// micronaut-serde: without this the image has no Serde bean definitions and selects JacksonDatabindMapper (#285).
-configurations.named("nativeImageSerdeTestClasspath") { extendsFrom(configurations.getByName(serdeTest.runtimeClasspathConfigurationName)) }
 
 // The schema index of the discovery test (SchemaDiscoveryTest): a native image cannot list a classpath directory, so the
 // wildcard location reads this file. The same task is in the Schema page of the guide.

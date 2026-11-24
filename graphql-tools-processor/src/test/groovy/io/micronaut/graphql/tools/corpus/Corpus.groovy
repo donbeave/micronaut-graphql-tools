@@ -38,6 +38,7 @@ final class Corpus {
     final Divergences divergences
     final SoundnessExceptions exceptions
     final LanguageDifferences differences
+    final MutationGaps mutationGaps
     final List<String> problems = []
 
     Corpus(Path root) {
@@ -48,6 +49,7 @@ final class Corpus {
         this.divergences = Divergences.load(root.resolve(DIVERGENCES))
         this.exceptions = SoundnessExceptions.load(root.resolve(SoundnessExceptions.FILE))
         this.differences = LanguageDifferences.load(root.resolve(LanguageDifferences.FILE))
+        this.mutationGaps = MutationGaps.load(root.resolve(MutationGaps.FILE))
         found.each { c -> c.problems.each { problems.add("${c.name}: ${it}".toString()) } }
         problems.addAll(divergences.problems)
         problems.addAll(divergences.verify(this))
@@ -55,6 +57,7 @@ final class Corpus {
         problems.addAll(exceptions.verify(this))
         problems.addAll(differences.problems)
         problems.addAll(differences.verify(this))
+        problems.addAll(mutationGaps.problems)
         problems.addAll(Parity.checkExpected(this))
     }
 
@@ -76,7 +79,7 @@ final class Corpus {
         list(directory).each { Path entry ->
             if (Files.isDirectory(entry)) {
                 any = discover(entry, found) || any
-            } else if (directory == root ? !(entry.fileName.toString() in [DIVERGENCES, SoundnessExceptions.FILE, LanguageDifferences.FILE, 'README.md']) : true) {
+            } else if (directory == root ? !(entry.fileName.toString() in [DIVERGENCES, SoundnessExceptions.FILE, LanguageDifferences.FILE, MutationGaps.FILE, 'README.md']) : true) {
                 problems.add("orphan file ${root.relativize(entry)}".toString())
             }
         }
