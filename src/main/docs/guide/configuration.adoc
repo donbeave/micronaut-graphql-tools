@@ -16,7 +16,7 @@ The generated tables below list the type and the default of every key. This tabl
 |`type-class-convention` |none |A class name pattern with `{Type}` that picks the class of an object type of a union or interface. |<<typeSystem,Type System>>
 |`eager-init` |`true` |Binds the schema when the application context starts, so a binding failure stops the start. |<<startupErrors,Startup Errors>>
 |`schema.locations` |`classpath:graphql/**/*.graphqls` |Where the schema files are read from. |<<schema,Schema>>
-|`manifest.record`, `manifest.enabled`, `manifest.path` |`false`, `false`, none |Record the binding manifest as a bean, write it at startup, and choose the file. |<<manifest,Binding Manifest>>
+|`manifest.enabled`, `manifest.path` |`false`, none |Record the binding manifest as a bean, and write it to the file at startup when a path is set. |<<manifest,Binding Manifest>>
 |`execution.executor` |`blocking` |The executor that every operation hops to, or `none`. |<<executionSettings,Execution>>
 |`execution.timeout` |none |How long an operation may take before the client gets an `EXECUTION_TIMEOUT` error. |<<protection,Protection>>
 |`execution.data-loader-statistics` |`false` |Counts the batches of each batch loader bean. |<<observability,Observability>>
