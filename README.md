@@ -900,10 +900,12 @@ micronaut:
 
 The `micronaut-graphql-tools-processor` module registers a Micronaut `TypeElementVisitor` that reads the schema files while the
 application compiles and fails the build on drift that the startup would report, with the same code and the same schema
-coordinate. The build setup for Gradle and Maven (Java, Kotlin with KSP or kapt, Groovy), the options, what is checked at compile
-time and what only at startup, the support matrix and the incrementality guarantee are on the guide page
-[Compile-Time Verification](src/main/docs/guide/compileTime.adoc); its options are on
-[Options](src/main/docs/guide/compileTime/options.adoc). The error codes are in the
+coordinate. The build setup for Gradle and Maven (Java, Kotlin with KSP or kapt, Groovy) is on
+[Set Up the Build](src/main/docs/guide/compileTime/setup.adoc), the options on
+[Options](src/main/docs/guide/compileTime/options.adoc), the support matrix and the incremental builds on
+[Build Manifest](src/main/docs/guide/compileTime/buildManifest.adoc), and what is checked at compile time and what
+only at startup on [Limits](src/main/docs/guide/compileTime/limits.adoc); the section starts at
+[Compile-Time Verification](src/main/docs/guide/compileTime.adoc). The error codes are in the
 [error reference](src/main/docs/guide/exceptions.adoc).
 
 ### The strict schema-build test
