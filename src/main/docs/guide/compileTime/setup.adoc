@@ -1,0 +1,122 @@
+:repo: https://github.com/{githubSlug}/blob/master
+:samples: {sourcedir}/test-suite-build/samples
+:tests: {repo}/test-suite-build/src/test/java/io/micronaut/graphql/tools/buildtools
+:corpus: {repo}/graphql-tools-processor/src/test/resources/corpus
+
+The compile-time checks read the schema files while the application compiles and fail the build on drift that the startup would also reject: a resolver parameter that names no argument, a primitive at a nullable position, an input class with a property the schema does not define. Each error starts with the code of the check and the schema coordinate, and names the schema file and line. The code and the coordinate are the ones the startup reports for the same fault (see the <<exceptions,error reference>>), so a build error and a startup error are one finding.
+
+The checks are a Micronaut `TypeElementVisitor` in the `micronaut-graphql-tools-processor` artifact. It is the only compile-time engine: the jar registers the visitor and no `javax.annotation.processing.Processor`. A build puts it on the path that its compiler reads Micronaut's processors from, and passes the schema directories as an option (see <<compileTimeOptions,Options>>).
+
+== What a failure looks like
+
+The example suites each keep a resolver that drifts from the schema on purpose. The argument of `Query.searchProfile` is named `limit`, and the parameter is named `count`:
+
+snippet::example.drift.DriftedSearchProfileQuery[project-base="test-suite", source="driftFixture", tags="drifted", indent="0"]
+
+The compilation of this source set fails, and the build prints the code, the coordinate, the Java member and the schema location:
+
+[source]
+----
+error: [argument-mismatch] Query.searchProfile: the parameter count binds no argument of Query.searchProfile (arguments: contains, limit).
+    at example.drift.DriftedSearchProfileQuery#searchProfile(java.lang.String,java.lang.Integer)
+    schema src/main/resources/schema.graphqls:11:3
+    fix: rename the parameter to an argument name, annotate it with @GraphQLArgument("<name>"), or add the argument to the schema
+----
+
+The task `driftFixtureTest` of `test-suite-java`, `test-suite-kotlin` and `test-suite-groovy` asserts this failure, with the `[code] coordinate` line, for each language, and `check` runs it. The fix is the one the message says: rename the parameter, or keep the name and annotate it:
+
+snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="by-name", indent="0"]
+
+[[compileTimeSetup]]
+== Set up the build
+
+Add the processor to the path that the compiler of the language reads Micronaut's processors from, and pass `micronaut.graphql.tools.processor.schema.dirs`. Each snippet below is a tagged part of a sample build under `test-suite-build/samples`, and the sample is built by a test, so a documented snippet is one that has run.
+
+TIP: Add the directories of schema that the application adds by code to `schema.dirs` too, so that the checks see it.
+
+=== Gradle with Java
+
+The processor goes on `annotationProcessor`. The schema directory is the `@InputFiles` input of a `CommandLineArgumentProvider`: a plain `compilerArgs` string would leave `compileJava` up to date after a schema edit.
+
+[source,kotlin]
+----
+include::{samples}/java-gradle/build.gradle.kts[tags=dependencies]
+
+include::{samples}/java-gradle/build.gradle.kts[tags=schema-dirs]
+----
+
+=== Gradle with Kotlin and KSP
+
+The processor goes on `ksp`. KSP2 does not track the schema files by itself, so they are declared as an input of the `ksp*Kotlin` tasks.
+
+[source,kotlin]
+----
+include::{samples}/kotlin-ksp/build.gradle.kts[tags=dependencies]
+
+include::{samples}/kotlin-ksp/build.gradle.kts[tags=schema-dirs]
+----
+
+=== Gradle with Kotlin and kapt
+
+The processor goes on `kapt`. Under kapt, `compileJava` runs with `-proc:none`, so a processor that is only on `annotationProcessor` does not run: register it with `kapt`. The schema files are declared as an input of `kaptKotlin` and `kaptGenerateStubsKotlin`.
+
+[source,kotlin]
+----
+include::{samples}/kotlin-kapt/build.gradle.kts[tags=dependencies]
+
+include::{samples}/kotlin-kapt/build.gradle.kts[tags=schema-dirs]
+----
+
+=== Gradle with Groovy
+
+The Groovy compiler loads Micronaut's visitors from its compile classpath, so the processor goes on `compileOnly`. The Groovy compiler reads its options from system properties, so `compileGroovy` runs in its own JVM (the default) with the option as a `-D` argument.
+
+[source,kotlin]
+----
+include::{samples}/groovy-gradle/build.gradle.kts[tags=dependencies]
+
+include::{samples}/groovy-gradle/build.gradle.kts[tags=schema-dirs]
+----
+
+=== Maven with Java
+
+The processor goes on `annotationProcessorPaths` of `maven-compiler-plugin`, and the option is a `-A` compiler argument. The library BOM manages the version of the processor.
+
+[source,xml]
+----
+include::{samples}/java-maven/pom.xml[tags=bom]
+
+include::{samples}/java-maven/pom.xml[tags=processor]
+----
+
+=== Maven with Kotlin and kapt
+
+The processor goes on the `annotationProcessorPaths` of the `kapt` execution of `kotlin-maven-plugin`, next to the Micronaut processor that kapt needs.
+
+[source,xml]
+----
+include::{samples}/kotlin-kapt-maven/pom.xml[tags=processor]
+----
+
+=== Maven with Groovy
+
+The processor goes on the `provided` scope. The Groovy compiler reads the option from a system property of the Maven JVM, which `properties-maven-plugin` sets.
+
+[source,xml]
+----
+include::{samples}/groovy-maven/pom.xml[tags=processor]
+
+include::{samples}/groovy-maven/pom.xml[tags=schema-dirs]
+----
+
+=== Switch the checks off
+
+`micronaut.graphql.tools.processor.checks=false` compiles without the checks and prints one note. The startup still runs every check, so the switch only moves a finding from the build to the first start. Each sample passes it from a build property (`-PgraphqlChecks=false` for Gradle, `-Dgraphql.checks=false` for Maven), for example for Gradle with Java:
+
+[source,kotlin]
+----
+include::{samples}/java-gradle/build.gradle.kts[tags=checks]
+----
+
+A build prints one note that names the schema directory of each compilation that runs the checks, so a build log shows whether they ran. A processor that is not on the path of the compiler does not fail anything: it does not run, and no note appears.
+

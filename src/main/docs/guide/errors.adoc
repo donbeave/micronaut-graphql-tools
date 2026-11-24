@@ -139,6 +139,19 @@ A call that violates the constraint is rejected before the resolver runs. The me
 
 A call with several violations gives one error for each, all with the path of the field. The errors are in the order of the parameters, then of the `inputPath` (list indexes compare as numbers, so `[2]` comes before `[10]`, and names compare as text), because the validator returns the violations in no fixed order. The mapper has the lowest precedence: your own mapper for `ConstraintViolationException` wins.
 
+A request whose arguments pass the constraints runs the resolver as usual, and a request that violates one is rejected before the resolver runs. The message of an error is the message of the constraint, and the extensions carry the argument name and the path inside it, so the error does not show the class or the method of the server.
+
+[[constraintViolationsCustomize]]
+=== Changing the mapping
+
+To change the errors of a violation, add a `GraphQLExceptionMapper<ConstraintViolationException>` bean. It replaces the default mapper for that exception, and it follows the rules of every mapper: `@Order` chooses between mappers, and `mapAll` can return one error for each violation where `map` returns one error for the call. The mapper below answers one error for the whole call and lists the names of the fields that failed:
+
+snippet::example.tck.ConstraintViolationsScenario[project-base="test-suite", source="validationFixtures", tags="custom-mapper", indent="0"]
+
+The default mapper is part of the library's internals, not a public type, so a change of the format goes through your own mapper or a `GraphQLErrorsCustomizer`.
+
+An application without Jakarta Validation on the classpath has no constraint violation mapper at all: the bean is created only when `jakarta.validation.ConstraintViolationException` is present, so that application has no mapper to look up.
+
 [[executionErrors]]
 == Errors of the execution
 
