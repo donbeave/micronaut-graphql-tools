@@ -28,15 +28,18 @@ final class Verdict {
     final List<Finding> findings
     /** the binding manifest of a bound startup (without its `#` header lines, which name the versions), or {@code null} */
     final String manifest
+    /** the normalized introspection of a bound startup that was asked for it (the drift mutation runner), or {@code null} */
+    final String responses
 
-    private Verdict(boolean available, List<Finding> findings, String manifest) {
+    private Verdict(boolean available, List<Finding> findings, String manifest, String responses = null) {
         this.available = available
         this.findings = Collections.unmodifiableList(new ArrayList<>(findings.sort(false)))
         this.manifest = manifest
+        this.responses = responses
     }
 
-    static Verdict bound(String manifest = null) {
-        return new Verdict(true, [], manifest)
+    static Verdict bound(String manifest = null, String responses = null) {
+        return new Verdict(true, [], manifest, responses)
     }
 
     static Verdict failed(List<Finding> findings) {
