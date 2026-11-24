@@ -21,6 +21,10 @@ import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.AnnotationValue;
+import io.micronaut.graphql.tools.error.GraphQLExceptionContext;
+import io.micronaut.graphql.tools.error.GraphQLExceptionMapper;
+import graphql.GraphQLError;
+import jakarta.validation.ConstraintViolationException;
 import io.micronaut.graphql.tools.annotation.GraphQLInput;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
@@ -39,6 +43,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.List;
+import java.util.stream.StreamSupport;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SortedMap;
@@ -366,6 +371,32 @@ public final class ConstraintViolationsScenario {
         }
 
         public String several(@NotBlank String name, @Positive int count, @Valid Cart cart) {
+            return name;
+        }
+    }
+
+    // tag::custom-mapper[]
+    @Singleton
+    @Requires(property = "tck.scenario", value = "constraint-violation-mapper")
+    public static class InvalidInputMapper implements GraphQLExceptionMapper<ConstraintViolationException> {
+        @Override
+        public GraphQLError map(ConstraintViolationException exception, GraphQLExceptionContext context) {
+            List<String> fields = exception.getConstraintViolations().stream()
+                    .map(violation -> StreamSupport.stream(violation.getPropertyPath().spliterator(), false)
+                            .reduce((first, second) -> second).orElseThrow().getName())
+                    .sorted()
+                    .toList();
+            return context.error("The input is not valid", Map.of("code", "INVALID_INPUT", "fields", fields));
+        }
+    }
+    // end::custom-mapper[]
+
+    @Singleton
+    @GraphQLRootResolver
+    @Requires(property = "tck.scenario", value = "constraint-violation-mapper")
+    public static class RegistrationQueries {
+
+        public String register(@NotBlank String name, @Positive int seats) {
             return name;
         }
     }
