@@ -10,7 +10,7 @@ Open issues are listed at [donbeave/micronaut-graphql-tools/issues](https://gith
 
 ## JDK Setup
 
-Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check` works: the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
+Micronaut GraphQL Tools builds on JDK 17, 21 or 25; native tests need Oracle GraalVM 25. The library compiles to Java 17 bytecode (`--release 17`), and on JDK 17 only `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check :micronaut-graphql-tools-testing:check` works: the `test-suite-*` modules need JDK 21 or newer, so run the full `./gradlew build` on JDK 21 or 25.
 
 The tools are pinned in `mise.toml` and installed with [mise](https://mise.jdx.dev): run `mise install` in the project directory. It installs Oracle GraalVM 25 (the build JDK, and `native-image` for the native tests) and `jactionlint` (a fork of actionlint that lints the workflows and composite actions: run `jactionlint` in the project directory; CI runs the same command in the `actionlint` job, with the default profile, which adds the security rules). It is pinned in `mise.toml`; the [jactionlint documentation](https://jactionlint.jdx.dev) lists the other install methods. To build on another JDK line, select an overlay with `MISE_ENV`, for example `export MISE_ENV=jdk21` and then `mise install` (or one command at a time: `MISE_ENV=jdk21 mise exec -- ./gradlew build`; `mise install` alone does not activate the tools, so keep `MISE_ENV` set, or use `mise exec`, when you run Gradle) (`jdk17`, `jdk21`, `jdk25` and `jdk27` install Temurin; JDK 27 is for the canary only). Gradle is not installed by mise: use `./gradlew`.
 
@@ -28,7 +28,7 @@ The tests do not need Docker. These are the commands CI runs (all in `.github/wo
 
 - `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
 - `./gradlew build -PgraphqlJavaLeg=floor|ceiling` runs the same build on another graphql-java leg (`default` is the default; `latest` is for the canary). The versions of each role are in `gradle/libs.versions.toml`; the README explains the roles. `-PgraphqlJavaCompileLeg=default` compiles main code on the default leg while the tests run on the leg of `-PgraphqlJavaLeg` (the binary compatibility job).
-- `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check` checks the library, its binding module, the processor and the scalars module only; this is the one that works on JDK 17.
+- `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check :micronaut-graphql-tools-testing:check` checks the library, its binding module, the processor and the scalars module only; this is the one that works on JDK 17.
 - `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` runs the native image tests (the build runs tasks in parallel by default, and each native build needs about 5 GB) (Oracle GraalVM 25); add `-PgraphqlJavaLeg=ceiling` for another leg.
 - `./gradlew :test-suite-build:buildToolsTest` builds the sample projects of `test-suite-build` with Gradle TestKit and Maven against the library published to `build/repo` (CI job `build tools`, JDK 25 and `mvn`, needs the network; the job also runs `corpusKotlin`, below). `build` and `check` do not run it.
 
@@ -205,6 +205,7 @@ This section tells you which package holds what, which packages you may import f
 | Name the request metrics and tags of the Micrometer module | `io.micronaut.graphql.tools.micrometer` (`GraphQLMetrics`; the module `graphql-tools-micrometer`) |
 | Name the `Upload` scalar and the error code of an invalid multipart request | `io.micronaut.graphql.tools.upload` (`GraphQLUpload`; the module `graphql-tools-upload`) |
 | Name the context key of the authentication, the error codes of a secured field, and see the root fields of an operation | `io.micronaut.graphql.tools.security` (`GraphQLSecurity`, `RootFieldsHook`; the module `graphql-tools-security`) |
+| Run a document in-process in a test and assert on the response | `io.micronaut.graphql.tools.testing` (`GraphQLTester`, `GraphQLTestRequest`, `GraphQLTestResponse`; the module `graphql-tools-testing`) |
 | Tell an omitted argument from an explicit `null` | `io.micronaut.graphql.tools.input` (`ArgumentValue`) |
 | Accept or reject a `graphql-transport-ws` connection, with attributes | `io.micronaut.graphql.tools.websocket` (`GraphQLConnectionInterceptor`, `GraphQLConnectionRequest`, `GraphQLConnectionResult`) |
 | Wire a directive | `io.micronaut.graphql.tools.directive` (`SchemaDirective`) |
@@ -216,7 +217,7 @@ Do not import any type annotated `@Internal`, and nothing from a package named `
 
 ### Current layout
 
-This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration and `test-suite-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration, `graphql-tools-testing` the in-process tester and `test-suite-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
 
 | Package | Module | Audience | Holds |
 | --- | --- | --- | --- |
@@ -278,6 +279,8 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.upload.internal` | graphql-tools-upload | Internal | The multipart route, the reader of the `operations` and `map` parts and the `Upload` scalar |
 | `io.micronaut.graphql.tools.security` | graphql-tools-security | Public API | `GraphQLSecurity`, the configuration prefix, the context key of the authentication and the error codes of a secured field, and `RootFieldsHook` |
 | `io.micronaut.graphql.tools.security.internal` | graphql-tools-security | Internal | The context contributor, the decorator and fetcher of the secured fields and the instrumentation of the hook |
+| `io.micronaut.graphql.tools.testing` | graphql-tools-testing | Public API | `GraphQLTester`, `GraphQLTestRequest` and `GraphQLTestResponse`, the in-process tester and its fluent assertions |
+| `io.micronaut.graphql.tools.testing.internal` | graphql-tools-testing | Internal | The context contributor that copies the values of a test request into the GraphQL context |
 | `io.micronaut.graphql.tools.visitor` | graphql-tools-processor | Compiler plug-in | The compile-time `TypeElementVisitor`, loaded by the compiler and never imported |
 | `io.micronaut.graphql.tools.tck` | test-suite-tck | Test helper | The TCK runner; not published |
 

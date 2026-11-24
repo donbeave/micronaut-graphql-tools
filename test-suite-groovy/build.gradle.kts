@@ -35,6 +35,9 @@ dependencies {
     // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
     // itself does not depend on it.
     testImplementation(projects.micronautGraphqlToolsUpload)
+    // The in-process tester: runs documents against the application's GraphQL bean in a test. Test scope: the application itself does not depend
+    // on it, and as test-time code it has no native test.
+    testImplementation(projects.micronautGraphqlToolsTesting)
     // The security module and Micronaut Security: the principal in the context, @Secured on resolvers and the root fields hook, tested with
     // a real HTTP and WebSocket client. Test scope: the application itself does not depend on them.
     testImplementation(projects.micronautGraphqlToolsSecurity)
