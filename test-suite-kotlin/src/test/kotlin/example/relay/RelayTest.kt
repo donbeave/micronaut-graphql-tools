@@ -39,7 +39,7 @@ class RelayTest {
         val result = GraphQL.newGraphQL(context.getBean(GraphQLSchema::class.java)).build()
             .execute(ExecutionInput.newExecutionInput().query(page).variables(mapOf("first" to first, "after" to after)).build())
         assertTrue(result.errors.isEmpty(), result.errors.toString())
-        return result.getData<Map<String, Any?>>()["articles"] as Map<String, Any?>
+        return result.getData<Map<String, Any?>>()!!["articles"] as Map<String, Any?>
     }
 
     // tag::paging[]
