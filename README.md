@@ -135,7 +135,7 @@ missing. A wildcard needs a directory before it. Several locations are read in o
   mutations, fragments) or nothing is skipped and logged at INFO, so client operation files in the same directory do not
   break the startup. A file that mixes operations and type definitions fails.
 - **Override.** Any `TypeDefinitionRegistry` bean of the application is used instead and nothing is read. A
-  `TypeDefinitionRegistryCustomizer` still runs on top of the schema, with either source.
+  `GraphQLTypeDefinitionRegistryCustomizer` still runs on top of the schema, with either source.
 - **Failures.** A file that does not parse or conflicts with another, a location that names a missing file, and locations
   that match no file at all fail the startup: code `schema-invalid` for a file that does not parse or conflicts, `schema-not-found` for the rest. The message names the file or the locations.
 - **Compile time.** The processor reads the same `*.graphqls` files with the same code from its schema directory
@@ -582,7 +582,7 @@ compile time (`unbound-resolver-method`, `root-method-several-operations`, `unbo
   the request. Use the wrapper class or make the GraphQL type non-null. For a custom scalar this fails in every mode.
   A primitive for a non-null type and a primitive return type are fine.
 - **`unwired-directive`** (`!unwired-directive name`, one line per directive): a directive the schema applies that no
-  `SchemaDirective` bean, `RuntimeWiringCustomizer` or `resolver-directives` entry implements and that
+  `SchemaDirective` bean, `GraphQLRuntimeWiringCustomizer` or `resolver-directives` entry implements and that
   `allow.inert-directives` does not list (see [Schema directives](#schema-directives)); a directive applied only on
   `schema { }` or on a directive argument is reported even when a wiring names it, unless `allow.inert-directives` or
   `allow.schema-customizer-directives` lists it. They are reported in one `[unwired-directive]` failure, which lists
@@ -829,7 +829,7 @@ value without a constant fails it with `[missing-enum-values]`; a constant witho
 schema does not define is a request error from graphql-java and never reaches the resolver. The schema name is the Java
 constant name; the library has no rename annotation for enum values.
 
-A `RuntimeWiringCustomizer` cannot register its own `enumValues` provider for a bound enum: that replaces the library's
+A `GraphQLRuntimeWiringCustomizer` cannot register its own `enumValues` provider for a bound enum: that replaces the library's
 wiring and fails the startup with `[runtime-wiring-override]`.
 
 ### Omitted values and `null`
@@ -937,15 +937,15 @@ union or interface resolves are errors of the request, reported by graphql-java.
 
 GraphQL interfaces and union types often have multiple concrete implementations.
 
-Define a `SchemaMappingDictionaryCustomizer` bean to register custom types if any. You may define several, for example one
+Define a `GraphQLSchemaMappingDictionaryCustomizer` bean to register custom types if any. You may define several, for example one
 per module: all of them run, in `@Order`, on one dictionary. A GraphQL type that two of them map fails the startup.
 
-In the example below, the `SchemaMappingDictionaryCustomizer` bean is used to register the Java classes of the members of the `Error` union type. This associates the GraphQL types `SecurityError` and `ValidationError` with their respective Java implementations (`SecurityError.class` and `ValidationError.class`).
+In the example below, the `GraphQLSchemaMappingDictionaryCustomizer` bean is used to register the Java classes of the members of the `Error` union type. This associates the GraphQL types `SecurityError` and `ValidationError` with their respective Java implementations (`SecurityError.class` and `ValidationError.class`).
 
 ```java
 @Bean
 @Singleton
-public SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+public GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
 return schemaMappingDictionary -> schemaMappingDictionary
         .registerType("SecurityError", SecurityError.class)
         .registerType("ValidationError", ValidationError.class);
@@ -1073,15 +1073,15 @@ first, by `@Order` on the bean class or factory method, or by `Ordered#getOrder(
 
 | Bean type | Receives | Runs |
 |---|---|---|
-| `TypeDefinitionRegistryCustomizer` | a copy of the application's `TypeDefinitionRegistry` bean (the bean itself stays unchanged) | before the binding: types and fields added here need a binding like any other |
-| `RuntimeWiringCustomizer` | the `RuntimeWiring.Builder` that holds the library's wiring | after the binding, before the schema is generated |
+| `GraphQLTypeDefinitionRegistryCustomizer` | a copy of the application's `TypeDefinitionRegistry` bean (the bean itself stays unchanged) | before the binding: types and fields added here need a binding like any other |
+| `GraphQLRuntimeWiringCustomizer` | the `RuntimeWiring.Builder` that holds the library's wiring | after the binding, before the schema is generated |
 | `GraphQLSchemaCustomizer` | the generated `GraphQLSchema`; returns the schema to use | last |
 
-A `RuntimeWiringCustomizer` may only **add** (scalars, directive wirings, field visibility, ...). If it replaces a data
+A `GraphQLRuntimeWiringCustomizer` may only **add** (scalars, directive wirings, field visibility, ...). If it replaces a data
 fetcher, default data fetcher, type resolver or scalar that the library registered, or the wiring factory, or puts a
 data fetcher or type resolver for a field or type the library wired into a code registry (`builder.codeRegistry(...)`,
 which graphql-java lets win), the startup fails with `[runtime-wiring-override]`, which names every replacement
-and the customizer that made it. The check runs only when the application has a `RuntimeWiringCustomizer` bean; the
+and the customizer that made it. The check runs only when the application has a `GraphQLRuntimeWiringCustomizer` bean; the
 library's own directive wirings are not checked, and without a customizer the startup does no check work. Code registry entries for fields the library does not wire, and enum value
 providers, are allowed.
 (On graphql-java 25.2 the builder itself already rejects the first replaced default data fetcher, type
@@ -1089,11 +1089,11 @@ resolver or scalar with `StrictModeWiringException`; 21.5 and 22.4 accept them s
 field the library wired is reported as `[runtime-wiring-override]` on every line. On some graphql-java lines `RuntimeWiring.Builder#type` for a
 type the library wired clears that type's default data fetcher; the library puts it back, so calling `type` to add a
 field fetcher is not a replacement.) To wrap data fetchers, use a
-`FieldFetcherDecorator` bean (see below) or a `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
+`GraphQLFieldFetcherDecorator` bean (see below) or a `SchemaDirective` bean (`named` or `everyElement`); to change the generated schema, use a `GraphQLSchemaCustomizer` (it replaces
 `RuntimeWiring.Builder#transformer`, which graphql-java 25 removed). The library does not check what a
 `GraphQLSchemaCustomizer` changes.
 
-Which seam to use to change the schema: a `RuntimeWiringCustomizer` to add wiring before the schema is generated, a
+Which seam to use to change the schema: a `GraphQLRuntimeWiringCustomizer` to add wiring before the schema is generated, a
 `GraphQLSchemaCustomizer` to change the generated schema as part of the library's own bean (recommended), and a
 `BeanCreatedEventListener<GraphQLSchema>` when another module has to replace the `GraphQLSchema` bean. The library's
 union and interface type resolvers read the schema of the execution (`TypeResolutionEnvironment#getSchema()`), so
@@ -1104,7 +1104,7 @@ keep a reference to the schema the library built; the data fetchers and type res
 @Bean
 @Singleton
 @Order(10)
-public RuntimeWiringCustomizer hideInternalFields() {
+public GraphQLRuntimeWiringCustomizer hideInternalFields() {
     return builder -> builder.fieldVisibility(BlockedFields.newBlock().addPattern("Query.internal.*").build());
 }
 ```
@@ -1117,7 +1117,7 @@ data fetcher in `customize`:
 
 ```java
 @Singleton
-class ServerVersionCustomizer implements RuntimeWiringCustomizer {
+class ServerVersionCustomizer implements GraphQLRuntimeWiringCustomizer {
 
     @Override
     public Set<FieldCoordinates> claimedFields() {
@@ -1154,7 +1154,7 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
 
 - `SchemaDirective.named(name, wiring)` binds the wiring to **one** directive name; graphql-java calls it only for the
   elements that apply that directive (`RuntimeWiring.Builder#directive`). Two such beans for one name fail the
-  startup with `[duplicate-directive-wiring]`, and a `RuntimeWiringCustomizer` that replaces such a wiring fails
+  startup with `[duplicate-directive-wiring]`, and a `GraphQLRuntimeWiringCustomizer` that replaces such a wiring fails
   it with `[runtime-wiring-override]`.
 - `SchemaDirective.everyElement(names, wiring)` registers a wiring that graphql-java calls for **every** schema element
   and that decides itself what to do (`RuntimeWiring.Builder#directiveWiring`); the names say which directives it
@@ -1170,7 +1170,7 @@ The library applies an SDL directive wiring (`graphql.schema.idl.SchemaDirective
   has no effect: the library does not sort them, and they run in the order the SDL applies the directives to the
   element.
 
-To wrap the data fetchers of selected fields, for example to sanitise arguments, prefer a `FieldFetcherDecorator` bean to a
+To wrap the data fetchers of selected fields, for example to sanitise arguments, prefer a `GraphQLFieldFetcherDecorator` bean to a
 wrap-all `everyElement` wiring. The library asks each decorator once for each field at startup, and the decorator returns the
 fetcher it received for a field it does not select, so unselected fields and trivial property fetchers keep their base
 fetcher. A field without arguments and a property are not offered unless the decorator overrides
@@ -1180,7 +1180,7 @@ outermost: decorators (lowest order first), the async boundary, the `@ExecuteOn`
 guide has the details.
 
 A `SchemaDirectiveWiring` bean is **not** applied on its own: if neither a `SchemaDirective` bean wraps it nor a
-`RuntimeWiringCustomizer` registers it (`RuntimeWiring.Builder#directive` or `#directiveWiring`), the startup fails with
+`GraphQLRuntimeWiringCustomizer` registers it (`RuntimeWiring.Builder#directive` or `#directiveWiring`), the startup fails with
 `[unwrapped-directive-wiring]`, which names the bean. The check runs after every customizer. A wiring therefore
 never runs on every element just because it is a bean. To keep a wiring as a bean, inject it into the factory method of
 its `SchemaDirective`. A singleton is matched by instance; a `@Prototype` bean (a new instance per injection point) by
@@ -1190,7 +1190,7 @@ instance (of any bean) has the same class; the check then cannot tell the two in
 **Every directive the schema applies must have a wiring**, or the startup fails with `[unwired-directive]`,
 which lists every such directive and where the schema applies it. With the check `unwired-directive` at `warn` (or `strict: false`, see [Strict mode](#strict-mode)) the
 same list is a warning instead; either way each such directive is an `!unwired-directive` line of the binding
-manifest. A directive counts as wired if a `SchemaDirective` bean names it, if a `RuntimeWiringCustomizer` registers a
+manifest. A directive counts as wired if a `SchemaDirective` bean names it, if a `GraphQLRuntimeWiringCustomizer` registers a
 wiring for it with `RuntimeWiring.Builder#directive`, or if `resolver-directives` lists it (the binding implements it). A
 directive that is meant to have no effect at runtime (documentation, or enforced elsewhere) is listed in
 `micronaut.graphql.tools.allow.inert-directives`, by name or with `*` as a pattern (`fed*`; a pattern must match a declared
@@ -1217,7 +1217,7 @@ public SchemaDirective upper(UpperCaseWiring upperCaseWiring) { // UpperCaseWiri
 ```
 
 graphql-java-extended-validation plugs in as a wiring for every element that names its constraint directives, and a
-`TypeDefinitionRegistryCustomizer` can add their declarations unless the SDL declares them:
+`GraphQLTypeDefinitionRegistryCustomizer` can add their declarations unless the SDL declares them:
 
 ```java
 @Bean
@@ -1230,7 +1230,7 @@ public SchemaDirective validation() {
 
 @Bean
 @Singleton
-public TypeDefinitionRegistryCustomizer validationDirectives() {
+public GraphQLTypeDefinitionRegistryCustomizer validationDirectives() {
     return registry -> registry.merge(DirectiveConstraints.newDirectiveConstraints().build().getDirectivesDeclaration());
 }
 ```

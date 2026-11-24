@@ -21,14 +21,14 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class TypeDefinitionRegistryCustomizerSpec extends AbstractTest {
+class GraphQLTypeDefinitionRegistryCustomizerSpec extends AbstractTest {
 
-    static final String SPEC_NAME = "TypeDefinitionRegistryCustomizerSpec"
+    static final String SPEC_NAME = "GraphQLTypeDefinitionRegistryCustomizerSpec"
 
     static final List<String> CALLS = Collections.synchronizedList([])
 
@@ -71,7 +71,7 @@ type Query {
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     @Order(20)
-    static class ExpectSchemaDefinition implements TypeDefinitionRegistryCustomizer {
+    static class ExpectSchemaDefinition implements GraphQLTypeDefinitionRegistryCustomizer {
         @Override
         void customize(TypeDefinitionRegistry registry) {
             CALLS << 'ExpectSchemaDefinition'
@@ -81,7 +81,7 @@ type Query {
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
-    static class AddSchemaDefinition implements TypeDefinitionRegistryCustomizer, Ordered {
+    static class AddSchemaDefinition implements GraphQLTypeDefinitionRegistryCustomizer, Ordered {
         @Override
         void customize(TypeDefinitionRegistry registry) {
             CALLS << 'AddSchemaDefinition'

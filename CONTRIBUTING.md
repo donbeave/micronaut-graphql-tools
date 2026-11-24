@@ -44,6 +44,7 @@ The binding corpus (#142) is a directory of data cases under `graphql-tools-proc
 
 - a class reflects: a `Class` lookup of a user class, member or annotation (`forName`, `getMethod`, `getDeclaredMethod`, `getDeclaredAnnotation`, `getEnumConstants`, `newInstance` and the like), `setAccessible`, any `java.lang.reflect` type except `Modifier`, or anything of `java.lang.invoke`. Read user classes through the bean introspection or the compile-time metadata instead; reflection needs native-image configuration and is slower.
 - a class depends on `com.fasterxml.jackson..` (#36). Use Micronaut Serialization.
+- a public interface of the `customizer` package, or a public interface named `*Customizer` or `*Decorator`, does not start with `GraphQL`. The naming rule is that a type an application implements as an extension point carries the `GraphQL` prefix (`GraphQLSchemaCustomizer`, `GraphQLExceptionMapper`, `GraphQLFieldFetcherDecorator`); a value type or a data holder (`SchemaDirective`, `ArgumentValue`, `FieldDescriptor`) keeps its short name (BC-43).
 - a public or protected member of a public class that is not `@Internal` names an `@Internal` type or a type of an `internal` package.
 
 A class that must still reflect goes in `REFLECTION_ALLOWLIST` of the spec, with the exact accesses it may make, the reason and the issue that removes it; any other reflective access in that class still fails. The list may only shrink: the spec fails when an allowed access no longer happens, so delete the entry in the change that removes the reflection. `GraphQLResolversRegistry` is the one entry today (#34). To check a rule, add a violating class to `graphql-tools/src/main/java` and run `./gradlew :micronaut-graphql-tools:test --tests '*ArchitectureRulesSpec'`; remove it afterwards.
@@ -208,8 +209,8 @@ This section tells you which package holds what, which packages you may import f
 | Accept or reject a `graphql-transport-ws` connection, with attributes | `io.micronaut.graphql.tools.websocket` (`GraphQLConnectionInterceptor`, `GraphQLConnectionRequest`, `GraphQLConnectionResult`) |
 | Wire a directive | `io.micronaut.graphql.tools.directive` (`SchemaDirective`) |
 | Read what the schema is bound to | `io.micronaut.graphql.tools.manifest` (`BindingManifest`) |
-| Add values to the GraphQL context of each operation | `io.micronaut.graphql.tools.execution` (`GraphQLContextContributor`, `GraphQLExecutionRequest`, `GraphQLTransport`, `DataLoaderBatchStatistics`, `DataLoaderOptionsCustomizer`) |
-| Wrap the data fetchers of selected fields | `io.micronaut.graphql.tools.execution` (`FieldFetcherDecorator`, `FieldDescriptor`, `FieldExecutionKind`) |
+| Add values to the GraphQL context of each operation | `io.micronaut.graphql.tools.execution` (`GraphQLContextContributor`, `GraphQLExecutionRequest`, `GraphQLTransport`, `DataLoaderBatchStatistics`, `GraphQLDataLoaderOptionsCustomizer`) |
+| Wrap the data fetchers of selected fields | `io.micronaut.graphql.tools.execution` (`GraphQLFieldFetcherDecorator`, `FieldDescriptor`, `FieldExecutionKind`) |
 
 Do not import any type annotated `@Internal`, and nothing from a package named `internal`.
 
@@ -227,7 +228,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.directive` | graphql-tools | Public API | `SchemaDirective` and `CustomWiring` |
 | `io.micronaut.graphql.tools.input` | graphql-tools | Public API | `ArgumentValue` |
 | `io.micronaut.graphql.tools.manifest` | graphql-tools | Public API | `BindingManifest` |
-| `io.micronaut.graphql.tools.execution` | graphql-tools | Public API | `GraphQLContextContributor`, the read-only `GraphQLExecutionRequest` that it receives, the `GraphQLTransport` kinds, the `DataLoaderBatchStatistics` of an execution, the `DataLoaderOptionsCustomizer` of one batch loader, and `FieldFetcherDecorator` with its `FieldDescriptor` and `FieldExecutionKind` |
+| `io.micronaut.graphql.tools.execution` | graphql-tools | Public API | `GraphQLContextContributor`, the read-only `GraphQLExecutionRequest` that it receives, the `GraphQLTransport` kinds, the `DataLoaderBatchStatistics` of an execution, the `GraphQLDataLoaderOptionsCustomizer` of one batch loader, and `GraphQLFieldFetcherDecorator` with its `FieldDescriptor` and `FieldExecutionKind` |
 | `io.micronaut.graphql.tools.annotation` | graphql-tools | Public API | The annotations of resolver classes, methods, parameters and input classes |
 | `io.micronaut.graphql.tools.resolver` | graphql-tools | Public API | The marker interfaces of resolver contracts: `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` |
 | `io.micronaut.graphql.tools.websocket` | graphql-tools | Public API | The connection hook of the `graphql-transport-ws` endpoint: `GraphQLConnectionInterceptor`, the request it receives and the result it returns |

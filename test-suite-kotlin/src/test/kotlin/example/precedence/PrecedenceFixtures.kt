@@ -23,8 +23,8 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -43,7 +43,7 @@ class PrecedenceFixtures {
     @Bean
     @Singleton
     @Requires(env = [PRECEDENCE_RELAY])
-    fun relaySchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun relaySchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "interface Gizmo { id: ID! }\n" +
@@ -57,8 +57,8 @@ class PrecedenceFixtures {
     @Bean
     @Singleton
     @Requires(env = [PRECEDENCE_RELAY])
-    @Replaces(value = SchemaMappingDictionaryCustomizer::class, factory = GraphQLFactory::class)
-    fun relayTypes() = SchemaMappingDictionaryCustomizer { dictionary ->
+    @Replaces(value = GraphQLSchemaMappingDictionaryCustomizer::class, factory = GraphQLFactory::class)
+    fun relayTypes() = GraphQLSchemaMappingDictionaryCustomizer { dictionary ->
         dictionary
             .registerType("SecurityError", SecurityError::class.java)
             .registerType("ValidationError", ValidationError::class.java)
@@ -68,7 +68,7 @@ class PrecedenceFixtures {
     @Bean
     @Singleton
     @Requires(env = [PRECEDENCE_AMBIGUOUS])
-    fun ambiguousSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun ambiguousSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Gadget { name: String! label: String! }\n" +

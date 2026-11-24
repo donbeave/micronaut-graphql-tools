@@ -32,7 +32,7 @@ import graphql.schema.idl.TypeRuntimeWiring;
 import graphql.schema.idl.WiringFactory;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer;
 import io.micronaut.graphql.tools.internal.exceptions.checks.InvalidClaimedFieldsException;
 import io.micronaut.graphql.tools.internal.exceptions.wiring.RuntimeWiringOverrideException;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder;
@@ -48,18 +48,18 @@ import java.util.regex.Pattern;
 
 /** Applies the runtime wiring customizers in their order. */
 @Internal
-public final class RuntimeWiringCustomizers {
+public final class GraphQLRuntimeWiringCustomizers {
 
     private static final Pattern DUPLICATE_ENUM_PROVIDER = Pattern.compile("The type (\\S+) already has a enum provider defined");
     private static final Pattern DUPLICATE_FIELD = Pattern.compile("The field (\\S+) on type (\\S+) has already been defined");
 
-    private RuntimeWiringCustomizers() {
+    private GraphQLRuntimeWiringCustomizers() {
     }
 
-    static Map<String, String> claims(List<RuntimeWiringCustomizer> customizers, TypeDefinitionRegistry registry) {
+    static Map<String, String> claims(List<GraphQLRuntimeWiringCustomizer> customizers, TypeDefinitionRegistry registry) {
         Map<String, String> claims = new TreeMap<>();
         List<String> problems = new ArrayList<>();
-        for (RuntimeWiringCustomizer customizer : customizers) {
+        for (GraphQLRuntimeWiringCustomizer customizer : customizers) {
             for (FieldCoordinates claim : customizer.claimedFields()) {
                 String coordinate = claim.getTypeName() + "." + claim.getFieldName();
                 String problem = claimProblem(claim, registry);
@@ -95,7 +95,7 @@ public final class RuntimeWiringCustomizers {
     }
 
     static void apply(RuntimeWiring.Builder builder,
-                      List<RuntimeWiringCustomizer> customizers,
+                      List<GraphQLRuntimeWiringCustomizer> customizers,
                       TypeDefinitionRegistry registry,
                       Map<String, String> claimed) {
         int first = 0;
@@ -109,7 +109,7 @@ public final class RuntimeWiringCustomizers {
         Map<String, Set<String>> fieldsByType = objectTypeFields(registry);
         List<String> replacements = new ArrayList<>();
         Snapshot before = Snapshot.of(builder.build(), fieldsByType.keySet());
-        for (RuntimeWiringCustomizer customizer : customizers.subList(first, customizers.size())) {
+        for (GraphQLRuntimeWiringCustomizer customizer : customizers.subList(first, customizers.size())) {
             String by = " (" + customizer.getClass().getName() + ")";
             try {
                 customizer.customize(builder);

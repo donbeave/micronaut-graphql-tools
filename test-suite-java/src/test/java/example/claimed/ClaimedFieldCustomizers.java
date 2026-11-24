@@ -23,8 +23,8 @@ import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
 import jakarta.inject.Singleton;
 
 import java.util.Set;
@@ -36,7 +36,7 @@ class ClaimedFieldCustomizers {
     static final String ENVIRONMENT = "claimed-field";
 
     @Singleton
-    TypeDefinitionRegistryCustomizer serverVersionField() {
+    GraphQLTypeDefinitionRegistryCustomizer serverVersionField() {
         return registry -> registry.add(ObjectTypeExtensionDefinition.newObjectTypeExtensionDefinition()
                 .name("Query")
                 .fieldDefinition(FieldDefinition.newFieldDefinition()
@@ -47,8 +47,8 @@ class ClaimedFieldCustomizers {
     }
 
     @Singleton
-    RuntimeWiringCustomizer serverVersionFetcher() {
-        return new RuntimeWiringCustomizer() {
+    GraphQLRuntimeWiringCustomizer serverVersionFetcher() {
+        return new GraphQLRuntimeWiringCustomizer() {
             @Override
             public Set<FieldCoordinates> claimedFields() {
                 return Set.of(FieldCoordinates.coordinates("Query", "serverVersion"));

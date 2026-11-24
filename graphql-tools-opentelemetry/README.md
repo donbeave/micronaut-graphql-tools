@@ -17,7 +17,7 @@ metrics are in the sibling module `graphql-tools-micrometer`.
 - One span for each request, made with the OpenTelemetry `Instrumenter` API: named after the operation type, with the
   OpenTelemetry GraphQL attributes, and current in the propagated context so that the spans of resolvers are its children.
 - The field-wrapping classes, which live only in this module: spans for the fields that `micronaut.graphql.tools.tracing.fields`
-  selects, decided once at startup by a `FieldFetcherDecorator`. A property read and a subscription field never get a span.
+  selects, decided once at startup by a `GraphQLFieldFetcherDecorator`. A property read and a subscription field never get a span.
 - The configuration under `micronaut.graphql.tools.tracing`: `enabled`, `fields` and `add-operation-name-to-span-name`.
 - Per-resolver spans are `@NewSpan`, `@ContinueSpan` and `@SpanTag` on the resolver methods, which the module documents and
   tests but does not reimplement.

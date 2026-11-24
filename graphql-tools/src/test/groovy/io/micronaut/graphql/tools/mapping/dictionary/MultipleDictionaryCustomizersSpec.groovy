@@ -20,7 +20,7 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
@@ -86,7 +86,7 @@ type Second {
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     @Order(1)
-    static class FirstTypes implements SchemaMappingDictionaryCustomizer {
+    static class FirstTypes implements GraphQLSchemaMappingDictionaryCustomizer {
         @Override
         void customize(SchemaMappingDictionary dictionary) {
             CALLS << 'FirstTypes'
@@ -97,7 +97,7 @@ type Second {
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     @Order(2)
-    static class SecondTypes implements SchemaMappingDictionaryCustomizer {
+    static class SecondTypes implements GraphQLSchemaMappingDictionaryCustomizer {
         @Override
         void customize(SchemaMappingDictionary dictionary) {
             CALLS << 'SecondTypes'
@@ -108,7 +108,7 @@ type Second {
     @Requires(property = 'spec.name', value = CONFLICTING)
     @Singleton
     @Order(1)
-    static class MapsFirst implements SchemaMappingDictionaryCustomizer {
+    static class MapsFirst implements GraphQLSchemaMappingDictionaryCustomizer {
         @Override
         void customize(SchemaMappingDictionary dictionary) {
             dictionary.registerType('First', First).registerType('Second', Second)
@@ -118,7 +118,7 @@ type Second {
     @Requires(property = 'spec.name', value = CONFLICTING)
     @Singleton
     @Order(2)
-    static class MapsFirstAgain implements SchemaMappingDictionaryCustomizer {
+    static class MapsFirstAgain implements GraphQLSchemaMappingDictionaryCustomizer {
         @Override
         void customize(SchemaMappingDictionary dictionary) {
             dictionary.registerType('First', Other)

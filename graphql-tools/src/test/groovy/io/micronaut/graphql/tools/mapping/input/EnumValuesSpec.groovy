@@ -22,7 +22,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
@@ -279,7 +279,7 @@ enum Shade {
 
     @Requires(property = 'spec.name', value = SPEC_REPLACED)
     @Singleton
-    static class ReplaceValues implements RuntimeWiringCustomizer {
+    static class ReplaceValues implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.type('Color') { it.enumValues(new MapEnumValuesProvider([RED: 'r', GREEN: 'g'])) }

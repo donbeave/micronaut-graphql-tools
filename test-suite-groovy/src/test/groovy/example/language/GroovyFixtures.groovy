@@ -23,9 +23,9 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.scheduling.annotation.ExecuteOn
 import jakarta.inject.Singleton
 
@@ -42,7 +42,7 @@ class GroovyFixtures {
     @Bean
     @Singleton
     @Requires(env = GroovyFixtures.LANGUAGE)
-    TypeDefinitionRegistryCustomizer languageSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer languageSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse('''
                 type Member { name: String! age: Int! active: Boolean! nickname: String greeting: String! }
@@ -65,17 +65,17 @@ class GroovyFixtures {
                     animals: [Animal!]!
                 }
             '''))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean
     @Singleton
     @Requires(env = GroovyFixtures.LANGUAGE)
-    SchemaMappingDictionaryCustomizer languageMappings() {
+    GraphQLSchemaMappingDictionaryCustomizer languageMappings() {
         return { SchemaMappingDictionary dictionary ->
             dictionary.registerType('Circle', Circle).registerType('Square', Square)
                     .registerType('Dog', Dog).registerType('Cat', Cat)
-        } as SchemaMappingDictionaryCustomizer
+        } as GraphQLSchemaMappingDictionaryCustomizer
     }
 }
 

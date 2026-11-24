@@ -22,7 +22,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter
 import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor
@@ -62,7 +62,7 @@ class ObservabilityFixtures {
     @Bean
     @Singleton
     @Requires(env = ObservabilityFixtures.OBSERVED)
-    TypeDefinitionRegistryCustomizer observedFields() {
+    GraphQLTypeDefinitionRegistryCustomizer observedFields() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'extend type Query {\n' +
@@ -75,7 +75,7 @@ class ObservabilityFixtures {
                             'type ObservedBook {\n' +
                             '  title: String!\n' +
                             '}\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
 }

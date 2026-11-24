@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -145,7 +145,7 @@ type MediaSection implements Section {
     static class DictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (schemaMappingDictionary) -> schemaMappingDictionary
                     .registerType("TextSection", TextSection.class)
                     .registerType("MediaSection", MediaSection.class)
@@ -184,7 +184,7 @@ type MediaSection implements Section {
     static class OwnPropertyDictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (schemaMappingDictionary) -> schemaMappingDictionary
                     .registerType("TextSection", SummarizedTextSection.class)
                     .registerType("MediaSection", MediaSection.class)
@@ -309,7 +309,7 @@ type Tag implements Item & Labelled {
     static class TagDictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (schemaMappingDictionary) -> schemaMappingDictionary
                     .registerType("Tag", Tag.class)
         }
@@ -402,7 +402,7 @@ type TextSection implements Section & Node {
     static class NestedDictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (schemaMappingDictionary) -> schemaMappingDictionary
                     .registerType("TextSection", NestedTextSection.class)
         }

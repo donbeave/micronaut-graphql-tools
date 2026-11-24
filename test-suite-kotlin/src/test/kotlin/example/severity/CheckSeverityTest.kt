@@ -20,7 +20,7 @@ import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
@@ -36,7 +36,7 @@ const val CHECK_SEVERITY_ENVIRONMENT = "check-severity"
 // A type that no field returns, which the unreachable-type check finds
 @Singleton
 @Requires(env = [CHECK_SEVERITY_ENVIRONMENT])
-class SeveritySchema : TypeDefinitionRegistryCustomizer {
+class SeveritySchema : GraphQLTypeDefinitionRegistryCustomizer {
     override fun customize(registry: TypeDefinitionRegistry) {
         registry.merge(SchemaParser().parse("type Orphan { id: ID }\n"))
     }

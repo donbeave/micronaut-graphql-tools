@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.execution.FieldDescriptor
-import io.micronaut.graphql.tools.execution.FieldFetcherDecorator
+import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator
 import jakarta.inject.Singleton
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -31,7 +31,7 @@ import java.util.concurrent.CompletionStage
 @Requires(property = "tck.scenario", value = "field-decorator")
 // tag::decorator[]
 @Singleton
-class MarkingDecorator : FieldFetcherDecorator {
+class MarkingDecorator : GraphQLFieldFetcherDecorator {
 
     override fun decorate(field: FieldDescriptor, fetcher: DataFetcher<Any>): DataFetcher<Any> =
         DataFetcher { environment ->

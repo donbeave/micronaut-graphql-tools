@@ -18,12 +18,12 @@ package io.micronaut.graphql.tools.customizer;
 import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer;
 import jakarta.inject.Singleton;
 
-@Requires(property = "spec.name", value = "RuntimeWiringCustomizerSpec.shadowJava")
+@Requires(property = "spec.name", value = "GraphQLRuntimeWiringCustomizerSpec.shadowJava")
 @Singleton
-public class JavaShadowingCustomizer implements RuntimeWiringCustomizer {
+public class JavaShadowingCustomizer implements GraphQLRuntimeWiringCustomizer {
 
     @Override
     public void customize(RuntimeWiring.Builder builder) {

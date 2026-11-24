@@ -21,7 +21,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
-import io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer;
+import io.micronaut.graphql.tools.execution.GraphQLDataLoaderOptionsCustomizer;
 import io.micronaut.graphql.tools.execution.GraphQLContextContributor;
 import io.micronaut.graphql.tools.execution.GraphQLExecutionRequest;
 import jakarta.inject.Singleton;
@@ -113,7 +113,7 @@ public final class DataLoaderOptionsScenario {
     @Requires(property = "tck.scenario", value = "data-loader-options")
     // tag::options[]
     @Singleton
-    public static class PageLoaderOptions implements DataLoaderOptionsCustomizer {
+    public static class PageLoaderOptions implements GraphQLDataLoaderOptionsCustomizer {
 
         @Override
         public String getLoaderName() {

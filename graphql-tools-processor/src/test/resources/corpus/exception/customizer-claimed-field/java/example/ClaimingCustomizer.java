@@ -3,12 +3,12 @@ package example;
 import graphql.schema.FieldCoordinates;
 import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer;
 import jakarta.inject.Singleton;
 import java.util.Set;
 
 @Singleton
-public class ClaimingCustomizer implements RuntimeWiringCustomizer {
+public class ClaimingCustomizer implements GraphQLRuntimeWiringCustomizer {
 
     @Override
     public Set<FieldCoordinates> claimedFields() {

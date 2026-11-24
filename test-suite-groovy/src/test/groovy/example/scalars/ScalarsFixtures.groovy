@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping
 import jakarta.inject.Singleton
 
@@ -43,7 +43,7 @@ class ScalarsFixtures {
     @Bean
     @Singleton
     @Requires(env = ScalarsFixtures.DEFAULTS)
-    TypeDefinitionRegistryCustomizer defaultScalars() {
+    GraphQLTypeDefinitionRegistryCustomizer defaultScalars() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'scalar LocalDate\n' +
@@ -59,14 +59,14 @@ class ScalarsFixtures {
                             '  ticket(id: UUID!): UUID!\n' +
                             '  homepage(url: Url!): Url!\n' +
                             '}\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
     // end::schema[]
 
     @Bean
     @Singleton
     @Requires(env = ScalarsFixtures.RENAMED)
-    TypeDefinitionRegistryCustomizer renamedScalars() {
+    GraphQLTypeDefinitionRegistryCustomizer renamedScalars() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'scalar Date\n' +
@@ -82,13 +82,13 @@ class ScalarsFixtures {
                             '  ticket(id: UUID!): UUID!\n' +
                             '  homepage(url: Url!): Url!\n' +
                             '}\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean
     @Singleton
     @Requires(env = ScalarsFixtures.CONFIGURED)
-    TypeDefinitionRegistryCustomizer configuredScalars() {
+    GraphQLTypeDefinitionRegistryCustomizer configuredScalars() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'scalar Date\n' +
@@ -104,7 +104,7 @@ class ScalarsFixtures {
                             '  ticket(id: UUID!): UUID!\n' +
                             '  homepage(url: Url!): Url!\n' +
                             '}\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean

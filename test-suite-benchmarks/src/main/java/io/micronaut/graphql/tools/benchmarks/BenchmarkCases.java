@@ -188,7 +188,7 @@ public final class BenchmarkCases implements AutoCloseable {
 
     /** The field decorator bean of the application. */
     public enum Decorators {
-        /** None: no {@code FieldFetcherDecorator} bean. */
+        /** None: no {@code GraphQLFieldFetcherDecorator} bean. */
         NONE("none"),
         /** One that is offered every field and selects none. */
         UNSELECTIVE("unselective"),
@@ -240,7 +240,7 @@ public final class BenchmarkCases implements AutoCloseable {
     /**
      * @param loaders      how many batch loader beans no operation uses: 0, 1 or 50
      * @param instrumented which {@code Instrumentation} bean the application has
-     * @param decorators   which {@code FieldFetcherDecorator} bean the application has
+     * @param decorators   which {@code GraphQLFieldFetcherDecorator} bean the application has
      */
     public BenchmarkCases(int loaders, Instrumented instrumented, Decorators decorators) {
         this(loaders, instrumented, decorators, false);
@@ -249,7 +249,7 @@ public final class BenchmarkCases implements AutoCloseable {
     /**
      * @param loaders      how many batch loader beans no operation uses: 0, 1 or 50
      * @param instrumented which {@code Instrumentation} bean the application has
-     * @param decorators   which {@code FieldFetcherDecorator} bean the application has
+     * @param decorators   which {@code GraphQLFieldFetcherDecorator} bean the application has
      * @param security     whether the security module is installed: its context contributor and its decorator of {@code @Secured} fields
      */
     public BenchmarkCases(int loaders, Instrumented instrumented, Decorators decorators, boolean security) {

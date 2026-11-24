@@ -19,7 +19,7 @@ import graphql.schema.DataFetcher;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.execution.FieldDescriptor;
 import io.micronaut.graphql.tools.execution.FieldExecutionKind;
-import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
+import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,20 +27,20 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Applies the {@link FieldFetcherDecorator} beans to a field at startup. The first decorator in order is the outermost.
+ * Applies the {@link GraphQLFieldFetcherDecorator} beans to a field at startup. The first decorator in order is the outermost.
  * A field that no decorator selects is returned as it came: the same instance. With no decorator bean the call
  * returns at once.
  */
 @Internal
-public final class FieldFetcherDecorators {
+public final class GraphQLFieldFetcherDecorators {
 
-    private final List<FieldFetcherDecorator> innermostFirst;
+    private final List<GraphQLFieldFetcherDecorator> innermostFirst;
 
     /**
      * @param decorators the decorator beans, outermost first
      */
-    public FieldFetcherDecorators(List<FieldFetcherDecorator> decorators) {
-        List<FieldFetcherDecorator> reversed = new ArrayList<>(decorators);
+    public GraphQLFieldFetcherDecorators(List<GraphQLFieldFetcherDecorator> decorators) {
+        List<GraphQLFieldFetcherDecorator> reversed = new ArrayList<>(decorators);
         Collections.reverse(reversed);
         this.innermostFirst = reversed;
     }
@@ -52,16 +52,16 @@ public final class FieldFetcherDecorators {
      */
     public DataFetcher<Object> apply(FieldDescriptor field, DataFetcher<Object> fetcher) {
         DataFetcher<Object> result = fetcher;
-        for (FieldFetcherDecorator decorator : innermostFirst) {
+        for (GraphQLFieldFetcherDecorator decorator : innermostFirst) {
             if (offered(decorator, field)) {
                 result = Objects.requireNonNull(decorator.decorate(field, result),
-                        () -> "FieldFetcherDecorator " + decorator.getClass().getName() + " returned null for " + field.coordinates());
+                        () -> "GraphQLFieldFetcherDecorator " + decorator.getClass().getName() + " returned null for " + field.coordinates());
             }
         }
         return result;
     }
 
-    private static boolean offered(FieldFetcherDecorator decorator, FieldDescriptor field) {
+    private static boolean offered(GraphQLFieldFetcherDecorator decorator, FieldDescriptor field) {
         if (field.kind() == FieldExecutionKind.TRIVIAL) {
             return decorator.decoratesTrivialFields();
         }
