@@ -507,6 +507,11 @@ at startup to that path (directories are created), which binds the schema at sta
 the line kinds, the sorting, the escape of non-ASCII characters and the schema hash, which does not depend on the order
 of the schema files or of the extensions.
 
+With Micronaut Management on the classpath and the manifest recorded, the read-only endpoint `graphql-binding`
+(`GET /graphql-binding`) serves it as JSON: the `header` lines and the `lines` of the file output. The standard
+`endpoints.graphql-binding.enabled` and `endpoints.graphql-binding.sensitive` keys apply. Without Micronaut Management
+nothing is registered.
+
 ```
 # graphql-binding-manifest 2
 # binder: micronaut-graphql-tools 1.0.0

@@ -22,6 +22,21 @@ micronaut:
 
 Without `path` the manifest is recorded and can be read from the `BindingManifest` bean, and nothing is written or logged.
 
+[[manifestEndpoint]]
+== Management endpoint
+
+An application that has Micronaut Management on its classpath can read the manifest while it runs. Add `io.micronaut:micronaut-management` and set `micronaut.graphql.tools.manifest.enabled` to `true`: `GET /graphql-binding` answers with the manifest as JSON, read-only.
+
+[source,json]
+----
+{
+  "header": ["# graphql-binding-manifest 2", "# binder: micronaut-graphql-tools 1.0.0", "# graphql-java: 22.4", "# schema-sha256: 207c5aaec4894a775f03ae20eaa6b97ba4293ed6608936aa65c812af3a469469"],
+  "lines": ["Query -> object ; - ; - ; -", "Query.version: String -> resolver ; example.graphql.query.VersionQuery#version() ; java.lang.String ; java.lang.String"]
+}
+----
+
+The `header` and the `lines` are those of the text format below, so the file output and the endpoint never differ. The standard keys of Micronaut endpoints apply: `endpoints.graphql-binding.enabled` switches the endpoint off, and `endpoints.graphql-binding.sensitive` decides whether it needs authentication when Micronaut Security is present. Without Micronaut Management, or without `manifest.enabled`, no endpoint is registered and the start is unchanged. The manifest is rendered when the endpoint is first read, so a request to the GraphQL endpoint never pays for it. The JSON is written by the JSON codec of the application: the library adds none.
+
 == The format
 
 A manifest is a text file: UTF-8 without a byte order mark, every line ended by `LF`, and the last line ended too. The characters of the text are ASCII (see <<manifestAscii,ASCII only>>). It has a header of four lines and a body of any number of lines.
