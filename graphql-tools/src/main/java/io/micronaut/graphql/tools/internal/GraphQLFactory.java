@@ -47,6 +47,7 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import io.micronaut.graphql.tools.internal.checks.DirectiveWiringCheck;
 import io.micronaut.graphql.tools.internal.protection.DocumentCache;
+import io.micronaut.graphql.tools.internal.protection.GetMutationGuard;
 import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestHolder;
 import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry;
@@ -168,9 +169,8 @@ public final class GraphQLFactory {
         }
         GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema)
                 .defaultDataFetcherExceptionHandler(exceptionHandler);
-        if (protection.getDocumentCacheSize() > 0) {
-            builder.preparsedDocumentProvider(new DocumentCache(protection.getDocumentCacheSize()));
-        }
+        builder.preparsedDocumentProvider(new GetMutationGuard(protection.getDocumentCacheSize() > 0
+                ? new DocumentCache(protection.getDocumentCacheSize()) : null));
         List<Instrumentation> chain = new ArrayList<>(instrumentations);
         if (protection.getMaxDepth() > 0) {
             chain.add(new MaxQueryDepthInstrumentation(protection.getMaxDepth()));
