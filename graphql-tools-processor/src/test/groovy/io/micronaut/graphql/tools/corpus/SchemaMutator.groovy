@@ -164,7 +164,8 @@ final class SchemaMutator {
 
     private static Type<?> toggleList(Type<?> type) {
         if (type instanceof ListType) {
-            return ((ListType) type).type
+            Type<?> element = ((ListType) type).type
+            return element instanceof NonNullType ? ((NonNullType) element).type : element
         }
         if (type instanceof NonNullType && ((NonNullType) type).type instanceof ListType) {
             Type<?> element = ((ListType) ((NonNullType) type).type).type
@@ -250,14 +251,26 @@ final class SchemaMutator {
             result.add(new Mutant('shuffle-files', false, 'files', [], reversed))
             List<Definition> all = documents.values().collectMany { it.definitions }
             Collections.shuffle(all, new Random(seed))
+            List<List<Definition>> original = documents.values().collect { it.definitions }
+            List<List<Definition>> parts = distribute(all, names.size())
+            if (parts == original) {
+                Collections.rotate(all, 1)
+                parts = distribute(all, names.size())
+            }
             Map<String, String> spread = new LinkedHashMap<>()
             names.eachWithIndex { String name, int i ->
-                List<Definition> part = all.findAll { all.indexOf(it) % names.size() == i }
+                List<Definition> part = parts.get(i)
                 spread.put(name, AstPrinter.printAst(documents.get(name).transform { Document.Builder b -> b.definitions(part) }))
             }
             result.add(new Mutant('shuffle-across-files', false, 'files', [], spread))
         }
         return result
+    }
+
+    private static List<List<Definition>> distribute(List<Definition> definitions, int count) {
+        List<List<Definition>> parts = (0..<count).collect { (List<Definition>) new ArrayList<Definition>() }
+        definitions.eachWithIndex { Definition definition, int i -> parts.get(i % count).add(definition) }
+        return parts
     }
 
     private static Mutant equivalent(String kind, String coordinate, Map<String, String> files, String file, Document changed) {
