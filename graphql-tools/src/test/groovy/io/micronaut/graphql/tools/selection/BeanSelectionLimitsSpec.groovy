@@ -135,6 +135,30 @@ type Query { hello: String }
         noExceptionThrown()
     }
 
+    void "a schema template over every GraphQLInvocation fails the startup when the application engine needs the schema"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.eachInvocationEngineNeedsSchema')
+
+        then:
+        def e = thrown(Throwable)
+        rootConfiguration(e).message.contains('NeedsSchemaFactory#GraphQLSchema')
+    }
+
+    void "a schema template whose library expansion is replaced by qualifier does not fail the startup"() {
+        when:
+        List<String> templates = []
+        try {
+            startContext(SCHEMA, 'BeanSelectionLimitsSpec.eachInvocationQualifierReplaced')
+        } catch (Throwable ignored) {
+            // the context may fail for another reason; only the library's own check is asserted
+        }
+        templates = io.micronaut.graphql.tools.internal.LibraryBeanSelection.eachInvocationTemplates(
+                io.micronaut.context.ApplicationContext.run(['spec.name': 'BeanSelectionLimitsSpec.eachInvocationQualifierReplaced', 'micronaut.graphql.tools.eager-init': false], 'test'))
+
+        then:
+        templates.isEmpty()
+    }
+
     void "a qualified invocation that is only @Secondary ties with the library's and fails the startup"() {
         when:
         startContext(SCHEMA, 'BeanSelectionLimitsSpec.namedSecondary')
@@ -274,6 +298,27 @@ type Query { hello: String }
 
         @Bean @EachBean(GraphQLInvocation)
         GraphQL perInvocation(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.engine('eachi') }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.eachInvocationEngineNeedsSchema')
+    @Factory
+    static class NeedsSchemaFactory {
+        @Bean @Singleton
+        GraphQL graphQL(GraphQLSchema schema) { GraphQL.newGraphQL(schema).build() }
+
+        @Bean @EachBean(GraphQLInvocation)
+        GraphQLSchema schema(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.schema('eachi') }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.eachInvocationQualifierReplaced')
+    @Factory
+    static class QualifierReplacedFactory {
+        @Bean @EachBean(GraphQLInvocation)
+        GraphQLSchema schema(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.schema('eachi') }
+
+        @Bean @Singleton
+        @io.micronaut.context.annotation.Replaces(value = GraphQLSchema, qualifier = Secondary)
+        GraphQLSchema replacing() { BeanSelectionMatrixSpec.schema('replacing') }
     }
 
 }

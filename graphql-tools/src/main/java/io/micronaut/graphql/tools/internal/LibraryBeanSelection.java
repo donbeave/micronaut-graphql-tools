@@ -242,29 +242,43 @@ public final class LibraryBeanSelection {
      * @return the description of each such template
      */
     public static List<String> eachInvocationTemplates(BeanContext context) {
+        BeanDefinition<?> library = context.findBeanDefinition(LibraryGraphQLInvocation.class).orElse(null);
         List<Provided> candidates = new ArrayList<>();
         for (BeanDefinitionReference<?> reference : context.getBeanDefinitionReferences()) {
             Class<?> beanType = reference.getBeanType();
             if ((GraphQLSchema.class.isAssignableFrom(beanType) || GraphQL.class.isAssignableFrom(beanType)) && reference.isPresent()) {
                 BeanDefinition<?> definition = reference.load();
                 if (definition != null && !isLibrary(definition) && reference.isEnabled(context)) {
-                    candidates.add(new Provided(definition));
+                    // the template's expansion for the library's invocation carries the library's qualifier
+                    candidates.add(library != null && eachInvocation(definition)
+                            ? new Provided(definition, library.getDeclaredQualifier(), false, library)
+                            : new Provided(definition));
                 }
             }
         }
-        List<String> templates = new ArrayList<>();
-        // an application engine that does not itself depend on the invocation breaks the cycle, for both kinds of template
+        // an application engine breaks the cycle unless it needs the schema template or is itself a template
         Provided engine = competitor(context, GraphQL.class);
         boolean libraryEngine = engine == null;
-        boolean cyclicEngine = libraryEngine || eachInvocation(engine.definition());
+        boolean schemaCycle = libraryEngine || requires(engine.definition(), GraphQLSchema.class);
+        boolean engineCycle = libraryEngine || eachInvocation(engine.definition()) || requires(engine.definition(), GraphQLInvocation.class);
+        List<String> templates = new ArrayList<>();
         for (Provided candidate : withoutReplaced(candidates)) {
             BeanDefinition<?> definition = candidate.definition();
             boolean engineTemplate = GraphQL.class.isAssignableFrom(definition.getBeanType());
-            if ((engineTemplate ? cyclicEngine : libraryEngine) && eachInvocation(definition)) {
+            if ((engineTemplate ? engineCycle : schemaCycle) && eachInvocation(definition)) {
                 templates.add(describe(definition));
             }
         }
         return templates;
+    }
+
+    private static boolean requires(BeanDefinition<?> definition, Class<?> type) {
+        for (Class<?> component : definition.getRequiredComponents()) {
+            if (type.isAssignableFrom(component)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean eachInvocation(BeanDefinition<?> definition) {
