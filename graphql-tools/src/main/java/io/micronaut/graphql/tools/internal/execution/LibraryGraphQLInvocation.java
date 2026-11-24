@@ -49,7 +49,6 @@ import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutClaim;
 import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutScheduler;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
-import io.micronaut.http.context.ServerHttpRequestContext;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.executor.ExecutorSelector;
 import jakarta.inject.Singleton;
@@ -184,11 +183,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             throw new IllegalStateException("The library's GraphQLInvocation is not the one that serves the transport: the application "
                     + "provides its own GraphQLInvocation, so this bean was not set up. Call the application's invocation instead.");
         }
-        PropagatedContext propagated = PropagatedContext.getOrEmpty();
-        if (request != null && propagated.find(ServerHttpRequestContext.class).isEmpty()) {
-            propagated = propagated.plus(new ServerHttpRequestContext(request));
-        }
-        PropagatedContext captured = propagated;
+        PropagatedContext captured = ExecutionState.withRequest(PropagatedContext.getOrEmpty(), transport, request);
         Mono<ExecutionResult> result = Mono.deferContextual(context -> {
             ExecutionState state = new ExecutionState(captured, transport, request, response, attributes, executor, customizerName);
             if (disconnectWatcher != null && request != null && transport == GraphQLTransport.HTTP) {
