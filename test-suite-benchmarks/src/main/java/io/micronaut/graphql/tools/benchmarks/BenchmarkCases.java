@@ -46,6 +46,7 @@ import io.micronaut.graphql.tools.security.GraphQLSecurity;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.context.ApplicationContextBuilder;
 import io.micronaut.graphql.tools.internal.execution.ExecutionState;
+import io.micronaut.graphql.tools.internal.http.GraphQLHttpResponses;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Circle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Item;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.PlainItem;
@@ -88,6 +89,8 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String INTERFACE_RESOLUTION = "interfaceResolution";
     public static final String DIRECTIVE_WRAPPED_FETCHER = "directiveWrappedFetcher";
     public static final String ASYNC_BOUNDARY_DONE = "asyncBoundaryDone";
+    /** The choice of the response media type from the {@code Accept} header of an HTTP request. */
+    public static final String ACCEPT_NEGOTIATION = "acceptNegotiation";
     public static final String ASYNC_BOUNDARY_OTHER_THREAD = "asyncBoundaryOtherThread";
     /** The future of an async field that is not done, without the boundary: what the other-thread case subtracts. */
     public static final String ASYNC_PENDING_SOURCE = "asyncPendingSource";
@@ -323,6 +326,15 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(SECURITY_SECURED_FIELD_PASSES, fetch("Query", "secured", null, Map.of()));
         ops.put(DIRECTIVE_WRAPPED_FETCHER, fetch("Query", "guarded", null, Map.of()));
         ops.put(ASYNC_BOUNDARY_DONE, fetch("Query", "asyncDone", null, Map.of()));
+        String[] accepts = {null, "*/*", "application/json", "application/graphql-response+json",
+            "application/graphql-response+json, application/json;q=0.9", "text/html, */*;q=0.1"};
+        ops.put(ACCEPT_NEGOTIATION, () -> {
+            Object chosen = null;
+            for (String accept : accepts) {
+                chosen = GraphQLHttpResponses.negotiate(accept);
+            }
+            return chosen;
+        });
         ops.put(ASYNC_BOUNDARY_OTHER_THREAD, pendingFetch("Query", "asyncPending"));
         Resolvers.Query resolver = new Resolvers.Query();
         ops.put(ASYNC_PENDING_SOURCE, resolver::asyncPending);
