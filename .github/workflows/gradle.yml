@@ -233,7 +233,7 @@ jobs:
         with:
           tools: java
       - name: Run native tests
-        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-java:nativeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-daemon --no-parallel -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           GRAALVM_QUICK_BUILD: 'true'
           PREDICTIVE_TEST_SELECTION: 'false'
@@ -245,8 +245,6 @@ jobs:
           path: |
             test-suite-*/build/test-results/test-native/TEST-*.xml
             test-suite-*/build/test-results/test-native/
-            test-suite-*/build/test-results/serdeTest-native/TEST-*.xml
-            test-suite-*/build/test-results/serdeTest-native/
           if-no-files-found: ignore
           retention-days: 7
 
