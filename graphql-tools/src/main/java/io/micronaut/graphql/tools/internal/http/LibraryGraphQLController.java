@@ -80,7 +80,7 @@ public final class LibraryGraphQLController {
      * @param request       the request
      * @return the response
      */
-    @Get(produces = MediaType.ALL)
+    @Get(produces = MediaType.ALL, single = true)
     public Publisher<MutableHttpResponse<String>> get(@QueryValue("query") String query,
                                                       @Nullable @QueryValue("operationName") String operationName,
                                                       @Nullable @QueryValue("variables") String variables,
@@ -100,7 +100,7 @@ public final class LibraryGraphQLController {
      * @param request       the request
      * @return the response
      */
-    @Post(consumes = MediaType.ALL, produces = MediaType.ALL)
+    @Post(consumes = MediaType.ALL, produces = MediaType.ALL, single = true)
     public Publisher<MutableHttpResponse<String>> post(@Nullable @QueryValue("query") String query,
                                                        @Nullable @QueryValue("operationName") String operationName,
                                                        @Nullable @QueryValue("variables") String variables,

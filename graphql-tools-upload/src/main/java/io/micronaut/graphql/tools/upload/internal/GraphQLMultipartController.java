@@ -84,7 +84,7 @@ public final class GraphQLMultipartController {
      * @param request the request
      * @return the response of the operation, or a {@code 400} when the request does not follow the specification
      */
-    @Post(consumes = MediaType.MULTIPART_FORM_DATA, produces = MediaType.ALL)
+    @Post(consumes = MediaType.MULTIPART_FORM_DATA, produces = MediaType.ALL, single = true)
     public Publisher<MutableHttpResponse<String>> post(@Body MultipartBody body, HttpRequest<?> request) {
         MediaType type = GraphQLHttpResponses.negotiate(request);
         return Mono.defer(() -> {
