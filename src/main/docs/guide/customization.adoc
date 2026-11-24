@@ -1,5 +1,42 @@
-The library creates the beans that run a schema: the `GraphQLSchema`, the `GraphQL` engine and the `GraphQLInvocation`. An application replaces any of them by declaring its own bean of that type. This page says which application bean wins, and why the three types are not selected the same way.
+The library creates the beans that run a schema: the `GraphQLSchema`, the `GraphQL` engine and the `GraphQLInvocation`. An application changes what the library builds with customizers, or replaces any of the beans by declaring its own bean of that type. This page lists the customizers first, and then says which application bean wins, and why the three types are not selected the same way.
 
+== Customizers
+
+Three kinds of beans change what the library builds. Several beans of one kind can exist, and they run lowest order first (`@Order` on the bean class or factory method, or `Ordered#getOrder()`).
+
+[cols="3,4,3", options="header"]
+|===
+|Bean type |Receives |Runs
+|`GraphQLTypeDefinitionRegistryCustomizer` |a copy of the `TypeDefinitionRegistry` (the registry bean itself stays unchanged) |before the binding: a type or a field added here is bound like any other
+|`GraphQLRuntimeWiringCustomizer` |the `RuntimeWiring.Builder` that holds the library's wiring |after the binding, before the schema is generated
+|`GraphQLSchemaCustomizer` |the generated `GraphQLSchema`, and returns the schema to use |last
+|===
+
+A `GraphQLRuntimeWiringCustomizer` adds wiring: scalars, directive wirings, field visibility. When it replaces a data fetcher, a default data fetcher, a type resolver or a scalar that the library registered, or puts one for a field or type that the library wired into a code registry, the startup fails with `[runtime-wiring-override]`, which names each replacement and the customizer that made it. The check runs when the application has a `GraphQLRuntimeWiringCustomizer` bean. Code registry entries for fields that the library does not wire are accepted.
+
+To change the generated schema, use a `GraphQLSchemaCustomizer`; the library does not check what it changes. To wrap data fetchers, use a `GraphQLFieldFetcherDecorator` (see <<execution,Execution>>) or a `SchemaDirective` (see <<directives,Directives>>). A `GraphQLSchemaCustomizer` of the example suites handles the `@audit` directive of the schema definition, in the snippet of the <<directives,Directives>> page.
+
+=== Fields a customizer serves
+
+A field that only a hand-written `DataFetcher` serves has no Java member, so the startup would fail with `[field-not-bound]`. The customizer declares the field by claiming it in `claimedFields()`, and registers the data fetcher in `customize`. The library does not bind or check a claimed field, and a data fetcher that the customizer registers for it is not a replacement.
+
+* A claim names a field of an object type of the schema, including a field that `extend type` adds. A claim for a type or a field that the schema does not define, or for an interface, fails the startup with `[invalid-claimed-fields]`, which names each coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
+* `claimedFields()` is read once, at startup, before a field is bound. A claimed field has a line of the kind `claimed` in the <<manifest,binding manifest>>, which names the customizer.
+* A type that a claimed field alone returns is not reached by the binding: list it in `allow.unreachable`, or bind it through another field.
+* The compile-time checks cannot see a claim, because customizers are runtime beans.
+
+== Configuring the `GraphQL` bean
+
+`GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean, which the library creates with its own schema, before it is built, lowest order first. They set a `PreparsedDocumentProvider`, the execution strategies, the default `DataFetcherExceptionHandler` and the like; the <<errors,Errors>> page has an example.
+
+The library collects the `Instrumentation` beans and installs them before the customizers run: one bean is installed as it is, and several are chained in a `ChainedInstrumentation`, lowest order first. With no `Instrumentation` bean the library sets none, and graphql-java keeps its default. A customizer that calls `instrumentation(...)` replaces what the beans installed, so register an instrumentation as a bean.
+
+== Building the `GraphQL` bean yourself
+
+An application that declares its own `GraphQL` bean keeps the library's `GraphQLSchema` and builds the engine from it (see <<customizationReplace,Replacing the schema or the engine>>). A `GraphQLBuilderCustomizer` configures the builder of the library's bean, so it does not apply to a bean that the application creates.
+
+
+[[customizationReplace]]
 == Replacing the schema or the engine
 
 The library's `GraphQLSchema` and `GraphQL` beans are `@Primary`, and each one is created only when the application has no bean of that type that competes for an unqualified injection point: a bean without a qualifier, or a `@Primary` one. Such a bean wins, and the library does not create its own. A bean with a qualifier, such as `@Named("admin")`, is a secondary bean that is injected by its qualifier. It does not replace the library's bean, so an unqualified `GraphQLSchema` or `GraphQL` injection point still gets the library's.

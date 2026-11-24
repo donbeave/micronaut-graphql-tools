@@ -26,6 +26,7 @@ import org.dataloader.DataLoader;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 
+// tag::type-resolver[]
 @Singleton
 @GraphQLTypeResolver(Book.class)
 public class BookResolver {
@@ -40,6 +41,7 @@ public class BookResolver {
     public CompletionStage<List<BookSeller>> sellers(Book book, DataLoader<String, List<BookSeller>> dataLoader) {
         return dataLoader.load(book.getId());
     }
+// end::type-resolver[]
 
     @Override
     public String toString() {
@@ -56,4 +58,6 @@ public class BookResolver {
         return BookResolver.class.hashCode();
     }
 
+// tag::type-resolver[]
 }
+// end::type-resolver[]

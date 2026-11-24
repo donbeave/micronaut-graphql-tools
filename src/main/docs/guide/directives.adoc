@@ -1,1 +1,71 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+A directive that the schema applies has an effect at runtime when a wiring implements it. The library applies a `SchemaDirectiveWiring` of graphql-java through a `SchemaDirective` bean, and it checks that each directive the schema applies has a wiring. This page says how to register one, in which order the wirings run, and how to accept a directive that has no effect on purpose.
+
+The example schema declares `@upper` and `@tagged(label)` for fields, and `@audit` for the schema itself:
+
+[source,graphql]
+----
+directive @audit on SCHEMA
+directive @upper on FIELD_DEFINITION
+directive @tagged(label: String!) on FIELD_DEFINITION
+
+type Query {
+  shout: String! @upper
+  tagged: String! @tagged(label: "t")
+}
+----
+
+snippet::example.graphql.directive.DirectiveWirings[project-base="test-suite", source="main", tags="directives", indent="0"]
+
+The factory registers `upper` with `SchemaDirective.named`, `tagged` with `SchemaDirective.everyElement`, and a `GraphQLSchemaCustomizer` that handles `@audit`, which no wiring can reach (see below).
+
+== The two kinds of registration
+
+* `SchemaDirective.named(name, wiring)` binds the wiring to one directive name. graphql-java calls it for the elements that apply that directive (`RuntimeWiring.Builder#directive`). Two such beans for one name fail the startup with `[duplicate-directive-wiring]`, and a `GraphQLRuntimeWiringCustomizer` that replaces such a wiring fails it with `[runtime-wiring-override]`.
+* `SchemaDirective.everyElement(names, wiring)` registers a wiring that graphql-java calls for each schema element, and decides itself what to do (`RuntimeWiring.Builder#directiveWiring`). The names say which directives it implements. The wiring returns the element unchanged unless the element carries one of those directives, because a wiring that wraps the data fetchers of every element adds a call to each of them. Prefer `named` when one directive is enough.
+
+A directive has either one `named` bean or any number of `everyElement` beans. A `named` bean and an `everyElement` bean that lists the same name would apply the directive twice, so the startup fails with `[duplicate-directive-wiring]`, which names the directive and both wirings. Remove the `named` bean, or take the name out of the `everyElement` wiring.
+
+== The order of wirings
+
+* The `named` wirings run before the `everyElement` wirings, so a `named` wiring is the innermost one around a data fetcher.
+* `@Order` on a `named` bean has no effect: the library does not sort them, and they run in the order in which the schema applies the directives to the element.
+* The `everyElement` wirings run lowest order first (`@Order` or `Ordered` on the `SchemaDirective` bean), so the first one wraps a data fetcher innermost.
+
+To wrap the data fetchers of selected fields, a `GraphQLFieldFetcherDecorator` bean is the cheaper choice: see <<execution,Execution>>.
+
+== A wiring needs a registration
+
+A `SchemaDirectiveWiring` bean is not applied on its own. When no `SchemaDirective` bean wraps it and no `GraphQLRuntimeWiringCustomizer` registers it, the startup fails with `[unwrapped-directive-wiring]`, which names the bean. The check runs after the customizers. To keep a wiring as a bean, inject it into the factory method of its `SchemaDirective`.
+
+== Applied directives and wirings
+
+The check `unwired-directive` fails the startup when the schema applies a directive that nothing wires, and lists each such directive with the places where the schema applies it. A directive counts as wired when:
+
+* a `SchemaDirective` bean names it,
+* a `GraphQLRuntimeWiringCustomizer` registers a wiring for it with `RuntimeWiring.Builder#directive`, or
+* `micronaut.graphql.tools.resolver-directives` lists it (see <<binding,Binding>>).
+
+Set the severity with `micronaut.graphql.tools.checks.unwired-directive` (see <<checkSeverity,Check Severity>>): a directive that guards access is a reason to keep it at `fail`.
+
+A directive that has no effect at runtime, because it is documentation or is enforced elsewhere, is listed in `micronaut.graphql.tools.allow.inert-directives`, by name or with `*` as a pattern (`fed*`). A pattern has to match a declared directive without a wiring, so a stale entry fails the startup.
+
+[configuration]
+----
+micronaut:
+  graphql:
+    tools:
+      allow:
+        inert-directives:
+          - legacy
+          - fed*
+----
+
+`SchemaDirectiveWiring` has no hook for the schema definition or for the argument of a directive definition, so a wiring does not count there. A directive applied on `schema { }`, as `@audit` above, fails the check unless `allow.inert-directives` lists it or `allow.schema-customizer-directives` lists it because a `GraphQLSchemaCustomizer` handles it. The second list takes exact names of declared directives, and each has to be applied on the schema definition or on a directive argument: an entry that the schema does not apply there fails the startup.
+
+The check leaves out the built-in directives of graphql-java (`@deprecated`, `@specifiedBy`, `@oneOf`, `@include` and `@skip`), directives that the schema declares and never applies, and directives that it applies without declaring them (graphql-java reports those). A `SchemaDirective` name that the schema does not declare is logged at INFO and not used, so a module that is shared by several schemas can wire more directives than one schema applies.
+
+An `unwired-directive` finding is also a line of the <<manifest,binding manifest>>. The compile-time checks do not run this check, because it needs the whole program (see <<compileTimeLimits,Limits>>).
+
+== Cost
+
+An `everyElement` wiring is called for each schema element, so it returns the elements that do not carry its directive unchanged. A wiring that wraps a data fetcher adds one call to that field for each request, so wrap the fields that need it.

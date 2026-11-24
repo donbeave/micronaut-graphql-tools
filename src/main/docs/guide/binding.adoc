@@ -1,1 +1,97 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+Binding is the step that connects each field of the schema to Java, Kotlin or Groovy code. It runs once, when the application context starts (see <<startupErrors,Startup Errors>>), and a request does no lookup of names. This page says where a field gets its value from and which rules decide between candidates. The pages that follow it go deeper: <<resolverContracts,Resolver Contracts>>, <<typeSystem,Type System>>, <<models,Model Classes>>, <<inputs,Inputs>> and <<resolverParameters,Resolver Parameters>>.
+
+== Where a field gets its value
+
+A field of an object type is served by one of three things:
+
+* a *root resolver* method, for a field of `Query`, `Mutation` or `Subscription`;
+* a *member* of the Java type that the object type is mapped to: a property (a getter, a Kotlin or Groovy property) or a method annotated with `@GraphQLField`;
+* a *type resolver* method, for a field that the Java type does not hold or computes from other data.
+
+A field that none of them serves fails the startup with `[field-not-bound]`, and the message names the coordinate. A field that is claimed by a `GraphQLRuntimeWiringCustomizer` is served by a data fetcher you write instead (see <<customization,Customization>>).
+
+== Root resolvers
+
+A root resolver is a bean annotated with `@GraphQLRootResolver`. Its public methods bind the fields of the operation types by name, and the parameters bind the arguments (see <<inputs,Inputs>>):
+
+snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="main", tags="resolver", indent="0"]
+
+A method of a bean without coordinates binds the field of its name on each root operation type that has one. When one method then serves fields of several operation types, the check `root-method-several-operations` reports it (see <<strictMode,Strict Mode>>). `@GraphQLSchemaCoordinate("Query.status")` on a method binds that field and no other, so two methods of different operation types can have the field name in common. The marker interfaces on the <<resolverContracts,Resolver Contracts>> page fix the operation type in the type of the contract instead.
+
+When more than one method can bind one root field (two beans with a method of that name, or two methods with one coordinate), the startup fails with `[multiple-methods-found]`, which names the field and each method. `@Replaces(<original>.class)` on the class that should win drops the other bean.
+
+== Object types and models
+
+A Java class stands for an object type when a field returns it. The binding reads its properties through the bean introspection that Micronaut generates at compile time, so a class that you write carries `@GraphQLType`, and a class that you cannot annotate is listed with `@GraphQLModels` (see <<models,Model Classes>>). A class that backs an object type and has no introspection fails the startup with `[class-not-introspected]`.
+
+A property is read through the introspection; a method is read as a field when it carries `@GraphQLField`. `@GraphQLIgnore` on a member removes it from the candidates.
+
+== Type resolvers
+
+A type resolver is a bean annotated with `@GraphQLTypeResolver` that names the Java type it serves. The first parameter of each method is the source object, and the other parameters are bound as they are for a root resolver:
+
+snippet::example.graphql.type.resolver.BookResolver[project-base="test-suite", source="main", tags="type-resolver", indent="0"]
+
+`sellers` serves the field `Book.sellers`, which the `Book` class does not hold. The `DataLoader` parameter is bound by the library (see <<dataLoaders,Data Loaders>>).
+
+For a Java interface that an SDL interface is mapped to, a type resolver of that interface serves the field on each implementing object type that does not bind it itself. The coordinate of such a method, when it declares one, is the field of the interface. When an implementation binds the same field with a member or a resolver of its own, the startup fails with `[multiple-methods-found]`.
+
+== A property or a type resolver
+
+A field can have both a member of the Java type and a type resolver method. `micronaut.graphql.tools.precedence` decides which one serves it:
+
+[cols="1,4", options="header"]
+|===
+|Value |Effect
+|`fail` (the default) |The startup fails with `[precedence-ambiguity]`, which names the field and both members.
+|`property-first` |The member of the Java type serves the field, and the type resolver method is not called.
+|`resolver-first` |The type resolver method serves the field, and the member is not read.
+|===
+
+The two lenient values log each ambiguity at WARN and write a `!precedence-ambiguity` line to the <<manifest,binding manifest>>. A field can say which side it wants, and then the setting is not consulted:
+
+* a directive listed in `micronaut.graphql.tools.resolver-directives` on the field makes its type resolver method serve it (a field that has just a member fails with `[resolver-required]`);
+* `@GraphQLSchemaCoordinate("Item.price")` on the type resolver method declares the coordinate;
+* `@GraphQLIgnore` on the member removes it from the candidates.
+
+[source,graphql]
+----
+directive @computed on FIELD_DEFINITION
+
+type Item {
+  name: String!
+  price: Long! @computed
+}
+----
+
+[configuration]
+----
+micronaut:
+  graphql:
+    tools:
+      resolver-directives:
+        - computed
+----
+
+`precedence` is independent of `strict`: `strict: false` does not relax it. See <<precedence,Precedence>> for the reference.
+
+[[bindingRenaming]]
+== A member with another name
+
+A member serves the field of its own name unless it says otherwise. `@GraphQLField("name")` binds a member to a field with another name, which is the way to serve a field called `class`, `default` or `hashCode`:
+
+snippet::example.rename.RenameFixtures[project-base="test-suite", source="test", tags="parcel", indent="0"]
+
+On a resolver method, `@GraphQLSchemaCoordinate("Type.field")` plays that role, and `micronaut.graphql.tools.resolver-accessor-prefixes` lets a resolver method named `getX` or `isX` serve the field `x`. The <<renaming,configuration reference>> lists the three forms and their limits.
+
+== Return types and arguments
+
+A field may return the mapped type inside the wrappers that the <<typeSystem,Type System>> page lists (`CompletionStage`, `Publisher`, `DataFetcherResult` and `Optional`). The parameters of a method are bound by name, and the <<resolverParameters,Resolver Parameters>> page lists the kinds that the library fills in, such as the `DataFetchingEnvironment`.
+
+== Resolver scopes
+
+A resolver is an ordinary bean, so its scope decides which instance is used. A singleton resolver, or one behind a scoped proxy such as `@RequestScope` or `@Refreshable`, is looked up once at binding and held. A bean of another scope, such as `@Prototype`, is looked up again for each call of the field. A resolver keeps the scope of the beans it uses as well:
+
+snippet::example.tck.BeanScopesScenario[project-base="test-suite", source="test", tags="scopes", indent="0"]
+
+`@RequestScope` needs a current HTTP request. A field fetched outside one, such as a field of a subscription over a WebSocket connection, fails with `IllegalStateException`. Kotlin classes of a proxied scope are `open`, as for any Micronaut proxy.
