@@ -69,7 +69,7 @@ public final class EagerBinding implements ApplicationEventListener<StartupEvent
             throw new ConfigurationException("The application declares " + String.join(", ", templates)
                     + " with @EachBean(GraphQLInvocation.class), which the library's own invocation matches too, and that"
                     + " invocation needs the GraphQL engine that such a bean provides. Fix: target the application's own bean"
-                    + " type instead of GraphQLInvocation, or declare a GraphQLSchema or GraphQL bean without @EachBean.");
+                    + " type instead of GraphQLInvocation, or provide an independent unqualified or @Primary GraphQL bean (for a GraphQLSchema template, an unqualified or @Primary GraphQLSchema also works).");
         }
         List<String> secondary = LibraryBeanSelection.secondaryInvocations(beanContext);
         if (!secondary.isEmpty()) {
