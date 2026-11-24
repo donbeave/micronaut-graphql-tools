@@ -1,12 +1,16 @@
 introduction:
   title: Introduction
+  architecture: Architecture
 releaseHistory: Release History
 breaks: Breaking Changes
 quickStart:
   title: Quick Start
 languageSupport: Language Support
 groovy: Groovy
-why: Why This Library
+why:
+  title: Why This Library
+  noReflection: No Runtime Reflection
+  comparison: Comparison
 schema: Schema
 binding: Binding
 resolverContracts: Resolver Contracts

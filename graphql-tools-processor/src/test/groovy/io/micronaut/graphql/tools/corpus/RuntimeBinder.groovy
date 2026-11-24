@@ -37,6 +37,13 @@ final class RuntimeBinder implements Binder {
 
     @Override
     Verdict bind(BindRequest request) {
+        Map<String, Object> result = start(request)
+        List<Finding> findings = ((List<List<String>>) result.get('findings')).collect { new Finding(it[0], it[1], it[2]) }
+        return findings.empty ? Verdict.bound((String) result.get('manifest')) : Verdict.failed(findings)
+    }
+
+    /** @return what the startup of the case says: the map of {@link CorpusStartup#start}, without a {@code failure} */
+    Map<String, Object> start(BindRequest request) {
         CorpusCase corpusCase = request.corpusCase
         List<URL> urls = ([request.unchecked.classes] + request.unchecked.more).collect { it.toUri().toURL() }
         System.getProperty('java.class.path').split(File.pathSeparator).each { urls.add(new File(it).toURI().toURL()) }
@@ -69,8 +76,7 @@ final class RuntimeBinder implements Binder {
             if (result.containsKey('failure')) {
                 throw new AssertionError("${corpusCase.name} [${request.language.dir}]: the startup failed outside the bindings: ${result.get('failure')}".toString())
             }
-            List<Finding> findings = ((List<List<String>>) result.get('findings')).collect { new Finding(it[0], it[1], it[2]) }
-            return findings.empty ? Verdict.bound((String) result.get('manifest')) : Verdict.failed(findings)
+            return result
         } finally {
             thread.contextClassLoader = previous
             loader.close()

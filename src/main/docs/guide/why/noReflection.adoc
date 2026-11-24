@@ -1,0 +1,29 @@
+The library's claim is narrow, and this page defines it: *no runtime reflection, no dynamic proxies and no runtime bytecode generation* in the code of the `micronaut-graphql-tools` and `micronaut-graphql-tools-binding` modules, the ones that bind the schema and run the requests. The other modules are not covered by the bytecode rule below. The claim does not say that an application on the library does none of these, because the application, graphql-java and the other libraries on the classpath are separate code.
+
+== What the claim covers
+
+* *Binding*: the startup reads the bean definitions and the bean introspection that Micronaut generates at compile time. It does not scan the classpath and does not read classes through `java.lang.reflect`.
+* *Invocation*: a resolver method is called through the executable method that Micronaut generates for the bean at compile time, not through `Method.invoke`.
+* *Arguments*: the converter of each argument and each input field is built at startup from the declared type and the bean introspection, and a request runs no Jackson conversion (see <<inputs,Inputs>>).
+
+== Micronaut AOP
+
+The claim is not "zero proxy". Micronaut AOP advice, such as an interceptor on a resolver bean, makes Micronaut generate a proxy subclass at compile time. The library supports a resolver that carries advice: the example suites keep one (`IntroducedQuery`), and the tests of the Java suite call it. The generated subclass is code that exists before the application runs, so it falls outside "dynamic proxy" and "runtime bytecode generation" as defined above.
+
+== What supports the claim
+
+[cols="3,5", options="header"]
+|===
+|Statement |Check
+|No class of the library and the binding module uses `java.lang.reflect` (other than `Modifier`), `Class` lookups or `java.lang.invoke`. |`ArchitectureRulesSpec` in the `graphql-tools` module reads the bytecode of both modules. Its allowlist of exceptions is empty.
+|The native image of the library needs no reflection metadata of its own. |The `micronaut-graphql-tools` jar registers resources only (`resource-config.json`), and the Java and Kotlin example suites carry no `reflect-config.json`. Both suites run their tests as native binaries (see <<nativeImage,Native Image>>).
+|The Groovy example is checked natively by a smoke test. |`:test-suite-groovy:nativeSmokeTest` builds the Groovy example's executable and asserts its responses. The Groovy example carries a `reflect-config.json` for the Groovy runtime (see <<groovy,Groovy>>).
+|===
+
+== What the claim does not cover
+
+* *graphql-java*: the library calls graphql-java for parsing, validation and execution. What graphql-java does at runtime is outside the claim. The Spring for GraphQL reference lists reflection on internal types of graphql-java for schema inspection among the things that a native image needs metadata for (see <<comparison,the comparison>>).
+* *Your classes*: an application can use reflection or proxies in its own code and in other libraries.
+* *Groovy*: the Groovy runtime uses reflection, which is why the Groovy example has its own metadata.
+
+The bytecode rule runs in the build, so a change that adds reflection to those two modules fails `ArchitectureRulesSpec`. An exception would be listed in that spec with a reason and an issue, and on this page.
