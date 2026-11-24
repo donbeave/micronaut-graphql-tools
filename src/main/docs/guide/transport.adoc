@@ -39,7 +39,7 @@ graphql:
 
 Under `application/graphql-response+json` the library changes only a `200` to `400`: a status that a `GraphQLExecutionInputCustomizer` sets on the response is kept.
 
-Every operation runs on the executor of `micronaut.graphql.tools.execution.executor`, never on the event loop unless that is `none` (see <<execution,Execution>>). To reach the request in a resolver, use a `GraphQLContextContributor`, which reads the request once and puts what the resolvers need in the GraphQL context of that execution:
+Every operation runs on the executor of `micronaut.graphql.tools.execution.executor`, never on the event loop unless that is `none` (see <<execution,Execution>>). To reach the request in a resolver, use a api:io.micronaut.graphql.tools.execution.GraphQLContextContributor[], which reads the request once and puts what the resolvers need in the GraphQL context of that execution:
 
 [source,java]
 ----
@@ -74,7 +74,7 @@ graphql:
 
 * `graphql.graphql-ws.enabled` (default `false`) turns the `graphql-transport-ws` endpoint on, `graphql.graphql-ws.path` (default `/graphql-ws`) is its path and `graphql.graphql-ws.connection-init-wait-timeout` (default `15s`) is how long a client may take to send `connection_init`.
 * The library's handler serves the endpoint. It keeps the operations of each connection apart, runs the events of a subscription off the event loop and cancels the stream when the client sends `complete` or closes the connection. See <<subscriptions,Subscriptions>>.
-* `GraphQLConnectionInterceptor` beans accept or reject a connection at `connection_init`.
+* api:io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor[] beans accept or reject a connection at `connection_init`.
 
 The deprecated Apollo sub-protocol has its own keys: `graphql.graphql-apollo-ws.enabled` (default `false`), `.path`, `.keep-alive-enabled` and `.keep-alive-interval`. The library sets the `enabled` default itself, so the keep-alive sender of `micronaut-graphql` is not a bean, and an application with no WebSocket server starts without an error, until the application sets `graphql.graphql-apollo-ws.enabled=true` (see <<subscriptions,Subscriptions>>). With the Apollo support on, `graphql.graphql-apollo-ws.keep-alive-enabled=false` switches the sender off.
 

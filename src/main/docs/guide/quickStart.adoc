@@ -1,6 +1,10 @@
 This page binds a small schema to a resolver. Every code example is shown in Java, Kotlin and Groovy; pick a tab.
 
-1. Add the repository and the dependency. Milestone previews are published to the https://github.com/donbeave/micronaut-graphql-tools/packages[GitHub Packages] Maven registry of the repository, and GitHub Packages needs a token with the `read:packages` scope even to download a public package (see <<compatibility,Compatibility>>). No version is on Maven Central:
+1. Add the dependency. The macro renders the Gradle and Maven declarations:
++
+dependency:micronaut-graphql-tools[groupId=io.micronaut.graphql.tools,version=1.0.0-M4]
++
+Milestone previews are published to the https://github.com/donbeave/micronaut-graphql-tools/packages[GitHub Packages] Maven registry of the repository, not to Maven Central, so the build also needs that repository. GitHub Packages needs a token with the `read:packages` scope even to download a public package (see <<compatibility,Compatibility>>). In Gradle:
 +
 [source,groovy]
 ----
@@ -15,14 +19,9 @@ repositories {
         content { includeGroup("io.micronaut.graphql.tools") }
     }
 }
-
-dependencies {
-    implementation(platform("io.micronaut.graphql.tools:micronaut-graphql-tools-bom:1.0.0-M4"))
-    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools")
-}
 ----
 +
-With Maven, add the same repository and the BOM, then the dependency. The `<server>` entry with the id `graphql-tools` carries your user name and token in `~/.m2/settings.xml`:
+In Maven, add the repository with the id `graphql-tools`; the `<server>` entry with the same id carries your user name and token in `~/.m2/settings.xml`:
 +
 [source,xml]
 ----
@@ -32,30 +31,11 @@ With Maven, add the same repository and the BOM, then the dependency. The `<serv
     <url>https://maven.pkg.github.com/donbeave/micronaut-graphql-tools</url>
   </repository>
 </repositories>
-
-<dependencyManagement>
-  <dependencies>
-    <dependency>
-      <groupId>io.micronaut.graphql.tools</groupId>
-      <artifactId>micronaut-graphql-tools-bom</artifactId>
-      <version>1.0.0-M4</version>
-      <type>pom</type>
-      <scope>import</scope>
-    </dependency>
-  </dependencies>
-</dependencyManagement>
-
-<dependencies>
-  <dependency>
-    <groupId>io.micronaut.graphql.tools</groupId>
-    <artifactId>micronaut-graphql-tools</artifactId>
-  </dependency>
-</dependencies>
 ----
 +
 To use a build of your own checkout instead, run `./gradlew publishToMavenLocal` in the repository and add `mavenLocal()` (Gradle) to the repositories; Maven reads its local repository without a declaration (see `CONTRIBUTING.md`). That publishes to your machine only.
 +
-The BOM (`micronaut-graphql-tools-bom`) sets the version of every module of the library, so the other module snippets of this guide name no version. The library does not bring a JSON codec (BC-26). Add the one your application uses, for example `micronaut-jackson-databind` or `micronaut-serde-jackson`, to the same `dependencies` block.
+The BOM (`micronaut-graphql-tools-bom`) sets the version of every module of the library, so the other module snippets of this guide name no version. Import it in Gradle with `implementation(platform("io.micronaut.graphql.tools:micronaut-graphql-tools-bom:1.0.0-M4"))`, or in the `dependencyManagement` of a Maven build with `<type>pom</type>` and `<scope>import</scope>`. The library does not bring a JSON codec (BC-26). Add the one your application uses, for example `micronaut-jackson-databind` or `micronaut-serde-jackson`, to the same `dependencies` block.
 
 2. Define the GraphQL schema in `.graphqls` files in the `src/main/resources/graphql` folder. The library finds them at startup (see the Schema page), and a `schema { }` block is optional:
 +
@@ -73,15 +53,15 @@ type Book {
 
 3. Optional: to load the schema yourself, define a `TypeDefinitionRegistry` bean. It is used instead of the discovered files, so the example loads its own file, `schema.graphqls` at the root of the classpath (a file in the default folder is `classpath:graphql/schema.graphqls`). Put the bean method in a class annotated with `@Factory` (`io.micronaut.context.annotation.Factory`):
 +
-snippet::example.graphql.GraphQLFactory[project-base="test-suite", source="main", tags="registry", indent="0"]
+snippet::example.quickstart.GraphQLFactory[project-base="docs-examples", source="main", tags="registry", indent="0"]
 
-4. Add a root resolver. The method name is the field name in the schema, and the class is bound by `@GraphQLRootResolver`. The annotation carries no bean stereotype, so the class also needs a scope annotation such as `@Singleton`. The resolver reads from a `BookRepository` that returns `Book` objects with an `id` and a `title`; they are classes of the example application, so replace them with your own data source and model. `@ElapsedTime` is a timing aspect of the example application; leave it out:
+4. Add a root resolver. The method name is the field name in the schema, and the class is bound by @api:io.micronaut.graphql.tools.annotation.GraphQLRootResolver[]. The annotation carries no bean stereotype, so the class also needs a scope annotation such as `@Singleton`. The resolver reads from a `BookRepository` that returns `Book` objects with an `id` and a `title`; they are classes of the example, so replace them with your own data source and model:
 +
-snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="main", tags="resolver", indent="0"]
+snippet::example.quickstart.AllBooksQuery[project-base="docs-examples", source="main", tags="resolver", indent="0"]
 
-5. Run the first query. The test starts the application, takes the `GraphQL` bean and executes a query against the schema above. With the HTTP transport of micronaut-graphql on the classpath, the same query can be posted to the GraphQL endpoint (see <<transport,Transports>>). The query reads the `allBooks` field of the example application; use a field of your schema:
+5. Run the first query. The test starts the application, takes the `GraphQL` bean and executes a query against the schema above. With the HTTP transport of micronaut-graphql on the classpath, the same query can be posted to the GraphQL endpoint (see <<transport,Transports>>). The query reads the `allBooks` field of the example; use a field of your schema:
 +
-snippet::example.quickstart.QuickStartTest[project-base="test-suite", source="test", tags="query", indent="0"]
+snippet::example.quickstart.QuickStartTest[project-base="docs-examples", source="test", tags="query", indent="0"]
 
 6. The compile-time checks are optional. Without them, the startup binds the schema when the application context starts (`eager-init`, see <<configuration,Configuration>>) and fails with a code such as `[field-not-bound]` when a field has no resolver. With the processor on the compiler path, the build reports many of the same failures first. See <<compileTimeSetup,Set up the build>> for each build tool and <<exceptions,Exceptions>> for the codes.
 
@@ -89,14 +69,14 @@ snippet::example.quickstart.QuickStartTest[project-base="test-suite", source="te
 
 The library provides these annotations (package `io.micronaut.graphql.tools.annotation`):
 
-* `@GraphQLRootResolver` defines a root-level resolver, a GraphQL entry point such as a query or mutation. Like `@GraphQLTypeResolver`, it makes no bean: the class needs `@Singleton` or another scope annotation.
-* `@GraphQLType` maps a Java class to a GraphQL type.
+* `@GraphQLRootResolver` defines a root-level resolver, a GraphQL entry point such as a query or mutation. Like @api:io.micronaut.graphql.tools.annotation.GraphQLTypeResolver[], it makes no bean: the class needs `@Singleton` or another scope annotation.
+* @api:io.micronaut.graphql.tools.annotation.GraphQLType[] maps a Java class to a GraphQL type.
 * `@GraphQLTypeResolver` specifies a resolver for a field of a specific GraphQL type, to map nested or complex fields.
-* `@GraphQLInput` defines a GraphQL input type, structured input data for mutations or queries.
-* `@GraphQLField` marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field. `@GraphQLField("name")` on a method or a property binds the field of that name (see <<renaming,Binding a field to a differently named member>>).
+* @api:io.micronaut.graphql.tools.annotation.GraphQLInput[] defines a GraphQL input type, structured input data for mutations or queries.
+* @api:io.micronaut.graphql.tools.annotation.GraphQLField[] marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field. `@GraphQLField("name")` on a method or a property binds the field of that name (see <<renaming,Binding a field to a differently named member>>).
 * `@GraphQLSchemaCoordinate("Type.field")` names the field a resolver method binds; it is meant for resolver contracts (interfaces).
 
-The marker interfaces `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` (package `io.micronaut.graphql.tools.resolver`) declare resolver contracts without an annotation; see <<resolverContracts,Resolver Contracts>>.
+The marker interfaces api:io.micronaut.graphql.tools.resolver.QueryResolver[], api:io.micronaut.graphql.tools.resolver.MutationResolver[], api:io.micronaut.graphql.tools.resolver.SubscriptionResolver[] and `TypeResolver<T>` (package `io.micronaut.graphql.tools.resolver`) declare resolver contracts without an annotation; see <<resolverContracts,Resolver Contracts>>.
 
 GraphQL enums map to Java enums annotated with `@Introspected`, and unions and interfaces to Java interfaces, without an annotation of their own.
 

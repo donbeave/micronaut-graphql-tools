@@ -10,7 +10,7 @@ This page lists what a resolver method can take as a parameter besides the sourc
 |The environment of the field.
 
 |`GraphQLContext`
-|The context of the execution, with what the `GraphQLContextContributor` beans put in it.
+|The context of the execution, with what the api:io.micronaut.graphql.tools.execution.GraphQLContextContributor[] beans put in it.
 
 |`@GraphQLContextValue("<key>") T`
 |The value of one key of the context, or `null` when the key is absent. Without a value the parameter name is the key.
@@ -37,7 +37,7 @@ This page lists what a resolver method can take as a parameter besides the sourc
 |The same response, empty for a WebSocket operation.
 |===
 
-Over WebSocket, the request and the principal are those of the handshake, not of the message: a header or a principal that the client sends later does not show up in them. To read data that the client sends with the connection, such as a token, put it in the `payload` of `connection_init`, accept it in a `GraphQLConnectionInterceptor` and read the connection attributes that it returns, as <<subscriptions,Subscriptions>> describes.
+Over WebSocket, the request and the principal are those of the handshake, not of the message: a header or a principal that the client sends later does not show up in them. To read data that the client sends with the connection, such as a token, put it in the `payload` of `connection_init`, accept it in a api:io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor[] and read the connection attributes that it returns, as <<subscriptions,Subscriptions>> describes.
 
 snippet::example.tck.ResolverParametersScenario[project-base="test-suite", source="test", tags="parameters", indent="0"]
 
@@ -45,7 +45,7 @@ snippet::example.tck.ResolverParametersScenario[project-base="test-suite", sourc
 
 * The library decides the kind of each parameter once per field, at startup, from its type or annotation. A parameter binds by type and annotation, in any position after the source object. It is not an argument of the field, so it does not count against the arguments of the schema field, and the other parameters still bind by name. The kind of a parameter never depends on its name, so a `Locale locale` parameter and a schema argument named `locale` do not collide.
 * A parameter that is none of the kinds above is an argument of the field and must match one by name, as <<inputs,Inputs>> describes. A parameter of another type with no such argument fails the startup with `[argument-mismatch]`, and the message names the method and the parameter.
-* A `@GraphQLContextValue` parameter cannot be a primitive, because an absent key is `null`: it fails with `[argument-mismatch]`. The parameter needs a name from the class file (compile with `-parameters`) or a key in the annotation. A value of another type than the parameter's fails the field when the method is called.
+* A @api:io.micronaut.graphql.tools.annotation.GraphQLContextValue[] parameter cannot be a primitive, because an absent key is `null`: it fails with `[argument-mismatch]`. The parameter needs a name from the class file (compile with `-parameters`) or a key in the annotation. A value of another type than the parameter's fails the field when the method is called.
 * The compile-time check applies the same rules as the startup and reports the same errors with the same codes. The facts that only the running application knows (which loader beans exist) are reported by the startup alone.
 * Nothing is looked up by reflection to resolve a parameter: the types and annotations come from the compile-time metadata of Micronaut, so the same rules hold in a native image.
 

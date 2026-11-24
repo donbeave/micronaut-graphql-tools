@@ -133,7 +133,7 @@ To build the guide and the Javadocs, run `./gradlew docs`, then open `build/docs
 
 ### Adding a code example
 
-Every code example in the guide is compiled code in all three languages. A page includes it with the `snippet::` macro:
+Every code example in the guide is compiled code in all three languages. The quickstart examples live in the `docs-examples-java`, `docs-examples-kotlin` and `docs-examples-groovy` modules (`project-base="docs-examples"`), apart from the behavioural tests of the `test-suite-*` modules; the suites keep their names, and a module that holds guide examples is named `docs-examples-<language>`. A page includes it with the `snippet::` macro:
 
 ```
 snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="main", tags="resolver", indent="0"]
