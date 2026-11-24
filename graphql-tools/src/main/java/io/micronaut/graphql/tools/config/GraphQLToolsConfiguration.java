@@ -38,7 +38,7 @@ public class GraphQLToolsConfiguration {
     private boolean strict = true;
     private boolean resolverAccessorPrefixes;
     private String typeClassConvention;
-    private Map<String, String> checks = Collections.emptyMap();
+    private Map<String, CheckSeverity> checks = Collections.emptyMap();
     private AllowConfiguration allow = new AllowConfiguration();
     private boolean eagerInit = true;
     private SchemaConfiguration schema = new SchemaConfiguration();
@@ -153,7 +153,7 @@ public class GraphQLToolsConfiguration {
      * @return the severity of each check by its code, as written: {@code fail}, {@code warn} or {@code ignore}
      */
     @NonNull
-    public Map<String, String> getChecks() {
+    public Map<String, CheckSeverity> getChecks() {
         return checks;
     }
 
@@ -167,7 +167,7 @@ public class GraphQLToolsConfiguration {
      *
      * @param checks the severity of each check by its code
      */
-    public void setChecks(@NonNull Map<String, String> checks) {
+    public void setChecks(@NonNull Map<String, CheckSeverity> checks) {
         ArgumentUtils.requireNonNull("checks", checks);
         this.checks = Map.copyOf(checks);
     }
@@ -568,57 +568,30 @@ public class GraphQLToolsConfiguration {
     public static class ManifestConfiguration {
 
         private boolean enabled;
-        private boolean record;
         @Nullable
         private String path;
 
         /**
-         * @return whether the binding manifest is recorded while the schema is bound, which is the case when it is
-         * recorded explicitly or written at startup
-         */
-        public boolean isRecorded() {
-            return record || enabled;
-        }
-
-        /**
-         * @return whether the binding manifest is recorded explicitly, so that the {@link io.micronaut.graphql.tools.manifest.BindingManifest} bean can be
-         * read
-         */
-        public boolean isRecord() {
-            return record;
-        }
-
-        /**
-         * Sets whether the binding manifest is recorded while the schema is bound, so that the
-         * {@link io.micronaut.graphql.tools.manifest.BindingManifest} bean can be read. Default: {@code false}: nothing is recorded, the bean cannot be
-         * created. The checks run the same either way: the manifest only lists what they find. {@link #isEnabled()}
-         * implies it.
-         *
-         * @param record whether to record it
-         */
-        public void setRecord(boolean record) {
-            this.record = record;
-        }
-
-        /**
-         * @return whether the binding manifest is written at startup
+         * @return whether the binding manifest is recorded while the schema is bound
          */
         public boolean isEnabled() {
             return enabled;
         }
 
         /**
-         * Sets whether the binding manifest is written at startup: to {@link #getPath()}, or to the log when no path is
-         * set. Default: {@code false}. This records the manifest, see {@link #setRecord(boolean)}.
+         * Sets whether the binding manifest is recorded while the schema is bound, so that the
+         * {@link io.micronaut.graphql.tools.manifest.BindingManifest} bean can be read. It is also written at startup
+         * when {@link #getPath()} is set; without a path nothing is written or logged.
+         * Default: {@code false}: nothing is recorded, the bean cannot be created. The checks run the same either way: the manifest only lists what they find.
          *
-         * @param enabled whether to write it
+         * @param enabled whether to record and write it
          */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
         /**
-         * @return the file the binding manifest is written to, or {@code null} to log it
+         * @return the file the binding manifest is written to at startup, or {@code null} to write none
          */
         @Nullable
         public String getPath() {
@@ -627,7 +600,7 @@ public class GraphQLToolsConfiguration {
 
         /**
          * Sets the file the binding manifest is written to at startup; its directories are created. Default: none,
-         * the manifest is logged at INFO.
+         * nothing is written. It has an effect only with {@link #isEnabled()}.
          *
          * @param path the file
          */

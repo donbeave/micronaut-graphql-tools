@@ -33,7 +33,7 @@ abstract class AbstractTest extends Specification {
         def ctxBuilder = ApplicationContext
                 .builder(
                         ["spec.name": specName ?: getClass().simpleName,
-                         "micronaut.graphql.tools.manifest.record": true] << defaults << additionalConfig,
+                         "micronaut.graphql.tools.manifest.enabled": true] << defaults << additionalConfig,
                         "test"
                 )
 

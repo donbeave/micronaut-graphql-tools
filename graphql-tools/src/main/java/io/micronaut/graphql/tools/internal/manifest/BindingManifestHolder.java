@@ -47,7 +47,7 @@ public final class BindingManifestHolder {
                         + "bind. Remove that bean, or give it a qualifier such as @Named, to let the library bind its schema");
             }
             throw new NoSuchElementException("There is no binding manifest: the schema is not bound yet, "
-                    + "or the manifest is not recorded (set " + GraphQLToolsConfiguration.PREFIX + ".manifest.record to true)");
+                    + "or the manifest is not recorded (set " + GraphQLToolsConfiguration.PREFIX + ".manifest.enabled to true)");
         }
         return bindingManifest;
     }

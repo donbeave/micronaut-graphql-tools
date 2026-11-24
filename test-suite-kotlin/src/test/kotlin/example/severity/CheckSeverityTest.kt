@@ -101,4 +101,17 @@ class CheckSeverityTest {
         assertFails(mapOf(prefix + "unreachable-types" to "ignore"), "removed-configuration-key")
         assertFails(mapOf(prefix + "checks.no-such-check" to "warn"), "invalid-check-setting")
     }
+
+    @Test
+    fun `the severity accepts the spellings of the enum conversion`() {
+        assertNotNull(start(mapOf(prefix + "checks.unreachable-type" to "WARN")))
+        assertNotNull(start(mapOf(prefix + "checks.unreachable-type" to "Ignore")))
+    }
+
+    @Test
+    fun `an invalid severity fails the startup with the property and the valid values`() {
+        val e = assertFails(mapOf(prefix + "checks.unreachable-type" to "sometimes"), "invalid-check-setting")
+        assertTrue(e.message!!.contains(prefix + "checks.unreachable-type"), e.message)
+        assertTrue(e.message!!.contains("fail, warn, ignore"), e.message)
+    }
 }

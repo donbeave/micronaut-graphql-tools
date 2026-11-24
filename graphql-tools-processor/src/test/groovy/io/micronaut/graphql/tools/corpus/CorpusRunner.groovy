@@ -139,7 +139,7 @@ final class CorpusRunner {
             if (!runtime.bound) {
                 failures.add('expected/manifest.txt is recorded but the startup does not bind')
             } else if (runtime.manifest == null) {
-                failures.add('expected/manifest.txt is recorded but the case does not record a manifest (manifest.record is off)')
+                failures.add('expected/manifest.txt is recorded but the case does not record a manifest (manifest.enabled is off)')
             } else if (expectedManifest != runtime.manifest) {
                 failures.add("the binding manifest differs from expected/manifest.txt:\n${diff(expectedManifest.readLines(), runtime.manifest.readLines())}".toString())
             }
