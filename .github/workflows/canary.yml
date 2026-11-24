@@ -125,6 +125,34 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The drift mutation tests (#89): every mutant of the SDL of the binding corpus, which takes about half an hour, so `test` runs a sample.
+  drift-mutation:
+    name: canary (drift mutations of the corpus)
+    if: github.event.schedule != '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Run every drift mutant
+        run: ./gradlew :micronaut-graphql-tools-processor:corpusMutation --no-daemon -PgraphqlJavaLeg=default
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-canary-drift-mutation
+          path: |
+            graphql-tools-processor/build/test-results/corpusMutation/TEST-*.xml
+            graphql-tools-processor/build/reports/tests/corpusMutation/
+            graphql-tools-processor/build/corpus/mutations.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
   native-latest:
     name: canary (GraalVM 25, graphql-java latest)
     if: github.event.schedule != '47 4 * * 1'
