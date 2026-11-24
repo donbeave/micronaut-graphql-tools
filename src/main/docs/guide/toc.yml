@@ -32,6 +32,7 @@ execution: Execution
 protection: Protection
 transport: Transports
 customization: Customization
+federation: Federation
 safety:
   title: Safety
   startupErrors: Startup Errors
