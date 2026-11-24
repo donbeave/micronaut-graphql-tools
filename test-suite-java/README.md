@@ -5,8 +5,7 @@ Gradle project `:test-suite-java`, folder `test-suite-java/`. Not published.
 ## Purpose
 
 The example application in Java, and the test suite that runs it. It uses `micronaut-graphql-tools` with the Java
-annotation processors, and it has JUnit tests over HTTP, the native image tests and the Micronaut Serialization variant
-of the JSON tests. The guide's code snippets come from the three suites (`snippet::` in `src/main/docs/guide`).
+annotation processors, and it has JUnit tests over HTTP, the native image tests . The guide's code snippets come from the three suites (`snippet::` in `src/main/docs/guide`).
 
 ## Responsibility
 
@@ -14,8 +13,7 @@ of the JSON tests. The guide's code snippets come from the three suites (`snippe
   the `GraphQLFactory` bean. The `.graphql` operations used by the tests are in `src/main/graphql`.
 - `src/test/java/example`: JUnit tests by feature (`claimed`, `discovery`, `directives`, `eager`, `enums`, `graphql/query`, `manifest`, `nullfields`,
   `scope`, `tck`, `host`, ...). `example.tck.GraphQLToolsTckTest` runs the scenarios of `test-suite-tck`.
-- `src/serdeTest/java/example/nullfields`: the same null-field checks with Micronaut Serialization, in their own source
-  set and task.
+- The null-field checks with Micronaut Serialization are in `test-suite-serde`.
 - Build checks: `checkBindingManifest` and `checkSuiteSchemaParity`. The parity check fails when the schema of this suite
   differs from the copies in `test-suite-kotlin` and `test-suite-groovy`.
 
@@ -54,14 +52,12 @@ Run from the repository root. JDK 21 or 25 (JDK 25 with Oracle GraalVM for the n
 
 ```
 ./gradlew :test-suite-java:test
-./gradlew :test-suite-java:serdeTest
 ./gradlew :test-suite-java:test --tests 'example.tck.*'
-./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest --no-parallel
+./gradlew :test-suite-java:nativeTest --no-parallel
 ```
 
-- `test` runs the JUnit tests on the JVM. `serdeTest` runs the null-field tests with Micronaut Serialization. Both are part of
-  `check`.
-- `nativeTest` and `nativeSerdeTest` build native images and run the tests in them. They need Oracle GraalVM 25, about 5 GB of
+- `test` runs the JUnit tests on the JVM; it is part of `check`.
+- `nativeTest` builds a native image and runs the tests in it. They need Oracle GraalVM 25, about 5 GB of
   memory and 5 to 7 minutes each. Run them one after another (`--no-parallel`).
 - Add `-PgraphqlJavaLeg=floor|ceiling` to run on another graphql-java leg.
 
