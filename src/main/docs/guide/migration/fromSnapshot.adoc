@@ -59,6 +59,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-44 one accessor style in the public types (#504) | `GraphQLConnectionRequest` is a record (`payload()` and `httpRequest()` keep their names). The accessors of `GraphQLConnectionResult` (`getAttributes()`, `getCloseCode()`, `getReason()`), `GraphQLExecutionRequest` (`getHttpRequest()`, `getHttpResponse()`, `getTransport()`, `getConnectionAttributes()`, `getExecutionInput()`), `GraphQLDataLoaderOptionsCustomizer` (`getLoaderName()`) and `DataLoaderBatchStatistics` (`getCounts()`) are renamed. | Rename the calls, and the method that a `GraphQLDataLoaderOptionsCustomizer` overrides. In Groovy and Kotlin, read the properties (`request.httpRequest`, `request.transport`).
 | BC-42 the library's `GraphQLInvocation` stays registered beside yours (#499) | The library's `GraphQLInvocation` is `@Secondary` and is no longer removed when the application declares its own. The unqualified injection point still resolves to yours. `List<GraphQLInvocation>` and `getBeansOfType(GraphQLInvocation.class)` now also contain `LibraryGraphQLInvocation`. | Filter the library's invocation out by type if a list of invocations matters to you. An application invocation that is only `@Secondary` fails the startup with a message that names the way out: drop `@Secondary` or make it `@Primary`. A `GraphQL` or `GraphQLSchema` declared with `@EachBean(GraphQLInvocation.class)` fails the startup with a message that names the way out (target the application's own bean type), unless an application `GraphQL` bean that does not depend on it is selected. |
 | BC-50 an unknown property of a standard scalar fails the startup (#650) | A property under `micronaut.graphql.tools.scalars.<id>` that is not `enabled`, `name` or `format`, such as `local-date.nmae`, fails the startup with a `ConfigurationException` that names the whole key and lists the valid properties. Before it was ignored, so the setting never took effect. | Fix or remove the misspelled key. The documented keys keep their names and meaning.
+| BC-51 a mutation over `GET` is refused (#691) | A `GET` request whose selected operation is a mutation is answered with `405` and `Allow: POST` before any resolver runs, under `application/json` and `application/graphql-response+json`. Before, the library executed it, so a link or a prefetch could change data. A query over `GET` and every operation over `POST` are unchanged. | Send the mutation with `POST`.
 | BC-45 manifest flags collapsed, check severity is an enum (#505) | `micronaut.graphql.tools.manifest.record` is removed and fails the startup with `[removed-configuration-key]`. `manifest.enabled` alone records the manifest (the `BindingManifest` bean can be read), and a startup write happens only when `manifest.path` is set; with no path, nothing is logged any more. `checks` is a `Map<String, CheckSeverity>` and `precedence` a `Precedence`, read by the core enum conversion, so a spelling that conversion does not accept stops working (the documented spellings keep working). | Replace `manifest.record: true` with `manifest.enabled: true`, and set `manifest.path` where the file is wanted. Use `fail`, `warn` or `ignore` for a check. | Status: breaking by design; no opt-out.
 |===
 
@@ -1146,6 +1147,20 @@ micronaut:
       scalars:
         local-date:
           name: Date
+----
+
+=== BC-51: a mutation over GET is refused (#691)
+
+The GraphQL over HTTP specification forbids executing a mutation over `GET`, because a link, a prefetch or a crawler issues `GET` requests without the user's intent. The library executed such a request.
+
+What changes: a `GET` request whose selected operation is a mutation is answered with `405 Method Not Allowed` and the header `Allow: POST`, before any resolver runs. The body is a GraphQL response with one error (`extensions.code` is `METHOD_NOT_ALLOWED`) and no `data`, in the media type that `Accept` negotiates. The operation is the one that `operationName` names, or the only operation of the document. A query over `GET`, every operation over `POST`, and the subscriptions over WebSocket are unchanged.
+
+[source,bash]
+----
+# Before: the mutation ran
+curl 'http://localhost:8080/graphql?query=mutation%7BdeleteAll%7D'
+# Now: 405 with Allow: POST. Send it with POST
+curl -X POST -H 'Content-Type: application/json' -d '{"query":"mutation{deleteAll}"}' http://localhost:8080/graphql
 ----
 
 === BC-45: the manifest flags are collapsed and the check severity is an enum (#505)

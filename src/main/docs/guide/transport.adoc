@@ -39,6 +39,11 @@ graphql:
 
 Under `application/graphql-response+json` the library changes only a `200` to `400`: a status that a `GraphQLExecutionInputCustomizer` sets on the response is kept.
 
+[[get-mutation]]
+=== A mutation over GET
+
+A `GET` request must not change data: a link, a prefetch or a crawler sends one without the user's intent. A `GET` request whose selected operation (the one that `operationName` names, or the only operation of the document) is a mutation is answered with `405` and `Allow: POST`, before any resolver runs, under both media types. The body is a GraphQL response with one error, `extensions.code` `METHOD_NOT_ALLOWED`, and no `data`. A query works over `GET`, and a mutation works over `POST`. The check reads the document that the execution parses (the `DocumentCache` keeps it when `micronaut.graphql.tools.protection.document-cache-size` is above `0`), so it adds no second parse; it applies to the library's `GraphQLInvocation`. A WebSocket operation is not an HTTP `GET` and is not affected. See the migration page, entry BC-51.
+
 Every operation runs on the executor of `micronaut.graphql.tools.execution.executor`, never on the event loop unless that is `none` (see <<execution,Execution>>). To reach the request in a resolver, use a `GraphQLContextContributor`, which reads the request once and puts what the resolvers need in the GraphQL context of that execution:
 
 [source,java]
@@ -88,7 +93,7 @@ A connection that sends no `connection_init` within `connection-init-wait-timeou
 
 Each example suite starts an embedded server and talks to it with a real client:
 
-* `HttpTck` (GET and POST, variables and operation name, a moved `graphql.path`, the media type and status of each response with and without the upload module, the context of each request, and 400 concurrent requests with distinct contexts and DataLoader registries that never see each other's data);
+* `HttpTck` (GET and POST, variables and operation name, the refusal of a mutation over GET, a moved `graphql.path`, the media type and status of each response with and without the upload module, the context of each request, and 400 concurrent requests with distinct contexts and DataLoader registries that never see each other's data);
 * `WebSocketTck` (subscriptions with variables and an operation name, a moved `graphql.graphql-ws.path` and the configured initialisation timeout, the connection interceptor, the cleanup of a session on complete, close, a dropped connection and a finished operation, the thread of the events, and concurrent subscriptions that keep their own context);
 * `DisconnectTck` (the cancellation on an HTTP disconnect);
 * the scenarios `http`, `websocket` and `protection` of the TCK, whose responses are compared as JSON.

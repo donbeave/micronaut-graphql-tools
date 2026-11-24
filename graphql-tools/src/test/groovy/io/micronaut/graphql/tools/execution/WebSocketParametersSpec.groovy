@@ -17,6 +17,9 @@ package io.micronaut.graphql.tools.execution
 
 import graphql.ExecutionResult
 import io.micronaut.core.convert.value.ConvertibleValues
+import io.micronaut.core.propagation.PropagatedContext
+import io.micronaut.http.context.ServerHttpRequestContext
+import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
@@ -53,6 +56,7 @@ type Query {
   response: String
   optionalResponse: Boolean
   principal: String
+  currentPath: String
 }
 
 type Mutation {
@@ -104,6 +108,20 @@ type Subscription {
         'subscription' | 'subscription'
     }
 
+    void "a thread that holds the context of another request does not change the request of a WebSocket operation"() {
+        given:
+        startContext(SCHEMA, SPEC)
+        def foreign = PropagatedContext.empty().plus(new ServerHttpRequestContext(HttpRequest.GET('/foreign')))
+
+        when:
+        def first = foreign.propagate().withCloseable { over(GraphQLTransport.WEBSOCKET, 'query', 'currentPath') }
+        def second = over(GraphQLTransport.WEBSOCKET, 'query', 'currentPath')
+
+        then:
+        first == '/graphql-ws'
+        second == '/graphql-ws'
+    }
+
     void "over HTTP the same parameters receive the real request, principal and response"() {
         given:
         startContext(SCHEMA, SPEC)
@@ -144,6 +162,8 @@ type Subscription {
         boolean optionalResponse(Optional<MutableHttpResponse<?>> response) { response.isPresent() }
 
         String principal(Principal principal) { principal?.name }
+
+        String currentPath() { ServerRequestContext.currentRequest().map { it.path }.orElse(null) }
 
         String mutationRequest(HttpRequest<?> request) { request?.path }
 

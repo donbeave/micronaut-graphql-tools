@@ -165,6 +165,10 @@ public final class WebSocketScenario {
             return ExecutionState.of(environment.getGraphQlContext()).getConnectionAttributes().get("user", String.class).orElse(null);
         }
 
+        public String requestHeader() {
+            return ServerRequestContext.currentRequest().map(request -> request.getHeaders().get("X-Tck")).orElse(null);
+        }
+
         public String nothing() {
             return null;
         }
