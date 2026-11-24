@@ -408,7 +408,7 @@ type Card implements Face {
     static class MemoDictionary {
         @io.micronaut.context.annotation.Bean
         @jakarta.inject.Singleton
-        io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary.registerType("Memo", MemoGraph)
         }
     }
@@ -449,7 +449,7 @@ type Card implements Face {
     static class CardDictionary {
         @io.micronaut.context.annotation.Bean
         @jakarta.inject.Singleton
-        io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary.registerType("Card", CardGraph)
         }
     }

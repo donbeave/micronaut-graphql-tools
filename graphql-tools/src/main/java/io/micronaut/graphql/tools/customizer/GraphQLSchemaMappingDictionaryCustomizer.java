@@ -23,7 +23,7 @@ import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
  *
  * @author Alexey Zhokhov
  */
-public interface SchemaMappingDictionaryCustomizer {
+public interface GraphQLSchemaMappingDictionaryCustomizer {
 
     void customize(SchemaMappingDictionary schemaMappingDictionary);
 

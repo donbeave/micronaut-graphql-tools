@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.resolver.MutationResolver
 import io.micronaut.graphql.tools.resolver.QueryResolver
 import io.micronaut.graphql.tools.resolver.TypeResolver
@@ -38,7 +38,7 @@ class MarkerFixtures {
     @Bean
     @Singleton
     @Requires(env = [MARKERS])
-    fun markersSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun markersSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Shelf { id: ID! slots: Int! label: String! }\n" +

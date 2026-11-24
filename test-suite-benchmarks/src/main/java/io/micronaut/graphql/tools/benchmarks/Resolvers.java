@@ -26,8 +26,8 @@ import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.directive.SchemaDirective;
 import io.micronaut.graphql.tools.execution.FieldDescriptor;
-import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
 import io.micronaut.graphql.tools.annotation.GraphQLContextValue;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
@@ -191,7 +191,7 @@ public final class Resolvers {
 
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer dictionary() {
+        GraphQLSchemaMappingDictionaryCustomizer dictionary() {
             return dictionary -> dictionary
                     .registerType("Circle", Circle.class)
                     .registerType("Square", Square.class)
@@ -209,8 +209,8 @@ public final class Resolvers {
         @Bean
         @Singleton
         @Requires(property = "benchmarks.decorator", value = "unselective")
-        FieldFetcherDecorator unselective() {
-            return new FieldFetcherDecorator() {
+        GraphQLFieldFetcherDecorator unselective() {
+            return new GraphQLFieldFetcherDecorator() {
                 @Override
                 public boolean decoratesFieldsWithoutArguments() {
                     return true;
@@ -233,8 +233,8 @@ public final class Resolvers {
         @Bean
         @Singleton
         @Requires(property = "benchmarks.decorator", value = "wrapAll")
-        FieldFetcherDecorator wrapAll() {
-            return new FieldFetcherDecorator() {
+        GraphQLFieldFetcherDecorator wrapAll() {
+            return new GraphQLFieldFetcherDecorator() {
                 @Override
                 public boolean decoratesFieldsWithoutArguments() {
                     return true;

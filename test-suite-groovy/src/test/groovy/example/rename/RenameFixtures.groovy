@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
@@ -46,46 +46,46 @@ class RenameFixtures {
     @Bean
     @Singleton
     @Requires(env = RenameFixtures.MEMBERS)
-    TypeDefinitionRegistryCustomizer membersSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer membersSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Parcel { id: ID! class: String! hashCode: Int! headline: String! tagline: String! ' +
                             'new(prefix: String!): String! }\n' +
                             'extend type Query { parcel: Parcel }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean
     @Singleton
     @Requires(env = RenameFixtures.CLASH)
-    TypeDefinitionRegistryCustomizer clashSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer clashSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Slip { title: String! }\n' +
                             'extend type Query { slip: Slip }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean
     @Singleton
     @Requires(env = RenameFixtures.COORDINATES)
-    TypeDefinitionRegistryCustomizer coordinatesSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer coordinatesSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Parcel { id: ID! class: String! }\n' +
                             'extend type Query { parcel: Parcel default: String! }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean
     @Singleton
     @Requires(env = RenameFixtures.PREFIXES)
-    TypeDefinitionRegistryCustomizer prefixesSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer prefixesSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Parcel { id: ID! author: String! active: Boolean! }\n' +
                             'extend type Query { parcel: Parcel stamp: String! }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
 }

@@ -306,7 +306,7 @@ type Author {
 
     @Requires(property = 'spec.name', value = SPEC)
     @Singleton
-    static class ReturnedCustomizer implements DataLoaderOptionsCustomizer {
+    static class ReturnedCustomizer implements GraphQLDataLoaderOptionsCustomizer {
         @Override
         String getLoaderName() {
             'returnedLoader'
@@ -325,7 +325,7 @@ type Author {
 
     @Requires(property = 'spec.name', value = SPEC)
     @Singleton
-    static class MutatingCustomizer implements DataLoaderOptionsCustomizer {
+    static class MutatingCustomizer implements GraphQLDataLoaderOptionsCustomizer {
         @Override
         String getLoaderName() {
             'mutatedLoader'
@@ -342,7 +342,7 @@ type Author {
 
     @Requires(property = 'spec.name', value = SPEC)
     @Singleton
-    static class FirstCustomizer implements DataLoaderOptionsCustomizer {
+    static class FirstCustomizer implements GraphQLDataLoaderOptionsCustomizer {
         @Override
         String getLoaderName() {
             'chunkedLoader'
@@ -361,7 +361,7 @@ type Author {
 
     @Requires(property = 'spec.name', value = SPEC)
     @Singleton
-    static class SecondCustomizer implements DataLoaderOptionsCustomizer {
+    static class SecondCustomizer implements GraphQLDataLoaderOptionsCustomizer {
         @Override
         String getLoaderName() {
             'chunkedLoader'
@@ -381,7 +381,7 @@ type Author {
 
     @Requires(property = 'spec.name', value = SPEC + '.unknown')
     @Singleton
-    static class MissingCustomizer implements DataLoaderOptionsCustomizer {
+    static class MissingCustomizer implements GraphQLDataLoaderOptionsCustomizer {
         @Override
         String getLoaderName() {
             'missingLoader'

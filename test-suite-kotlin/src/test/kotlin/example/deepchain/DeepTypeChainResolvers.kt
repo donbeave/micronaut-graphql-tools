@@ -19,7 +19,7 @@ import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -33,7 +33,7 @@ const val DEEP_TYPE_CHAIN_TYPES = 200
 // schema types that matters.
 @Singleton
 @Requires(env = [DEEP_TYPE_CHAIN_ENVIRONMENT])
-class DeepTypeChainSchema : TypeDefinitionRegistryCustomizer {
+class DeepTypeChainSchema : GraphQLTypeDefinitionRegistryCustomizer {
     override fun customize(registry: TypeDefinitionRegistry) {
         val sdl = StringBuilder("extend type Query { chainRoot: Node0 chainEcho(input: In0!): String! }\n")
         for (i in 0 until DEEP_TYPE_CHAIN_TYPES) {

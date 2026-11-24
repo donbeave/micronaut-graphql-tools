@@ -26,7 +26,7 @@ import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.io.ResourceResolver;
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
 import io.micronaut.graphql.tools.tck.Scenarios;
 import io.micronaut.graphql.tools.tck.Tck;
 import jakarta.inject.Singleton;
@@ -59,8 +59,8 @@ public class TckGraphQLFactory {
     // The example registers the classes of its union by name; a scenario with classes of that kind adds its own mappings.
     @Bean
     @Singleton
-    @Replaces(value = SchemaMappingDictionaryCustomizer.class, factory = GraphQLFactory.class)
-    public SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer(List<TckTypeMappings> scenarioMappings) {
+    @Replaces(value = GraphQLSchemaMappingDictionaryCustomizer.class, factory = GraphQLFactory.class)
+    public GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer(List<TckTypeMappings> scenarioMappings) {
         return dictionary -> {
             dictionary
                     .registerType("SecurityError", SecurityError.class)

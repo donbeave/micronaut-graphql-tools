@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLArgument
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -332,7 +332,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     static class UnionMemberDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Book", BookGraph)
                     .registerType("Author", AuthorModel)
@@ -370,7 +370,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     static class InterfaceImplementationDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Poem", PoemGraph)
                     .registerType("Letter", LetterModel)
@@ -391,7 +391,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     static class FieldImplementationDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary.registerType("Book", BookGraph)
         }
     }
@@ -410,7 +410,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     static class FieldInterfaceDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary.registerType("Book", BookModel)
         }
     }
@@ -442,7 +442,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     static class AnnotatedImplementationDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Book", BookGraph)
                     .registerType("Novel", BookModel)
@@ -454,7 +454,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     static class ImplementingClassDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Book", BookGraph)
                     .registerType("Novel", NovelModel)
@@ -475,7 +475,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
     static class SubclassDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Essay", EssayModel)
                     .registerType("LongEssay", LongEssayModel)

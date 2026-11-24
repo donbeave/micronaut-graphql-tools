@@ -19,14 +19,14 @@ import graphql.schema.FieldCoordinates;
 import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer;
 import jakarta.inject.Singleton;
 
 import java.util.Set;
 
 @Requires(property = "spec.name", value = "ClaimedFieldsSpecJava")
 @Singleton
-public class JavaClaimingCustomizer implements RuntimeWiringCustomizer {
+public class JavaClaimingCustomizer implements GraphQLRuntimeWiringCustomizer {
 
     @Override
     public Set<FieldCoordinates> claimedFields() {

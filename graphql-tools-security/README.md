@@ -13,7 +13,7 @@ library does not depend on it and the beans of the module exist only when the ap
 
 - One `GraphQLContextContributor` that puts the `Authentication` of the request (the HTTP request, or the upgrade request
   of a WebSocket connection) into the `GraphQLContext` under `GraphQLSecurity.AUTHENTICATION_KEY`, once for each execution.
-- One `FieldFetcherDecorator` that decides, at startup, which fields `@Secured` guards. A field without it, or with
+- One `GraphQLFieldFetcherDecorator` that decides, at startup, which fields `@Secured` guards. A field without it, or with
   `isAnonymous()`, keeps the fetcher it was offered. A guarded field gets a fetcher that rejects an anonymous call with
   `UNAUTHENTICATED` and a call without the role with `FORBIDDEN`, as an error of the field.
 - `RootFieldsHook`: a bean interface, run by one `Instrumentation` that exists only when a hook bean does.
@@ -44,7 +44,7 @@ Applications that use `micronaut-graphql-tools` with Micronaut Security.
 
 ## Relation to other modules
 
-- Depends on `graphql-tools` (`api`) and uses its public SPI only (`GraphQLContextContributor`, `FieldFetcherDecorator`).
+- Depends on `graphql-tools` (`api`) and uses its public SPI only (`GraphQLContextContributor`, `GraphQLFieldFetcherDecorator`).
 - `micronaut-security` is `compileOnly`; its version comes from the `micronaut-security` catalog.
 - The test suites (`test-suite-java`, `-kotlin`, `-groovy`) depend on it and run the security checks with a real HTTP and
   WebSocket client, on the JVM and, for Java and Kotlin, as a native binary.

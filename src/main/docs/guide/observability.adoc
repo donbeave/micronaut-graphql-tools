@@ -102,7 +102,7 @@ micronaut:
           - Mutation.*
 ----
 
-The selection is a `FieldFetcherDecorator`, which the library asks once for each field at startup, never per request. The decorator wraps the fetcher of a selected field in a span named `Type.field`, a child of the request span, current while the fetcher runs and ended when the value is there (for a field that returns a future, when the future completes). It records the attributes `graphql.field.name` and `graphql.field.path`, the names that the OpenTelemetry GraphQL instrumentation uses. A field that the selection excludes gets back the very fetcher it was offered: it has no span and no instrumenter call, and costs nothing. Two kinds of field never get a span, even when selected, because a span there would only measure noise or nothing:
+The selection is a `GraphQLFieldFetcherDecorator`, which the library asks once for each field at startup, never per request. The decorator wraps the fetcher of a selected field in a span named `Type.field`, a child of the request span, current while the fetcher runs and ended when the value is there (for a field that returns a future, when the future completes). It records the attributes `graphql.field.name` and `graphql.field.path`, the names that the OpenTelemetry GraphQL instrumentation uses. A field that the selection excludes gets back the very fetcher it was offered: it has no span and no instrumenter call, and costs nothing. Two kinds of field never get a span, even when selected, because a span there would only measure noise or nothing:
 
 * A property read (a field the library serves from a property of its Java type): it is a trivial fetcher, and the library does not offer it to the decorator.
 * A field of the subscription type, whose value is a stream.

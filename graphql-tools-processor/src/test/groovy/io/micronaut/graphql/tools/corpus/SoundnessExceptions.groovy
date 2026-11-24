@@ -39,7 +39,7 @@ final class SoundnessExceptions {
     /** the reasons, each the sentence of the soundness rule that stops holding */
     static final Map<String, String> REASONS = [
             'two-classes-one-root-field'  : 'two resolver classes bind one root field: the startup reports the ambiguity and judges no argument of either',
-            'customizer-claimed-field'    : 'a RuntimeWiringCustomizer claims the field: the startup binds no method to it and judges none of its arguments',
+            'customizer-claimed-field'    : 'a GraphQLRuntimeWiringCustomizer claims the field: the startup binds no method to it and judges none of its arguments',
             'runtime-exception-first'     : 'binding the field throws before the argument rule runs (a resolver bean that cannot be created): the startup reports that exception',
             'other-class-binding-failure' : 'a binding failure of another resolver class stops the startup before the strict checks of this class run',
             'kotlin-nullability'          : 'the nullability of a Kotlin type is compile-time metadata that the startup does not read, so it reports nothing for the mismatch',

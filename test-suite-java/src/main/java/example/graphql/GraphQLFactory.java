@@ -22,7 +22,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.core.io.ResourceResolver;
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
 import jakarta.inject.Singleton;
 
 import java.io.BufferedReader;
@@ -45,7 +45,7 @@ public class GraphQLFactory {
 
     @Bean
     @Singleton
-    public SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+    public GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
         return schemaMappingDictionary -> schemaMappingDictionary
                 .registerType("SecurityError", SecurityError.class)
                 .registerType("ValidationError", ValidationError.class);

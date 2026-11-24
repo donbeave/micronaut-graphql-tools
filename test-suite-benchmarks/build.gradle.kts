@@ -289,7 +289,7 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
                 |import io.micronaut.context.annotation.Bean;
                 |import io.micronaut.context.annotation.Factory;
                 |import io.micronaut.context.annotation.Requires;
-                |import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+                |import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
                 |import jakarta.inject.Singleton;
                 |
                 |$requires
@@ -298,7 +298,7 @@ fun registerInterfaceSchema(name: String, output: org.gradle.api.provider.Provid
                 |
                 |    @Bean
                 |    @Singleton
-                |    SchemaMappingDictionaryCustomizer largeTypes() {
+                |    GraphQLSchemaMappingDictionaryCustomizer largeTypes() {
                 |        // statements, not one chained call: javac overflows its stack on a chain of two thousand calls
                 |        return dictionary -> {$dictionary
                 |        };

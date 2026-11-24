@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.order.OrderUtil;
-import io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer;
+import io.micronaut.graphql.tools.execution.GraphQLDataLoaderOptionsCustomizer;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
@@ -50,14 +50,14 @@ import java.util.Map;
 @Requires(property = "graphql.enabled", notEquals = "false")
 public final class DataLoaderTable {
 
-    private static final DataLoaderOptionsCustomizer[] NO_CUSTOMIZERS = new DataLoaderOptionsCustomizer[0];
+    private static final GraphQLDataLoaderOptionsCustomizer[] NO_CUSTOMIZERS = new GraphQLDataLoaderOptionsCustomizer[0];
 
     private final BeanContext beanContext;
     private final Entry[] entries;
     private final Map<String, Entry> byName;
     private final boolean statistics;
 
-    DataLoaderTable(BeanContext beanContext, GraphQLToolsConfiguration configuration, List<DataLoaderOptionsCustomizer> customizers) {
+    DataLoaderTable(BeanContext beanContext, GraphQLToolsConfiguration configuration, List<GraphQLDataLoaderOptionsCustomizer> customizers) {
         this.beanContext = beanContext;
         this.statistics = configuration.getExecution().isDataLoaderStatistics();
         Map<BeanDefinition<?>, Kind> kinds = new LinkedHashMap<>();
@@ -67,10 +67,10 @@ public final class DataLoaderTable {
                 kinds.putIfAbsent(definition, kind);
             }
         }
-        List<DataLoaderOptionsCustomizer> sorted = new ArrayList<>(customizers);
+        List<GraphQLDataLoaderOptionsCustomizer> sorted = new ArrayList<>(customizers);
         OrderUtil.sort(sorted);
-        Map<String, List<DataLoaderOptionsCustomizer>> customizersByName = new HashMap<>();
-        for (DataLoaderOptionsCustomizer customizer : sorted) {
+        Map<String, List<GraphQLDataLoaderOptionsCustomizer>> customizersByName = new HashMap<>();
+        for (GraphQLDataLoaderOptionsCustomizer customizer : sorted) {
             customizersByName.computeIfAbsent(String.valueOf(customizer.getLoaderName()), name -> new ArrayList<>()).add(customizer);
         }
         List<Entry> list = new ArrayList<>(kinds.size());
@@ -82,7 +82,7 @@ public final class DataLoaderTable {
             Argument<?> key = arguments.size() == 2 ? arguments.get(0) : Argument.OBJECT_ARGUMENT;
             Argument<?> value = arguments.size() == 2 ? arguments.get(1) : Argument.OBJECT_ARGUMENT;
             String name = nameOf(definition);
-            List<DataLoaderOptionsCustomizer> own = customizersByName.remove(name);
+            List<GraphQLDataLoaderOptionsCustomizer> own = customizersByName.remove(name);
             Entry entry = new Entry(list.size(), name, kind, definition, key, value,
                     own == null ? NO_CUSTOMIZERS : own.toArray(NO_CUSTOMIZERS));
             Entry other = names.putIfAbsent(entry.name(), entry);
@@ -96,7 +96,7 @@ public final class DataLoaderTable {
         }
         if (!customizersByName.isEmpty()) {
             String unknown = customizersByName.keySet().iterator().next();
-            throw new ExecutionSetupException(BindingCode.DATA_LOADER_NOT_FOUND, "A DataLoaderOptionsCustomizer ("
+            throw new ExecutionSetupException(BindingCode.DATA_LOADER_NOT_FOUND, "A GraphQLDataLoaderOptionsCustomizer ("
                     + customizersByName.get(unknown).get(0).getClass().getName() + ") is for the loader '" + unknown
                     + "', and no batch loader bean has that name. " + known(list) + " Fix: return the name of a loader from getLoaderName().");
         }
@@ -241,7 +241,7 @@ public final class DataLoaderTable {
      * @param customizers the options customizers of this loader, in order
      */
     record Entry(int index, String name, Kind kind, BeanDefinition<?> definition, Argument<?> key, Argument<?> value,
-                 DataLoaderOptionsCustomizer[] customizers) {
+                 GraphQLDataLoaderOptionsCustomizer[] customizers) {
 
         /** @return the loader as a description for a message: its name and types */
         String describe() {

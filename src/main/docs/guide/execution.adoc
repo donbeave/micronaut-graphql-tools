@@ -157,7 +157,7 @@ An HTTP disconnect is noticed on the Netty server: Micronaut does not cancel the
 
 Cross-cutting logic, such as sanitising arguments, needs to wrap the fetcher of some fields. Do not write it as a `SchemaDirective.everyElement` wiring that wraps every field: such a wiring turns the library's trivial fetchers into non-trivial ones, which loses graphql-java's shortcuts, and adds a call to every field of every request. If you must use `everyElement`, return the element unchanged unless it carries your directive, and prefer a `named` wiring.
 
-A `FieldFetcherDecorator` bean is the SPI for this. The library asks each decorator once for each field at startup, never per request. The decorator returns the fetcher it received, the same instance, for a field it does not select, and a wrapper for a field it does:
+A `GraphQLFieldFetcherDecorator` bean is the SPI for this. The library asks each decorator once for each field at startup, never per request. The decorator returns the fetcher it received, the same instance, for a field it does not select, and a wrapper for a field it does:
 
 snippet::example.tck.FieldDecoratorScenario[project-base="test-suite", source="test", tags="decorator", indent="0"]
 

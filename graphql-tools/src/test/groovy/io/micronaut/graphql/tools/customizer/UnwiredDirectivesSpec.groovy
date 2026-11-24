@@ -29,7 +29,7 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.context.BeanRegistration
 import io.micronaut.graphql.tools.manifest.BindingManifest
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer
 import io.micronaut.graphql.tools.directive.SchemaDirective
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -334,7 +334,7 @@ scalar Sc @onScalar
         }
     }
 
-    void "a directive wiring that a RuntimeWiringCustomizer registers counts"() {
+    void "a directive wiring that a GraphQLRuntimeWiringCustomizer registers counts"() {
         given:
         startContext(SCHEMA, SPEC_NAME_CUSTOMIZER, ALLOW + ['micronaut.graphql.tools.allow.inert-directives': ['cached']])
 
@@ -527,7 +527,7 @@ scalar Sc @onScalar
 
     @Requires(property = 'spec.name', value = SPEC_NAME_CUSTOMIZER)
     @Singleton
-    static class RegistersAuth implements RuntimeWiringCustomizer {
+    static class RegistersAuth implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.directive('auth', new NoOpWiring())

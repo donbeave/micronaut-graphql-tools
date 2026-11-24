@@ -29,7 +29,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLModels
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import jakarta.inject.Singleton
 
 // Model classes that carry no annotation (#68): the classes of another module or of a generator.
@@ -49,48 +49,48 @@ class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = ExternalModelFixtures.CLASSES)
-    TypeDefinitionRegistryCustomizer classesSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer classesSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Atlas { title: String! region: Region! pages: Int! }\n' +
                             'type Region { name: String! }\n' +
                             'extend type Query { atlas: Atlas atlases: [Atlas!]! }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean
     @Singleton
     @Requires(env = ExternalModelFixtures.PACKAGE)
-    TypeDefinitionRegistryCustomizer packageSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer packageSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Chart { label: String! axis: Axis! }\n' +
                             'type Axis { unit: String! }\n' +
                             'extend type Query { chart: Chart }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean
     @Singleton
     @Requires(env = ExternalModelFixtures.MISSING)
-    TypeDefinitionRegistryCustomizer missingSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer missingSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Unlisted { name: String! }\n' +
                             'extend type Query { unlisted: Unlisted }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     @Bean
     @Singleton
     @Requires(env = ExternalModelFixtures.NESTED)
-    TypeDefinitionRegistryCustomizer nestedSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer nestedSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
                     'type Holder { label: String! inner: Inner! }\n' +
                             'type Inner { name: String! }\n' +
                             'extend type Query { holder: Holder }\n'))
-        } as TypeDefinitionRegistryCustomizer
+        } as GraphQLTypeDefinitionRegistryCustomizer
     }
 
     // tag::listed-classes[]

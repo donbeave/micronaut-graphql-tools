@@ -1,14 +1,14 @@
 package example;
 
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
 import jakarta.inject.Singleton;
 
 @Factory
 public class RuntimeBeans {
 
     @Singleton
-    SchemaMappingDictionaryCustomizer dictionary() {
+    GraphQLSchemaMappingDictionaryCustomizer dictionary() {
         return dictionary -> dictionary.registerType("Book", Book.class).registerType("Author", Author.class).registerType("Shelf", Shelf.class);
     }
 

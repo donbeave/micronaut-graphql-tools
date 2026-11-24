@@ -21,7 +21,7 @@ import java.util.List;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
 
 /**
- * Thrown when {@link io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer#claimedFields()} names a coordinate that is not
+ * Thrown when {@link io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer#claimedFields()} names a coordinate that is not
  * a field of an object type of the schema: the claim is stale or misspelled. All of them are reported in one error.
  */
 @Internal
@@ -30,9 +30,9 @@ public final class InvalidClaimedFieldsException extends SchemaBindingException 
     private final List<String> problems;
 
     public InvalidClaimedFieldsException(List<String> problems) {
-        super(BindingCode.INVALID_CLAIMED_FIELDS, "RuntimeWiringCustomizer beans claim fields that the schema does not define:\n  "
+        super(BindingCode.INVALID_CLAIMED_FIELDS, "GraphQLRuntimeWiringCustomizer beans claim fields that the schema does not define:\n  "
                 + String.join("\n  ", problems)
-                + "\n  Correct or remove the coordinate in RuntimeWiringCustomizer#claimedFields().");
+                + "\n  Correct or remove the coordinate in GraphQLRuntimeWiringCustomizer#claimedFields().");
 
         this.problems = List.copyOf(problems);
     }

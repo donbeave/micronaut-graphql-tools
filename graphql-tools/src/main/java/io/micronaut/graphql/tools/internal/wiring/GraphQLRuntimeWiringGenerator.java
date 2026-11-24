@@ -57,7 +57,7 @@ import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 import io.micronaut.graphql.tools.mapping.MappingContext;
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer;
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore;
@@ -108,10 +108,10 @@ import io.micronaut.graphql.tools.internal.exceptions.resolver.UnsupportedReturn
 import io.micronaut.graphql.tools.internal.resolver.MicronautExecutableMethodDataFetcher;
 import io.micronaut.graphql.tools.execution.FieldDescriptor;
 import io.micronaut.graphql.tools.execution.FieldExecutionKind;
-import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
+import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator;
 import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.execution.FieldExecutionPlanner;
-import io.micronaut.graphql.tools.internal.execution.FieldFetcherDecorators;
+import io.micronaut.graphql.tools.internal.execution.GraphQLFieldFetcherDecorators;
 import io.micronaut.graphql.tools.internal.resolver.FlowAdapter;
 import io.micronaut.graphql.tools.internal.resolver.FlowDataFetcher;
 import io.micronaut.graphql.tools.internal.execution.SuspendInvoker;
@@ -236,7 +236,7 @@ public final class GraphQLRuntimeWiringGenerator {
 
     private final FieldExecutors fieldExecutors;
 
-    private final FieldFetcherDecorators fieldDecorators;
+    private final GraphQLFieldFetcherDecorators fieldDecorators;
 
     private final AbstractTypeWiring abstractTypeWiring;
 
@@ -250,7 +250,7 @@ public final class GraphQLRuntimeWiringGenerator {
                                   SchemaMappingDictionary schemaMappingDictionary,
                                   GraphQLToolsConfiguration configuration,
                                   Set<String> extensionFields,
-                                  List<FieldFetcherDecorator> fieldDecorators) {
+                                  List<GraphQLFieldFetcherDecorator> fieldDecorators) {
         requireNonNull("applicationContext", applicationContext);
         requireNonNull("graphQLBeanIntrospectionRegistry", graphQLBeanIntrospectionRegistry);
         requireNonNull("graphQLResolversRegistry", graphQLResolversRegistry);
@@ -286,7 +286,7 @@ public final class GraphQLRuntimeWiringGenerator {
                 checkPolicy, manifestRecorder, typeModel, applicationContext, new InputCallbacks());
         this.argumentPlanner = new ArgumentPlanner(inputTypeBinder, typeModel, applicationContext);
         this.fieldExecutors = new FieldExecutors(applicationContext, configuration);
-        this.fieldDecorators = new FieldFetcherDecorators(fieldDecorators);
+        this.fieldDecorators = new GraphQLFieldFetcherDecorators(fieldDecorators);
         this.ambiguityLog = new AmbiguityLog(configuration.getPrecedence(), manifestRecorder);
         this.abstractTypeWiring = new AbstractTypeWiring(typeDefinitionRegistry, schemaMappingDictionary,
                 graphQLBeanIntrospectionRegistry, manifestRecorder, rootRuntimeWiringBuilder,
@@ -301,7 +301,7 @@ public final class GraphQLRuntimeWiringGenerator {
         return checkPolicy;
     }
 
-    public RuntimeWiring generate(List<RuntimeWiringCustomizer> customizers) {
+    public RuntimeWiring generate(List<GraphQLRuntimeWiringCustomizer> customizers) {
         long start = System.nanoTime();
 
         try {
@@ -322,7 +322,7 @@ public final class GraphQLRuntimeWiringGenerator {
 
             validateResolverDirectives();
 
-            claimedFields = RuntimeWiringCustomizers.claims(customizers, typeDefinitionRegistry);
+            claimedFields = GraphQLRuntimeWiringCustomizers.claims(customizers, typeDefinitionRegistry);
 
             subscriptionTypeName = SchemaModel.load(typeDefinitionRegistry)
                     .flatMap(SchemaModel::subscriptionType)
@@ -368,7 +368,7 @@ public final class GraphQLRuntimeWiringGenerator {
 
             rootRuntimeWiringBuilder.wiringFactory(new DefaultWiringFactory(unboundTypes));
 
-            RuntimeWiringCustomizers.apply(rootRuntimeWiringBuilder, customizers, typeDefinitionRegistry, claimedFields);
+            GraphQLRuntimeWiringCustomizers.apply(rootRuntimeWiringBuilder, customizers, typeDefinitionRegistry, claimedFields);
 
             return rootRuntimeWiringBuilder.build();
         } finally {

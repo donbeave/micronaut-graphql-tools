@@ -83,8 +83,8 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`missing-enum-values` |failure |no |A schema enum value has no constant in the Java enum.
 |`scalar-mapping-not-provided` |failure |no |A custom scalar of the schema has no GraphQLScalarMapping.
 |`invalid-scalar-mapping` |failure |no |GraphQLScalarMapping beans contradict each other or the library.
-|`runtime-wiring-override` |failure |no |A RuntimeWiringCustomizer replaced what the library wired.
-|`invalid-claimed-fields` |failure |no |A RuntimeWiringCustomizer claims fields that the schema does not define.
+|`runtime-wiring-override` |failure |no |A GraphQLRuntimeWiringCustomizer replaced what the library wired.
+|`invalid-claimed-fields` |failure |no |A GraphQLRuntimeWiringCustomizer claims fields that the schema does not define.
 |`invalid-allow-unreachable` |failure |no |allow.unreachable names a type that is not an unreachable type.
 |`invalid-inert-directives` |failure |no |allow.inert-directives lists a directive that is built in, undeclared or wired.
 |`invalid-schema-customizer-directives` |failure |no |allow.schema-customizer-directives lists a built-in or undeclared directive, or one it never applies to the schema definition or a directive argument.

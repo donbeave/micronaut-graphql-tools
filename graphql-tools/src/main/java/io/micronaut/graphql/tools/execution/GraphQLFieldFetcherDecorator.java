@@ -34,7 +34,7 @@ import io.micronaut.core.annotation.NonNull;
  * {@link io.micronaut.core.order.Ordered#getOrder()} (lowest first, so the lowest is the outermost), the async
  * boundary, the executor hop of {@code @ExecuteOn}, the publisher adapter, the method or property fetcher.</p>
  */
-public interface FieldFetcherDecorator {
+public interface GraphQLFieldFetcherDecorator {
 
     /**
      * @return whether the library offers this decorator the fields that the schema declares without arguments; false by default

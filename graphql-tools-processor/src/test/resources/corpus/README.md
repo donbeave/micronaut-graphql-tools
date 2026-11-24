@@ -112,7 +112,7 @@ case under `exception/` that shows it:
 | reason | what the startup does instead |
 |---|---|
 | `two-classes-one-root-field` | reports the ambiguity of the field and judges no argument of either class |
-| `customizer-claimed-field` | binds no method to a field that a `RuntimeWiringCustomizer` claims (`unbound-resolver-method` with strict on, nothing with strict off) |
+| `customizer-claimed-field` | binds no method to a field that a `GraphQLRuntimeWiringCustomizer` claims (`unbound-resolver-method` with strict on, nothing with strict off) |
 | `runtime-exception-first` | binding the field throws before the argument rule (a singleton resolver that cannot be created): `unexpected-binding-error` |
 | `other-class-binding-failure` | stops at a binding failure of another class before the strict checks of this one |
 | `kotlin-nullability` | reports nothing: the nullability of a Kotlin type is compile-time metadata (`kotlin-nullability-mismatch`) |

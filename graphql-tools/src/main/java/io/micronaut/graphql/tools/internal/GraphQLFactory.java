@@ -37,12 +37,12 @@ import io.micronaut.graphql.tools.manifest.BindingManifest;
 import io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer;
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer;
-import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer;
+import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator;
 import io.micronaut.graphql.tools.directive.SchemaDirective;
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import io.micronaut.graphql.tools.internal.checks.DirectiveWiringCheck;
@@ -96,15 +96,15 @@ public final class GraphQLFactory {
     public GraphQLSchema graphQLSchema(ApplicationContext applicationContext,
                                        GraphQLResolversRegistry graphQLResolversRegistry,
                                        TypeDefinitionRegistry typeDefinitionRegistry,
-                                       List<SchemaMappingDictionaryCustomizer> schemaMappingDictionaryCustomizers,
+                                       List<GraphQLSchemaMappingDictionaryCustomizer> schemaMappingDictionaryCustomizers,
                                        GraphQLToolsConfiguration configuration,
-                                       List<TypeDefinitionRegistryCustomizer> typeDefinitionRegistryCustomizers,
-                                       List<RuntimeWiringCustomizer> runtimeWiringCustomizers,
+                                       List<GraphQLTypeDefinitionRegistryCustomizer> typeDefinitionRegistryCustomizers,
+                                       List<GraphQLRuntimeWiringCustomizer> runtimeWiringCustomizers,
                                        List<GraphQLSchemaCustomizer> graphQLSchemaCustomizers,
                                        List<BeanRegistration<SchemaDirectiveWiring>> directiveWirings,
                                        List<BeanRegistration<SchemaDirective>> schemaDirectives,
                                        BindingManifestHolder bindingManifestHolder,
-                                       List<FieldFetcherDecorator> fieldFetcherDecorators) {
+                                       List<GraphQLFieldFetcherDecorator> fieldFetcherDecorators) {
         SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
         schemaMappingDictionaryCustomizers.forEach(customizer -> customizer.customize(schemaMappingDictionary));
 
@@ -123,7 +123,7 @@ public final class GraphQLFactory {
                 fieldFetcherDecorators
         );
 
-        List<RuntimeWiringCustomizer> customizers = new ArrayList<>();
+        List<GraphQLRuntimeWiringCustomizer> customizers = new ArrayList<>();
         SchemaDirectiveWirings schemaDirectiveWirings = new SchemaDirectiveWirings(
                 directiveWirings,
                 schemaDirectives

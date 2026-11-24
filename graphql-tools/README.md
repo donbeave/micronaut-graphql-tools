@@ -13,7 +13,7 @@ Start with the guide: `src/main/docs/guide/quickStart.adoc` and `binding.adoc`.
 ## Responsibility
 
 - Schema discovery (`internal.discovery.SchemaDiscovery`) and the runtime wiring that connects fields to beans
-  (`GraphQLRuntimeWiringGenerator`, `RuntimeWiringCustomizers`, the data fetchers in `internal.resolver`).
+  (`GraphQLRuntimeWiringGenerator`, `GraphQLRuntimeWiringCustomizers`, the data fetchers in `internal.resolver`).
 - The strict checks and the startup failures, which are reported as the exceptions of `io.micronaut.graphql.tools.exceptions`.
 - Recording the binding manifest (`BindingManifestRecorder`, `BindingManifestWriter`).
 - The Micronaut integration: `GraphQLFactory` builds the `GraphQL` bean, and the `processor/` package holds the method
@@ -72,8 +72,8 @@ The public API is what applications import. The package layout is reviewed in #3
   `@GraphQLTypeResolver`, `@GraphQLInput`, `@GraphQLField`, `@GraphQLArgument`, `@GraphQLIgnore`,
   `@GraphQLSchemaCoordinate`).
 - `io.micronaut.graphql.tools.config`, `customizer`, `mapping`, `directive`, `input` and `manifest`: the extension points
-  and the types around them: `GraphQLToolsConfiguration`; `RuntimeWiringCustomizer`, `SchemaMappingDictionaryCustomizer`,
-  `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer` and `TypeDefinitionRegistryCustomizer`; `SchemaMappingDictionary`
+  and the types around them: `GraphQLToolsConfiguration`; `GraphQLRuntimeWiringCustomizer`, `GraphQLSchemaMappingDictionaryCustomizer`,
+  `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer` and `GraphQLTypeDefinitionRegistryCustomizer`; `SchemaMappingDictionary`
   and `GraphQLScalarMapping`; `SchemaDirective` and `CustomWiring`; `ArgumentValue`; `BindingManifest`. Every type of
   these packages is public API; the root package `io.micronaut.graphql.tools` holds no types.
 - `io.micronaut.graphql.tools.exceptions`: the startup failure, `SchemaBindingException`. Match on its code.

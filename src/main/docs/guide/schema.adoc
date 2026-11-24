@@ -18,7 +18,7 @@ A location is a scheme and an Ant-style path (`*`, `**`, `?`). A path without wi
 
 * A schema without a `schema { }` block but with a `Query` type uses the object types `Query`, `Mutation` and `Subscription` that it defines as the root operation types.
 * The default reads `*.graphqls` only. A file that holds only executable definitions (queries, mutations, fragments) or nothing is skipped and logged at INFO, so client operation files in the same directory do not break the startup. A file that mixes operations and type definitions fails.
-* Any `TypeDefinitionRegistry` bean of the application is used instead and nothing is read. A `TypeDefinitionRegistryCustomizer` still runs on top of the schema, with either source.
+* Any `TypeDefinitionRegistry` bean of the application is used instead and nothing is read. A `GraphQLTypeDefinitionRegistryCustomizer` still runs on top of the schema, with either source.
 * A file that does not parse or conflicts with another, a location that names a missing file, and locations that match no file at all fail the startup: code `schema-invalid` for a file that does not parse or conflicts, `schema-not-found` for the rest. The message names the file or the locations.
 
 == Compile time

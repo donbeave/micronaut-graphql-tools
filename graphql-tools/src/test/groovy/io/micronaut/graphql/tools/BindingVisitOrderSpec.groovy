@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
@@ -225,13 +225,13 @@ type OrdN3 implements OrdNode {
     static class DictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer dictionary() {
+        GraphQLSchemaMappingDictionaryCustomizer dictionary() {
             return { SchemaMappingDictionary dictionary ->
                 dictionary.registerType("OrdM1", OrdM1)
                 dictionary.registerType("OrdM3", OrdM3)
                 dictionary.registerType("OrdN1", OrdN1)
                 dictionary.registerType("OrdN3", OrdN3)
-            } as SchemaMappingDictionaryCustomizer
+            } as GraphQLSchemaMappingDictionaryCustomizer
         }
     }
 

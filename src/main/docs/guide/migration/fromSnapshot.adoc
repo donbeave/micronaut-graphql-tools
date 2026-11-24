@@ -23,7 +23,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-10 `GraphQL` bean | The library creates its `GraphQL` bean only when the application has none. | Define your own `GraphQL` bean, or change the library's one with `GraphQLBuilderCustomizer`.
 | BC-11 bare `SchemaDirectiveWiring` bean | Startup fails with `[unwrapped-directive-wiring]`. | Wrap the wiring in a `SchemaDirective` bean.
 | BC-12 directive without a wiring | Startup fails with `[unwired-directive]`. | Add a wiring, or list the directive in `allow.inert-directives`. Or set `checks.unwired-directive` to `warn` (also what `strict: false` does).
-| BC-13 `RuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `[runtime-wiring-override]` (on graphql-java 25, `StrictModeWiringException` first for a replaced default data fetcher, type resolver or scalar). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
+| BC-13 `GraphQLRuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `[runtime-wiring-override]` (on graphql-java 25, `StrictModeWiringException` first for a replaced default data fetcher, type resolver or scalar). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
 | BC-14 property and type resolver bind one field | Startup fails with `[precedence-ambiguity]`. Before, the property won silently. | Remove one member, or choose the winner with `precedence` or `resolver-directives`. Or use `@GraphQLIgnore` on the getter.
 | BC-15 root resolvers per operation type | Startup fails when two root methods bind one field. Before, the first bean found won. | Remove one of two methods that bind the same field, or use `@Replaces` when one bean overrides another. Add `@GraphQLSchemaCoordinate` (for example `Query.field`) only when the methods serve different operation types.
 | BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding the startup reports, annotate it with `@GraphQLIgnore` (the compile-time processor does not read it yet), or set `strict: false`.
@@ -51,11 +51,12 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-37 unhandled exceptions are hidden (#32) | The message of an exception that a resolver throws is no longer sent to the client: the error is `Internal server error` with `extensions.code` `INTERNAL_ERROR`. Before, graphql-java's handler sent `Exception while fetching data (/path) : <message>`, and logged each error at WARN with a stack trace; now one ERROR line without a stack trace is logged. A client that matched on that message text, or a test that asserts it, fails. | Add a `GraphQLExceptionMapper` bean for each exception whose message the client may see, throw a `GraphQLError` exception, or turn on `micronaut.graphql.tools.errors.details` in a development environment. A `DataFetcherExceptionHandler` of your own set in a `GraphQLBuilderCustomizer` keeps working.
 | BC-39 observability follows the Micronaut metrics and tracing conventions (#495) | The configuration keys of the observability module moved, and the span layout changed. `micronaut.graphql.tools.observability.enabled` is removed, `.metrics.enabled` and `.metrics.max-operations` are `micronaut.metrics.binders.graphql.enabled` and `.max-operations`, and `.tracing.enabled` and `.tracing.fields` are `micronaut.graphql.tools.tracing.enabled` and `.fields`. The request span is named `query`, `mutation` or `subscription`, not `query <operation>`. A field span has `graphql.field.path` and no `graphql.field.parent`. `GraphQLObservability.PREFIX` and the four span attribute constants are removed. The request span is now current in the propagated context, so a span started in a resolver is its child, not its sibling. | Rename the keys (the old ones are ignored, with no warning). Set `micronaut.graphql.tools.tracing.add-operation-name-to-span-name: true` to keep the operation name in the span name, and change a dashboard or a test that reads `graphql.field.parent` to read `graphql.field.name` and `graphql.field.path`. Use the attribute names as strings in place of the removed constants.
 | BC-40 scalars configuration is bound to a typed class (#497) | `micronaut.graphql.tools.scalars.*` is bound to `ScalarsConfiguration` and `ScalarConfiguration` instead of being read key by key. A key under `micronaut.graphql.tools.scalars` that is not the id of a standard scalar, or not `enabled`, now fails the startup with a message that names the key and lists the valid ids. Before it was ignored. The documented keys (`enabled`, `<id>.enabled`, `<id>.name`, `<id>.format`) keep their names and meaning. | Fix or remove a misspelled or unknown scalar key, such as `local-dat.enabled`. See the scalars page for the valid ids.
+| BC-43 the extension point types carry the `GraphQL` prefix (#502) | `RuntimeWiringCustomizer`, `TypeDefinitionRegistryCustomizer`, `SchemaMappingDictionaryCustomizer`, `FieldFetcherDecorator` and `DataLoaderOptionsCustomizer` are renamed `GraphQLRuntimeWiringCustomizer`, `GraphQLTypeDefinitionRegistryCustomizer`, `GraphQLSchemaMappingDictionaryCustomizer`, `GraphQLFieldFetcherDecorator` and `GraphQLDataLoaderOptionsCustomizer`. The packages and the behaviour do not change. | Change the import and the class name; see the section on BC-43. |
 | BC-46 the camelCase compile-time options are renamed (#506) | `micronaut.graphql.tools.processor.resolverAccessorPrefixes`, `looseNullability` and `typeClassConvention` fail the build with `[processor-option-removed]` and the name of the replacement: `resolver.accessor.prefixes`, `loose.nullability` and `type.class.convention` under the same prefix. | Rename the three options in every build that passes them (Gradle, Maven, KSP, kapt, Groovy). The values do not change.
 | BC-49 the observability module is split into `graphql-tools-micrometer` and `graphql-tools-opentelemetry` (#570) | `micronaut-graphql-tools-observability` does not exist: the metrics are in `micronaut-graphql-tools-micrometer` (package `io.micronaut.graphql.tools.micrometer`) and the spans in `micronaut-graphql-tools-opentelemetry`. `GraphQLObservability` is now `GraphQLMetrics`, with the same meter and tag constants. The configuration keys of BC-39 do not change. | Replace the one dependency with the module of each technology you use (the artifact was never published, so there is no relocation), and import `io.micronaut.graphql.tools.micrometer.GraphQLMetrics` where you used `GraphQLObservability`.
 | BC-41 binding failures are a `ConfigurationException` (#498) | `SchemaBindingException` extends `io.micronaut.context.exceptions.ConfigurationException`, not `RuntimeException`, and `code()` is renamed `getCode()`. The error codes and messages are the same. | Call `getCode()` (the `code` property in Groovy and Kotlin) where you called `code()`. A `catch (ConfigurationException)` now also catches the binding failures.
 | BC-47 `ResolverBeanCondition` is internal, `@GraphQLType.value()` is `Class<?>` (#501) | `io.micronaut.graphql.tools.annotation.ResolverBeanCondition` is now `io.micronaut.graphql.tools.internal.resolver.ResolverBeanCondition`, marked `@Internal` and no longer `@Introspected`. `@GraphQLType.value()` is declared `Class<?>`, not the raw `Class`. `GraphQLToolsConfiguration.SchemaConfiguration.DEFAULT_SCHEMA_LOCATION` and `BindingManifest.FORMAT` are constants of the public types and no longer refer to an `internal` package. | Nothing, unless you name the condition class in a `@Requires(condition = ...)` of your own: stop doing that, it is not API. A Kotlin or Groovy source that read `@GraphQLType.value` compiles as before.
-| BC-44 one accessor style in the public types (#504) | `GraphQLConnectionRequest` is a record (`payload()` and `httpRequest()` keep their names). The accessors of `GraphQLConnectionResult` (`getAttributes()`, `getCloseCode()`, `getReason()`), `GraphQLExecutionRequest` (`getHttpRequest()`, `getHttpResponse()`, `getTransport()`, `getConnectionAttributes()`, `getExecutionInput()`), `DataLoaderOptionsCustomizer` (`getLoaderName()`) and `DataLoaderBatchStatistics` (`getCounts()`) are renamed. | Rename the calls, and the method that a `DataLoaderOptionsCustomizer` overrides. In Groovy and Kotlin, read the properties (`request.httpRequest`, `request.transport`).
+| BC-44 one accessor style in the public types (#504) | `GraphQLConnectionRequest` is a record (`payload()` and `httpRequest()` keep their names). The accessors of `GraphQLConnectionResult` (`getAttributes()`, `getCloseCode()`, `getReason()`), `GraphQLExecutionRequest` (`getHttpRequest()`, `getHttpResponse()`, `getTransport()`, `getConnectionAttributes()`, `getExecutionInput()`), `GraphQLDataLoaderOptionsCustomizer` (`getLoaderName()`) and `DataLoaderBatchStatistics` (`getCounts()`) are renamed. | Rename the calls, and the method that a `GraphQLDataLoaderOptionsCustomizer` overrides. In Groovy and Kotlin, read the properties (`request.httpRequest`, `request.transport`).
 | BC-42 the library's `GraphQLInvocation` stays registered beside yours (#499) | The library's `GraphQLInvocation` is `@Secondary` and is no longer removed when the application declares its own. The unqualified injection point still resolves to yours. `List<GraphQLInvocation>` and `getBeansOfType(GraphQLInvocation.class)` now also contain `LibraryGraphQLInvocation`. | Filter the library's invocation out by type if a list of invocations matters to you. An application invocation that is `@Secondary` fails an unqualified injection point with `NonUniqueBeanException`: drop `@Secondary` or make it `@Primary`. A `GraphQL` or `GraphQLSchema` declared with `@EachBean(GraphQLInvocation.class)` fails at startup: target the application's own bean type. A `@Primary` factory `DefaultGraphQLInvocation` replaced with a `qualifier` constraint still makes the library's invocation step aside: replace it without the constraint, or provide your invocation as `@Primary` directly. |
 | BC-50 an unknown property of a standard scalar fails the startup (#650) | A property under `micronaut.graphql.tools.scalars.<id>` that is not `enabled`, `name` or `format`, such as `local-date.nmae`, fails the startup with a `ConfigurationException` that names the whole key and lists the valid properties. Before it was ignored, so the setting never took effect. | Fix or remove the misspelled key. The documented keys keep their names and meaning.
 | BC-45 manifest flags collapsed, check severity is an enum (#505) | `micronaut.graphql.tools.manifest.record` is removed and fails the startup with `[removed-configuration-key]`. `manifest.enabled` alone records the manifest (the `BindingManifest` bean can be read), and a startup write happens only when `manifest.path` is set; with no path, nothing is logged any more. `checks` is a `Map<String, CheckSeverity>` and `precedence` a `Precedence`, read by the core enum conversion, so a spelling that conversion does not accept stops working (the documented spellings keep working). | Replace `manifest.record: true` with `manifest.enabled: true`, and set `manifest.path` where the file is wanted. Use `fail`, `warn` or `ignore` for a check. | Status: breaking by design; no opt-out.
@@ -302,7 +303,7 @@ public class AuthDirectives {
 
 === BC-12: directives without a wiring
 
-A directive that the schema applies without a wiring is a startup error, `[unwired-directive]`, which lists where each one is applied. A wiring is a `SchemaDirective` bean, a `RuntimeWiringCustomizer` that registers a wiring under the directive's name, or a name in `resolver-directives`. graphql-java's built-in directives need none.
+A directive that the schema applies without a wiring is a startup error, `[unwired-directive]`, which lists where each one is applied. A wiring is a `SchemaDirective` bean, a `GraphQLRuntimeWiringCustomizer` that registers a wiring under the directive's name, or a name in `resolver-directives`. graphql-java's built-in directives need none.
 
 Fix: add a wiring. If the directive has no effect at runtime, list it in `micronaut.graphql.tools.allow.inert-directives`.
 
@@ -320,9 +321,9 @@ micronaut:
           - deprecated-since
 ----
 
-=== BC-13: a `RuntimeWiringCustomizer` that replaces the library's wiring
+=== BC-13: a `GraphQLRuntimeWiringCustomizer` that replaces the library's wiring
 
-A `RuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `[runtime-wiring-override]`. On graphql-java 25 the builder rejects the first replaced default data fetcher, type resolver or scalar itself, with `StrictModeWiringException`, so the startup fails with that exception instead. A replaced data fetcher of a library-wired field is always reported as `[runtime-wiring-override]`.
+A `GraphQLRuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `[runtime-wiring-override]`. On graphql-java 25 the builder rejects the first replaced default data fetcher, type resolver or scalar itself, with `StrictModeWiringException`, so the startup fails with that exception instead. A replaced data fetcher of a library-wired field is always reported as `[runtime-wiring-override]`.
 
 Fix: add to the library's wiring in the customizer. To serve a field with a hand-written `DataFetcher`, return its coordinate from `claimedFields()`. The library then does not bind the field. The library does not traverse the return type of a claimed field, so that type must also be reached through another bound field, or listed in `allow.unreachable`.
 
@@ -331,7 +332,7 @@ Status: approved, no opt-out. `claimedFields()` is on `master`.
 [source,java]
 ----
 @Singleton
-public class BookFetcherCustomizer implements RuntimeWiringCustomizer {
+public class BookFetcherCustomizer implements GraphQLRuntimeWiringCustomizer {
     @Override
     public void customize(RuntimeWiring.Builder builder) {
         builder.type("Query", type -> type.dataFetcher("latestBook", env -> latestBook()));
@@ -427,7 +428,7 @@ Opt-out: `micronaut.graphql.tools.strict: false` makes every check `warn`, inclu
 
 Fields of an `extend type` definition are bound and checked like any other field. Before, graphql-java's default data fetcher served them without any check. The startup now names the coordinate of an extension field that nothing binds.
 
-Fix: give the field a resolver or a property. If a `RuntimeWiringCustomizer` serves it, return its coordinate from `claimedFields()`. A type that such a field returns must still be reached through another bound field, or listed in `allow-unreachable`.
+Fix: give the field a resolver or a property. If a `GraphQLRuntimeWiringCustomizer` serves it, return its coordinate from `claimedFields()`. A type that such a field returns must still be reached through another bound field, or listed in `allow-unreachable`.
 
 Status: approved, no opt-out.
 
@@ -502,7 +503,7 @@ The library wires one values provider per bound enum, built at startup from the 
 
 Fix: annotate each Java enum that a field, argument or input field uses with `@Introspected`. Micronaut Serialization's `@Serdeable` also introspects the enum. The compile-time processor does not check this yet.
 
-A `RuntimeWiringCustomizer` that registers its own `enumValues` provider for a bound enum now fails the startup with `[runtime-wiring-override]`, like any other replacement of the library's wiring.
+A `GraphQLRuntimeWiringCustomizer` that registers its own `enumValues` provider for a bound enum now fails the startup with `[runtime-wiring-override]`, like any other replacement of the library's wiring.
 
 [source,java]
 ----
@@ -938,7 +939,7 @@ What else changes:
 * A field span keeps its name `Type.field`. It has `graphql.field.name` and the new `graphql.field.path`; `graphql.field.parent` is removed.
 * `GraphQLObservability.PREFIX` and the span attribute constants (`OPERATION_NAME_ATTRIBUTE`, `OPERATION_TYPE_ATTRIBUTE`, `FIELD_PARENT_ATTRIBUTE`, `FIELD_NAME_ATTRIBUTE`) are removed. The meter and tag constants stay.
 * The request span is current in the propagated context of the execution. A span that a resolver starts (a `@NewSpan` method, an HTTP client call) is its child; before it was a sibling, a child of the HTTP span.
-* The fields that `tracing.fields` selects are chosen by a `FieldFetcherDecorator`, not a `GraphQLSchemaCustomizer`. The same fields get a span, with the same names and parents.
+* The fields that `tracing.fields` selects are chosen by a `GraphQLFieldFetcherDecorator`, not a `GraphQLSchemaCustomizer`. The same fields get a span, with the same names and parents.
 
 [source,yaml]
 ----
@@ -1015,6 +1016,26 @@ ksp { arg("micronaut.graphql.tools.processor.loose.nullability", "warn") }
 
 Status: breaking by design; no opt-out.
 
+=== BC-43: the extension point types carry the GraphQL prefix (#502)
+
+A type that an application implements as an extension point carries the `GraphQL` prefix, so that a user finds the extension points by the prefix, as in `GraphQLSchemaCustomizer`, `GraphQLExceptionMapper` and `GraphQLContextContributor`. Value types and data holders (`SchemaDirective`, `SchemaMappingDictionary`, `ArgumentValue`, `FieldDescriptor`, `DataLoaderBatchStatistics`, `Precedence`) keep their short names. Five extension points had none and are renamed. Only the name changes: the packages, the members and the behaviour do not.
+
+[cols="3,3", options="header"]
+|===
+| Before | Now
+| `io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer` | `io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer`
+| `io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer` | `io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer`
+| `io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer` | `io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer`
+| `io.micronaut.graphql.tools.execution.FieldFetcherDecorator` | `io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator`
+| `io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer` | `io.micronaut.graphql.tools.execution.GraphQLDataLoaderOptionsCustomizer`
+|===
+
+What breaks: every import and every `implements` or bean return type of the old names, in Java, Kotlin and Groovy.
+
+Fix: change the import and the class name.
+
+Status: breaking by design; no opt-out.
+
 === BC-49: the observability module is split into graphql-tools-micrometer and graphql-tools-opentelemetry (#570)
 
 `observability` is not the name of a Micronaut module: the official modules are named after their technology, such as `micronaut-micrometer-core` and `micronaut-tracing-opentelemetry-http`, and none ships metrics and tracing in one artifact. The module is now two, each named after its technology:
@@ -1082,7 +1103,7 @@ The public types of the `websocket`, `mapping`, `directive` and `execution` pack
 
 | `GraphQLConnectionResult#attributes()`, `closeCode()`, `reason()` | `getAttributes()`, `getCloseCode()`, `getReason()`
 | `GraphQLExecutionRequest#httpRequest()`, `httpResponse()`, `transport()`, `connectionAttributes()`, `executionInput()` | `getHttpRequest()`, `getHttpResponse()`, `getTransport()`, `getConnectionAttributes()`, `getExecutionInput()`
-| `DataLoaderOptionsCustomizer#loaderName()` | `getLoaderName()`
+| `GraphQLDataLoaderOptionsCustomizer#loaderName()` | `getLoaderName()`
 | `DataLoaderBatchStatistics#counts()` | `getCounts()`
 |===
 
@@ -1094,7 +1115,7 @@ request.httpRequest().getHeaders().get("X-Tenant", String.class);
 request.getHttpRequest().getHeaders().get("X-Tenant", String.class);
 ----
 
-In Groovy and Kotlin, `request.httpRequest` reads the property. A class that implements `DataLoaderOptionsCustomizer` renames `loaderName()` to `getLoaderName()` (in Kotlin, `override fun getLoaderName()`). Code that only calls `GraphQLConnectionRequest#payload()` or `httpRequest()` compiles as before.
+In Groovy and Kotlin, `request.httpRequest` reads the property. A class that implements `GraphQLDataLoaderOptionsCustomizer` renames `loaderName()` to `getLoaderName()` (in Kotlin, `override fun getLoaderName()`). Code that only calls `GraphQLConnectionRequest#payload()` or `httpRequest()` compiles as before.
 === BC-42: the library's `GraphQLInvocation` stays registered beside yours (#499)
 
 The library's `GraphQLInvocation` is no longer removed when your application declares its own. The unqualified injection point still resolves to yours (a bean without a qualifier, a `@Primary` bean, a `@Replaces(DefaultGraphQLInvocation.class)` bean or a `@Primary` factory method that returns `DefaultGraphQLInvocation`), and the library's bean is not created unless something asks for it. Code that injects `List<GraphQLInvocation>` or calls `getBeansOfType(GraphQLInvocation.class)` now also sees `LibraryGraphQLInvocation`; filter it by type if that matters. The startup no longer logs the INFO line that said the library does not create its invocation.
