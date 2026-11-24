@@ -42,7 +42,7 @@ CAUTION: Do not switch `precedence` to collect findings. A lenient setting chang
 . Set `manifest.enabled: true` and a `manifest.path` under `build/`, and start the application. A finding is a line that starts with `!` in the manifest (see <<manifest,Binding Manifest>>).
 . Fix or annotate each finding: fix the code or the schema, or put `@GraphQLIgnore` on a member that binds no field on purpose. List a finding in `allow.findings` only when no processor will see it (see <<strictModeEscape,Accept a finding>>): the processor ignores the runtime `allow.*` settings.
 . Remove `strict: false`.
-. Add `micronaut-graphql-tools-processor` (see <<compileTimeSetup,Set up the build>>). A few findings are reported by the compiler only; the soundness rule in <<compileTime,Compile-Time Verification>> lists them.
+. Add `micronaut-graphql-tools-processor` (see <<compileTimeSetup,Set up the build>>). A few findings are reported by the compiler only; the <<compileTimeSoundness,soundness rule>> lists them.
 
 [configuration]
 ----

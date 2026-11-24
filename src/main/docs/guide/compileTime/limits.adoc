@@ -17,6 +17,7 @@ The visitor checks one resolver class at a time, with the per-class rules that t
 
 Every compile-time check is the same in the three languages. The corpus compiles each case in each language the case has a directory for and compares the findings with one expected file; a language that differs needs an entry in {corpus}/corpus-language-differences.txt[`corpus-language-differences.txt`], and the list is empty and may only shrink ({repo}/graphql-tools-processor/src/test/groovy/io/micronaut/graphql/tools/corpus/BindingCorpusSpec.groovy[`BindingCorpusSpec`]).
 
+[[compileTimeSoundness]]
 === The soundness rule
 
 A compile-time error is a finding that the startup also reports at its default severity, with the same code and the same coordinate. The compile-time check never reads the severity settings (`strict`, `checks.<code>` and `allow.*` of the runtime): the five checks above are errors at compile time even where a runtime setting would relax them. A build that is rejected by a check a runtime setting relaxes is rejected on purpose, and the way out is an annotation (see below).
@@ -65,6 +66,7 @@ An `@Introspected(accessKind = FIELD)` model that a method parameter reaches is 
 
 A build that turns compiler warnings into errors (`-Werror` for javac) fails on this warning like on any other, because the visitor reports it through the compiler's own warning channel; no sample build runs with `-Werror`, so no test covers that. There, put `@Introspected` on the class itself: a class that carries `@Introspected`, or an annotation that carries it (`@GraphQLInput`, `@GraphQLType`, `@Serdeable`), is seen as introspected at compile time. The corpus shows the finding as a `warning` line in `compile.txt` ({corpus}/README.md[corpus README]).
 
+[[compileTimeSeveralModules]]
 === Several modules
 
 A build that keeps resolver classes in feature modules applies the processor in each module that holds resolver classes, and only there: a module without resolvers has nothing to check, and a schema edit does not recompile it. A compilation sees its own sources and its classpath, so the checks split in two.
