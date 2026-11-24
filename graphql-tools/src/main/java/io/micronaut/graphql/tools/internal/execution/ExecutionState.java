@@ -27,6 +27,7 @@ import io.micronaut.core.propagation.PropagatedContextElement;
 import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
+import io.micronaut.http.context.ServerHttpRequestContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -122,6 +123,30 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      */
     public PropagatedContext propagatedContext() {
         return propagatedContext;
+    }
+
+    /**
+     * Makes the request of a context the request of the operation. Over HTTP the context of the thread already holds it. A
+     * WebSocket operation has the upgrade request of its connection as its request, whatever context its thread holds: a
+     * worker thread can carry the context of another request, and it is replaced.
+     *
+     * @param context   a context
+     * @param transport the transport of the operation
+     * @param request   the request of the operation, or null
+     * @return the context itself when it holds the request, or a context with it in place of any other request
+     */
+    public static PropagatedContext withRequest(PropagatedContext context, GraphQLTransport transport, @Nullable HttpRequest<?> request) {
+        if (request == null) {
+            return context;
+        }
+        ServerHttpRequestContext held = context.find(ServerHttpRequestContext.class).orElse(null);
+        if (held == null) {
+            return context.plus(new ServerHttpRequestContext(request));
+        }
+        if (transport == GraphQLTransport.WEBSOCKET && held.httpRequest() != request) {
+            return context.replace(held, new ServerHttpRequestContext(request));
+        }
+        return context;
     }
 
     /**

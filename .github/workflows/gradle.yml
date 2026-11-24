@@ -114,13 +114,13 @@ jobs:
   # Main code is compiled on the default leg and tested on the ceiling: the published jar is compiled against what
   # micronaut-graphql manages, so a graphql-java change that breaks its binary linkage (a changed return type, a removed
   # method) fails here as NoSuchMethodError, which a build that recompiles main on the ceiling would not show.
-  binary-compatibility:
+  graphql-java-compat:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         java: ['25']
-    name: binary compatibility (Java ${{ matrix.java }}, graphql-java ceiling)
+    name: graphql-java compat (Java ${{ matrix.java }}, graphql-java ceiling)
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -140,7 +140,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-reports-binary-compatibility
+          name: test-reports-graphql-java-compat
           path: |
             **/build/test-results/test/TEST-*.xml
             **/build/reports/tests/test/
@@ -401,7 +401,7 @@ jobs:
   required:
     name: required checks
     if: always()
-    needs: [actionlint, build, check-library, binary-compatibility, build-tools, compile-time-budget, native, native-groovy-smoke, docs, consumer-name-guard]
+    needs: [actionlint, build, check-library, graphql-java-compat, build-tools, compile-time-budget, native, native-groovy-smoke, docs, consumer-name-guard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

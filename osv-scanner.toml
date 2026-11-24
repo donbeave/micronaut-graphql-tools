@@ -1,0 +1,7 @@
+# Accepted findings of the vulnerability audit (.github/scripts/vulnerability-audit.sh). Each entry names one advisory
+# and says why it is accepted; an entry that carries an ignoreUntil date expires and the audit fails on it again.
+#
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# ignoreUntil = 2027-01-01
+# reason = "the vulnerable code path is not reachable from this library"

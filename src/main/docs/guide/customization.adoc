@@ -8,7 +8,7 @@ snippet::example.replaced.ReplacedBeansFactory[project-base="test-suite", source
 
 A request is then served by that schema, and the library's binding does not run for it. At startup the library logs one INFO line for each of the two types, which names the bean that is used and the application's qualified beans that it ignores.
 
-An application that builds its own `GraphQL` keeps the library's `GraphQLSchema`, which is bound at startup. To change the library's `GraphQL` without replacing it, add a `GraphQLBuilderCustomizer`.
+An application that builds its own `GraphQL` keeps the library's `GraphQLSchema`, which is bound at startup. To change the library's `GraphQL` without replacing it, add a api:io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer[].
 
 === Why the library selects these two itself
 
