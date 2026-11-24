@@ -14,6 +14,27 @@ The `micronaut-graphql-tools-security` jar ships a `native-image.properties` wit
 
 Reflective reads of graphql-java, the Groovy runtime and other libraries of an application may need reachability metadata of those libraries. The example suites run on the graphql-java versions of the `default` and `ceiling` legs (`gradle/libs.versions.toml`); their native tests show what they cover. For the metadata of the Groovy example, see `META-INF/native-image` of `test-suite-groovy`.
 
+[[nativeThirdParty]]
+== What graphql-java needs
+
+graphql-java loads message bundles from the `i18n/` directory of its jar and uses some of its own types reflectively. The native-image Gradle plugin of the example suites passes a graphql-java entry of its metadata repository to `native-image`: the build log of `:test-suite-java:nativeTest` lists that entry among the `-H:ConfigurationFileDirectories` values. The suites run graphql-java versions that the entry was not written for, so treat what it covers as what the native tests exercise, not as a guarantee for a graphql-java version or a code path that they do not run.
+
+The library adds no graphql-java entry of its own (see <<noReflection,No Runtime Reflection>>). An application whose build does not apply such an entry registers the bundles and the reflective types it uses in its own `resource-config.json` and `reflect-config.json`, and checks the messages of the paths it takes in a native run.
+
+[[nativeReflection]]
+== Needs that belong to other code
+
+The library and the binding module read no classes through `java.lang.reflect` (`ArchitectureRulesSpec` checks the bytecode). The native-image needs that remain belong to other code. Only the first two rows are reflection; the others are a resource and a class-initialization need:
+
+[cols="2,1,3,3", options="header"]
+|===
+|Need |Kind |Effect |Workaround
+|graphql-java internal types |Reflection |Covered by the metadata entry above while the build applies it. |Register the types in your own `reflect-config.json` when the build does not.
+|The Groovy runtime and the closures of a Groovy example |Reflection |Groovy 4.0.x ships no GraalVM metadata. |The Groovy example carries its own (see <<groovyNative,Groovy>> below); the smoke test fails without it.
+|graphql-java message bundles |Resource |A bundle that is not registered is missing at run time. |Register the bundles in your own `resource-config.json` when the build does not apply the entry above.
+|`AuthenticationMode` constants of Micronaut Security |Class initialization |Read from the annotation metadata of its conditions. |The `micronaut-graphql-tools-security` jar ships `--initialize-at-build-time` for the class.
+|===
+
 [[nativeSettings]]
 == Build settings of the example suites
 
@@ -34,6 +55,8 @@ The native tests run the JUnit 5 tests of the Java and the Kotlin example suites
 Groovy has no native test, because Spock does not run natively. The Groovy example has a native smoke test instead: it builds the example's native executable, posts queries to `/graphql` and asserts the response bodies. Groovy 4.0.x ships no GraalVM metadata, so the Groovy example carries its own; see <<groovy,the Groovy page>>.
 
 == Build and run the native tests
+
+On Oracle GraalVM 25.0.5, `./gradlew :test-suite-java:nativeTest --no-parallel` built the test image and its JUnit run reported no failed test.
 
 A native test build needs Oracle GraalVM 25 and a few GB of memory, so run them one after another:
 

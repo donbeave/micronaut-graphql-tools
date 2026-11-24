@@ -1,0 +1,1 @@
+{"data":{"register":null},"errors":[{"message":"The input is not valid","locations":[{"line":2,"column":3}],"path":["register"],"extensions":{"code":"INVALID_INPUT","fields":["name","seats"],"classification":"DataFetchingException"}}]}
