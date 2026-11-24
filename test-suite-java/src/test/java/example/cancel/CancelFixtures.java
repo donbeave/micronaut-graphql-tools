@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
 import jakarta.inject.Singleton;
 
 import java.util.concurrent.CompletableFuture;
@@ -42,7 +42,7 @@ public class CancelFixtures {
     @Bean
     @Singleton
     @Requires(env = CANCEL_PENDING)
-    TypeDefinitionRegistryCustomizer cancelSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer cancelSchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "extend type Query { held: String! quick: String! }\n"));
     }

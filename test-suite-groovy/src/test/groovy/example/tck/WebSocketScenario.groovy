@@ -157,6 +157,10 @@ class WebSocketQueries {
         return ExecutionState.of(environment.graphQlContext).connectionAttributes.get('user', String).orElse(null)
     }
 
+    String nothing() {
+        return null
+    }
+
     String transport(DataFetchingEnvironment environment) {
         return ExecutionState.of(environment.graphQlContext).transport.name()
     }

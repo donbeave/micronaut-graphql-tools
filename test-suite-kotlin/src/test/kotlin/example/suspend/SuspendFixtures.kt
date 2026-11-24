@@ -25,7 +25,7 @@ import io.micronaut.core.propagation.PropagatedContextElement
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.http.annotation.Filter
 import io.micronaut.http.annotation.RequestFilter
 import io.micronaut.http.annotation.ServerFilter
@@ -52,7 +52,7 @@ class SuspendFixtures {
     @Bean
     @Singleton
     @Requires(env = [SUSPEND_RESOLVERS])
-    fun suspendSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun suspendSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Shelf { id: ID! title: String! requestOf: String! sellers: Int! label: String! }\n" +

@@ -19,7 +19,7 @@ import graphql.GraphQL;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
 import io.micronaut.graphql.tools.manifest.BindingManifest;
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 
@@ -105,7 +105,7 @@ final class LargeSchema {
     // class, and without it that lookup is skipped, so a measurement of it would time nothing (#71)
     private static void checkSharedMapped(ApplicationContext context) {
         SchemaMappingDictionary dictionary = new SchemaMappingDictionary();
-        context.getBeansOfType(SchemaMappingDictionaryCustomizer.class).forEach(it -> it.customize(dictionary));
+        context.getBeansOfType(GraphQLSchemaMappingDictionaryCustomizer.class).forEach(it -> it.customize(dictionary));
         if (dictionary.getTypes().get("Shared") == null) {
             throw new IllegalStateException("The dictionary has no entry for the interface Shared");
         }

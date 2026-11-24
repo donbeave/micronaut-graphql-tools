@@ -111,6 +111,8 @@ class WebSocketQueries(private val cancelled: CancelledStreams) {
     fun connectionUser(environment: DataFetchingEnvironment): String? =
         ExecutionState.of(environment.graphQlContext).connectionAttributes.get("user", String::class.java).orElse(null)
 
+    fun nothing(): String? = null
+
     fun transport(environment: DataFetchingEnvironment): String =
         ExecutionState.of(environment.graphQlContext).transport.name
 

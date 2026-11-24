@@ -145,6 +145,18 @@ class ArchitectureRulesSpec extends Specification {
         result.failureReport.details.any { it.contains('io.micronaut.graphql.tools.internal') }
     }
 
+    void "every public extension point interface starts with GraphQL"() {
+        given:
+        def extensionPoints = classes.findAll {
+            it.interface && it.modifiers.contains(JavaModifier.PUBLIC) && !it.packageName.contains('.internal') &&
+                    (it.packageName == 'io.micronaut.graphql.tools.customizer' || it.simpleName.endsWith('Customizer') || it.simpleName.endsWith('Decorator'))
+        }
+
+        expect:
+        extensionPoints.size() >= 7
+        extensionPoints.every { it.simpleName.startsWith('GraphQL') }
+    }
+
     void "no public class or interface declares a record-style accessor"() {
         expect:
         classes().that(publicApi()).and(DescribedPredicate.describe('in websocket, mapping, directive or execution, and not a record, an enum or an annotation', { JavaClass c ->

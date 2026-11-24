@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * The customizer interfaces: beans that change the {@code GraphQL} builder, the schema, the runtime wiring, the type definition registry or the schema mapping dictionary. Key types: {@link io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer}, {@link io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer}, {@link io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer}, {@link io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer}, {@link io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer}.
+ * The customizer interfaces: beans that change the {@code GraphQL} builder, the schema, the runtime wiring, the type definition registry or the schema mapping dictionary. Key types: {@link io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer}, {@link io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer}, {@link io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer}, {@link io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer}, {@link io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer}.
  *
  * <p><b>Audience.</b> Public API. An application implements these interfaces as beans.</p>
  */

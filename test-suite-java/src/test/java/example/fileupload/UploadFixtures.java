@@ -19,7 +19,7 @@ import graphql.schema.idl.SchemaParser;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
 import jakarta.inject.Singleton;
 
 @Factory
@@ -31,7 +31,7 @@ public class UploadFixtures {
     @Bean
     @Singleton
     @Requires(env = UPLOAD)
-    TypeDefinitionRegistryCustomizer uploadSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer uploadSchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "scalar Upload\n"
                         + "extend type Mutation {\n"

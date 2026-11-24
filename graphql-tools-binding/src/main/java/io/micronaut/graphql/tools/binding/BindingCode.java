@@ -166,10 +166,10 @@ public enum BindingCode {
             "GraphQLScalarMapping beans contradict each other or the library."),
     /** Failure: a customizer replaced library wiring. */
     RUNTIME_WIRING_OVERRIDE("runtime-wiring-override", false, false,
-            "A RuntimeWiringCustomizer replaced what the library wired."),
+            "A GraphQLRuntimeWiringCustomizer replaced what the library wired."),
     /** Failure: a customizer claims fields the schema does not define. */
     INVALID_CLAIMED_FIELDS("invalid-claimed-fields", false, false,
-            "A RuntimeWiringCustomizer claims fields that the schema does not define."),
+            "A GraphQLRuntimeWiringCustomizer claims fields that the schema does not define."),
     /** Failure: allow.unreachable names a type that is not unreachable. */
     INVALID_ALLOW_UNREACHABLE("invalid-allow-unreachable", false, false,
             "allow.unreachable names a type that is not an unreachable type."),

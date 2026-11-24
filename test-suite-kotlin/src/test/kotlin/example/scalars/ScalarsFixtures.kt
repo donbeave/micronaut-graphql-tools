@@ -21,7 +21,7 @@ import graphql.schema.idl.SchemaParser
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -45,7 +45,7 @@ class ScalarsFixtures {
     @Bean
     @Singleton
     @Requires(env = [SCALARS_DEFAULTS])
-    fun defaultScalars() = TypeDefinitionRegistryCustomizer { registry ->
+    fun defaultScalars() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "scalar LocalDate\n" +
@@ -69,7 +69,7 @@ class ScalarsFixtures {
     @Bean
     @Singleton
     @Requires(env = [SCALARS_RENAMED])
-    fun renamedScalars() = TypeDefinitionRegistryCustomizer { registry ->
+    fun renamedScalars() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "scalar Date\n" +
@@ -92,7 +92,7 @@ class ScalarsFixtures {
     @Bean
     @Singleton
     @Requires(env = [SCALARS_CONFIGURED])
-    fun configuredScalars() = TypeDefinitionRegistryCustomizer { registry ->
+    fun configuredScalars() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "scalar Date\n" +

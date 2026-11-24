@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools
 
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
 import io.micronaut.context.annotation.Bean
@@ -194,7 +194,7 @@ enum Color {
     static class DictionaryFactory {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (schemaMappingDictionary) -> schemaMappingDictionary.registerType("Ghost", Item.class)
         }
     }

@@ -23,8 +23,8 @@ import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer;
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
 import jakarta.inject.Singleton;
 
 @Factory
@@ -38,7 +38,7 @@ public class PrecedenceFixtures {
     @Bean
     @Singleton
     @Requires(env = RELAY)
-    TypeDefinitionRegistryCustomizer relaySchema() {
+    GraphQLTypeDefinitionRegistryCustomizer relaySchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "interface Gizmo { id: ID! }\n"
                         + "type Sprocket implements Gizmo { id: ID! name: String! }\n"
@@ -49,8 +49,8 @@ public class PrecedenceFixtures {
     @Bean
     @Singleton
     @Requires(env = RELAY)
-    @Replaces(value = SchemaMappingDictionaryCustomizer.class, factory = GraphQLFactory.class)
-    SchemaMappingDictionaryCustomizer relayTypes() {
+    @Replaces(value = GraphQLSchemaMappingDictionaryCustomizer.class, factory = GraphQLFactory.class)
+    GraphQLSchemaMappingDictionaryCustomizer relayTypes() {
         return dictionary -> dictionary
                 .registerType("SecurityError", SecurityError.class)
                 .registerType("ValidationError", ValidationError.class)
@@ -60,7 +60,7 @@ public class PrecedenceFixtures {
     @Bean
     @Singleton
     @Requires(env = AMBIGUOUS)
-    TypeDefinitionRegistryCustomizer ambiguousSchema() {
+    GraphQLTypeDefinitionRegistryCustomizer ambiguousSchema() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "type Gadget { name: String! label: String! }\n"
                         + "extend type Query { gadget: Gadget }\n"));

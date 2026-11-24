@@ -21,7 +21,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.scheduling.annotation.ExecuteOn
 import jakarta.inject.Singleton
 
@@ -39,14 +39,14 @@ class ExecuteOnFixtures {
     @Bean
     @Singleton
     @Requires(env = [EXECUTE_ON_UNKNOWN])
-    fun unknownSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun unknownSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(SchemaParser().parse("extend type Query { slowLookup: String! }\n"))
     }
 
     @Bean
     @Singleton
     @Requires(env = [EXECUTE_ON_PROPERTY])
-    fun propertySchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun propertySchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(SchemaParser().parse("type Gadget { size: String! }\nextend type Query { gadget: Gadget }\n"))
     }
 }

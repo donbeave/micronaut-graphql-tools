@@ -19,7 +19,7 @@ import graphql.schema.idl.SchemaParser
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
@@ -48,7 +48,7 @@ class RenameFixtures {
     @Bean
     @Singleton
     @Requires(env = [RENAME_MEMBERS])
-    fun membersSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun membersSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Parcel { id: ID! class: String! hashCode: Int! headline: String! tagline: String! " +
@@ -61,7 +61,7 @@ class RenameFixtures {
     @Bean
     @Singleton
     @Requires(env = [RENAME_CLASH])
-    fun clashSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun clashSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Slip { title: String! }\n" +
@@ -73,7 +73,7 @@ class RenameFixtures {
     @Bean
     @Singleton
     @Requires(env = [RENAME_COORDINATES])
-    fun coordinatesSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun coordinatesSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Parcel { id: ID! class: String! }\n" +
@@ -85,7 +85,7 @@ class RenameFixtures {
     @Bean
     @Singleton
     @Requires(env = [RENAME_PREFIXES])
-    fun prefixesSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun prefixesSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Parcel { id: ID! author: String! active: Boolean! }\n" +

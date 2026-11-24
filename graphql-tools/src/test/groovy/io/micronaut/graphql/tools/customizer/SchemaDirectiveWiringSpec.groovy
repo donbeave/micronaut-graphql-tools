@@ -32,9 +32,9 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.RuntimeWiringCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer
 import io.micronaut.graphql.tools.directive.SchemaDirective
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
@@ -152,7 +152,7 @@ type Query {
         e.cause.beans[0].startsWith(PrototypeUpperWiring.name)
     }
 
-    void "a SchemaDirectiveWiring bean that a RuntimeWiringCustomizer registers starts and applies"() {
+    void "a SchemaDirectiveWiring bean that a GraphQLRuntimeWiringCustomizer registers starts and applies"() {
         given:
         startContext(SCHEMA, SPEC_NAME_CUSTOMIZER_BEAN)
 
@@ -227,7 +227,7 @@ type Query {
                 + "Use one of them: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.").toString()
     }
 
-    void "a RuntimeWiringCustomizer may not replace the wiring of a SchemaDirective bean"() {
+    void "a GraphQLRuntimeWiringCustomizer may not replace the wiring of a SchemaDirective bean"() {
         given:
         startContext(SCHEMA, SPEC_NAME_REPLACED)
 
@@ -327,7 +327,7 @@ type Query {
 
     @Requires(property = 'spec.name', value = SPEC_NAME_REPLACED)
     @Singleton
-    static class ReplaceUpper implements RuntimeWiringCustomizer {
+    static class ReplaceUpper implements GraphQLRuntimeWiringCustomizer {
         @Override
         void customize(RuntimeWiring.Builder builder) {
             builder.directive('upper', new UpperWiring())
@@ -384,7 +384,7 @@ type Query {
 
     @Requires(property = 'spec.name', value = SPEC_NAME_CUSTOMIZER_BEAN)
     @Singleton
-    static class RegisterUpper implements RuntimeWiringCustomizer {
+    static class RegisterUpper implements GraphQLRuntimeWiringCustomizer {
         private final CustomizerUpperWiring wiring
 
         RegisterUpper(CustomizerUpperWiring wiring) {
@@ -446,10 +446,10 @@ type Query {
 
         @Bean
         @Singleton
-        TypeDefinitionRegistryCustomizer validationDirectives() {
+        GraphQLTypeDefinitionRegistryCustomizer validationDirectives() {
             return { TypeDefinitionRegistry registry ->
                 registry.merge(DirectiveConstraints.newDirectiveConstraints().build().directivesDeclaration)
-            } as TypeDefinitionRegistryCustomizer
+            } as GraphQLTypeDefinitionRegistryCustomizer
         }
     }
 

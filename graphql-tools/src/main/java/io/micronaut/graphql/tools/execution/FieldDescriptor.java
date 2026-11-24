@@ -23,7 +23,7 @@ import io.micronaut.core.annotation.Nullable;
 import java.util.concurrent.Executor;
 
 /**
- * What a {@link FieldFetcherDecorator} learns about a field at startup.
+ * What a {@link GraphQLFieldFetcherDecorator} learns about a field at startup.
  *
  * @param coordinates        the coordinates of the field
  * @param kind               how the library executes the field

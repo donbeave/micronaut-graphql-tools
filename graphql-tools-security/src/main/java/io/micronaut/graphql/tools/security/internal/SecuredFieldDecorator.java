@@ -22,7 +22,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.execution.FieldDescriptor;
-import io.micronaut.graphql.tools.execution.FieldFetcherDecorator;
+import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator;
 import io.micronaut.graphql.tools.security.GraphQLSecurity;
 import io.micronaut.inject.annotation.EvaluatedAnnotationValue;
 import io.micronaut.security.annotation.Secured;
@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
 @Singleton
 @Requires(classes = {Secured.class, Authentication.class})
 @Requires(property = GraphQLSecurity.PREFIX + ".enabled", value = "true", defaultValue = "true")
-final class SecuredFieldDecorator implements FieldFetcherDecorator {
+final class SecuredFieldDecorator implements GraphQLFieldFetcherDecorator {
 
     private static final String EXPRESSION_PREFIX = "#{";
 

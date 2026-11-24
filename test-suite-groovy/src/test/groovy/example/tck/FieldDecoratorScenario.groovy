@@ -21,7 +21,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.execution.FieldDescriptor
-import io.micronaut.graphql.tools.execution.FieldFetcherDecorator
+import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator
 import jakarta.inject.Singleton
 
 import java.util.concurrent.CompletableFuture
@@ -34,7 +34,7 @@ import java.util.concurrent.CompletionStage
 // tag::decorator[]
 @CompileStatic
 @Singleton
-class MarkingDecorator implements FieldFetcherDecorator {
+class MarkingDecorator implements GraphQLFieldFetcherDecorator {
 
     @Override
     DataFetcher<Object> decorate(FieldDescriptor field, DataFetcher<Object> fetcher) {

@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.AbstractTest
-import io.micronaut.graphql.tools.customizer.SchemaMappingDictionaryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
@@ -461,7 +461,7 @@ type Stray implements Coded {
     static class PayloadDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Receipt", ReceiptModel)
                     .registerType("Failure", FailureModel)
@@ -517,7 +517,7 @@ type Stray implements Coded {
     static class ResultDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Song", SongGraph)
                     .registerType("Album", AlbumModel)
@@ -558,7 +558,7 @@ type Stray implements Coded {
     static class ItemDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Printed", PrintedGraph)
                     .registerType("Digital", DigitalGraph)
@@ -594,7 +594,7 @@ type Stray implements Coded {
     static class TextDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Note", NoteModel)
                     .registerType("LongNote", LongNoteModel)
@@ -641,7 +641,7 @@ type Stray implements Coded {
     static class ShelfDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Volume", VolumeGraph)
                     .registerType("Magazine", MagazineModel)
@@ -679,7 +679,7 @@ type Stray implements Coded {
     static class PayDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Receipt", ReceiptGraph)
                     .registerType("Refund", RefundModel)
@@ -705,7 +705,7 @@ type Stray implements Coded {
     static class StrayDictionary {
         @Bean
         @Singleton
-        SchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
+        GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
             return (dictionary) -> dictionary
                     .registerType("Receipt", ReceiptModel)
                     .registerType("Stray", StrayModel)

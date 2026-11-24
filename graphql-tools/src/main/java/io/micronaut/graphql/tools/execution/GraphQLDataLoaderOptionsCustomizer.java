@@ -36,7 +36,7 @@ import org.dataloader.DataLoaderOptions;
  * application has. Return a new object each time rather than a shared one when the options hold state, such as a
  * cache map: the loader is created again for every execution.</p>
  */
-public interface DataLoaderOptionsCustomizer extends Ordered {
+public interface GraphQLDataLoaderOptionsCustomizer extends Ordered {
 
     /**
      * @return the name of the loader that this customizer applies to

@@ -28,7 +28,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLModels
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import jakarta.inject.Singleton
 
 // Model classes that carry no annotation (#68): the classes of another module or of a generator.
@@ -51,7 +51,7 @@ class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = [EXTERNAL_CLASSES])
-    fun classesSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun classesSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Atlas { title: String! region: Region! pages: Int! }\n" +
@@ -64,7 +64,7 @@ class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = [EXTERNAL_PACKAGE])
-    fun packageSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun packageSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Chart { label: String! axis: Axis! }\n" +
@@ -77,7 +77,7 @@ class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = [EXTERNAL_MISSING])
-    fun missingSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun missingSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Unlisted { name: String! }\n" +
@@ -89,7 +89,7 @@ class ExternalModelFixtures {
     @Bean
     @Singleton
     @Requires(env = [EXTERNAL_NESTED])
-    fun nestedSchema() = TypeDefinitionRegistryCustomizer { registry ->
+    fun nestedSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
                 "type Holder { label: String! inner: Inner! }\n" +

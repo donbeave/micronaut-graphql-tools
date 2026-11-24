@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.internal.execution;
 
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.execution.DataLoaderOptionsCustomizer;
+import io.micronaut.graphql.tools.execution.GraphQLDataLoaderOptionsCustomizer;
 import org.dataloader.DataLoader;
 import org.dataloader.DataLoaderOptions;
 import org.dataloader.DataLoaderRegistry;
@@ -116,10 +116,10 @@ public final class LazyDataLoaderRegistry extends DataLoaderRegistry {
     @Nullable
     private DataLoaderOptions options(DataLoaderTable.Entry entry) {
         DataLoaderOptions options = state.isSubscription() ? new UncachedOptions() : null;
-        for (DataLoaderOptionsCustomizer customizer : entry.customizers()) {
+        for (GraphQLDataLoaderOptionsCustomizer customizer : entry.customizers()) {
             DataLoaderOptions customized = customizer.customize(options == null ? new DataLoaderOptions() : options);
             if (customized == null) {
-                throw new IllegalStateException("The DataLoaderOptionsCustomizer " + customizer.getClass().getName()
+                throw new IllegalStateException("The GraphQLDataLoaderOptionsCustomizer " + customizer.getClass().getName()
                         + " returned no options for the loader '" + entry.name() + "'");
             }
             options = customized;

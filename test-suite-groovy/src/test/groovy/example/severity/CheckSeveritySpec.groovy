@@ -20,7 +20,7 @@ import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
@@ -110,7 +110,7 @@ class CheckSeveritySpec extends Specification {
 
     @Singleton
     @Requires(env = CheckSeveritySpec.ENVIRONMENT)
-    static class Schema implements TypeDefinitionRegistryCustomizer {
+    static class Schema implements GraphQLTypeDefinitionRegistryCustomizer {
         @Override
         void customize(TypeDefinitionRegistry registry) {
             registry.merge(new SchemaParser().parse('type Orphan { id: ID }\n'))

@@ -21,7 +21,7 @@ import graphql.schema.idl.SchemaParser;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
-import io.micronaut.graphql.tools.customizer.TypeDefinitionRegistryCustomizer;
+import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
 import jakarta.inject.Singleton;
 
@@ -43,7 +43,7 @@ public class ScalarsFixtures {
     @Bean
     @Singleton
     @Requires(env = DEFAULTS)
-    TypeDefinitionRegistryCustomizer defaultScalars() {
+    GraphQLTypeDefinitionRegistryCustomizer defaultScalars() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "scalar LocalDate\n"
                         + "scalar OffsetDateTime\n"
@@ -64,7 +64,7 @@ public class ScalarsFixtures {
     @Bean
     @Singleton
     @Requires(env = RENAMED)
-    TypeDefinitionRegistryCustomizer renamedScalars() {
+    GraphQLTypeDefinitionRegistryCustomizer renamedScalars() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "scalar Date\n"
                         + "scalar OffsetDateTime\n"
@@ -84,7 +84,7 @@ public class ScalarsFixtures {
     @Bean
     @Singleton
     @Requires(env = CONFIGURED)
-    TypeDefinitionRegistryCustomizer configuredScalars() {
+    GraphQLTypeDefinitionRegistryCustomizer configuredScalars() {
         return registry -> registry.merge(new SchemaParser().parse(
                 "scalar Date\n"
                         + "scalar OffsetDateTime\n"
