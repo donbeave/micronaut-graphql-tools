@@ -10,7 +10,7 @@ dependencies {
     api(mn.micronaut.core)
 
     testImplementation(mnTest.micronaut.test.spock)
-    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testRuntimeOnly(mnLogging.logback.classic)
 }
 
 tasks.named<Test>("test") {
