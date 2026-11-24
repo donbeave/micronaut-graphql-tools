@@ -24,6 +24,8 @@ import graphql.language.FieldDefinition
 import graphql.language.InputObjectTypeDefinition
 import graphql.language.InputObjectTypeExtensionDefinition
 import graphql.language.InputValueDefinition
+import graphql.language.InterfaceTypeDefinition
+import graphql.language.InterfaceTypeExtensionDefinition
 import graphql.language.ListType
 import graphql.language.NonNullType
 import graphql.language.ObjectTypeDefinition
@@ -65,7 +67,11 @@ final class SchemaMutator {
         documents.each { String file, Document document ->
             document.definitions.eachWithIndex { Definition definition, int at ->
                 if (definition instanceof ObjectTypeDefinition) {
-                    objectMutants((ObjectTypeDefinition) definition, file, document, at, files, result)
+                    objectMutants(((ObjectTypeDefinition) definition).name, ((ObjectTypeDefinition) definition).fieldDefinitions, file, document, at, files,
+                            result) { int index, FieldDefinition field -> replaceField(document, at, (ObjectTypeDefinition) definition, index, field) }
+                } else if (definition instanceof InterfaceTypeDefinition) {
+                    objectMutants(((InterfaceTypeDefinition) definition).name, ((InterfaceTypeDefinition) definition).fieldDefinitions, file, document, at,
+                            files, result) { int index, FieldDefinition field -> replaceInterfaceField(document, at, (InterfaceTypeDefinition) definition, index, field) }
                 } else if (definition instanceof InputObjectTypeDefinition) {
                     inputMutants((InputObjectTypeDefinition) definition, file, document, at, files, result)
                 } else if (definition instanceof EnumTypeDefinition) {
@@ -79,9 +85,8 @@ final class SchemaMutator {
 
     // ---------------------------------------------------------------------------------------------- breaking mutants
 
-    private static void objectMutants(ObjectTypeDefinition type, String file, Document document, int at, Map<String, String> files, List<Mutant> out) {
-        String owner = type.name
-        List<FieldDefinition> fields = type.fieldDefinitions
+    private static void objectMutants(String owner, List<FieldDefinition> fields, String file, Document document, int at, Map<String, String> files,
+                                      List<Mutant> out, Closure<Document> replace) {
         fields.eachWithIndex { FieldDefinition field, int i ->
             if (field.name.startsWith('__')) {
                 return
@@ -91,10 +96,10 @@ final class SchemaMutator {
             List<String> names = [coordinate, '#' + field.name + '(', '#get' + capitalized + '(', '#is' + capitalized + '(']
             String renamed = field.name + 'Renamed'
             out.add(breaking('rename-field', coordinate, names + [owner + '.' + renamed], files, file,
-                    replaceField(document, at, type, i, field.transform { FieldDefinition.Builder b -> b.name(renamed) })))
+                    replace.call(i, field.transform { FieldDefinition.Builder b -> b.name(renamed) })))
             typeMutations(field.type).each { String kind, Type<?> changed ->
                 out.add(breaking(kind, coordinate, names, files, file,
-                        replaceField(document, at, type, i, field.transform { FieldDefinition.Builder b -> b.type(changed) })))
+                        replace.call(i, field.transform { FieldDefinition.Builder b -> b.type(changed) })))
             }
             List<InputValueDefinition> arguments = field.inputValueDefinitions
             arguments.eachWithIndex { InputValueDefinition argument, int k ->
@@ -102,7 +107,7 @@ final class SchemaMutator {
                     List<InputValueDefinition> copy = new ArrayList<>(arguments)
                     copy.set(k, argument.transform { InputValueDefinition.Builder b -> b.type(changed) })
                     out.add(breaking(kind + '-argument', coordinate + '(' + argument.name + ':)', names, files, file,
-                            replaceField(document, at, type, i, field.transform { FieldDefinition.Builder b -> b.inputValueDefinitions(copy) })))
+                            replace.call(i, field.transform { FieldDefinition.Builder b -> b.inputValueDefinitions(copy) })))
                 }
             }
         }
@@ -158,7 +163,8 @@ final class SchemaMutator {
             return ((ListType) type).type
         }
         if (type instanceof NonNullType && ((NonNullType) type).type instanceof ListType) {
-            return ((ListType) ((NonNullType) type).type).type
+            Type<?> element = ((ListType) ((NonNullType) type).type).type
+            return element instanceof NonNullType ? element : NonNullType.newNonNullType(element).build()
         }
         return ListType.newListType(type).build()
     }
@@ -268,6 +274,15 @@ final class SchemaMutator {
         ObjectTypeDefinition changed = type instanceof ObjectTypeExtensionDefinition
                 ? ((ObjectTypeExtensionDefinition) type).transformExtension { ObjectTypeExtensionDefinition.Builder b -> b.fieldDefinitions(fields) }
                 : type.transform { ObjectTypeDefinition.Builder b -> b.fieldDefinitions(fields) }
+        return replaceDefinition(document, at, changed)
+    }
+
+    private static Document replaceInterfaceField(Document document, int at, InterfaceTypeDefinition type, int index, FieldDefinition field) {
+        List<FieldDefinition> fields = new ArrayList<>(type.fieldDefinitions)
+        fields.set(index, field)
+        InterfaceTypeDefinition changed = type instanceof InterfaceTypeExtensionDefinition
+                ? ((InterfaceTypeExtensionDefinition) type).transformExtension { InterfaceTypeExtensionDefinition.Builder b -> b.definitions(fields) }
+                : type.transform { InterfaceTypeDefinition.Builder b -> b.definitions(fields) }
         return replaceDefinition(document, at, changed)
     }
 

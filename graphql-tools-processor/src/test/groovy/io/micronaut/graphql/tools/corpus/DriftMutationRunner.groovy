@@ -168,7 +168,7 @@ final class DriftMutationRunner {
                     Verdict compile = compileTimeBinder.bind(request)
                     problem = judge(mutated, unit.language, mutant, baseline, runtime, compile)
                 } catch (AssertionError e) {
-                    if (e.message.contains('outside the bindings')) {
+                    if (mutant.breaking && e.message.contains('outside the bindings')) {
                         outcome = 'invalid'
                     } else {
                         problem = e.message
