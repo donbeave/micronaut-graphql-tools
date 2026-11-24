@@ -37,4 +37,10 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     importMicronautCatalog("micronaut-micrometer")
     importMicronautCatalog("micronaut-tracing")
     importMicronautCatalog("micronaut-security")
+    importMicronautCatalog("micronaut-serde")
+    importMicronautCatalog("micronaut-validation")
+    importMicronautCatalog("micronaut-rxjava2")
+    importMicronautCatalog("micronaut-rxjava3")
+    importMicronautCatalog("micronaut-kotlin")
+    importMicronautCatalog("micronaut-logging")
 }

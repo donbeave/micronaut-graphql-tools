@@ -17,13 +17,11 @@ dependencies {
     // ScalarsArchitectureSpec: the package and Jackson rules read the bytecode of this module.
     testImplementation(libs.archunit)
     // The JSON scalar specs run on Micronaut Serialization, and no Jackson databind is on the test classpath. The Serde version
-    // comes from the Micronaut platform BOM, as in graphql-tools.
-    testImplementation(platform(libs.micronaut.platform))
-    testImplementation("io.micronaut.serde:micronaut-serde-jackson")
-    testAnnotationProcessor(platform(libs.micronaut.platform))
-    testAnnotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    // comes from the micronaut-serde catalog.
+    testImplementation(mnSerde.micronaut.serde.jackson)
+    testAnnotationProcessor(mnSerde.micronaut.serde.processor)
     testAnnotationProcessor(mn.micronaut.inject.java)
-    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testRuntimeOnly(mnLogging.logback.classic)
 }
 
 // DocsPageSpec reads the guide page of the scalars behind Gradle's back, so it is a declared input.

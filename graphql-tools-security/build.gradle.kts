@@ -18,7 +18,7 @@ dependencies {
     testImplementation(mn.micronaut.http.server.netty)
     testImplementation(mn.micronaut.http.client)
     testRuntimeOnly(mn.micronaut.jackson.databind)
-    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testRuntimeOnly(mnLogging.logback.classic)
 }
 
 // DocsPageSpec reads the guide page of the module behind Gradle's back, so it is a declared input.
