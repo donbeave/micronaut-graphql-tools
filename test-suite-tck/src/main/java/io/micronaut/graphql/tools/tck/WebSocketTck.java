@@ -62,6 +62,7 @@ public final class WebSocketTck {
             "rejecting-interceptor-closes",
             "accepting-interceptor-attributes",
             "transport-per-entry",
+            "null-only-data-keeps-payload",
             "events-off-event-loop-with-context",
             "blocking-resolver-off-event-loop",
             "complete-cancels",
@@ -122,6 +123,7 @@ public final class WebSocketTck {
                 case "rejecting-interceptor-closes" -> rejectingInterceptorCloses(env);
                 case "accepting-interceptor-attributes" -> acceptingInterceptorAttributes(env);
                 case "transport-per-entry" -> transportPerEntry(env);
+                case "null-only-data-keeps-payload" -> nullOnlyDataKeepsPayload(env);
                 case "events-off-event-loop-with-context" -> eventsOffEventLoopWithContext(env);
                 case "blocking-resolver-off-event-loop" -> blockingResolverOffEventLoop(env);
                 case "complete-cancels" -> completeCancels(env);
@@ -217,6 +219,21 @@ public final class WebSocketTck {
             socket.subscribe("1", "{ connectionUser }");
             Map<String, Object> next = socket.next();
             expect("alice", path(next, "payload", "data", "connectionUser"), next);
+            expect("complete", socket.next().get("type"), "completion");
+        }
+    }
+
+    // A data object that holds only a null field is a payload of its own: the next message carries it with the field set to null.
+    private static void nullOnlyDataKeepsPayload(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of())) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "{ nothing }");
+            Map<String, Object> next = socket.next();
+            expect("next", next.get("type"), next);
+            Object payload = next.get("payload");
+            if (!(payload instanceof Map<?, ?> map) || !(map.get("data") instanceof Map<?, ?> data) || !data.containsKey("nothing") || data.get("nothing") != null) {
+                throw new AssertionError("the payload of the next message must hold data {nothing=null}: " + next);
+            }
             expect("complete", socket.next().get("type"), "completion");
         }
     }
