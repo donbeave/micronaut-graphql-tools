@@ -107,7 +107,7 @@ tasks.named("publishGuide") {
 // type would leave a dead link. This check fails the guide build on an `api:` link whose type has no source file in a module.
 val checkApiLinks by tasks.registering {
     group = "verification"
-    description = "Checks that every api: link of the guide names a type that exists in a library module."
+    description = "Checks that every api: link of the guide names a top-level type that exists in a library module."
     val guide = fileTree(layout.projectDirectory.dir("src/main/docs/guide")) { include("**/*.adoc") }
     val sources = fileTree(layout.projectDirectory) { include("graphql-tools*/src/main/java/**/*.java") }
     inputs.files(guide).withPropertyName("guide").withPathSensitivity(PathSensitivity.RELATIVE)
@@ -115,11 +115,11 @@ val checkApiLinks by tasks.registering {
     val marker = layout.buildDirectory.file("checks/api-links.ok")
     outputs.file(marker)
     doLast {
-        val known = sources.files.map { it.path.substringAfter("/src/main/java/").removeSuffix(".java").replace('/', '.') }.toSet()
+        val known = sources.files.map { it.invariantSeparatorsPath.substringAfter("/src/main/java/").removeSuffix(".java").replace('/', '.') }.toSet()
         val link = Regex("""api:([\w.]+)\[""")
         val missing = guide.files.sortedBy { it.name }.flatMap { page ->
             page.readLines().flatMap { line -> link.findAll(line).map { it.groupValues[1] }.toList() }
-                .filter { type -> generateSequence(type) { it.substringBeforeLast('.', "").ifEmpty { null } }.none { it in known } }
+                .filter { type -> type !in known }
                 .map { "${page.name}: api:$it[]" }
         }
         if (missing.isNotEmpty()) {
