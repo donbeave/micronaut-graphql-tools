@@ -108,10 +108,9 @@ public final class CheckPolicy {
         Map<BindingCode, Severity> explicit = new EnumMap<>(BindingCode.class);
         List<String> problems = new ArrayList<>();
         Map<String, Object> entries = new LinkedHashMap<>();
-        configuration.getChecks().forEach((key, value) -> entries.put(key, value));
-        Map<String, Object> raw = resolver.getProperty(PREFIX + "checks", Argument.mapOf(String.class, Object.class))
-                .orElse(Map.of());
-        entries.putAll(raw);
+        entries.putAll(resolver.getProperty(PREFIX + "checks", Argument.mapOf(String.class, Object.class))
+                .orElse(Map.of()));
+        entries.putAll(configuration.getChecks());
         entries.forEach((key, value) -> {
             String name = NameUtils.hyphenate(key.replace('.', '-').replace('_', '-'));
             BindingCode code = BindingCode.fromCode(name);

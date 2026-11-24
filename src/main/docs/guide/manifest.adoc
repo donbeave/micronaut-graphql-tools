@@ -16,12 +16,11 @@ micronaut:
   graphql:
     tools:
       manifest:
-        record: true # enabled implies it
         enabled: true
         path: build/graphql-binding-manifest.txt
 ----
 
-Without `path` the manifest is logged at INFO.
+Without `path` the manifest is recorded and can be read from the `BindingManifest` bean, and nothing is written or logged.
 
 == The format
 
