@@ -1153,7 +1153,7 @@ micronaut:
 
 The GraphQL over HTTP specification forbids executing a mutation over `GET`, because a link, a prefetch or a crawler issues `GET` requests without the user's intent. The library executed such a request.
 
-What changes: a `GET` request whose selected operation is a mutation is answered with `405 Method Not Allowed` and the header `Allow: POST`, before any resolver runs. The body is a GraphQL response with one error (`extensions.code` is `METHOD_NOT_ALLOWED`) and no `data`, in the media type that `Accept` negotiates. The operation is the one that `operationName` names, or the only operation of the document. A query over `GET`, every operation over `POST`, and the subscriptions over WebSocket are unchanged.
+What changes: a `GET` request whose selected operation is a mutation is answered with `405 Method Not Allowed` and the header `Allow: POST`, before any resolver runs. The body is a GraphQL response with one error (`extensions.code` is `METHOD_NOT_ALLOWED`) and no `data`, in the media type that `Accept` negotiates. The operation is the one that `operationName` names, or the only operation of the document. A query over `GET`, every operation over `POST`, and the subscriptions over WebSocket are unchanged. The TCK scenario `http-conformance` checks this in the three example suites, with the upload module on and off.
 
 [source,bash]
 ----
