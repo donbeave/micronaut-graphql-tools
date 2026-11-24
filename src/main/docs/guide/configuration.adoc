@@ -1,5 +1,48 @@
 The library reads its settings from `micronaut.graphql.tools`, in `application.yml` or any other property source that Micronaut reads. The reference below is generated from the configuration class: each key has its type and its default. The topics with settings of their own have a child page: <<scalarSettings,Scalars>>, <<executionSettings,Execution>>, <<errorSettings,Errors>>, <<precedence,Precedence>> and <<checkSeverity,Check severity>>. The keys of protection and the binding of a renamed field are on this page.
 
+== Keys at a glance
+
+The generated tables below list the type and the default of every key. This table adds the effect of each key and the page that explains it. Keys under `scalars` are on <<scalarSettings,Scalars>>.
+
+[cols="4,2,5,2", options="header"]
+|===
+|Key (under `micronaut.graphql.tools`) |Default |Effect |Page
+|`precedence` |`fail` |How a field is bound when a property and a type resolver method can both bind it. |<<precedence,Precedence>>
+|`resolver-directives` |empty |Directive names that mark a field as bound by a type resolver method. |<<precedence,Precedence>>
+|`strict` |`true` |The shorthand for the severity of every check without an entry in `checks`: `true` is `fail`, `false` is `warn`. |<<checkSeverity,Check severity>>
+|`checks.<code>` |none |The severity (`fail`, `warn` or `ignore`) of one check. An entry wins over `strict`. |<<checkSeverity,Check severity>>
+|`allow.unreachable`, `allow.inert-directives`, `allow.schema-customizer-directives`, `allow.findings` |empty |What the checks accept: unreachable types, directives without wiring, and manifest lines of findings. |<<checkSeverity,Check severity>>
+|`resolver-accessor-prefixes` |`false` |Lets a resolver method named `getX` or `isX` bind the field `x`. |<<renaming,Binding a field to a differently named member>>
+|`type-class-convention` |none |A class name pattern with `{Type}` that picks the class of an object type of a union or interface. |<<typeSystem,Type System>>
+|`eager-init` |`true` |Binds the schema when the application context starts, so a binding failure stops the start. |<<startupErrors,Startup Errors>>
+|`schema.locations` |`classpath:graphql/**/*.graphqls` |Where the schema files are read from. |<<schema,Schema>>
+|`manifest.enabled`, `manifest.path` |`false`, none |Record the binding manifest as a bean, and write it to the file at startup when a path is set. |<<manifest,Binding Manifest>>
+|`execution.executor` |`blocking` |The executor that every operation hops to, or `none`. |<<executionSettings,Execution>>
+|`execution.timeout` |none |How long an operation may take before the client gets an `EXECUTION_TIMEOUT` error. |<<protection,Protection>>
+|`execution.data-loader-statistics` |`false` |Counts the batches of each batch loader bean. |<<observability,Observability>>
+|`errors.details` |`false` |Sends the message of an unmapped exception to the client. |<<errorSettings,Errors>>
+|`errors.stack-traces` |`false` |Logs the stack trace of an unmapped exception. |<<errorSettings,Errors>>
+|`protection.document-cache-size` |`1000` |The size of the cache of parsed documents; `0` switches it off. |<<protection,Protection>>
+|`protection.max-depth`, `protection.max-complexity` |`0` |Reject deep or expensive operations; `0` is no limit. |<<protection,Protection>>
+|`protection.introspection` |`true` |Whether `+__schema+` and `+__type+` answer. |<<protection,Protection>>
+|===
+
+[[processorOptions]]
+== Processor options and their runtime keys
+
+The compile-time checks read processor options, not configuration properties. An option name starts with `micronaut.graphql.tools.processor.`. The table gives the runtime key whose value the option should match; see <<compileTimeOptions,Options>> for the values and how each build tool passes them.
+
+[cols="4,4,5", options="header"]
+|===
+|Processor option |Runtime key |Note
+|`schema.dirs` |`schema.locations` |The option lists directories and the key lists locations, so the two are set separately.
+|`resolver.accessor.prefixes` |`resolver-accessor-prefixes` |Set both to one value.
+|`type.class.convention` |`type-class-convention` |Set both to one value.
+|`loose.nullability` |none |Read by the compile-time checks only.
+|`checks` |none |Switches the compile-time checks off; the startup still checks.
+|`module.dir` |none |Read by the compile-time checks only.
+|===
+
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration.adoc[]
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$AllowConfiguration.adoc[]

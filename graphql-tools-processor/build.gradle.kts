@@ -46,6 +46,10 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-XX:SoftRefLRUPolicyMSPerMB=0")
     // the Kotlin batch is its own task (corpusKotlin): it needs the network and has its own budget
     systemProperty("corpus.dir", corpusDir.asFile.absolutePath)
+    // the error reference page, whose example messages ErrorReferenceSpec compares with the startup of a corpus case
+    val errorReference = rootProject.file("src/main/docs/guide/exceptions.adoc")
+    inputs.file(errorReference).withPathSensitivity(PathSensitivity.NONE).withPropertyName("errorReference")
+    systemProperty("guide.errors", errorReference.absolutePath)
     systemProperty("corpus.report", layout.buildDirectory.file("corpus/timings.txt").get().asFile.absolutePath)
     if (project.hasProperty("corpus.update")) {
         systemProperty("corpus.update", "true")
@@ -71,6 +75,7 @@ tasks.named<Test>("test") {
     exclude("**/KotlinCorpusSpec*")
     if (!corpusOnThisLeg && !project.hasProperty("corpus.update")) {
         exclude("**/BindingCorpusSpec*")
+        exclude("**/ErrorReferenceSpec*")
         doFirst {
             logger.lifecycle("BindingCorpusSpec skipped: the binding corpus runs on the default graphql-java leg only (-PgraphqlJavaLeg=default).")
         }

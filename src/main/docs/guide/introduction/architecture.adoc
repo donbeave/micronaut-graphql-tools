@@ -1,0 +1,26 @@
+The library is one layer of a stack. Each layer is a separate project with its own documentation, and this page says what the library takes from the layer below it.
+
+[cols="2,5,3", options="header"]
+|===
+|Layer |Role |Documentation
+|graphql-java |Parses and validates the query, runs the execution and builds the response. It has no opinion about your classes. |The graphql-java documentation
+|micronaut-graphql |The GraphQL endpoint over HTTP and over WebSocket for Micronaut, built on graphql-java. |The Micronaut GraphQL guide
+|This library |Reads the schema and binds it to your classes, builds the runtime wiring for graphql-java, and plugs an execution model into the transports of micronaut-graphql. |This guide
+|===
+
+== What the library depends on
+
+The `micronaut-graphql-tools` artifact declares `micronaut-graphql` as an API dependency, so the transports and the graphql-java version come with it. The graphql-java version is the one that micronaut-graphql manages for the release you use; the versions that the build is tested against are on <<compatibility,Compatibility>>. The transports are configured as micronaut-graphql documents them, and <<transport,Transports>> lists what the library adds.
+
+== What happens at startup
+
+. The library reads the schema files, or a `TypeDefinitionRegistry` bean of your application (see <<schema,Schema>>).
+. It finds the resolver beans and the model classes from Micronaut's compile-time metadata (see <<binding,Binding>>).
+. It matches each field of the schema to a method or a property, and reports the fields that it cannot match with a code and a schema coordinate.
+. It builds the runtime wiring and the `GraphQL` bean. With `eager-init` on, the default, these steps run when the application context starts (see <<configuration,Configuration>>).
+
+A request then runs through micronaut-graphql and graphql-java, which call the resolvers that the wiring names.
+
+== Relation to graphql-java-tools
+
+The library follows the schema-first model of graphql-java-tools: the schema is written in the schema language, and plain classes of the application back its types. The two differ in how the binding is made and in the platform; <<comparison,the comparison>> lists the differences with the version of each source.
