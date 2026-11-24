@@ -31,16 +31,20 @@ import io.micronaut.context.annotation.Secondary;
 import io.micronaut.context.condition.Condition;
 import io.micronaut.context.condition.ConditionContext;
 import io.micronaut.core.annotation.AnnotationClassValue;
+import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.type.Argument;
 import io.micronaut.core.value.PropertyCatalog;
+import io.micronaut.inject.FieldInjectionPoint;
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.BeanDefinitionReference;
 import io.micronaut.inject.qualifiers.Qualifiers;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -272,9 +276,17 @@ public final class LibraryBeanSelection {
         return templates;
     }
 
+    /** Whether an injection point of the definition asks, without a qualifier, for a bean of the type. */
     private static boolean requires(BeanDefinition<?> definition, Class<?> type) {
-        for (Class<?> component : definition.getRequiredComponents()) {
-            if (type.isAssignableFrom(component)) {
+        List<Argument<?>> arguments = new ArrayList<>(Arrays.asList(definition.getConstructor().getArguments()));
+        definition.getInjectedMethods().forEach(method -> arguments.addAll(Arrays.asList(method.getArguments())));
+        for (Argument<?> argument : arguments) {
+            if (type.isAssignableFrom(argument.getType()) && !argument.getAnnotationMetadata().hasStereotype(AnnotationUtil.QUALIFIER)) {
+                return true;
+            }
+        }
+        for (FieldInjectionPoint<?, ?> field : definition.getInjectedFields()) {
+            if (type.isAssignableFrom(field.getType()) && !field.getAnnotationMetadata().hasStereotype(AnnotationUtil.QUALIFIER)) {
                 return true;
             }
         }

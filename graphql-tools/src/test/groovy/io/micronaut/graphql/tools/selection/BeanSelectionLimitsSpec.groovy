@@ -159,6 +159,14 @@ type Query { hello: String }
         templates.isEmpty()
     }
 
+    void "an engine template starts when the primary engine takes a qualified invocation"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.eachInvocationQualifiedEngine')
+
+        then:
+        noExceptionThrown()
+    }
+
     void "a qualified invocation that is only @Secondary ties with the library's and fails the startup"() {
         when:
         startContext(SCHEMA, 'BeanSelectionLimitsSpec.namedSecondary')
@@ -319,6 +327,19 @@ type Query { hello: String }
         @Bean @Singleton
         @io.micronaut.context.annotation.Replaces(value = GraphQLSchema, qualifier = Secondary)
         GraphQLSchema replacing() { BeanSelectionMatrixSpec.schema('replacing') }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.eachInvocationQualifiedEngine')
+    @Factory
+    static class QualifiedEngineFactory {
+        @Bean @Singleton @jakarta.inject.Named('custom')
+        GraphQLInvocation custom() { new Marked('custom') }
+
+        @Bean @Singleton @Primary
+        GraphQL graphQL(@jakarta.inject.Named('custom') GraphQLInvocation invocation) { BeanSelectionMatrixSpec.engine('primary') }
+
+        @Bean @EachBean(GraphQLInvocation)
+        GraphQL perInvocation(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.engine('eachi') }
     }
 
 }
