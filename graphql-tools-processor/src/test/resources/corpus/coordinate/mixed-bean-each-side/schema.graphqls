@@ -1,0 +1,12 @@
+schema {
+  query: Query
+}
+
+type Query {
+  book(id: ID!): Book
+}
+
+type Book {
+  title: String!
+  summary: String!
+}
