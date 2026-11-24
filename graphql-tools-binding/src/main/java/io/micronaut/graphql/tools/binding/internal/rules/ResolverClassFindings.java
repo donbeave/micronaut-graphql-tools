@@ -122,7 +122,7 @@ public final class ResolverClassFindings {
                     continue;
                 }
                 String problem = SchemaCoordinates.check(schema.registry(), rootTypes, coordinate,
-                        SchemaCoordinates.kindsOf(root, type, resolver.markers(), method.name(), method.parameters().size()))
+                        SchemaCoordinates.kindsOf(root, type, resolver.markers(), method.name(), ResolverClassRules.contractArity(method)))
                         .orElse(null);
                 if (problem != null) {
                     invalidCoordinates.add(method.signature());
@@ -220,7 +220,7 @@ public final class ResolverClassFindings {
     }
 
     private static String operationNames(JClass resolver, JMethod method) {
-        return String.join(", ", resolver.markers().operationsOf(method.name(), method.parameters().size()));
+        return String.join(", ", resolver.markers().operationsOf(method.name(), ResolverClassRules.contractArity(method)));
     }
 
     private static List<Finding> dedupe(List<Finding> findings) {
