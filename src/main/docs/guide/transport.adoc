@@ -18,7 +18,7 @@ graphql:
 [[media-types]]
 === Media types and status
 
-`GET` and `POST` answer `application/graphql-response+json` or `application/json`, chosen by the `Accept` header with its quality values. A request without `Accept`, or with `*/*`, gets `application/json`; at an equal quality the more specific range wins, then the one listed first, then `application/json`. An `Accept` that lists neither type, or refuses both with `q=0`, gets `406`. Every negotiated response, a `406` included, carries `Vary: Accept`, so a shared cache keeps the two representations apart. `Accept` lines that repeat are read as one list, and when a media range repeats the higher quality value counts. The multipart route of the upload module (see the File Upload guide) negotiates the same way, with or without the upload module on the classpath.
+`GET` and `POST` answer `application/graphql-response+json` or `application/json`, chosen by the `Accept` header with its quality values. A request without `Accept`, or with `*/*`, gets `application/json`; a range with a parameter other than `q` and `charset` matches neither type; at an equal quality the more specific range wins, then the one listed first, then `application/json`. An `Accept` that lists neither type, or refuses both with `q=0`, gets `406`. Every negotiated response, a `406` included, carries `Vary: Accept`, so a shared cache keeps the two representations apart. `Accept` lines that repeat are read as one list, and when a media range repeats the higher quality value counts. The multipart route of the upload module (see the File Upload guide) negotiates the same way, with or without the upload module on the classpath.
 
 [cols="2,2,1"]
 |===

@@ -57,7 +57,10 @@ class GraphQLHttpResponsesSpec extends Specification {
         'application/graphql-response+json;q=0, application/json'              | JSON
         'application/graphql-response+json;q=0, */*'                            | JSON
         'application/json;q=0, */*;q=0.5'                                       | GRAPHQL
-        'text/html, application/graphql-response+json;level=1;q=0.2'            | GRAPHQL
+        'text/html, application/graphql-response+json;level=1;q=0.2'            | null
+        'application/json;profile=x, application/graphql-response+json;q=0.5'  | GRAPHQL
+        'application/json;charset=utf-8'                                        | JSON
+        'application/graphql-response+json;q=0.2;ext=1'                         | GRAPHQL
         'application/graphql-response+json;q=bad'                               | GRAPHQL
         'application/xml'                                                       | null
         'text/*'                                                                | null

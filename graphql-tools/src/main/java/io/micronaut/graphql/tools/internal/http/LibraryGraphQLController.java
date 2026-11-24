@@ -85,7 +85,11 @@ public final class LibraryGraphQLController {
                                                       @Nullable @QueryValue("operationName") String operationName,
                                                       @Nullable @QueryValue("variables") String variables,
                                                       HttpRequest<?> request) {
-        return execute(query, operationName, variablesOf(variables), request);
+        MediaType type = GraphQLHttpResponses.negotiate(request);
+        if (type == null) {
+            return Flux.just(GraphQLHttpResponses.notAcceptable());
+        }
+        return execute(query, operationName, variablesOf(variables), request, type);
     }
 
     /**
@@ -101,17 +105,21 @@ public final class LibraryGraphQLController {
                                                        @Nullable @QueryValue("operationName") String operationName,
                                                        @Nullable @QueryValue("variables") String variables,
                                                        @Nullable @Body String body, HttpRequest<?> request) {
+        MediaType type = GraphQLHttpResponses.negotiate(request);
+        if (type == null) {
+            return Flux.just(GraphQLHttpResponses.notAcceptable());
+        }
         MediaType contentType = request.getContentType().orElse(null);
         String text = body == null ? "" : body;
         if (MediaType.APPLICATION_JSON_TYPE.equals(contentType)) {
             GraphQLRequestBody parsed = serializer.deserialize(text, GraphQLRequestBody.class);
-            return execute(parsed.getQuery() == null ? "" : parsed.getQuery(), parsed.getOperationName(), parsed.getVariables(), request);
+            return execute(parsed.getQuery() == null ? "" : parsed.getQuery(), parsed.getOperationName(), parsed.getVariables(), request, type);
         }
         if (query != null) {
-            return execute(query, operationName, variablesOf(variables), request);
+            return execute(query, operationName, variablesOf(variables), request, type);
         }
         if (MediaType.APPLICATION_GRAPHQL_TYPE.equals(contentType)) {
-            return execute(text, null, null, request);
+            return execute(text, null, null, request, type);
         }
         throw new HttpStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Could not process GraphQL request");
     }
@@ -122,11 +130,8 @@ public final class LibraryGraphQLController {
     }
 
     private Publisher<MutableHttpResponse<String>> execute(String query, @Nullable String operationName,
-                                                           @Nullable Map<String, Object> variables, HttpRequest<?> request) {
-        MediaType type = GraphQLHttpResponses.negotiate(request);
-        if (type == null) {
-            return Flux.just(GraphQLHttpResponses.notAcceptable());
-        }
+                                                           @Nullable Map<String, Object> variables, HttpRequest<?> request,
+                                                           MediaType type) {
         MutableHttpResponse<String> response = HttpResponse.status(HttpStatus.OK);
         @SuppressWarnings({"rawtypes", "unchecked"})
         Publisher<MutableHttpResponse<String>> result = Publishers.map(

@@ -96,13 +96,14 @@ public final class GraphQLHttpResponses {
             int to = trimEnd(accept, from, typeEnd);
             if (to > from) {
                 int q = typeEnd < end ? quality(accept, typeEnd + 1, end) : FULL_Q;
-                int json = specificity(accept, from, to, JSON);
+                boolean plain = typeEnd == end || plain(accept, typeEnd + 1, end);
+                int json = plain ? specificity(accept, from, to, JSON) : -1;
                 if (json > jsonSpecificity || json == jsonSpecificity && json >= 0 && q > jsonQ) {
                     jsonSpecificity = json;
                     jsonQ = q;
                     jsonPosition = position;
                 }
-                int graphQL = specificity(accept, from, to, GRAPHQL_RESPONSE_JSON);
+                int graphQL = plain ? specificity(accept, from, to, GRAPHQL_RESPONSE_JSON) : -1;
                 if (graphQL > graphQLSpecificity || graphQL == graphQLSpecificity && graphQL >= 0 && q > graphQLQ) {
                     graphQLSpecificity = graphQL;
                     graphQLQ = q;
@@ -206,6 +207,28 @@ public final class GraphQLHttpResponses {
             return SPECIFICITY_TYPE;
         }
         return -1;
+    }
+
+    /**
+     * A media range with a parameter other than {@code q} and {@code charset} (which says nothing of a JSON body) names a
+     * representation that the endpoint does not produce, so it matches neither type. Parameters after {@code q} are extensions.
+     */
+    private static boolean plain(String accept, int from, int to) {
+        int i = from;
+        while (i < to) {
+            i = skipSpaces(accept, i, to);
+            int paramEnd = indexOf(accept, ';', i, to);
+            if (paramEnd - i >= 2 && (accept.charAt(i) == 'q' || accept.charAt(i) == 'Q') && accept.charAt(i + 1) == '=') {
+                return true;
+            }
+            int nameEnd = indexOf(accept, '=', i, paramEnd);
+            int nameTo = trimEnd(accept, i, nameEnd);
+            if (nameTo > i && !(nameTo - i == 7 && accept.regionMatches(true, i, "charset", 0, 7))) {
+                return false;
+            }
+            i = paramEnd + 1;
+        }
+        return true;
     }
 
     private static int quality(String accept, int from, int to) {
