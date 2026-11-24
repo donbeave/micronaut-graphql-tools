@@ -3,7 +3,7 @@ name: Release
 # Nothing else is published: no Maven Central, no GitHub Release, no snapshots.
 #
 # Triggers: a pushed version tag, or a manual run with the tag to publish (this is how a tag that predates this workflow
-# is published). The workflow definition and the publishing setup (.github/gradle/publish-github-packages.init.gradle)
+# is published). The workflow definition and the publishing setup (.github/gradle/publish-github-packages.init.gradle.kts)
 # always come from the ref that runs the workflow; the sources that are built and published are always the tag's tree.
 # It never runs on a release or a pull request.
 on:
@@ -166,7 +166,7 @@ jobs:
           fi
           ./gradlew publishAllPublicationsToGitHubPackagesRepository --no-daemon \
             -PgraphqlJavaLeg=default -PprojectVersion="$TAG" \
-            -I "$GITHUB_WORKSPACE/.github/gradle/publish-github-packages.init.gradle"
+            -I "$GITHUB_WORKSPACE/.github/gradle/publish-github-packages.init.gradle.kts"
         env:
           TAG: ${{ needs.verify.outputs.tag }}
           GITHUB_ACTOR: ${{ github.actor }}
