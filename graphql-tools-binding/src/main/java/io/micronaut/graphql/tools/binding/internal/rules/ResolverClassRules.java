@@ -539,6 +539,19 @@ public final class ResolverClassRules {
     }
 
     /**
+     * @param method a method of a resolver class
+     * @return its number of parameters as the contract methods count them: without the continuation of a Kotlin suspend function
+     */
+    public static int contractArity(JMethod method) {
+        List<JParameter> parameters = method.parameters();
+        int count = parameters.size();
+        if (count > 0 && method.suspend() && "kotlin.coroutines.Continuation".equals(parameters.get(count - 1).type().rawName())) {
+            count--;
+        }
+        return count;
+    }
+
+    /**
      * The per-class rules for one resolver class: which methods can bind a field, which coordinates they bind, and for
      * each the argument plan and the return adaptation. A root resolver binds the root fields that carry the name of a
      * method; a method that declares a coordinate binds that coordinate. The fields of the other types cannot be told
@@ -570,7 +583,7 @@ public final class ResolverClassRules {
                 if (coordinate.indexOf('.') > 0 && !contradictsOperation(schema, resolver, method, coordinate)) {
                     coordinates.add(coordinate);
                 }
-            } else if (root && resolver.markers().admitsRoot(method.name(), method.parameters().size())) {
+            } else if (root && resolver.markers().admitsRoot(method.name(), contractArity(method))) {
                 List<String> names = FieldNames.ofResolverMethod(method.name(), accessorPrefixes);
                 new TreeSet<>(operationTypes(schema, resolver, method)).forEach(type -> names.forEach(name -> {
                     if (field(schema, type, name) != null) {
@@ -626,7 +639,7 @@ public final class ResolverClassRules {
      * the method decide, and every root type is open for a method that no marker contract fixes
      */
     public static Set<String> operationTypes(SchemaModel schema, JClass resolver, JMethod method) {
-        return schema.rootTypeNames(resolver.markers().operationsOf(method.name(), method.parameters().size()));
+        return schema.rootTypeNames(resolver.markers().operationsOf(method.name(), contractArity(method)));
     }
 
     /**

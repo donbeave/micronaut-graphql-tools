@@ -52,4 +52,25 @@ final class CorpusFixtures {
                 new RuntimeBinder(), new VisitorCompileTimeBinder(), update())
     }
 
+    static final long DEFAULT_MUTATION_SEED = 89L
+    static final int DEFAULT_MUTATION_LIMIT = 100
+
+    /** the seed of the drift mutation tests: the choice of the mutants and the shuffles */
+    static long mutationSeed() {
+        return Long.getLong('mutation.seed', DEFAULT_MUTATION_SEED)
+    }
+
+    /** how many mutants run; {@code 0} is every mutant of the corpus */
+    static int mutationLimit() {
+        return Integer.getInteger('mutation.limit', DEFAULT_MUTATION_LIMIT)
+    }
+
+    static Path mutationReportFile() {
+        return Path.of(System.getProperty('mutation.report', 'build/corpus/mutations.txt')).toAbsolutePath()
+    }
+
+    static DriftMutationRunner mutationRunner() {
+        return new DriftMutationRunner(new Corpus(root()), [new JavaCaseCompiler(), new GroovyCaseCompiler()], mutationSeed(), mutationLimit())
+    }
+
 }

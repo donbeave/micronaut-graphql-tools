@@ -39,11 +39,9 @@ import io.micronaut.graphql.tools.binding.internal.rules.ArgumentVerdict.Untyped
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.FieldVerdict;
 import io.micronaut.graphql.tools.binding.internal.rules.ClassVerdict.MethodVerdict;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
-import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates.ResolverKind;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -114,13 +112,6 @@ public final class ResolverClassFindings {
         Map<String, String> declared = ResolverClassRules.declaredCoordinates(bindable);
         Set<String> rootTypes = schema.rootTypeNames();
 
-        EnumSet<ResolverKind> kinds = EnumSet.noneOf(ResolverKind.class);
-        if (root) {
-            kinds.add(ResolverKind.ROOT);
-        }
-        if (type) {
-            kinds.add(ResolverKind.TYPE);
-        }
 
         List<Finding> findings = new ArrayList<>();
         Set<String> invalidCoordinates = new HashSet<>();
@@ -130,7 +121,8 @@ public final class ResolverClassFindings {
                 if (coordinate == null) {
                     continue;
                 }
-                String problem = SchemaCoordinates.check(schema.registry(), rootTypes, coordinate, kinds)
+                String problem = SchemaCoordinates.check(schema.registry(), rootTypes, coordinate,
+                        SchemaCoordinates.kindsOf(root, type, resolver.markers(), method.name(), ResolverClassRules.contractArity(method)))
                         .orElse(null);
                 if (problem != null) {
                     invalidCoordinates.add(method.signature());
@@ -228,7 +220,7 @@ public final class ResolverClassFindings {
     }
 
     private static String operationNames(JClass resolver, JMethod method) {
-        return String.join(", ", resolver.markers().operationsOf(method.name(), method.parameters().size()));
+        return String.join(", ", resolver.markers().operationsOf(method.name(), ResolverClassRules.contractArity(method)));
     }
 
     private static List<Finding> dedupe(List<Finding> findings) {

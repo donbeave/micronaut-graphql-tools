@@ -31,6 +31,7 @@ and test it.
 | [`test-suite-tck`](test-suite-tck/README.md) | `:test-suite-tck` | The execution-behaviour scenarios that the example suites run. |
 | [`test-suite-benchmarks`](test-suite-benchmarks/README.md) | `:test-suite-benchmarks` | JMH benchmarks and the allocation gate. |
 | [`test-suite-java`](test-suite-java/README.md) | `:test-suite-java` | The example application in Java, with its tests. |
+| [`test-suite-serde`](test-suite-serde/README.md) | `:test-suite-serde` | The null-field checks on Micronaut Serialization, with their native test. |
 | [`test-suite-kotlin`](test-suite-kotlin/README.md) | `:test-suite-kotlin` | The example application in Kotlin, with its tests. |
 | [`test-suite-groovy`](test-suite-groovy/README.md) | `:test-suite-groovy` | The example application in Groovy, with its tests and a native smoke test. |
 | [`test-suite-build`](test-suite-build/README.md) | `:test-suite-build` | Sample projects that apply the compile-time checks the way a consumer's build does, built by Gradle TestKit. |
@@ -1390,9 +1391,8 @@ public GraphQL graphQL(GraphQLSchema schema, MyInstrumentation instrumentation) 
 `TypeDefinitionRegistry`, consumes only the library's `GraphQLSchema` and builds its own `GraphQL` with its own
 instrumentation, which then serves the HTTP requests.
 
-The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and its HTTP controller serves
-whichever `GraphQL` bean exists. The library's own code does not use it, so an application with its own transport
-can exclude that dependency.
+The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and the library's HTTP endpoint (which
+replaces the controller of that dependency) serves whichever `GraphQL` bean exists.
 
 ## Examples
 

@@ -59,3 +59,5 @@ replacesDefault | invocation | DefaultGraphQLInvocation | all=DefaultGraphQLInvo
 replacedDefault | invocation | inv_replacing | all=LibraryGraphQLInvocation,inv_replacing
 replacesDefaultOfFactory | invocation | LibraryGraphQLInvocation | all=LibraryGraphQLInvocation
 replacesDefaultNamed | invocation | LibraryGraphQLInvocation | all=LibraryGraphQLInvocation
+replacedDefaultByQualifier | invocation | inv_qreplacing | all=LibraryGraphQLInvocation,inv_qreplacing
+qualifierMissesDefault | invocation | DefaultGraphQLInvocation | all=DefaultGraphQLInvocation,DefaultGraphQLInvocation,inv_qreplacing

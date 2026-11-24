@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.binding
 
 import graphql.schema.idl.SchemaParser
+import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers
 import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates.ResolverKind
@@ -114,6 +115,20 @@ enum Genre {
         !ScalarTable.acceptsReturnClass('ID', GString)
         !ScalarTable.acceptsReturnClass('Int', GString)
         !ScalarTable.acceptsReturnClass('String', CharSequence)
+    }
+
+    void "a bean that mixes root and type contracts is checked per method on the side of its contract"() {
+        given:
+        def markers = new ResolverMarkers(['query'], null, [
+                new ResolverMarkers.ContractMethod(['query'], null, 'book', 1),
+                new ResolverMarkers.ContractMethod([], 'example.Book', 'pages', 1)])
+
+        expect:
+        SchemaCoordinates.kindsOf(true, true, markers, 'book', 1) == [ResolverKind.ROOT] as Set
+        SchemaCoordinates.kindsOf(true, true, markers, 'pages', 1) == [ResolverKind.TYPE] as Set
+        SchemaCoordinates.kindsOf(true, true, markers, 'helper', 1) == [ResolverKind.ROOT, ResolverKind.TYPE] as Set
+        SchemaCoordinates.kindsOf(true, false, markers, 'pages', 1) == [ResolverKind.ROOT] as Set
+        SchemaCoordinates.kindsOf(false, true, ResolverMarkers.NONE, 'pages', 1) == [ResolverKind.TYPE] as Set
     }
 
     void "a coordinate rule reports #expected"() {
