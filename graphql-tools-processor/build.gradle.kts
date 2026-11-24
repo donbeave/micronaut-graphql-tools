@@ -14,15 +14,14 @@ dependencies {
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.java)
-    // the single-value return types of the binding corpus (#428); the platform manages the versions
-    testImplementation(platform(libs.micronaut.platform))
-    testImplementation("io.reactivex.rxjava3:rxjava")
-    testImplementation("io.reactivex.rxjava2:rxjava")
+    // the single-value return types of the binding corpus (#428)
+    testImplementation(mnRxjava3.rxjava3)
+    testImplementation(mnRxjava2.rxjava2)
     // the corpus compiles Groovy cases in process, and Micronaut's AST transformation writes their bean definitions
     testImplementation(mn.micronaut.inject.groovy)
     // the Kotlin side of the corpus compiles its cases in a batched TestKit build
     testImplementation(gradleTestKit())
-    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testRuntimeOnly(mnLogging.logback.classic)
     // the Kotlin cases of the corpus with a suspend resolver start up with the library's suspend support, which needs these
     testRuntimeOnly(mn.kotlin.stdlib)
     testRuntimeOnly(mn.kotlinx.coroutines.core)

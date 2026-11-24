@@ -13,7 +13,7 @@ dependencies {
     testImplementation(mn.micronaut.inject.java)
     testImplementation(libs.jetbrains.annotations)
     testImplementation(libs.archunit)
-    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testRuntimeOnly(mnLogging.logback.classic)
 }
 
 // DocsPageSpec reads the guide page of the module behind Gradle's back, so it is a declared input.
