@@ -5,12 +5,12 @@ Gradle project `:micronaut-graphql-tools-bom`, folder `graphql-tools-bom/`. It h
 ## Purpose
 
 The bill of materials (BOM) for the published artifacts. It pins one version of each artifact, so that an application
-that imports the BOM uses matching versions of the library, the binding module, the standard scalars module, the Micrometer module, the OpenTelemetry module, the upload module, the security module and the compile-time processor.
+that imports the BOM uses matching versions of the library, the binding module, the standard scalars module, the Micrometer module, the OpenTelemetry module, the upload module, the security module, the testing module and the compile-time processor.
 
 ## Responsibility
 
 - Manage the versions of `micronaut-graphql-tools`, `micronaut-graphql-tools-binding`, `micronaut-graphql-tools-processor`,
-  `micronaut-graphql-tools-scalars`, `micronaut-graphql-tools-micrometer`, `micronaut-graphql-tools-opentelemetry`, `micronaut-graphql-tools-upload` and `micronaut-graphql-tools-security` (the generated POM lists these eight in `dependencyManagement`).
+  `micronaut-graphql-tools-scalars`, `micronaut-graphql-tools-micrometer`, `micronaut-graphql-tools-opentelemetry`, `micronaut-graphql-tools-upload`, `micronaut-graphql-tools-security` and `micronaut-graphql-tools-testing` (the generated POM lists these nine in `dependencyManagement`).
 - Nothing else: no code, no dependencies of its own. The build applies the Micronaut BOM convention
   (`io.micronaut.build.internal.bom`) from `micronaut-build`.
 
@@ -27,7 +27,7 @@ in it.
 
 - Depends on nothing in this repository.
 - Its version is the `projectVersion` in `gradle.properties`.
-- The modules it manages are `graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`, `graphql-tools-micrometer`, `graphql-tools-opentelemetry`, `graphql-tools-upload` and `graphql-tools-security`.
+- The modules it manages are `graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`, `graphql-tools-micrometer`, `graphql-tools-opentelemetry`, `graphql-tools-upload`, `graphql-tools-security` and `graphql-tools-testing`.
 
 ## Build and test
 

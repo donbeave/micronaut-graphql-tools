@@ -12,10 +12,10 @@ val registryUrl = "https://maven.pkg.github.com/donbeave/micronaut-graphql-tools
 val repositoryUrl = "https://github.com/donbeave/micronaut-graphql-tools"
 
 // The only projects that are published: the library, the annotation processor, the shared binding rules module, the standard
-// scalars module, the Micrometer module, the OpenTelemetry module, the upload module and the BOM.
+// scalars module, the Micrometer module, the OpenTelemetry module, the upload module, the testing module and the BOM.
 // Test suites, benchmarks and anything added later are never published unless they are listed here.
 val publishable = setOf("micronaut-graphql-tools", "micronaut-graphql-tools-processor", "micronaut-graphql-tools-binding",
-                        "micronaut-graphql-tools-scalars", "micronaut-graphql-tools-micrometer", "micronaut-graphql-tools-opentelemetry", "micronaut-graphql-tools-upload", "micronaut-graphql-tools-security", "micronaut-graphql-tools-bom")
+                        "micronaut-graphql-tools-scalars", "micronaut-graphql-tools-micrometer", "micronaut-graphql-tools-opentelemetry", "micronaut-graphql-tools-upload", "micronaut-graphql-tools-security", "micronaut-graphql-tools-testing", "micronaut-graphql-tools-bom")
 
 // A milestone (1.0.0-M<n>) or a final release (1.0.0). Snapshots and any other string are refused.
 val versionPattern = Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(-M[0-9]+)?$")
