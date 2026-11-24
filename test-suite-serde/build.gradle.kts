@@ -12,11 +12,11 @@ repositories {
 // raw HTTP that a response keeps its null fields.
 dependencies {
     implementation(projects.micronautGraphqlTools)
-    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation(mnSerde.micronaut.serde.jackson)
     annotationProcessor(projects.micronautGraphqlToolsProcessor)
-    annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
-    testAnnotationProcessor("io.micronaut.serde:micronaut-serde-processor")
-    runtimeOnly("ch.qos.logback:logback-classic")
+    annotationProcessor(mnSerde.micronaut.serde.processor)
+    testAnnotationProcessor(mnSerde.micronaut.serde.processor)
+    runtimeOnly(mnLogging.logback.classic)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

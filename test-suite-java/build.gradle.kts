@@ -38,8 +38,8 @@ dependencies {
     // a real HTTP and WebSocket client. Test scope: the application itself does not depend on them.
     testImplementation(projects.micronautGraphqlToolsSecurity)
     testImplementation(mnSecurity.micronaut.security)
-    testImplementation("io.micronaut:micronaut-http-client")
-    runtimeOnly("ch.qos.logback:logback-classic")
+    testImplementation(mn.micronaut.http.client)
+    runtimeOnly(mnLogging.logback.classic)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -144,7 +144,7 @@ apply(from = rootProject.file("config/drift-fixture.gradle.kts"))
 // The resolver fixtures of the constraint-violations scenario (#468), compiled with Micronaut Validation's processor and its own
 // source set: that processor re-annotates every class that has @Introspected through a meta-annotation, which drops the `classes`
 // of @GraphQLModels, so it cannot share a compilation with the external-model fixtures. The output is on the test classpath. The
-// validation artifacts are not in the `mn` catalog (the platform BOM manages them), so no version here.
+// validation artifacts come from the micronaut-validation catalog.
 val validationFixtures: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets.main.get().output
     runtimeClasspath += sourceSets.main.get().output
@@ -159,11 +159,11 @@ tasks.named<JavaCompile>(validationFixtures.compileJavaTaskName) {
     options.compilerArgs.add("-Amicronaut.graphql.tools.processor.checks=false")
 }
 dependencies {
-    "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
-    "validationFixturesAnnotationProcessor"("io.micronaut.validation:micronaut-validation-processor")
+    "validationFixturesImplementation"(mnValidation.micronaut.validation)
+    "validationFixturesAnnotationProcessor"(mnValidation.micronaut.validation.processor)
     "validationFixturesAnnotationProcessor"(projects.micronautGraphqlToolsProcessor)
     testImplementation(validationFixtures.output)
-    testImplementation("io.micronaut.validation:micronaut-validation")
+    testImplementation(mnValidation.micronaut.validation)
 }
 
 // The Micronaut BOMs manage Groovy 4.0.28, which cannot read JDK 27 class files; 4.0.33 is the newest 4.0.x.

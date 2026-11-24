@@ -15,8 +15,7 @@ dependencies {
     // The disconnect of an HTTP client cancels its execution (#429); the watcher bean is active only with the Netty server on the classpath
     compileOnly(mn.micronaut.http.server.netty)
     // ConstraintViolationException is mapped to errors when Micronaut Validation is on the application's classpath (#32)
-    compileOnly(platform(libs.micronaut.platform))
-    compileOnly("jakarta.validation:jakarta.validation-api")
+    compileOnly(mnValidation.validation)
 
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)
@@ -26,25 +25,22 @@ dependencies {
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(libs.jetbrains.annotations)
     // ErrorHandlingSpec: the mapping of ConstraintViolationException (#32)
-    testImplementation("jakarta.validation:jakarta.validation-api")
+    testImplementation(mnValidation.validation)
     // ArchitectureRulesSpec: the reflection, Jackson and public-API rules read the bytecode of the library and the binding module.
     testImplementation(libs.archunit)
     // InputPropertiesSpec: a Jackson annotation on an input class has no effect (BC-23). Annotations only, no databind.
-    testImplementation("com.fasterxml.jackson.core:jackson-annotations")
+    testImplementation(mn.jackson.annotations)
     // DocsCoverageSpec reads spring-configuration-metadata.json with groovy.json.JsonSlurper
-    testImplementation("org.apache.groovy:groovy-json")
-    testImplementation("ch.qos.logback:logback-classic")
+    testImplementation(mn.groovy.json)
+    testImplementation(mnLogging.logback.classic)
     testImplementation(libs.graphql.java.datetime)
     testImplementation(libs.graphql.java.extended.validation)
     // SerdeInputMutationSpec: an input class with Micronaut Serialization, and no Jackson databind on the test classpath (#36).
-    // The Serde version comes from the Micronaut platform BOM, as in test-suite-tck.
-    testImplementation(platform(libs.micronaut.platform))
-    testAnnotationProcessor(platform(libs.micronaut.platform))
-    testImplementation("io.micronaut.serde:micronaut-serde-api")
+    testImplementation(mnSerde.micronaut.serde.api)
     // SingleValuePublisherSpec: the RxJava single-value types are adapted through Micronaut's reactive type converters (#428)
-    testImplementation("io.micronaut.rxjava3:micronaut-rxjava3")
-    testImplementation("io.micronaut.rxjava2:micronaut-rxjava2")
-    testAnnotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    testImplementation(mnRxjava3.micronaut.rxjava3)
+    testImplementation(mnRxjava2.micronaut.rxjava2)
+    testAnnotationProcessor(mnSerde.micronaut.serde.processor)
 }
 
 // The inherited-resolver specs need the contracts that the visitor of the processor writes into the annotation metadata of a bean
