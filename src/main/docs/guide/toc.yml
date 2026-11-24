@@ -39,7 +39,10 @@ safety:
 manifest: Binding Manifest
 compileTime:
   title: Compile-Time Verification
+  setup: Set Up the Build
   options: Options
+  buildManifest: Build Manifest
+  limits: Limits
 codegen: Code Generation
 nativeImage: Native Image
 testing: Testing

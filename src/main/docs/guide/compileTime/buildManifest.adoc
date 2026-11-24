@@ -1,0 +1,82 @@
+:repo: https://github.com/{githubSlug}/blob/master
+:samples: {sourcedir}/test-suite-build/samples
+:tests: {repo}/test-suite-build/src/test/java/io/micronaut/graphql/tools/buildtools
+:corpus: {repo}/graphql-tools-processor/src/test/resources/corpus
+
+[[compileTimeBuildManifest]]
+
+This page lists what the build does and what proves it: the budget of the compile time, the failures that stop a build, the supported combinations of language, compiler and build tool, and the incremental builds.
+
+== Compile time
+
+The checks run inside the compile task of each language (javac, KSP, kapt and the Groovy compiler), so their cost is part of that task. The repository measures it with gradle-profiler and keeps a budget that fails the build when a build gets much slower.
+
+*The scenarios.* link:{repo}/test-suite-build/profiler/compile-time.scenarios[`compile-time.scenarios`] has six scenarios for each of the Java, Kotlin (KSP), Kotlin (kapt), Groovy and multi-module samples: a clean build, a body-only edit of the resolver class and an edit of the schema, each with the checks on and with the checks off (`-PgraphqlChecks=false`, the control: the processor stays on the compile path, so the control isolates the checks from the rest of the annotation processing). The edits are made by an init script task inside the measured build, which also records the time of every compile task, so the report names the cost of the checks per module (`books` and `authors` of the multi-module sample, the only modules there that apply them). Run them with `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>`; the report is `test-suite-build/build/reports/compile-time/report.md`.
+
+*The budget.* The build fails when the median of the measured builds with the checks on is over the budget of its language. It is set from the measured numbers with a margin of three, because the numbers come from small samples that a shared runner times with a lot of noise. The incremental budget holds for the body edit and for the schema edit.
+
+[cols="2,1,1,1,1", options="header"]
+|===
+|Sample |Clean, measured (ms) |Clean, budget (ms) |Incremental, slowest measured (ms) |Incremental, budget (ms)
+|Java |1226 |4000 |2124 |7000
+|Kotlin, KSP |2583 |8000 |4371 |14000
+|Kotlin, kapt |2508 |8000 |3481 |11000
+|Groovy |3102 |10000 |4101 |13000
+|Multi-module, Java |7356 |23000 |4133 |13000
+|===
+
+The numbers are the medians of 5 builds after 2 warm-ups, on JDK 25.0.5 (Oracle GraalVM) with Gradle 9.9.1 on a machine whose load average was 32 to 38, so the noise is large: the cost of the checks (the build time with the checks on minus off) is a few hundred milliseconds for Java and up to about 1.8 seconds for KSP and kapt, and it is negative for Groovy, which means that the difference is below the noise. Treat the budget as a guard against a regression of several times, not as a measurement of the cost. The CI job `compile-time budget` runs the scenarios on every change and fails when a budget is exceeded; the budget file is link:{repo}/test-suite-build/profiler/compile-time-budget.properties[`compile-time-budget.properties`]. A change that raises a budget quotes new numbers from gradle-profiler.
+
+== What fails the build
+
+[cols="3,3,4", options="header"]
+|===
+|The build |The result |Proof
+|The option is missing (the processor runs, `schema.dirs` is not set) |`[processor-schema-not-configured]` |`aMissingOptionFails` in the Gradle and Maven contracts ({tests}/GradleSampleContract.java[`GradleSampleContract`], {tests}/MavenSampleContract.java[`MavenSampleContract`])
+|The directory has no schema file |`[processor-schema-not-found]` |corpus case {corpus}/options/schema-dir-without-schema-files[`options/schema-dir-without-schema-files`]
+|An unknown option, a bad value, or the retired `sdlDir` |`[processor-option-unknown]`, `[processor-option-invalid]`, `[processor-option-removed]` |corpus cases {corpus}/options/unknown-option[`unknown-option`], {corpus}/options/invalid-checks-value[`invalid-checks-value`], {corpus}/options/removed-option-sdl-dir[`removed-option-sdl-dir`]
+|A schema file that cannot be parsed or merged |`[schema-invalid]` |corpus case {corpus}/options/schema-invalid[`options/schema-invalid`]
+|A schema with no `schema` block and no `Query` type |`[schema-definition-not-provided]` |corpus case {corpus}/options/no-query-no-schema-definition[`options/no-query-no-schema-definition`]
+|A resolver class drifts from the schema |the code and coordinate of the finding, with the schema location |`theOptionArrivesAndASchemaEditRerunsTheCheckedTask` (Gradle) and `theOptionArrivesAndADriftedClassFailsAfterClean` (Maven), and the `driftFixtureTest` of each suite
+|`checks=false` |the build passes, with one note |`checksFalsePrintsItsNoteAndPasses` in both contracts
+|A module of a multi-module build forgot the options |`[processor-schema-not-configured]`, naming the directory of the other module |{tests}/MultiModuleGradleSampleTest.java[`MultiModuleGradleSampleTest`], {tests}/MultiModuleMavenSampleTest.java[`MultiModuleMavenSampleTest`]
+|===
+
+== Support matrix
+
+Each cell is a combination of language, compiler and build tool, and links the test or sample that proves it. A sample is a small project with a Book resolver and a one-file schema, built against the library as published ({tests}/GradleSampleContract.java[`GradleSampleContract`] for Gradle, {tests}/MavenSampleContract.java[`MavenSampleContract`] for Maven). The engine column says which corpus run checks the findings of the language.
+
+[cols="2,2,3,3,3", options="header"]
+|===
+|Language |Compiler |Gradle |Maven |Findings of the language
+|Java |javac, `annotationProcessor` |{repo}/test-suite-build/samples/java-gradle[`java-gradle`], {tests}/JavaGradleSampleTest.java[test] |{repo}/test-suite-build/samples/java-maven[`java-maven`], {tests}/JavaMavenSampleTest.java[test] |the corpus compiles each case with javac in process (`BindingCorpusSpec`, part of `check`)
+|Kotlin |KSP2, `ksp` |{repo}/test-suite-build/samples/kotlin-ksp[`kotlin-ksp`], {tests}/KotlinKspGradleSampleTest.java[test] |no sample; KSP is not documented for Maven |the `corpusKotlin` task runs each Kotlin case under KSP2 (CI job `build tools`)
+|Kotlin |kapt, `kapt` |{repo}/test-suite-build/samples/kotlin-kapt[`kotlin-kapt`], {tests}/KotlinKaptGradleSampleTest.java[test] |{repo}/test-suite-build/samples/kotlin-kapt-maven[`kotlin-kapt-maven`], {tests}/KotlinKaptMavenSampleTest.java[test] |the `lang:all` cases and the cases tagged `kapt:yes` (the nullability cases) of `corpusKotlin` run under kapt every night (`-Pcorpus.kotlin.processor=kapt`); kapt reads Kotlin nullability from the `@NotNull` and `@Nullable` annotations of the stub (<<kotlinNullabilityKapt,Under kapt>>)
+|Groovy |the Groovy compiler, `compileOnly` or `provided` |{repo}/test-suite-build/samples/groovy-gradle[`groovy-gradle`], {tests}/GroovyGradleSampleTest.java[test] |{repo}/test-suite-build/samples/groovy-maven[`groovy-maven`], {tests}/GroovyMavenSampleTest.java[test] |the corpus compiles each case with the Groovy compiler and Micronaut's AST transformation in process (`BindingCorpusSpec`)
+|===
+
+The example suites apply the processor too: `test-suite-java` (`annotationProcessor`), `test-suite-kotlin` (`ksp`) and `test-suite-groovy` (`compileOnly`), each with a drift fixture that must fail to compile. `buildToolsTest` builds the samples and needs the network and, for Maven, `mvn`. It is not part of `build`; the CI job `build tools` runs it.
+
+== Incrementality
+
+The visitor is isolating: it checks each resolver class on its own, so an incremental compilation checks the classes that changed. {tests}/IncrementalCompilationContract.java[`IncrementalCompilationContract`] proves what that means for each Gradle sample (Java, kapt, KSP and Groovy). It builds a copy of the sample with 22 classes twice, once with the processor and once as a control without it, and applies the same edits to both. The set of class files that an incremental build rewrote (modification time, size or presence) must be the same in both, so the visitor makes the compiler redo no work that it would not redo anyway.
+
+[cols="3,5", options="header"]
+|===
+|Edit |What the test asserts
+|The body of a bean, the body of the resolver |The rewritten class files equal those of the control build.
+|The binary interface of `Book` |The same.
+|A new class with a stereotype that the visitor does not claim |The same.
+|A deleted class |The same.
+|Every state, built from scratch in a copy |It passes: an incremental build never fails where a clean build of the same sources passes.
+|A schema edit that drifts the resolver |The incremental build fails with the code and the coordinate, and the repair passes.
+|A schema edit (Gradle) |The checked task reruns, because the build declares the schema directory as an input ({tests}/GradleSampleContract.java[`GradleSampleContract`]); with nothing changed the task is up to date.
+|A schema edit (Maven) |A build without `clean` can pass on the old result: see the Maven rule below.
+|===
+
+The tests assert no wall-clock time. They record the clean and the incremental time with the JDK and the load of the machine in `build/reports/build-tools/outcomes.txt`, so a number is quoted with its context or not at all. The checks add no build cache problem: a clean rebuild takes the checked javac task from the build cache, and so does the same project at another path, because the schema input is path sensitive by its relative path ({tests}/GradleSampleContract.java[`GradleSampleContract`] asserts `FROM_CACHE` for the Java sample, `aCleanRebuildAndARelocatedProjectUseTheBuildCache`). For the kapt, KSP and Groovy tasks the tests record the outcome and assert only that the task passes: they take the absolute path of the schema as an input.
+
+=== The Maven rule
+
+Maven does not track the schema directory. The compiler plugin of a Java project calls the classes up to date after a schema edit, so run `mvn clean verify` after a schema edit. What each sample does without `clean` is asserted in {tests}/MavenSampleContract.java[`MavenSampleContract`]: the Java sample passes on the stale result, and the kapt and Groovy samples run again and fail on the drift. The documented rule is the same for all three: clean after a schema edit. The startup runs every check in any case.
+
