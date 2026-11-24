@@ -6,7 +6,7 @@ The library checks that the code and the schema agree, and it fails early when t
 
 == When a fault fails
 
-*With the compile-time checks*, a fault that one class decides fails the build, with the code of the finding. Which checks run in the build, and what each finding names, is in <<compileTime,Compile-Time Verification>>. A fault that needs the whole program passes the build and fails at startup.
+*With the compile-time checks*, a fault that one class decides fails the build, with the code of the finding. Which checks run in the build, and what each finding names, is in <<compileTimeLimits,Limits>>. A fault that needs the whole program passes the build and fails at startup.
 
 *Without them*, the same fault fails when the schema is bound. By default (`micronaut.graphql.tools.eager-init: true`) that is when the application context starts, so the application, and the embedded server with it, does not start. The first request does no binding work. With `eager-init: false` the schema is bound when the first bean that needs the `GraphQLSchema` is created. See <<startupErrors,Startup Errors>>.
 

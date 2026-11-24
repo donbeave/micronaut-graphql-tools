@@ -35,7 +35,7 @@ The severity settings apply to the startup only. The compile-time checks do not 
 [cols="3,4,4", options="header"]
 |===
 |Code |What it finds |The fix
-|`unbound-resolver-method` (compile time) |A method of a resolver bean that binds no field. Which methods count is in <<compileTime,Compile-Time Verification>>. |Remove the method, make it bind a field, or put `@GraphQLIgnore` on it.
+|`unbound-resolver-method` (compile time) |A method of a resolver bean that binds no field. Which methods count is in <<compileTimeLimits,Limits>>. |Remove the method, make it bind a field, or put `@GraphQLIgnore` on it.
 |`root-method-several-operations` (compile time) |A root resolver method that binds the field of its name on more than one operation type. |Give each operation type its own method with `@GraphQLSchemaCoordinate`.
 |`unbound-enum-constant` (compile time) |A Java enum constant that has no value in the schema enum. |Add the value to the schema, remove the constant, or put `@GraphQLIgnore` on it.
 |`unmapped-input-property` (compile time) |A settable property of an input class that the GraphQL input type does not define. |Add the field to the input type, remove the property, or put `@GraphQLIgnore` on it.
@@ -47,7 +47,7 @@ The severity settings apply to the startup only. The compile-time checks do not 
 |`unwired-directive` |A directive that the schema applies and nothing wires. |Wire it: directive wiring is what enforces an authorization directive, so keep this check at `fail` for one. A directive on the schema definition or on a directive-definition argument is not reached by a `SchemaDirectiveWiring`; see the directive section of the <<checkSeverity,configuration reference>> for `allow.schema-customizer-directives` and `allow.inert-directives`, and use them only as it describes.
 |===
 
-The definitions, such as which methods, types and properties count, are in <<compileTime,Compile-Time Verification>> and the <<checkSeverity,configuration reference>>. The error that each check throws, and the order in which they run, are in the <<exceptions,error reference>>.
+The definitions, such as which methods, types and properties count, are in <<compileTimeLimits,Limits>> and the <<checkSeverity,configuration reference>>. The error that each check throws, and the order in which they run, are in the <<exceptions,error reference>>.
 
 [[strictModeEscape]]
 == Accept a finding

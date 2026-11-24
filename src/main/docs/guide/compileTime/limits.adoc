@@ -1,0 +1,122 @@
+:repo: https://github.com/{githubSlug}/blob/master
+:samples: {sourcedir}/test-suite-build/samples
+:tests: {repo}/test-suite-build/src/test/java/io/micronaut/graphql/tools/buildtools
+:corpus: {repo}/graphql-tools-processor/src/test/resources/corpus
+
+[[compileTimeLimits]]
+
+This page says what the compile-time checks read and what they leave to the startup, and what to do when a build and a startup disagree.
+
+== What is checked at compile time
+
+The visitor checks one resolver class at a time, with the per-class rules that the startup uses. The <<exceptions,error reference>> lists every code, and its `Compile time` column says whether the compile-time check reports it. Two groups exist.
+
+*The strict checks that run at compile time.* Five of the ten checks of strict mode are decided by one class and run in the build: `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property` and `nullable-primitive`. The other five (`unreachable-type`, `unreachable-value-type`, `unused-dictionary-entry`, `interface-read-through-implementation` and `unwired-directive`) need the whole program and run at startup only.
+
+*The per-class failures.* A method that binds no field, a parameter that binds no argument or binds it twice, the number of parameters, the Java type of an argument or of an input property, the input classes and enums that the arguments reach, the shape of the return type, `@GraphQLSchemaCoordinate`, and the introspection of the classes behind input and enum types, and the class of a union member or interface implementation that `@GraphQLType(name)` or the naming convention names (see <<compileTimeMembers,below>>), are all decided by the class and its types, so they are reported at compile time.
+
+Every compile-time check is the same in the three languages. The corpus compiles each case in each language the case has a directory for and compares the findings with one expected file; a language that differs needs an entry in {corpus}/corpus-language-differences.txt[`corpus-language-differences.txt`], and the list is empty and may only shrink ({repo}/graphql-tools-processor/src/test/groovy/io/micronaut/graphql/tools/corpus/BindingCorpusSpec.groovy[`BindingCorpusSpec`]).
+
+=== The soundness rule
+
+A compile-time error is a finding that the startup also reports at its default severity, with the same code and the same coordinate. The compile-time check never reads the severity settings (`strict`, `checks.<code>` and `allow.*` of the runtime): the five checks above are errors at compile time even where a runtime setting would relax them. A build that is rejected by a check a runtime setting relaxes is rejected on purpose, and the way out is an annotation (see below).
+
+The corpus asserts the rule for every case and language (`BindingCorpusSpec`, rule 5 of the {repo}/graphql-tools-processor/src/test/resources/corpus/README.md[corpus README]). Eight documented exceptions remain, most of them cases where the build also fails at startup, but with another code first. They are in {corpus}/corpus-soundness-exceptions.txt[`corpus-soundness-exceptions.txt`] with a reason each, and the list may only shrink:
+
+* two resolver classes bind one root field (the startup reports the ambiguity first);
+* a `GraphQLRuntimeWiringCustomizer` claims the field (the startup binds no method to it);
+* binding the field throws before the argument rule runs;
+* a binding failure of another resolver class stops the startup before the strict checks of this class;
+* two resolver classes bind one input type or enum to different Java classes;
+* a `SchemaMappingDictionary` entry wins over two classes that match one object type by name (the startup passes, and the compile-time check reports `[ambiguous-type-class]`);
+* a `SchemaMappingDictionary` entry names the class of a union member or interface implementation that `@GraphQLType(name)` maps to a disjoint class (the startup lets the entry win and binds the member);
+* a Kotlin nullability mismatch, which only the compiler can see (see <<kotlinNullability,Kotlin nullability>>): the startup reports nothing.
+
+=== Kotlin nullability
+
+[[kotlinNullability]]
+Kotlin writes nullability into the type (`String?` against `String`). Under KSP the visitor reads it from the Kotlin declaration; under kapt it reads the `@NotNull` and `@Nullable` annotations of JetBrains that kapt writes on every member of a Java stub of a Kotlin class (see <<kotlinNullabilityKapt,Under kapt>>). It compares it with the nullability of the schema at each position: the return type of a field, a parameter that binds an argument, a property of an input class, and the element of a list. Two codes report it:
+
+* `kotlin-nullability-mismatch` is a compile error, because the code fails at run time: a return type that is nullable where the field is non-null (`String?` for `String!`) nulls out the parent, and a non-null parameter or input property where the schema accepts `null` (`String` for `term: String`) cannot take it. The finding names the schema coordinate and the Kotlin member.
+* `kotlin-nullability-loose` is the reverse: a non-null return type where the field is nullable, or a nullable parameter or property where the schema requires a value. The code is stricter than the schema, so nothing fails, but the schema promises something else than the code. Plain Kotlin returns `String` for a nullable field all the time, so the check is off by default. The option `micronaut.graphql.tools.processor.loose.nullability` (`ignore`, `warn` or `fail`, see <<compileTimeOptions,the options>>) sets its severity, with the vocabulary of the `checks` setting of strict mode: `warn` reports a compiler warning and `fail` a compile error.
+
+What the check leaves alone: Java and Groovy, whose results do not change (a `@Nullable` annotation is not compared); a platform type, which has no declared nullability; a return type wrapped in `Optional`, `Mono`, `Maybe` or another type that can be empty, because the wrapper already says the position is nullable; and arrays.
+
+[[kotlinNullabilityKapt]]
+*Under kapt.* The visitor sees the Java stub that kapt writes for a Kotlin class, not the Kotlin declaration. A stub carries the nullability of a return type, a parameter and a property of the class as `@NotNull` or `@Nullable` so those positions give the same answer under kapt as under KSP. The visitor takes the stub for Kotlin when its class carries the `kotlin.Metadata` annotation; a Java class, which has the same annotations by choice, is never compared. A stub holds no nullability for the type argument of a generic type (the element of `List<String?>`, the value of `CompletableFuture<String>`), for a type variable, for an array, and for the return type of a `suspend` function (its stub returns `Object`), so the check reports nothing for those positions under kapt, with no error and no warning, where KSP reports a mismatch. The check never reads the contents of the Kotlin metadata of the compiled class, only whether the annotation is present: the annotations of the stub are enough for every position that a stub can answer. The corpus case {corpus}/exception/kotlin-nullability[`exception/kotlin-nullability`] records both results (`compile.txt` for KSP, `compile.kapt.txt` for kapt).
+
+The startup does not read Kotlin metadata, so the check costs nothing at run time and in a native image; the compile-time cost is one flag per type that the visitor already reads. The corpus case {corpus}/exception/kotlin-nullability[`exception/kotlin-nullability`] shows each error, the cases under {corpus}/nullability[`nullability`] show the warnings and the combinations that must stay silent.
+
+=== Union members and interface implementations
+
+[[compileTimeMembers]]
+A union member or an interface implementation gets its Java class from the `SchemaMappingDictionary`, from `@GraphQLType(name)` or from the naming convention (see <<typeDictionary,the classes of union members and interface implementations>>). The visitor sees the two annotation forms and not the dictionary, which is code, so the checks split:
+
+* *Per class, at compile time.* A field of a resolver class returns a union or an interface as a Java interface, and the class of an object type of it, found by `@GraphQLType(name)` or by the naming convention among the classes of the compilation, is `final` and does not implement that interface. No object can be an instance of both, so the build fails with `[incorrect-member-mapping]`, the coordinate of the field and its schema location. A class that is not final is not disjoint: a subclass could implement the interface. The members are judged in the order of the schema (the implementations of an interface in the order of their names), as the startup binds them, and the first failing member is the finding.
+* *At startup only.* A member that no class of the compilation matches, or that several match, is the startup's: the check stops there, because the startup stops there (`[union-type-mapping-not-provided]`, `[interface-type-mapping-not-provided]`, `[ambiguous-type-class]`). The same holds for a class that a dependency provides, for a union or interface that more than one field of the schema returns (the startup binds it once, from the first field that reaches it), for a field that returns it through the type of a model class, and for every entry of a `SchemaMappingDictionary`, which always wins over the annotation. A class whose union member fails is reported alone: the startup throws a binding failure before it runs the strict checks of the class, and the compile-time check does the same.
+
+The one build the check can get wrong is a dictionary entry that names a fitting class for a member whose annotation names a disjoint one: the startup lets the entry win and passes, and the compile-time check reports the annotation. That is the exception `dictionary-member-wins`; remove the annotation or the entry, or compile that module without checks. The corpus cases {corpus}/abstract/union-member-final-class[`abstract/union-member-final-class`], {corpus}/abstract/interface-member-final-class[`abstract/interface-member-final-class`], {corpus}/abstract/union-member-open-class[`abstract/union-member-open-class`], {corpus}/abstract/union-member-final-implementation[`abstract/union-member-final-implementation`], {corpus}/abstract/union-member-after-failed-member[`abstract/union-member-after-failed-member`], {corpus}/abstract/union-member-after-unmapped-member[`abstract/union-member-after-unmapped-member`], {corpus}/abstract/union-member-before-strict-check[`abstract/union-member-before-strict-check`] and {corpus}/exception/dictionary-member-wins[`exception/dictionary-member-wins`] show each verdict in Java, Groovy and Kotlin.
+
+An `@Introspected(accessKind = FIELD)` model that a method parameter reaches is checked at compile time with the other input classes, through its readable properties. The sealed-type derivation of a union is not available to the element API, so it is not checked.
+
+=== Only the startup can prove it
+
+`class-not-introspected` is the one finding that a check of one class cannot prove: another class can make a class introspected with `@Introspected(classes = ...)` or `@Introspected(packages = ...)`, and so can a dependency. A `@GraphQLModels` of the same compilation is the exception: the check reads it (wherever in the compilation it is declared) and does not warn about a class it lists. The check also covers the class that a resolver method returns for an object type, with the coordinate of the field; see <<models,Model Classes>>. So the compile-time check reports it as a *warning*, and the startup decides. The walk stops at that finding, as the startup stops at its failure, so the findings of the same class that come after it are the startup's.
+
+A build that turns compiler warnings into errors (`-Werror` for javac) fails on this warning like on any other, because the visitor reports it through the compiler's own warning channel; no sample build runs with `-Werror`, so no test covers that. There, put `@Introspected` on the class itself: a class that carries `@Introspected`, or an annotation that carries it (`@GraphQLInput`, `@GraphQLType`, `@Serdeable`), is seen as introspected at compile time. The corpus shows the finding as a `warning` line in `compile.txt` ({corpus}/README.md[corpus README]).
+
+=== Several modules
+
+A build that keeps resolver classes in feature modules applies the processor in each module that holds resolver classes, and only there: a module without resolvers has nothing to check, and a schema edit does not recompile it. A compilation sees its own sources and its classpath, so the checks split in two.
+
+*What one class determines runs in every module*, whichever module defines the classes it reaches: a method that binds no field, a wrong argument name or type, a primitive at a nullable position, an input class property or an enum constant that the schema does not define, the shape of the return type. The input classes and enums of a dependency are read from its class files. A module that fails fails its own build, with the code, the coordinate and the schema location, and a module that does not depend on it still compiles.
+
+*What needs the whole program never fails at compile time*: a field that no resolver binds (the resolver may be in another module), two modules that resolve one field, a type that nothing reaches, the dictionary and the directives. The visitor never reports a field as unbound because no resolver is in the module. The startup of the application, which sees every module, reports these with the coordinate (`field-not-bound`, `multiple-methods-found`, and the others whose `Compile time` column says `no`).
+
+The schema is a directory of each module that applies the processor: the module sets `schema.dirs` to the directory that holds the schema, for example the source directory of the schema module. A schema that exists only inside a jar of the classpath (`classpath*:` at startup) cannot be read by a compiler plug-in, so a module with resolvers and no directory fails with `[processor-schema-not-configured]`; the explicit way out is `checks=false` there, and the startup still checks everything. Each module also sets `module.dir` to its own project directory (see <<compileTimeOptions,Options>>), as in these snippets:
+
+[source,kotlin]
+----
+include::{samples}/multi-module-gradle/books/build.gradle.kts[tags=schema-dirs]
+----
+
+[source,xml]
+----
+include::{samples}/multi-module-maven/books/pom.xml[tags=schema-dirs]
+----
+
+The samples prove it: in {repo}/test-suite-build/samples/multi-module-gradle[`multi-module-gradle`] (five modules) every module compiles and the application answers a query through the resolvers of both feature modules; a schema edit reruns `books` and `authors` and leaves `model` and `app` up to date; a wrong argument type, a wrong argument name, or a model enum that drifts from the schema fails the compile task of the module whose resolver is affected, while the module next to it still compiles; a field with no resolver in any module compiles everywhere and fails `:app:run` with its coordinate. {repo}/test-suite-build/samples/multi-module-maven[`multi-module-maven`] builds a reactor and builds it again with the snippet removed from the module built last. The corpus cases under {corpus}/modules[`modules/`] compile each module of a case on its own.
+
+=== Conditional beans, `@Requires` and `@Replaces`
+
+The visitor checks the class as written. It does not evaluate `@Requires` or `@Replaces`, and it does not know which beans an environment creates: that is a property of the running application. So the facts that depend on the set of beans are the startup's. When a subclass carries `@Replaces(<original>.class)`, the original is dropped at startup and only the subclass binds; when both stay active and bind one field, the startup fails with `[multiple-methods-found]`. Neither outcome is a compile-time finding, because the `Compile time` column of both `multiple-methods-found` and `field-not-bound` is `no`. A conditional bean gets the same per-class compile-time checks as any other bean. A class that `@Requires` excludes in some environment is still compiled with the checks on, so a per-class error in it (an argument that does not match the schema, for example) fails the build although no environment may ever create the bean. This is the documented behaviour, not a gap in the soundness rule: the startup reports the same finding with the same code and coordinate when it binds the class, and a build can only reject what the class itself decides. The corpus cases {corpus}/conditional/per-class-finding[`conditional/per-class-finding`] and {corpus}/conditional/replaces-per-class-finding[`conditional/replaces-per-class-finding`] show a per-class error in a conditional class failing the build, and {corpus}/modules/conditional-replaces-library-resolver[`modules/conditional-replaces-library-resolver`] shows a `@Replaces` of a resolver from another module deciding nothing at compile time. The checks that need the set of beans (`multiple-methods-found` and the other whole-program findings) run at startup only, where the conditions decide which beans count. If a module holds classes that must compile without checks, keep them in a module that does not apply the processor, or set `checks=false` there.
+
+=== Customizers
+
+A customizer (a `GraphQLSchemaMappingDictionaryCustomizer`, a `GraphQLRuntimeWiringCustomizer`, a customizer of the registry) adds schema or wiring that no schema file holds, and the compile-time checks do not see it. The checks read the files of `schema.dirs` only, and there is no option that makes the visitor run a customizer. A field that a customizer claims is the case of the `GraphQLRuntimeWiringCustomizer` soundness exception above. Keep the schema a customizer adds in files and list their directory in `schema.dirs`, or leave that part to the startup.
+
+=== The escape hatches at compile time
+
+The way out of a compile-time check is an annotation on the code, not a setting: the compile-time check does not read `strict`, `checks.<code>` or `allow.*`. `@GraphQLArgument("<name>")` binds a parameter whose name is not the argument's, `@GraphQLSchemaCoordinate` binds a method to a field explicitly, `@GraphQLIgnore` takes a public method out of binding, and `@Introspected` on the class makes it introspected (see above). `checks=false` is the one switch for a whole compilation.
+
+=== Parameter names
+
+A method declared in the sources that Micronaut processes (Java, Kotlin or Groovy) binds by the name in its source: no `-parameters` flag is needed. The corpus compiles Java without `-parameters` and Groovy without `parameters`, so its `argument/` cases show it. The flag is needed for one case only: a method inherited from a class file without parameter names, such as an interface method of a dependency. See <<inputs,Inputs>>, "Where the names come from".
+
+== Native image
+
+The compile-time checks run in the compiler and add nothing to the application at runtime: the processor goes on the compiler path (`annotationProcessor`, `ksp`, `kapt`, `compileOnly`, or Maven's `provided`), not on the runtime classpath, and the module depends on no runtime class. The visitor writes no file. It writes the type resolver contracts that a bean class inherits into the annotation metadata of the class (`@ResolverContracts`), which the startup reads from the bean definition without reflection, so a bean that is a type resolver only through an inherited annotation binds the same way on the JVM and in a native image. A build that does not run the processor fails such a bean at startup with `[type-resolver-contracts-not-found]`, which names the processor. The rule that the library uses no reflection is enforced by `ArchitectureRulesSpec` (see "Architecture rules" in `CONTRIBUTING.md`).
+
+== Troubleshooting
+
+[cols="2,5", options="header"]
+|===
+|Symptom |What to do
+|A schema edit does not fail the build |Gradle: the schema directory must be a declared input of the compile task (the snippets of <<compileTimeSetup,Set up the build>> do it); a `compilerArgs` string is not. Maven: run `mvn clean verify` after a schema edit.
+|The build prints no note about the checks |The processor did not run. Check the path of the compiler: `annotationProcessor` for javac, `ksp` or `kapt` for Kotlin (under kapt `compileJava` runs with `-proc:none`), `compileOnly` or `provided` for Groovy.
+|`[processor-schema-not-configured]` |Set `micronaut.graphql.tools.processor.schema.dirs` in this module, and `module.dir` next to it in a build with several modules. A schema that exists only in a jar cannot be read: point to a directory, or set `checks=false`.
+|A `[type-resolver-contracts-not-found]` at startup |The module that holds the bean does not run the processor.
+|A parameter is `arg0` in the message |The method is inherited from a class file built without `-parameters`: build the class with `-parameters`.
+|A warning `class-not-introspected` fails a `-Werror` build |Put `@Introspected` on the class.
+|The checks and the startup disagree on a getter name |Set `micronaut.graphql.tools.processor.resolver.accessor.prefixes` to the value of `micronaut.graphql.tools.resolver-accessor-prefixes`.
+|===

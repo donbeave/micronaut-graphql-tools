@@ -53,7 +53,7 @@ The tests that build these snippets are `KotlinKspLooseNullabilityTest` (the def
 |Groovy compiler |a system property of the compiler JVM: `-D<name>=<value>` in the `jvmArgs` of the forked `compileGroovy` task (Gradle), or `properties-maven-plugin` in the Maven JVM
 |===
 
-The snippets are on the <<compileTime,Compile-Time Verification>> page. Each one is the tagged part of a sample build that a test builds (see the support matrix there).
+The snippets are on the <<compileTimeSetup,Set up the build>> page. Each one is the tagged part of a sample build that a test builds (see the support matrix on the <<compileTimeBuildManifest,Build Manifest>> page).
 
 == The module marker
 
