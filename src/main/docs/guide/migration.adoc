@@ -1,1 +1,1 @@
-Migration notes for each release line. The page for applications that run `1.0.0-SNAPSHOT` lists every breaking change with its fix, and the breaking changes of each release are listed on the Breaking Changes page.
+ The page for applications that move from graphql-java-tools lists what each of their resolver pieces becomes, and the gaps that remain.
