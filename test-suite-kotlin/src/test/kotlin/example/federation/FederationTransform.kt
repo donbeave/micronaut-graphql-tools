@@ -66,7 +66,7 @@ object FederationTransform {
             }
         }
         val typeResolver = TypeResolver { environment ->
-            val obj = environment.getObject<Any>()
+            val obj = environment.getObject<Any>()!!
             val name = if (obj is Map<*, *>) obj["__typename"] as String else obj.javaClass.simpleName
             environment.schema.getObjectType(name)
         }

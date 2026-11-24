@@ -47,7 +47,7 @@ class FederationTest {
         ApplicationContext.run(settings, FEDERATION).use { context ->
             val result = execute(context, "{ _service { sdl } }")
             assertTrue(result.errors.isEmpty(), result.errors.toString())
-            val sdl = (result.getData<Map<String, Map<String, String>>>()["_service"])!!["sdl"]!!
+            val sdl = (result.getData<Map<String, Map<String, String>>>()!!["_service"])!!["sdl"]!!
             assertTrue(sdl.contains("type Product @key(fields : \"id\")"), sdl)
             assertTrue(sdl.contains("type Order @key(fields : \"id\")"), sdl)
         }
