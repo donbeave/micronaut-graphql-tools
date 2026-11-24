@@ -30,6 +30,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver;
 import io.micronaut.graphql.tools.binding.internal.meta.ResolverContracts;
 import io.micronaut.graphql.tools.binding.internal.model.JMethod;
 import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers;
+import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassRules;
 import io.micronaut.graphql.tools.internal.MicronautUtils;
 import io.micronaut.graphql.tools.internal.exceptions.implementation.AmbiguousTypeResolverException;
@@ -351,6 +352,11 @@ public final class GraphQLResolversRegistry {
     public List<String> operationsOf(SchemaCoordinateMethod coordinateMethod) {
         return markersOf(coordinateMethod.beanDefinition())
                 .operationsOf(coordinateMethod.method().getMethodName(), arity(coordinateMethod.method()));
+    }
+
+    public Set<SchemaCoordinates.ResolverKind> kindsOf(SchemaCoordinateMethod coordinateMethod, boolean root, boolean type) {
+        return SchemaCoordinates.kindsOf(root, type, markersOf(coordinateMethod.beanDefinition()),
+                coordinateMethod.method().getMethodName(), arity(coordinateMethod.method()));
     }
 
     public List<SchemaCoordinateMethod> getSchemaCoordinateMethods() {
