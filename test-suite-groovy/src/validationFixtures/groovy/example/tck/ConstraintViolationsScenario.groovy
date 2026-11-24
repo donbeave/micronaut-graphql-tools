@@ -21,7 +21,11 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
+import graphql.GraphQLError
 import io.micronaut.core.annotation.AnnotationValue
+import io.micronaut.graphql.tools.error.GraphQLExceptionContext
+import io.micronaut.graphql.tools.error.GraphQLExceptionMapper
+import jakarta.validation.ConstraintViolationException
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping
@@ -297,6 +301,30 @@ class ConstraintViolationsQueries {
     }
 
     String several(@NotBlank String name, @Positive int count, @Valid Cart cart) {
+        return name
+    }
+}
+
+// tag::custom-mapper[]
+@CompileStatic
+@Singleton
+@Requires(property = 'tck.scenario', value = 'constraint-violation-mapper')
+class InvalidInputMapper implements GraphQLExceptionMapper<ConstraintViolationException> {
+    @Override
+    GraphQLError map(ConstraintViolationException exception, GraphQLExceptionContext context) {
+        List<String> fields = exception.constraintViolations.collect { it.propertyPath.last().name }.sort()
+        return context.error('The input is not valid', [code: 'INVALID_INPUT', fields: fields] as Map<String, Object>)
+    }
+}
+// end::custom-mapper[]
+
+@CompileStatic
+@Singleton
+@GraphQLRootResolver
+@Requires(property = 'tck.scenario', value = 'constraint-violation-mapper')
+class RegistrationQueries {
+
+    String register(@NotBlank String name, @Positive int seats) {
         return name
     }
 }
