@@ -132,7 +132,7 @@ class ArgumentsQueries {
         if (text.omitted) {
             return 'omitted'
         }
-        return text.isNull() ? 'null' : 'present:' + text.get()
+        return text.isNull() ? 'null' : 'present:' + text.getRequired()
     }
 
     int total(List<Integer> numbers) {

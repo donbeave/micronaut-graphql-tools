@@ -846,7 +846,7 @@ configured, and input types without an `ArgumentValue` pay nothing for it:
 String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput> profile) {
     if (nickname.isOmitted()) { /* not sent: keep the stored value */ }
     else if (nickname.isNull()) { /* sent as null: clear it */ }
-    else { /* nickname.get() */ }
+    else { /* nickname.getRequired() */ }
 }
 ```
 
@@ -1115,7 +1115,7 @@ public GraphQLRuntimeWiringCustomizer hideInternalFields() {
 ### Fields a customizer serves
 
 A field that only a hand-written `DataFetcher` serves has no Java member, so the library would fail the startup with
-`[field-not-bound]`. The customizer declares such a field by **claiming** it in `claimedFields()` and registers the
+`[field-not-bound]`. The customizer declares such a field by **claiming** it in `getClaimedFields()` and registers the
 data fetcher in `customize`:
 
 ```java
@@ -1123,7 +1123,7 @@ data fetcher in `customize`:
 class ServerVersionCustomizer implements GraphQLRuntimeWiringCustomizer {
 
     @Override
-    public Set<FieldCoordinates> claimedFields() {
+    public Set<FieldCoordinates> getClaimedFields() {
         return Set.of(FieldCoordinates.coordinates("Query", "serverVersion"));
     }
 
@@ -1142,8 +1142,8 @@ class ServerVersionCustomizer implements GraphQLRuntimeWiringCustomizer {
   or field the schema does not define, or for an interface, fails the startup with `[invalid-claimed-fields]`, which
   names every such coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
 - `[runtime-wiring-override]`, and the `[field-not-bound]` of a field added by `extend type`, name
-  `claimedFields()` as the way out.
-- `claimedFields()` is read once, at startup, before any field is bound. Claimed fields have a line in the
+  `getClaimedFields()` as the way out.
+- `getClaimedFields()` is read once, at startup, before any field is bound. Claimed fields have a line in the
   [binding manifest](#binding-manifest) of kind `claimed`, naming the customizer.
 - Types that only a claimed field returns are not reached by the binding: list them in `allow.unreachable`, or bind
   them through another field.
