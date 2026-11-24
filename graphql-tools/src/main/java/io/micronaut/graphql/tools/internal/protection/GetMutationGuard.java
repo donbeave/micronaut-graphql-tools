@@ -35,7 +35,7 @@ import java.util.function.Function;
 /**
  * The library's {@link PreparsedDocumentProvider} when the endpoint serves {@code GET}: the document that the execution
  * parses (or takes from the {@link DocumentCache}) is the one whose operation type is checked, so nothing is parsed twice. A
- * {@code GET} request whose selected operation is a mutation fails with {@link MutationOverGetException} before any
+ * {@code GET} or {@code HEAD} request whose selected operation is a mutation fails with {@link MutationOverGetException} before any
  * resolver runs. Every other request, and every operation of another transport, takes the delegate's path unchanged.
  */
 @Internal
@@ -86,7 +86,7 @@ public final class GetMutationGuard implements PreparsedDocumentProvider {
         List<Definition> definitions = document.getDefinitions();
         for (int i = 0; i < definitions.size(); i++) {
             if (definitions.get(i) instanceof OperationDefinition operation) {
-                if (operationName != null) {
+                if (operationName != null && !operationName.isEmpty()) {
                     if (operationName.equals(operation.getName())) {
                         return operation;
                     }
@@ -97,7 +97,7 @@ public final class GetMutationGuard implements PreparsedDocumentProvider {
                 }
             }
         }
-        return operationName == null ? only : null;
+        return operationName == null || operationName.isEmpty() ? only : null;
     }
 
     private static boolean isGet(ExecutionInput input) {
@@ -106,7 +106,7 @@ public final class GetMutationGuard implements PreparsedDocumentProvider {
             return false;
         }
         HttpRequest<?> request = state.getHttpRequest();
-        return request != null && request.getMethod() == HttpMethod.GET;
+        return request != null && (request.getMethod() == HttpMethod.GET || request.getMethod() == HttpMethod.HEAD);
     }
 
     /**

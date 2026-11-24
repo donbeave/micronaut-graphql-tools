@@ -116,4 +116,19 @@ class GetMutationGuardSpec extends Specification {
         HttpMethod.POST | GraphQLTransport.HTTP
         HttpMethod.GET  | GraphQLTransport.WEBSOCKET
     }
+
+    @Unroll
+    void "a #method request is refused, and an empty operation name selects the only operation"() {
+        given:
+        def guard = new GetMutationGuard(null)
+
+        when:
+        guard.getDocumentAsync(input('mutation { b }', '', method), parse).join()
+
+        then:
+        thrown(CompletionException)
+
+        where:
+        method << [HttpMethod.GET, HttpMethod.HEAD]
+    }
 }

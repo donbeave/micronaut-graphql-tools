@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.internal;
 
 import graphql.GraphQL;
+import graphql.execution.preparsed.PreparsedDocumentProvider;
 import graphql.execution.instrumentation.ChainedInstrumentation;
 import graphql.analysis.MaxQueryComplexityInstrumentation;
 import graphql.analysis.MaxQueryDepthInstrumentation;
@@ -169,8 +170,9 @@ public final class GraphQLFactory {
         }
         GraphQL.Builder builder = GraphQL.newGraphQL(graphQLSchema)
                 .defaultDataFetcherExceptionHandler(exceptionHandler);
-        builder.preparsedDocumentProvider(new GetMutationGuard(protection.getDocumentCacheSize() > 0
-                ? new DocumentCache(protection.getDocumentCacheSize()) : null));
+        if (protection.getDocumentCacheSize() > 0) {
+            builder.preparsedDocumentProvider(new DocumentCache(protection.getDocumentCacheSize()));
+        }
         List<Instrumentation> chain = new ArrayList<>(instrumentations);
         if (protection.getMaxDepth() > 0) {
             chain.add(new MaxQueryDepthInstrumentation(protection.getMaxDepth()));
@@ -184,7 +186,10 @@ public final class GraphQLFactory {
             builder.instrumentation(new ChainedInstrumentation(chain));
         }
         graphQLBuilderCustomizers.forEach(customizer -> customizer.customize(builder));
-        return builder.build();
+        GraphQL graphQL = builder.build();
+        PreparsedDocumentProvider provider = graphQL.getPreparsedDocumentProvider();
+        return provider instanceof GetMutationGuard ? graphQL
+                : graphQL.transform(guarded -> guarded.preparsedDocumentProvider(new GetMutationGuard(provider)));
     }
 
     /**
