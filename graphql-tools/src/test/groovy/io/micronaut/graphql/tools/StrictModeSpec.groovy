@@ -115,7 +115,7 @@ enum Color {
 
     void "with the manifest not recorded strict mode still fails with the same problems"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.manifest.record': false])
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.manifest.enabled': false])
 
         when:
         getGraphQLBean()
@@ -129,7 +129,7 @@ enum Color {
 
     void "with strict false and the manifest not recorded the schema binds, and the manifest bean says how to get it"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, NOT_STRICT + ['micronaut.graphql.tools.manifest.record': false])
+        startContext(SCHEMA, SPEC_NAME, NOT_STRICT + ['micronaut.graphql.tools.manifest.enabled': false])
 
         when:
         def result = executeQuery('{ item { name color } }')
@@ -144,22 +144,16 @@ enum Color {
         then:
         def e = thrown(BeanInstantiationException)
         e.cause instanceof NoSuchElementException
-        e.cause.message.contains('micronaut.graphql.tools.manifest.record')
+        e.cause.message.contains('micronaut.graphql.tools.manifest.enabled')
     }
 
-    void "the manifest is recorded by manifest.record, or by manifest.enabled"() {
+    void "the manifest is recorded and written by manifest.enabled"() {
         given:
-        startContext(SCHEMA, SPEC_NAME, NOT_STRICT + config)
+        startContext(SCHEMA, SPEC_NAME, NOT_STRICT + ['micronaut.graphql.tools.manifest.enabled': true,
+                'micronaut.graphql.tools.manifest.path': File.createTempFile('manifest', '.txt').absolutePath])
 
         expect:
         !applicationContext.getBean(BindingManifest).lines.isEmpty()
-
-        where:
-        config << [
-                ['micronaut.graphql.tools.manifest.record': true],
-                ['micronaut.graphql.tools.manifest.record': false, 'micronaut.graphql.tools.manifest.enabled': true,
-                 'micronaut.graphql.tools.manifest.path'  : File.createTempFile('manifest', '.txt').absolutePath]
-        ]
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)

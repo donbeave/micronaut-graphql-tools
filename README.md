@@ -498,10 +498,10 @@ kind (`argument-mismatch`, `unsupported-return-type`, `scalar-mapping-not-provid
 
 The `BindingManifest` bean says what the schema is bound to: one line per schema coordinate, naming the Java member
 that serves it, in a stable, versioned text format (`graphql-binding-manifest 2`) that can be checked into a repository
-and diffed. Recording is opt-in: set `micronaut.graphql.tools.manifest.record: true` to record it while the schema is
+and diffed. Recording is opt-in: set `micronaut.graphql.tools.manifest.enabled: true` to record it while the schema is
 bound (without it nothing is recorded and getting the bean fails with a message saying so). Getting the bean binds the
-schema first. With `micronaut.graphql.tools.manifest.enabled: true` it is written
-at startup to `micronaut.graphql.tools.manifest.path` (directories are created). Without a path, one line is logged at INFO, and the manifest lines at DEBUG on the `BindingManifestWriter` logger (the manifest is rendered only when DEBUG is on). The format is specified in the guide page "Binding Manifest" (`src/main/docs/guide/manifest.adoc`): the grammar,
+schema first. With `micronaut.graphql.tools.manifest.path` also set it is written
+at startup to that path (directories are created), which binds the schema at startup. The format is specified in the guide page "Binding Manifest" (`src/main/docs/guide/manifest.adoc`): the grammar,
 the line kinds, the sorting, the escape of non-ASCII characters and the schema hash, which does not depend on the order
 of the schema files or of the extensions.
 
@@ -621,7 +621,7 @@ that no longer applies fails it, so the lists cannot go stale:
   `[invalid-allow-findings]`. A precedence ambiguity is not a check and cannot be allowed here.
 
 Migrating an application that fails the checks: set `strict: false`, `precedence: resolver-first` and
-`manifest.enabled: true`, start it, then fix, annotate (`@GraphQLIgnore`) or allow each `!` line of the manifest, and
+`manifest.enabled: true` and a `manifest.path`, start it, then fix, annotate (`@GraphQLIgnore`) or allow each `!` line of the manifest, and
 remove `strict: false` again.
 
 ### Escape hatches
@@ -880,9 +880,8 @@ String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput>
 | `micronaut.graphql.tools.protection.max-depth` | `0` (no limit) | The deepest selection nesting that an operation may have; a deeper one is rejected with a GraphQL error. |
 | `micronaut.graphql.tools.protection.max-complexity` | `0` (no limit) | The highest complexity (every selected field counts 1) that an operation may have; a higher one is rejected with a GraphQL error. |
 | `micronaut.graphql.tools.protection.introspection` | `true` \| `false` | Whether `__schema` and `__type` can be queried; off, they fail validation. |
-| `micronaut.graphql.tools.manifest.record` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded. The checks run the same either way. |
-| `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Write the [binding manifest](#binding-manifest) at startup (this binds the schema at startup). Implies `manifest.record`. |
-| `micronaut.graphql.tools.manifest.path` | file path (none) | Where to write it; without a path one line is logged at INFO and the manifest lines at DEBUG. |
+| `micronaut.graphql.tools.manifest.enabled` | `false` \| `true` | Record the [binding manifest](#binding-manifest) while the schema is bound, so that the `BindingManifest` bean can be read. Off by default: nothing is recorded. The checks run the same either way. |
+| `micronaut.graphql.tools.manifest.path` | file path | Write the recorded manifest to this file at startup (this binds the schema at startup). |
 | `micronaut.graphql.tools.allow.unreachable` | list of type names (empty) | Unreachable types that the checks accept; they are logged at INFO. Every entry must be an unreachable type of the schema (object, interface, union, enum, input or scalar), otherwise the startup fails, so the list cannot go stale. An allowed type also allows the enum, input and scalar types that its fields and arguments use, and that those input types use in turn (transitive); list only the type itself. A type that only a type that is not allowed uses stays unreachable. |
 | `micronaut.graphql.tools.allow.inert-directives` | list of directive names, without `@` (empty) | Directives the schema may apply without a wiring, because they have no effect at runtime; they are logged at INFO. An entry with `*` is a pattern (`fed*`) that must match at least one declared directive without a wiring. Every other applied directive needs a wiring (see [Schema directives](#schema-directives)). Every exact entry must be a directive the schema declares, that is not built in, that has no wiring and that is not a `resolver-directives` entry, otherwise the startup fails in every mode, so the list cannot go stale. |
 | `micronaut.graphql.tools.allow.schema-customizer-directives` | list of directive names, without `@` (empty) | Directives that a `GraphQLSchemaCustomizer` handles on the `schema` definition or on directive arguments, where graphql-java calls no wiring (see [Schema directives](#schema-directives)). Every entry must be a directive the schema declares that is not built in and that it applies on the schema definition or on a directive argument, otherwise the startup fails in every mode. |

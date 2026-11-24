@@ -29,7 +29,7 @@ abstract class AbstractScalarsSpec extends Specification {
 
     protected void startContext(String schema, String specName, Map config = [:]) {
         def builder = ApplicationContext.builder(
-                ['spec.name': specName, 'micronaut.graphql.tools.manifest.record': true] << config, 'test')
+                ['spec.name': specName, 'micronaut.graphql.tools.manifest.enabled': true] << config, 'test')
         TypeDefinitionRegistry registry = new TypeDefinitionRegistry()
         registry.merge(new SchemaParser().parse(schema))
         builder.singletons(registry)
