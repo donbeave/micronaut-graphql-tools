@@ -1,1 +1,1 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+This chapter gives the reasons for the design and compares the library with two other tools. <<noReflection,No Runtime Reflection>> defines the claim that the library makes about reflection, proxies and bytecode generation, and what supports it. <<comparison,Comparison>> is a table of facts about graphql-java-tools, Spring for GraphQL and this library, each with the version and the source that it was read from.

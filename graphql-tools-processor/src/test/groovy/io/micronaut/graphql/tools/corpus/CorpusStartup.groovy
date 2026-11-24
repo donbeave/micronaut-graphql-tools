@@ -37,7 +37,7 @@ import java.util.regex.Matcher
  * Starts the application of a compiled case with the library and reports what the startup says. It is loaded by the
  * class loader of the application (see {@link RuntimeBinder}), so that Micronaut's caches see only the classes of the
  * case, and it talks to the runner in JDK types only: a map with {@code findings} (a list of
- * {@code [code, coordinate, location]}), {@code manifest} and {@code failure}.
+ * {@code [code, coordinate, location]}), {@code message} (the message of the binding failure), {@code manifest} and {@code failure}.
  *
  * <p>The codes are the check names for the strict-mode checks and the simple name of the exception for the
  * other failures, until the stable codes of #237 land.</p>
@@ -86,6 +86,7 @@ final class CorpusStartup {
                 result.put('failure', causes(e).last().toString())
             } else {
                 findings.addAll(flatten(known))
+                result.put('message', known.message)
             }
         } finally {
             context?.close()
