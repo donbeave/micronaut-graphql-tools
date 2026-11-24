@@ -119,6 +119,38 @@ type Query { hello: String }
         noExceptionThrown()
     }
 
+    void "a schema template over every GraphQLInvocation starts when the application provides the engine"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.eachInvocationOwnEngine')
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "a qualified invocation that is only @Secondary ties with the library's and fails the startup"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.namedSecondary')
+
+        then:
+        def e = thrown(Throwable)
+        rootConfiguration(e).message.contains('Fix: remove @Secondary')
+    }
+
+    void "Micronaut itself finds no single unqualified bean beside a qualified secondary invocation"() {
+        given:
+        Map config = ['spec.name': 'BeanSelectionLimitsSpec.namedSecondary', 'micronaut.graphql.tools.eager-init': false]
+        def context = io.micronaut.context.ApplicationContext.run(config, 'test')
+
+        when:
+        context.getBean(GraphQLInvocation)
+
+        then:
+        thrown(io.micronaut.context.exceptions.NonUniqueBeanException)
+
+        cleanup:
+        context?.close()
+    }
+
     static ConfigurationException rootConfiguration(Throwable e) {
         Throwable current = e
         while (current != null) {
@@ -207,6 +239,23 @@ type Query { hello: String }
 
         @Bean @Singleton @io.micronaut.context.annotation.Replaces(value = GraphQLSchema, factory = EachInvocationReplacedFactory)
         GraphQLSchema replacing() { BeanSelectionMatrixSpec.schema('replacing') }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.eachInvocationOwnEngine')
+    @Factory
+    static class OwnEngineFactory {
+        @Bean @Singleton
+        GraphQL graphQL() { BeanSelectionMatrixSpec.engine('own') }
+
+        @Bean @EachBean(GraphQLInvocation)
+        GraphQLSchema schema(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.schema('eachi') }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.namedSecondary')
+    @Factory
+    static class NamedSecondaryFactory {
+        @Bean @Singleton @Secondary @jakarta.inject.Named('admin')
+        GraphQLInvocation invocation() { new Marked('named') }
     }
 
 }
