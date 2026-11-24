@@ -253,16 +253,23 @@ public final class LibraryBeanSelection {
             }
         }
         List<String> templates = new ArrayList<>();
-        // an application engine does not need the schema the template builds, so a schema template then breaks no cycle
-        boolean libraryEngine = competitor(context, GraphQL.class) == null;
+        // an application engine that does not itself depend on the invocation breaks the cycle, for both kinds of template
+        Provided engine = competitor(context, GraphQL.class);
+        boolean libraryEngine = engine == null;
+        boolean cyclicEngine = libraryEngine || eachInvocation(engine.definition());
         for (Provided candidate : withoutReplaced(candidates)) {
             BeanDefinition<?> definition = candidate.definition();
-            if ((libraryEngine || GraphQL.class.isAssignableFrom(definition.getBeanType())) && definition.hasStereotype(EachBean.class)
-                    && definition.classValue(EachBean.class).filter(target -> target.isAssignableFrom(LibraryGraphQLInvocation.class)).isPresent()) {
+            boolean engineTemplate = GraphQL.class.isAssignableFrom(definition.getBeanType());
+            if ((engineTemplate ? cyclicEngine : libraryEngine) && eachInvocation(definition)) {
                 templates.add(describe(definition));
             }
         }
         return templates;
+    }
+
+    private static boolean eachInvocation(BeanDefinition<?> definition) {
+        return definition.hasStereotype(EachBean.class)
+                && definition.classValue(EachBean.class).filter(target -> target.isAssignableFrom(LibraryGraphQLInvocation.class)).isPresent();
     }
 
     /**

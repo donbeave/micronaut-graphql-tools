@@ -127,6 +127,14 @@ type Query { hello: String }
         noExceptionThrown()
     }
 
+    void "an engine template over every GraphQLInvocation starts when the application provides a primary engine"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.eachInvocationPrimaryEngine')
+
+        then:
+        noExceptionThrown()
+    }
+
     void "a qualified invocation that is only @Secondary ties with the library's and fails the startup"() {
         when:
         startContext(SCHEMA, 'BeanSelectionLimitsSpec.namedSecondary')
@@ -256,6 +264,16 @@ type Query { hello: String }
     static class NamedSecondaryFactory {
         @Bean @Singleton @Secondary @jakarta.inject.Named('admin')
         GraphQLInvocation invocation() { new Marked('named') }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.eachInvocationPrimaryEngine')
+    @Factory
+    static class PrimaryEngineFactory {
+        @Bean @Singleton @Primary
+        GraphQL graphQL() { BeanSelectionMatrixSpec.engine('primary') }
+
+        @Bean @EachBean(GraphQLInvocation)
+        GraphQL perInvocation(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.engine('eachi') }
     }
 
 }
