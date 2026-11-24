@@ -24,7 +24,7 @@ dependencies {
     implementation(projects.micronautGraphqlToolsBinding)
     implementation(mn.micronaut.inject.java)
     annotationProcessor(mn.micronaut.inject.java)
-    runtimeOnly("ch.qos.logback:logback-classic")
+    runtimeOnly(mnLogging.logback.classic)
 
     jmh(libs.jmh.core)
     // the jmh plugin resolves jmh-generator-asm's asm 9.0 on its own, ahead of the platform's: the in-process compilation of the binding

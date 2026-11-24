@@ -16,19 +16,19 @@ dependencies {
     implementation(projects.micronautGraphqlToolsScalars)
     // The JSON codec of the application. The library no longer brings Jackson (#36), so the default stack declares it here.
     runtimeOnly(mn.micronaut.jackson.databind)
-    implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation(mnKotlin.micronaut.kotlin.runtime)
+    implementation(mn.kotlin.stdlib)
+    implementation(mn.kotlin.reflect)
     // suspend resolvers (#185): the library starts a coroutine only when this is on the classpath
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    implementation(mn.kotlinx.coroutines.core)
     // Flow subscriptions (#181): the library adapts a Flow only when this is on the classpath
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive")
-    ksp("io.micronaut:micronaut-inject-kotlin")
-    kspTest("io.micronaut:micronaut-inject-kotlin")
+    implementation(mn.kotlinx.coroutines.reactive)
+    ksp(mn.micronaut.inject.kotlin)
+    kspTest(mn.micronaut.inject.kotlin)
     // the compile-time checks (#291): the processor registers the visitor, which KSP loads next to Micronaut's processor
     ksp(projects.micronautGraphqlToolsProcessor)
-    runtimeOnly("ch.qos.logback:logback-classic")
-    testImplementation("io.micronaut:micronaut-http-client")
+    runtimeOnly(mnLogging.logback.classic)
+    testImplementation(mn.micronaut.http.client)
     testImplementation(projects.testSuiteTck) // the execution-behaviour TCK (#53)
     // The metrics and tracing modules and the libraries their tests observe with: the Micrometer and OpenTelemetry integrations of
     // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
@@ -40,7 +40,7 @@ dependencies {
     // the mapper of @Timed, which KSP gives to the test source set; it is not transitive because its dependencies include a second
     // Micronaut processor, and it needs Micrometer on the processor path
     ksp(mnMicrometer.micronaut.micrometer.annotation) { isTransitive = false }
-    ksp("io.micrometer:micrometer-core")
+    ksp(mnMicrometer.micrometer.core)
     // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
     // itself does not depend on it.
     testImplementation(projects.micronautGraphqlToolsUpload)
@@ -125,12 +125,12 @@ configurations {
     named(validationFixtures.implementationConfigurationName) { extendsFrom(implementation.get()) }
 }
 dependencies {
-    "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
-    "kspValidationFixtures"("io.micronaut:micronaut-inject-kotlin")
-    "kspValidationFixtures"("io.micronaut.validation:micronaut-validation-processor")
+    "validationFixturesImplementation"(mnValidation.micronaut.validation)
+    "kspValidationFixtures"(mn.micronaut.inject.kotlin)
+    "kspValidationFixtures"(mnValidation.micronaut.validation.processor)
     "kspValidationFixtures"(projects.micronautGraphqlToolsProcessor)
     testImplementation(validationFixtures.output)
-    testImplementation("io.micronaut.validation:micronaut-validation")
+    testImplementation(mnValidation.micronaut.validation)
 }
 // The resolvers of this source set are completed by a schema customizer, so the schema checks are off here.
 tasks.matching { it.name == "kspValidationFixturesKotlin" }.configureEach {
