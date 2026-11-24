@@ -33,7 +33,7 @@ class QuickStartTest {
             val result = graphQL.execute("{ allBooks { id title } }")
 
             assertTrue(result.errors.isEmpty())
-            val data = result.getData<Map<String, List<Map<String, Any>>>?>()!!
+            val data: Map<String, List<Map<String, Any>>> = result.getData()!!
             assertEquals("The Fractured Sage", data["allBooks"]!!.first()["title"])
         }
     }
