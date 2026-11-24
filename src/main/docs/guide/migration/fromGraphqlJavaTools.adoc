@@ -4,7 +4,7 @@ The examples are in Java. The same classes exist in Kotlin and Groovy in the exa
 
 == The order of work
 
-Move the application in two steps. First make it start with the settings below, which turn the checks that fail the startup into findings in the log and in the <<manifest,binding manifest>>. Then work through the findings and tighten the settings again.
+Move the application in three steps. First fix the binding failures that the settings below do not relax: the Gaps table lists them, and `[field-not-bound]`, `[argument-mismatch]`, `[incorrect-class-mapping]` and `[implementation-not-found]` are among them. Then start it with the settings below, which turn the checks that fail the startup into warnings and into findings in the <<manifest,binding manifest>>. Then work through the findings and tighten the settings again.
 
 [configuration]
 ----
@@ -12,6 +12,8 @@ micronaut:
   graphql:
     tools:
       strict: false
+      checks:
+        unwired-directive: fail
       precedence: resolver-first
       manifest:
         enabled: true
@@ -19,18 +21,19 @@ micronaut:
 ----
 
 * `strict: false` makes the checks without an entry in `checks` log a warning and go on instead of failing the startup (see <<strictMode,Strict Mode>>).
-* `precedence: resolver-first` binds the resolver method when a member of the model and a resolver method can both bind a field. This is the migration setting for an application that comes from graphql-java-tools, where the resolver wins (see <<precedence,Precedence>>). The default, `fail`, reports the field with `[precedence-ambiguity]`.
-* `manifest.enabled: true` records what each field is bound to. A finding is a line that starts with `!` and the code of the check.
+* `checks.unwired-directive: fail` keeps the check of a directive that nothing wires at `fail`. An entry wins over `strict`, so an application that relies on a custom directive for authorization does not serve its fields without it while it migrates. Run the migration on an instance that no client can reach when the schema has other access rules.
+* `precedence: resolver-first` binds the resolver method when a member of the model and a resolver method can both bind a field. This is the migration setting for an application that comes from graphql-java-tools, where the resolver wins (see <<precedence,Precedence>>). The default, `fail`, reports the field with `[precedence-ambiguity]`. The resolver method binds without the security annotations of the member that lost, so on a reachable instance keep `fail` and resolve each ambiguity with `@GraphQLSchemaCoordinate` or `@GraphQLIgnore` instead (see <<safety,Safety>>).
+* `manifest.enabled: true` records what each field is bound to. A finding is a line of the manifest that starts with `!` and the code of the check. The log has a warning for each check, tagged with the code in brackets.
 
 The test below runs the same schema with the defaults and with these settings:
 
 snippet::example.migration.MigrationTest[project-base="test-suite", source="test", tags="recipe", indent="0"]
 
-Then take each `!` line and do one of three things: fix the code, annotate the member (`@GraphQLIgnore` for a member that binds no field on purpose), or accept the line with `allow.findings` (see <<strictMode,Strict Mode>>). A line that concerns an authorization directive is a line to fix, not to accept. When the log has no `!` line left, remove `strict: false` and `precedence: resolver-first`, and add `micronaut-graphql-tools-processor` to the build so that the checks that have a compile-time form run in the build (see <<compileTimeSetup,Set up the build>>).
+Then take each `!` line of the manifest and do one of three things: fix the code, annotate the member (`@GraphQLIgnore` for a member that binds no field on purpose), or accept the line with `allow.findings` (see <<strictMode,Strict Mode>>). A line that concerns an authorization directive is a line to fix, not to accept, and a `!precedence-ambiguity` line cannot be accepted: resolve the field instead. The processor ignores `allow.*`, so fix or annotate a finding of a check that runs at compile time (the strict mode page marks them) before you add the processor. When the manifest has no `!` line left, remove `strict: false` and `precedence: resolver-first`, and add `micronaut-graphql-tools-processor` to the build (see <<compileTimeSetup,Set up the build>>).
 
 == Resolver interfaces become annotations and contracts
 
-The resolver interfaces of graphql-java-tools carry the meaning of a class. Here a class says it in an annotation or in a marker interface, and a scope annotation makes it a bean.
+The resolver interfaces of graphql-java-tools carry the meaning of a class. Here a class says it in an annotation or in a marker interface, and a scope annotation makes it a bean, unless a `@Factory` already exposes the class.
 
 [cols="3,5", options="header"]
 |===
@@ -66,7 +69,7 @@ snippet::example.migration.MigrationFixtures[project-base="test-suite", source="
 
 snippet::example.migration.MigrationFixtures[project-base="test-suite", source="test", tags="type-resolver", indent="0"]
 
-* An annotation of the library does not make a class a bean. Add a scope annotation such as `@Singleton`. A class with no scope annotation is not a bean, as <<resolverContracts,Resolver Contracts>> describes.
+* An annotation of the library does not make a class a bean. Add a scope annotation such as `@Singleton` to a class that no factory exposes. A class with no scope annotation is not a bean, as <<resolverContracts,Resolver Contracts>> describes.
 * A class with `@GraphQLRootResolver` binds its public methods to the root fields of the same name. A method name that exists on several operation types, such as a query and a mutation both named `stock`, needs `@GraphQLSchemaCoordinate` or a marker that fixes the operation.
 * The marker interfaces suit a contract per field, as a code generator writes it. The contract examples of <<resolverContracts,Resolver Contracts>> need the processor, because the build records what a marker means.
 * A class that served several operations in the old setup can stay one class.
@@ -99,7 +102,7 @@ snippet::example.migration.MigrationFixtures[project-base="test-suite", source="
 
 The same field on a class without the annotation fails the startup with `[field-not-bound]`. The compile-time checks read the processor option `micronaut.graphql.tools.processor.resolver.accessor.prefixes` for the prefix setting, so give the option and the key the same value (see <<configuration,Configuration>>).
 
-A field that a model member and a resolver method both bind is ambiguous, and `precedence` decides it (see above). The members of one resolver class named `getAuthor` and `author` both bind `author` and fail with `[multiple-methods-found]`.
+A field that a model member and a resolver method both bind is ambiguous, and `precedence` decides it (see above). With `resolver-accessor-prefixes` on, the methods `getAuthor` and `author` of one resolver class both bind `author` and fail with `[multiple-methods-found]`.
 
 == Arguments
 
@@ -125,7 +128,7 @@ A `Map` as the source of an object type is a gap, see below.
 
 == Schema location
 
-graphql-java-tools reads the files that the application code names. Here the schema files are found by `micronaut.graphql.tools.schema.locations`, which defaults to `classpath:graphql/**/*.graphqls`. Move the schema files under `graphql/` with the extension `.graphqls`, or set the locations. A file with the extension `.graphql` in the schema directory is not a schema file. See <<schema,Schema>>.
+graphql-java-tools reads the files that the application code names. Here the schema files are found by `micronaut.graphql.tools.schema.locations`, which defaults to `classpath:graphql/**/*.graphqls`. Move the schema files under `graphql/` with the extension `.graphqls`, or set the locations. The default location does not find a file with the extension `.graphql`. See <<schema,Schema>>.
 
 == Optional and nullability
 
@@ -185,9 +188,9 @@ The tests of the first four rows are in `MigrationTest` of the three example sui
 [cols="3,5", options="header"]
 |===
 |Code |What to do
-|`field-not-bound` |A schema field has no member. Name the member after the field, add `@GraphQLField`, or turn on `resolver-accessor-prefixes` for `getX` resolver methods.
+|`field-not-bound` |A schema field has no member. Name the member after the field, add `@GraphQLField` to a model member or `@GraphQLSchemaCoordinate` to a resolver method, or turn on `resolver-accessor-prefixes` for `getX` resolver methods.
 |`argument-mismatch` |A parameter names no argument. Rename it or add `@GraphQLArgument`.
-|`precedence-ambiguity` |A model member and a resolver method bind one field. Set `precedence`, or declare the coordinate on the method.
+|`precedence-ambiguity` |A model member and a resolver method bind one field. Declare the coordinate on the method or put `@GraphQLIgnore` on the member; `precedence` decides it for the migration only.
 |`multiple-methods-found` |Two members bind one field. Remove one.
 |`class-not-introspected` |A model class has no introspection. Add `@GraphQLType` or list it in `@GraphQLModels`.
 |`incorrect-class-mapping` |A parameter has a Java type that the GraphQL type cannot fill, such as `Optional`. Use `ArgumentValue` or the wrapper class.
