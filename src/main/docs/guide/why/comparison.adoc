@@ -1,7 +1,4 @@
-:gt: https://github.com/graphql-java-kickstart/graphql-java-tools/blob/v15.0.0
-:spring: https://docs.spring.io/spring-graphql/reference
-
-This page lists facts about three tools that bind a GraphQL schema to Java code. Each cell names the version it was read from and links its source. The notes below the table list the rows where another tool offers more than this library.
+This page lists facts about three tools that bind a GraphQL schema to Java code. Each cell names the version it was read from and the source: a file of the tagged source tree, or a page of the reference documentation. The sources are public and are not linked from this guide. The notes below the table list the rows where another tool offers more than this library.
 
 The versions are graphql-java-tools 15.0.0, Spring for GraphQL 2.1.0 with its Spring Boot starter, and this library at the version of this guide. A fact about a later version of another tool is not in the table until a release re-verifies it: the release checklist in `MAINTAINING.md` has a step for that.
 
@@ -10,63 +7,63 @@ The versions are graphql-java-tools 15.0.0, Spring for GraphQL 2.1.0 with its Sp
 |Row |graphql-java-tools 15.0.0 |Spring for GraphQL 2.1.0 |This library
 
 |Resolver model
-|Classes that implement `GraphQLQueryResolver`, `GraphQLMutationResolver`, `GraphQLSubscriptionResolver` or `GraphQLResolver<T>` ({gt}/src/main/kotlin/graphql/kickstart/tools/GraphQLResolver.kt[source tree]).
-|Controller methods with `@QueryMapping`, `@SchemaMapping` and related annotations ({spring}/controllers.html[Annotated Controllers]).
+|Classes that implement `GraphQLQueryResolver`, `GraphQLMutationResolver`, `GraphQLSubscriptionResolver` or `GraphQLResolver<T>` (graphql-java-tools 15.0.0, `src/main/kotlin/graphql/kickstart/tools/GraphQLResolver.kt`).
+|Controller methods with `@QueryMapping`, `@SchemaMapping` and related annotations (Spring for GraphQL reference, page "Annotated Controllers").
 |Beans with `@GraphQLRootResolver` or `@GraphQLTypeResolver`, or beans that implement the marker interfaces (see <<resolverContracts,Resolver Contracts>>).
 
 |Field matching
-|A scanner reads the resolver and model classes ({gt}/src/main/kotlin/graphql/kickstart/tools/SchemaClassScanner.kt[`SchemaClassScanner`]).
-|By method name or annotation value on the controller, and by property name through graphql-java's default data fetcher ({spring}/request-execution.html[Schema Mapping Inspection]).
+|A scanner reads the resolver and model classes (graphql-java-tools 15.0.0, `src/main/kotlin/graphql/kickstart/tools/SchemaClassScanner.kt`).
+|By method name or annotation value on the controller, and by property name through graphql-java's default data fetcher (Spring for GraphQL reference, page "Schema Mapping Inspection").
 |By member name, `@GraphQLField` or `@GraphQLSchemaCoordinate`, decided once at startup from compile-time metadata (see <<configuration,Configuration>>).
 
 |Argument binding
-|A Jackson `ObjectMapper` converts the arguments ({gt}/src/main/kotlin/graphql/kickstart/tools/resolver/MethodFieldResolver.kt[`MethodFieldResolver`]).
-|`@Argument` binds by parameter name when the name is available (`-parameters` or debug information), or by the annotation value ({spring}/controllers.html[Annotated Controllers]).
+|A Jackson `ObjectMapper` converts the arguments (graphql-java-tools 15.0.0, `src/main/kotlin/graphql/kickstart/tools/resolver/MethodFieldResolver.kt`).
+|`@Argument` binds by parameter name when the name is available (`-parameters` or debug information), or by the annotation value (Spring for GraphQL reference, page "Annotated Controllers").
 |By parameter name, or `@GraphQLArgument`. Converters are built at startup from the bean introspection and use no Jackson (see <<inputs,Inputs>>).
 
 |Invocation
-|`java.lang.reflect.Method` ({gt}/src/main/kotlin/graphql/kickstart/tools/resolver/MethodFieldResolver.kt[`MethodFieldResolver`]).
-|Controller methods are called by the framework's handler method infrastructure; the reference does not state a mechanism ({spring}/controllers.html[Annotated Controllers]).
+|`java.lang.reflect.Method` (graphql-java-tools 15.0.0, `src/main/kotlin/graphql/kickstart/tools/resolver/MethodFieldResolver.kt`).
+|Controller methods are called by the framework's handler method infrastructure; the reference does not state a mechanism (Spring for GraphQL reference, page "Annotated Controllers").
 |Micronaut's generated `ExecutableMethod` (see <<noReflection,No Runtime Reflection>>).
 
 |Native image
-|The 15.0.0 source tree has no `META-INF/native-image` directory ({gt}/pom.xml[`pom.xml`] lists `kotlin-reflect`, `classmate` and Jackson).
-|Reflection on the Java types of the schema is registered through AOT hints, and the reference lists reflection by graphql-java as covered by reachability metadata ({spring}/graalvm-native.html[GraalVM Native support]).
+|The 15.0.0 source tree has no `META-INF/native-image` directory (graphql-java-tools 15.0.0, `pom.xml` lists `kotlin-reflect`, `classmate` and Jackson).
+|Reflection on the Java types of the schema is registered through AOT hints, and the reference lists reflection by graphql-java as covered by reachability metadata (Spring for GraphQL reference, page "GraalVM Native support").
 |The Java and Kotlin example suites run natively, and the Groovy example has a native smoke test (see <<nativeImage,Native Image>>).
 
 |Schema check
-|Warns about classes and types that are not needed, and fails on a wrong Java class for a GraphQL type, when it builds the schema ({gt}/README.md[README]).
-|Schema mapping inspection reports unmapped fields, registrations and arguments. Spring Boot enables it by default and logs the report at INFO ({spring}/request-execution.html[Schema Mapping Inspection], https://github.com/spring-projects/spring-boot/blob/main/module/spring-boot-graphql/src/main/java/org/springframework/boot/graphql/autoconfigure/GraphQlAutoConfiguration.java[`GraphQlAutoConfiguration`]).
+|Warns about classes and types that are not needed, and fails on a wrong Java class for a GraphQL type, when it builds the schema (graphql-java-tools 15.0.0, `README.md`).
+|Schema mapping inspection reports unmapped fields, registrations and arguments. Spring Boot enables it by default and logs the report at INFO (Spring for GraphQL reference, page "Schema Mapping Inspection", Spring Boot, `GraphQlAutoConfiguration`).
 |Strict checks with a code each. The default severity is `fail`, and a failure stops the application context from starting with `eager-init` on (see <<strictMode,Strict Mode>>).
 
 |DataLoader
-|The source tree has no class for DataLoader registration; a resolver uses graphql-java's `DataLoader` ({gt}/src/main/kotlin/graphql/kickstart/tools/resolver/MethodFieldResolver.kt[`MethodFieldResolver`]).
-|`@BatchMapping` methods, and `BatchLoaderRegistry` ({spring}/controllers.html[Annotated Controllers]).
+|The source tree has no class for DataLoader registration; a resolver uses graphql-java's `DataLoader` (graphql-java-tools 15.0.0, `src/main/kotlin/graphql/kickstart/tools/resolver/MethodFieldResolver.kt`).
+|`@BatchMapping` methods, and `BatchLoaderRegistry` (Spring for GraphQL reference, page "Annotated Controllers").
 |`BatchLoader` beans, and a `DataLoader` parameter on the resolver method (see <<dataLoaders,Data Loaders>>).
 
 |Error defaults
-|The source tree has no exception handler class; graphql-java's `DataFetcherExceptionHandler` applies ({gt}/src/main/kotlin/graphql/kickstart/tools[source tree]).
-|`DataFetcherExceptionResolver` beans and `@GraphQlExceptionHandler`. An unresolved exception becomes `INTERNAL_ERROR` with a generic message that has the category and the execution id ({spring}/request-execution.html[Exceptions]).
+|The source tree has no exception handler class; graphql-java's `DataFetcherExceptionHandler` applies (graphql-java-tools 15.0.0, `src/main/kotlin/graphql/kickstart/tools`).
+|`DataFetcherExceptionResolver` beans and `@GraphQlExceptionHandler`. An unresolved exception becomes `INTERNAL_ERROR` with a generic message that has the category and the execution id (Spring for GraphQL reference, page "Exceptions").
 |`GraphQLExceptionMapper` beans. An unmapped exception becomes `Internal server error` with the code `INTERNAL_ERROR` (see <<errors,Errors>>).
 
 |Schema location
-|Files named in code with `files(...)` and `file(...)`, or a string ({gt}/src/main/kotlin/graphql/kickstart/tools/SchemaParserBuilder.kt[`SchemaParserBuilder`]).
-|`.graphqls` and `.gqls` files under `classpath:graphql/**` by default, set with `spring.graphql.schema.locations` (https://docs.spring.io/spring-boot/reference/web/spring-graphql.html[Spring Boot reference]).
+|Files named in code with `files(...)` and `file(...)`, or a string (graphql-java-tools 15.0.0, `src/main/kotlin/graphql/kickstart/tools/SchemaParserBuilder.kt`).
+|`.graphqls` and `.gqls` files under `classpath:graphql/**` by default, set with `spring.graphql.schema.locations` (Spring Boot reference, page "Spring for GraphQL").
 |`classpath:graphql/**/*.graphqls` by default, set with `micronaut.graphql.tools.schema.locations` (see <<schema,Schema>>).
 
 |Kotlin
-|Depends on `kotlin-reflect` and the coroutines libraries ({gt}/pom.xml[`pom.xml`]); the source tree has a suspend-function invoker.
-|Kotlin `suspend` functions and `Flow` are described in the reference ({spring}/controllers.html[Annotated Controllers]).
+|Depends on `kotlin-reflect` and the coroutines libraries (graphql-java-tools 15.0.0, `pom.xml`); the source tree has a suspend-function invoker.
+|Kotlin `suspend` functions and `Flow` are described in the reference (Spring for GraphQL reference, page "Annotated Controllers").
 |`suspend` resolvers, `Flow` subscriptions and data classes, with checks for the nullability of Kotlin types (see <<languageSupport,Language Support>>).
 
 |Groovy
-|No Groovy-specific page in the README ({gt}/README.md[README]).
-|The reference examples are in Java and Kotlin ({spring}/controllers.html[Annotated Controllers]).
+|No Groovy-specific page in the README (graphql-java-tools 15.0.0, `README.md`).
+|The reference examples are in Java and Kotlin (Spring for GraphQL reference, page "Annotated Controllers").
 |An example suite with Spock tests and a native smoke test (see <<groovy,Groovy>>).
 
 |Platform
-|No web framework; depends on Jackson and Kotlin, and its `proxy` package has handlers for Spring AOP, Guice AOP, Weld and Javassist proxies ({gt}/src/main/kotlin/graphql/kickstart/tools/proxy[source tree]).
-|Spring Framework and Spring Boot ({spring}/boot-starter.html[Boot Starter]).
+|No web framework; depends on Jackson and Kotlin, and its `proxy` package has handlers for Spring AOP, Guice AOP, Weld and Javassist proxies (graphql-java-tools 15.0.0, `src/main/kotlin/graphql/kickstart/tools/proxy`).
+|Spring Framework and Spring Boot (Spring for GraphQL reference, page "Boot Starter").
 |Micronaut 4, with the transports of micronaut-graphql (see <<architecture,Architecture>>).
 |===
 

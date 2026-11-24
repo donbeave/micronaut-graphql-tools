@@ -3,8 +3,8 @@ The library is one layer of a stack. Each layer is a separate project with its o
 [cols="2,5,3", options="header"]
 |===
 |Layer |Role |Documentation
-|https://www.graphql-java.com/[graphql-java] |Parses and validates the query, runs the execution and builds the response. It has no opinion about your classes. |https://www.graphql-java.com/documentation/getting-started[graphql-java documentation]
-|https://micronaut-projects.github.io/micronaut-graphql/latest/guide/[micronaut-graphql] |The GraphQL endpoint over HTTP and over WebSocket for Micronaut, built on graphql-java. |https://micronaut-projects.github.io/micronaut-graphql/latest/guide/[Micronaut GraphQL]
+|graphql-java |Parses and validates the query, runs the execution and builds the response. It has no opinion about your classes. |The graphql-java documentation
+|micronaut-graphql |The GraphQL endpoint over HTTP and over WebSocket for Micronaut, built on graphql-java. |The Micronaut GraphQL guide
 |This library |Reads the schema and binds it to your classes, builds the runtime wiring for graphql-java, and plugs an execution model into the transports of micronaut-graphql. |This guide
 |===
 

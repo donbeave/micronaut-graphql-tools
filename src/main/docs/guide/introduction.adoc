@@ -1,4 +1,4 @@
-Micronaut GraphQL Tools is a schema-first approach for building GraphQL applications with Micronaut. You write the schema in the https://graphql.org/learn/schema/[GraphQL schema language] and bind it to your classes with annotations. It takes its schema-first model from https://github.com/graphql-java-kickstart/graphql-java-tools[graphql-java-tools] and is built on Micronaut.
+Micronaut GraphQL Tools is a schema-first approach for building GraphQL applications with Micronaut. You write the schema in the https://graphql.org/learn/schema/[GraphQL schema language] and bind it to your classes with annotations. It takes its schema-first model from graphql-java-tools and is built on Micronaut.
 
 NOTE: This is not an official Micronaut module yet: it is developed in https://github.com/donbeave/micronaut-graphql-tools[its own repository] and is intended for later contribution to the Micronaut Foundation. Milestone previews are published to the GitHub Packages Maven registry of that repository (see <<compatibility,Compatibility>>); nothing is published to Maven Central. Names and behaviour can change between milestones.
 
