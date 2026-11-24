@@ -40,7 +40,7 @@ class MigrationTest {
     private fun data(properties: Map<String, Any>, environment: String, query: String): Map<String, Any?> {
         val result = execute(properties, environment, query)
         assertTrue(result.errors.isEmpty(), result.errors.toString())
-        return result.getData()
+        return result.getData<Map<String, Any?>>()!!
     }
 
     private fun failureCode(properties: Map<String, Any>, environment: String): String {
