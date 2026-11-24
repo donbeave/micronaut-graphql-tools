@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * The end-to-end checks of the HTTP transport, run by each example suite against its own fixtures of the scenario
  * {@code http}: GET queries with variables and an operation name, the per-request context, and concurrent requests whose
- * contexts and DataLoader registries must never meet, and the media types and statuses of the responses. A real client talks to the running application; each check starts
+ * contexts and DataLoader registries must never meet, and the media types and statuses of the responses, and the refusal of a mutation over GET. A real client talks to the running application; each check starts
  * the application of its own. The data-driven POST cases of the scenario run in {@link Tck}.
  */
 public final class HttpTck {
@@ -60,7 +60,8 @@ public final class HttpTck {
             "media-type-negotiation-without-upload",
             "request-errors-status",
             "request-errors-status-without-upload",
-            "multipart-media-type");
+            "multipart-media-type",
+            "get-mutation-method-not-allowed");
 
     private static final Argument<Map<String, Object>> OBJECT = Argument.mapOf(String.class, Object.class);
 
@@ -108,6 +109,7 @@ public final class HttpTck {
                 case "media-type-negotiation", "media-type-negotiation-without-upload" -> mediaTypeNegotiation(env);
                 case "request-errors-status", "request-errors-status-without-upload" -> requestErrorsStatus(env);
                 case "multipart-media-type" -> multipartMediaType(env);
+                case "get-mutation-method-not-allowed" -> getMutationMethodNotAllowed(env);
                 default -> concurrentRequestsAreIsolated(env);
             }
         } catch (AssertionError | RuntimeException e) {
@@ -281,6 +283,39 @@ public final class HttpTck {
         expect(406, refused.status(), "a multipart request with an Accept that lists neither type: " + refused);
     }
 
+    // A mutation does not run over GET: the answer is 405 with Allow: POST under both media types, and no resolver ran. A query works
+    // over GET, a mutation works over POST, and the operation name decides which operation of a document counts.
+    private static void getMutationMethodNotAllowed(Env env) throws Exception {
+        String mutation = "mutation { httpMutate(value: \"changed\") }";
+        String count = "{ httpMutationCount }";
+        for (String accept : new String[] {null, JSON, GRAPHQL_RESPONSE_JSON}) {
+            String expectedType = GRAPHQL_RESPONSE_JSON.equals(accept) ? GRAPHQL_RESPONSE_JSON : JSON;
+            Reply refused = env.send("GET", accept, mutation);
+            String what = "GET of a mutation with Accept <" + accept + ">: " + refused;
+            expect(405, refused.status(), what);
+            expect("POST", refused.allow(), what);
+            expect(expectedType, refused.mediaType(), what);
+            expect(true, refused.body(env).get("errors") instanceof List<?> errors && !errors.isEmpty(), what);
+            expect(false, refused.body(env).containsKey("data"), what);
+            Reply query = env.send("GET", accept, count);
+            expect(200, query.status(), "GET of a query with Accept <" + accept + ">: " + query);
+            expect(0, data(query.body(env)).get("httpMutationCount"), "no resolver ran for the refused GET: " + query);
+        }
+        String document = "query Read { httpEcho(value: \"read\") } mutation Write { httpMutate(value: \"written\") }";
+        Reply read = env.send("GET", null, document, "Read");
+        expect(200, read.status(), "GET that selects the query of a document with a mutation: " + read);
+        expect("read", data(read.body(env)).get("httpEcho"), read);
+        Reply write = env.send("GET", null, document, "Write");
+        expect(405, write.status(), "GET that selects the mutation of a document: " + write);
+        expect("POST", write.allow(), write);
+        for (String accept : new String[] {null, JSON, GRAPHQL_RESPONSE_JSON}) {
+            Reply done = env.send("POST", accept, mutation);
+            expect(200, done.status(), "POST of a mutation with Accept <" + accept + ">: " + done);
+            expect("changed", data(done.body(env)).get("httpMutate"), done);
+        }
+        expect(3, data(env.send("GET", null, count).body(env)).get("httpMutationCount"), "the three POST mutations ran and no GET did");
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, Object> data(Map<String, Object> body) {
         Object data = body.get("data");
@@ -321,12 +356,18 @@ public final class HttpTck {
         }
 
         Reply send(String method, String accept, String query) throws IOException, InterruptedException {
+            return send(method, accept, query, null);
+        }
+
+        Reply send(String method, String accept, String query, String operationName) throws IOException, InterruptedException {
             HttpRequest.Builder request;
             if ("GET".equals(method)) {
-                request = HttpRequest.newBuilder(URI.create(url + "?query=" + encode(query))).GET();
+                request = HttpRequest.newBuilder(URI.create(url + "?query=" + encode(query)
+                        + (operationName == null ? "" : "&operationName=" + encode(operationName)))).GET();
             } else {
+                Map<String, Object> payload = operationName == null ? Map.of("query", query) : Map.of("query", query, "operationName", operationName);
                 request = HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(Map.of("query", query))));
+                        .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(payload)));
             }
             if (accept != null) {
                 request.header("Accept", accept);
@@ -356,7 +397,8 @@ public final class HttpTck {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             String contentType = response.headers().firstValue("Content-Type").orElse("");
             int parameters = contentType.indexOf(';');
-            return new Reply(response.statusCode(), parameters < 0 ? contentType : contentType.substring(0, parameters), response.body());
+            return new Reply(response.statusCode(), parameters < 0 ? contentType : contentType.substring(0, parameters),
+                    response.headers().firstValue("Allow").orElse(null), response.body());
         }
 
         private Map<String, Object> send(HttpRequest request) throws IOException, InterruptedException {
@@ -372,7 +414,7 @@ public final class HttpTck {
         }
     }
 
-    private record Reply(int status, String mediaType, String text) {
+    private record Reply(int status, String mediaType, String allow, String text) {
 
         Map<String, Object> body(Env env) throws IOException {
             return env.json().readValue(text, OBJECT);

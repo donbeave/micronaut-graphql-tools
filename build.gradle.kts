@@ -130,6 +130,42 @@ val checkApiLinks by tasks.registering {
 }
 tasks.named("publishGuide") { dependsOn(checkApiLinks) }
 
+// The vulnerability audit (.github/scripts/vulnerability-audit.sh) scans this file with osv-scanner. It lists what the published
+// modules resolve at runtime on the default graphql-java leg, in the format of a Gradle dependency lockfile.
+// The published library modules, derived from the folders so that a new module is audited without a second list.
+fun isAuditModule(project: Project) = project.projectDir.name.startsWith("graphql-tools") && !project.projectDir.name.endsWith("-bom")
+
+subprojects.filter { isAuditModule(it) }.forEach { module ->
+    with(module) {
+        val coordinates = objects.setProperty<String>()
+        coordinates.addAll(configurations.named("runtimeClasspath").flatMap { it.incoming.artifacts.resolvedArtifacts }.map { artifacts ->
+            artifacts.map { it.id.componentIdentifier }
+                .filterIsInstance<org.gradle.api.artifacts.component.ModuleComponentIdentifier>()
+                .map { "${it.group}:${it.module}:${it.version}=runtimeClasspath" }
+        })
+        tasks.register("auditCoordinates") {
+            inputs.property("coordinates", coordinates)
+            val output = layout.buildDirectory.file("audit/coordinates.txt")
+            outputs.file(output)
+            doLast { output.get().asFile.apply { parentFile.mkdirs() }.writeText(coordinates.get().sorted().joinToString("\n", postfix = "\n")) }
+        }
+    }
+}
+
+val auditLockfile by tasks.registering {
+    group = "verification"
+    description = "Writes the runtime dependencies of the published modules as a gradle.lockfile for the vulnerability audit."
+    val parts = subprojects.filter { isAuditModule(it) }.map { it.layout.buildDirectory.file("audit/coordinates.txt") }
+    dependsOn(subprojects.filter { isAuditModule(it) }.map { "${it.path}:auditCoordinates" })
+    inputs.files(parts).withPropertyName("coordinates")
+    val output = layout.buildDirectory.file("audit/gradle.lockfile")
+    outputs.file(output)
+    doLast {
+        val lines = parts.flatMap { it.get().asFile.readLines() }.filter { it.isNotBlank() }.toSortedSet()
+        output.get().asFile.apply { parentFile.mkdirs() }.writeText(lines.joinToString("\n", postfix = "\n"))
+    }
+}
+
 // The native coverage table of CONTRIBUTING.md names a test class per feature category and suite, and the TCK scenarios it
 // relies on. The native run executes the whole test source set, so a row whose class is missing means a category lost its test.
 val checkNativeCoverage by tasks.registering {

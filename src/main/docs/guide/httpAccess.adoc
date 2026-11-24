@@ -12,6 +12,8 @@ An operation of a `graphql-transport-ws` connection has the upgrade request as i
 
 The upgrade request is the request of the connection, not of one message. Every operation of the connection, whether a query, a mutation or a subscription, gets the same `HttpRequest` object, so its path is the path of the upgrade request (`/graphql-ws` by default, not `/graphql`), and a header or a principal that the client sends later does not appear in it. The parameters behave the same on the three operation types.
 
+The request that the propagated context holds, which `ServerRequestContext.currentRequest()` returns, is the upgrade request too, and the library keeps it so on every thread an operation runs on. A worker thread can carry the `PropagatedContext` of another request, for example when a stage of an async field completes on a thread that serves other work; the field of a WebSocket operation that hops to its executor then runs with the upgrade request of its own connection and not with the foreign one. Two operations on one connection see the same upgrade request, and an operation of another connection sees that one's. Over HTTP the context of the request is the one the server set.
+
 * `Optional<MutableHttpResponse<?>>` is empty over WebSocket and present over HTTP. Use it in code that serves both transports.
 * A plain `MutableHttpResponse<?>` or `HttpResponse<?>` parameter over WebSocket is an error of the field, with `extensions.code` `HTTP_RESPONSE_UNAVAILABLE` and a message that says to declare the `Optional` form. It is not a `NullPointerException`, and the other fields of the operation still run. A call without a request (a direct call of the invocation) has no response either and gets the same error.
 

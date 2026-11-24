@@ -23,7 +23,10 @@ import graphql.TypeResolutionEnvironment;
 import graphql.execution.instrumentation.SimplePerformantInstrumentation;
 import graphql.execution.MergedField;
 import graphql.execution.TypeResolutionParameters;
+import graphql.execution.preparsed.PreparsedDocumentEntry;
+import graphql.execution.preparsed.PreparsedDocumentProvider;
 import graphql.language.Field;
+import graphql.parser.Parser;
 import graphql.schema.Coercing;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
@@ -45,7 +48,12 @@ import io.micronaut.context.ApplicationContext;
 import io.micronaut.graphql.tools.security.GraphQLSecurity;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.context.ApplicationContextBuilder;
+import io.micronaut.core.convert.value.ConvertibleValues;
+import io.micronaut.core.propagation.PropagatedContext;
+import io.micronaut.graphql.tools.execution.GraphQLTransport;
 import io.micronaut.graphql.tools.internal.execution.ExecutionState;
+import io.micronaut.graphql.tools.internal.protection.GetMutationGuard;
+import io.micronaut.http.HttpRequest;
 import io.micronaut.graphql.tools.internal.http.GraphQLHttpResponses;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Circle;
 import io.micronaut.graphql.tools.benchmarks.Fixtures.Item;
@@ -65,6 +73,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public final class BenchmarkCases implements AutoCloseable {
 
@@ -91,6 +101,8 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String ASYNC_BOUNDARY_DONE = "asyncBoundaryDone";
     /** The choice of the response media type from the {@code Accept} header of an HTTP request. */
     public static final String ACCEPT_NEGOTIATION = "acceptNegotiation";
+    /** The operation-type check of a GET request on a parsed document, which a cache or the execution's own parse already supplied. */
+    public static final String GET_MUTATION_GUARD = "getMutationGuard";
     public static final String ASYNC_BOUNDARY_OTHER_THREAD = "asyncBoundaryOtherThread";
     /** The future of an async field that is not done, without the boundary: what the other-thread case subtracts. */
     public static final String ASYNC_PENDING_SOURCE = "asyncPendingSource";
@@ -335,6 +347,7 @@ public final class BenchmarkCases implements AutoCloseable {
             }
             return chosen;
         });
+        ops.put(GET_MUTATION_GUARD, getMutationGuard());
         ops.put(ASYNC_BOUNDARY_OTHER_THREAD, pendingFetch("Query", "asyncPending"));
         Resolvers.Query resolver = new Resolvers.Query();
         ops.put(ASYNC_PENDING_SOURCE, resolver::asyncPending);
@@ -346,6 +359,27 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(directOp(LARGE_QUERY_FIELDS), direct(LARGE_QUERY_FIELDS));
         ops.put(QUERY_1K, query(1_000));
         ops.put(QUERY_10K, query(10_000));
+    }
+
+    private static Op getMutationGuard() {
+        PreparsedDocumentEntry entry = new PreparsedDocumentEntry(new Parser().parseDocument("query Read { ping } mutation Write { ping }"));
+        CompletableFuture<PreparsedDocumentEntry> parsed = CompletableFuture.completedFuture(entry);
+        GetMutationGuard guard = new GetMutationGuard(new PreparsedDocumentProvider() {
+            @Override
+            public CompletableFuture<PreparsedDocumentEntry> getDocumentAsync(ExecutionInput input,
+                                                                              Function<ExecutionInput, PreparsedDocumentEntry> parse) {
+                return parsed;
+            }
+
+            public PreparsedDocumentEntry getDocument(ExecutionInput input, Function<ExecutionInput, PreparsedDocumentEntry> parse) {
+                return entry;
+            }
+        });
+        Function<ExecutionInput, PreparsedDocumentEntry> parse = in -> entry;
+        ExecutionInput input = ExecutionInput.newExecutionInput("query Read { ping } mutation Write { ping }").operationName("Read").build();
+        new ExecutionState(PropagatedContext.empty(), GraphQLTransport.HTTP, HttpRequest.GET("/graphql"), null,
+                ConvertibleValues.empty(), null, null).storeIn(input.getGraphQLContext());
+        return () -> guard.getDocumentAsync(input, parse);
     }
 
     /** The operation that runs a query of {@code fields} root fields through the library's invocation. */

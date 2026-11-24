@@ -5,3 +5,5 @@ java = "oracle-graalvm-25.0.5.0.3"
 # the Maven samples of test-suite-build; the newest 3.9 line (the one micronaut-parent builds against)
 maven = "3.9.16"
 "github:jdx/jactionlint" = "2.6.0"
+# the vulnerability audit (.github/scripts/vulnerability-audit.sh)
+"github:google/osv-scanner" = "2.7.1"
