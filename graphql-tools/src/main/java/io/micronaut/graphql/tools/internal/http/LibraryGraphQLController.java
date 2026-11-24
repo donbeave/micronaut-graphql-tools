@@ -51,7 +51,7 @@ import java.util.Map;
  * {@link GraphQLHttpResponses}), and under the first a response without {@code data} has status {@code 400}.
  *
  * <p>The {@code POST} route consumes every content type, so the multipart route of the upload module, which consumes
- * {@code multipart/form-data} only, still wins for that content type. The {@code POST} routes of both controllers produce
+ * {@code multipart/form-data} only, still wins for that content type. The {@code GET} route and the {@code POST} routes of both controllers produce
  * {@code *}{@code /*} and answer {@code 406} themselves for an {@code Accept} that lists neither type: if the router judged
  * {@code Accept}, it would report {@code 415} from the multipart route when the upload module is on the classpath and
  * {@code 406} when it is not.</p>
@@ -80,7 +80,7 @@ public final class LibraryGraphQLController {
      * @param request       the request
      * @return the response
      */
-    @Get(produces = {GraphQLHttpResponses.GRAPHQL_RESPONSE_JSON, MediaType.APPLICATION_JSON})
+    @Get(produces = MediaType.ALL)
     public Publisher<MutableHttpResponse<String>> get(@QueryValue("query") String query,
                                                       @Nullable @QueryValue("operationName") String operationName,
                                                       @Nullable @QueryValue("variables") String variables,

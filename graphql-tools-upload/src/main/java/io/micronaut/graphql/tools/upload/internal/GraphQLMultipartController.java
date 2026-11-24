@@ -87,14 +87,12 @@ public final class GraphQLMultipartController {
     @Post(consumes = MediaType.MULTIPART_FORM_DATA, produces = MediaType.ALL)
     public Publisher<MutableHttpResponse<String>> post(@Body MultipartBody body, HttpRequest<?> request) {
         MediaType type = GraphQLHttpResponses.negotiate(request);
-        if (type == null) {
-            return Mono.just(GraphQLHttpResponses.notAcceptable());
-        }
         return Mono.defer(() -> {
             List<CompletedPart> received = new ArrayList<>();
+            // A refused Accept still reads and discards every part: an upload that nobody reads leaks its buffers.
             return Flux.from(body).doOnNext(received::add)
-                    .then(Mono.defer(() -> execute(received, request, type)))
-                    .onErrorResume(InvalidMultipartRequestException.class, e -> Mono.just(invalid(e, type)))
+                    .then(Mono.defer(() -> type == null ? Mono.just(GraphQLHttpResponses.notAcceptable()) : execute(received, request, type)))
+                    .onErrorResume(InvalidMultipartRequestException.class, e -> Mono.just(type == null ? GraphQLHttpResponses.notAcceptable() : invalid(e, type)))
                     .doFinally(signal -> discard(received));
         });
     }

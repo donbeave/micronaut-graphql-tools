@@ -37,7 +37,8 @@ import java.util.List;
  * {@code application/json} the status is never changed. A status that an execution input customizer already set on the
  * response is kept.</p>
  *
- * <p>The negotiation reads the header in place and allocates nothing.</p>
+ * <p>The parse of one {@code Accept} value reads it in place and allocates nothing. A request with several {@code Accept}
+ * lines has them joined into one list first, which is rare.</p>
  */
 @Internal
 public final class GraphQLHttpResponses {
