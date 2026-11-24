@@ -1410,7 +1410,7 @@ The library is built and tested against graphql-java by role. The versions of ea
 |---|---|---|---|---|
 | `floor` | 21.5 | 21.0 | 3.2.1 | full build, JDK 25 |
 | `default` | what `micronaut-graphql` 4.8.0 manages (22.4), not pinned by this build | 22.0 | as graphql-java brings it | full build on JDK 25 and 21, library check on JDK 17, native tests on GraalVM 25; the published POM |
-| `ceiling` | 26.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; binary compatibility (main compiled on `default`, tested on `ceiling`) |
+| `ceiling` | 26.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; the `graphql-java-compat` job (main compiled on `default`, tested on `ceiling`) |
 | `latest` | newest release (`latest.release`) | newest release | newest release | the canary only, never a required check |
 
 The graphql-java axis runs on JDK 25; JDK 21 and JDK 17 run the `default` role only. Micronaut 4.10.x and micronaut-graphql 4.8.0
@@ -1429,7 +1429,7 @@ To build or test against a role locally:
 ./gradlew build                              # default
 ./gradlew build -PgraphqlJavaLeg=floor       # graphql-java 21.5
 ./gradlew build -PgraphqlJavaLeg=ceiling     # graphql-java 26.2
-./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default   # binary compatibility: main compiled on default
+./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default   # graphql-java-compat: main compiled on default
 ```
 
 `-PgraphqlJavaVersion` no longer exists: setting it fails the build with a message that names `-PgraphqlJavaLeg`.
@@ -1506,7 +1506,7 @@ Both commands publish the library and the annotation processor (jar, sources, ja
 metadata) and the BOM. Consumers then
 add the repository and depend on `io.micronaut.graphql.tools:micronaut-graphql-tools:<version>`.
 
-The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the first version is released; see the
+The japicmp check (`findBaseline`/`japiCmp`) is disabled until the first version is released; see the
 module conventions in `buildSrc`.
 
 ## Why GraphQL Java Tools?
