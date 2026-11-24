@@ -39,7 +39,7 @@ An error of the operation itself (a variable that no file replaces, an unknown f
 
 == The route
 
-The transport (`micronaut-graphql`) has a `POST` route on the GraphQL path that consumes every content type and cannot read a multipart body. The module adds a second `POST` route on the same path that consumes `multipart/form-data` only. Micronaut's router picks the more specific `consumes`, so a multipart request reaches the module, and every other request still reaches the transport:
+The library's HTTP endpoint has a `POST` route on the GraphQL path that consumes every content type and cannot read a multipart body. The module adds a second `POST` route on the same path that consumes `multipart/form-data` only. Micronaut's router picks the more specific `consumes`, so a multipart request reaches the module, and every other request still reaches the library's endpoint. Both routes negotiate the response media type and set the status in the same way, with or without this module (see the Transports guide, media types and status):
 
 snippet::example.fileupload.UploadTest[project-base="test-suite", source="test", tags="precedence", indent="0"]
 
@@ -64,7 +64,7 @@ A `multipart/form-data` request is a simple cross-site request: a page on anothe
 
 An endpoint that authenticates only with an `Authorization` header that the application adds itself (a bearer token) needs none of these, because a cross-site form cannot set that header.
 
-A mutation that takes an `Upload` changes state, so treat the route as you treat any other state-changing `POST`. The transport's `POST` route consumes every content type, so a JSON operation sent with `Content-Type: text/plain` reaches it as a simple request too. A cookie-authenticated mutation needs the same defence on that route, or the server must reject every content type other than `application/json`.
+A mutation that takes an `Upload` changes state, so treat the route as you treat any other state-changing `POST`. The library's `POST` route consumes every content type, so a JSON operation sent with `Content-Type: text/plain` reaches it as a simple request too. A cookie-authenticated mutation needs the same defence on that route, or the server must reject every content type other than `application/json`.
 
 == Cost and limits
 

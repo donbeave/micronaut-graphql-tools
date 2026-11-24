@@ -27,18 +27,24 @@ import io.micronaut.context.annotation.EachBean;
 import io.micronaut.context.annotation.EachProperty;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Replaces;
+import io.micronaut.context.annotation.Secondary;
 import io.micronaut.context.condition.Condition;
 import io.micronaut.context.condition.ConditionContext;
+import io.micronaut.core.annotation.AnnotationClassValue;
+import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.type.Argument;
 import io.micronaut.core.value.PropertyCatalog;
+import io.micronaut.inject.FieldInjectionPoint;
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.BeanDefinitionReference;
 import io.micronaut.inject.qualifiers.Qualifiers;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -155,7 +161,9 @@ public final class LibraryBeanSelection {
 
     private static boolean replaces(AnnotationValue<Replaces> replaces, BeanDefinition<?> replacing, Provided candidate) {
         Class<?> replaced = replaces.classValue("bean").orElse(replacing.getBeanType());
-        if (replaces.annotationClassValue("qualifier").isPresent()) {
+        Optional<AnnotationClassValue<?>> qualifier = replaces.annotationClassValue("qualifier");
+        if (qualifier.isPresent() && !candidate.definition().hasStereotype(qualifier.get().getName())
+                && (candidate.target() == null || !candidate.target().hasStereotype(qualifier.get().getName()))) {
             return false;
         }
         Optional<Class<?>> factory = replaces.classValue("factory").map(type -> (Class<?>) type);
@@ -199,7 +207,7 @@ public final class LibraryBeanSelection {
         PropertyCatalog catalog = template.enumValue(EachProperty.class, "catalog", PropertyCatalog.class).orElse(PropertyCatalog.NORMALIZED);
         boolean templatePrimary = template.hasStereotype(Primary.class);
         for (String key : applicationContext.getEnvironment().getPropertyEntries(prefix, catalog)) {
-            beans.add(new Provided(template, Qualifiers.byName(key), templatePrimary || key.equals(primary)));
+            beans.add(new Provided(template, Qualifiers.byName(key), templatePrimary || key.equals(primary), null));
         }
     }
 
@@ -211,7 +219,8 @@ public final class LibraryBeanSelection {
             try {
                 for (Provided targetBean : provided(context, target.get(), true, visits)) {
                     beans.add(new Provided(template, targetBean.qualifier(),
-                            template.hasStereotype(Primary.class) || targetBean.primary()));
+                            template.hasStereotype(Primary.class) || targetBean.primary(),
+                            targetBean.target() != null ? targetBean.target() : targetBean.definition()));
                 }
             } finally {
                 visits.expanding().remove(template);
@@ -226,6 +235,104 @@ public final class LibraryBeanSelection {
         return replaces != null && replaces.classValue("bean").filter(DefaultGraphQLInvocation.class::equals).isPresent()
                 && replaces.classValue("factory").isEmpty() && replaces.stringValue("named").isEmpty()
                 && replaces.annotationClassValue("qualifier").isEmpty();
+    }
+
+    /**
+     * The enabled application templates that create a {@code GraphQLSchema} or {@code GraphQL} for every
+     * {@code GraphQLInvocation}. The library's invocation is one of those, and it needs the engine that such a template
+     * needs the invocation of, so the context cannot be built.
+     *
+     * @param context the bean context to search
+     * @return the description of each such template
+     */
+    public static List<String> eachInvocationTemplates(BeanContext context) {
+        BeanDefinition<?> library = context.findBeanDefinition(LibraryGraphQLInvocation.class).orElse(null);
+        List<Provided> candidates = new ArrayList<>();
+        for (BeanDefinitionReference<?> reference : context.getBeanDefinitionReferences()) {
+            Class<?> beanType = reference.getBeanType();
+            if ((GraphQLSchema.class.isAssignableFrom(beanType) || GraphQL.class.isAssignableFrom(beanType)) && reference.isPresent()) {
+                BeanDefinition<?> definition = reference.load();
+                if (definition != null && !isLibrary(definition) && reference.isEnabled(context)) {
+                    // the template's expansion for the library's invocation carries the library's qualifier
+                    candidates.add(library != null && eachInvocation(definition)
+                            ? new Provided(definition, library.getDeclaredQualifier(), false, library)
+                            : new Provided(definition));
+                }
+            }
+        }
+        // an application engine breaks the cycle unless it needs the schema template or is itself a template
+        Provided engine = competitor(context, GraphQL.class);
+        boolean libraryEngine = engine == null;
+        // an independent unqualified or primary application schema outranks the template's expansion, which is @Secondary
+        boolean schemaCycle = libraryEngine || requires(engine.definition(), GraphQLSchema.class)
+                && !hasIndependentSchema(withoutReplaced(candidates));
+        boolean engineCycle = libraryEngine || eachInvocation(engine.definition()) || requires(engine.definition(), GraphQLInvocation.class);
+        List<String> templates = new ArrayList<>();
+        for (Provided candidate : withoutReplaced(candidates)) {
+            BeanDefinition<?> definition = candidate.definition();
+            boolean engineTemplate = GraphQL.class.isAssignableFrom(definition.getBeanType());
+            if ((engineTemplate ? engineCycle : schemaCycle) && eachInvocation(definition)) {
+                templates.add(describe(definition));
+            }
+        }
+        return templates;
+    }
+
+    /** Whether an injection point of the definition asks, without a qualifier, for a bean of the type. */
+    private static boolean requires(BeanDefinition<?> definition, Class<?> type) {
+        List<Argument<?>> arguments = new ArrayList<>(Arrays.asList(definition.getConstructor().getArguments()));
+        definition.getInjectedMethods().forEach(method -> arguments.addAll(Arrays.asList(method.getArguments())));
+        for (Argument<?> argument : arguments) {
+            if (type.isAssignableFrom(argument.getType()) && !argument.getAnnotationMetadata().hasStereotype(AnnotationUtil.QUALIFIER)) {
+                return true;
+            }
+        }
+        for (FieldInjectionPoint<?, ?> field : definition.getInjectedFields()) {
+            if (type.isAssignableFrom(field.getType()) && !field.getAnnotationMetadata().hasStereotype(AnnotationUtil.QUALIFIER)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasIndependentSchema(List<Provided> candidates) {
+        for (Provided candidate : candidates) {
+            BeanDefinition<?> definition = candidate.definition();
+            if (GraphQLSchema.class.isAssignableFrom(definition.getBeanType()) && !eachInvocation(definition)
+                    && (candidate.primary() || candidate.qualifier() == null)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean eachInvocation(BeanDefinition<?> definition) {
+        return definition.hasStereotype(EachBean.class)
+                && definition.classValue(EachBean.class).filter(target -> target.isAssignableFrom(LibraryGraphQLInvocation.class)).isPresent();
+    }
+
+    /**
+     * The application invocations that tie with the library's: every enabled application invocation is
+     * {@code @Secondary}, like the library's, so an unqualified injection point finds no single bean. An application
+     * invocation that is not {@code @Secondary} outranks the library's, and then nothing ties.
+     *
+     * @param context the bean context to search
+     * @return the description of each tying invocation, empty when none ties
+     */
+    public static List<String> secondaryInvocations(BeanContext context) {
+        List<String> secondary = new ArrayList<>();
+        for (Provided bean : applicationBeans(context, GraphQLInvocation.class)) {
+            BeanDefinition<?> definition = bean.definition();
+            // the library's invocation replaces every DefaultGraphQLInvocation bean, the transport's and a factory's
+            if (definition.getBeanType() == DefaultGraphQLInvocation.class) {
+                continue;
+            }
+            if (bean.primary() || !definition.hasStereotype(Secondary.class)) {
+                return List.of();
+            }
+            secondary.add(describe(bean));
+        }
+        return secondary;
     }
 
     static boolean isLibrary(BeanDefinition<?> definition) {
@@ -265,10 +372,12 @@ public final class LibraryBeanSelection {
      * @param definition the bean definition, or the template
      * @param qualifier  the qualifier of the bean, or null
      * @param primary    whether the bean is primary
+     * @param target     the definition an {@code @EachBean} expansion takes its qualifier from, or null
      */
-    public record Provided(BeanDefinition<?> definition, @Nullable Qualifier<?> qualifier, boolean primary) {
+    public record Provided(BeanDefinition<?> definition, @Nullable Qualifier<?> qualifier, boolean primary,
+                           @Nullable BeanDefinition<?> target) {
         Provided(BeanDefinition<?> definition) {
-            this(definition, definition.getDeclaredQualifier(), definition.hasStereotype(Primary.class));
+            this(definition, definition.getDeclaredQualifier(), definition.hasStereotype(Primary.class), null);
         }
     }
 

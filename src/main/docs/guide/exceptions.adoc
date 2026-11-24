@@ -298,7 +298,7 @@ Each entry gives the cause, a message and the fix. The message is the text that 
   1) @GraphQLSchemaCoordinate("Query.shelf") on example.BookQuery book(java.lang.String id): the type Query has no field shelf.
 ----
 
-*Fix.* Correct the coordinate, or add the field to the schema.
+*Fix.* Correct the coordinate, or add the field to the schema. A bean that mixes root contracts (`QueryResolver`, `MutationResolver`, `SubscriptionResolver`) and `TypeResolver` contracts has each coordinate checked against the side of the contract that declares its method: a root contract method names a field of a root type, and a `TypeResolver` contract method names a field of a type.
 
 *See.* <<resolverContracts,Resolver Contracts>>.
 
