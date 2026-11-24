@@ -62,7 +62,7 @@ A loader that a subscription operation creates has caching off. The loader of a 
 
 == Batching in a subscription event
 
-Each event of a subscription is executed as a small operation of its own, and what graphql-java does with the loaders of that execution depends on its line:
+The loaders of a subscription live as long as the subscription, and each event dispatches the loads that it makes while its fields execute. Loads of one event batch together only as far as graphql-java dispatches them together, which depends on its line, and an event can dispatch more than one batch. Loads of events that finish one after the other are never in one batch; events whose fields still run when the next event arrives (an async field that has not completed) execute at the same time and can share a batch, because they use the same loader. For one event, graphql-java behaves as follows:
 
 * On graphql-java 21.5 and 22.4 (the floor and default legs) the subscription execution strategy is not the one that graphql-java batches per level, so graphql-java dispatches the registry after every data fetcher returns. Three `load` calls in three fetchers of one event reach the batch function as three batches of one key.
 * On graphql-java 26.2 (the ceiling leg) the per-level dispatch also covers the events, and the same three calls reach the batch function as one batch of three keys. A query batches the loads of one level on every line.

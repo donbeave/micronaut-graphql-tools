@@ -23,6 +23,7 @@ import io.micronaut.configuration.graphql.GraphQLJsonSerializer;
 import io.micronaut.configuration.graphql.RequiresGraphQL;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.internal.http.GraphQLHttpResponses;
 import io.micronaut.graphql.tools.upload.GraphQLUpload;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -83,19 +84,22 @@ public final class GraphQLMultipartController {
      * @param request the request
      * @return the response of the operation, or a {@code 400} when the request does not follow the specification
      */
-    @Post(consumes = MediaType.MULTIPART_FORM_DATA, produces = MediaType.APPLICATION_JSON)
+    @Post(consumes = MediaType.MULTIPART_FORM_DATA, produces = MediaType.ALL, single = true)
     public Publisher<MutableHttpResponse<String>> post(@Body MultipartBody body, HttpRequest<?> request) {
+        MediaType type = GraphQLHttpResponses.negotiate(request);
         return Mono.defer(() -> {
             List<CompletedPart> received = new ArrayList<>();
+            // A refused Accept still reads and discards every part: an upload that nobody reads leaks its buffers.
             return Flux.from(body).doOnNext(received::add)
-                    .then(Mono.defer(() -> execute(received, request)))
-                    .onErrorResume(InvalidMultipartRequestException.class, e -> Mono.just(invalid(e)))
+                    .then(Mono.defer(() -> type == null ? Mono.just(GraphQLHttpResponses.notAcceptable()) : execute(received, request, type)))
+                    .onErrorResume(InvalidMultipartRequestException.class, e -> Mono.just(type == null ? GraphQLHttpResponses.notAcceptable() : invalid(e, type)))
                     .doFinally(signal -> discard(received));
         });
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private Mono<MutableHttpResponse<String>> execute(List<CompletedPart> parts, HttpRequest<?> request) {
+    private Mono<MutableHttpResponse<String>> execute(List<CompletedPart> parts, HttpRequest<?> request,
+                                                       MediaType type) {
         Map<String, CompletedPart> byName = new LinkedHashMap<>();
         for (CompletedPart part : parts) {
             if (byName.putIfAbsent(part.getName(), part) != null) {
@@ -105,13 +109,13 @@ public final class GraphQLMultipartController {
         GraphQLInvocationData data = reader.read(byName);
         MutableHttpResponse<String> response = HttpResponse.status(HttpStatus.OK);
         return Mono.from(resultHandler.handleExecutionResult(invocation.invoke(data, (HttpRequest) request, response)))
-                .map(result -> response.body(serializer.serialize(result.getSpecification())));
+                .map(result -> GraphQLHttpResponses.prepare(response, type, result).body(serializer.serialize(result.getSpecification())));
     }
 
-    private MutableHttpResponse<String> invalid(InvalidMultipartRequestException e) {
+    private MutableHttpResponse<String> invalid(InvalidMultipartRequestException e, MediaType type) {
         Map<String, Object> error = GraphqlErrorBuilder.newError().message(e.getMessage())
                 .extensions(Map.of("code", GraphQLUpload.INVALID_REQUEST_CODE)).build().toSpecification();
-        return HttpResponse.<String>status(HttpStatus.BAD_REQUEST).body(serializer.serialize(Map.of("errors", List.of(error))));
+        return HttpResponse.<String>status(HttpStatus.BAD_REQUEST).contentType(type).header("Vary", "Accept").body(serializer.serialize(Map.of("errors", List.of(error))));
     }
 
     private static void discard(List<CompletedPart> parts) {

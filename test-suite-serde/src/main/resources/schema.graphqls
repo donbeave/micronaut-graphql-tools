@@ -1,0 +1,31 @@
+type Query {
+  searchProfile(contains: String!, limit: Int): [Profile!]!
+
+  currentUser: User
+}
+
+type Mutation {
+  signIn(username: String!, password: String!): SignInPayload!
+}
+
+type ValidationError {
+  message: String!
+}
+
+union Error = ValidationError
+
+type SignInPayload {
+  error: Error
+  data: User
+}
+
+type Profile {
+  username: String!
+  fullName: String!
+}
+
+type User {
+  username: String!
+  firstName: String!
+  lastName: String!
+}

@@ -62,8 +62,8 @@ A native test build needs Oracle GraalVM 25 and a few GB of memory, so run them 
 
 [source,bash]
 ----
-./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel
+./gradlew :test-suite-java:nativeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-parallel
 ./gradlew :test-suite-groovy:nativeSmokeTest --no-parallel
 ----
 
-`nativeSerdeTest` runs the Java tests of the Micronaut Serialization stack as a native binary. Add `-PgraphqlJavaLeg=ceiling` to run on the newest tested graphql-java version.
+`:test-suite-serde:nativeTest` runs the Java tests of the Micronaut Serialization stack as a native binary. Add `-PgraphqlJavaLeg=ceiling` to run on the newest tested graphql-java version.
