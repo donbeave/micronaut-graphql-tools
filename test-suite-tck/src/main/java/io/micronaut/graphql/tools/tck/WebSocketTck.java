@@ -65,6 +65,7 @@ public final class WebSocketTck {
             "null-only-data-keeps-payload",
             "events-off-event-loop-with-context",
             "blocking-resolver-off-event-loop",
+            "operations-of-one-connection-share-the-upgrade-request",
             "complete-cancels",
             "close-cancels",
             "abort-cancels",
@@ -125,6 +126,7 @@ public final class WebSocketTck {
                 case "transport-per-entry" -> transportPerEntry(env);
                 case "null-only-data-keeps-payload" -> nullOnlyDataKeepsPayload(env);
                 case "events-off-event-loop-with-context" -> eventsOffEventLoopWithContext(env);
+                case "operations-of-one-connection-share-the-upgrade-request" -> operationsShareUpgradeRequest(env);
                 case "blocking-resolver-off-event-loop" -> blockingResolverOffEventLoop(env);
                 case "complete-cancels" -> completeCancels(env);
                 case "close-cancels" -> closeCancels(env);
@@ -268,6 +270,28 @@ public final class WebSocketTck {
                 expect("hello", path(next, "payload", "data", "ticks", "requestHeader"), next);
             }
             expect("complete", socket.next().get("type"), "completion");
+        }
+    }
+
+    // Every operation of a connection, a query or a subscription whose events are resolved on the executor, sees the upgrade
+    // request of its connection in the propagated context, the one after the other on one connection.
+    private static void operationsShareUpgradeRequest(Env env) throws Exception {
+        try (Socket socket = env.connect(Map.of("X-Tck", "hello"))) {
+            socket.init(TOKEN);
+            socket.subscribe("1", "{ requestHeader }");
+            Map<String, Object> first = socket.next();
+            expect("hello", path(first, "payload", "data", "requestHeader"), first);
+            expect("complete", socket.next().get("type"), "completion of the query");
+            socket.subscribe("2", "subscription { ticks(count: 2) { requestHeader } }");
+            for (int i = 0; i < 2; i++) {
+                Map<String, Object> next = socket.next();
+                expect("hello", path(next, "payload", "data", "ticks", "requestHeader"), next);
+            }
+            expect("complete", socket.next().get("type"), "completion of the subscription");
+            socket.subscribe("3", "{ requestHeader }");
+            Map<String, Object> last = socket.next();
+            expect("hello", path(last, "payload", "data", "requestHeader"), last);
+            expect("complete", socket.next().get("type"), "completion of the second query");
         }
     }
 

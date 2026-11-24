@@ -8,6 +8,8 @@ extend type Query {
   nothing: String
   # the transport kind of the execution state: HTTP or WEBSOCKET
   transport: String!
+  # the header X-Tck of the request that the current thread holds in the propagated context
+  requestHeader: String
   # how many streams were cancelled
   cancelledStreams: Int!
   # how many keys the batch function of the echo loader received, over all batches

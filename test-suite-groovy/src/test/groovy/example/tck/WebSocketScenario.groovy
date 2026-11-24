@@ -157,6 +157,10 @@ class WebSocketQueries {
         return ExecutionState.of(environment.graphQlContext).connectionAttributes.get('user', String).orElse(null)
     }
 
+    String requestHeader() {
+        return ServerRequestContext.currentRequest().map { it.headers.get('X-Tck') }.orElse(null)
+    }
+
     String nothing() {
         return null
     }
