@@ -95,5 +95,6 @@ Each example suite starts an embedded server and talks to it with a real client:
 
 * `HttpTck` (GET and POST, variables and operation name, the refusal of a mutation over GET, a moved `graphql.path`, the media type and status of each response with and without the upload module, the context of each request, and 400 concurrent requests with distinct contexts and DataLoader registries that never see each other's data);
 * `WebSocketTck` (subscriptions with variables and an operation name, a moved `graphql.graphql-ws.path` and the configured initialisation timeout, the connection interceptor, the cleanup of a session on complete, close, a dropped connection and a finished operation, the thread of the events, and concurrent subscriptions that keep their own context);
+* `HttpConformanceTck` (the scenario `http-conformance`: the status and media type of an executed request and of each kind of failed request under every `Accept`, the `406` of an unacceptable `Accept`, the `405` of a method the endpoint does not serve, the refusal of a mutation over `GET` with `Allow: POST`, and the same with the upload module on and off);
 * `DisconnectTck` (the cancellation on an HTTP disconnect);
 * the scenarios `http`, `websocket` and `protection` of the TCK, whose responses are compared as JSON.
