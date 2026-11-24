@@ -263,7 +263,9 @@ public final class LibraryBeanSelection {
         // an application engine breaks the cycle unless it needs the schema template or is itself a template
         Provided engine = competitor(context, GraphQL.class);
         boolean libraryEngine = engine == null;
-        boolean schemaCycle = libraryEngine || requires(engine.definition(), GraphQLSchema.class);
+        // an independent unqualified or primary application schema outranks the template's expansion, which is @Secondary
+        boolean schemaCycle = libraryEngine || requires(engine.definition(), GraphQLSchema.class)
+                && !hasIndependentSchema(withoutReplaced(candidates));
         boolean engineCycle = libraryEngine || eachInvocation(engine.definition()) || requires(engine.definition(), GraphQLInvocation.class);
         List<String> templates = new ArrayList<>();
         for (Provided candidate : withoutReplaced(candidates)) {
@@ -287,6 +289,17 @@ public final class LibraryBeanSelection {
         }
         for (FieldInjectionPoint<?, ?> field : definition.getInjectedFields()) {
             if (type.isAssignableFrom(field.getType()) && !field.getAnnotationMetadata().hasStereotype(AnnotationUtil.QUALIFIER)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasIndependentSchema(List<Provided> candidates) {
+        for (Provided candidate : candidates) {
+            BeanDefinition<?> definition = candidate.definition();
+            if (GraphQLSchema.class.isAssignableFrom(definition.getBeanType()) && !eachInvocation(definition)
+                    && (candidate.primary() || candidate.qualifier() == null)) {
                 return true;
             }
         }

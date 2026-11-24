@@ -167,6 +167,14 @@ type Query { hello: String }
         noExceptionThrown()
     }
 
+    void "a schema template starts when an independent primary schema serves the engine"() {
+        when:
+        startContext(SCHEMA, 'BeanSelectionLimitsSpec.eachInvocationPrimarySchema')
+
+        then:
+        noExceptionThrown()
+    }
+
     void "a qualified invocation that is only @Secondary ties with the library's and fails the startup"() {
         when:
         startContext(SCHEMA, 'BeanSelectionLimitsSpec.namedSecondary')
@@ -340,6 +348,19 @@ type Query { hello: String }
 
         @Bean @EachBean(GraphQLInvocation)
         GraphQL perInvocation(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.engine('eachi') }
+    }
+
+    @Requires(property = 'spec.name', value = 'BeanSelectionLimitsSpec.eachInvocationPrimarySchema')
+    @Factory
+    static class PrimarySchemaFactory {
+        @Bean @Singleton @Primary
+        GraphQLSchema primary() { BeanSelectionMatrixSpec.schema('primary') }
+
+        @Bean @Singleton
+        GraphQL graphQL(GraphQLSchema schema) { GraphQL.newGraphQL(schema).build() }
+
+        @Bean @EachBean(GraphQLInvocation)
+        GraphQLSchema perInvocation(GraphQLInvocation invocation) { BeanSelectionMatrixSpec.schema('eachi') }
     }
 
 }
