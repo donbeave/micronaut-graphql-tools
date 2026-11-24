@@ -1,5 +1,10 @@
 The library reads its settings from `micronaut.graphql.tools`, in `application.yml` or any other property source that Micronaut reads. The reference below is generated from the configuration class: each key has its type and its default. The topics with settings of their own have a child page: <<scalarSettings,Scalars>>, <<executionSettings,Execution>>, <<errorSettings,Errors>>, <<precedence,Precedence>> and <<checkSeverity,Check severity>>. The keys of protection and the binding of a renamed field are on this page.
 
+[[prefixes]]
+== Two prefixes
+
+The library has two prefixes. `graphql.*` belongs to the transport of Micronaut GraphQL: `graphql.enabled` switches the route and the library's invocation with it, and `graphql.path` sets the route. `micronaut.graphql.tools.*` belongs to the binding and the execution of the library, and this page lists it. There is no `micronaut.graphql.tools.enabled`: the library is on whenever its beans are on the classpath, and `graphql.enabled` is the one switch for the operations.
+
 == Keys at a glance
 
 The generated tables below list the type and the default of every key. This table adds the effect of each key and the page that explains it. Keys under `scalars` are on <<scalarSettings,Scalars>>.

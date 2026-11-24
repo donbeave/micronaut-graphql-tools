@@ -28,7 +28,6 @@ import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.BeanRegistration;
-import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
@@ -89,7 +88,6 @@ import java.util.Objects;
 @Factory
 public final class GraphQLFactory {
 
-    @Bean
     @Singleton
     @Primary
     @Requires(condition = LibraryBeanSelection.NoCompetingSchema.class)
@@ -153,7 +151,6 @@ public final class GraphQLFactory {
         return graphQLSchema;
     }
 
-    @Bean
     @Singleton
     @Primary
     @Requires(condition = LibraryBeanSelection.NoCompetingGraphQL.class)
@@ -192,7 +189,6 @@ public final class GraphQLFactory {
      * @param bindingManifestHolder the manifest recorded while the schema was bound
      * @return what the schema is bound to
      */
-    @Bean
     @Singleton
     public BindingManifest bindingManifest(GraphQLSchema graphQLSchema, BindingManifestHolder bindingManifestHolder) {
         return bindingManifestHolder.get();

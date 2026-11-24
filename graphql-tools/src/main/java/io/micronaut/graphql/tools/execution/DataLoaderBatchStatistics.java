@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.execution;
 
 import graphql.GraphQLContext;
+import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 
@@ -26,6 +27,7 @@ import java.util.Map;
  * counts them only when {@code micronaut.graphql.tools.execution.data-loader-statistics} is {@code true}: the counting adds
  * two atomic increments to each batch, and nothing to an execution without a batch loader or with the key off.
  */
+@Experimental
 public interface DataLoaderBatchStatistics {
 
     /** The key of the GraphQL context that holds the statistics of an execution. */

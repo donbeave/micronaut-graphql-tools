@@ -23,3 +23,21 @@ The library's `GraphQLInvocation` is `@Secondary`, and it declares `@Replaces(De
 snippet::example.replaced.ReplacedBeansFactory[project-base="test-suite", source="test", tags="invocation", indent="0"]
 
 The operations then run as your invocation decides, and a resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`. See the Execution page.
+
+[[customizerOrder]]
+== The order of customizers and decorators
+
+Several beans of one customizer type form a chain, and Micronaut's `OrderUtil` sorts it: a bean implements `io.micronaut.core.order.Ordered` or carries `@Order`, and the lower value runs first. A bean with neither has the order `0`, and two beans with the same value keep no defined sequence, so give beans that must run in a fixed sequence different values. A lambda or a closure has no `@Order`, so a lambda bean is ordered by declaring it in a factory method that carries `@Order`.
+
+The chains and what the order means for each:
+
+* `GraphQLSchemaCustomizer`: each one receives the schema that the one before returned. The order is part of the result.
+* `GraphQLErrorsCustomizer`: each one receives the list of errors that the one before returned.
+* `GraphQLFieldFetcherDecorator`: the lowest value is the outermost wrapper of a field.
+* `GraphQLExceptionMapper`: the mappers whose type matches are tried lowest value first, and the first one that answers wins.
+* `GraphQLConnectionInterceptor`: lowest value first, until one rejects the connection.
+
+[[experimentalTypes]]
+== Types that are marked `@Experimental`
+
+`io.micronaut.core.annotation.Experimental` marks an API that can still change before the API freeze. These types of the library carry it: `GraphQLFieldFetcherDecorator`, `GraphQLTransport`, `DataLoaderBatchStatistics`, `GraphQLContextContributor` and `GraphQLConnectionInterceptor`. A change to one of them is listed on the page of breaking changes like any other.
