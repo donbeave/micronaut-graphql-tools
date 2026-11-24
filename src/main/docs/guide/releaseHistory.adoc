@@ -1,5 +1,11 @@
 This page records what each tagged milestone changed. The breaking changes of each release and their numbers are on the Breaking Changes page. Milestones are published to the GitHub Packages Maven registry of this repository by the `Release` workflow; they are not on Maven Central and there is no GitHub Release.
 
+== 1.0.0-M5
+
+=== What this release changes
+
+* In-process tester (#215): the module `micronaut-graphql-tools-testing` runs a document with variables, context values and headers through the application's `GraphQLInvocation` in a test, and returns a response with data, errors and extensions and fluent assertions on paths and errors. See the Testing page.
+
 == 1.0.0-M4
 
 === What this release changes

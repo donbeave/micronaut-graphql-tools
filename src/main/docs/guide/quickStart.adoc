@@ -83,7 +83,7 @@ snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="
 +
 snippet::example.quickstart.QuickStartTest[project-base="test-suite", source="test", tags="query", indent="0"]
 
-6. The compile-time checks are optional. Without them, the startup binds the schema when the application context starts (`eager-init`, see <<configuration,Configuration>>) and fails with a code such as `[field-not-bound]` when a field has no resolver. With the processor on the compiler path, the build reports many of the same failures first. See <<compileTime,Compile-Time Verification>> for each build tool and <<exceptions,Exceptions>> for the codes.
+6. The compile-time checks are optional. Without them, the startup binds the schema when the application context starts (`eager-init`, see <<configuration,Configuration>>) and fails with a code such as `[field-not-bound]` when a field has no resolver. With the processor on the compiler path, the build reports many of the same failures first. See <<compileTimeSetup,Set up the build>> for each build tool and <<exceptions,Exceptions>> for the codes.
 
 == Annotations
 

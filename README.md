@@ -25,6 +25,7 @@ and test it.
 | [`graphql-tools-opentelemetry`](graphql-tools-opentelemetry/README.md) | `:micronaut-graphql-tools-opentelemetry` | Request and field spans (OpenTelemetry), optional. |
 | [`graphql-tools-upload`](graphql-tools-upload/README.md) | `:micronaut-graphql-tools-upload` | File upload: the `Upload` scalar and the multipart request route, optional. |
 | [`graphql-tools-security`](graphql-tools-security/README.md) | `:micronaut-graphql-tools-security` | Micronaut Security: the principal in resolvers, `@Secured` on resolver methods and the root fields hook, optional. |
+| [`graphql-tools-testing`](graphql-tools-testing/README.md) | `:micronaut-graphql-tools-testing` | The in-process tester for application tests: run a document against the `GraphQL` bean and assert on the response, test scope. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`test-suite-tck`](test-suite-tck/README.md) | `:test-suite-tck` | The execution-behaviour scenarios that the example suites run. |
@@ -900,10 +901,12 @@ micronaut:
 
 The `micronaut-graphql-tools-processor` module registers a Micronaut `TypeElementVisitor` that reads the schema files while the
 application compiles and fails the build on drift that the startup would report, with the same code and the same schema
-coordinate. The build setup for Gradle and Maven (Java, Kotlin with KSP or kapt, Groovy), the options, what is checked at compile
-time and what only at startup, the support matrix and the incrementality guarantee are on the guide page
-[Compile-Time Verification](src/main/docs/guide/compileTime.adoc); its options are on
-[Options](src/main/docs/guide/compileTime/options.adoc). The error codes are in the
+coordinate. The build setup for Gradle and Maven (Java, Kotlin with KSP or kapt, Groovy) is on
+[Set Up the Build](src/main/docs/guide/compileTime/setup.adoc), the options on
+[Options](src/main/docs/guide/compileTime/options.adoc), the support matrix and the incremental builds on
+[Build Manifest](src/main/docs/guide/compileTime/buildManifest.adoc), and what is checked at compile time and what
+only at startup on [Limits](src/main/docs/guide/compileTime/limits.adoc); the section starts at
+[Compile-Time Verification](src/main/docs/guide/compileTime.adoc). The error codes are in the
 [error reference](src/main/docs/guide/exceptions.adoc).
 
 ### The strict schema-build test
@@ -1308,6 +1311,20 @@ library's invocation, so the resolver runs on the executor of the library, not o
 `400` with an error whose `extensions.code` is `INVALID_MULTIPART_REQUEST`. `micronaut.graphql.tools.upload.enabled`
 (default `true`) turns the module off. The guide page on file upload has the details.
 
+## Testing
+
+The `micronaut-graphql-tools-testing` module runs a GraphQL document in the process of a test, without a server or an HTTP
+client.
+
+```groovy
+testImplementation("io.micronaut.graphql.tools:micronaut-graphql-tools-testing:1.0.0-M5")
+```
+
+A `@MicronautTest` class injects `GraphQLTester`, builds a request with variables, context values and headers, and
+asserts on the `GraphQLTestResponse`: `tester.request(document).variable("id", "b1").execute().assertNoErrors().assertPath("book.title", "Dune")`.
+The document goes through the library's invocation, so the context contributors and the other beans run as for a request.
+The module is test-time code and has no native test. The guide page on testing has the details.
+
 ## Security
 
 The `micronaut-graphql-tools-security` module integrates Micronaut Security. Micronaut Security stays the application's own
@@ -1428,6 +1445,7 @@ To build or test against a role locally:
 | Tracing ([OpenTelemetry](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry` |
 | File upload ([`Upload` scalar and multipart route](#file-upload)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-upload` |
 | Security ([principal, `@Secured` and the root fields hook](#security)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-security` |
+| Testing ([in-process tester](#testing)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-testing` |
 | Annotation processor ([compile-time checks](#compile-time-checks)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 

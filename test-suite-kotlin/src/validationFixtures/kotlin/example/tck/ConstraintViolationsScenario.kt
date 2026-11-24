@@ -20,7 +20,11 @@ import graphql.schema.GraphQLScalarType
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
+import graphql.GraphQLError
 import io.micronaut.core.annotation.AnnotationValue
+import io.micronaut.graphql.tools.error.GraphQLExceptionContext
+import io.micronaut.graphql.tools.error.GraphQLExceptionMapper
+import jakarta.validation.ConstraintViolationException
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping
@@ -202,4 +206,23 @@ open class ConstraintViolationsQueries {
     open fun tray(tray: Tray<@Positive Int>): String = tray.items.size.toString()
 
     open fun several(@NotBlank name: String, @Positive count: Int, @Valid cart: Cart): String = name
+}
+
+// tag::custom-mapper[]
+@Singleton
+@Requires(property = "tck.scenario", value = "constraint-violation-mapper")
+class InvalidInputMapper : GraphQLExceptionMapper<ConstraintViolationException> {
+    override fun map(exception: ConstraintViolationException, context: GraphQLExceptionContext): GraphQLError {
+        val fields = exception.constraintViolations.map { violation -> violation.propertyPath.last().name }.sorted()
+        return context.error("The input is not valid", mapOf("code" to "INVALID_INPUT", "fields" to fields))
+    }
+}
+// end::custom-mapper[]
+
+@Singleton
+@GraphQLRootResolver
+@Requires(property = "tck.scenario", value = "constraint-violation-mapper")
+open class RegistrationQueries {
+
+    open fun register(@NotBlank name: String, @Positive seats: Int): String = name
 }
