@@ -193,16 +193,16 @@ final class DriftMutationRunner {
     String judge(CorpusCase mutated, Language language, Mutant mutant, Verdict baseline, Verdict runtime, Verdict compile) {
         List<String> problems = []
         if (mutant.breaking) {
+            Set<String> runtimeKeys = runtime.keys()
             if (runtime.bound) {
                 gap(problems, language, mutant, 'silent', 'BUG: the mutant binds silently, the startup reports nothing although the schema no longer matches the code')
-            } else {
-                if (!runtime.findings.any { mutant.names(it) }) {
-                    gap(problems, language, mutant, 'unnamed', "the startup fails but no finding names the mutated element (${mutant.names}): ${runtime.lines()}".toString())
-                }
-                Set<String> runtimeKeys = runtime.keys()
-                compile.errors.findAll { !runtimeKeys.contains(it.key()) && !mutant.names(it) }.each {
-                    gap(problems, language, mutant, 'compile-extra', "the compile-time check reports '${it.key()}', which neither the startup reports nor names the mutated element".toString())
-                }
+            } else if (!runtime.findings.any { mutant.names(it) }) {
+                gap(problems, language, mutant, 'unnamed', "the startup fails but no finding names the mutated element (${mutant.names}): ${runtime.lines()}".toString())
+            }
+            compile.errors.findAll { !runtimeKeys.contains(it.key()) && !mutant.names(it) }.each {
+                gap(problems, language, mutant, 'compile-extra', "the compile-time check reports '${it.key()}', which neither the startup reports nor names the mutated element".toString())
+            }
+            if (!runtime.bound) {
                 Parity.check(mutated.name, language, runtime, compile, corpus.divergences, [] as Set<String>, corpus.exceptions)
                         .findAll { it.startsWith('completeness') }.each { gap(problems, language, mutant, 'compile-missed', it) }
             }

@@ -46,6 +46,7 @@ class DriftMutationSpec extends Specification {
     void "every line of the list of known gaps is used by a mutant"() {
         expect:
         runner.staleGaps() == []
+        runner.corpus.problems == []
     }
 
     void cleanupSpec() {

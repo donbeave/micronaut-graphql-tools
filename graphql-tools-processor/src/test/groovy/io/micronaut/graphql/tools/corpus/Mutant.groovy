@@ -51,7 +51,10 @@ final class Mutant {
 
     /** @return whether a finding is about the mutated element */
     boolean names(Finding finding) {
-        return names.any { finding.coordinate.contains(it) }
+        return names.any { String name ->
+            name.startsWith('.') ? finding.coordinate.endsWith(name) : name.startsWith('#') ? (name.endsWith('(') ? finding.coordinate.contains(name) : finding.coordinate.endsWith(name))
+                    : finding.coordinate == name || finding.coordinate.startsWith(name + '(')
+        }
     }
 
     @Override

@@ -71,7 +71,7 @@ final class SchemaMutator {
                             result) { int index, FieldDefinition field -> replaceField(document, at, (ObjectTypeDefinition) definition, index, field) }
                 } else if (definition instanceof InterfaceTypeDefinition) {
                     objectMutants(((InterfaceTypeDefinition) definition).name, ((InterfaceTypeDefinition) definition).fieldDefinitions, file, document, at,
-                            files, result) { int index, FieldDefinition field -> replaceInterfaceField(document, at, (InterfaceTypeDefinition) definition, index, field) }
+                            files, result, true) { int index, FieldDefinition field -> replaceInterfaceField(document, at, (InterfaceTypeDefinition) definition, index, field) }
                 } else if (definition instanceof InputObjectTypeDefinition) {
                     inputMutants((InputObjectTypeDefinition) definition, file, document, at, files, result)
                 } else if (definition instanceof EnumTypeDefinition) {
@@ -86,7 +86,8 @@ final class SchemaMutator {
     // ---------------------------------------------------------------------------------------------- breaking mutants
 
     private static void objectMutants(String owner, List<FieldDefinition> fields, String file, Document document, int at, Map<String, String> files,
-                                      List<Mutant> out, Closure<Document> replace) {
+                                      List<Mutant> out, boolean ofInterface = false, Closure<Document> replace) {
+        String element = ofInterface ? owner : null
         fields.eachWithIndex { FieldDefinition field, int i ->
             if (field.name.startsWith('__')) {
                 return
@@ -94,12 +95,15 @@ final class SchemaMutator {
             String coordinate = owner + '.' + field.name
             String capitalized = field.name.capitalize()
             List<String> names = [coordinate, '#' + field.name + '(', '#get' + capitalized + '(', '#is' + capitalized + '(']
+            if (ofInterface) {
+                names.add('.' + field.name)
+            }
             String renamed = field.name + 'Renamed'
             out.add(breaking('rename-field', coordinate, names + [owner + '.' + renamed], files, file,
-                    replace.call(i, field.transform { FieldDefinition.Builder b -> b.name(renamed) })))
+                    replace.call(i, field.transform { FieldDefinition.Builder b -> b.name(renamed) }), element))
             typeMutations(field.type).each { String kind, Type<?> changed ->
                 out.add(breaking(kind, coordinate, names, files, file,
-                        replace.call(i, field.transform { FieldDefinition.Builder b -> b.type(changed) })))
+                        replace.call(i, field.transform { FieldDefinition.Builder b -> b.type(changed) }), element))
             }
             List<InputValueDefinition> arguments = field.inputValueDefinitions
             arguments.eachWithIndex { InputValueDefinition argument, int k ->
@@ -107,7 +111,7 @@ final class SchemaMutator {
                     List<InputValueDefinition> copy = new ArrayList<>(arguments)
                     copy.set(k, argument.transform { InputValueDefinition.Builder b -> b.type(changed) })
                     out.add(breaking(kind + '-argument', coordinate + '(' + argument.name + ':)', names, files, file,
-                            replace.call(i, field.transform { FieldDefinition.Builder b -> b.inputValueDefinitions(copy) })))
+                            replace.call(i, field.transform { FieldDefinition.Builder b -> b.inputValueDefinitions(copy) }), element))
                 }
             }
         }
@@ -166,6 +170,9 @@ final class SchemaMutator {
             Type<?> element = ((ListType) ((NonNullType) type).type).type
             return element instanceof NonNullType ? element : NonNullType.newNonNullType(element).build()
         }
+        if (type instanceof NonNullType) {
+            return NonNullType.newNonNullType(ListType.newListType(((NonNullType) type).type).build()).build()
+        }
         return ListType.newListType(type).build()
     }
 
@@ -223,6 +230,9 @@ final class SchemaMutator {
             if (document.definitions.size() >= 2) {
                 List<Definition> shuffled = new ArrayList<>(document.definitions)
                 Collections.shuffle(shuffled, new Random(seed ^ file.hashCode()))
+                if (shuffled == document.definitions) {
+                    Collections.reverse(shuffled)
+                }
                 if (shuffled != document.definitions) {
                     result.add(equivalent('shuffle-definitions', file, files, file, withDefinitions(document, shuffled)))
                 }
