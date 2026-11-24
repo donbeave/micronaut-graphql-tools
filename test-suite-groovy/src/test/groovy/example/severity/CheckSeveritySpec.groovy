@@ -92,6 +92,22 @@ class CheckSeveritySpec extends Specification {
         failure([(PREFIX + 'checks.no-such-check'): 'warn']).message.startsWith('[invalid-check-setting]')
     }
 
+    void 'the severity accepts the spellings of the enum conversion'() {
+        expect:
+        start([(PREFIX + 'checks.unreachable-type'): 'WARN']) != null
+        start([(PREFIX + 'checks.unreachable-type'): 'Ignore']) != null
+    }
+
+    void 'an invalid severity fails the startup with the property and the valid values'() {
+        when:
+        def e = failure([(PREFIX + 'checks.unreachable-type'): 'sometimes'])
+
+        then:
+        e.message.startsWith('[invalid-check-setting]')
+        e.message.contains(PREFIX + 'checks.unreachable-type')
+        e.message.contains('fail, warn, ignore')
+    }
+
     @Singleton
     @Requires(env = CheckSeveritySpec.ENVIRONMENT)
     static class Schema implements TypeDefinitionRegistryCustomizer {

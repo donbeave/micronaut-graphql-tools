@@ -1,5 +1,7 @@
 Each check has a severity, `micronaut.graphql.tools.checks.<code>`: `fail` (the default), `warn` or `ignore`. `strict` is the shorthand for the checks that have no entry: `true` is every check at `fail`, `false` is every check at `warn`. An explicit entry wins. A check at `ignore` does no work. An unknown code or severity fails the startup. The `allow` settings accept findings: `allow.unreachable`, `allow.inert-directives`, `allow.schema-customizer-directives` and `allow.findings` (lines of the binding manifest). Every entry is validated, and one that no longer applies fails the startup.
 
+The values are those of the enum `CheckSeverity` (`FAIL`, `WARN`, `IGNORE`); Micronaut reads them in any case, so `warn` and `WARN` are the same. An unknown check code or a value that is not a severity fails the startup with `[invalid-check-setting]`, the property name and the valid values.
+
 An allowed type, or an unreachable type under `checks.unreachable-type` `warn` or `ignore`, also covers the enum, input and scalar types that its fields and arguments use, and those that the input types use in turn. List only the type itself. A type that only a type that is not allowed uses still fails.
 
 == Check codes

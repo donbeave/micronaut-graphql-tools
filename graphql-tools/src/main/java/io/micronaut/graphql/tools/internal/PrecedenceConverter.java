@@ -29,7 +29,11 @@ import java.util.Optional;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
 
 /**
- * Reads {@code micronaut.graphql.tools.precedence}. The value {@code strict}, the former default, was renamed
+ * Reads {@code micronaut.graphql.tools.precedence}. The core enum conversion of Micronaut accepts the same spellings
+ * ({@code property-first}, {@code PROPERTY_FIRST}, {@code Property_First}), but it fails with a message that names
+ * neither the valid values nor the replacement of the removed value {@code strict}, and a setter never sees a value
+ * that the conversion rejects. This converter is the one hook that can give those messages, so it stays; it accepts
+ * the spellings of the core conversion and nothing more. The value {@code strict}, the former default, was renamed
  * {@code fail}; it is rejected with a message that names the replacement.
  */
 @Internal

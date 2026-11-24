@@ -258,7 +258,7 @@ type AdminQuery {
 
     void start(String spec, Map config = [:], boolean withRegistry = true, Closure customize = null) {
         def builder = ApplicationContext.builder(
-                ['spec.name': spec, 'micronaut.graphql.tools.eager-init': false, 'micronaut.graphql.tools.manifest.record': true] << config, 'test')
+                ['spec.name': spec, 'micronaut.graphql.tools.eager-init': false, 'micronaut.graphql.tools.manifest.enabled': true] << config, 'test')
         if (withRegistry) {
             builder.singletons(registry())
         }

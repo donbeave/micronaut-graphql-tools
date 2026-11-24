@@ -58,6 +58,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-44 one accessor style in the public types (#504) | `GraphQLConnectionRequest` is a record (`payload()` and `httpRequest()` keep their names). The accessors of `GraphQLConnectionResult` (`getAttributes()`, `getCloseCode()`, `getReason()`), `GraphQLExecutionRequest` (`getHttpRequest()`, `getHttpResponse()`, `getTransport()`, `getConnectionAttributes()`, `getExecutionInput()`), `DataLoaderOptionsCustomizer` (`getLoaderName()`) and `DataLoaderBatchStatistics` (`getCounts()`) are renamed. | Rename the calls, and the method that a `DataLoaderOptionsCustomizer` overrides. In Groovy and Kotlin, read the properties (`request.httpRequest`, `request.transport`).
 | BC-42 the library's `GraphQLInvocation` stays registered beside yours (#499) | The library's `GraphQLInvocation` is `@Secondary` and is no longer removed when the application declares its own. The unqualified injection point still resolves to yours. `List<GraphQLInvocation>` and `getBeansOfType(GraphQLInvocation.class)` now also contain `LibraryGraphQLInvocation`. | Filter the library's invocation out by type if a list of invocations matters to you. An application invocation that is `@Secondary` fails an unqualified injection point with `NonUniqueBeanException`: drop `@Secondary` or make it `@Primary`. A `GraphQL` or `GraphQLSchema` declared with `@EachBean(GraphQLInvocation.class)` fails at startup: target the application's own bean type. A `@Primary` factory `DefaultGraphQLInvocation` replaced with a `qualifier` constraint still makes the library's invocation step aside: replace it without the constraint, or provide your invocation as `@Primary` directly. |
 | BC-50 an unknown property of a standard scalar fails the startup (#650) | A property under `micronaut.graphql.tools.scalars.<id>` that is not `enabled`, `name` or `format`, such as `local-date.nmae`, fails the startup with a `ConfigurationException` that names the whole key and lists the valid properties. Before it was ignored, so the setting never took effect. | Fix or remove the misspelled key. The documented keys keep their names and meaning.
+| BC-45 manifest flags collapsed, check severity is an enum (#505) | `micronaut.graphql.tools.manifest.record` is removed and fails the startup with `[removed-configuration-key]`. `manifest.enabled` alone records the manifest (the `BindingManifest` bean can be read), and a startup write happens only when `manifest.path` is set; with no path, nothing is logged any more. `checks` is a `Map<String, CheckSeverity>` and `precedence` a `Precedence`, read by the core enum conversion, so a spelling that conversion does not accept stops working (the documented spellings keep working). | Replace `manifest.record: true` with `manifest.enabled: true`, and set `manifest.path` where the file is wanted. Use `fail`, `warn` or `ignore` for a check. | Status: breaking by design; no opt-out.
 |===
 
 == Entries for 1.0.0-M1
@@ -1125,3 +1126,31 @@ micronaut:
         local-date:
           name: Date
 ----
+
+=== BC-45: the manifest flags are collapsed and the check severity is an enum (#505)
+
+`micronaut.graphql.tools.manifest.record` and `manifest.enabled` both controlled the manifest, and `checks` was a map of strings that the library validated by hand.
+
+What changes:
+
+* `manifest.record` is removed. A configuration that sets it fails the startup with `[removed-configuration-key]` and names `manifest.enabled`.
+* `manifest.enabled` records the manifest while the schema is bound, so the `BindingManifest` bean can be read. With `manifest.path` set, the manifest is also written to the file at startup (this binds the schema at startup). With no path nothing is written and nothing is logged.
+* `checks.<code>` is bound to the enum `io.micronaut.graphql.tools.config.CheckSeverity` (`FAIL`, `WARN`, `IGNORE`) and `precedence` to `Precedence`. Micronaut reads an enum value case-insensitively and with a hyphen or an underscore, so `fail`, `FAIL` and `property-first` work. An invalid severity or an unknown check code fails the startup with `[invalid-check-setting]`, the property name and the valid values. The removed value `precedence: strict` keeps its message that names `fail`.
+
+[source,yaml]
+----
+# Before
+micronaut:
+  graphql:
+    tools:
+      manifest:
+        record: true
+# Now
+micronaut:
+  graphql:
+    tools:
+      manifest:
+        enabled: true
+----
+
+Status: breaking by design; no opt-out.

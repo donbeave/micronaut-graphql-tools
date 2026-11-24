@@ -30,8 +30,8 @@ import java.util.function.Supplier;
  * What the schema is bound to: one line per schema coordinate, saying which Java member serves it, in the text format
  * {@code graphql-binding-manifest 2}. The format is specified, with its grammar, sorting and escape rules, in the guide
  * page "Binding Manifest". Available as a bean once the {@code GraphQL} bean is built when
- * {@code micronaut.graphql.tools.manifest.record} is set, and written at startup with
- * {@code micronaut.graphql.tools.manifest.enabled}.
+ * {@code micronaut.graphql.tools.manifest.enabled} is set. It is also written at startup when
+ * {@code micronaut.graphql.tools.manifest.path} is set.
  *
  * <p>The manifest is rendered when it is first read, not while the schema is bound, and without reflection: it is the
  * same text on the JVM and in a native image.</p>

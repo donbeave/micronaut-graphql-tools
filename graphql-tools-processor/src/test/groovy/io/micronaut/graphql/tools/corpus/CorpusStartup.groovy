@@ -58,7 +58,7 @@ final class CorpusStartup {
     static Map<String, Object> properties(Map<String, String> config, List<String> schemaLocations) {
         Map<String, Object> properties = new LinkedHashMap<>(config)
         properties.put('micronaut.graphql.tools.schema.locations', schemaLocations)
-        properties.putIfAbsent('micronaut.graphql.tools.manifest.record', true)
+        properties.putIfAbsent('micronaut.graphql.tools.manifest.enabled', true)
         properties.putIfAbsent('micronaut.graphql.tools.eager-init', false)
         properties.putIfAbsent('graphql.graphql-ws.enabled', false)
         return properties
@@ -75,9 +75,7 @@ final class CorpusStartup {
             context = ApplicationContext.builder(properties, environments as String[]).start()
             context.getBean(GraphQL)
             // the manifest bean cannot be read when the case turns recording off: a bound startup then has no manifest
-            // (recorded = manifest.record or manifest.enabled, as ManifestConfiguration.isRecorded)
-            if (['micronaut.graphql.tools.manifest.record', 'micronaut.graphql.tools.manifest.enabled']
-                    .any { String.valueOf(properties.get(it)) == 'true' }) {
+            if (String.valueOf(properties.get('micronaut.graphql.tools.manifest.enabled')) == 'true') {
                 String manifest = context.getBean(BindingManifest).render()
                 result.put('manifest', manifest.readLines().findAll { !it.startsWith('#') }.join('\n') + '\n')
             }
