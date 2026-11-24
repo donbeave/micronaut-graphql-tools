@@ -104,12 +104,10 @@ tasks.named("publishGuide") {
 
 // The vulnerability audit (.github/scripts/vulnerability-audit.sh) scans this file with osv-scanner. It lists what the published
 // modules resolve at runtime on the default graphql-java leg, in the format of a Gradle dependency lockfile.
-val auditModules = setOf(
-    "graphql-tools", "graphql-tools-binding", "graphql-tools-scalars", "graphql-tools-micrometer", "graphql-tools-opentelemetry",
-    "graphql-tools-upload", "graphql-tools-security", "graphql-tools-testing", "graphql-tools-processor",
-)
+// The published library modules, derived from the folders so that a new module is audited without a second list.
+fun isAuditModule(project: Project) = project.projectDir.name.startsWith("graphql-tools") && !project.projectDir.name.endsWith("-bom")
 
-subprojects.filter { it.projectDir.name in auditModules }.forEach { module ->
+subprojects.filter { isAuditModule(it) }.forEach { module ->
     with(module) {
         val coordinates = objects.setProperty<String>()
         coordinates.addAll(configurations.named("runtimeClasspath").flatMap { it.incoming.artifacts.resolvedArtifacts }.map { artifacts ->
@@ -129,8 +127,8 @@ subprojects.filter { it.projectDir.name in auditModules }.forEach { module ->
 val auditLockfile by tasks.registering {
     group = "verification"
     description = "Writes the runtime dependencies of the published modules as a gradle.lockfile for the vulnerability audit."
-    val parts = subprojects.filter { it.projectDir.name in auditModules }.map { it.layout.buildDirectory.file("audit/coordinates.txt") }
-    dependsOn(subprojects.filter { it.projectDir.name in auditModules }.map { "${it.path}:auditCoordinates" })
+    val parts = subprojects.filter { isAuditModule(it) }.map { it.layout.buildDirectory.file("audit/coordinates.txt") }
+    dependsOn(subprojects.filter { isAuditModule(it) }.map { "${it.path}:auditCoordinates" })
     inputs.files(parts).withPropertyName("coordinates")
     val output = layout.buildDirectory.file("audit/gradle.lockfile")
     outputs.file(output)
