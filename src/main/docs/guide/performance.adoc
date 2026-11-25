@@ -17,3 +17,34 @@ property of each of two interfaces of the same class compare as follows:
 | Oracle GraalVM 25 | 5.60 ns | 5.59 ns
 | Temurin 21 | 3.61 ns | 4.85 ns
 |===
+
+== Union and interface resolution
+
+The type resolver of a union or interface looks the object type up in the schema of the request, so that a schema another
+component replaced after the binding is the one that answers. `AbstractTypeBenchmark` measures it on four threads next to two
+controls: a resolver that caches the object type per class in a `ClassValue` and never looks at the schema
+(`unionResolutionCachedType`), and a resolver that returns one object type (`unionResolutionControl`, the cost of the
+benchmark loop itself, about 7 to 8 ns).
+
+The schema check is not where the time goes: the variant without it is as slow as the resolver was, so the cost is the
+`ClassValue` lookup. The resolver now also remembers the first two classes that resolve, weakly, so that a hit on one of
+them is a reference comparison; any other class takes the `ClassValue`, and a class of a discarded class loader is still
+not retained.
+
+Measured with JMH (4 threads, two forks, `gc` profiler, Oracle GraalVM 25.0.5), runs back to back on one machine with a
+load average of 6 to 11, the order reversed once. The ranges are the runs, not the error of one run, which reaches 8 ns on a
+shared machine:
+
+[cols="1,1,1,1"]
+|===
+| Leg | Variant | `unionResolution` | `interfaceResolution`
+
+| default | before | 25.8 to 27.5 ns | 25.8 to 31.5 ns
+| default | now | 17.0 to 20.5 ns | 15.8 to 24.7 ns
+| default | cached object type, no schema check | 23.8 to 30.7 ns | not measured
+| floor | before | 25.3 ns | 27.6 ns
+| floor | now | 23.2 ns | 21.7 ns
+|===
+
+Allocation is 0 B/op on both benchmarks on both legs. The remaining distance to the loop itself is about 10 ns on the default
+leg.

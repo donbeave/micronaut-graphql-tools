@@ -97,6 +97,10 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String NESTED_INPUT_ARGUMENT = "nestedInputArgument";
     public static final String UNION_RESOLUTION = "unionResolution";
     public static final String INTERFACE_RESOLUTION = "interfaceResolution";
+    /** The union resolution with the object type cached per class and no schema check: the cost the schema check adds. */
+    public static final String UNION_RESOLUTION_CACHED_TYPE = "unionResolutionCachedType";
+    /** The same call with a resolver that returns one object type: what the benchmark loop itself costs. */
+    public static final String UNION_RESOLUTION_CONTROL = "unionResolutionControl";
     public static final String DIRECTIVE_WRAPPED_FETCHER = "directiveWrappedFetcher";
     public static final String ASYNC_BOUNDARY_DONE = "asyncBoundaryDone";
     /** The choice of the response media type from the {@code Accept} header of an HTTP request. */
@@ -353,6 +357,9 @@ public final class BenchmarkCases implements AutoCloseable {
         ops.put(ASYNC_PENDING_SOURCE, resolver::asyncPending);
         ops.put(UNION_RESOLUTION, resolve(schema.getType("Shape"), new Circle(), new Square()));
         ops.put(INTERFACE_RESOLUTION, resolve(schema.getType("Figure"), new Triangle(), new Rectangle()));
+        ops.put(UNION_RESOLUTION_CACHED_TYPE, resolve(cachedTypeResolver(), new Circle(), new Square()));
+        GraphQLObjectType circle = (GraphQLObjectType) schema.getType("Circle");
+        ops.put(UNION_RESOLUTION_CONTROL, resolve(env -> circle, new Circle(), new Square()));
         ops.put(invokeOp(SMALL_QUERY_FIELDS), invoke(SMALL_QUERY_FIELDS));
         ops.put(directOp(SMALL_QUERY_FIELDS), direct(SMALL_QUERY_FIELDS));
         ops.put(invokeOp(LARGE_QUERY_FIELDS), invoke(LARGE_QUERY_FIELDS));
@@ -485,10 +492,23 @@ public final class BenchmarkCases implements AutoCloseable {
                 .build();
     }
 
+    private TypeResolver cachedTypeResolver() {
+        ClassValue<GraphQLObjectType> types = new ClassValue<>() {
+            @Override
+            protected GraphQLObjectType computeValue(Class<?> type) {
+                return (GraphQLObjectType) schema.getType(type.getSimpleName());
+            }
+        };
+        return env -> types.get(env.getObject().getClass());
+    }
+
     private Op resolve(Object abstractType, Object first, Object second) {
-        TypeResolver resolver = abstractType instanceof GraphQLUnionType union
+        return resolve(abstractType instanceof GraphQLUnionType union
                 ? schema.getCodeRegistry().getTypeResolver(union)
-                : schema.getCodeRegistry().getTypeResolver((GraphQLInterfaceType) abstractType);
+                : schema.getCodeRegistry().getTypeResolver((GraphQLInterfaceType) abstractType), first, second);
+    }
+
+    private Op resolve(TypeResolver resolver, Object first, Object second) {
         TypeResolutionEnvironment[] environments = {
                 TypeResolutionParameters.newParameters().value(first).schema(schema).build(),
                 TypeResolutionParameters.newParameters().value(second).schema(schema).build()

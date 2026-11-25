@@ -34,11 +34,15 @@ public class AbstractTypeBenchmark extends CaseState {
 
     private BenchmarkCases.Op union;
     private BenchmarkCases.Op iface;
+    private BenchmarkCases.Op cachedType;
+    private BenchmarkCases.Op control;
 
     @Setup
     public void prepare() {
         union = op(BenchmarkCases.UNION_RESOLUTION);
         iface = op(BenchmarkCases.INTERFACE_RESOLUTION);
+        cachedType = op(BenchmarkCases.UNION_RESOLUTION_CACHED_TYPE);
+        control = op(BenchmarkCases.UNION_RESOLUTION_CONTROL);
     }
 
     @Benchmark
@@ -49,5 +53,15 @@ public class AbstractTypeBenchmark extends CaseState {
     @Benchmark
     public Object interfaceResolution() throws Exception {
         return iface.run();
+    }
+
+    @Benchmark
+    public Object unionResolutionCachedType() throws Exception {
+        return cachedType.run();
+    }
+
+    @Benchmark
+    public Object unionResolutionControl() throws Exception {
+        return control.run();
     }
 }

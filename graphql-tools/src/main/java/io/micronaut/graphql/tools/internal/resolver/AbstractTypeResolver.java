@@ -24,6 +24,7 @@ import graphql.schema.TypeResolver;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +49,8 @@ import java.util.stream.Collectors;
  * {@link UnresolvedTypeException}, which graphql-java reports as an error of that field, with its path; the message
  * names the abstract type, the class and the candidates. The result, with the name of the resolved object type is
  * cached per class in a {@link ClassValue}: a lookup takes no lock, and the cache does not keep a class, or its class
- * loader, alive.</p>
+ * loader, alive. The first two classes that resolve are also remembered by this resolver, weakly, which makes
+ * their lookup a comparison.</p>
  *
  * @author Alexey Zhokhov
  */
@@ -99,7 +101,17 @@ public final class AbstractTypeResolver implements TypeResolver {
             this.current = current;
         }
 
-        GraphQLObjectType objectType = current.objectTypes.get(objectClass);
+        GraphQLObjectType objectType;
+        Hit first = current.first;
+        Hit second = current.second;
+        if (first != null && first.type.refersTo(objectClass)) {
+            objectType = first.objectType;
+        } else if (second != null && second.type.refersTo(objectClass)) {
+            objectType = second.objectType;
+        } else {
+            objectType = current.objectTypes.get(objectClass);
+            current.remember(objectClass, objectType);
+        }
         if (objectType != null) {
             return objectType;
         }
@@ -185,6 +197,9 @@ public final class AbstractTypeResolver implements TypeResolver {
         return result.isEmpty() ? "none is mapped" : result;
     }
 
+    private record Hit(WeakReference<Class<?>> type, GraphQLObjectType objectType) {
+    }
+
     private record Resolution(String objectTypeName, String error) {
     }
 
@@ -193,6 +208,11 @@ public final class AbstractTypeResolver implements TypeResolver {
     private final class SchemaTypes {
 
         private final GraphQLSchema schema;
+
+        // the first two classes that resolved, checked before the ClassValue; immutable, so that a thread that sees one
+        // sees both of its fields
+        private Hit first;
+        private Hit second;
 
         // null for a class that resolves to no object type
         private final ClassValue<GraphQLObjectType> objectTypes = new ClassValue<>() {
@@ -212,6 +232,17 @@ public final class AbstractTypeResolver implements TypeResolver {
 
         private SchemaTypes(GraphQLSchema schema) {
             this.schema = schema;
+        }
+
+        void remember(Class<?> type, GraphQLObjectType objectType) {
+            if (objectType == null) {
+                return;
+            }
+            if (first == null) {
+                first = new Hit(new WeakReference<>(type), objectType);
+            } else if (second == null && !first.type.refersTo(type)) {
+                second = new Hit(new WeakReference<>(type), objectType);
+            }
         }
     }
 
