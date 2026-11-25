@@ -1,5 +1,39 @@
-The library creates the beans that run a schema: the `GraphQLSchema`, the `GraphQL` engine and the `GraphQLInvocation`. An application replaces any of them by declaring its own bean of that type. This page says which application bean wins, and why the three types are not selected the same way.
+The library creates the beans that run a schema: the `GraphQLSchema`, the `GraphQL` engine and the `GraphQLInvocation`. An application changes what the library builds with customizers, or replaces any of the beans by declaring its own bean of that type. This page lists the customizers first, and then says which application bean wins, and why the three types are not selected the same way.
 
+== Customizers
+
+Three kinds of beans change what the library builds. Several beans of one kind can exist, and they run lowest order first (`@Order` on the bean class or factory method, or `Ordered#getOrder()`).
+
+[cols="3,4,3", options="header"]
+|===
+|Bean type |Receives |Runs
+|`GraphQLTypeDefinitionRegistryCustomizer` |a copy of the `TypeDefinitionRegistry` (the registry bean itself stays unchanged) |before the binding: a type or a field added here is bound like any other
+|`GraphQLRuntimeWiringCustomizer` |the `RuntimeWiring.Builder` that holds the library's wiring |after the binding, before the schema is generated
+|`GraphQLSchemaCustomizer` |the generated `GraphQLSchema`, and returns the schema to use |last
+|===
+
+A `GraphQLRuntimeWiringCustomizer` adds wiring: scalars, directive wirings, field visibility. A replacement of something that the library registered is reported as `[runtime-wiring-override]` (see <<exceptions,Exceptions>>).
+
+To change the generated schema, use a `GraphQLSchemaCustomizer`; the library does not check what it changes. To wrap data fetchers, use a `GraphQLFieldFetcherDecorator` (see <<execution,Execution>>) or a `SchemaDirective` (see <<directives,Directives>>). A `GraphQLSchemaCustomizer` of the example suites handles the `@audit` directive of the schema definition, in the snippet of the <<directives,Directives>> page.
+
+=== Fields a customizer serves
+
+A field that only a hand-written `DataFetcher` serves has no Java member, so the startup would fail with `[field-not-bound]`. The customizer declares the field by claiming it in `claimedFields()`, and registers the data fetcher in `customize`. The library does not bind or check a claimed field, and a data fetcher that the customizer registers for it is not a replacement.
+
+* A claim names a field of an object type of the schema, including a field that `extend type` adds. A claim for a type or a field that the schema does not define, or for an interface, fails the startup with `[invalid-claimed-fields]`, which names each coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
+
+== Configuring the `GraphQL` bean
+
+`GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean before it is built. The bean uses the selected `GraphQLSchema`: the library's, or an application schema that replaces it, lowest order first. They set a `PreparsedDocumentProvider`, the execution strategies, the default `DataFetcherExceptionHandler` and the like; the <<errors,Errors>> page has an example.
+
+The library installs the `Instrumentation` beans before the customizers run; see <<observability,Observability>>.
+
+== Building the `GraphQL` bean yourself
+
+An application that declares its own `GraphQL` bean keeps the library's `GraphQLSchema` and builds the engine from it (see <<customizationReplace,Replacing the schema or the engine>>). A `GraphQLBuilderCustomizer` configures the builder of the library's bean, so it does not apply to a bean that the application creates.
+
+
+[[customizationReplace]]
 == Replacing the schema or the engine
 
 The library's `GraphQLSchema` and `GraphQL` beans are `@Primary`, and each one is created only when the application has no bean of that type that competes for an unqualified injection point: a bean without a qualifier, or a `@Primary` one. Such a bean wins, and the library does not create its own. A bean with a qualifier, such as `@Named("admin")`, is a secondary bean that is injected by its qualifier. It does not replace the library's bean, so an unqualified `GraphQLSchema` or `GraphQL` injection point still gets the library's.
@@ -23,3 +57,21 @@ The library's `GraphQLInvocation` is `@Secondary`, and it declares `@Replaces(De
 snippet::example.replaced.ReplacedBeansFactory[project-base="test-suite", source="test", tags="invocation", indent="0"]
 
 The operations then run as your invocation decides, and a resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`. See the Execution page.
+
+[[customizerOrder]]
+== The order of customizers and decorators
+
+Several beans of one customizer type form a chain, and Micronaut's `OrderUtil` sorts it: a bean implements `io.micronaut.core.order.Ordered` or carries `@Order`, and the lower value runs first. A bean with neither has the order `0`, and two beans with the same value keep no defined sequence, so give beans that must run in a fixed sequence different values. A lambda or a closure has no `@Order`, so a lambda bean is ordered by declaring it in a factory method that carries `@Order`.
+
+The chains and what the order means for each:
+
+* `GraphQLSchemaCustomizer`: each one receives the schema that the one before returned. The order is part of the result.
+* `GraphQLErrorsCustomizer`: each one receives the list of errors that the one before returned.
+* `GraphQLFieldFetcherDecorator`: the lowest value is the outermost wrapper of a field.
+* `GraphQLExceptionMapper`: the mappers whose type matches are tried lowest value first, and the first one that answers wins.
+* `GraphQLConnectionInterceptor`: lowest value first, until one rejects the connection.
+
+[[experimentalTypes]]
+== Types that are marked `@Experimental`
+
+`io.micronaut.core.annotation.Experimental` marks an API that can still change before the API freeze. These types of the library carry it: `GraphQLFieldFetcherDecorator`, `GraphQLTransport`, `DataLoaderBatchStatistics`, `GraphQLContextContributor` and `GraphQLConnectionInterceptor`. A change to one of them is listed on the page of breaking changes like any other.

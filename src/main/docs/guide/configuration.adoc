@@ -1,5 +1,10 @@
 The library reads its settings from `micronaut.graphql.tools`, in `application.yml` or any other property source that Micronaut reads. The reference below is generated from the configuration class: each key has its type and its default. The topics with settings of their own have a child page: <<scalarSettings,Scalars>>, <<executionSettings,Execution>>, <<errorSettings,Errors>>, <<precedence,Precedence>> and <<checkSeverity,Check severity>>. The keys of protection and the binding of a renamed field are on this page.
 
+[[prefixes]]
+== Two prefixes
+
+The library has two prefixes. `graphql.*` belongs to the transport of Micronaut GraphQL: `graphql.enabled` switches the route and the library's invocation with it, and `graphql.path` sets the route. `micronaut.graphql.tools.*` belongs to the binding and the execution of the library, and this page lists it. There is no `micronaut.graphql.tools.enabled`: the library is on whenever its beans are on the classpath, and `graphql.enabled` is the one switch for the operations.
+
 == Keys at a glance
 
 The generated tables below list the type and the default of every key. This table adds the effect of each key and the page that explains it. Keys under `scalars` are on <<scalarSettings,Scalars>>.
@@ -17,6 +22,7 @@ The generated tables below list the type and the default of every key. This tabl
 |`eager-init` |`true` |Binds the schema when the application context starts, so a binding failure stops the start. |<<startupErrors,Startup Errors>>
 |`schema.locations` |`classpath:graphql/**/*.graphqls` |Where the schema files are read from. |<<schema,Schema>>
 |`manifest.enabled`, `manifest.path` |`false`, none |Record the binding manifest as a bean, and write it to the file at startup when a path is set. |<<manifest,Binding Manifest>>
+|`endpoints.graphql-binding.enabled`, `endpoints.graphql-binding.sensitive` (outside the prefix) |`false`, `true` |Switch on the read-only `graphql-binding` management endpoint, or set its sensitivity. It exists only with Micronaut Management on the classpath and `manifest.enabled` set. |<<manifestEndpoint,Management endpoint>>
 |`execution.executor` |`blocking` |The executor that every operation hops to, or `none`. |<<executionSettings,Execution>>
 |`execution.timeout` |none |How long an operation may take before the client gets an `EXECUTION_TIMEOUT` error. |<<protection,Protection>>
 |`execution.data-loader-statistics` |`false` |Counts the batches of each batch loader bean. |<<observability,Observability>>

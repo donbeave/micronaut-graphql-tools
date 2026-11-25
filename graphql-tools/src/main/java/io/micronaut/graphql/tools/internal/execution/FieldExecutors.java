@@ -25,6 +25,7 @@ import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSet
 import io.micronaut.graphql.tools.internal.exceptions.resolver.ExecuteOnException;
 import io.micronaut.graphql.tools.mapping.MappingContext;
 import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.executor.ExecutorConfiguration;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.scheduling.executor.ExecutorSelector;
 
@@ -70,11 +71,11 @@ public final class FieldExecutors {
         if (name.equals(TaskExecutors.SCHEDULED)) {
             throw new ExecuteOnException(BindingCode.UNKNOWN_EXECUTOR, "@ExecuteOn(\"scheduled\") names the executor of scheduled "
                     + "tasks, which does not run work. Use 'blocking', 'io', 'virtual' (JDK 21 and later) or an executor configured "
-                    + "under micronaut.executors.", mappingContext);
+                    + "under " + ExecutorConfiguration.PREFIX + ".", mappingContext);
         }
         Executor executor = selector().select(name).orElseThrow(() -> new ExecuteOnException(BindingCode.UNKNOWN_EXECUTOR,
                 LibraryGraphQLInvocation.unknownExecutor("@ExecuteOn(\"" + name + "\")", name, context,
-                        "Use one of them, or configure '" + name + "' under micronaut.executors."), mappingContext));
+                        "Use one of them, or configure '" + name + "' under " + ExecutorConfiguration.PREFIX + "."), mappingContext));
         return executor == requestExecutor() ? null : executor;
     }
 

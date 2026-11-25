@@ -23,6 +23,7 @@ import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import io.micronaut.context.exceptions.ConfigurationException;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
 
 import java.util.List;
@@ -36,7 +37,7 @@ import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation;
  */
 @Internal
 @Singleton
-@Requires(property = GraphQLToolsConfiguration.PREFIX + ".eager-init", notEquals = "false")
+@Requires(property = GraphQLToolsConfiguration.EAGER_INIT, notEquals = StringUtils.FALSE)
 public final class EagerBinding implements ApplicationEventListener<StartupEvent> {
 
     private final BeanProvider<GraphQLSchema> schema;
