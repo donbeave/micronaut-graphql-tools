@@ -7,6 +7,6 @@ checked against two interfaces alternately contends on the secondary-super cache
 that cost. `InterfaceReadBenchmark` in `test-suite-benchmarks` reads one interface and then alternates two interfaces of the same
 class, so the two can be compared on the JDK you run.
 
-On Oracle GraalVM 25 (JMH, two forks of five iterations, two reads per operation) one interface reads in about 12 ns and two
-alternating interfaces in about 26 ns. The JDK 25 numbers include the cost of a second, megamorphic read site, and the
-secondary-super cache is not involved there; run the benchmark on JDK 21 to see the contention.
+On Oracle GraalVM 25 (JMH, two forks of five iterations, two reads per operation) reading two properties of one interface takes
+5.60 ns and reading one property of each of two interfaces of the same class takes 5.59 ns, so there is no difference on JDK 25.
+Run the benchmark on JDK 21 or earlier to see the contention.

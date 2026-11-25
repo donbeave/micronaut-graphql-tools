@@ -30,8 +30,8 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Reads through the introspection of an interface. {@code one} reads one interface of the class, {@code two} alternates
- * two interfaces of the same class. On JDK 21 and earlier, checking one class against two interfaces alternately
+ * Reads through the introspection of an interface. {@code one} reads two properties of one interface, {@code two} reads one
+ * property of each of two interfaces of the same class. On JDK 21 and earlier, checking one class against two interfaces alternately
  * contends on the secondary-super cache of the class (fixed in JDK 23), so {@code two} may cost more per read there.
  */
 @State(Scope.Benchmark)
@@ -43,6 +43,7 @@ public class InterfaceReadBenchmark {
     public String interfaces;
 
     private BeanProperty<InterfaceReads.Named, String> name;
+    private BeanProperty<InterfaceReads.Named, String> title;
     private BeanProperty<InterfaceReads.Labelled, String> label;
     private InterfaceReads.Item item;
     private boolean alternate;
@@ -50,25 +51,20 @@ public class InterfaceReadBenchmark {
     @Setup
     public void prepare() {
         name = BeanIntrospection.getIntrospection(InterfaceReads.Named.class).getRequiredProperty("name", String.class);
+        title = BeanIntrospection.getIntrospection(InterfaceReads.Named.class).getRequiredProperty("title", String.class);
         label = BeanIntrospection.getIntrospection(InterfaceReads.Labelled.class).getRequiredProperty("label", String.class);
-        item = new InterfaceReads.Item("n", "l");
+        item = new InterfaceReads.Item("n", "t", "l");
         alternate = "two".equals(interfaces);
-        String expected = alternate ? "nl" : "nn";
-        String actual = read() + read();
+        String expected = alternate ? "nl" : "nt";
+        String actual = name.get(item) + (alternate ? label.get(item) : title.get(item));
         if (!expected.equals(actual)) {
             throw new IllegalStateException(interfaces + ": read " + actual + ", expected " + expected);
         }
     }
 
-    private int turn;
-
-    private String read() {
-        return alternate && (turn++ & 1) == 1 ? label.get(item) : name.get(item);
-    }
-
     @Benchmark
     public void read2(Blackhole blackhole) {
-        blackhole.consume(read());
-        blackhole.consume(read());
+        blackhole.consume(name.get(item));
+        blackhole.consume(alternate ? label.get(item) : title.get(item));
     }
 }

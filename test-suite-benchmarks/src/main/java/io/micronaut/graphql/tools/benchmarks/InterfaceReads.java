@@ -25,6 +25,8 @@ public final class InterfaceReads {
     @Introspected
     public interface Named {
         String getName();
+
+        String getTitle();
     }
 
     @Introspected
@@ -32,10 +34,15 @@ public final class InterfaceReads {
         String getLabel();
     }
 
-    public record Item(String name, String label) implements Named, Labelled {
+    public record Item(String name, String title, String label) implements Named, Labelled {
         @Override
         public String getName() {
             return name;
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
         }
 
         @Override
