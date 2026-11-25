@@ -60,15 +60,12 @@ class PrecedenceFixtures {
     @Requires(env = PrecedenceFixtures.RELAY)
     @Replaces(value = GraphQLSchemaMappingDictionaryCustomizer, factory = GraphQLFactory)
     GraphQLSchemaMappingDictionaryCustomizer relayTypes() {
-        return new GraphQLSchemaMappingDictionaryCustomizer() {
-            @Override
-            void customize(SchemaMappingDictionary dictionary) {
-                dictionary
-                        .registerType('SecurityError', SecurityError)
-                        .registerType('ValidationError', ValidationError)
-                        .registerType('Sprocket', Sprocket)
-            }
-        }
+        return { SchemaMappingDictionary dictionary ->
+            dictionary
+                    .registerType('SecurityError', SecurityError)
+                    .registerType('ValidationError', ValidationError)
+                    .registerType('Sprocket', Sprocket)
+        } as GraphQLSchemaMappingDictionaryCustomizer
     }
 
     @Bean

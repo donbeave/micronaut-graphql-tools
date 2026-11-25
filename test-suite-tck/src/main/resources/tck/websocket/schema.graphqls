@@ -8,8 +8,12 @@ extend type Query {
   nothing: String
   # the transport kind of the execution state: HTTP or WEBSOCKET
   transport: String!
+  # the header X-Tck of the request that the current thread holds in the propagated context
+  requestHeader: String
   # how many streams were cancelled
   cancelledStreams: Int!
+  # the operation ids of the streams that were cancelled, in order
+  cancelledOperations: [String!]!
   # how many keys the batch function of the echo loader received, over all batches
   echoLoaderKeys: Int!
 }
@@ -22,6 +26,8 @@ extend schema {
 type Subscription {
   # emits count ticks, from a thread that declares itself an event loop thread
   ticks(count: Int!): Tick!
+  # emits count ticks like ticks, and records the operation under which it runs when it is cancelled
+  tracked(count: Int!, operation: String!): Tick!
   # never completes: it ends when the client completes it or closes the connection
   endless: Tick!
   # the publisher fails with an exception that has no mapper

@@ -38,8 +38,11 @@ import io.micronaut.graphql.tools.internal.GraphQLFactory
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
 import jakarta.inject.Named
+import jakarta.inject.Qualifier
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
 import reactor.core.publisher.Mono
 import spock.lang.Shared
 
@@ -64,13 +67,14 @@ type Query { hello: String }
             'named,plain', 'named,primary', 'named,requiresOn', 'plain,primary', 'named,eachProperty',
             'secondary', 'plain,secondary', 'plain,eachInvocation', 'eachInvocation', 'eachDefaultEmpty',
             'plainDefault', 'replacesDefault', 'replacedDefault',
-            'replacesDefaultOfFactory', 'replacesDefaultNamed'
+            'replacesDefaultOfFactory', 'replacesDefaultNamed', 'replacedDefaultByQualifier', 'qualifierMissesDefault'
     ]
     static final Map<String, List<String>> ONLY = [
             primaryDefault: ['invocation'], secondary: ['invocation'], 'plain,secondary': ['invocation'],
             'plain,eachInvocation': ['schema', 'graphql'], eachInvocation: ['schema', 'graphql'], eachDefaultEmpty: ['invocation'],
             plainDefault: ['invocation'], replacesDefault: ['invocation'], replacedDefault: ['invocation'],
-            replacesDefaultOfFactory: ['invocation'], replacesDefaultNamed: ['invocation']
+            replacesDefaultOfFactory: ['invocation'], replacesDefaultNamed: ['invocation'],
+            replacedDefaultByQualifier: ['invocation'], qualifierMissesDefault: ['invocation']
     ]
     static final List<String> TARGETS = ['schema', 'graphql', 'invocation']
 
@@ -394,6 +398,35 @@ type Query { hello: String }
     static class ReplacesDefaultNamedFactory {
         @Bean @Singleton @Replaces(value = DefaultGraphQLInvocation, named = 'other') @Requires(property = 'matrix.target', value = 'invocation')
         DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Qualifier
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Special {
+    }
+
+    @Requires(property = 'matrix.kind', value = 'replacedDefaultByQualifier')
+    @Factory
+    static class QualifiedDefaultFactory {
+        @Bean @Primary @Singleton @Special @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', value = 'qualifierMissesDefault')
+    @Factory
+    static class UnqualifiedDefaultFactory {
+        @Bean @Primary @Singleton @Requires(property = 'matrix.target', value = 'invocation')
+        DefaultGraphQLInvocation invocation() { new DefaultGraphQLInvocation(null, null, null) }
+    }
+
+    @Requires(property = 'matrix.kind', pattern = 'replacedDefaultByQualifier|qualifierMissesDefault')
+    @Requires(property = 'matrix.target', value = 'invocation')
+    @Singleton
+    @Replaces(value = DefaultGraphQLInvocation, qualifier = Special)
+    static class QualifierReplacingInvocation extends AppInvocation {
+        QualifierReplacingInvocation() {
+            super('qreplacing')
+        }
     }
 
 }

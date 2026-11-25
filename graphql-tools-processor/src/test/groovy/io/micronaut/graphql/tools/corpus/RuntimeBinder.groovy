@@ -30,6 +30,12 @@ import java.util.jar.JarOutputStream
 @CompileStatic
 final class RuntimeBinder implements Binder {
 
+    private final boolean introspect
+
+    RuntimeBinder(boolean introspect = false) {
+        this.introspect = introspect
+    }
+
     @Override
     String getName() {
         return 'runtime'
@@ -39,7 +45,7 @@ final class RuntimeBinder implements Binder {
     Verdict bind(BindRequest request) {
         Map<String, Object> result = start(request)
         List<Finding> findings = ((List<List<String>>) result.get('findings')).collect { new Finding(it[0], it[1], it[2]) }
-        return findings.empty ? Verdict.bound((String) result.get('manifest')) : Verdict.failed(findings)
+        return findings.empty ? Verdict.bound((String) result.get('manifest'), (String) result.get('responses')) : Verdict.failed(findings)
     }
 
     /** @return what the startup of the case says: the map of {@link CorpusStartup#start}, without a {@code failure} */
@@ -71,8 +77,8 @@ final class RuntimeBinder implements Binder {
         try {
             thread.contextClassLoader = loader
             Map<String, Object> result = (Map<String, Object>) loader.loadClass(CorpusStartup.name)
-                    .getMethod('start', Map, List, List)
-                    .invoke(null, corpusCase.config, corpusCase.environments, locations)
+                    .getMethod('start', Map, List, List, boolean)
+                    .invoke(null, corpusCase.config, corpusCase.environments, locations, introspect)
             if (result.containsKey('failure')) {
                 throw new AssertionError("${corpusCase.name} [${request.language.dir}]: the startup failed outside the bindings: ${result.get('failure')}".toString())
             }

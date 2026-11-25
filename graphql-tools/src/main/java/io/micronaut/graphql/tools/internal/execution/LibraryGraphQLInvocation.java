@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
+import io.micronaut.graphql.tools.internal.RequiresLibraryGraphQL;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
@@ -47,10 +48,11 @@ import io.micronaut.graphql.tools.internal.exceptions.configuration.ExecutionSet
 import io.micronaut.graphql.tools.internal.execution.disconnect.DisconnectWatcher;
 import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutClaim;
 import io.micronaut.graphql.tools.internal.execution.timeout.TimeoutScheduler;
+import io.micronaut.graphql.tools.internal.protection.GetMutationGuard;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
-import io.micronaut.http.context.ServerHttpRequestContext;
 import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.executor.ExecutorConfiguration;
 import io.micronaut.scheduling.executor.ExecutorSelector;
 import jakarta.inject.Singleton;
 import org.dataloader.DataLoaderRegistry;
@@ -70,7 +72,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
 /**
@@ -100,12 +101,12 @@ import java.util.function.BiConsumer;
 @Singleton
 @Secondary
 @Replaces(DefaultGraphQLInvocation.class)
-@Requires(property = "graphql.enabled", notEquals = "false")
+@RequiresLibraryGraphQL
 @Requires(condition = LibraryBeanSelection.NoApplicationDefaultInvocation.class)
 public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
     private static final Logger LOG = LoggerFactory.getLogger(LibraryGraphQLInvocation.class);
-    private static final String EXECUTOR_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.executor";
+    private static final String EXECUTOR_KEY = GraphQLToolsConfiguration.EXECUTION_EXECUTOR;
 
     private final boolean selected;
     private final GraphQL graphQL;
@@ -135,7 +136,8 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                              List<GraphQLErrorsCustomizer> errorsCustomizers, @Nullable DisconnectWatcher disconnectWatcher) {
         this.disconnectWatcher = disconnectWatcher;
         this.errorsCustomizers = errorsCustomizers.isEmpty() ? null : errorsCustomizers.toArray(new GraphQLErrorsCustomizer[0]);
-        this.graphQL = graphQL;
+        this.graphQL = graphQL.getPreparsedDocumentProvider() instanceof GetMutationGuard ? graphQL
+                : graphQL.transform(guarded -> guarded.preparsedDocumentProvider(new GetMutationGuard(graphQL.getPreparsedDocumentProvider())));
         this.customizer = customizer.getClass() == DefaultGraphQLExecutionInputCustomizer.class ? null : customizer;
         this.customizerName = this.customizer == null ? null : this.customizer.getClass().getName();
         // The setup that can fail on configuration (the registry bean, the executor, the timer) runs only when this bean
@@ -185,11 +187,7 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             throw new IllegalStateException("The library's GraphQLInvocation is not the one that serves the transport: the application "
                     + "provides its own GraphQLInvocation, so this bean was not set up. Call the application's invocation instead.");
         }
-        PropagatedContext propagated = PropagatedContext.getOrEmpty();
-        if (request != null && propagated.find(ServerHttpRequestContext.class).isEmpty()) {
-            propagated = propagated.plus(new ServerHttpRequestContext(request));
-        }
-        PropagatedContext captured = propagated;
+        PropagatedContext captured = ExecutionState.withRequest(PropagatedContext.getOrEmpty(), transport, request);
         Mono<ExecutionResult> result = Mono.deferContextual(context -> {
             ExecutionState state = new ExecutionState(captured, transport, request, response, attributes, executor, customizerName);
             if (disconnectWatcher != null && request != null && transport == GraphQLTransport.HTTP) {
@@ -275,11 +273,11 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         if (name.equals(TaskExecutors.SCHEDULED)) {
             throw new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR, EXECUTOR_KEY + " is 'scheduled', the executor of "
                     + "scheduled tasks, which does not run operations. Use 'blocking' (the default), 'io', 'virtual' (JDK 21 and "
-                    + "later), an executor configured under micronaut.executors, or 'none' to run on the calling thread.");
+                    + "later), an executor configured under " + ExecutorConfiguration.PREFIX + ", or 'none' to run on the calling thread.");
         }
         return selector.select(name).orElseThrow(() -> new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR,
                 unknownExecutor(EXECUTOR_KEY + " is '" + name + "'", name, beanContext,
-                        "Use one of them, or 'none' to run on the calling thread, or configure '" + name + "' under micronaut.executors.")));
+                        "Use one of them, or 'none' to run on the calling thread, or configure '" + name + "' under " + ExecutorConfiguration.PREFIX + ".")));
     }
 
     /**

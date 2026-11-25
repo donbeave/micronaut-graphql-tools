@@ -108,6 +108,7 @@ public final class AbstractTypesScenario {
         }
     }
 
+// tag::mappings[]
     @Singleton
     @Requires(property = "tck.scenario", value = "abstract-types")
     public static class Mappings implements TckTypeMappings {
@@ -119,6 +120,7 @@ public final class AbstractTypesScenario {
                     .registerType("Missing", Missing.class);
         }
     }
+// end::mappings[]
 
     @Singleton
     @GraphQLRootResolver

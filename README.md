@@ -28,9 +28,13 @@ and test it.
 | [`graphql-tools-testing`](graphql-tools-testing/README.md) | `:micronaut-graphql-tools-testing` | The in-process tester for application tests: run a document against the `GraphQL` bean and assert on the response, test scope. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
+| [`docs-examples-java`](docs-examples-java/README.md) | `:micronaut-docs-examples-java` | The guide examples in Java, with a test that runs the quickstart. |
+| [`docs-examples-kotlin`](docs-examples-kotlin/README.md) | `:micronaut-docs-examples-kotlin` | The guide examples in Kotlin, with a test that runs the quickstart. |
+| [`docs-examples-groovy`](docs-examples-groovy/README.md) | `:micronaut-docs-examples-groovy` | The guide examples in Groovy, with a test that runs the quickstart. |
 | [`test-suite-tck`](test-suite-tck/README.md) | `:test-suite-tck` | The execution-behaviour scenarios that the example suites run. |
 | [`test-suite-benchmarks`](test-suite-benchmarks/README.md) | `:test-suite-benchmarks` | JMH benchmarks and the allocation gate. |
 | [`test-suite-java`](test-suite-java/README.md) | `:test-suite-java` | The example application in Java, with its tests. |
+| [`test-suite-serde`](test-suite-serde/README.md) | `:test-suite-serde` | The null-field checks on Micronaut Serialization, with their native test. |
 | [`test-suite-kotlin`](test-suite-kotlin/README.md) | `:test-suite-kotlin` | The example application in Kotlin, with its tests. |
 | [`test-suite-groovy`](test-suite-groovy/README.md) | `:test-suite-groovy` | The example application in Groovy, with its tests and a native smoke test. |
 | [`test-suite-build`](test-suite-build/README.md) | `:test-suite-build` | Sample projects that apply the compile-time checks the way a consumer's build does, built by Gradle TestKit. |
@@ -1390,16 +1394,15 @@ public GraphQL graphQL(GraphQLSchema schema, MyInstrumentation instrumentation) 
 `TypeDefinitionRegistry`, consumes only the library's `GraphQLSchema` and builds its own `GraphQL` with its own
 instrumentation, which then serves the HTTP requests.
 
-The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and its HTTP controller serves
-whichever `GraphQL` bean exists. The library's own code does not use it, so an application with its own transport
-can exclude that dependency.
+The library brings `io.micronaut.graphql:micronaut-graphql` as an API dependency, and the library's HTTP endpoint (which
+replaces the controller of that dependency) serves whichever `GraphQL` bean exists.
 
 ## Examples
 
 Three example applications serve the same schema (the same resolvers, types and data) in each language:
 [test-suite-java](test-suite-java), [test-suite-kotlin](test-suite-kotlin) (KSP) and
 [test-suite-groovy](test-suite-groovy). Their classes have the same fully qualified names, so a documentation snippet can
-include a language's source by path.
+include a language's source by path. The guide's quickstart code is in the `docs-examples-*` modules, apart from these suites.
 
 ## Compatibility
 
@@ -1410,7 +1413,7 @@ The library is built and tested against graphql-java by role. The versions of ea
 |---|---|---|---|---|
 | `floor` | 21.5 | 21.0 | 3.2.1 | full build, JDK 25 |
 | `default` | what `micronaut-graphql` 4.8.0 manages (22.4), not pinned by this build | 22.0 | as graphql-java brings it | full build on JDK 25 and 21, library check on JDK 17, native tests on GraalVM 25; the published POM |
-| `ceiling` | 26.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; binary compatibility (main compiled on `default`, tested on `ceiling`) |
+| `ceiling` | 26.2 | 24.0 | 6.0.0 | full build, JDK 25; native tests on GraalVM 25; the `graphql-java-compat` job (main compiled on `default`, tested on `ceiling`) |
 | `latest` | newest release (`latest.release`) | newest release | newest release | the canary only, never a required check |
 
 The graphql-java axis runs on JDK 25; JDK 21 and JDK 17 run the `default` role only. Micronaut 4.10.x and micronaut-graphql 4.8.0
@@ -1429,7 +1432,7 @@ To build or test against a role locally:
 ./gradlew build                              # default
 ./gradlew build -PgraphqlJavaLeg=floor       # graphql-java 21.5
 ./gradlew build -PgraphqlJavaLeg=ceiling     # graphql-java 26.2
-./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default   # binary compatibility: main compiled on default
+./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default   # graphql-java-compat: main compiled on default
 ```
 
 `-PgraphqlJavaVersion` no longer exists: setting it fails the build with a message that names `-PgraphqlJavaLeg`.
@@ -1506,7 +1509,7 @@ Both commands publish the library and the annotation processor (jar, sources, ja
 metadata) and the BOM. Consumers then
 add the repository and depend on `io.micronaut.graphql.tools:micronaut-graphql-tools:<version>`.
 
-The binary-compatibility check (`findBaseline`/`japiCmp`) is disabled until the first version is released; see the
+The japicmp check (`findBaseline`/`japiCmp`) is disabled until the first version is released; see the
 module conventions in `buildSrc`.
 
 ## Why GraphQL Java Tools?

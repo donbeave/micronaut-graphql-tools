@@ -39,6 +39,7 @@ class Podcast(override val title: String, override val seconds: Int, val host: S
 @GraphQLType
 class Missing(val reason: String) : Lookup
 
+// tag::mappings[]
 @Singleton
 @Requires(property = "tck.scenario", value = "abstract-types")
 class AbstractTypesMappings : TckTypeMappings {
@@ -49,6 +50,7 @@ class AbstractTypesMappings : TckTypeMappings {
             .registerType("Missing", Missing::class.java)
     }
 }
+// end::mappings[]
 
 @Singleton
 @GraphQLRootResolver

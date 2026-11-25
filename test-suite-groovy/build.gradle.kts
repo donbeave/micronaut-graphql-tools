@@ -19,10 +19,10 @@ dependencies {
     runtimeOnly(mn.micronaut.jackson.databind)
     // The Groovy runtime of the application classes. Nothing else puts it on the runtime classpath: the tests got it from
     // Spock, so the application itself (run, shadowJar) was missing it.
-    implementation("org.apache.groovy:groovy")
-    runtimeOnly("ch.qos.logback:logback-classic")
+    implementation(mn.groovy)
+    runtimeOnly(mnLogging.logback.classic)
     testImplementation(mnTest.micronaut.test.spock)
-    testImplementation("io.micronaut:micronaut-http-client")
+    testImplementation(mn.micronaut.http.client)
     testImplementation(projects.testSuiteTck) // the execution-behaviour TCK (#53)
     // The metrics and tracing modules and the libraries their tests observe with: the Micrometer and OpenTelemetry integrations of
     // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
@@ -84,11 +84,11 @@ configurations {
     named(validationFixtures.compileOnlyConfigurationName) { extendsFrom(configurations.testCompileOnly.get()) }
 }
 dependencies {
-    "validationFixturesImplementation"("io.micronaut.validation:micronaut-validation")
-    "validationFixturesCompileOnly"("io.micronaut.validation:micronaut-validation-processor")
+    "validationFixturesImplementation"(mnValidation.micronaut.validation)
+    "validationFixturesCompileOnly"(mnValidation.micronaut.validation.processor)
     "validationFixturesCompileOnly"(projects.micronautGraphqlToolsProcessor)
     testImplementation(validationFixtures.output)
-    testImplementation("io.micronaut.validation:micronaut-validation")
+    testImplementation(mnValidation.micronaut.validation)
 }
 tasks.named<GroovyCompile>(validationFixtures.getCompileTaskName("groovy")) {
     options.forkOptions.jvmArgs!!.add("-Dmicronaut.graphql.tools.processor.checks=false")

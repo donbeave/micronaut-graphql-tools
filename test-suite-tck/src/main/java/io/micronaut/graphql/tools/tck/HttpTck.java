@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * The end-to-end checks of the HTTP transport, run by each example suite against its own fixtures of the scenario
  * {@code http}: GET queries with variables and an operation name, the per-request context, and concurrent requests whose
- * contexts and DataLoader registries must never meet. A real client talks to the running application; each check starts
+ * contexts and DataLoader registries must never meet, and the media types and statuses of the responses, and the refusal of a mutation over GET. A real client talks to the running application; each check starts
  * the application of its own. The data-driven POST cases of the scenario run in {@link Tck}.
  */
 public final class HttpTck {
@@ -55,7 +55,13 @@ public final class HttpTck {
             "get-query-with-variables-and-operation-name",
             "context-per-request",
             "configured-path",
-            "concurrent-requests-are-isolated");
+            "concurrent-requests-are-isolated",
+            "media-type-negotiation",
+            "media-type-negotiation-without-upload",
+            "request-errors-status",
+            "request-errors-status-without-upload",
+            "multipart-media-type",
+            "get-mutation-method-not-allowed");
 
     private static final Argument<Map<String, Object>> OBJECT = Argument.mapOf(String.class, Object.class);
 
@@ -68,6 +74,9 @@ public final class HttpTck {
         Map<String, Object> properties = Tck.applicationProperties("http");
         if ("configured-path".equals(check)) {
             properties.put("graphql.path", CONFIGURED_PATH);
+        }
+        if (check.endsWith("-without-upload")) {
+            properties.put("micronaut.graphql.tools.upload.enabled", false);
         }
         return properties;
     }
@@ -97,6 +106,10 @@ public final class HttpTck {
                 case "get-query-with-variables-and-operation-name" -> getWithVariablesAndOperationName(env);
                 case "context-per-request" -> contextPerRequest(env);
                 case "configured-path" -> configuredPath(env, "http://" + server.getHost() + ":" + server.getPort());
+                case "media-type-negotiation", "media-type-negotiation-without-upload" -> mediaTypeNegotiation(env);
+                case "request-errors-status", "request-errors-status-without-upload" -> requestErrorsStatus(env);
+                case "multipart-media-type" -> multipartMediaType(env);
+                case "get-mutation-method-not-allowed" -> getMutationMethodNotAllowed(env);
                 default -> concurrentRequestsAreIsolated(env);
             }
         } catch (AssertionError | RuntimeException e) {
@@ -187,6 +200,122 @@ public final class HttpTck {
         expect(THREADS * ROUNDS, loaderIds.size(), "distinct data loaders, one for each execution");
     }
 
+    private static final String GRAPHQL_RESPONSE_JSON = "application/graphql-response+json";
+    private static final String JSON = "application/json";
+    private static final String QUERY = "{ httpEcho(value: \"hello\") }";
+    private static final String PARSE_ERROR = "{ httpEcho(value: ";
+    private static final String VALIDATION_ERROR = "{ doesNotExist }";
+    private static final String VARIABLE_ERROR = "query($v: String!) { httpEcho(value: $v) }";
+
+    // Accept chooses the media type of a GET and of a POST: the higher q-value wins, an absent header and */* give application/json.
+    private static void mediaTypeNegotiation(Env env) throws Exception {
+        String[][] matrix = {
+            {null, JSON},
+            {"*/*", JSON},
+            {JSON, JSON},
+            {GRAPHQL_RESPONSE_JSON, GRAPHQL_RESPONSE_JSON},
+            {"APPLICATION/GRAPHQL-RESPONSE+JSON", GRAPHQL_RESPONSE_JSON},
+            {GRAPHQL_RESPONSE_JSON + ", " + JSON + ";q=0.9", GRAPHQL_RESPONSE_JSON},
+            {JSON + ", " + GRAPHQL_RESPONSE_JSON + ";q=0.5", JSON},
+            {GRAPHQL_RESPONSE_JSON + ";q=0.5, " + JSON, JSON},
+            {GRAPHQL_RESPONSE_JSON + ", */*", GRAPHQL_RESPONSE_JSON},
+            {"text/html, " + GRAPHQL_RESPONSE_JSON + ";q=0.1", GRAPHQL_RESPONSE_JSON},
+        };
+        for (String[] row : matrix) {
+            for (String method : new String[] {"GET", "POST"}) {
+                Reply reply = env.send(method, row[0], QUERY);
+                String what = method + " with Accept <" + row[0] + ">: " + reply;
+                expect(200, reply.status(), what);
+                expect(row[1], reply.mediaType(), what);
+                expect("hello", data(reply.body(env)).get("httpEcho"), what);
+            }
+        }
+        for (String method : new String[] {"GET", "POST"}) {
+            Reply reply = env.send(method, "application/xml", QUERY);
+            expect(406, reply.status(), method + " with an Accept that lists neither type: " + reply);
+        }
+    }
+
+    // Under application/graphql-response+json a request that fails before the execution answers 400 and one that executes answers
+    // 200. Under application/json, or without Accept, the status stays 200.
+    private static void requestErrorsStatus(Env env) throws Exception {
+        String[][] failing = {{"a parse error", PARSE_ERROR}, {"a validation error", VALIDATION_ERROR},
+            {"a variable coercion error", VARIABLE_ERROR}};
+        for (String method : new String[] {"GET", "POST"}) {
+            for (String[] failure : failing) {
+                Reply reply = env.send(method, GRAPHQL_RESPONSE_JSON, failure[1]);
+                String what = method + " with " + failure[0] + " under " + GRAPHQL_RESPONSE_JSON + ": " + reply;
+                expect(400, reply.status(), what);
+                expect(GRAPHQL_RESPONSE_JSON, reply.mediaType(), what);
+                Map<String, Object> body = reply.body(env);
+                expect(false, body.containsKey("data"), what);
+                expect(true, body.get("errors") instanceof List<?> errors && !errors.isEmpty(), what);
+                for (String accept : new String[] {JSON, null, "*/*"}) {
+                    reply = env.send(method, accept, failure[1]);
+                    what = method + " with " + failure[0] + " and Accept <" + accept + ">: " + reply;
+                    expect(200, reply.status(), what);
+                    expect(JSON, reply.mediaType(), what);
+                    expect(true, reply.body(env).get("errors") instanceof List<?>, what);
+                }
+            }
+            Reply reply = env.send(method, GRAPHQL_RESPONSE_JSON, QUERY);
+            expect(200, reply.status(), method + " that executes under " + GRAPHQL_RESPONSE_JSON + ": " + reply);
+        }
+    }
+
+    // The multipart route of the upload module answers the same media types and statuses as the endpoint of the library.
+    private static void multipartMediaType(Env env) throws Exception {
+        for (String accept : new String[] {null, JSON, GRAPHQL_RESPONSE_JSON}) {
+            String expectedType = GRAPHQL_RESPONSE_JSON.equals(accept) ? GRAPHQL_RESPONSE_JSON : JSON;
+            Reply ok = env.multipart(accept, QUERY, true);
+            expect(200, ok.status(), "a multipart request with Accept <" + accept + ">: " + ok);
+            expect(expectedType, ok.mediaType(), ok);
+            expect("hello", data(ok.body(env)).get("httpEcho"), ok);
+            Reply invalid = env.multipart(accept, QUERY, false);
+            expect(400, invalid.status(), "an invalid multipart request with Accept <" + accept + ">: " + invalid);
+            expect(expectedType, invalid.mediaType(), invalid);
+            Reply failing = env.multipart(accept, VALIDATION_ERROR, true);
+            expect(GRAPHQL_RESPONSE_JSON.equals(accept) ? 400 : 200, failing.status(),
+                    "a multipart request that fails validation with Accept <" + accept + ">: " + failing);
+            expect(expectedType, failing.mediaType(), failing);
+        }
+        Reply refused = env.multipart("application/xml", QUERY, true);
+        expect(406, refused.status(), "a multipart request with an Accept that lists neither type: " + refused);
+    }
+
+    // A mutation does not run over GET: the answer is 405 with Allow: POST under both media types, and no resolver ran. A query works
+    // over GET, a mutation works over POST, and the operation name decides which operation of a document counts.
+    private static void getMutationMethodNotAllowed(Env env) throws Exception {
+        String mutation = "mutation { httpMutate(value: \"changed\") }";
+        String count = "{ httpMutationCount }";
+        for (String accept : new String[] {null, JSON, GRAPHQL_RESPONSE_JSON}) {
+            String expectedType = GRAPHQL_RESPONSE_JSON.equals(accept) ? GRAPHQL_RESPONSE_JSON : JSON;
+            Reply refused = env.send("GET", accept, mutation);
+            String what = "GET of a mutation with Accept <" + accept + ">: " + refused;
+            expect(405, refused.status(), what);
+            expect("POST", refused.allow(), what);
+            expect(expectedType, refused.mediaType(), what);
+            expect(true, refused.body(env).get("errors") instanceof List<?> errors && !errors.isEmpty(), what);
+            expect(false, refused.body(env).containsKey("data"), what);
+            Reply query = env.send("GET", accept, count);
+            expect(200, query.status(), "GET of a query with Accept <" + accept + ">: " + query);
+            expect(0, data(query.body(env)).get("httpMutationCount"), "no resolver ran for the refused GET: " + query);
+        }
+        String document = "query Read { httpEcho(value: \"read\") } mutation Write { httpMutate(value: \"written\") }";
+        Reply read = env.send("GET", null, document, "Read");
+        expect(200, read.status(), "GET that selects the query of a document with a mutation: " + read);
+        expect("read", data(read.body(env)).get("httpEcho"), read);
+        Reply write = env.send("GET", null, document, "Write");
+        expect(405, write.status(), "GET that selects the mutation of a document: " + write);
+        expect("POST", write.allow(), write);
+        for (String accept : new String[] {null, JSON, GRAPHQL_RESPONSE_JSON}) {
+            Reply done = env.send("POST", accept, mutation);
+            expect(200, done.status(), "POST of a mutation with Accept <" + accept + ">: " + done);
+            expect("changed", data(done.body(env)).get("httpMutate"), done);
+        }
+        expect(3, data(env.send("GET", null, count).body(env)).get("httpMutationCount"), "the three POST mutations ran and no GET did");
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, Object> data(Map<String, Object> body) {
         Object data = body.get("data");
@@ -226,6 +355,52 @@ public final class HttpTck {
             return send(request.build());
         }
 
+        Reply send(String method, String accept, String query) throws IOException, InterruptedException {
+            return send(method, accept, query, null);
+        }
+
+        Reply send(String method, String accept, String query, String operationName) throws IOException, InterruptedException {
+            HttpRequest.Builder request;
+            if ("GET".equals(method)) {
+                request = HttpRequest.newBuilder(URI.create(url + "?query=" + encode(query)
+                        + (operationName == null ? "" : "&operationName=" + encode(operationName)))).GET();
+            } else {
+                Map<String, Object> payload = operationName == null ? Map.of("query", query) : Map.of("query", query, "operationName", operationName);
+                request = HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(payload)));
+            }
+            if (accept != null) {
+                request.header("Accept", accept);
+            }
+            return reply(request.build());
+        }
+
+        Reply multipart(String accept, String query, boolean withMap) throws IOException, InterruptedException {
+            String boundary = "tck-boundary";
+            StringBuilder body = new StringBuilder();
+            body.append("--").append(boundary).append("\r\nContent-Disposition: form-data; name=\"operations\"\r\n\r\n")
+                    .append(json.writeValueAsString(Map.of("query", query))).append("\r\n");
+            if (withMap) {
+                body.append("--").append(boundary).append("\r\nContent-Disposition: form-data; name=\"map\"\r\n\r\n{}\r\n");
+            }
+            body.append("--").append(boundary).append("--\r\n");
+            HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(url))
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .POST(HttpRequest.BodyPublishers.ofString(body.toString()));
+            if (accept != null) {
+                request.header("Accept", accept);
+            }
+            return reply(request.build());
+        }
+
+        private Reply reply(HttpRequest request) throws IOException, InterruptedException {
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            String contentType = response.headers().firstValue("Content-Type").orElse("");
+            int parameters = contentType.indexOf(';');
+            return new Reply(response.statusCode(), parameters < 0 ? contentType : contentType.substring(0, parameters),
+                    response.headers().firstValue("Allow").orElse(null), response.body());
+        }
+
         private Map<String, Object> send(HttpRequest request) throws IOException, InterruptedException {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() != 200) {
@@ -236,6 +411,18 @@ public final class HttpTck {
 
         private static String encode(String value) {
             return URLEncoder.encode(value, StandardCharsets.UTF_8);
+        }
+    }
+
+    private record Reply(int status, String mediaType, String allow, String text) {
+
+        Map<String, Object> body(Env env) throws IOException {
+            return env.json().readValue(text, OBJECT);
+        }
+
+        @Override
+        public String toString() {
+            return "status " + status + ", content type <" + mediaType + ">, body " + text;
         }
     }
 }

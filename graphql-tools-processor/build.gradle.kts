@@ -14,15 +14,14 @@ dependencies {
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.java)
-    // the single-value return types of the binding corpus (#428); the platform manages the versions
-    testImplementation(platform(libs.micronaut.platform))
-    testImplementation("io.reactivex.rxjava3:rxjava")
-    testImplementation("io.reactivex.rxjava2:rxjava")
+    // the single-value return types of the binding corpus (#428)
+    testImplementation(mnRxjava3.rxjava3)
+    testImplementation(mnRxjava2.rxjava2)
     // the corpus compiles Groovy cases in process, and Micronaut's AST transformation writes their bean definitions
     testImplementation(mn.micronaut.inject.groovy)
     // the Kotlin side of the corpus compiles its cases in a batched TestKit build
     testImplementation(gradleTestKit())
-    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testRuntimeOnly(mnLogging.logback.classic)
     // the Kotlin cases of the corpus with a suspend resolver start up with the library's suspend support, which needs these
     testRuntimeOnly(mn.kotlin.stdlib)
     testRuntimeOnly(mn.kotlinx.coroutines.core)
@@ -56,6 +55,22 @@ tasks.withType<Test>().configureEach {
     }
     // `-Pcorpus.only=<regex>` runs only the cases whose name matches (for writing a case; not for CI)
     providers.gradleProperty("corpus.only").orNull?.let { systemProperty("corpus.only", it) }
+    // the drift mutation tests (#89): a seed and a limit of mutants (0 is every mutant)
+    providers.gradleProperty("mutation.seed").orNull?.let { systemProperty("mutation.seed", it) }
+    providers.gradleProperty("mutation.limit").orNull?.let { systemProperty("mutation.limit", it) }
+    systemProperty("mutation.report", layout.buildDirectory.file("corpus/mutations.txt").get().asFile.absolutePath)
+}
+// Every mutant of the corpus, not the sample that `test` runs (`-Pmutation.limit=0`): the nightly job.
+tasks.register<Test>("corpusMutation") {
+    description = "Runs every drift mutant of the binding corpus (-Pmutation.seed, -Pmutation.limit to narrow it)."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    filter.includeTestsMatching("*DriftMutationSpec")
+    if (!project.hasProperty("mutation.limit")) {
+        systemProperty("mutation.limit", "0")
+    }
+    outputs.upToDateWhen { false }
 }
 tasks.register<Test>("corpusUpdate") {
     description = "Rewrites the expected files of the binding corpus from what the binders say; review the diff."
@@ -76,6 +91,7 @@ tasks.named<Test>("test") {
     if (!corpusOnThisLeg && !project.hasProperty("corpus.update")) {
         exclude("**/BindingCorpusSpec*")
         exclude("**/ErrorReferenceSpec*")
+        exclude("**/DriftMutationSpec*")
         doFirst {
             logger.lifecycle("BindingCorpusSpec skipped: the binding corpus runs on the default graphql-java leg only (-PgraphqlJavaLeg=default).")
         }

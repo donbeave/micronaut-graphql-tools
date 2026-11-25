@@ -26,9 +26,13 @@ include("graphql-tools-processor")
 include("test-suite-benchmarks")
 include("test-suite-tck")
 include("test-suite-java")
+include("test-suite-serde")
 include("test-suite-kotlin")
 include("test-suite-groovy")
 include("test-suite-build")
+include("docs-examples-java")
+include("docs-examples-kotlin")
+include("docs-examples-groovy")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true
@@ -37,4 +41,10 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     importMicronautCatalog("micronaut-micrometer")
     importMicronautCatalog("micronaut-tracing")
     importMicronautCatalog("micronaut-security")
+    importMicronautCatalog("micronaut-serde")
+    importMicronautCatalog("micronaut-validation")
+    importMicronautCatalog("micronaut-rxjava2")
+    importMicronautCatalog("micronaut-rxjava3")
+    importMicronautCatalog("micronaut-kotlin")
+    importMicronautCatalog("micronaut-logging")
 }

@@ -95,6 +95,7 @@ class RenameFixtures {
     }
 }
 
+// tag::parcel[]
 @GraphQLType
 class Parcel {
 
@@ -115,6 +116,7 @@ class Parcel {
     @GraphQLField("new")
     fun create(prefix: String): String = "$prefix parcel"
 }
+// end::parcel[]
 
 @Requires(env = [RENAME_MEMBERS])
 @Singleton
