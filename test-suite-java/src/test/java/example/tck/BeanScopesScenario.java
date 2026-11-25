@@ -42,6 +42,7 @@ public final class BeanScopesScenario {
         }
     }
 
+// tag::scopes[]
     @RequestScope
     @Requires(property = "tck.scenario", value = "bean-scopes")
     public static class RequestCounter {
@@ -65,6 +66,7 @@ public final class BeanScopesScenario {
             return id;
         }
     }
+// end::scopes[]
 
     @Singleton
     @GraphQLRootResolver
