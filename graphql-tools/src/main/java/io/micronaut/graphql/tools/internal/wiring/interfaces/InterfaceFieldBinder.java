@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.internal.wiring;
+package io.micronaut.graphql.tools.internal.wiring.interfaces;
 
 import graphql.language.FieldDefinition;
 import graphql.language.InterfaceTypeDefinition;
@@ -92,7 +92,7 @@ public final class InterfaceFieldBinder {
      * @param manifestRecorder         the manifest sink
      * @param callbacks                the binding work that stays with the type phase
      */
-    InterfaceFieldBinder(DeclaringInterfaces declaringInterfaces, GraphQLResolversRegistry graphQLResolversRegistry,
+    public InterfaceFieldBinder(DeclaringInterfaces declaringInterfaces, GraphQLResolversRegistry graphQLResolversRegistry,
                          Map<String, Class<?>> processedTypes, Precedence precedence,
                          BindingManifestRecorder manifestRecorder, Callbacks callbacks) {
         this.declaringInterfaces = declaringInterfaces;
@@ -103,7 +103,7 @@ public final class InterfaceFieldBinder {
         this.ambiguityLog = new AmbiguityLog(precedence, manifestRecorder);
     }
 
-    InterfaceBindings bind() {
+    public InterfaceBindings bind() {
         bindInterfaceFields();
         return new InterfaceBindings(Map.copyOf(fieldBindings), Map.copyOf(resolverBindings), ambiguityLog.snapshot(),
                 List.copyOf(failures), Set.copyOf(boundUnreturned));
@@ -378,7 +378,7 @@ public final class InterfaceFieldBinder {
      * What the phase needs from the type phase: binding a model member or a resolver method to a field is the same work
      * as for any other field.
      */
-    interface Callbacks {
+    public interface Callbacks {
 
         /**
          * @return the fields that the type phase collected since the last call; it forgets them
@@ -412,7 +412,7 @@ public final class InterfaceFieldBinder {
      * @param deferred      the model members that wait for the interface resolvers
      * @param resolverBound the fields that an interface resolver already binds
      */
-    record InterfaceFields(List<InterfaceField> unbound, List<InterfaceField> own, List<InterfaceField> deferred,
+    public record InterfaceFields(List<InterfaceField> unbound, List<InterfaceField> own, List<InterfaceField> deferred,
                            List<InterfaceField> resolverBound) {
     }
 
@@ -425,7 +425,7 @@ public final class InterfaceFieldBinder {
      * @param failures         the failures of the fields it could not bind
      * @param boundUnreturned  the interfaces that no field returns and whose resolver bound a field
      */
-    record InterfaceBindings(Map<String, String> fieldBindings, Map<String, Set<String>> resolverBindings,
+    public record InterfaceBindings(Map<String, String> fieldBindings, Map<String, Set<String>> resolverBindings,
                              Ambiguities ambiguities, List<AbstractMappingException> failures,
                              Set<String> boundUnreturned) {
     }

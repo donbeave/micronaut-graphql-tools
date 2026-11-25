@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 /**
- * The graphql-java wiring factory that gives each field its data fetcher and each interface or union its type resolver, the runtime wiring generator that drives the binding, the binding of interface fields and the directive wirings.
+ * The graphql-java wiring factory that gives each field its data fetcher and each interface or union its type resolver, the runtime wiring generator that drives the binding, the binders of root fields, object fields and returned types, and the directive wirings.
  *
- * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: GraphQLRuntimeWiringGenerator, DefaultWiringFactory, InterfaceFieldBinder, SchemaDirectiveWirings.</p>
+ * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: GraphQLRuntimeWiringGenerator, DefaultWiringFactory, WiringComponents, SchemaDirectiveWirings.</p>
  */
 @Internal
 package io.micronaut.graphql.tools.internal.wiring;

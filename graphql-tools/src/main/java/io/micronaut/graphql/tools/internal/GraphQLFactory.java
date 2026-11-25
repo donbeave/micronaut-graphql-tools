@@ -22,12 +22,6 @@ import graphql.analysis.MaxQueryDepthInstrumentation;
 import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.visibility.NoIntrospectionGraphqlFieldVisibility;
-import graphql.schema.idl.RuntimeWiring;
-import graphql.schema.idl.SchemaDirectiveWiring;
-import graphql.schema.idl.SchemaGenerator;
-import graphql.schema.idl.TypeDefinitionRegistry;
-import io.micronaut.context.ApplicationContext;
-import io.micronaut.context.BeanRegistration;
 import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;
@@ -35,28 +29,13 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.manifest.BindingManifest;
 import io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer;
-import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer;
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
-import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer;
-import io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator;
-import io.micronaut.graphql.tools.directive.SchemaDirective;
-import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
-import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer;
-import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer;
-import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
-import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
-import io.micronaut.graphql.tools.internal.checks.DirectiveWiringCheck;
 import io.micronaut.graphql.tools.internal.protection.DocumentCache;
 import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestHolder;
-import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry;
-import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry;
-import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator;
-import io.micronaut.graphql.tools.internal.wiring.SchemaDirectiveWirings;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Creates the {@link GraphQLSchema} bound from the application's {@link TypeDefinitionRegistry} and the
@@ -93,64 +72,8 @@ public final class GraphQLFactory {
     @Singleton
     @Primary
     @Requires(condition = LibraryBeanSelection.NoCompetingSchema.class)
-    public GraphQLSchema graphQLSchema(ApplicationContext applicationContext,
-                                       GraphQLResolversRegistry graphQLResolversRegistry,
-                                       TypeDefinitionRegistry typeDefinitionRegistry,
-                                       List<GraphQLSchemaMappingDictionaryCustomizer> schemaMappingDictionaryCustomizers,
-                                       GraphQLToolsConfiguration configuration,
-                                       List<GraphQLTypeDefinitionRegistryCustomizer> typeDefinitionRegistryCustomizers,
-                                       List<GraphQLRuntimeWiringCustomizer> runtimeWiringCustomizers,
-                                       List<GraphQLSchemaCustomizer> graphQLSchemaCustomizers,
-                                       List<BeanRegistration<SchemaDirectiveWiring>> directiveWirings,
-                                       List<BeanRegistration<SchemaDirective>> schemaDirectives,
-                                       BindingManifestHolder bindingManifestHolder,
-                                       List<GraphQLFieldFetcherDecorator> fieldFetcherDecorators) {
-        SchemaMappingDictionary schemaMappingDictionary = new SchemaMappingDictionary();
-        schemaMappingDictionaryCustomizers.forEach(customizer -> customizer.customize(schemaMappingDictionary));
-
-        TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(typeDefinitionRegistry);
-        typeDefinitionRegistryCustomizers.forEach(customizer -> customizer.customize(registry));
-        SchemaSources.addImplicitRoots(registry);
-
-        GraphQLRuntimeWiringGenerator graphQLRuntimeWiringGenerator = new GraphQLRuntimeWiringGenerator(
-                applicationContext,
-                new GraphQLBeanIntrospectionRegistry(),
-                graphQLResolversRegistry,
-                TypeExtensions.merge(registry),
-                schemaMappingDictionary,
-                configuration,
-                TypeExtensions.objectExtensionFields(registry),
-                fieldFetcherDecorators
-        );
-
-        List<GraphQLRuntimeWiringCustomizer> customizers = new ArrayList<>();
-        SchemaDirectiveWirings schemaDirectiveWirings = new SchemaDirectiveWirings(
-                directiveWirings,
-                schemaDirectives
-        );
-        customizers.add(schemaDirectiveWirings);
-        customizers.addAll(runtimeWiringCustomizers);
-
-        RuntimeWiring runtimeWiring = graphQLRuntimeWiringGenerator.generate(customizers);
-        schemaDirectiveWirings.checkUnwrapped(runtimeWiring);
-
-        DirectiveWiringCheck.check(registry, runtimeWiring, schemaDirectiveWirings.getEveryElementDirectiveNames(),
-                schemaDirectiveWirings.getDirectiveNames(), configuration,
-                graphQLRuntimeWiringGenerator.getCheckPolicy(), graphQLRuntimeWiringGenerator.getManifestRecorder());
-        graphQLRuntimeWiringGenerator.getCheckPolicy().verifyAllowedFindings();
-
-        SchemaGenerator schemaGenerator = new SchemaGenerator();
-        GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(registry, runtimeWiring);
-
-        for (GraphQLSchemaCustomizer customizer : graphQLSchemaCustomizers) {
-            graphQLSchema = Objects.requireNonNull(customizer.customize(graphQLSchema),
-                    () -> "GraphQLSchemaCustomizer " + customizer.getClass().getName()
-                            + " returned null instead of a schema");
-        }
-
-        bindingManifestHolder.set(graphQLRuntimeWiringGenerator.getManifestRecorder().build(registry));
-
-        return graphQLSchema;
+    public GraphQLSchema graphQLSchema(SchemaBinder schemaBinder) {
+        return schemaBinder.bind();
     }
 
     @Bean

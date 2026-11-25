@@ -15,7 +15,7 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
-import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
@@ -35,11 +35,15 @@ import java.util.concurrent.Executor;
  * {@link ExecutorSelector}: no reflection and no annotation read per request. A field hops only when its executor
  * differs from the executor of the operation, which is the configured one while the library's invocation runs the
  * operations, and unknown when the application's own invocation replaced it (the field then always hops).
+ *
+ * <p>Thread contract: the {@link ExecutorSelector} and the executor of the operation are looked up lazily and kept in
+ * plain fields. That is safe because the one thread that binds the schema at startup is the only user: an instance is
+ * built for one binding, used by that thread, and never read at request time.</p>
  */
 @Internal
 public final class FieldExecutors {
 
-    private final ApplicationContext context;
+    private final BeanContext context;
     private final GraphQLToolsConfiguration configuration;
     private ExecutorSelector selector;
     private Executor requestExecutor;
@@ -49,7 +53,7 @@ public final class FieldExecutors {
      * @param context       the application context
      * @param configuration the library configuration
      */
-    public FieldExecutors(ApplicationContext context, GraphQLToolsConfiguration configuration) {
+    public FieldExecutors(BeanContext context, GraphQLToolsConfiguration configuration) {
         this.context = context;
         this.configuration = configuration;
     }
