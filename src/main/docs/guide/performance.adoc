@@ -102,20 +102,21 @@ The schema check is not where the time goes: the variant without it is as slow a
 them is a reference comparison; any other class takes the `ClassValue`, and a class of a discarded class loader is still
 not retained.
 
-Measured with JMH (4 threads, two forks, `gc` profiler, Oracle GraalVM 25.0.5), runs back to back on one machine with a
-load average of 6 to 11, the order reversed once. The ranges are the runs, not the error of one run, which reaches 8 ns on a
-shared machine:
+Measured with JMH (4 threads, two forks, `gc` profiler, Oracle GraalVM 25.0.5), the resolver before and after run back to
+back on one machine under a load average of 6 to 11. The error of one run reaches 8 ns on a shared machine, so the figures
+show the direction and the order of magnitude, not a precise difference:
 
 [cols="1,1,1,1"]
 |===
-| Leg | Variant | `unionResolution` | `interfaceResolution`
+| Leg | Resolver | `unionResolution` | `interfaceResolution`
 
-| default | before | 25.8 to 27.5 ns | 25.8 to 31.5 ns
-| default | now | 17.0 to 20.5 ns | 15.8 to 24.7 ns
-| default | cached object type, no schema check | 23.8 to 30.7 ns | not measured
+| default | before | 27.5 ns | 26.3 ns
+| default | now | 17.5 ns | 17.0 ns
 | floor | before | 25.3 ns | 27.6 ns
 | floor | now | 23.2 ns | 21.7 ns
 |===
 
-Allocation is 0 B/op on both benchmarks on both legs. The remaining distance to the loop itself is about 10 ns on the default
-leg.
+The resolver that caches the object type with no schema check measured 25 to 31 ns in the same runs, and the loop control
+about 7 to 8 ns.
+
+Allocation is 0 B/op on both benchmarks on both legs.
