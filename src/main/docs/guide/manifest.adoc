@@ -4,7 +4,7 @@ NOTE: The current version is *2*. Version 1 was the format of 1.0.0-M1 and 1.0.0
 
 == Where the text comes from
 
-Recording is opt-in: set `micronaut.graphql.tools.manifest.enabled` to `true`. Without it, nothing is recorded while the schema is bound, the `BindingManifest` bean cannot be created (it fails with a message that names `manifest.enabled`). With `micronaut.graphql.tools.manifest.path` also set, the manifest is written to that file at startup, which binds the schema at startup. The checks do not need the manifest: they fail, warn or are skipped by their severity either way, and the manifest only lists what they find.
+Recording is opt-in: set `micronaut.graphql.tools.manifest.enabled` to `true`. Without it, nothing is recorded while the schema is bound, the api:io.micronaut.graphql.tools.manifest.BindingManifest[] bean cannot be created (it fails with a message that names `manifest.enabled`). With `micronaut.graphql.tools.manifest.path` also set, the manifest is written to that file at startup, which binds the schema at startup. The checks do not need the manifest: they fail, warn or are skipped by their severity either way, and the manifest only lists what they find.
 
 When it is recorded, the manifest is recorded as cheap facts (the binding plan) and rendered the first time it is read: by the `BindingManifest` bean, or by the startup writer when `micronaut.graphql.tools.manifest.enabled` is `true` and `manifest.path` is set. A start that does not read the manifest renders nothing, and a start that does not record costs nothing.
 
@@ -63,12 +63,12 @@ An entry has five parts. `-` stands for a part that has no value. Every entry th
 
 |`Type.field(argument: T): T`
 |`root`, `resolver`, `property`
-|`Class#method(parameter types)` of the root resolver method, the type resolver method, or the getter or `@GraphQLField` method
+|`Class#method(parameter types)` of the root resolver method, the type resolver method, or the getter or @api:io.micronaut.graphql.tools.annotation.GraphQLField[] method
 |the declared Java type, and the converted type (the declared type without `CompletionStage`, `Publisher` (a `Flux` on a list field is reported as the `java.util.List` of its element), `DataFetcherResult` (also per list element) and `Optional` or a primitive optional, unwrapped once in that order)
 
 |`Type.field(argument: T): T`
 |`claimed`
-|the class name of the `GraphQLRuntimeWiringCustomizer` that claims the field. An anonymous or lambda class is named by its enclosing class or its interface.
+|the class name of the api:io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer[] that claims the field. An anonymous or lambda class is named by its enclosing class or its interface.
 |`-`, `-`
 
 |`Abstract/Member`
@@ -106,7 +106,7 @@ A line that starts with `!` is a finding. The word after `!` is the code of the 
 |the same for an enum, input or scalar type
 
 |`!precedence-ambiguity Type.field ; member \| member`
-|a field decided by a lenient `precedence` (`resolver-first` or `property-first`): the coordinate, then the members that compete. A field that a resolver directive, a declared `@GraphQLSchemaCoordinate` or `@GraphQLIgnore` decides has no line
+|a field decided by a lenient `precedence` (`resolver-first` or `property-first`): the coordinate, then the members that compete. A field that a resolver directive, a declared @api:io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate[] or @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[] decides has no line
 
 |`!unbound-resolver-method member`, `!root-method-several-operations member`, `!unbound-enum-constant member`, `!unmapped-input-property member`, `!nullable-primitive Type.field(argument:)`, `!unused-dictionary-entry Type = Class`, `!interface-read-through-implementation Type`, `!unwired-directive name`
 |the findings of the strict checks. A check at `ignore` writes none; a line that `allow.findings` lists is not written

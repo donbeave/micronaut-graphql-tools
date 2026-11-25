@@ -37,7 +37,6 @@ import io.micronaut.inject.BeanDefinition;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -141,13 +140,7 @@ public final class SchemaCoordinateValidator {
             return NOT_A_RESOLVER;
         }
 
-        Set<ResolverKind> kinds = EnumSet.noneOf(ResolverKind.class);
-        if (rootResolver) {
-            kinds.add(ResolverKind.ROOT);
-        }
-        if (typeResolver) {
-            kinds.add(ResolverKind.TYPE);
-        }
+        Set<ResolverKind> kinds = graphQLResolversRegistry.kindsOf(coordinateMethod, rootResolver, typeResolver);
         return SchemaCoordinates.check(typeDefinitionRegistry, operationTypeNames, coordinateMethod.coordinate(), kinds).orElse(null);
     }
 

@@ -94,12 +94,76 @@ subprojects {
     }
 }
 
-// The guide takes its code examples from the test-suite-* sources with the `snippet::` macro. The macro reads them behind
+// The guide takes its code examples from the docs-examples-* and test-suite-* sources with the `snippet::` macro. The macro reads them behind
 // Gradle's back, so without these inputs a changed or removed example would leave publishGuide up to date.
 tasks.named("publishGuide") {
-    inputs.files(fileTree(".") { include("test-suite-*/src/main/**", "test-suite-*/src/test/**", "test-suite-*/src/driftFixture/**") })
+    inputs.files(fileTree(".") { include("test-suite-*/src/main/**", "test-suite-*/src/test/**", "test-suite-*/src/driftFixture/**",
+        "docs-examples-*/src/main/**", "docs-examples-*/src/test/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("snippetSources")
+}
+
+// The `api:` macro of the guide links a type to its Javadoc page and does not fail on a type that is gone, so a renamed or removed
+// type would leave a dead link. This check fails the guide build on an `api:` link whose type has no source file in a module.
+val checkApiLinks by tasks.registering {
+    group = "verification"
+    description = "Checks that every api: link of the guide names a top-level type that exists in a library module."
+    val guide = fileTree(layout.projectDirectory.dir("src/main/docs/guide")) { include("**/*.adoc") }
+    val sources = fileTree(layout.projectDirectory) { include("graphql-tools*/src/main/java/**/*.java") }
+    inputs.files(guide).withPropertyName("guide").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(sources).withPropertyName("sources").withPathSensitivity(PathSensitivity.RELATIVE)
+    val marker = layout.buildDirectory.file("checks/api-links.ok")
+    outputs.file(marker)
+    doLast {
+        val known = sources.files.map { it.invariantSeparatorsPath.substringAfter("/src/main/java/").removeSuffix(".java").replace('/', '.') }.toSet()
+        val link = Regex("""api:([\w.]+)\[""")
+        val missing = guide.files.sortedBy { it.name }.flatMap { page ->
+            page.readLines().flatMap { line -> link.findAll(line).map { it.groupValues[1] }.toList() }
+                .filter { type -> type !in known }
+                .map { "${page.name}: api:$it[]" }
+        }
+        if (missing.isNotEmpty()) {
+            throw GradleException("The guide has api: links to types that do not exist:\n" + missing.joinToString("\n"))
+        }
+        marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
+    }
+}
+tasks.named("publishGuide") { dependsOn(checkApiLinks) }
+
+// The vulnerability audit (.github/scripts/vulnerability-audit.sh) scans this file with osv-scanner. It lists what the published
+// modules resolve at runtime on the default graphql-java leg, in the format of a Gradle dependency lockfile.
+// The published library modules, derived from the folders so that a new module is audited without a second list.
+fun isAuditModule(project: Project) = project.projectDir.name.startsWith("graphql-tools") && !project.projectDir.name.endsWith("-bom")
+
+subprojects.filter { isAuditModule(it) }.forEach { module ->
+    with(module) {
+        val coordinates = objects.setProperty<String>()
+        coordinates.addAll(configurations.named("runtimeClasspath").flatMap { it.incoming.artifacts.resolvedArtifacts }.map { artifacts ->
+            artifacts.map { it.id.componentIdentifier }
+                .filterIsInstance<org.gradle.api.artifacts.component.ModuleComponentIdentifier>()
+                .map { "${it.group}:${it.module}:${it.version}=runtimeClasspath" }
+        })
+        tasks.register("auditCoordinates") {
+            inputs.property("coordinates", coordinates)
+            val output = layout.buildDirectory.file("audit/coordinates.txt")
+            outputs.file(output)
+            doLast { output.get().asFile.apply { parentFile.mkdirs() }.writeText(coordinates.get().sorted().joinToString("\n", postfix = "\n")) }
+        }
+    }
+}
+
+val auditLockfile by tasks.registering {
+    group = "verification"
+    description = "Writes the runtime dependencies of the published modules as a gradle.lockfile for the vulnerability audit."
+    val parts = subprojects.filter { isAuditModule(it) }.map { it.layout.buildDirectory.file("audit/coordinates.txt") }
+    dependsOn(subprojects.filter { isAuditModule(it) }.map { "${it.path}:auditCoordinates" })
+    inputs.files(parts).withPropertyName("coordinates")
+    val output = layout.buildDirectory.file("audit/gradle.lockfile")
+    outputs.file(output)
+    doLast {
+        val lines = parts.flatMap { it.get().asFile.readLines() }.filter { it.isNotBlank() }.toSortedSet()
+        output.get().asFile.apply { parentFile.mkdirs() }.writeText(lines.joinToString("\n", postfix = "\n"))
+    }
 }
 
 // The native coverage table of CONTRIBUTING.md names a test class per feature category and suite, and the TCK scenarios it

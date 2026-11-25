@@ -16,6 +16,8 @@
 package io.micronaut.graphql.tools.execution;
 
 import graphql.GraphQLContext;
+import io.micronaut.core.annotation.Experimental;
+import io.micronaut.core.annotation.NonNull;
 
 /**
  * Adds values to the {@link GraphQLContext} of an execution, where resolvers read them with
@@ -37,6 +39,7 @@ import graphql.GraphQLContext;
  * use. Without them, and with at least one contributor, it is a new empty registry for each execution. Without loader beans
  * and without contributors no registry is set, and graphql-java keeps its shared empty one.</p>
  */
+@Experimental
 @FunctionalInterface
 public interface GraphQLContextContributor {
 
@@ -46,6 +49,6 @@ public interface GraphQLContextContributor {
      * @param context the context of the execution
      * @param request a read-only view of the execution
      */
-    void contribute(GraphQLContext context, GraphQLExecutionRequest request);
+    void contribute(@NonNull GraphQLContext context, @NonNull GraphQLExecutionRequest request);
 
 }

@@ -25,6 +25,7 @@ import org.dataloader.DataLoader
 
 import java.util.concurrent.CompletionStage
 
+// tag::type-resolver[]
 @CompileStatic
 @Singleton
 @GraphQLTypeResolver(Book)
@@ -35,3 +36,4 @@ class BookResolver {
         return dataLoader.load(book.id)
     }
 }
+// end::type-resolver[]

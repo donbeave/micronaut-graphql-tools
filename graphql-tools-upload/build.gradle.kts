@@ -13,17 +13,15 @@ dependencies {
     testImplementation(mn.micronaut.inject.java)
     testImplementation(libs.jetbrains.annotations)
     testImplementation(libs.archunit)
-    testImplementation("org.apache.groovy:groovy-json")
+    testImplementation(mn.groovy.json)
     // The specs start a real server and post real multipart requests. The JSON stack is Micronaut Serialization, and no Jackson
-    // databind is on the test classpath. The Serde version comes from the Micronaut platform BOM, as in graphql-tools.
-    testImplementation(platform(libs.micronaut.platform))
+    // databind is on the test classpath. The Serde version comes from the micronaut-serde catalog.
     testImplementation(mn.micronaut.http.server.netty)
     testImplementation(mn.micronaut.http.client)
-    testImplementation("io.micronaut.serde:micronaut-serde-jackson")
-    testAnnotationProcessor(platform(libs.micronaut.platform))
-    testAnnotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    testImplementation(mnSerde.micronaut.serde.jackson)
+    testAnnotationProcessor(mnSerde.micronaut.serde.processor)
     testAnnotationProcessor(mn.micronaut.inject.java)
-    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testRuntimeOnly(mnLogging.logback.classic)
 }
 
 // DocsPageSpec reads the guide page of the module behind Gradle's back, so it is a declared input.

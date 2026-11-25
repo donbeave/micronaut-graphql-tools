@@ -1,4 +1,4 @@
-The library does not own the transports: `micronaut-graphql` serves GraphQL over HTTP and over WebSocket, and the library plugs its execution model into both. This page lists what to configure, and what the library adds. The example applications in `test-suite-java`, `test-suite-kotlin` and `test-suite-groovy` run both transports under an embedded server in their tests.
+The library owns both transports: it serves GraphQL over HTTP and over WebSocket with its own endpoint and handler, on the paths and under the switches of `micronaut-graphql`, and runs every operation through its execution model. This page lists what to configure, and what the library adds. The example applications in `test-suite-java`, `test-suite-kotlin` and `test-suite-groovy` run both transports under an embedded server in their tests.
 
 == HTTP
 
@@ -15,9 +15,36 @@ graphql:
 * `graphql.path` (default `/graphql`) is the endpoint. It takes `POST` with a JSON body of `query`, `operationName` and `variables`, and `GET` with the same three as query parameters, where `variables` is a JSON object.
 * `graphql.graphiql.enabled` (default `false`) serves the GraphiQL page, at `graphql.graphiql.path`.
 
-The HTTP status of a GraphQL response is `200` also when the response has `errors`: a parse error, a validation error and an error of a resolver all arrive in the body, with `message`, `locations`, `path` and `extensions` as the specification says (see <<errors,Errors>>).
+[[media-types]]
+=== Media types and status
 
-Every operation runs on the executor of `micronaut.graphql.tools.execution.executor`, never on the event loop unless that is `none` (see <<execution,Execution>>). To reach the request in a resolver, use a `GraphQLContextContributor`, which reads the request once and puts what the resolvers need in the GraphQL context of that execution:
+`GET` and `POST` answer `application/graphql-response+json` or `application/json`, chosen by the `Accept` header with its quality values. A request without `Accept`, or with `*/*`, gets `application/json`; a range with a parameter other than `q` and `charset` matches neither type; at an equal quality the more specific range wins, then the one listed first, then `application/json`. An `Accept` that lists neither type, or refuses both with `q=0`, gets `406`. Every negotiated response, a `406` included, carries `Vary: Accept`, so a shared cache keeps the two representations apart. `Accept` lines that repeat are read as one list, and when a media range repeats the higher quality value counts. The multipart route of the upload module (see the File Upload guide) negotiates the same way, with or without the upload module on the classpath.
+
+[cols="2,2,1"]
+|===
+|`Accept` chosen type |The response has |Status
+
+|`application/json` (the default)
+|`data` or not, with or without `errors`: a parse, validation or variable error and an error of a resolver all arrive in the body, with `message`, `locations`, `path` and `extensions` as the specification says (see <<errors,Errors>>)
+|`200`
+
+|`application/graphql-response+json`
+|`data`, also `null`, with or without `errors`
+|`200`
+
+|`application/graphql-response+json`
+|no `data`: the request failed before the execution (a parse error, a validation error or a variable coercion error)
+|`400`
+|===
+
+Under `application/graphql-response+json` the library changes only a `200` to `400`: a status that a `GraphQLExecutionInputCustomizer` sets on the response is kept.
+
+[[get-mutation]]
+=== A mutation over GET
+
+A `GET` request must not change data: a link, a prefetch or a crawler sends one without the user's intent. A `GET` request whose selected operation (the one that `operationName` names, or the only operation of the document) is a mutation is answered with `405` and `Allow: POST`, before any resolver runs, under both media types. The body is a GraphQL response with one error, `extensions.code` `METHOD_NOT_ALLOWED`, and no `data`. A query works over `GET`, and a mutation works over `POST`. The check reads the document that the execution parses (the `DocumentCache` keeps it when `micronaut.graphql.tools.protection.document-cache-size` is above `0`), so it adds no second parse; it applies to the library's `GraphQLInvocation`. A WebSocket operation is not an HTTP `GET` and is not affected. See the migration page, entry BC-51.
+
+Every operation runs on the executor of `micronaut.graphql.tools.execution.executor`, never on the event loop unless that is `none` (see <<execution,Execution>>). To reach the request in a resolver, use a api:io.micronaut.graphql.tools.execution.GraphQLContextContributor[], which reads the request once and puts what the resolvers need in the GraphQL context of that execution:
 
 [source,java]
 ----
@@ -52,7 +79,7 @@ graphql:
 
 * `graphql.graphql-ws.enabled` (default `false`) turns the `graphql-transport-ws` endpoint on, `graphql.graphql-ws.path` (default `/graphql-ws`) is its path and `graphql.graphql-ws.connection-init-wait-timeout` (default `15s`) is how long a client may take to send `connection_init`.
 * The library's handler serves the endpoint. It keeps the operations of each connection apart, runs the events of a subscription off the event loop and cancels the stream when the client sends `complete` or closes the connection. See <<subscriptions,Subscriptions>>.
-* `GraphQLConnectionInterceptor` beans accept or reject a connection at `connection_init`.
+* api:io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor[] beans accept or reject a connection at `connection_init`.
 
 The deprecated Apollo sub-protocol has its own keys: `graphql.graphql-apollo-ws.enabled` (default `false`), `.path`, `.keep-alive-enabled` and `.keep-alive-interval`. The library sets the `enabled` default itself, so the keep-alive sender of `micronaut-graphql` is not a bean, and an application with no WebSocket server starts without an error, until the application sets `graphql.graphql-apollo-ws.enabled=true` (see <<subscriptions,Subscriptions>>). With the Apollo support on, `graphql.graphql-apollo-ws.keep-alive-enabled=false` switches the sender off.
 
@@ -66,7 +93,8 @@ A connection that sends no `connection_init` within `connection-init-wait-timeou
 
 Each example suite starts an embedded server and talks to it with a real client:
 
-* `HttpTck` (GET and POST, variables and operation name, a moved `graphql.path`, the context of each request, and 400 concurrent requests with distinct contexts and DataLoader registries that never see each other's data);
+* `HttpTck` (GET and POST, variables and operation name, the refusal of a mutation over GET, a moved `graphql.path`, the media type and status of each response with and without the upload module, the context of each request, and 400 concurrent requests with distinct contexts and DataLoader registries that never see each other's data);
 * `WebSocketTck` (subscriptions with variables and an operation name, a moved `graphql.graphql-ws.path` and the configured initialisation timeout, the connection interceptor, the cleanup of a session on complete, close, a dropped connection and a finished operation, the thread of the events, and concurrent subscriptions that keep their own context);
+* `HttpConformanceTck` (the scenario `http-conformance`: the status and media type of an executed request and of each kind of failed request under every `Accept`, the `406` of an unacceptable `Accept`, the `405` of a method the endpoint does not serve, the refusal of a mutation over `GET` with `Allow: POST`, and the same with the upload module on and off);
 * `DisconnectTck` (the cancellation on an HTTP disconnect);
 * the scenarios `http`, `websocket` and `protection` of the TCK, whose responses are compared as JSON.

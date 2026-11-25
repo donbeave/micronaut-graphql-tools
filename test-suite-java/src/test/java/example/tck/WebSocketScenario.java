@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -78,6 +79,7 @@ public final class WebSocketScenario {
 
         final AtomicInteger count = new AtomicInteger();
         final AtomicInteger echoKeys = new AtomicInteger();
+        final List<String> operations = new CopyOnWriteArrayList<>();
     }
 
     /** Counts the keys that reach its batch function. */
@@ -163,6 +165,10 @@ public final class WebSocketScenario {
             return ExecutionState.of(environment.getGraphQlContext()).getConnectionAttributes().get("user", String.class).orElse(null);
         }
 
+        public String requestHeader() {
+            return ServerRequestContext.currentRequest().map(request -> request.getHeaders().get("X-Tck")).orElse(null);
+        }
+
         public String nothing() {
             return null;
         }
@@ -173,6 +179,10 @@ public final class WebSocketScenario {
 
         public int cancelledStreams() {
             return cancelled.count.get();
+        }
+
+        public List<String> cancelledOperations() {
+            return List.copyOf(cancelled.operations);
         }
 
         public int echoLoaderKeys() {
@@ -211,6 +221,10 @@ public final class WebSocketScenario {
                     .map(number -> new Tick(number.intValue(), Thread.currentThread() instanceof NonBlocking));
         }
         // end::ws-subscription[]
+
+        public Flux<Tick> tracked(int count, String operation) {
+            return ticks(count).doOnCancel(() -> cancelled.operations.add(operation));
+        }
 
         public Flux<Tick> endless() {
             return Flux.interval(Duration.ofMillis(20))

@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -99,6 +100,23 @@ public final class HttpScenario {
 
         public String loaderId(DataLoader<String, String> loader) {
             return Long.toString(loaderIds.computeIfAbsent(loader, key -> nextLoaderId.incrementAndGet()));
+        }
+    }
+
+    @Singleton
+    @GraphQLRootResolver
+    @Requires(property = "tck.scenario", value = SCENARIO)
+    public static class Mutations {
+
+        private final AtomicInteger count = new AtomicInteger();
+
+        public String httpMutate(String value) {
+            count.incrementAndGet();
+            return value;
+        }
+
+        public int httpMutationCount() {
+            return count.get();
         }
     }
 }

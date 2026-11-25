@@ -35,6 +35,7 @@ import io.micronaut.core.annotation.Order
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.graphql.tools.internal.protection.GetMutationGuard
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
@@ -78,6 +79,9 @@ type Query {
         result.extensions == [instrumented: true]
         CountingDocumentProvider.CALLS.get() == 1
         CALLS == ['instrumentation', 'documentProvider', 'strategies']
+
+        and: 'the document provider of a customizer stays behind the guard that refuses a mutation over GET'
+        applicationContext.getBean(GraphQL).preparsedDocumentProvider instanceof GetMutationGuard
 
         when: 'the exception handler set through the execution strategy and as the default'
         result = executeQuery('{ broken }')

@@ -23,17 +23,18 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Full build, default leg | `./gradlew build` | Before every push (JDK 21 or 25) |
 | graphql-java floor leg | `./gradlew build -PgraphqlJavaLeg=floor` | Any change that touches graphql-java use (JDK 25) |
 | graphql-java ceiling leg | `./gradlew build -PgraphqlJavaLeg=ceiling` | Same (JDK 25) |
-| Binary compatibility | `./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default` | Changes to main code (JDK 25) |
+| graphql-java compat leg | `./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default` | Changes to main code (JDK 25) |
 | Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check :micronaut-graphql-tools-testing:check` | Changes to the library, binding, processor or scalars module (JDK 17) |
 | Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
 | Drift fixtures of the suites | `./gradlew :test-suite-java:driftFixtureTest :test-suite-kotlin:driftFixtureTest :test-suite-groovy:driftFixtureTest` | Changes to the processor or its registration (part of `check`; each runs a build of its own, `--no-daemon`) |
-| Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
+| Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
 | Build wiring of the compile-time checks | `./gradlew :test-suite-build:buildToolsTest` | Changes to the processor's options, registration or documented build snippets (JDK 25 and `mvn`, needs the network; CI job `build tools`) |
 | Kotlin cases of the binding corpus | `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` | Changes to the visitor or to a corpus case with a `kotlin/` directory (JDK 25, needs the network; CI job `build tools`; `-Pcorpus.kotlin.processor=kapt` is the nightly variant) |
 | Compile-time budget | `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>` | Changes to the compile-time checks or to `test-suite-build/profiler` (JDK 25, needs a gradle-profiler install; CI job `compile-time budget`, gated) |
 | Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |
 | Benchmarks | `./gradlew :test-suite-benchmarks:check` | Hot path, allocation or startup changes |
 | Workflow lint | `mise exec -- jactionlint` and `python3 .github/scripts/check-gate.py` | Any change under `.github/` |
+| Vulnerability audit | `.github/scripts/vulnerability-audit.sh` (needs `osv-scanner` from mise, the network and JDK 25) | Dependency changes; the canary workflow runs it weekly and on demand (job `vulnerability audit`); accepted findings go in `osv-scanner.toml` with a reason |
 | Module lists | `python3 .github/scripts/check-modules.py` | Adding or renaming a module, or editing a list of modules (the `actionlint` job runs it) |
 | Gradle DSL guard | `python3 .github/scripts/check-gradle-dsl.py` | Adding or renaming a Gradle script (fails on a tracked `*.gradle` file; the `actionlint` job runs it) |
 

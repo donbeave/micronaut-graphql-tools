@@ -19,7 +19,7 @@ dependencies {
     testAnnotationProcessor(mn.micronaut.inject.java)
     testAnnotationProcessor(mnMicrometer.micronaut.micrometer.annotation)
     testRuntimeOnly(mn.micronaut.jackson.databind)
-    testRuntimeOnly("ch.qos.logback:logback-classic")
+    testRuntimeOnly(mnLogging.logback.classic)
 }
 
 // DocsPageSpec reads the guide page of the module behind Gradle's back, so it is a declared input.

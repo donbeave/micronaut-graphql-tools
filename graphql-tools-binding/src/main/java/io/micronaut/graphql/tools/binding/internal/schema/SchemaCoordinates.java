@@ -21,7 +21,9 @@ import graphql.language.ObjectTypeDefinition;
 import graphql.language.TypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -71,6 +73,37 @@ public final class SchemaCoordinates {
      */
     public static String fieldName(String coordinate) {
         return coordinate.substring(coordinate.indexOf('.') + 1);
+    }
+
+    /**
+     * The sides that a method is checked for. A class that is a root resolver or a type resolver, not both, is checked on
+     * that side. A class that is both (a bean that mixes root markers and {@code TypeResolver} contracts) binds each method
+     * on the side of the contract that declares it, so a coordinate is checked against that side only.
+     *
+     * @param root       whether the class is a {@code @GraphQLRootResolver}
+     * @param type       whether the class is a {@code @GraphQLTypeResolver}
+     * @param markers    the contracts of the class
+     * @param name       the name of the method
+     * @param parameters its number of parameters
+     * @return the kinds to check the coordinate of the method for, never empty when the class is a resolver
+     */
+    public static Set<ResolverKind> kindsOf(boolean root, boolean type, ResolverMarkers markers, String name, int parameters) {
+        Set<ResolverKind> kinds = EnumSet.noneOf(ResolverKind.class);
+        if (root && (!type || markers.admitsRoot(name, parameters))) {
+            kinds.add(ResolverKind.ROOT);
+        }
+        if (type && (!root || markers.admitsType(name, parameters))) {
+            kinds.add(ResolverKind.TYPE);
+        }
+        if (kinds.isEmpty()) {
+            if (root) {
+                kinds.add(ResolverKind.ROOT);
+            }
+            if (type) {
+                kinds.add(ResolverKind.TYPE);
+            }
+        }
+        return kinds;
     }
 
     /**

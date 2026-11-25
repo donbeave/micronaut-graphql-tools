@@ -23,6 +23,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import org.dataloader.DataLoader
 import java.util.concurrent.CompletionStage
 
+// tag::type-resolver[]
 @Singleton
 @GraphQLTypeResolver(Book::class)
 open class BookResolver {
@@ -32,3 +33,4 @@ open class BookResolver {
         return dataLoader.load(book.id)
     }
 }
+// end::type-resolver[]

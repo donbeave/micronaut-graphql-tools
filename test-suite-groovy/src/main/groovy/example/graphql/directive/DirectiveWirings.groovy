@@ -30,6 +30,7 @@ import jakarta.inject.Singleton
 
 import java.util.function.Consumer
 
+// tag::directives[]
 @CompileStatic
 @Factory
 class DirectiveWirings {
@@ -115,3 +116,4 @@ class DirectiveWirings {
         }
     }
 }
+// end::directives[]

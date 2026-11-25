@@ -90,6 +90,7 @@ class RenameFixtures {
 
 }
 
+// tag::parcel[]
 @CompileStatic
 @GraphQLType
 class Parcel {
@@ -122,6 +123,7 @@ class Parcel {
     }
 
 }
+// end::parcel[]
 
 @CompileStatic
 @Requires(env = RenameFixtures.MEMBERS)

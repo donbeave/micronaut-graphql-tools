@@ -20,6 +20,7 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.context.event.StartupEvent;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.util.StringUtils;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration;
  */
 @Internal
 @Singleton
-@Requires(property = GraphQLToolsConfiguration.PREFIX + ".manifest.enabled", value = "true")
+@Requires(property = GraphQLToolsConfiguration.MANIFEST_ENABLED, value = StringUtils.TRUE)
 public final class BindingManifestWriter implements ApplicationEventListener<StartupEvent> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BindingManifestWriter.class);

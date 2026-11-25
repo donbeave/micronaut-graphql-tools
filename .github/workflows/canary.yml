@@ -1,5 +1,5 @@
 name: Canary
-# Runs what Micronaut 4 does not support yet (JDK 27, the newest graphql-java and Kotlin) and audits the pinned versions.
+# Runs what Micronaut 4 does not support yet (JDK 27, the newest graphql-java and Kotlin) and audits the pinned versions and the dependencies for known vulnerabilities.
 # Never on pull_request, never on a push and never in the `required checks` gate of gradle.yml: a red canary blocks no merge
 # and is no verdict on a commit of master (it runs against the newest releases of its inputs, so it goes red for its own
 # reasons). Only gradle.yml runs on a push; `.github/scripts/check-gate.py` fails when another workflow does.
@@ -125,6 +125,34 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The drift mutation tests (#89): every mutant of the SDL of the binding corpus, which takes about half an hour, so `test` runs a sample.
+  drift-mutation:
+    name: canary (drift mutations of the corpus)
+    if: github.event.schedule != '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java
+      - name: Run every drift mutant
+        run: ./gradlew :micronaut-graphql-tools-processor:corpusMutation --no-daemon -PgraphqlJavaLeg=default
+        env:
+          PREDICTIVE_TEST_SELECTION: 'false'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-canary-drift-mutation
+          path: |
+            graphql-tools-processor/build/test-results/corpusMutation/TEST-*.xml
+            graphql-tools-processor/build/reports/tests/corpusMutation/
+            graphql-tools-processor/build/corpus/mutations.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
   native-latest:
     name: canary (GraalVM 25, graphql-java latest)
     if: github.event.schedule != '47 4 * * 1'
@@ -136,7 +164,7 @@ jobs:
         with:
           tools: java
       - name: Run native tests
-        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-java:nativeTest :test-suite-java:nativeSerdeTest :test-suite-kotlin:nativeTest --no-daemon --no-parallel -PgraphqlJavaLeg=latest
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-java:nativeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-daemon --no-parallel -PgraphqlJavaLeg=latest
         env:
           GRAALVM_QUICK_BUILD: 'true'
           PREDICTIVE_TEST_SELECTION: 'false'
@@ -148,8 +176,6 @@ jobs:
           path: |
             test-suite-*/build/test-results/test-native/TEST-*.xml
             test-suite-*/build/test-results/test-native/
-            test-suite-*/build/test-results/serdeTest-native/TEST-*.xml
-            test-suite-*/build/test-results/serdeTest-native/
           if-no-files-found: ignore
           retention-days: 7
 
@@ -170,3 +196,19 @@ jobs:
         run: .github/scripts/versions-audit.sh
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # Weekly (the Monday cron) and on demand, also on a test branch through workflow_dispatch. A known vulnerability in a runtime
+  # dependency of a published module fails the job; osv-scanner.toml records the findings that are accepted, with a reason.
+  vulnerability-audit:
+    name: vulnerability audit
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '47 4 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-build
+        with:
+          jdk: '25'
+          tools: java github:google/osv-scanner
+      - name: Scan the runtime dependencies
+        run: .github/scripts/retry-on-download-failure.sh .github/scripts/vulnerability-audit.sh
