@@ -52,7 +52,11 @@ class ArticlesQuery {
     }
 
     private static int offset(String cursor) {
-        return new String(Base64.decoder.decode(cursor)).substring('offset:'.length()) as int
+        int offset = new String(Base64.decoder.decode(cursor)).substring('offset:'.length()) as int
+        if (offset < 0 || offset >= ARTICLES.size()) {
+            throw new IllegalArgumentException('invalid cursor')
+        }
+        return offset
     }
 
 }

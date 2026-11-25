@@ -53,7 +53,11 @@ public class ArticlesQuery {
     }
 
     private static int offset(String cursor) {
-        return Integer.parseInt(new String(Base64.getDecoder().decode(cursor), StandardCharsets.UTF_8).substring("offset:".length()));
+        int offset = Integer.parseInt(new String(Base64.getDecoder().decode(cursor), StandardCharsets.UTF_8).substring("offset:".length()));
+        if (offset < 0 || offset >= ARTICLES.size()) {
+            throw new IllegalArgumentException("invalid cursor");
+        }
+        return offset;
     }
 
 }

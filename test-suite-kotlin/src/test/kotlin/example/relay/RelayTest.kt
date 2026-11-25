@@ -78,6 +78,16 @@ class RelayTest {
     }
 
     @Test
+    fun `an overflowing cursor is rejected`() {
+        ApplicationContext.run(mapOf(), RELAY).use { context ->
+            val cursor = java.util.Base64.getEncoder().encodeToString("offset:2147483647".toByteArray())
+            val result = GraphQL.newGraphQL(context.getBean(GraphQLSchema::class.java)).build()
+                .execute(ExecutionInput.newExecutionInput().query(page).variables(mapOf("first" to 2, "after" to cursor)).build())
+            assertFalse(result.errors.isEmpty())
+        }
+    }
+
+    @Test
     fun `a page after the last cursor is empty`() {
         ApplicationContext.run(mapOf(), RELAY).use { context ->
             val last = (page(context, 5, null)["pageInfo"] as Map<*, *>)["endCursor"] as String

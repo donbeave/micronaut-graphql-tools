@@ -39,6 +39,10 @@ open class ArticlesQuery {
 
     private fun cursor(offset: Int): String = Base64.getEncoder().encodeToString("offset:$offset".toByteArray())
 
-    private fun offset(cursor: String): Int = String(Base64.getDecoder().decode(cursor)).removePrefix("offset:").toInt()
+    private fun offset(cursor: String): Int {
+        val offset = String(Base64.getDecoder().decode(cursor)).removePrefix("offset:").toInt()
+        require(offset in articles.indices) { "invalid cursor" }
+        return offset
+    }
 }
 // end::resolver[]
