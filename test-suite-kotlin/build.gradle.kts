@@ -29,6 +29,8 @@ dependencies {
     ksp(projects.micronautGraphqlToolsProcessor)
     runtimeOnly(mnLogging.logback.classic)
     testImplementation(mn.micronaut.http.client)
+    // The graphql-binding management endpoint (#515) is served only with Micronaut Management on the classpath. Test scope: the application itself does not depend on it.
+    testImplementation(mn.micronaut.management)
     testImplementation(projects.testSuiteTck) // the execution-behaviour TCK (#53)
     // The metrics and tracing modules and the libraries their tests observe with: the Micrometer and OpenTelemetry integrations of
     // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.
@@ -41,6 +43,9 @@ dependencies {
     // Micronaut processor, and it needs Micrometer on the processor path
     ksp(mnMicrometer.micronaut.micrometer.annotation) { isTransitive = false }
     ksp(mnMicrometer.micrometer.core)
+    // newer KSP releases no longer give kspTest the processors of ksp, and the test source set holds the @Timed resolver
+    kspTest(mnMicrometer.micronaut.micrometer.annotation) { isTransitive = false }
+    kspTest(mnMicrometer.micrometer.core)
     // The upload module: the Upload scalar and the multipart route, tested with a real multipart client (#47). Test scope: the application
     // itself does not depend on it.
     testImplementation(projects.micronautGraphqlToolsUpload)
@@ -61,6 +66,17 @@ application {
 java {
     sourceCompatibility = JavaVersion.toVersion("21")
     targetCompatibility = JavaVersion.toVersion("21")
+}
+
+// The Micronaut BOM pins kotlin-stdlib and kotlin-reflect to the Kotlin it was built with. Code compiled by a newer Kotlin needs the matching runtime library
+// (its coroutine debug metadata and its helper classes), so the runtime follows the compiler plugin, which keeps the canary on the newest Kotlin honest.
+configurations.matching { !it.name.startsWith("ksp") }.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin" && (requested.name.startsWith("kotlin-stdlib") || requested.name == "kotlin-reflect")) {
+            useVersion(org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion(logger))
+            because("the runtime library follows the Kotlin compiler plugin")
+        }
+    }
 }
 
 kotlin {
@@ -95,7 +111,7 @@ tasks.named<io.micronaut.gradle.docker.NativeImageDockerfile>("dockerfileNative"
 // fails instead of reading these.
 val graphqlSchemaDirs = files("src/main/resources")
 // The checks cover `main` only: the test fixtures (for example the precedence classes) have no schema file in the schema directories.
-// KSP gives `kspTest` the processors of `ksp`, so the processor is excluded from it.
+// KSP gives `kspTest` the processors of `ksp` (releases before 2.3), so the processor is excluded from it.
 configurations.matching { it.name == "kspTest" }.configureEach {
     val processor = project(projects.micronautGraphqlToolsProcessor.path)
     exclude(group = processor.group.toString(), module = processor.name)

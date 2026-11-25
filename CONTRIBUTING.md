@@ -313,7 +313,7 @@ the dictionary validation and the registry lookups that the rings barely reach. 
 as the secondary result `retainedBytes`: the heap in use after a full collection with the context open, minus the heap
 in use before the start. JMH's text summary adds the forks up for a secondary result, so the figure per fork is read from
 the JSON. Both are measured cold, one fresh JVM per sample, only by `scripts/startup-report.py` (see below): the
-`./gradlew :test-suite-benchmarks:jmh` task excludes them, because its warm-up would start contexts in the same JVM first.
+`./gradlew :test-suite-benchmarks:jmh` task excludes them, and `ContextStartBenchmark`, `FirstRequestBenchmark` and `StartAndFirstRequestBenchmark` too, because its warm-up would start contexts in the same JVM first (run those three from the jar, below).
 
 The benchmark jar generates the 1,600-field ring schema only, as before, so the other start-up benchmarks bind the same
 schema as before. Each other size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build; add
@@ -383,12 +383,23 @@ over the per-fork values in the JMH JSON. `--json <file>` keeps the JSON, `--pre
 an earlier JSON, and `--from <file>` reports a JSON without running anything. The report prints the JDK, so quote it with
 the figures. The last jar it builds is a one-size jar: run `./gradlew :test-suite-benchmarks:jmhJar` again before the other benchmarks.
 
-The `Startup benchmark` workflow (`.github/workflows/startup-benchmark.yml`) runs the command every night and on demand
-(Actions, "Run workflow"). It archives the JSON as the `startup-benchmark` artifact (90 days), prints the medians and the
-change against the last successful run in the job summary, and is never part of the pull request gate: the figures are
-reported, not gated. Hosted runners are shared, so read the retained heap first and treat a binding-time change inside
-the spread of the forks as noise. To compare a change with master, run the command on each checkout with `--json` and
-pass the master JSON to `--previous`.
+The `Performance nightly` workflow (`.github/workflows/perf-nightly.yml`) runs every night and on demand (Actions, "Run workflow"),
+for each `ref` of its matrix (`master` until the `1.0.x` branch is cut; add it to the three matrices then). Three jobs run on JDK 25, the
+graphql-java `default` leg and `ubuntu-latest`, and each states them in its name:
+
+- `jmh` runs the whole `:test-suite-benchmarks:jmh` suite (two forks, the `gc` profiler) and archives `jmh.json` and `jmh-report.md` as the
+  `jmh-nightly-<ref>` artifact (90 days). `scripts/jmh-compare.py` writes the report into the job summary: the JDK and VM, the fork and iteration
+  counts, the commit, the runner, and a row per benchmark with the previous and current score, the change, the error that JMH reports for each
+  score (the spread of the repeated runs) and the bytes per operation. A row is flagged as a regression when the score is worse by more than 10
+  percent (`--threshold`) and the two scores differ by more than the sum of their errors; the summary then lists each flagged benchmark with both numbers.
+- `startup` runs the command above and archives `startup-benchmark.json` as `startup-nightly-<ref>`; its summary prints the medians, the change against the last successful run and the change against the recorded reference `test-suite-benchmarks/startup-baseline.json` (passed as `--baseline`; `test-suite-benchmarks/README.md` names its commit and run conditions).
+- `compile-time` runs `:test-suite-build:compileTimeBudget` and archives the profile as `compile-time-nightly-<ref>`.
+
+The previous run is the last successful run of the workflow. To read a result, open the run, read the summary and read the
+allocation columns first: bytes per operation do not depend on the runner, while a time change inside the reported error is noise. To refresh a
+baseline, there is nothing to edit: the next successful run becomes the baseline of the one after it, so run the workflow once on the commit that
+should be the reference (a regression that stays on purpose is accepted this way). To compare a change with master by hand, run the same commands
+on each checkout and pass the master JSON to `jmh-compare.py --previous` or `startup-report.py --previous`. The workflow is never part of the pull request gate: the figures are reported, not gated.
 
 To compare two builds on a machine that is not idle, build one jar per checkout and case, and run
 `python3 test-suite-benchmarks/scripts/startup-ab.py --fields <fields> --shape <shape> --forks 25 base=<jar> branch=<jar>`. It starts the

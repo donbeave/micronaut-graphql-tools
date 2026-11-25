@@ -23,11 +23,11 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-10 `GraphQL` bean | The library creates its `GraphQL` bean only when the application has none. | Define your own `GraphQL` bean, or change the library's one with `GraphQLBuilderCustomizer`.
 | BC-11 bare `SchemaDirectiveWiring` bean | Startup fails with `[unwrapped-directive-wiring]`. | Wrap the wiring in a `SchemaDirective` bean.
 | BC-12 directive without a wiring | Startup fails with `[unwired-directive]`. | Add a wiring, or list the directive in `allow.inert-directives`. Or set `checks.unwired-directive` to `warn` (also what `strict: false` does).
-| BC-13 `GraphQLRuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `[runtime-wiring-override]` (on graphql-java 25, `StrictModeWiringException` first for a replaced default data fetcher, type resolver or scalar). | Add to the library's wiring. Return a hand-written field's coordinate from `claimedFields()`.
+| BC-13 `GraphQLRuntimeWiringCustomizer` replaces the library's wiring | Startup fails with `[runtime-wiring-override]` (on graphql-java 25, `StrictModeWiringException` first for a replaced default data fetcher, type resolver or scalar). | Add to the library's wiring. Return a hand-written field's coordinate from `getClaimedFields()`.
 | BC-14 property and type resolver bind one field | Startup fails with `[precedence-ambiguity]`. Before, the property won silently. | Remove one member, or choose the winner with `precedence` or `resolver-directives`. Or use `@GraphQLIgnore` on the getter.
 | BC-15 root resolvers per operation type | Startup fails when two root methods bind one field. Before, the first bean found won. | Remove one of two methods that bind the same field, or use `@Replaces` when one bean overrides another. Add `@GraphQLSchemaCoordinate` (for example `Query.field`) only when the methods serve different operation types.
 | BC-16 `strict` on by default | Startup fails on stale resolver methods, missing enum constants, stale dictionary entries and similar findings. | Fix each finding the startup reports, annotate it with `@GraphQLIgnore` (the compile-time processor does not read it yet), or set `strict: false`.
-| BC-17 `extend type` fields | Startup fails for an extension field that nothing binds. Before, graphql-java served it without a check. | Give the field a resolver or property, or claim it with `claimedFields()`.
+| BC-17 `extend type` fields | Startup fails for an extension field that nothing binds. Before, graphql-java served it without a check. | Give the field a resolver or property, or claim it with `getClaimedFields()`.
 | BC-18 unreachable types | Startup fails and lists every unreachable type. An `allow.unreachable` entry that is no longer unreachable fails startup. | Bind the type, remove it, or list it in `allow.unreachable`. Remove stale entries. Or set `checks.unreachable-type` to `warn` or `ignore`.
 | BC-19 arguments bound by name | Startup fails when a resolver parameter has no argument of its name, or two parameters bind one argument. The compile-time visitor applies the same rule (#15); it is the real build's check once #291 registers it. | Rename the parameter, or add `@GraphQLArgument("<argument name>")`.
 | BC-20 `@Named("graphql-tools")` mapper seam (#173) | The `graphql-tools` `ObjectMapper` bean name and the `INPUT_OBJECT_MAPPER` constant are internal (`@Internal`) and no longer documented. Input conversion is not configurable through a public bean. | Do not define an `ObjectMapper` bean named `graphql-tools` to configure input conversion; it is not supported. Its replacement is BC-23 (#37): `TypeConverter` beans and the scalar mapping.
@@ -61,6 +61,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-50 an unknown property of a standard scalar fails the startup (#650) | A property under `micronaut.graphql.tools.scalars.<id>` that is not `enabled`, `name` or `format`, such as `local-date.nmae`, fails the startup with a `ConfigurationException` that names the whole key and lists the valid properties. Before it was ignored, so the setting never took effect. | Fix or remove the misspelled key. The documented keys keep their names and meaning.
 | BC-51 a mutation over `GET` is refused (#691) | A `GET` request whose selected operation is a mutation is answered with `405` and `Allow: POST` before any resolver runs, under `application/json` and `application/graphql-response+json`. Before, the library executed it, so a link or a prefetch could change data. A query over `GET` and every operation over `POST` are unchanged. | Send the mutation with `POST`.
 | BC-45 manifest flags collapsed, check severity is an enum (#505) | `micronaut.graphql.tools.manifest.record` is removed and fails the startup with `[removed-configuration-key]`. `manifest.enabled` alone records the manifest (the `BindingManifest` bean can be read), and a startup write happens only when `manifest.path` is set; with no path, nothing is logged any more. `checks` is a `Map<String, CheckSeverity>` and `precedence` a `Precedence`, read by the core enum conversion, so a spelling that conversion does not accept stops working (the documented spellings keep working). | Replace `manifest.record: true` with `manifest.enabled: true`, and set `manifest.path` where the file is wanted. Use `fail`, `warn` or `ignore` for a check. | Status: breaking by design; no opt-out.
+| BC-52 `getClaimedFields()` and `ArgumentValue#getRequired()` (#652) | `GraphQLRuntimeWiringCustomizer#claimedFields()` is renamed `getClaimedFields()` and `ArgumentValue#get()` is renamed `getRequired()`. The architecture rule of BC-44 now covers every public package, so no public interface or class declares a record-style accessor. | Rename the method a customizer overrides and the calls of `ArgumentValue#get()`. In Groovy and Kotlin, read the property (`value.required`).
 |===
 
 == Entries for 1.0.0-M1
@@ -326,9 +327,9 @@ micronaut:
 
 A `GraphQLRuntimeWiringCustomizer` may only add to the runtime wiring. One that replaces the library's wiring fails with `[runtime-wiring-override]`. On graphql-java 25 the builder rejects the first replaced default data fetcher, type resolver or scalar itself, with `StrictModeWiringException`, so the startup fails with that exception instead. A replaced data fetcher of a library-wired field is always reported as `[runtime-wiring-override]`.
 
-Fix: add to the library's wiring in the customizer. To serve a field with a hand-written `DataFetcher`, return its coordinate from `claimedFields()`. The library then does not bind the field. The library does not traverse the return type of a claimed field, so that type must also be reached through another bound field, or listed in `allow.unreachable`.
+Fix: add to the library's wiring in the customizer. To serve a field with a hand-written `DataFetcher`, return its coordinate from `getClaimedFields()`. The library then does not bind the field. The library does not traverse the return type of a claimed field, so that type must also be reached through another bound field, or listed in `allow.unreachable`.
 
-Status: approved, no opt-out. `claimedFields()` is on `master`.
+Status: approved, no opt-out. `getClaimedFields()` is on `master`.
 
 [source,java]
 ----
@@ -340,7 +341,7 @@ public class BookFetcherCustomizer implements GraphQLRuntimeWiringCustomizer {
     }
 
     @Override
-    public Set<FieldCoordinates> claimedFields() {
+    public Set<FieldCoordinates> getClaimedFields() {
         return Set.of(FieldCoordinates.coordinates("Query", "latestBook"));
     }
 }
@@ -429,7 +430,7 @@ Opt-out: `micronaut.graphql.tools.strict: false` makes every check `warn`, inclu
 
 Fields of an `extend type` definition are bound and checked like any other field. Before, graphql-java's default data fetcher served them without any check. The startup now names the coordinate of an extension field that nothing binds.
 
-Fix: give the field a resolver or a property. If a `GraphQLRuntimeWiringCustomizer` serves it, return its coordinate from `claimedFields()`. A type that such a field returns must still be reached through another bound field, or listed in `allow-unreachable`.
+Fix: give the field a resolver or a property. If a `GraphQLRuntimeWiringCustomizer` serves it, return its coordinate from `getClaimedFields()`. A type that such a field returns must still be reached through another bound field, or listed in `allow-unreachable`.
 
 Status: approved, no opt-out.
 
@@ -1117,6 +1118,30 @@ request.getHttpRequest().getHeaders().get("X-Tenant", String.class);
 ----
 
 In Groovy and Kotlin, `request.httpRequest` reads the property. A class that implements `GraphQLDataLoaderOptionsCustomizer` renames `loaderName()` to `getLoaderName()` (in Kotlin, `override fun getLoaderName()`). Code that only calls `GraphQLConnectionRequest#payload()` or `httpRequest()` compiles as before.
+=== BC-52: `getClaimedFields()` and `ArgumentValue#getRequired()` (#652)
+
+BC-44 gave the public types of four packages one accessor style. The rule now covers every public package: an interface or a class names its accessors `getX` and `isX`, a conversion `toX` or `asX`, and an immutable data carrier is a record. Two methods were left over and are renamed.
+
+[cols="2,2"]
+|===
+| Before | Now
+
+| `GraphQLRuntimeWiringCustomizer#claimedFields()` | `getClaimedFields()`
+| `ArgumentValue#get()` | `getRequired()`
+|===
+
+`getRequired()` still throws `NoSuchElementException` when the value is omitted or an explicit `null`; `getValue()` returns `null` instead. A class that implements `GraphQLRuntimeWiringCustomizer` and overrides `claimedFields()` renames the method (in Kotlin, `override fun getClaimedFields()`). In Groovy and Kotlin, `argument.required` reads the property.
+
+[source,java]
+----
+// Before
+Set<FieldCoordinates> claimedFields() { ... }
+String name = argument.get();
+// Now
+Set<FieldCoordinates> getClaimedFields() { ... }
+String name = argument.getRequired();
+----
+
 === BC-42: the library's `GraphQLInvocation` stays registered beside yours (#499)
 
 The library's `GraphQLInvocation` is no longer removed when your application declares its own. The unqualified injection point still resolves to yours (a bean without a qualifier, a `@Primary` bean, a `@Replaces(DefaultGraphQLInvocation.class)` bean or a `@Primary` factory method that returns `DefaultGraphQLInvocation`), and the library's bean is not created unless something asks for it. Code that injects `List<GraphQLInvocation>` or calls `getBeansOfType(GraphQLInvocation.class)` now also sees `LibraryGraphQLInvocation`; filter it by type if that matters. The startup no longer logs the INFO line that said the library does not create its invocation.

@@ -50,7 +50,7 @@ class ClaimedFieldCustomizers {
     GraphQLRuntimeWiringCustomizer serverVersionFetcher() {
         return new GraphQLRuntimeWiringCustomizer() {
             @Override
-            public Set<FieldCoordinates> claimedFields() {
+            public Set<FieldCoordinates> getClaimedFields() {
                 return Set.of(FieldCoordinates.coordinates("Query", "serverVersion"));
             }
 
