@@ -14,6 +14,8 @@ dependencies {
     compileOnly(mn.kotlinx.coroutines.reactive)
     // The disconnect of an HTTP client cancels its execution (#429); the watcher bean is active only with the Netty server on the classpath
     compileOnly(mn.micronaut.http.server.netty)
+    // The graphql-binding management endpoint (#515): the endpoint bean is active only when Micronaut Management is on the classpath
+    compileOnly(mn.micronaut.management)
     // ConstraintViolationException is mapped to errors when Micronaut Validation is on the application's classpath (#32)
     compileOnly(mnValidation.validation)
 

@@ -30,6 +30,9 @@ include("test-suite-serde")
 include("test-suite-kotlin")
 include("test-suite-groovy")
 include("test-suite-build")
+include("docs-examples-java")
+include("docs-examples-kotlin")
+include("docs-examples-groovy")
 
 configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     useStandardizedProjectNames = true

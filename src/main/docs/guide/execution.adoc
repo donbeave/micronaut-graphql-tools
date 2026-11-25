@@ -75,12 +75,12 @@ The library runs, in this order (the hop to the executor comes after the customi
 . build the `ExecutionInput` from the query, the operation name and the variables, put the library's per-execution state in its `GraphQLContext`, and set the lazy `DataLoaderRegistry` (only when the application has loader beans);
 . call the application's `GraphQLExecutionInputCustomizer` (skipped when it is the transport's default one);
 . put the state back in the `GraphQLContext` when the customizer returned a fresh `ExecutionInput`;
-. call every `GraphQLContextContributor`, in order;
+. call every api:io.micronaut.graphql.tools.execution.GraphQLContextContributor[], in order;
 . run graphql-java.
 
 The customizer therefore runs on the subscribing thread, which is the event loop for an HTTP request, and must not block. When its publisher emits, the operation hops to the executor once, whichever thread emits (with `executor: none` it does not, see <<executorNone,Executor none>>). The state is one object per execution (one per WebSocket operation): it holds the captured context, the transport, the request, the response and the connection attributes.
 
-The state is also the read-only `GraphQLExecutionRequest` that the context contributors receive. The registry is the library's own: an application with a `DataLoaderRegistry` bean fails the startup (BC-36). See the Data Loaders page for the loaders and the contributors.
+The state is also the read-only api:io.micronaut.graphql.tools.execution.GraphQLExecutionRequest[] that the context contributors receive. The registry is the library's own: an application with a `DataLoaderRegistry` bean fails the startup (BC-36). See the Data Loaders page for the loaders and the contributors.
 
 == Your own invocation
 
@@ -112,7 +112,7 @@ A few rules:
 Most resolvers run on the executor of the operation. A few need another one, for example a bounded pool for a slow backend, or a dedicated pool for blocking JDBC. Micronaut's own `@ExecuteOn("<executor>")` says so; the library has no annotation of its own. Put it on:
 
 * a resolver method, or a resolver class (the method inherits it, and a method's own value wins);
-* a `@GraphQLField` method of a model class, or on the model class (it applies to the methods that bind a field).
+* a @api:io.micronaut.graphql.tools.annotation.GraphQLField[] method of a model class, or on the model class (it applies to the methods that bind a field).
 
 snippet::example.tck.ExecuteOnScenario[project-base="test-suite", source="test", tags="execute-on-method", indent="0"]
 
@@ -138,7 +138,7 @@ The cost of a hop is one task and one future for the annotated field only. The `
 
 An execution is cancelled when its client goes away: an HTTP client that closes its connection, a WebSocket `complete` and the close of a WebSocket connection (see <<subscriptions,Subscriptions>>). Cancellation is cooperative, and it does not depend on the graphql-java version. The library stops starting new work for the execution, and never interrupts code that is running, because interrupting a thread inside a JDBC driver can break the connection:
 
-* A hop task that is still queued, the one of the operation or the one of an `@ExecuteOn` field, is skipped. The operation then ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, which goes through the default error handling and the `GraphQLErrorsCustomizer` beans like any other error of the execution (see <<errors,Errors>>). Nobody reads that response over HTTP, because the client is gone.
+* A hop task that is still queued, the one of the operation or the one of an `@ExecuteOn` field, is skipped. The operation then ends with an error whose `extensions.code` is `EXECUTION_CANCELLED`, which goes through the default error handling and the api:io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer[] beans like any other error of the execution (see <<errors,Errors>>). Nobody reads that response over HTTP, because the client is gone.
 * An async field that is still pending when the execution is cancelled has its source stage cancelled right away: a `CompletableFuture` that the resolver returned is cancelled, and the coroutine of a Kotlin `suspend` resolver is cancelled with it, so it ends with a `CancellationException` at its next suspension point and the code after that point does not run. Only the stages of that execution are cancelled, never those of another execution, and a stage that already completed keeps its result. A resolver that returns a stage that cannot be cancelled (a `CompletableFuture.minimalCompletionStage`, for example) is not interrupted: its field completes with an abort.
 * The continuation of an async field that completes afterwards is aborted with graphql-java's `AbortExecutionException`: the children of the field, and every later async field, do not run.
 * The stream of a subscription is cancelled upstream.
@@ -157,14 +157,14 @@ An HTTP disconnect is noticed on the Netty server: Micronaut does not cancel the
 
 Cross-cutting logic, such as sanitising arguments, needs to wrap the fetcher of some fields. Do not write it as a `SchemaDirective.everyElement` wiring that wraps every field: such a wiring turns the library's trivial fetchers into non-trivial ones, which loses graphql-java's shortcuts, and adds a call to every field of every request. If you must use `everyElement`, return the element unchanged unless it carries your directive, and prefer a `named` wiring.
 
-A `GraphQLFieldFetcherDecorator` bean is the SPI for this. The library asks each decorator once for each field at startup, never per request. The decorator returns the fetcher it received, the same instance, for a field it does not select, and a wrapper for a field it does:
+A api:io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator[] bean is the SPI for this. The library asks each decorator once for each field at startup, never per request. The decorator returns the fetcher it received, the same instance, for a field it does not select, and a wrapper for a field it does:
 
 snippet::example.tck.FieldDecoratorScenario[project-base="test-suite", source="test", tags="decorator", indent="0"]
 
-* The `FieldDescriptor` that the decorator receives carries the coordinates of the field, its `FieldExecutionKind` (`TRIVIAL` for a property, `SYNCHRONOUS`, `ASYNC` or `STREAM`), whether the schema declares arguments on it, the field executor (the executor that `@ExecuteOn` names when it differs from the executor of the operation, else `null`), the annotation metadata of the method or property that serves the field, and a description of that method or property (the declaring class, a space and the signature) for messages.
+* The api:io.micronaut.graphql.tools.execution.FieldDescriptor[] that the decorator receives carries the coordinates of the field, its api:io.micronaut.graphql.tools.execution.FieldExecutionKind[] (`TRIVIAL` for a property, `SYNCHRONOUS`, `ASYNC` or `STREAM`), whether the schema declares arguments on it, the field executor (the executor that `@ExecuteOn` names when it differs from the executor of the operation, else `null`), the annotation metadata of the method or property that serves the field, and a description of that method or property (the declaring class, a space and the signature) for messages.
 * A field without arguments and a trivial property fetcher are not offered to a decorator unless it opts in: override `decoratesFieldsWithoutArguments()` or `decoratesTrivialFields()`. A field that no decorator selects keeps its base fetcher, so a property fetcher stays the library's trivial one and costs nothing.
 * Decorators wrap outermost. The composition of a field, outermost first, is: the decorators (lowest `@Order` or `Ordered` first), the async boundary, the executor hop of `@ExecuteOn`, the publisher adapter, the method or property fetcher. A decorator therefore sees the whole field, including the hop, and a wrapper it returns runs on the thread that resolves the parent.
-* Directive wirings (`SchemaDirective`) are applied when graphql-java builds the schema, after the decorators, so they wrap the decorated fetcher.
+* Directive wirings (api:io.micronaut.graphql.tools.directive.SchemaDirective[]) are applied when graphql-java builds the schema, after the decorators, so they wrap the decorated fetcher.
 * A decorator is a bean found at compile time, so it works in a native image. A decorator that returns `null` fails the startup.
 * The cost on the request path is measured (Temurin 25, graphql-java default leg, idle machine, JMH error quoted in `test-suite-benchmarks/README.md`): on a query of 1,050 fields, a decorator that selects no field is not measurable (217.7 +- 0.3 us against 217.4 +- 0.6 us with no decorator), and one that wraps every field with a delegating wrapper adds about 3.5 us (220.8 +- 0.9 us, +1.6 percent), about 3 ns per field, with the same allocation.
 
@@ -188,7 +188,7 @@ How the coroutine runs:
 * A `suspend` function declares the type of its value. It cannot return a `CompletionStage` or a `Publisher` as well, and it cannot be a field of the subscription type: both fail at compile time and at startup with `[unsupported-return-type]`. Return a `Publisher` without `suspend` for a subscription.
 * A function with a wrong number of parameters fails with `[argument-mismatch]`, at compile time and at startup, and the continuation is not counted.
 
-The support needs `org.jetbrains.kotlinx:kotlinx-coroutines-core` on the classpath of the application. The library does not depend on it: its support for `suspend` is a bean that exists only when the Kotlin and coroutines classes are present, so an application without Kotlin (and its native image) never links a Kotlin type. Binding a `suspend` function without kotlinx-coroutines-core fails the startup with `[suspend-without-coroutines]` and the dependency to add. A `suspend` function on a model class (a member of an introspected `@GraphQLType` class) is not supported: put it in a type resolver.
+The support needs `org.jetbrains.kotlinx:kotlinx-coroutines-core` on the classpath of the application. The library does not depend on it: its support for `suspend` is a bean that exists only when the Kotlin and coroutines classes are present, so an application without Kotlin (and its native image) never links a Kotlin type. Binding a `suspend` function without kotlinx-coroutines-core fails the startup with `[suspend-without-coroutines]` and the dependency to add. A `suspend` function on a model class (a member of an introspected @api:io.micronaut.graphql.tools.annotation.GraphQLType[] class) is not supported: put it in a type resolver.
 
 == Breaking change
 

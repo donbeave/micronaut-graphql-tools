@@ -29,6 +29,8 @@ dependencies {
     ksp(projects.micronautGraphqlToolsProcessor)
     runtimeOnly(mnLogging.logback.classic)
     testImplementation(mn.micronaut.http.client)
+    // The graphql-binding management endpoint (#515) is served only with Micronaut Management on the classpath. Test scope: the application itself does not depend on it.
+    testImplementation(mn.micronaut.management)
     testImplementation(projects.testSuiteTck) // the execution-behaviour TCK (#53)
     // The metrics and tracing modules and the libraries their tests observe with: the Micrometer and OpenTelemetry integrations of
     // Micronaut, and an in-memory span exporter (#24). Test scope: the application itself does not depend on them.

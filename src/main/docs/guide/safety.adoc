@@ -18,7 +18,7 @@ The compile-time checks ignore `strict`, `checks.<code>` and `allow.*`. A findin
 The statements of these pages hold by default. They do not cover:
 
 * *graphql-java's schema validation.* When the schema is built, graphql-java reports its own problems (an object that omits a field of an interface it implements, for example) with its own exception type and no code of this library. See <<exceptions,Exceptions>>.
-* *A `GraphQLSchemaCustomizer`.* It runs after the binding and the checks, and the library does not check what it changes.
+* *A api:io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer[].* It runs after the binding and the checks, and the library does not check what it changes.
 * *An application-owned schema.* An application that supplies its own `GraphQLSchema` bean (an unqualified or `@Primary` one) replaces the library's `GraphQLFactory`: nothing is bound, no strict check runs and no manifest is written for it.
 * *Runtime `allow.*` settings in the build.* The processor ignores them, so a finding that only a runtime setting accepts still fails the build.
 
@@ -40,7 +40,7 @@ CAUTION: Do not switch `precedence` to collect findings. A lenient setting chang
 
 . Set `strict: false`.
 . Set `manifest.enabled: true` and a `manifest.path` under `build/`, and start the application. A finding is a line that starts with `!` in the manifest (see <<manifest,Binding Manifest>>).
-. Fix or annotate each finding: fix the code or the schema, or put `@GraphQLIgnore` on a member that binds no field on purpose. List a finding in `allow.findings` only when no processor will see it (see <<strictModeEscape,Accept a finding>>): the processor ignores the runtime `allow.*` settings.
+. Fix or annotate each finding: fix the code or the schema, or put @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[] on a member that binds no field on purpose. List a finding in `allow.findings` only when no processor will see it (see <<strictModeEscape,Accept a finding>>): the processor ignores the runtime `allow.*` settings.
 . Remove `strict: false`.
 . Add `micronaut-graphql-tools-processor` (see <<compileTimeSetup,Set up the build>>). A few findings are reported by the compiler only; the <<compileTimeSoundness,soundness rule>> lists them.
 

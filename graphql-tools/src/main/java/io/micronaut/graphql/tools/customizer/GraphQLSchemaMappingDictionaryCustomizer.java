@@ -15,16 +15,23 @@
  */
 package io.micronaut.graphql.tools.customizer;
 
+import io.micronaut.core.annotation.NonNull;
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary;
 
 /**
  * Registers type mappings in the {@link SchemaMappingDictionary}. An application may define any number of these beans;
- * all of them run, in {@code @Order}, on one dictionary, and a type that two of them map fails the startup.
+ * all of them run, in {@code @Order} (implement {@link io.micronaut.core.order.Ordered} or use {@code @Order}; lower runs first), on one dictionary, and a type that two of them map fails the startup.
  *
  * @author Alexey Zhokhov
  */
+@FunctionalInterface
 public interface GraphQLSchemaMappingDictionaryCustomizer {
 
-    void customize(SchemaMappingDictionary schemaMappingDictionary);
+    /**
+     * Registers the mappings of this customizer.
+     *
+     * @param schemaMappingDictionary the dictionary that every customizer registers in
+     */
+    void customize(@NonNull SchemaMappingDictionary schemaMappingDictionary);
 
 }

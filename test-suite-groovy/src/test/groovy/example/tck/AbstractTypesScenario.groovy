@@ -71,6 +71,7 @@ class Missing implements Lookup {
     }
 }
 
+// tag::mappings[]
 @CompileStatic
 @Singleton
 @Requires(property = 'tck.scenario', value = 'abstract-types')
@@ -83,6 +84,7 @@ class AbstractTypesMappings implements TckTypeMappings {
                 .registerType('Missing', Missing)
     }
 }
+// end::mappings[]
 
 @CompileStatic
 @Singleton

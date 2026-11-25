@@ -11,9 +11,9 @@ The version comes from the `micronaut-graphql-tools-bom` import of the quick sta
 
 == Run a document
 
-`GraphQLTester` is a bean of the application. A `@MicronautTest` class injects it, calls `request(document)`, adds what the call needs and calls `execute()`. `GraphQLTestRequest` has `operationName`, `variable`, `variables`, `context`, `header` and `timeout`. `execute()` blocks the test thread until the operation completes (30 seconds at most, unless `timeout` says otherwise). `tester.execute(document)` is the short form for a document without variables.
+api:io.micronaut.graphql.tools.testing.GraphQLTester[] is a bean of the application. A `@MicronautTest` class injects it, calls `request(document)`, adds what the call needs and calls `execute()`. api:io.micronaut.graphql.tools.testing.GraphQLTestRequest[] has `operationName`, `variable`, `variables`, `context`, `header` and `timeout`. `execute()` blocks the test thread until the operation completes (30 seconds at most, unless `timeout` says otherwise). `tester.execute(document)` is the short form for a document without variables.
 
-The call goes through the same invocation as an HTTP request: the executor hop, the `GraphQLContextContributor` beans, the customizers, the instrumentations and the error handling all run. The invocation gets a synthetic `POST /graphql` request, so the request scope works and a header is visible to a contributor or a resolver that reads the `HttpRequest`.
+The call goes through the same invocation as an HTTP request: the executor hop, the api:io.micronaut.graphql.tools.execution.GraphQLContextContributor[] beans, the customizers, the instrumentations and the error handling all run. The invocation gets a synthetic `POST /graphql` request, so the request scope works and a header is visible to a contributor or a resolver that reads the `HttpRequest`.
 
 snippet::example.tester.TesterTest[project-base="test-suite", source="test", tags="data", indent="0"]
 
@@ -25,7 +25,7 @@ snippet::example.tester.TesterQuery[project-base="test-suite", source="test", ta
 
 == Read the response
 
-`GraphQLTestResponse` has `getData()` (a `Map`, or `null` when the operation produced no data), `getErrors()` (the graphql-java errors) and `getExtensions()`. `path(path)` and `path(path, type)` read one value of the data as an `Optional`. A path is a chain of response keys and list indexes, such as `book.authors[0].name`; an alias is the key.
+api:io.micronaut.graphql.tools.testing.GraphQLTestResponse[] has `getData()` (a `Map`, or `null` when the operation produced no data), `getErrors()` (the graphql-java errors) and `getExtensions()`. `path(path)` and `path(path, type)` read one value of the data as an `Optional`. A path is a chain of response keys and list indexes, such as `book.authors[0].name`; an alias is the key.
 
 == Assert
 

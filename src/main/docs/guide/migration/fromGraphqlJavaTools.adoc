@@ -1,0 +1,205 @@
+This page is for an application whose resolvers are written for graphql-java-tools (the `graphql.kickstart.tools` package) and that moves to this library. It lists what each piece of such a resolver becomes, what the startup reports for what does not carry over, and the gaps that remain. The facts about graphql-java-tools are the ones of version 15.0.0, as on the <<comparison,Comparison>> page. A migration to Spring for GraphQL is not covered here.
+
+The examples are in Java. The same classes exist in Kotlin and Groovy in the example suites, with the same names and tags, and the tests of the mappings below run in all three suites.
+
+== The order of work
+
+Move the application in three steps. First fix the binding failures that the settings below do not relax: the Gaps table lists them, and `[field-not-bound]`, `[argument-mismatch]`, `[incorrect-class-mapping]` and `[implementation-not-found]` are among them. Then start it with the settings below, which turn the checks that fail the startup into warnings and into findings in the <<manifest,binding manifest>>. Then work through the findings and tighten the settings again.
+
+[configuration]
+----
+micronaut:
+  graphql:
+    tools:
+      strict: false
+      checks:
+        unwired-directive: fail
+        root-method-several-operations: fail
+      precedence: resolver-first
+      manifest:
+        enabled: true
+        path: build/graphql-binding-manifest.txt
+----
+
+* `strict: false` makes the checks without an entry in `checks` log a warning and go on instead of failing the startup (see <<strictMode,Strict Mode>>).
+* `checks.root-method-several-operations: fail` keeps the check of a root method that binds fields of several operation types at `fail`, so a method of that name does not serve a query and a mutation while it migrates.
+* `checks.unwired-directive: fail` keeps the check of a directive that nothing wires at `fail`. An entry wins over `strict`, so an application that relies on a custom directive for authorization does not serve its fields without it while it migrates. Run the migration on an instance that no client can reach when the schema has other access rules.
+* `precedence: resolver-first` binds the resolver method when a member of the model and a resolver method can both bind a field. This is the migration setting for an application that comes from graphql-java-tools, where the resolver wins (see <<precedence,Precedence>>). The default, `fail`, reports the field with `[precedence-ambiguity]`. The resolver method binds without the security annotations of the member that lost, so on a reachable instance keep `fail` and resolve each ambiguity with `@GraphQLSchemaCoordinate` or `@GraphQLIgnore` instead (see <<safety,Safety>>).
+* `manifest.enabled: true` records what each field is bound to. A finding is a line of the manifest that starts with `!` and the code of the check. The log has a warning for each check, tagged with the code in brackets.
+
+The test below runs the same schema with the defaults and with these settings:
+
+snippet::example.migration.MigrationTest[project-base="test-suite", source="test", tags="recipe", indent="0"]
+
+Then take each `!` line of the manifest and do one of three things: fix the code, annotate the member (`@GraphQLIgnore` for a member that binds no field on purpose), or accept the line with `allow.findings` (see <<strictMode,Strict Mode>>). A line that concerns an authorization directive is a line to fix, not to accept, and a `!precedence-ambiguity` line cannot be accepted: resolve the field instead. The processor ignores `allow.*`, so fix or annotate a finding of a check that runs at compile time (the strict mode page marks them) before you add the processor. When the manifest has no `!` line left, remove `strict: false` and `precedence: resolver-first`, and add `micronaut-graphql-tools-processor` to the build (see <<compileTimeSetup,Set up the build>>).
+
+== Resolver interfaces become annotations and contracts
+
+The resolver interfaces of graphql-java-tools carry the meaning of a class. Here a class says it in an annotation, and a scope annotation makes it a bean, unless a `@Factory` already exposes the class.
+
+[cols="3,5", options="header"]
+|===
+|graphql-java-tools |This library
+|`GraphQLQueryResolver` |`@GraphQLRootResolver` on the class.
+|`GraphQLMutationResolver` |`@GraphQLRootResolver` on the class.
+|`GraphQLSubscriptionResolver` |`@GraphQLRootResolver` on the class.
+|`GraphQLResolver<T>` |`@GraphQLTypeResolver(T.class)` on the class. The source object is the first parameter of each method.
+|===
+
+A resolver of the old setup:
+
+[source,java]
+----
+public class NoteQuery implements GraphQLQueryResolver {
+
+    public Note note(String id) { ... }
+
+    public List<Note> notes(String tag, Integer limit) { ... }
+}
+
+public class NoteFields implements GraphQLResolver<Note> {
+
+    public String summary(Note note) { ... }
+}
+----
+
+The same resolvers here:
+
+snippet::example.migration.MigrationFixtures[project-base="test-suite", source="test", tags="query", indent="0"]
+
+snippet::example.migration.MigrationFixtures[project-base="test-suite", source="test", tags="mutation", indent="0"]
+
+snippet::example.migration.MigrationFixtures[project-base="test-suite", source="test", tags="type-resolver", indent="0"]
+
+* An annotation of the library does not make a class a bean. Add a scope annotation such as `@Singleton` to a class that no factory exposes. A class with no scope annotation is not a bean, as <<resolverContracts,Resolver Contracts>> describes.
+* A type resolver class that implements an interface or extends a class needs `micronaut-graphql-tools-processor` from the start, because the build records the inherited contracts. Add it with the processor option `micronaut.graphql.tools.processor.checks=false` and remove the option when the manifest has no `!` line left (see <<resolverContracts,Resolver Contracts>>).
+* A class with `@GraphQLRootResolver` binds its public methods to the root fields of the same name. A method name that exists on several operation types, such as a query and a mutation both named `stock`, needs `@GraphQLSchemaCoordinate`.
+* A class that served several operations in the old setup can stay one class.
+
+== Method names
+
+A field `x` of a schema type is bound by the first rule that finds a member, and the startup fails with `[field-not-bound]` when none does.
+
+[cols="4,3", options="header"]
+|===
+|Member |Binds field `x`
+|A property or getter of the model class, `getX()` or `isX()` for a boolean, read through the bean introspection |Yes
+|A method `x(...)` of a type resolver, with the source object as its first parameter |Yes
+|A method `x(...)` of a root resolver |Yes
+|A method `getX(...)` or `isX(...)` of a resolver |With `micronaut.graphql.tools.resolver-accessor-prefixes: true`; without it, no
+|A member with another name, with `@GraphQLField("x")` on a model member, or `@GraphQLSchemaCoordinate("Type.x")` on a resolver method |Yes
+|===
+
+The model class of the example binds `id`, `title` and `done` through `getId()`, `getTitle()` and `isDone()`, and the type resolver binds `summary`:
+
+snippet::example.migration.MigrationFixtures[project-base="test-suite", source="test", tags="model", indent="0"]
+
+A resolver method named `getShout` binds the field `shout` when the prefix setting is on. Without it the startup fails with `[field-not-bound]`:
+
+snippet::example.migration.MigrationFixtures[project-base="test-suite", source="test", tags="accessor-prefix", indent="0"]
+
+The name of a field is not converted. A field `created_at` is not bound by a member `createdAt`; name it with `@GraphQLField`:
+
+snippet::example.migration.MigrationFixtures[project-base="test-suite", source="test", tags="renamed-field", indent="0"]
+
+The same field on a class without the annotation fails the startup with `[field-not-bound]`. The compile-time checks read the processor option `micronaut.graphql.tools.processor.resolver.accessor.prefixes` for the prefix setting, so give the option and the key the same value (see <<configuration,Configuration>>).
+
+A field that a model member and a resolver method both bind is ambiguous, and `precedence` decides it (see above). With `resolver-accessor-prefixes` on, the methods `getAuthor` and `author` of one resolver class both bind `author` and fail with `[multiple-methods-found]`.
+
+== Arguments
+
+Arguments bind by name here. The parameters of a method can be in any order, and the order of the schema field does not matter. In the example, the schema declares `notes(tag: String, limit: Int!)` and the method takes `(int limit, ArgumentValue<String> tag)`.
+
+* A parameter that names no argument fails the startup with `[argument-mismatch]`, and there is no positional fallback. Rename the parameter, or bind it with `@GraphQLArgument("name")`. See <<inputs,Inputs>>.
+* The parameter names come from the source of a class that Micronaut processes, so a class of the application needs no compiler flag.
+* A `DataFetchingEnvironment`, a `GraphQLContext`, a `DataLoader` and the other kinds of <<resolverParameters,Resolver Parameters>> are injected by type and can be in any position after the source object.
+* An input object is a class with `@GraphQLInput`, built from its bean introspection. The library reads no Jackson annotation and uses no `ObjectMapper` (see <<inputs,Inputs>>).
+
+An `Optional` argument is not accepted, see the gaps below. `ArgumentValue<T>` tells an omitted argument from a `null` one, and `asOptional()` gives the `Optional`.
+
+== Models
+
+The binding reads the classes behind object types through their bean introspection, which Micronaut generates when the application compiles, so a model class needs one.
+
+* A class you write carries `@GraphQLType`. A Kotlin data class needs the same annotation and nothing else.
+* A class that cannot carry an annotation, such as a generated class or a class of a library, is listed in `@GraphQLModels`. See <<models,Model Classes>>.
+* A class that nothing introspects fails the startup with `[class-not-introspected]`, and the message names the class and the field.
+* The class of an interface or union member that no field returns comes from the dictionary, from `@GraphQLType(name)` or from `type-class-convention`. See <<typeSystem,Type System>>.
+
+A `Map` as the source of an object type is a gap, see below.
+
+== Schema location
+
+graphql-java-tools reads the files that the application code names. Here the schema files are found by `micronaut.graphql.tools.schema.locations`, which defaults to `classpath:graphql/**/*.graphqls`. Move the schema files under `graphql/` with the extension `.graphqls`, or set the locations. The default location does not find a file with the extension `.graphql`. See <<schema,Schema>>.
+
+== Optional and nullability
+
+* `Optional<T>` and the primitive optionals are accepted as the return type of a field with a nullable GraphQL type. An empty one becomes `null`. On a non-null type the startup fails. See <<typeSystem,Type System>>. The `note` field of the example returns `Optional<Note>`.
+* A primitive parameter at a nullable position fails with `[nullable-primitive]`, because a `null` does not fit it. Use the wrapper class, or make the GraphQL type non-null.
+* The compile-time checks read the nullability of Kotlin types (see <<languageSupport,Language Support>>).
+
+== Errors
+
+An `@ExceptionHandler` method of the old setup becomes a `GraphQLExceptionMapper` bean for the exception type:
+
+snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="test", tags="mapper", indent="0"]
+
+The message of an exception that no mapper handles does not reach the client, where graphql-java's own handler sends it. Throw a `GraphQLError` exception or add a mapper to keep a message, and use `errors.details` while migrating to see the messages in a development environment. See <<errors,Errors>> for the mapping of the other pieces of the old setup.
+
+== Request context
+
+The context object of graphql-java-tools is replaced by the `GraphQLContext` of the execution. A `GraphQLContextContributor` bean adds values to it once for each execution:
+
+snippet::example.tck.PerExecutionContextScenario[project-base="test-suite", source="test", tags="contributor", indent="0"]
+
+A resolver reads a value with a `@GraphQLContextValue("key")` parameter, or from the `DataFetchingEnvironment`. The request, the response and the principal are parameters too (see <<resolverParameters,Resolver Parameters>> and <<httpAccess,HTTP Request and Response>>).
+
+== DataLoader registry
+
+With the library's invocation, a `DataLoaderRegistry` bean is not used, and its presence fails the startup with `[data-loader-registry-bean]`. Register each loader as a batch loader bean (`BatchLoader`, `MappedBatchLoader` or their `WithContext` variants), and declare a `DataLoader<K, V>` parameter on the resolver method. The library creates the registry of each execution:
+
+snippet::example.tck.DataLoaderScenario[project-base="test-suite", source="test", tags="loader", indent="0"]
+
+snippet::example.tck.DataLoaderScenario[project-base="test-suite", source="test", tags="typed-parameter", indent="0"]
+
+See <<dataLoaders,Data Loaders>>.
+
+== Kotlin
+
+A `suspend` function is a resolver method like any other, see <<execution,Execution>>, and needs `kotlinx-coroutines-core` on the classpath of the application. A `Flow` is accepted on a field of the subscription type, see <<subscriptions,Subscriptions>>, and needs `kotlinx-coroutines-reactive` as well. Add them as dependencies of the application if graphql-java-tools supplied them before. A `ReceiveChannel` is a gap, see below.
+
+== Gaps
+
+These are the places where a resolver of the old setup does not carry over as it is at this version, with the change that makes it work.
+
+[cols="3,3,4", options="header"]
+|===
+|Old resolver |What the startup reports |Workaround
+|An `Optional<T>` argument |`[incorrect-class-mapping]` |Declare the parameter as `ArgumentValue<T>` and call `asOptional()`, or use the wrapper class and test for `null`.
+|A `Map` as the source of an object type |`[implementation-not-found]` |Return a class with `@GraphQLType`, such as a record, and give it the accessors of the fields.
+|A method named `getX` or `isX` on a resolver |`[field-not-bound]` |Rename the method to `x`, or set `resolver-accessor-prefixes: true`.
+|A field with an underscore, bound by a member with the camel-case name |`[field-not-bound]` |Put `@GraphQLField("created_at")` on the member, or `@GraphQLSchemaCoordinate` on the resolver method.
+|A `ReceiveChannel` returned by a subscription resolver |The type is not one of the return types of <<subscriptions,Subscriptions>> |Return a `Flow` (`receiveAsFlow()` of kotlinx-coroutines converts a channel) or a `Publisher`.
+|A class that nothing introspects |`[class-not-introspected]` |Add `@GraphQLType`, or list the class in `@GraphQLModels`.
+|===
+
+The tests of the first four rows are in `MigrationTest` of the three example suites. The migration page of the snapshot line lists the other breaking changes by number.
+
+== Checklist of what the checks report
+
+[cols="3,5", options="header"]
+|===
+|Code |What to do
+|`field-not-bound` |A schema field has no member. Name the member after the field, add `@GraphQLField` to a model member or `@GraphQLSchemaCoordinate` to a resolver method, or turn on `resolver-accessor-prefixes` for `getX` resolver methods.
+|`argument-mismatch` |A parameter names no argument. Rename it or add `@GraphQLArgument`.
+|`precedence-ambiguity` |A model member and a resolver method bind one field. Declare the coordinate on the method or put `@GraphQLIgnore` on the member; `precedence` decides it for the migration only.
+|`multiple-methods-found` |Two members bind one field. Remove one.
+|`class-not-introspected` |A model class has no introspection. Add `@GraphQLType` or list it in `@GraphQLModels`.
+|`incorrect-class-mapping` |A parameter has a Java type that the GraphQL type cannot fill, such as `Optional`. Use `ArgumentValue` or the wrapper class.
+|`implementation-not-found` |An object type has an interface, such as `Map`, with no class behind it. Return a class.
+|`data-loader-registry-bean` |An application bean of type `DataLoaderRegistry`, with the library's invocation. Register batch loader beans.
+|`unbound-resolver-method` |A public method of a resolver binds no field. Remove it, bind it, or add `@GraphQLIgnore`.
+|`unreachable-type` |A schema type that no field reaches. Remove it, bind it, or list it in `allow.unreachable`.
+|===
+
+Each message names the code, the coordinate and the member, and the full list of codes is in <<exceptions,Exceptions>> and <<checkSeverity,Check severity>>.

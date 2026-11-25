@@ -16,6 +16,7 @@ binding: Binding
 resolverContracts: Resolver Contracts
 typeSystem: Type System
 models: Model Classes
+relay: Relay Connections
 inputs: Inputs
 resolverParameters: Resolver Parameters
 httpAccess: HTTP Request and Response
@@ -58,5 +59,6 @@ exceptions: Exceptions
 migration:
   title: Migration
   fromSnapshot: Migrating from 1.0.0-SNAPSHOT
+  fromGraphqlJavaTools: Migrating from graphql-java-tools
 compatibility: Compatibility
 repository: Repository

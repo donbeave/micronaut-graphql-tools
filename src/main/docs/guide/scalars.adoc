@@ -1,4 +1,4 @@
-GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`, `BigDecimal` and `BigInteger` are built in. Any other scalar of the schema needs a `GraphQLScalarMapping` bean: wrap a `GraphQLScalarType` with `GraphQLScalarMapping.of(scalarType, JavaClass.class)`, or use `GraphQLScalarMapping.builder(scalarType)` for different output and input classes. A bare `GraphQLScalarType` bean is not registered on its own. When a scalar has no mapping but a bare `GraphQLScalarType` bean with its name exists, the startup error names that bean and this fix.
+GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`, `BigDecimal` and `BigInteger` are built in. Any other scalar of the schema needs a api:io.micronaut.graphql.tools.mapping.GraphQLScalarMapping[] bean: wrap a `GraphQLScalarType` with `GraphQLScalarMapping.of(scalarType, JavaClass.class)`, or use `GraphQLScalarMapping.builder(scalarType)` for different output and input classes. A bare `GraphQLScalarType` bean is not registered on its own. When a scalar has no mapping but a bare `GraphQLScalarType` bean with its name exists, the startup error names that bean and this fix.
 
 The `micronaut-graphql-tools-scalars` module registers the scalars that most services need, so that a service does not write them again: the `java.time` types, JSON and a selection of the extended scalars. A schema only has to declare `scalar LocalDate`; the mapping is there.
 
@@ -56,7 +56,7 @@ The id is the key of the scalar in the configuration. The name is the default na
 | `non-negative-float` | `NonNegativeFloat` | `java.lang.Double` | A `Float` of zero or more.
 |===
 
-`StandardScalar` (package `io.micronaut.graphql.tools.scalars`) lists the same ids, names and classes in code.
+api:io.micronaut.graphql.tools.scalars.StandardScalar[] (package `io.micronaut.graphql.tools.scalars`) lists the same ids, names and classes in code.
 
 `Long`, `Short`, `BigDecimal` and `BigInteger` are built in and are not part of the table.
 
@@ -83,7 +83,7 @@ All keys are under `micronaut.graphql.tools.scalars`.
 
 snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="renamed", indent="0"]
 
-The keys bind to `ScalarsConfiguration` (`@ConfigurationProperties` under `micronaut.graphql.tools.scalars`, `Toggleable`, with `PREFIX` and `ENABLED_CONFIG` constants) and, for each scalar, to a `ScalarConfiguration` (`enabled`, `name` and `format`), which `ScalarsConfiguration#getScalars()` returns by id. The generated reference is on the configuration page. The same properties enable, rename and disable scalars:
+The keys bind to api:io.micronaut.graphql.tools.scalars.ScalarsConfiguration[] (`@ConfigurationProperties` under `micronaut.graphql.tools.scalars`, `Toggleable`, with `PREFIX` and `ENABLED_CONFIG` constants) and, for each scalar, to a api:io.micronaut.graphql.tools.scalars.ScalarConfiguration[] (`enabled`, `name` and `format`), which `ScalarsConfiguration#getScalars()` returns by id. The generated reference is on the configuration page. The same properties enable, rename and disable scalars:
 
 snippet::example.scalars.ScalarsTest[project-base="test-suite", source="test", tags="configured", indent="0"]
 

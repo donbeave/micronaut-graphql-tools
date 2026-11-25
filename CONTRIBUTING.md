@@ -27,7 +27,7 @@ The module map and the purpose of each Gradle project are in the [Modules](READM
 The tests do not need Docker. These are the commands CI runs (all in `.github/workflows/gradle.yml`, workflow `Java CI`):
 
 - `./gradlew build` builds everything and runs every check and test on the default graphql-java leg (JDK 21 or 25).
-- `./gradlew build -PgraphqlJavaLeg=floor|ceiling` runs the same build on another graphql-java leg (`default` is the default; `latest` is for the canary). The versions of each role are in `gradle/libs.versions.toml`; the README explains the roles. `-PgraphqlJavaCompileLeg=default` compiles main code on the default leg while the tests run on the leg of `-PgraphqlJavaLeg` (the binary compatibility job).
+- `./gradlew build -PgraphqlJavaLeg=floor|ceiling` runs the same build on another graphql-java leg (`default` is the default; `latest` is for the canary). The versions of each role are in `gradle/libs.versions.toml`; the README explains the roles. `-PgraphqlJavaCompileLeg=default` compiles main code on the default leg while the tests run on the leg of `-PgraphqlJavaLeg` (the `graphql-java-compat` job).
 - `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check :micronaut-graphql-tools-testing:check` checks the library, its binding module, the processor and the scalars module only; this is the one that works on JDK 17.
 - `./gradlew :test-suite-java:nativeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-parallel` runs the native image tests (the build runs tasks in parallel by default, and each native build needs about 5 GB) (Oracle GraalVM 25); add `-PgraphqlJavaLeg=ceiling` for another leg.
 - `./gradlew :test-suite-build:buildToolsTest` builds the sample projects of `test-suite-build` with Gradle TestKit and Maven against the library published to `build/repo` (CI job `build tools`, JDK 25 and `mvn`, needs the network; the job also runs `corpusKotlin`, below). `build` and `check` do not run it.
@@ -133,7 +133,7 @@ To build the guide and the Javadocs, run `./gradlew docs`, then open `build/docs
 
 ### Adding a code example
 
-Every code example in the guide is compiled code in all three languages. A page includes it with the `snippet::` macro:
+Every code example in the guide is compiled code in all three languages. The quickstart examples live in the `docs-examples-java`, `docs-examples-kotlin` and `docs-examples-groovy` modules (`project-base="docs-examples"`), apart from the behavioural tests of the `test-suite-*` modules; the suites keep their names, and a module that holds guide examples is named `docs-examples-<language>`. A page includes it with the `snippet::` macro:
 
 ```
 snippet::example.graphql.query.AllBooksQuery[project-base="test-suite", source="main", tags="resolver", indent="0"]

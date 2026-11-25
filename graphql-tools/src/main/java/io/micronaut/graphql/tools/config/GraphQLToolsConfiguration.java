@@ -19,6 +19,7 @@ import io.micronaut.context.annotation.ConfigurationProperties;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.ArgumentUtils;
+import io.micronaut.scheduling.TaskExecutors;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -32,6 +33,15 @@ import java.util.Map;
 public class GraphQLToolsConfiguration {
 
     public static final String PREFIX = "micronaut.graphql.tools";
+
+    /** The key of {@link #isEagerInit()}: {@value}. */
+    public static final String EAGER_INIT = PREFIX + ".eager-init";
+
+    /** The key of {@link ManifestConfiguration#isEnabled()}: {@value}. */
+    public static final String MANIFEST_ENABLED = PREFIX + ".manifest.enabled";
+
+    /** The key of {@link ExecutionConfiguration#getExecutor()}: {@value}. */
+    public static final String EXECUTION_EXECUTOR = PREFIX + ".execution.executor";
 
     private Precedence precedence = Precedence.FAIL;
     private List<String> resolverDirectives = Collections.emptyList();
@@ -480,7 +490,7 @@ public class GraphQLToolsConfiguration {
     public static class ExecutionConfiguration {
 
         /** The default of {@link #getExecutor()}: Micronaut's {@code blocking} executor. */
-        public static final String DEFAULT_EXECUTOR = "blocking";
+        public static final String DEFAULT_EXECUTOR = TaskExecutors.BLOCKING;
 
         /** The value of {@link #getExecutor()} that runs the operation on the thread that receives it. */
         public static final String NO_EXECUTOR = "none";
