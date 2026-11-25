@@ -38,7 +38,7 @@ public final class JavaRecordInputs {
     }
 
     public static String show(ArgumentValue<String> value) {
-        return value.isOmitted() ? "omitted" : value.isNull() ? "null" : "value(" + value.get() + ")";
+        return value.isOmitted() ? "omitted" : value.isNull() ? "null" : "value(" + value.getRequired() + ")";
     }
 
 }

@@ -151,7 +151,7 @@ scalar Long
   wiring factory (${ReplaceFetchers.name})
   scalar Long (${ReplaceScalarAndTypeResolver.name})
   type resolver of Payload (${ReplaceScalarAndTypeResolver.name})
-  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field with the customizer's own data fetcher by returning its coordinate from GraphQLRuntimeWiringCustomizer#claimedFields() (or remove the registration to keep the library's binding), or change the built schema with a GraphQLSchemaCustomizer."""
+  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field with the customizer's own data fetcher by returning its coordinate from GraphQLRuntimeWiringCustomizer#getClaimedFields() (or remove the registration to keep the library's binding), or change the built schema with a GraphQLSchemaCustomizer."""
         }
     }
 
@@ -200,7 +200,7 @@ scalar Long
         e.cause.replacements == [
                 "data fetcher of Item.name (${ShadowBoundField.name})".toString()
         ]
-        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#getClaimedFields()')
         e.cause.message.contains('remove the registration')
     }
 
@@ -354,7 +354,7 @@ scalar Long
     @Singleton
     static class ClaimAndAddUnbound implements GraphQLRuntimeWiringCustomizer {
         @Override
-        Set<FieldCoordinates> claimedFields() {
+        Set<FieldCoordinates> getClaimedFields() {
             return [FieldCoordinates.coordinates('Item', 'label')] as Set
         }
 

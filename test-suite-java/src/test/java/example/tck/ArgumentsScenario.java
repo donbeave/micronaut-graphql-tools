@@ -142,7 +142,7 @@ public final class ArgumentsScenario {
             if (text.isOmitted()) {
                 return "omitted";
             }
-            return text.isNull() ? "null" : "present:" + text.get();
+            return text.isNull() ? "null" : "present:" + text.getRequired();
         }
 
         public int total(List<Integer> numbers) {

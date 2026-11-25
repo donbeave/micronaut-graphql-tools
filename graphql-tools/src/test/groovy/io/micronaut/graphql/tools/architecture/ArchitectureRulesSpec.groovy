@@ -38,7 +38,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 
 /**
  * The bytecode of the library and the binding module (not the processor, which runs at compile time) obeys five rules:
- * no reflection outside a short allowlist, no Jackson, no internal type in the signature of the public API, no dependency of a public package on an internal one, and one accessor style in the public types of the websocket, mapping, directive and execution packages. The rules
+ * no reflection outside a short allowlist, no Jackson, no internal type in the signature of the public API, no dependency of a public package on an internal one, and one accessor style in the public types of every public package. The rules
  * keep the native image free of reflection metadata and the public API free of types that can change in any release.
  */
 class ArchitectureRulesSpec extends Specification {
@@ -63,10 +63,8 @@ class ArchitectureRulesSpec extends Specification {
             'getEnclosingConstructor', 'getGenericSuperclass', 'getTypeParameters', 'getGenericInterfaces',
     ] as Set
 
-    static final Set<String> ACCESSOR_RULE_PACKAGES = ['websocket', 'mapping', 'directive', 'execution'].collect { "$ROOT.$it".toString() } as Set
-
     /** Methods without a parameter that return a value but are not accessors of state. */
-    static final Set<String> ACCESSOR_RULE_EXEMPT = ['hashCode', 'toString', 'build'] as Set
+    static final Set<String> ACCESSOR_RULE_EXEMPT = ['hashCode', 'toString', 'build', 'render'] as Set
 
     @Shared JavaClasses classes = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
@@ -159,10 +157,10 @@ class ArchitectureRulesSpec extends Specification {
 
     void "no public class or interface declares a record-style accessor"() {
         expect:
-        classes().that(publicApi()).and(DescribedPredicate.describe('in websocket, mapping, directive or execution, and not a record, an enum or an annotation', { JavaClass c ->
-            c.packageName in ACCESSOR_RULE_PACKAGES && !c.record && !c.enum && !c.annotation
+        classes().that(publicApi()).and(DescribedPredicate.describe('not a record, an enum or an annotation', { JavaClass c ->
+            !c.record && !c.enum && !c.annotation
         })).should(declareNoRecordStyleAccessor())
-                .because('a public interface or class names its accessors getX and isX; only a record, which is the immutable data carrier, uses the component name (BC-44)')
+                .because('a public interface or class names its accessors getX and isX; only a record, which is the immutable data carrier, uses the component name (BC-44, BC-52)')
                 .check(classes)
     }
 
@@ -235,7 +233,7 @@ class ArchitectureRulesSpec extends Specification {
                     m.modifiers.contains(JavaModifier.PUBLIC) && !m.modifiers.contains(JavaModifier.STATIC) &&
                             !m.modifiers.contains(JavaModifier.SYNTHETIC) && !m.modifiers.contains(JavaModifier.BRIDGE) &&
                             m.parameters.empty && m.rawReturnType.name != 'void' && !(m.name in ACCESSOR_RULE_EXEMPT) &&
-                            !(m.name =~ /^(get|is)[A-Z]/) && !(m.name =~ /^(to|decorates)[A-Z]/)
+                            !(m.name =~ /^(get|is)[A-Z]/) && !(m.name =~ /^(to|as|new|decorates)[A-Z]/)
                 }.each { JavaMethod m ->
                     events.add(SimpleConditionEvent.violated(m, "${m.fullName} is a record-style accessor in a class or interface"))
                 }

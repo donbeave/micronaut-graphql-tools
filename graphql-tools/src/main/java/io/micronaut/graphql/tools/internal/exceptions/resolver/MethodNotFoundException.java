@@ -144,7 +144,7 @@ public final class MethodNotFoundException extends AbstractMappingException {
     public MethodNotFoundException forExtensionField() {
         return new MethodNotFoundException(
                 reason + " If a GraphQLRuntimeWiringCustomizer serves the field with a data fetcher of its own, return "
-                        + "its coordinate from GraphQLRuntimeWiringCustomizer#claimedFields().",
+                        + "its coordinate from GraphQLRuntimeWiringCustomizer#getClaimedFields().",
                 getMappingContext(),
                 methodName
         );
