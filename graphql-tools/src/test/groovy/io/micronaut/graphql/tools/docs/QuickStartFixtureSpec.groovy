@@ -44,7 +44,7 @@ class QuickStartFixtureSpec extends Specification {
         List<Path> files = Files.list(dir).withCloseable { Stream<Path> s -> s.collect(Collectors.toList()) }
         files.collectEntries { Path file ->
             [(file.fileName.toString().replaceFirst(/\.[^.]+$/, '')):
-                     (Files.readString(file) =~ /tag::(\w+)\[]/).collect { it[1] } as Set<String>]
+                     (Files.readString(file) =~ /tag::([\w-]+)\[]/).collect { it[1] } as Set<String>]
         }
     }
 
@@ -69,10 +69,10 @@ class QuickStartFixtureSpec extends Specification {
         expect:
         snippets.size() == 3
         snippets.every { String type, String args ->
-            def source = (args =~ /source="(\w+)"/)[0][1]
-            def tag = (args =~ /tags="(\w+)"/)[0][1]
-            def tags = (source == 'main' ? main : test)[type.substring('example.quickstart.'.length())]
-            args.contains('project-base="docs-examples"') && type.startsWith('example.quickstart.') && tags != null && tag in tags
+            def source = (args =~ /source="([^"]*)"/)[0][1]
+            def named = (args =~ /tags="([^"]*)"/)[0][1].split(',')*.trim()
+            def tags = source in ['main', 'test'] ? (source == 'main' ? main : test)[type.substring('example.quickstart.'.length())] : null
+            args.contains('project-base="docs-examples"') && type.startsWith('example.quickstart.') && tags != null && named.every { it in tags }
         }
     }
 
@@ -86,11 +86,19 @@ class QuickStartFixtureSpec extends Specification {
         literal == schemas[0]
     }
 
+    def "the fixture projects are part of the Gradle build"() {
+        given:
+        def settings = Files.readString(root.resolve('settings.gradle.kts'))
+
+        expect:
+        LANGUAGES.keySet().every { settings.contains("include(\"docs-examples-${it}\")") }
+    }
+
     def "the fixtures depend on the library and on no test suite"() {
         expect:
         LANGUAGES.keySet().every { language ->
-            def build = Files.readAllLines(root.resolve("docs-examples-${language}/build.gradle.kts"))
-                    .findAll { !it.trim().startsWith('//') }.join('\n')
+            def build = Files.readString(root.resolve("docs-examples-${language}/build.gradle.kts"))
+                    .replaceAll(/(?s)\/\*.*?\*\//, '').replaceAll(/(?m)\/\/.*$/, '')
             build.contains('projects.micronautGraphqlTools') && !build.contains('testSuite') && !build.contains('test-suite')
         }
     }
