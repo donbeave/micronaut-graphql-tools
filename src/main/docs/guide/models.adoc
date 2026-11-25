@@ -1,8 +1,8 @@
-The binding reads the classes behind your object types through their bean introspection, which Micronaut generates at compile time. It does not use reflection or a scan of the classpath at startup, so a class has to be introspected before the startup binds it. A class you write yourself gets one from `@GraphQLType`. This page is about the classes that cannot carry an annotation: classes that a generator writes, and classes of another module or a library.
+The binding reads the classes behind your object types through their bean introspection, which Micronaut generates at compile time. It does not use reflection or a scan of the classpath at startup, so a class has to be introspected before the startup binds it. A class you write yourself gets one from @api:io.micronaut.graphql.tools.annotation.GraphQLType[]. This page is about the classes that cannot carry an annotation: classes that a generator writes, and classes of another module or a library.
 
 == Model classes without an annotation
 
-`@GraphQLModels` on any class of the module that compiles your resolvers lists the classes, and the packages, to introspect. The annotation is `@Introspected(classes = ...)` for the GraphQL binding, so the compiler generates one introspection for each listed class, and nothing else in the model classes changes. A class that a field returns, or that a property of a listed class returns, binds as one of your own:
+@api:io.micronaut.graphql.tools.annotation.GraphQLModels[] on any class of the module that compiles your resolvers lists the classes, and the packages, to introspect. The annotation is `@Introspected(classes = ...)` for the GraphQL binding, so the compiler generates one introspection for each listed class, and nothing else in the model classes changes. A class that a field returns, or that a property of a listed class returns, binds as one of your own:
 
 snippet::example.models.ExternalModelFixtures[project-base="test-suite", source="test", tags="listed-classes", indent="0"]
 

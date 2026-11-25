@@ -112,7 +112,8 @@ class DocsCoverageSpec extends Specification {
                 def source = attrs.source ?: 'test'
                 def tags = (attrs.tags ?: '').split(',').collect { it.trim() }.findAll { it }
                 SUITES.each { language, suite ->
-                    def file = root.resolve("${suite[0]}/src/${source}/${suite[1]}/${m.group(1).replace('.', '/')}.${suite[2]}")
+                    def base = attrs['project-base'] ?: 'test-suite'
+                    def file = root.resolve("${base}-${language}/src/${source}/${suite[1]}/${m.group(1).replace('.', '/')}.${suite[2]}")
                     if (!Files.isRegularFile(file)) {
                         problems << "${where}: no ${language} file ${root.relativize(file)} for snippet ${m.group(1)}"
                         return

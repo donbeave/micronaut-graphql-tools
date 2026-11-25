@@ -34,10 +34,12 @@ public final class EnumsScenario {
     private EnumsScenario() {
     }
 
+// tag::enums[]
     @Introspected
     public enum Level {
         LOW, MEDIUM, HIGH
     }
+// end::enums[]
 
     @GraphQLInput
     public static class Window {
@@ -70,6 +72,7 @@ public final class EnumsScenario {
         }
     }
 
+// tag::enums[]
     @Singleton
     @GraphQLRootResolver
     @Requires(property = "tck.scenario", value = "enums")
@@ -96,5 +99,6 @@ public final class EnumsScenario {
             return "from=" + window.getFrom() + " to=" + window.getTo() + " only=" + window.getOnly();
         }
     }
+// end::enums[]
 
 }

@@ -15,9 +15,12 @@
  */
 package io.micronaut.graphql.tools.execution;
 
+import io.micronaut.core.annotation.Experimental;
+
 /**
  * How an operation reached the library's invocation.
  */
+@Experimental
 public enum GraphQLTransport {
 
     /** An HTTP request to the GraphQL route. */
