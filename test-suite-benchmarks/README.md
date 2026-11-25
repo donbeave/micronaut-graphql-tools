@@ -169,10 +169,10 @@ A schema whose interfaces are all returned by a field never takes this path (the
 
 ## The recorded start-up baseline
 
-`startup-baseline.json` is the JMH JSON of `scripts/startup-report.py`, the format that the `Startup benchmark` workflow reads
+`startup-baseline.json` is the JMH JSON of `scripts/startup-report.py`, the format that the `startup` job of the `Performance nightly` workflow reads
 (`--previous` takes it too). The workflow passes it as `--baseline`, so its report prints the change against it for every case.
 
-- Baseline commit: `e0e820c52fe1a0e4d40f2d109dd7926b09d52ae3` of the default branch, which contains `BindingBenchmark`, `RetainedHeapBenchmark` and the report script. The run used the `Startup benchmark` workflow on a branch that adds the `--baseline` option and this file to that commit.
+- Baseline commit: `e0e820c52fe1a0e4d40f2d109dd7926b09d52ae3` of the default branch, which contains `BindingBenchmark`, `RetainedHeapBenchmark` and the report script. The run used the start-up benchmark workflow (now the `startup` job of `Performance nightly`) on a branch that adds the `--baseline` option and this file to that commit.
 - Method: the workflow's own command, `startup-report.py --forks 10`: one jar per case, ten cold JVMs per case, single shot, no warm-up, graphql-java default leg.
 - Conditions: the GitHub-hosted `ubuntu-latest` runner that the nightly run uses, Temurin 25.0.5+8, started by hand (`workflow_dispatch`). The runner is shared, so its load is not recorded. The spread of the forks is in the table and in the JSON (`rawData`).
 
