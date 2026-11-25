@@ -64,8 +64,8 @@ public class Query {
 
     void "a method declared in the processed class binds by the name of the source without -parameters, on both sides"() {
         when:
-        def checked = new VisitorCompilation().schema('schema.graphqls', SCHEMA).source('example.Query', OWN)
-                .withoutParametersFlag().compile()
+        def checked = new JavaParserCompilation().schema('schema.graphqls', SCHEMA).source('example.Query', OWN)
+                .compile()
 
         then:
         checked.success
@@ -78,8 +78,8 @@ public class Query {
         Path base = compileBase(['-proc:none'])
 
         when:
-        def checked = new VisitorCompilation().schema('schema.graphqls', SCHEMA).source('example.Query', QUERY)
-                .classpath(base.toFile()).withoutParametersFlag().compile()
+        def checked = new JavaParserCompilation().schema('schema.graphqls', SCHEMA).source('example.Query', QUERY)
+                .classpath(base.toFile()).compile()
 
         then:
         !checked.success
@@ -88,8 +88,8 @@ public class Query {
         checked.errors[0].contains('the class file of base.Base has no parameter names: compile it with -parameters')
 
         when:
-        def unchecked = new VisitorCompilation().schema('schema.graphqls', SCHEMA).source('example.Query', QUERY)
-                .classpath(base.toFile()).withoutParametersFlag()
+        def unchecked = new JavaParserCompilation().schema('schema.graphqls', SCHEMA).source('example.Query', QUERY)
+                .classpath(base.toFile())
                 .option('micronaut.graphql.tools.processor.checks', 'false').compile()
         String startup = started(unchecked, base)
 
@@ -106,8 +106,8 @@ public class Query {
         Path base = compileBase(['-proc:none', flag])
 
         when:
-        def checked = new VisitorCompilation().schema('schema.graphqls', SCHEMA).source('example.Query', QUERY)
-                .classpath(base.toFile()).withoutParametersFlag().compile()
+        def checked = new JavaParserCompilation().schema('schema.graphqls', SCHEMA).source('example.Query', QUERY)
+                .classpath(base.toFile()).compile()
 
         then:
         checked.success
