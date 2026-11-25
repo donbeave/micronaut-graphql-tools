@@ -189,6 +189,24 @@ These topics are in the guide, in `src/main/docs/guide`:
 | Customizers and replacing the `GraphQL` bean | [customization.adoc](src/main/docs/guide/customization.adoc) |
 | Instrumentation beans | [observability.adoc](src/main/docs/guide/observability.adoc) |
 
+## Resolver scopes
+
+A resolver is an ordinary bean, and its scope decides the instance the same way it does for any other injection point.
+
+| Scope | Behaviour |
+|---|---|
+| `@Singleton` (the default of the resolver annotations) | One instance, looked up once at binding and invoked directly on every call, with no lookup per call. |
+| `@Prototype` | A new instance for every call of a field, looked up when the field is fetched. |
+| `@RequestScope` | One instance per HTTP request. The bean is a scoped proxy that is looked up once at binding, and the proxy picks the instance of the current request. |
+| `@Refreshable` | A scoped proxy as well: it follows a refresh without a new schema build. |
+
+`@RequestScope` needs a current HTTP request. A field fetched outside one, such as a subscription over a WebSocket
+connection, fails with `IllegalStateException: No request present`. Use a singleton resolver there, and pass per-request
+state through the GraphQL context. Kotlin classes of a proxied scope must be `open`, as for any Micronaut proxy.
+
+Each schema build binds from the same resolver registry, so a second `GraphQLSchema` built in one context (for example with
+`ApplicationContext.createBean(GraphQLSchema.class)`) binds the same fields as the first.
+
 ## Startup errors
 
 The schema is bound when the application context starts, whether the library or the application creates the
