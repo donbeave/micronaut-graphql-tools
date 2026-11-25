@@ -25,7 +25,7 @@ Run the checks that cover what you changed, and before you push run the full bui
 | graphql-java ceiling leg | `./gradlew build -PgraphqlJavaLeg=ceiling` | Same (JDK 25) |
 | graphql-java compat leg | `./gradlew build -PgraphqlJavaLeg=ceiling -PgraphqlJavaCompileLeg=default` | Changes to main code (JDK 25) |
 | Library on JDK 17 | `./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check :micronaut-graphql-tools-testing:check` | Changes to the library, binding, processor or scalars module (JDK 17) |
-| Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
+| Example suites, JVM | `./gradlew :test-suite-java:test :test-suite-serde:test :test-suite-kotlin:test :test-suite-groovy:test` | Runtime and processor changes |
 | Drift fixtures of the suites | `./gradlew :test-suite-java:driftFixtureTest :test-suite-kotlin:driftFixtureTest :test-suite-groovy:driftFixtureTest` | Changes to the processor or its registration (part of `check`; each runs a build of its own, `--no-daemon`) |
 | Native image tests | `./gradlew :test-suite-java:nativeTest :test-suite-serde:nativeTest :test-suite-kotlin:nativeTest --no-parallel` | Runtime features (Oracle GraalVM 25, about 5 GB each) |
 | Build wiring of the compile-time checks | `./gradlew :test-suite-build:buildToolsTest` | Changes to the processor's options, registration or documented build snippets (JDK 25 and `mvn`, needs the network; CI job `build tools`) |

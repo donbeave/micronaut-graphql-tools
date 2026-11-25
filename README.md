@@ -987,8 +987,8 @@ To build or test against a role locally:
 
 ### Consuming milestone previews
 
-Milestone versions (`1.0.0-M1`, `1.0.0-M2`, ...) and, later, `1.0.0` are published to the GitHub Packages Maven registry of
-this repository: `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. They keep the `io.micronaut.graphql.tools`
+The 1.0 line ends with the release candidate `1.0.0-RC1`. Milestone versions (`1.0.0-M1`, `1.0.0-M2`, ...) are published to
+the GitHub Packages Maven registry of this repository: `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. They keep the `io.micronaut.graphql.tools`
 group, but they are milestone previews from this repository: they are not affiliated with, and not published by, the
 Micronaut Foundation, and the group is not on Maven Central until the project is contributed. The versions are listed on the
 [packages page](https://github.com/donbeave?tab=packages&repo_name=micronaut-graphql-tools). There are no snapshots and no
@@ -1054,7 +1054,7 @@ module conventions in `buildSrc`.
 
 ## Snapshots and Releases
 
-Milestone versions (`1.0.0-M<n>`) and, later, `1.0.0` are published to the GitHub Packages Maven registry of this repository
+Milestone versions (`1.0.0-M<n>`) are published to the GitHub Packages Maven registry of this repository
 by the `Release` workflow (`.github/workflows/release.yml`), after the full build is green on the tagged commit. See
 [Consuming milestone previews](#consuming-milestone-previews) to use them. Nothing is published to Maven Central, no
 GitHub Release is created and there are no snapshots; that stays so until the project is contributed to the Micronaut
