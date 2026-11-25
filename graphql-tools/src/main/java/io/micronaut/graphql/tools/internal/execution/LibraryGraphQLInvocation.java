@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
+import io.micronaut.graphql.tools.internal.RequiresLibraryGraphQL;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
@@ -51,6 +52,7 @@ import io.micronaut.graphql.tools.internal.protection.GetMutationGuard;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.MutableHttpResponse;
 import io.micronaut.scheduling.TaskExecutors;
+import io.micronaut.scheduling.executor.ExecutorConfiguration;
 import io.micronaut.scheduling.executor.ExecutorSelector;
 import jakarta.inject.Singleton;
 import org.dataloader.DataLoaderRegistry;
@@ -99,12 +101,12 @@ import java.util.function.BiConsumer;
 @Singleton
 @Secondary
 @Replaces(DefaultGraphQLInvocation.class)
-@Requires(property = "graphql.enabled", notEquals = "false")
+@RequiresLibraryGraphQL
 @Requires(condition = LibraryBeanSelection.NoApplicationDefaultInvocation.class)
 public final class LibraryGraphQLInvocation implements GraphQLInvocation {
 
     private static final Logger LOG = LoggerFactory.getLogger(LibraryGraphQLInvocation.class);
-    private static final String EXECUTOR_KEY = GraphQLToolsConfiguration.PREFIX + ".execution.executor";
+    private static final String EXECUTOR_KEY = GraphQLToolsConfiguration.EXECUTION_EXECUTOR;
 
     private final boolean selected;
     private final GraphQL graphQL;
@@ -271,11 +273,11 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
         if (name.equals(TaskExecutors.SCHEDULED)) {
             throw new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR, EXECUTOR_KEY + " is 'scheduled', the executor of "
                     + "scheduled tasks, which does not run operations. Use 'blocking' (the default), 'io', 'virtual' (JDK 21 and "
-                    + "later), an executor configured under micronaut.executors, or 'none' to run on the calling thread.");
+                    + "later), an executor configured under " + ExecutorConfiguration.PREFIX + ", or 'none' to run on the calling thread.");
         }
         return selector.select(name).orElseThrow(() -> new ExecutionSetupException(BindingCode.UNKNOWN_EXECUTOR,
                 unknownExecutor(EXECUTOR_KEY + " is '" + name + "'", name, beanContext,
-                        "Use one of them, or 'none' to run on the calling thread, or configure '" + name + "' under micronaut.executors.")));
+                        "Use one of them, or 'none' to run on the calling thread, or configure '" + name + "' under " + ExecutorConfiguration.PREFIX + ".")));
     }
 
     /**
@@ -422,7 +424,14 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 return;
             }
             Runnable completion = () -> inContext(() -> super.complete(timedOut(timeout)));
-            if (!dispatch(completion)) {
+            // the cancellation task can run before the subscription is stored and before this future is done, so it may
+            // have found nothing to dispose and startCustomized may have seen a future that was not done yet: a task that
+            // a worker runs disposes after the completion. The timer thread never runs the callbacks of the application.
+            Runnable disposingCompletion = () -> {
+                completion.run();
+                inContext(this::disposeCustomizer);
+            };
+            if (!dispatch(disposingCompletion)) {
                 completion.run();
             }
             if (!dispatch(() -> inContext(this::cancelAfterTimeOut))) {

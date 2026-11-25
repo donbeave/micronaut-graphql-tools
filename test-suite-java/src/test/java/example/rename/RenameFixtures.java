@@ -78,6 +78,7 @@ public class RenameFixtures {
                         + "extend type Query { parcel: Parcel stamp: String! }\n"));
     }
 
+// tag::parcel[]
     @GraphQLType
     public static class Parcel {
 
@@ -115,6 +116,7 @@ public class RenameFixtures {
         }
 
     }
+// end::parcel[]
 
     @Requires(env = MEMBERS)
     @Singleton

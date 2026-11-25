@@ -25,6 +25,7 @@ import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer
 import io.micronaut.graphql.tools.directive.SchemaDirective
 import jakarta.inject.Singleton
 
+// tag::directives[]
 @Factory
 class DirectiveWirings {
 
@@ -61,3 +62,4 @@ class DirectiveWirings {
         }
     }
 }
+// end::directives[]

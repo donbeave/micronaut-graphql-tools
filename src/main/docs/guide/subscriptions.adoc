@@ -25,7 +25,7 @@ The deprecated Apollo `graphql-ws` sub-protocol (`graphql.graphql-apollo-ws.enab
 
 == Writing a subscription
 
-A method of a `SubscriptionResolver` (or of a `@GraphQLRootResolver` class) that is named after a field of the `Subscription` type returns a reactive stream of the event. `Publisher<T>`, Reactor's `Flux<T>` and the other reactive types that Micronaut converts to a `Publisher` are accepted.
+A method of a api:io.micronaut.graphql.tools.resolver.SubscriptionResolver[] (or of a @api:io.micronaut.graphql.tools.annotation.GraphQLRootResolver[] class) that is named after a field of the `Subscription` type returns a reactive stream of the event. `Publisher<T>`, Reactor's `Flux<T>` and the other reactive types that Micronaut converts to a `Publisher` are accepted.
 
 snippet::example.tck.WebSocketScenario[project-base="test-suite", source="test", tags="ws-subscription", indent="0"]
 
@@ -63,7 +63,7 @@ The adapter needs `org.jetbrains.kotlinx:kotlinx-coroutines-reactive` on the cla
 
 == Accepting a connection
 
-A browser cannot set a header on a WebSocket, so clients put the token in the `payload` of the `connection_init` message. A `GraphQLConnectionInterceptor` bean (package `io.micronaut.graphql.tools.websocket`) sees that payload and the HTTP request that upgraded the connection (`GraphQLConnectionRequest` is a record: `payload()` and `httpRequest()`), and answers with `GraphQLConnectionResult`:
+A browser cannot set a header on a WebSocket, so clients put the token in the `payload` of the `connection_init` message. A api:io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor[] bean (package `io.micronaut.graphql.tools.websocket`) sees that payload and the HTTP request that upgraded the connection (api:io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest[] is a record: `payload()` and `httpRequest()`), and answers with api:io.micronaut.graphql.tools.websocket.GraphQLConnectionResult[]:
 
 * `accept()` or `accept(attributes)` acknowledges the connection. The attributes (the user that the token names, for example) belong to the connection and are given to every operation of it, as the connection attributes of the execution.
 * `reject()` closes the connection with `4403` and the reason `Forbidden`; `reject(code, reason)` picks a code between `4000` and `4999` and a reason.
@@ -102,7 +102,7 @@ A query, a mutation and a subscription over a WebSocket see the same parameters 
 * an `HttpRequest<?>` parameter is the upgrade request of the connection, and a `Principal` parameter is the principal of that request;
 * an `Optional<MutableHttpResponse<?>>` parameter is empty, and a plain `MutableHttpResponse<?>` or `HttpResponse<?>` parameter fails the field with `HTTP_RESPONSE_UNAVAILABLE`, see <<httpAccess,HTTP Request and Response>>: the response does not exist for a message of an open connection.
 
-The recommended way to carry data from the connection to the resolvers is the `payload` of `connection_init`: a `GraphQLConnectionInterceptor` reads it and returns the connection attributes, and a `GraphQLContextContributor` puts them into the `GraphQLContext` with `getConnectionAttributes()` of the execution request, where a resolver reads them as a context value.
+The recommended way to carry data from the connection to the resolvers is the `payload` of `connection_init`: a `GraphQLConnectionInterceptor` reads it and returns the connection attributes, and a api:io.micronaut.graphql.tools.execution.GraphQLContextContributor[] puts them into the `GraphQLContext` with `getConnectionAttributes()` of the execution request, where a resolver reads them as a context value.
 
 == Native image
 

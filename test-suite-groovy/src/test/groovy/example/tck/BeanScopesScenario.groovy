@@ -38,6 +38,7 @@ class IdSequence {
     }
 }
 
+// tag::scopes[]
 @CompileStatic
 @RequestScope
 @Requires(property = 'tck.scenario', value = 'bean-scopes')
@@ -59,6 +60,7 @@ class Ticket {
         this.id = sequence.next()
     }
 }
+// end::scopes[]
 
 @CompileStatic
 @Singleton

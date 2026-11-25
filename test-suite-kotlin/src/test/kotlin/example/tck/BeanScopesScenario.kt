@@ -33,6 +33,7 @@ open class IdSequence {
     fun next(): Int = next.incrementAndGet()
 }
 
+// tag::scopes[]
 @RequestScope
 @Requires(property = "tck.scenario", value = "bean-scopes")
 open class RequestCounter {
@@ -46,6 +47,7 @@ open class RequestCounter {
 class Ticket(sequence: IdSequence) {
     val id: Int = sequence.next()
 }
+// end::scopes[]
 
 @Singleton
 @GraphQLRootResolver

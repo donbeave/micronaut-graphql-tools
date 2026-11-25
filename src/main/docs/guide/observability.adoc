@@ -26,7 +26,7 @@ Both follow the conventions of the Micronaut module that provides their library:
 
 == Instrumentation beans
 
-The library collects every `Instrumentation` bean and installs them before the `GraphQLBuilderCustomizer` beans run. One bean is installed as it is. Several are chained in a `ChainedInstrumentation`, lowest order first (`@Order` or `Ordered`), so the `beginExecution` of the lowest order runs first. With no `Instrumentation` bean the library sets no instrumentation, and graphql-java keeps its default. A customizer that calls `instrumentation(...)` on the builder replaces what the beans installed.
+The library collects every `Instrumentation` bean and installs them before the api:io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer[] beans run. One bean is installed as it is. Several are chained in a `ChainedInstrumentation`, lowest order first (`@Order` or `Ordered`), so the `beginExecution` of the lowest order runs first. With no `Instrumentation` bean the library sets no instrumentation, and graphql-java keeps its default. A customizer that calls `instrumentation(...)` on the builder replaces what the beans installed.
 
 The library adds exactly one `Instrumentation` bean for observers, whichever modules are on the classpath. It lives in `graphql-tools` and exists only when an observer bean does: each module contributes one observer (the Micrometer module a `RequestObserver` that records the timer, the OpenTelemetry module one that starts the request span) when its technology is on the classpath and its bean (`MeterRegistry` or `OpenTelemetry`) exists. Two instrumentations in the chain would cost every field about 550 bytes on graphql-java 21, which is why the modules share one. It implements the request hooks only and nothing at field level, so an execution that it observes pays nothing for each field. The library itself uses no `Instrumentation`: an operation's fields run through the data fetchers that the binding created, and the spans of the OpenTelemetry module wrap only the fields that you select. `RequestObserver` is `@Internal`: it is not an extension point for applications, whose own `Instrumentation` beans are chained as above.
 
@@ -46,13 +46,13 @@ The request timer is `graphql.request`, from the start of the execution to its r
 
 snippet::example.observability.ObservabilityTest[project-base="test-suite", source="test", tags="metrics", indent="0"]
 
-A field has no timer of its own: see <<resolverTimers>> for how to time one. The meter names and tags are constants in `GraphQLMetrics`.
+A field has no timer of its own: see <<resolverTimers>> for how to time one. The meter names and tags are constants in api:io.micronaut.graphql.tools.micrometer.GraphQLMetrics[].
 
 A subscription is timed until its stream is set up, not until it completes.
 
 === DataLoader metrics
 
-`graphql.dataloader.batches` counts the batches that the `DataLoader` of a batch loader bean dispatched, and `graphql.dataloader.batch.keys` the keys those batches loaded. Each is tagged with `loader`, the name of the batch loader bean. They are recorded when the request ends, from the counts that the library keeps for the execution (`DataLoaderBatchStatistics` in the GraphQL context). Counting adds two atomic increments to each batch, so the library counts nothing by default: set `micronaut.graphql.tools.execution.data-loader-statistics` to `true` to get these meters. Without it no DataLoader meter exists.
+`graphql.dataloader.batches` counts the batches that the `DataLoader` of a batch loader bean dispatched, and `graphql.dataloader.batch.keys` the keys those batches loaded. Each is tagged with `loader`, the name of the batch loader bean. They are recorded when the request ends, from the counts that the library keeps for the execution (api:io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics[] in the GraphQL context). Counting adds two atomic increments to each batch, so the library counts nothing by default: set `micronaut.graphql.tools.execution.data-loader-statistics` to `true` to get these meters. Without it no DataLoader meter exists.
 
 [[resolverTimers]]
 === Timers for your own resolvers
@@ -102,7 +102,7 @@ micronaut:
           - Mutation.*
 ----
 
-The selection is a `GraphQLFieldFetcherDecorator`, which the library asks once for each field at startup, never per request. The decorator wraps the fetcher of a selected field in a span named `Type.field`, a child of the request span, current while the fetcher runs and ended when the value is there (for a field that returns a future, when the future completes). It records the attributes `graphql.field.name` and `graphql.field.path`, the names that the OpenTelemetry GraphQL instrumentation uses. A field that the selection excludes gets back the very fetcher it was offered: it has no span and no instrumenter call, and costs nothing. Two kinds of field never get a span, even when selected, because a span there would only measure noise or nothing:
+The selection is a api:io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator[], which the library asks once for each field at startup, never per request. The decorator wraps the fetcher of a selected field in a span named `Type.field`, a child of the request span, current while the fetcher runs and ended when the value is there (for a field that returns a future, when the future completes). It records the attributes `graphql.field.name` and `graphql.field.path`, the names that the OpenTelemetry GraphQL instrumentation uses. A field that the selection excludes gets back the very fetcher it was offered: it has no span and no instrumenter call, and costs nothing. Two kinds of field never get a span, even when selected, because a span there would only measure noise or nothing:
 
 * A property read (a field the library serves from a property of its Java type): it is a trivial fetcher, and the library does not offer it to the decorator.
 * A field of the subscription type, whose value is a stream.
