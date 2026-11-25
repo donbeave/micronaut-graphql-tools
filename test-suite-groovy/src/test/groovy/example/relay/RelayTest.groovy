@@ -85,14 +85,16 @@ class RelayTest extends Specification {
     void 'an overflowing cursor is rejected'() {
         given:
         ApplicationContext context = ApplicationContext.run([:], RelayFixtures.RELAY)
-        String cursor = Base64.encoder.encodeToString('offset:2147483647'.bytes)
 
         when:
-        def result = GraphQL.newGraphQL(context.getBean(GraphQLSchema)).build()
-                .execute(ExecutionInput.newExecutionInput().query(PAGE).variables([first: 2, after: cursor]).build())
+        def results = ['offset:2147483647', 'garbage0'].collect { String text ->
+            GraphQL.newGraphQL(context.getBean(GraphQLSchema)).build()
+                    .execute(ExecutionInput.newExecutionInput().query(PAGE)
+                            .variables([first: 2, after: Base64.encoder.encodeToString(text.bytes)]).build())
+        }
 
         then:
-        !result.errors.isEmpty()
+        results.every { !it.errors.isEmpty() }
 
         cleanup:
         context?.close()

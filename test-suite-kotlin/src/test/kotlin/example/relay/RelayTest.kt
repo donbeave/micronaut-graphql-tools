@@ -80,10 +80,12 @@ class RelayTest {
     @Test
     fun `an overflowing cursor is rejected`() {
         ApplicationContext.run(mapOf(), RELAY).use { context ->
-            val cursor = java.util.Base64.getEncoder().encodeToString("offset:2147483647".toByteArray())
-            val result = GraphQL.newGraphQL(context.getBean(GraphQLSchema::class.java)).build()
-                .execute(ExecutionInput.newExecutionInput().query(page).variables(mapOf("first" to 2, "after" to cursor)).build())
-            assertFalse(result.errors.isEmpty())
+            for (text in listOf("offset:2147483647", "garbage0")) {
+                val cursor = java.util.Base64.getEncoder().encodeToString(text.toByteArray())
+                val result = GraphQL.newGraphQL(context.getBean(GraphQLSchema::class.java)).build()
+                    .execute(ExecutionInput.newExecutionInput().query(page).variables(mapOf("first" to 2, "after" to cursor)).build())
+                assertFalse(result.errors.isEmpty(), text)
+            }
         }
     }
 

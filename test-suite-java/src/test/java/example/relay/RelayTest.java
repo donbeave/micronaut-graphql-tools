@@ -93,10 +93,12 @@ class RelayTest {
     @Test
     void anOverflowingCursorIsRejected() {
         try (ApplicationContext context = ApplicationContext.run(Map.of(), RelayFixtures.RELAY)) {
-            String cursor = java.util.Base64.getEncoder().encodeToString("offset:2147483647".getBytes());
-            ExecutionResult result = GraphQL.newGraphQL(context.getBean(GraphQLSchema.class)).build()
-                    .execute(ExecutionInput.newExecutionInput().query(PAGE).variables(Map.of("first", 2, "after", cursor)).build());
-            assertFalse(result.getErrors().isEmpty());
+            for (String text : List.of("offset:2147483647", "garbage0")) {
+                String cursor = java.util.Base64.getEncoder().encodeToString(text.getBytes());
+                ExecutionResult result = GraphQL.newGraphQL(context.getBean(GraphQLSchema.class)).build()
+                        .execute(ExecutionInput.newExecutionInput().query(PAGE).variables(Map.of("first", 2, "after", cursor)).build());
+                assertFalse(result.getErrors().isEmpty(), text);
+            }
         }
     }
 

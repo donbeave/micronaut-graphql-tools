@@ -40,7 +40,9 @@ open class ArticlesQuery {
     private fun cursor(offset: Int): String = Base64.getEncoder().encodeToString("offset:$offset".toByteArray())
 
     private fun offset(cursor: String): Int {
-        val offset = String(Base64.getDecoder().decode(cursor)).removePrefix("offset:").toInt()
+        val decoded = String(Base64.getDecoder().decode(cursor))
+        require(decoded.startsWith("offset:")) { "invalid cursor" }
+        val offset = decoded.removePrefix("offset:").toInt()
         require(offset in articles.indices) { "invalid cursor" }
         return offset
     }
