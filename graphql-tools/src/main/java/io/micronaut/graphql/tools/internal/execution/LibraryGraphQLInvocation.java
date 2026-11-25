@@ -424,7 +424,14 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
                 return;
             }
             Runnable completion = () -> inContext(() -> super.complete(timedOut(timeout)));
-            if (!dispatch(completion)) {
+            // the cancellation task can run before the subscription is stored and before this future is done, so it may
+            // have found nothing to dispose and startCustomized may have seen a future that was not done yet: a task that
+            // a worker runs disposes after the completion. The timer thread never runs the callbacks of the application.
+            Runnable disposingCompletion = () -> {
+                completion.run();
+                inContext(this::disposeCustomizer);
+            };
+            if (!dispatch(disposingCompletion)) {
                 completion.run();
             }
             if (!dispatch(() -> inContext(this::cancelAfterTimeOut))) {
