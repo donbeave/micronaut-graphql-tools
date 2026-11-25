@@ -410,76 +410,6 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 
 *See.* <<typeSystem,Type System>>.
 
-[[example-multiple-methods-found]]
-=== `multiple-methods-found`
-
-*Cause.* Two resolver methods in different beans can bind one field.
-
-// corpus: failure/two-type-resolver-methods
-[source,text]
-----
-[multiple-methods-found] Found multiple methods for one GraphQL field.
-  GraphQL coordinate: Book.author (schema.graphqls, line 12, column 3)
-  Methods: 
-  1) example.BookResolver author(example.Book book)
-  2) example.OtherBookResolver author(example.Book book)
-  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("Book.author") on one of them (two methods with the same coordinate still conflict).
-----
-
-*Fix.* Annotate the overriding bean with `@Replaces`, or give one of the methods the `@GraphQLSchemaCoordinate` of the field. Two methods with one coordinate still conflict.
-
-*See.* <<resolverContracts,Resolver Contracts>>.
-
-[[example-unmapped-input-property]]
-=== `unmapped-input-property`
-
-*Cause.* An input class has a settable property that its GraphQL input type does not define. This is a check.
-
-// corpus: input/unmapped-input-property
-[source,text]
-----
-[unmapped-input-property] Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.checks.unmapped-input-property to warn or ignore to accept them):
-  GraphQL input object type: Filter, mapped class: example.Filter, properties: extra
-----
-
-*Fix.* Add the field to the input type or remove the property. To accept the property, set `checks.unmapped-input-property` to `warn` or `ignore`.
-
-*See.* <<inputs,Inputs>>.
-
-[[example-unreachable-value-type]]
-=== `unreachable-value-type`
-
-*Cause.* The schema defines enum, input and scalar types that no field reachable from a root operation type returns. This is a check.
-
-// corpus: strict/unreachable-value-type
-[source,text]
-----
-[unreachable-value-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Filter (input), Size (enum).
-  Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks.unreachable-value-type to warn or ignore.
-----
-
-*Fix.* Bind the type through a field, remove it, or list it in `allow.unreachable`.
-
-*See.* <<checkSeverity,Check severity>>.
-
-[[example-mapping-conflict]]
-=== `mapping-conflict`
-
-*Cause.* One object type of the schema is reached through two Java classes.
-
-// corpus: failure/one-type-two-classes
-[source,text]
-----
-[mapping-conflict] Unable to map GraphQL type `Book` to example.Novel, as it is already mapped to example.Book.
-  GraphQL coordinate: Query.search (schema.graphqls, line 7, column 3)
-  Mapped class: example.BookQuery
-  Mapped method: search(example.BookFilter filter)
-----
-
-*Fix.* Return one Java class for each schema type.
-
-*See.* <<typeSystem,Type System>>.
-
 [[example-incorrect-member-mapping]]
 === `incorrect-member-mapping`
 
@@ -497,23 +427,6 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 *Fix.* Map the member to a Java type that the Java type of the union can implement or extend.
 
 *See.* <<typeSystem,Type System>>.
-
-[[example-unwired-directive]]
-=== `unwired-directive`
-
-*Cause.* The schema applies a directive to the schema definition, and no `SchemaDirective` wires it. graphql-java calls no wiring there. This is a check.
-
-// corpus: directive/schema-level
-[source,text]
-----
-[unwired-directive] The schema applies directives that have no wiring: @audit (schema definition).
-  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.allow.inert-directives if it has no effect at runtime, or set micronaut.graphql.tools.checks.unwired-directive to warn or ignore.
-  graphql-java calls no wiring for the schema definition or for directive arguments (@name(arg:)), so a directive applied there must be listed in allow.inert-directives, or in micronaut.graphql.tools.allow.schema-customizer-directives if a GraphQLSchemaCustomizer handles it.
-----
-
-*Fix.* Wire the directive with a `SchemaDirective` bean, list it in `allow.inert-directives` if it has no effect at run time, or set `checks.unwired-directive` to `warn` or `ignore`.
-
-*See.* <<directives,Directives>>.
 
 [[example-unused-dictionary-entry]]
 === `unused-dictionary-entry`
@@ -724,56 +637,6 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 ----
 
 *Fix.* Make the class implement the interface that the message names.
-
-*See.* <<typeSystem,Type System>>.
-
-[[example-duplicate-directive-wiring]]
-=== `duplicate-directive-wiring`
-
-*Cause.* A directive is wired by a named `SchemaDirective` and by an every-element one, so it would take effect twice.
-
-// corpus: directive/named-and-every-element
-[source,text]
-----
-[duplicate-directive-wiring] Directive @audit is wired by both a named and an every-element SchemaDirective bean, so it would take effect twice: named example.Directives$NoOp, every element example.Directives$NoOp. Use one of them: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.
-----
-
-*Fix.* Use one of the two wirings: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.
-
-*See.* <<directives,Directives>>.
-
-[[example-coordinate-on-non-resolver]]
-=== `coordinate-on-non-resolver`
-
-*Cause.* A `@GraphQLSchemaCoordinate` is on a bean that is neither a root resolver nor a type resolver.
-
-// corpus: coordinate/on-non-resolver
-[source,text]
-----
-[coordinate-on-non-resolver] Invalid @GraphQLSchemaCoordinate declarations:
-  1) @GraphQLSchemaCoordinate("Query.second") on example.Helper second(): the bean is neither a @GraphQLRootResolver nor a @GraphQLTypeResolver.
-----
-
-*Fix.* Annotate the bean with `@GraphQLRootResolver` or `@GraphQLTypeResolver`, or remove the coordinate.
-
-*See.* <<resolverContracts,Resolver Contracts>>.
-
-[[example-ambiguous-type-class]]
-=== `ambiguous-type-class`
-
-*Cause.* Two classes match one object type of a union or interface, by the naming convention or by `@GraphQLType(name)`.
-
-// corpus: abstract/ambiguous-type-class
-[source,text]
-----
-[ambiguous-type-class] The object type Book matches several classes: example.BookGraph, example.BookRecord.
-Declare @GraphQLType(name = "Book") on one class only, rename the others, or map Book in the SchemaMappingDictionary, which always wins.
-  GraphQL coordinate: Query.search (schema.graphqls, line 6, column 3)
-  Mapped class: example.Query
-  Mapped method: search()
-----
-
-*Fix.* Declare `@GraphQLType(name = "Book")` on one of the classes, rename the others, or map the type in a `SchemaMappingDictionary`.
 
 *See.* <<typeSystem,Type System>>.
 
