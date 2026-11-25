@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 /**
- * The protection of the library's {@code GraphQL} bean against expensive operations: the cache of parsed documents.
+ * The protection of the library's {@code GraphQL} bean against expensive operations: the cache of parsed documents and the guard that refuses a mutation over GET.
  *
- * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: DocumentCache.</p>
+ * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: DocumentCache, GetMutationGuard.</p>
  */
 @Internal
 package io.micronaut.graphql.tools.internal.protection;

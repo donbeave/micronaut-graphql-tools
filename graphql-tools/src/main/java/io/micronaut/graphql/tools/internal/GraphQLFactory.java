@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.internal;
 
 import graphql.GraphQL;
+import graphql.execution.preparsed.PreparsedDocumentProvider;
 import graphql.execution.instrumentation.ChainedInstrumentation;
 import graphql.analysis.MaxQueryComplexityInstrumentation;
 import graphql.analysis.MaxQueryDepthInstrumentation;
@@ -28,7 +29,6 @@ import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.BeanRegistration;
-import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.context.annotation.Requires;
@@ -47,6 +47,7 @@ import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions;
 import io.micronaut.graphql.tools.internal.checks.DirectiveWiringCheck;
 import io.micronaut.graphql.tools.internal.protection.DocumentCache;
+import io.micronaut.graphql.tools.internal.protection.GetMutationGuard;
 import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestHolder;
 import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry;
@@ -89,7 +90,6 @@ import java.util.Objects;
 @Factory
 public final class GraphQLFactory {
 
-    @Bean
     @Singleton
     @Primary
     @Requires(condition = LibraryBeanSelection.NoCompetingSchema.class)
@@ -153,7 +153,6 @@ public final class GraphQLFactory {
         return graphQLSchema;
     }
 
-    @Bean
     @Singleton
     @Primary
     @Requires(condition = LibraryBeanSelection.NoCompetingGraphQL.class)
@@ -184,7 +183,10 @@ public final class GraphQLFactory {
             builder.instrumentation(new ChainedInstrumentation(chain));
         }
         graphQLBuilderCustomizers.forEach(customizer -> customizer.customize(builder));
-        return builder.build();
+        GraphQL graphQL = builder.build();
+        PreparsedDocumentProvider provider = graphQL.getPreparsedDocumentProvider();
+        return provider instanceof GetMutationGuard ? graphQL
+                : graphQL.transform(guarded -> guarded.preparsedDocumentProvider(new GetMutationGuard(provider)));
     }
 
     /**
@@ -192,7 +194,6 @@ public final class GraphQLFactory {
      * @param bindingManifestHolder the manifest recorded while the schema was bound
      * @return what the schema is bound to
      */
-    @Bean
     @Singleton
     public BindingManifest bindingManifest(GraphQLSchema graphQLSchema, BindingManifestHolder bindingManifestHolder) {
         return bindingManifestHolder.get();

@@ -27,9 +27,9 @@ A field that only a hand-written `DataFetcher` serves has no Java member, so the
 
 == Configuring the `GraphQL` bean
 
-`GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean, which the library creates with its own schema, before it is built, lowest order first. They set a `PreparsedDocumentProvider`, the execution strategies, the default `DataFetcherExceptionHandler` and the like; the <<errors,Errors>> page has an example.
+`GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean before it is built. The bean uses the selected `GraphQLSchema`: the library's, or an application schema that replaces it, lowest order first. They set a `PreparsedDocumentProvider`, the execution strategies, the default `DataFetcherExceptionHandler` and the like; the <<errors,Errors>> page has an example.
 
-The library collects the `Instrumentation` beans and installs them before the customizers run: one bean is installed as it is, and several are chained in a `ChainedInstrumentation`, lowest order first. With no `Instrumentation` bean the library sets none, and graphql-java keeps its default. A customizer that calls `instrumentation(...)` replaces what the beans installed, so register an instrumentation as a bean.
+The library collects the `Instrumentation` beans and installs them before the customizers run: one bean is installed as it is, and several are chained in a `ChainedInstrumentation`, lowest order first. With no `Instrumentation` bean the library sets none, and graphql-java keeps its default. When `protection.max-depth` or `protection.max-complexity` is not `0`, the library installs the matching protection instrumentation as well. A customizer that calls `instrumentation(...)` replaces what the library installed, so register an instrumentation as a bean.
 
 == Building the `GraphQL` bean yourself
 
@@ -45,7 +45,7 @@ snippet::example.replaced.ReplacedBeansFactory[project-base="test-suite", source
 
 A request is then served by that schema, and the library's binding does not run for it. At startup the library logs one INFO line for each of the two types, which names the bean that is used and the application's qualified beans that it ignores.
 
-An application that builds its own `GraphQL` keeps the library's `GraphQLSchema`, which is bound at startup. To change the library's `GraphQL` without replacing it, add a `GraphQLBuilderCustomizer`.
+An application that builds its own `GraphQL` keeps the library's `GraphQLSchema`, which is bound at startup. To change the library's `GraphQL` without replacing it, add a api:io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer[].
 
 === Why the library selects these two itself
 
@@ -60,3 +60,21 @@ The library's `GraphQLInvocation` is `@Secondary`, and it declares `@Replaces(De
 snippet::example.replaced.ReplacedBeansFactory[project-base="test-suite", source="test", tags="invocation", indent="0"]
 
 The operations then run as your invocation decides, and a resolver that needs what only the library's invocation provides (a DataLoader, the request, the response or the principal as a parameter) fails the startup with `[execution-context-unavailable]`. See the Execution page.
+
+[[customizerOrder]]
+== The order of customizers and decorators
+
+Several beans of one customizer type form a chain, and Micronaut's `OrderUtil` sorts it: a bean implements `io.micronaut.core.order.Ordered` or carries `@Order`, and the lower value runs first. A bean with neither has the order `0`, and two beans with the same value keep no defined sequence, so give beans that must run in a fixed sequence different values. A lambda or a closure has no `@Order`, so a lambda bean is ordered by declaring it in a factory method that carries `@Order`.
+
+The chains and what the order means for each:
+
+* `GraphQLSchemaCustomizer`: each one receives the schema that the one before returned. The order is part of the result.
+* `GraphQLErrorsCustomizer`: each one receives the list of errors that the one before returned.
+* `GraphQLFieldFetcherDecorator`: the lowest value is the outermost wrapper of a field.
+* `GraphQLExceptionMapper`: the mappers whose type matches are tried lowest value first, and the first one that answers wins.
+* `GraphQLConnectionInterceptor`: lowest value first, until one rejects the connection.
+
+[[experimentalTypes]]
+== Types that are marked `@Experimental`
+
+`io.micronaut.core.annotation.Experimental` marks an API that can still change before the API freeze. These types of the library carry it: `GraphQLFieldFetcherDecorator`, `GraphQLTransport`, `DataLoaderBatchStatistics`, `GraphQLContextContributor` and `GraphQLConnectionInterceptor`. A change to one of them is listed on the page of breaking changes like any other.

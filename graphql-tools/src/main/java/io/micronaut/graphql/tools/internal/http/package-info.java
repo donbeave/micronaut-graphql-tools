@@ -17,7 +17,7 @@
  * The library's HTTP endpoint of the GraphQL transport: the controller that replaces the one of {@code micronaut-graphql}, and the
  * negotiation of the response media type and the status that its multipart sibling shares.
  *
- * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: LibraryGraphQLController, GraphQLHttpResponses.</p>
+ * <p><b>Audience.</b> Internal. Not part of the API; do not import it. Key types: LibraryGraphQLController, GraphQLHttpResponses, MutationOverGetHandler.</p>
  */
 @Internal
 package io.micronaut.graphql.tools.internal.http;

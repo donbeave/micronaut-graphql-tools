@@ -34,7 +34,7 @@ snippet::example.graphql.type.resolver.BookResolver[project-base="test-suite", s
 
 `sellers` serves the field `Book.sellers`, which the `Book` class does not hold. The `DataLoader` parameter is bound by the library (see <<dataLoaders,Data Loaders>>).
 
-For a Java interface that an SDL interface is mapped to, a type resolver of that interface serves the field on each implementing object type that does not bind it itself. The coordinate of such a method, when it declares one, is the field of the interface. When an implementation binds the same field with a member or a resolver of its own, the startup fails with `[multiple-methods-found]`.
+For a Java interface that an SDL interface is mapped to, a type resolver of that interface serves the field on each implementing object type that does not bind it itself. The coordinate of such a method, when it declares one, is the field of the interface. When an implementation also binds the same field with a member or a resolver of its own, the startup reports `[precedence-ambiguity]` for a member and a resolver under the default setting (see below), and `[multiple-methods-found]` for two resolvers.
 
 == A property or a type resolver
 

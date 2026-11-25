@@ -29,7 +29,7 @@ The adapted future completes on the thread that signals the publisher. The adapt
 
 A field that returns an object type tells the library its class through the return type. The members of a union and the object types that implement an interface are not named by any return type, so each needs a class. Four sources give it, and the first one that has an answer wins:
 
-. *The dictionary.* `SchemaMappingDictionary.registerType("Book", BookModel.class)`, from a `GraphQLSchemaMappingDictionaryCustomizer` bean, always wins. It is the escape hatch for a class that no rule below finds.
+. *The dictionary.* `SchemaMappingDictionary.registerType("Book", BookModel.class)`, from a api:io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer[] bean, always wins. It is the escape hatch for a class that no rule below finds.
 . *`@GraphQLType(name = "Book")`* on the class. The class stands for the object type of that name. The annotation is read from the bean introspection, so the build-time processor and the startup see the same declaration.
 . *The naming convention* `micronaut.graphql.tools.type-class-convention`, a pattern that holds `{Type}` once. With `{Type}Graph`, the object type `Book` is the introspected class whose simple name is `BookGraph`. A class that declares a name with `@GraphQLType(name)` is matched by that name only. There is no convention by default.
 . *The permitted subclasses of a sealed type.* When the Java type that the field declares for the union or the interface is sealed, the object type is the permitted subclass whose `@GraphQLType(name)`, or, where it declares none, whose simple name, is the type name. The member list stays in the schema; the sealed type only says which class is each member, so the same schema gives the same members in Java, Kotlin and Groovy. See <<sealedTypes,Sealed types>>.
@@ -40,7 +40,7 @@ With `type-class-convention: "{Type}Graph"`, `DerivedBook` and `DerivedPoster` m
 
 Two classes that match one object type, by the annotation, by the convention or one by each, fail the startup with `[ambiguous-type-class]` naming the type and both classes. A dictionary entry for that type ends the ambiguity, because an explicit entry always wins. A convention without `{Type}`, or with it twice, fails the startup with `[invalid-type-class-convention]`.
 
-The same three sources name the class of an interface that no field returns, so that a `@GraphQLTypeResolver` of that interface binds its fields on every implementation. Register the interface in the dictionary (`registerType("Node", Node.class)`), annotate it with `@GraphQLType(name)`, or let the convention find it. An implementation that binds the same field itself, with a member or a resolver of its own, is still reported: `[multiple-methods-found]` for two resolvers, and the `precedence` rules for a member. The dictionary entry of such an interface counts as used, so `strict` reports no `[unused-dictionary-entry]` for it.
+The same three sources name the class of an interface that no field returns, so that a @api:io.micronaut.graphql.tools.annotation.GraphQLTypeResolver[] of that interface binds its fields on every implementation. Register the interface in the dictionary (`registerType("Node", Node.class)`), annotate it with `@GraphQLType(name)`, or let the convention find it. An implementation that binds the same field itself, with a member or a resolver of its own, is still reported: `[multiple-methods-found]` for two resolvers, and the `precedence` rules for a member. The dictionary entry of such an interface counts as used, so `strict` reports no `[unused-dictionary-entry]` for it.
 
 The derivation reads the compile-time introspection metadata only, so it works in a native image and adds no reflection. It runs once for each type at startup. A request resolves the object type of a value through a cache with one entry for each runtime class, and does no lookup of a name.
 
@@ -56,7 +56,7 @@ snippet::example.tck.SealedTypesScenario[project-base="test-suite", source="test
 The rules:
 
 * Java sealed types (a `permits` clause, or subclasses in the same compilation unit), Kotlin `sealed` classes and interfaces, and Groovy `sealed` classes and interfaces with a `permits` clause are all sealed types, and the rule is the same for each. Groovy needs the sealed type on a JVM that supports it (Java 17 or later).
-* Only the permitted subclasses that are introspected (`@GraphQLType`, `@Introspected`) are members, because the binding reads their properties through the introspection. An abstract or sealed intermediate class is not a member; its own permitted subclasses are.
+* Only the permitted subclasses that are introspected (@api:io.micronaut.graphql.tools.annotation.GraphQLType[], `@Introspected`) are members, because the binding reads their properties through the introspection. An abstract or sealed intermediate class is not a member; its own permitted subclasses are.
 * Where no permitted subclass has the name of a member, the member has no class, as it has none without a sealed type: the startup fails with `[union-type-mapping-not-provided]` or `[interface-type-mapping-not-provided]`.
 * A type that is not sealed is not affected: its members are found by the dictionary, `@GraphQLType(name)` or the naming convention only.
 * The derivation reads no permits clause by reflection: every subclass of a sealed type is one of its permitted subclasses, so the introspected classes that the sealed type is assignable from are the candidates. It works in a native image and runs once for each type at startup.
@@ -64,7 +64,7 @@ The rules:
 
 === Compile-time check
 
-The processor reports `[ambiguous-type-class]` at compile time with the same rule and the same message as the startup. It sees the classes of the module that carry `@GraphQLType` or `@Introspected` (a class that only `@GraphQLModels` or a dependency introspects is not seen), the schema files of `schema.dirs`, and the processor option `micronaut.graphql.tools.processor.type.class.convention`, which holds the value of the runtime key. The dictionary is runtime code, which a visitor cannot see, so a build reports two matching classes even when a dictionary entry ends the ambiguity at startup. Remove the annotation or rename one class, or compile with `micronaut.graphql.tools.processor.checks=false` and let the startup decide. A class of another module is a candidate at startup only.
+The processor reports `[ambiguous-type-class]` at compile time with the same rule and the same message as the startup. It sees the classes of the module that carry `@GraphQLType` or `@Introspected` (a class that only @api:io.micronaut.graphql.tools.annotation.GraphQLModels[] or a dependency introspects is not seen), the schema files of `schema.dirs`, and the processor option `micronaut.graphql.tools.processor.type.class.convention`, which holds the value of the runtime key. The dictionary is runtime code, which a visitor cannot see, so a build reports two matching classes even when a dictionary entry ends the ambiguity at startup. Remove the annotation or rename one class, or compile with `micronaut.graphql.tools.processor.checks=false` and let the startup decide. A class of another module is a candidate at startup only.
 
 == Enums
 
@@ -86,7 +86,7 @@ A `GraphQLSchemaMappingDictionaryCustomizer` bean registers the Java class of an
 
 snippet::example.tck.AbstractTypesScenario[project-base="test-suite", source="test", tags="mappings", indent="0"]
 
-A GraphQL type can be mapped to a class or to a Java interface. An interface and the classes annotated with `@GraphQLType(TheInterface.class)` are one mapping: an object of any of those classes resolves to that object type, and a field may declare either the interface or such a class for the same GraphQL type. The startup checks these rules:
+A GraphQL type can be mapped to a class or to a Java interface. An interface and the classes annotated with `@GraphQLType(TheInterface.class)` are one mapping when each such class implements the interface (the startup fails with `[incorrect-implementation]` for one that does not): an object of any of those classes resolves to that object type, and a field may declare either the interface or such a class for the same GraphQL type. The startup checks these rules:
 
 * A GraphQL type is mapped once, and a Java type is mapped to one GraphQL type. The error names the GraphQL types and the Java types involved.
 * Mapping one GraphQL object type to an interface and another one to a class that implements it fails with `[ambiguous-type-mapping]`, because an object of that class would match both.

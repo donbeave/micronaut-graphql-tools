@@ -32,3 +32,4 @@ security
 unreturned-interface-resolver
 protection
 http
+http-conformance

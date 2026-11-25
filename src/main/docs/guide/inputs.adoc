@@ -19,7 +19,7 @@ The startup and the compile-time check (the visitor of `graphql-tools-processor`
 | A method inherited from a class file, such as a superclass or an interface of a dependency | The name that the class file carries. javac writes it with `-parameters` or, for a method that has a body, as local variable debug information with `-g`, which the Gradle and Maven compile tasks pass by default. An abstract or interface method has no body to hold that information, so its names need `-parameters`. A class file built without the needed flag has no names: the name is `arg0`.
 |===
 
-A parameter without a name fails like any other parameter with no argument of that name, and the message says what to do: compile the class that declares the method with `-parameters`, or bind the parameter with `@GraphQLArgument`. Startup and compile time see the same name for the same class file.
+A parameter without a name fails like any other parameter with no argument of that name, and the message says what to do: compile the class that declares the method with `-parameters`, or bind the parameter with @api:io.micronaut.graphql.tools.annotation.GraphQLArgument[]. Startup and compile time see the same name for the same class file.
 
 == What the converters do
 
@@ -41,7 +41,7 @@ Any other declared collection fails the startup with `[unsupported-input-type]`.
 
 == Input classes
 
-An input class is a class annotated with `@GraphQLInput`, which is `@Introspected`. The library instantiates it through the introspected constructor, which takes the input fields that match its parameters. Every other input field is then set through its property. A record, a Kotlin data class and an immutable class need nothing but the annotation:
+An input class is a class annotated with @api:io.micronaut.graphql.tools.annotation.GraphQLInput[], which is `@Introspected`. The library instantiates it through the introspected constructor, which takes the input fields that match its parameters. Every other input field is then set through its property. A record, a Kotlin data class and an immutable class need nothing but the annotation:
 
 snippet::example.tck.ArgumentsScenario[project-base="test-suite", source="test", tags="constructor-input", indent="0"]
 
@@ -52,7 +52,7 @@ The rules:
 * Every input field needs a property of the same name. The startup fails with `[field-not-bound]` for a missing one, and with `[input-field-not-settable]` for a read-only property that no constructor parameter of the same name takes.
 * A property is settable when it has a setter or a constructor parameter, as the introspection lists them. The same definition decides `[input-field-not-settable]`, the unmapped properties at startup and the compile-time check.
 * In strict mode, a settable property that no input type defines fails the startup (`[unmapped-input-property]`), naming the class and the property. A class that several input types map to, such as one DTO for a create and a rename input, is checked once: a property is unmapped only when none of those types has a field for it, so each type may cover a different subset.
-* To exclude a property that the server populates, annotate it with `@GraphQLIgnore`. The property is then not reported, and the binding manifest lists it as `~ignored`. A field that names the property still binds it. Jackson annotations such as `@JsonIgnore` are not read.
+* To exclude a property that the server populates, annotate it with @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[]. The property is then not reported, and the binding manifest lists it as `~ignored`. A field that names the property still binds it. Jackson annotations such as `@JsonIgnore` are not read.
 * The compile-time check cannot see the resolvers of other classes. It reports a property only when no input type of the schema that it did not reach could cover it, so it never reports a property that the startup accepts.
 
 == Conversion errors
@@ -63,8 +63,8 @@ A value that cannot be converted (see <<errors,Errors>>) is a GraphQL error with
 
 Customization goes through Micronaut `TypeConverter` beans and the scalar mapping, not through a mapper:
 
-* A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInput` itself, `ArgumentValue` properties included: the library does not touch the result. The class keeps its introspection, because the startup checks read it.
-* A `GraphQLScalarMapping` declares which Java classes a custom scalar produces. A value that is not an instance of the declared class goes through the Micronaut `ConversionService`, which holds the application's `TypeConverter` beans.
+* A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInput` itself, api:io.micronaut.graphql.tools.input.ArgumentValue[] properties included: the library does not touch the result. The class keeps its introspection, because the startup checks read it.
+* A api:io.micronaut.graphql.tools.mapping.GraphQLScalarMapping[] declares which Java classes a custom scalar produces. A value that is not an instance of the declared class goes through the Micronaut `ConversionService`, which holds the application's `TypeConverter` beans.
 
 == ArgumentValue
 

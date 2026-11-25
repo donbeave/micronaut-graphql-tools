@@ -53,7 +53,7 @@ With this mapper a resolver that throws `OutOfStockException` produces:
 * The mappers are beans, found at compile time with the rest of the bean definitions, and the type of the exception is read from the declared type argument, so a mapper works in a native image without reflection configuration.
 * The mappers of an exception class are looked up once and cached for that class. A response without a failing field never looks at the mappers.
 * A mapper matches a failure of a `CompletionStage` field, a `Mono` and a `Flux`: the library removes the `CompletionException` and `ExecutionException` that the stage wraps around the failure before the handler sees it, on every graphql-java version it supports.
-* An application that provides its own `GraphQL` bean, or replaces the handler in a `GraphQLBuilderCustomizer`, takes over the handling: the mappers are used by the library's handler only.
+* An application that provides its own `GraphQL` bean, or replaces the handler in a api:io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer[], takes over the handling: the mappers are used by the library's handler only.
 
 [[errorDetails]]
 == Details outside production
@@ -85,7 +85,7 @@ Each exception that is not mapped is logged once, at ERROR, by `io.micronaut.gra
 [[errorsCustomizer]]
 == The final list of errors
 
-A `GraphQLErrorsCustomizer` bean changes the list of errors of a response after the handler ran, whatever raised them: a resolver, a validation or syntax error, a rejected operation. Use it for what concerns every error, such as a correlation id, a translated message or dropping an error.
+A api:io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer[] bean changes the list of errors of a response after the handler ran, whatever raised them: a resolver, a validation or syntax error, a rejected operation. Use it for what concerns every error, such as a correlation id, a translated message or dropping an error.
 
 snippet::example.tck.ErrorHandlingScenario[project-base="test-suite", source="test", tags="customizer", indent="0"]
 
@@ -165,12 +165,12 @@ These errors are about the operation, not about a field. Match on `extensions.co
 |`INTERNAL_ERROR` |The generic error of an exception that no mapper handled, or of a failure of a context contributor.
 |===
 
-A context contributor (a `GraphQLContextContributor` bean) can reject an operation: if it throws a `GraphQLError` (for example `GraphqlErrorException`), that error is the only error of the response, `data` is `null` and no resolver runs. Any other exception from a contributor is logged at ERROR, and the response has the one generic `INTERNAL_ERROR` error, without the message. The customizers of the final list see these errors too.
+A context contributor (a api:io.micronaut.graphql.tools.execution.GraphQLContextContributor[] bean) can reject an operation: if it throws a `GraphQLError` (for example `GraphqlErrorException`), that error is the only error of the response, `data` is `null` and no resolver runs. Any other exception from a contributor is logged at ERROR, and the response has the one generic `INTERNAL_ERROR` error, without the message. The customizers of the final list see these errors too.
 
 [[errorsMigration]]
 == Migrating from `@ExceptionHandler`
 
-graphql-java-kickstart maps an exception to an error with an `@ExceptionHandler` method of a bean (and its `GraphQLErrorHandler`). The equivalent is one `GraphQLExceptionMapper` bean for each exception type.
+graphql-java-kickstart maps an exception to an error with an `@ExceptionHandler` method of a bean (and its `GraphQLErrorHandler`). The equivalent is one api:io.micronaut.graphql.tools.error.GraphQLExceptionMapper[] bean for each exception type.
 
 * The method of the handler that returns the error for one exception type becomes `map` of a mapper for that type. The message and the extensions you set there are what the client sees.
 * An exception that an `@ExceptionHandler` matched by its superclass is matched the same way, by the type argument. Where the handlers of the old setup relied on the order of the methods, give the mappers an `@Order`.

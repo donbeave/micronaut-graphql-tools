@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.execution;
 
 import graphql.schema.DataFetcher;
+import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.NonNull;
 
 /**
@@ -33,7 +34,10 @@ import io.micronaut.core.annotation.NonNull;
  * {@link io.micronaut.core.annotation.Order @Order} on the bean class or of
  * {@link io.micronaut.core.order.Ordered#getOrder()} (lowest first, so the lowest is the outermost), the async
  * boundary, the executor hop of {@code @ExecuteOn}, the publisher adapter, the method or property fetcher.</p>
+ *
+ * <p>Implement {@link io.micronaut.core.order.Ordered} or use {@code @Order}; lower runs first.</p>
  */
+@Experimental
 public interface GraphQLFieldFetcherDecorator {
 
     /**
