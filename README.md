@@ -214,6 +214,127 @@ The mapping then checks `T`. Anything else fails at startup with `[unsupported-r
 - `DataFetcherResult<Publisher<T>>` is not supported on a subscription field, although graphql-java would unwrap it:
   return the `Publisher` and, if needed, a `DataFetcherResult` per event.
 
+## Resolver contracts
+
+`@GraphQLRootResolver` and `@GraphQLTypeResolver` are inherited (`@Inherited`). They may sit on an interface, for
+example one emitted by a code generator, and a bean that implements it is a resolver without a GraphQL annotation of
+its own. The annotations carry no bean stereotype: a class that carries one, extends an annotated class or implements
+an annotated interface is a bean only when it has a scope annotation of its own, such as `@Singleton`. A class without
+one is not a bean, so a fake or a second implementation does not become a second resolver by accident, and the
+compile-time checks report a contract that no bean class implements. Every bean that implements the contract is a
+resolver, so a hand-written fake or delegating adapter that implements it and is a bean is registered too: annotate it
+with `@Replaces(<original>.class)` (`@Requires(env = "test")` alone does not help, because both beans are active in the
+test environment). Micronaut AOP advice (`@Around`) on the implementation still applies.
+
+**Marker interfaces.** `QueryResolver`, `MutationResolver`, `SubscriptionResolver` and `TypeResolver<T>` (package
+`io.micronaut.graphql.tools.resolver`) are the contracts without an annotation. `interface BookTitleResolver extends
+TypeResolver<Book>` binds to `Book` with no class literal, and the root marker fixes the operation type: the methods of
+a `MutationResolver` bind fields of the mutation type only, so one method name can serve a field of each operation type.
+Only the methods that implement a method of a contract interface (same name, same number of parameters) bind, each to the
+operation of its own contract: a public helper of the implementation binds
+nothing and does not fail strict mode. A class that implements a marker directly binds all its public methods. The
+processor records the operation, the source type and the contract methods in the annotation metadata of the
+implementation (the build needs `micronaut-graphql-tools-processor`, otherwise the startup fails with
+`[type-resolver-contracts-not-found]`). The guide page Resolver Contracts has the examples.
+
+```java
+public interface BookTitleResolver extends TypeResolver<Book> {
+    String title(Book book);
+}
+
+@Singleton
+public class BookTitles implements BookTitleResolver {
+    @Override
+    public String title(Book book) { ... }
+}
+```
+
+```java
+@GraphQLTypeResolver(Book.class)
+public interface BookLabelResolverContract {
+    @GraphQLSchemaCoordinate("Book.label")
+    String label(Book book);
+}
+
+@Singleton
+public class BookLabelResolver implements BookLabelResolverContract {
+    @Override
+    public String label(Book book) { ... }
+}
+```
+
+`@GraphQLSchemaCoordinate` makes the contract methods executable: Micronaut carries the method annotations from the
+contract method over to the implementation. A method with a coordinate binds the field its coordinate names and no
+other: a type resolver method only on that object type (or, for an interface field, on the implementations of that
+interface), a root resolver method only on that root operation type.
+Methods of beans without coordinates are matched by name. The coordinate is also checked at startup, never trusted:
+
+- On a bean where at least one method carries a coordinate, only those methods bind. Other public methods (helpers)
+  are not candidates.
+- The startup fails with `[unknown-schema-coordinate]` (or `[coordinate-on-non-resolver]`), listing every problem, when a coordinate is not of the
+  form `Type.field`, names a type or field the schema does not have or a type that is neither an object type nor an
+  interface, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
+  `@GraphQLTypeResolver`, or sits on a bean that is neither. The method may have any name: the coordinate decides, see
+  [Binding a field to a differently named member](src/main/docs/guide/binding.adoc).
+- It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
+  class that the `@GraphQLTypeResolver` does not resolve (a method that declares its coordinate wins over a property of
+  the mapped class, see [Property or type resolver](src/main/docs/guide/binding.adoc)). A coordinate whose type
+  is unreachable and allowed (see [Configuration](#configuration)) is not bound; with `unbound-resolver-method` at `fail` (the default)
+  it is an error, otherwise it is logged as a warning.
+
+**Root operation types.** Root resolver methods are scoped per root operation type (`Query`, `Mutation`,
+`Subscription`). A method with `@GraphQLSchemaCoordinate("Subscription.status")` binds only that field, so the same
+field name on two operation types binds two different methods:
+
+```java
+@Singleton
+@GraphQLRootResolver
+public class StatusQuery {
+    @GraphQLSchemaCoordinate("Query.status")
+    public String status(String id) { ... }
+}
+
+@Singleton
+@GraphQLRootResolver
+public class StatusSubscription {
+    @GraphQLSchemaCoordinate("Subscription.status")
+    public Publisher<String> status(String id) { ... }
+}
+```
+
+A root resolver method of a bean without coordinates binds the field of its name on every root operation type, as it
+always did; give it a coordinate to scope it to one. When that makes one method serve several operation types (a
+`ping()` for `Query.ping` and `Mutation.ping`), [strict mode](#strict-mode), on by default, fails the startup
+(`root-method-several-operations`); setting that check to `warn` or `ignore` allows it. When more than one method can bind one root field (two beans with
+a method of that name, two methods with one coordinate, or a coordinate method and a method of a bean without
+coordinates), the startup fails with `[multiple-methods-found]` naming the field and every method. Before, the
+first bean found won, which depended on the order Micronaut returned the beans in. There is no option to restore that.
+
+**Inheritance from classes.** The annotations are inherited from superclasses too, so a bean that extends an annotated
+class is a resolver as well: with the annotated class and a `@Singleton` subclass, both are registered. When both
+then bind the same field, the startup fails with `[multiple-methods-found]` naming both classes. Annotate only the
+class that should be the resolver, or annotate the subclass with `@Replaces(<original>.class)`: the original is then
+dropped and only the subclass binds. `@Requires(env = "test")` alone does not help, because both beans are active in the
+test environment. The same applies to two beans of different packages that bind one root field: the message names the
+operation field, each bean, and both fixes (`@Replaces`, or `@GraphQLSchemaCoordinate` when the methods serve different
+operation types).
+
+**Several contracts on one bean.** A bean may implement type resolver contracts for different classes. The
+annotation metadata keeps only one of the inherited values, so the class hierarchy is read to find every contract, and
+each method binds for the class of its first parameter (the source object). A public method whose first parameter is
+none of those classes fails the startup with `[ambiguous-type-resolver]`, naming the bean and every contract (on a
+bean that uses `@GraphQLSchemaCoordinate`, only methods with a coordinate count).
+
+The contracts are found at compile time: the visitor of `micronaut-graphql-tools-processor` walks the superclasses and
+interfaces of each bean class and writes the contracts into the annotation metadata of the bean (the internal
+`@ResolverContracts`), and the startup reads them from the bean definition. It uses no reflection, so a bean binds the
+same way on the JVM and in a native image. The visitor writes the contracts also with
+`micronaut.graphql.tools.processor.checks=false`. A bean that is a type resolver only through an inherited annotation,
+in a build that does not run the processor, fails the startup with `[type-resolver-contracts-not-found]`, which names
+the processor and where to add it (see [Compile-time checks](#compile-time-checks)). Add the processor,
+or annotate the bean class directly: a bean annotated directly binds without the processor (but a bean that is
+annotated directly and also inherits another contract needs the processor to see the inherited one).
+
 ## Resolver scopes
 
 A resolver is an ordinary bean, and its scope decides the instance the same way it does for any other injection point.

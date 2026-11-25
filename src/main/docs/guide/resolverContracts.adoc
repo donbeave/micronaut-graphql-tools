@@ -21,21 +21,6 @@ An implementation names no GraphQL annotation. It is a bean when it has a scope 
 
 snippet::example.markers.MarkerFixtures[project-base="test-suite", source="main", tags="implementations", indent="0"]
 
-== Annotations on a contract interface
-
-`@GraphQLRootResolver` and `@GraphQLTypeResolver` are `@Inherited`, so they can sit on an interface, and a bean that implements it is a resolver without an annotation of its own. `@GraphQLSchemaCoordinate` on a contract method carries over to the implementation, and the method then binds the field its coordinate names:
-
-[source,java]
-----
-@GraphQLTypeResolver(Book.class)
-public interface BookLabelResolverContract {
-    @GraphQLSchemaCoordinate("Book.label")
-    String label(Book book);
-}
-----
-
-A bean that inherits the resolver annotation from an interface or a superclass needs `micronaut-graphql-tools-processor` in the build. Without it the startup fails with `[type-resolver-contracts-not-found]`.
-
 == Which methods bind
 
 For a class that implements a contract interface, only the methods that implement a method of a contract are candidates for binding. A public helper of the implementation binds nothing, and it does not fail the startup or the build as an `[unbound-resolver-method]`, so no @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[] is needed on it. A method of the class implements a contract method when it has its name and its number of parameters, and the compile-time checks and the startup match them the same way. A helper that overloads a contract method with the same number of parameters binds as well, and an overload with another number of parameters is a helper and binds nothing. The number of parameters does not count the continuation of a Kotlin `suspend` function.
