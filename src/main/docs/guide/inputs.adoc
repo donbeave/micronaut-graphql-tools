@@ -68,7 +68,7 @@ Customization goes through Micronaut `TypeConverter` beans and the scalar mappin
 
 == ArgumentValue
 
-An `ArgumentValue<T>` argument or input field tells an omitted value from an explicit `null`. It needs a nullable GraphQL type; declaring it is all it takes, there is no option. A type without an `ArgumentValue` gets no omission handling at all. The converter sets it from the keys of the coerced `Map`, while it builds the instance: no getter is called, and no second pass walks the converted object. Besides `isOmitted()`, `isNull()`, `isPresent()` and `get()`, two methods read the value without a branch:
+An `ArgumentValue<T>` argument or input field tells an omitted value from an explicit `null`. It needs a nullable GraphQL type; declaring it is all it takes, there is no option. A type without an `ArgumentValue` gets no omission handling at all. A `List<ArgumentValue<T>>` is rejected at startup with `[unsupported-input-type]`, because a single list element cannot be omitted. The converter sets it from the keys of the coerced `Map`, while it builds the instance: no getter is called, and no second pass walks the converted object. Besides `isOmitted()`, `isNull()`, `isPresent()` and `getRequired()`, two methods read the value without a branch:
 
 * `asOptional()` returns an `Optional` that is empty for an omitted value and for an explicit `null`.
 * `ifPresent(Consumer)` runs the consumer only for a provided, non-null value.

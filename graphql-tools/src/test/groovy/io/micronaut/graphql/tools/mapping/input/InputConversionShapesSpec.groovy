@@ -406,7 +406,7 @@ type Query {
     @GraphQLRootResolver
     static class UnmappedWrapperQuery {
         String labelled(UnmappedWrapperInput input) {
-            return "${input.label} ${input.note.omitted ? 'omitted' : input.note.get()}"
+            return "${input.label} ${input.note.omitted ? 'omitted' : input.note.getRequired()}"
         }
     }
 
