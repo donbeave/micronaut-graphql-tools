@@ -41,7 +41,7 @@ class QuickStartFixtureSpec extends Specification {
             return [:]
         }
         List<Path> files = Files.list(dir).withCloseable { Stream<Path> s -> s.collect(Collectors.toList()) }
-        files.collectEntries { Path file ->
+        files.findAll { Files.isRegularFile(it) }.collectEntries { Path file ->
             [(file.fileName.toString().replaceFirst(/\.[^.]+$/, '')):
                      (Files.readString(file) =~ /tag::([\w-]+)\[]/).collect { it[1] } as Set<String>]
         }
@@ -68,8 +68,9 @@ class QuickStartFixtureSpec extends Specification {
         expect:
         !snippets.isEmpty()
         snippets.every { String type, String args ->
-            def tags = (args.contains('source="test"') ? test : main)[type.substring('example.quickstart.'.length())]
-            args.contains('project-base="docs-examples"') && tags != null && (args =~ /tags="([^"]*)"/)[0][1] in tags
+            def tags = type.startsWith('example.quickstart.') ?
+                    (args.contains('source="test"') ? test : main)[type.substring('example.quickstart.'.length())] : null
+            args =~ /(?:^|,\s*)project-base="docs-examples"/ && tags != null && (args =~ /tags="([^"]*)"/)[0][1] in tags
         }
     }
 }
