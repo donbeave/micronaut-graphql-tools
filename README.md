@@ -183,11 +183,36 @@ These topics are in the guide, in `src/main/docs/guide`:
 | --- | --- |
 | Where a field gets its value, property or type resolver precedence, renaming, resolver scopes | [binding.adoc](src/main/docs/guide/binding.adoc) |
 | Resolver contracts and the marker interfaces | [resolverContracts.adoc](src/main/docs/guide/resolverContracts.adoc) |
-| Return types, enums, unions, interfaces and the schema mapping dictionary | [typeSystem.adoc](src/main/docs/guide/typeSystem.adoc) |
+| Reactive return types, enums, unions, interfaces and the schema mapping dictionary | [typeSystem.adoc](src/main/docs/guide/typeSystem.adoc) |
 | Arguments, input classes and `ArgumentValue` | [inputs.adoc](src/main/docs/guide/inputs.adoc) |
 | Standard and custom scalars | [scalars.adoc](src/main/docs/guide/scalars.adoc) |
 | Customizers and replacing the `GraphQL` bean | [customization.adoc](src/main/docs/guide/customization.adoc) |
 | Instrumentation beans | [observability.adoc](src/main/docs/guide/observability.adoc) |
+
+## Return types
+
+The declared return type of a field (a resolver method or a bean property) may wrap the mapped class in the
+containers graphql-java resolves at runtime, outermost first and each at most once:
+
+- `CompletionStage<T>`, for the field itself only;
+- `Publisher<T>` (`org.reactivestreams.Publisher`, any subtype such as `Flux`), required on fields of the subscription
+  type and allowed nowhere else; the wrappers below then apply to each event;
+- `DataFetcherResult<T>`, for the field or each list element; its errors and local context are applied;
+- `Optional<T>`, for the field or each list element, and only where the GraphQL type is nullable (an empty
+  `Optional` becomes `null`);
+- `OptionalInt`, `OptionalLong` or `OptionalDouble`, under the same rules, mapped to `Int`, `Long` or `Float`.
+
+The mapping then checks `T`. Anything else fails at startup with `[unsupported-return-type]`. In particular:
+
+- `List<CompletionStage<T>>` is rejected: graphql-java does not wait for futures inside a list, and the client would
+  receive the future's `toString()`. Return `CompletionStage<List<T>>` instead.
+- `Optional<T>`, `OptionalInt`, `OptionalLong` and `OptionalDouble` on a non-null type (`String!`, `[String!]`) are
+  rejected.
+- A field of the subscription type must return a `Publisher` (optionally inside a `CompletionStage`); otherwise the
+  startup fails (graphql-java would fail only on the first subscription request). A `Publisher` on any other field,
+  or inside a list, is rejected.
+- `DataFetcherResult<Publisher<T>>` is not supported on a subscription field, although graphql-java would unwrap it:
+  return the `Publisher` and, if needed, a `DataFetcherResult` per event.
 
 ## Resolver scopes
 

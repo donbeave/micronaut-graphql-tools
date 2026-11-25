@@ -34,7 +34,7 @@ public interface BookLabelResolverContract {
 }
 ----
 
-A bean that inherits the resolver annotation from an interface or a superclass needs `micronaut-graphql-tools-processor` in the build. Without it the startup fails with `[type-resolver-contracts-not-found]`. A bean that carries the annotation itself binds without the processor.
+A bean that inherits the resolver annotation from an interface or a superclass needs `micronaut-graphql-tools-processor` in the build. Without it the startup fails with `[type-resolver-contracts-not-found]`.
 
 == Which methods bind
 
