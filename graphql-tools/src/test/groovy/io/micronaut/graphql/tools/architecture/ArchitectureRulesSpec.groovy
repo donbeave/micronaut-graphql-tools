@@ -160,7 +160,7 @@ class ArchitectureRulesSpec extends Specification {
         classes().that(publicApi()).and(DescribedPredicate.describe('not a record, an enum or an annotation', { JavaClass c ->
             !c.record && !c.enum && !c.annotation
         })).should(declareNoRecordStyleAccessor())
-                .because('a public interface or class names its accessors getX and isX; only a record, which is the immutable data carrier, uses the component name (BC-44, BC-51)')
+                .because('a public interface or class names its accessors getX and isX; only a record, which is the immutable data carrier, uses the component name (BC-44, BC-52)')
                 .check(classes)
     }
 
