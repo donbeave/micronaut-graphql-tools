@@ -1,4 +1,75 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+This page reports what the repository benchmarks measured for the 1.0 candidate against a baseline, with the settings and the commands to reproduce it. All figures were measured on one machine. Compare only runs made on the same machine, and read a difference inside the ranges below as noise.
+
+== Where it was measured
+
+[cols="1,3"]
+|===
+|Candidate |Version `1.0.0-M4` development line, with the merged type resolver cache.
+|Baseline |Commit `f1c12a4d`, the first commit that has the JMH benchmarks module (`benchmarks/`). A benchmark that did not exist then has no baseline.
+|JDK |Oracle GraalVM 25.0.5 (HotSpot VM, `25.0.5.0.3+1-LTS-jvmci-b01`), used by both sides.
+|Machine |Apple M1 Max, 10 cores, 64 GB, macOS. The machine was shared with other work: the one-minute load average read between 6 and 22 around the runs, so many rows were too noisy to use.
+|JMH |1.37, `gc` profiler, 2 forks, 5 warm-up and 5 measurement iterations of 1 s. `AbstractTypeBenchmark` runs on 4 threads, the others on 1.
+|graphql-java |Baseline 21.3 (what the transport managed then). Candidate: the `default` leg, 22.4.
+|===
+
+== Hot path
+
+The baseline, the candidate, the candidate and the baseline again were run back to back in this order with the same flags, each with `--rerun` so that JMH ran every time. The cells give the lowest and the highest score of the two runs of each side, in the unit shown, lower is better. Only rows whose JMH error stayed under 25 percent of the score in all four runs are listed, with one exception named below; the other rows of the suite were too noisy on this machine to report.
+
+[cols="2,1,1,1"]
+|===
+|Benchmark |Baseline |Candidate |B/op baseline / candidate
+|enumArgument |43.2 to 43.2 ns/op |16.5 to 16.7 ns/op |80 / 24
+|interfaceResolution |23.3 to 24.7 ns/op |23.8 to 26.9 ns/op |0 / 0
+|unionResolution |24.5 to 25.3 ns/op |20.8 to 25.6 ns/op |0 / 0
+|query1kObjects |916.2 to 1002.9 µs/op |577.0 to 607.5 µs/op |4640684 / 3672201
+|query10kObjects |8972.2 to 9494.7 µs/op |5888.4 to 7634.3 µs/op |44885500 / 31282515
+|===
+
+`unionResolution` and `interfaceResolution` have overlapping ranges: no difference was measured between the baseline and the candidate (`unionResolution` is listed although one of its runs had an error of 27 percent, because it is the row that #744 tracks). `enumArgument`, `query1kObjects` and `query10kObjects` have ranges that do not overlap, with the candidate lower. This page does not say which change produced a difference.
+
+== Allocation
+
+The bytes allocated per operation (`gc.alloc.rate.norm`) do not depend on the load of the machine. From the same runs, baseline and candidate:
+
+[cols="2,1,1"]
+|===
+|Benchmark |Baseline B/op |Candidate B/op
+|enumArgument |80 |24
+|scalarArgument |80 |24
+|typeResolverMethod |80 |24
+|typeResolverMethodWithArgument |80 |24
+|inputObjectArgument |264 |48
+|listOfInputsArgument |976 |176
+|===
+
+`./gradlew :test-suite-benchmarks:allocationTest` passed on the `default`, `floor` and `ceiling` legs on the same JDK. It fails when an operation allocates more than its baseline in `test-suite-benchmarks/allocation-baselines.properties`.
+
+== Retained heap at start-up
+
+`startup-report.py` binds generated schemas in a fresh JVM per sample (5 forks per case, `default` leg). The retained heap is the figure that does not depend on the load of the machine; the binding time varied too much between forks on this machine to report. There is no baseline: the start-up benchmarks do not exist at the baseline commit.
+
+[cols="2,1,1"]
+|===
+|Case |Retained heap, manifest off |Retained heap, manifest on
+|rings, 100 fields |6.20 MB |6.27 MB
+|rings, 1,600 fields |8.19 MB |9.14 MB
+|rings, 3,000 fields |10.09 MB |10.54 MB
+|rings, 10,000 fields |19.55 MB |21.23 MB
+|rings, 20,000 fields |33.61 MB |36.37 MB
+|interfaces, 3,000 fields |8.80 MB |9.87 MB
+|interfaces, 20,000 fields |25.81 MB |29.65 MB
+|===
+
+== Reproduce
+
+----
+./gradlew :test-suite-benchmarks:allocationTest -PgraphqlJavaLeg=<floor|default|ceiling>
+./gradlew :test-suite-benchmarks:jmh --rerun -Pjmh.includes='(Fetcher|Query|AbstractType)Benchmark'
+python3 test-suite-benchmarks/scripts/startup-report.py --forks 5
+----
+
+The baseline figures come from a checkout of `f1c12a4d` with `./gradlew :benchmarks:jmh --rerun -Pjmh.includes='(Fetcher|Query|AbstractType)Benchmark'` on the same JDK. Gradle treats an unchanged `jmh` task as up to date and would copy old results, hence `--rerun`. Compare two JMH JSON files with `python3 test-suite-benchmarks/scripts/jmh-compare.py <current.json> --previous <previous.json>`; the `Performance nightly` workflow does the same every night (see `CONTRIBUTING.md`).
 
 == Reads through an interface
 
