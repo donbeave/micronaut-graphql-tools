@@ -17,5 +17,5 @@ package example.federation
 
 import io.micronaut.graphql.tools.annotation.GraphQLType
 
-@GraphQLType
-data class Product(val id: String, val name: String)
+@GraphQLType(name = "Product")
+data class ProductEntity(val id: String, val name: String)

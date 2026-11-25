@@ -29,8 +29,12 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLUnionType;
 import graphql.schema.TypeResolver;
 import graphql.schema.idl.SchemaPrinter;
+import io.micronaut.core.beans.BeanIntrospection;
+import io.micronaut.core.beans.BeanIntrospector;
+import io.micronaut.graphql.tools.annotation.GraphQLType;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -44,9 +48,15 @@ public final class FederationTransform {
     private FederationTransform() {
     }
 
+    private static String typeName(Class<?> type) {
+        @SuppressWarnings("unchecked")
+        Optional<BeanIntrospection<Object>> introspection = BeanIntrospector.SHARED.findIntrospection((Class<Object>) type);
+        return introspection.flatMap(i -> i.stringValue(GraphQLType.class, "name")).filter(name -> !name.isEmpty())
+                .orElse(type.getSimpleName());
+    }
+
     public static GraphQLSchema apply(GraphQLSchema schema, Map<String, Function<Map<String, Object>, Object>> entities) {
-        String sdl = new SchemaPrinter(SchemaPrinter.Options.defaultOptions()
-                .includeSchemaDefinition(false)).print(schema);
+        String sdl = new SchemaPrinter(SchemaPrinter.Options.defaultOptions()).print(schema);
         GraphQLScalarType any = GraphQLScalarType.newScalar(ExtendedScalars.Json).name("_Any").build();
         GraphQLUnionType entity = GraphQLUnionType.newUnionType().name("_Entity")
                 .possibleTypes(schema.getAllTypesAsList().stream()
@@ -82,7 +92,7 @@ public final class FederationTransform {
         };
         TypeResolver typeResolver = environment -> {
             Object object = environment.getObject();
-            String name = object instanceof Map<?, ?> map ? (String) map.get("__typename") : object.getClass().getSimpleName();
+            String name = object instanceof Map<?, ?> map ? (String) map.get("__typename") : typeName(object.getClass());
             return environment.getSchema().getObjectType(name);
         };
         GraphQLCodeRegistry registry = schema.getCodeRegistry().transform(builder -> builder

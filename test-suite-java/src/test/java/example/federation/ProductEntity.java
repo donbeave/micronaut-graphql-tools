@@ -17,6 +17,6 @@ package example.federation;
 
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 
-@GraphQLType
-public record Product(String id, String name) {
+@GraphQLType(name = "Product")
+public record ProductEntity(String id, String name) {
 }

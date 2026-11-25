@@ -29,14 +29,20 @@ import graphql.schema.GraphQLSchema
 import graphql.schema.GraphQLUnionType
 import graphql.schema.TypeResolver
 import graphql.schema.idl.SchemaPrinter
+import io.micronaut.core.beans.BeanIntrospector
+import io.micronaut.graphql.tools.annotation.GraphQLType
 
 // tag::transform[]
 object FederationTransform {
 
     private const val MAX_REPRESENTATIONS = 100
 
+    private fun typeName(type: Class<*>): String =
+        BeanIntrospector.SHARED.findIntrospection(type).flatMap { it.stringValue(GraphQLType::class.java, "name") }
+            .filter { it.isNotEmpty() }.orElse(type.simpleName)
+
     fun apply(schema: GraphQLSchema, entities: Map<String, (Map<String, Any?>) -> Any>): GraphQLSchema {
-        val sdl = SchemaPrinter(SchemaPrinter.Options.defaultOptions().includeSchemaDefinition(false)).print(schema)
+        val sdl = SchemaPrinter(SchemaPrinter.Options.defaultOptions()).print(schema)
         val any = GraphQLScalarType.newScalar(ExtendedScalars.Json).name("_Any").build()
         val entity = GraphQLUnionType.newUnionType().name("_Entity")
             .possibleTypes(
@@ -72,7 +78,7 @@ object FederationTransform {
         }
         val typeResolver = TypeResolver { environment ->
             val obj = environment.getObject<Any>()!!
-            val name = if (obj is Map<*, *>) obj["__typename"] as String else obj.javaClass.simpleName
+            val name = if (obj is Map<*, *>) obj["__typename"] as String else typeName(obj.javaClass)
             environment.schema.getObjectType(name)
         }
         val registry = schema.codeRegistry.transform { builder ->

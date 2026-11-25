@@ -24,5 +24,5 @@ import jakarta.inject.Singleton
 @GraphQLRootResolver
 open class ProductQuery {
 
-    open fun product(id: String): Product? = Product(id, "Product $id")
+    open fun product(id: String): ProductEntity? = ProductEntity(id, "Product $id")
 }

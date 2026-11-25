@@ -28,8 +28,8 @@ import jakarta.inject.Singleton
 class ProductQuery {
 
     @Nullable
-    Product product(String id) {
-        return new Product(id: id, name: "Product ${id}".toString())
+    ProductEntity product(String id) {
+        return new ProductEntity(id: id, name: "Product ${id}".toString())
     }
 
 }

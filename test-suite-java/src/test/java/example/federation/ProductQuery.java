@@ -26,8 +26,8 @@ import jakarta.inject.Singleton;
 public class ProductQuery {
 
     @Nullable
-    public Product product(String id) {
-        return new Product(id, "Product " + id);
+    public ProductEntity product(String id) {
+        return new ProductEntity(id, "Product " + id);
     }
 
 }

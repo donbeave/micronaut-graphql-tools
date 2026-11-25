@@ -19,8 +19,8 @@ import groovy.transform.CompileStatic
 import io.micronaut.graphql.tools.annotation.GraphQLType
 
 @CompileStatic
-@GraphQLType
-class Product {
+@GraphQLType(name = 'Product')
+class ProductEntity {
     String id
     String name
 }

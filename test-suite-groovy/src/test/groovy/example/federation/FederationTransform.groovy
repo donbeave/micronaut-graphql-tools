@@ -29,6 +29,8 @@ import graphql.schema.GraphQLSchema
 import graphql.schema.GraphQLUnionType
 import graphql.schema.TypeResolver
 import graphql.schema.idl.SchemaPrinter
+import io.micronaut.core.beans.BeanIntrospector
+import io.micronaut.graphql.tools.annotation.GraphQLType
 import groovy.transform.CompileStatic
 
 // tag::transform[]
@@ -40,8 +42,14 @@ final class FederationTransform {
     private FederationTransform() {
     }
 
+    private static String typeName(Class<?> type) {
+        String name = BeanIntrospector.SHARED.findIntrospection((Class<Object>) type)
+                .flatMap { it.stringValue(GraphQLType, 'name') }.orElse('')
+        return name.empty ? type.simpleName : name
+    }
+
     static GraphQLSchema apply(GraphQLSchema schema, Map<String, Closure<Object>> entities) {
-        String sdl = new SchemaPrinter(SchemaPrinter.Options.defaultOptions().includeSchemaDefinition(false)).print(schema)
+        String sdl = new SchemaPrinter(SchemaPrinter.Options.defaultOptions()).print(schema)
         GraphQLScalarType any = GraphQLScalarType.newScalar(ExtendedScalars.Json).name('_Any').build()
         GraphQLObjectType[] keyed = schema.allTypesAsList
                 .findAll { it instanceof GraphQLObjectType && ((GraphQLObjectType) it).hasAppliedDirective('key') }
@@ -76,7 +84,7 @@ final class FederationTransform {
         } as DataFetcher<Object>
         TypeResolver typeResolver = { env ->
             Object object = env.getObject()
-            String name = object instanceof Map ? ((Map) object).get('__typename') : object.getClass().simpleName
+            String name = object instanceof Map ? ((Map) object).get('__typename') : typeName(object.getClass())
             return env.schema.getObjectType(name)
         } as TypeResolver
         def registry = schema.codeRegistry.transform { builder ->

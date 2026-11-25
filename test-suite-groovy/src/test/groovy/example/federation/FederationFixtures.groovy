@@ -20,6 +20,8 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.annotation.Order
+import io.micronaut.core.order.Ordered
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer
 import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import jakarta.inject.Singleton
@@ -50,9 +52,10 @@ class FederationFixtures {
     @Bean
     @Singleton
     @Requires(env = FederationFixtures.FEDERATION)
+    @Order(Ordered.LOWEST_PRECEDENCE)
     GraphQLSchemaCustomizer federation() {
         Map<String, Closure<Object>> entities = [
-                Product: { Map<String, Object> key -> new Product(id: key.id as String, name: "Product ${key.id}".toString()) },
+                Product: { Map<String, Object> key -> new ProductEntity(id: key.id as String, name: "Product ${key.id}".toString()) },
                 Order  : { Map<String, Object> key -> [__typename: 'Order', id: key.id, total: 42] }
         ] as Map<String, Closure<Object>>
         return { schema -> FederationTransform.apply(schema, entities) } as GraphQLSchemaCustomizer
