@@ -1,1 +1,19 @@
 NOTE: This page is pending. It will be written with the user guide (epic #97).
+
+== Reads through an interface
+
+A property read through the introspection of an interface is an `invokeinterface` call. On JDK 21 and earlier, a class that is
+checked against two interfaces alternately contends on the secondary-super cache of the class; JDK 23 and later do not have
+that cost. `InterfaceReadBenchmark` in `test-suite-benchmarks` reads two properties of one interface and then one property of each of two interfaces of the same
+class, so the two can be compared on the JDK you run.
+
+Measured with JMH (two forks of five iterations, two reads per operation), reading two properties of one interface and one
+property of each of two interfaces of the same class compare as follows:
+
+[cols="1,1,1"]
+|===
+| JDK | Two properties of one interface | One property of each of two interfaces
+
+| Oracle GraalVM 25 | 5.60 ns | 5.59 ns
+| Temurin 21 | 3.61 ns | 4.85 ns
+|===

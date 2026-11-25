@@ -39,6 +39,8 @@ dependencies {
     testImplementation(projects.micronautGraphqlToolsSecurity)
     testImplementation(mnSecurity.micronaut.security)
     testImplementation(mn.micronaut.http.client)
+    // The graphql-binding management endpoint (#515) is served only with Micronaut Management on the classpath. Test scope: the application itself does not depend on it.
+    testImplementation(mn.micronaut.management)
     runtimeOnly(mnLogging.logback.classic)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

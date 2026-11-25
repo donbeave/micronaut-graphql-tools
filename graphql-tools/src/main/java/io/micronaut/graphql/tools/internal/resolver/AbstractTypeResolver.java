@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
  * <p>An object that matches no object type, or whose candidates have no single most specific one (their Java types
  * are unrelated, or two object types are mapped to the same Java type), is an
  * {@link UnresolvedTypeException}, which graphql-java reports as an error of that field, with its path; the message
- * names the abstract type, the class and the candidates. The result, with the name of the resolved object type, is
+ * names the abstract type, the class and the candidates. The result, with the name of the resolved object type is
  * cached per class in a {@link ClassValue}: a lookup takes no lock, and the cache does not keep a class, or its class
  * loader, alive.</p>
  *
@@ -61,6 +61,8 @@ public final class AbstractTypeResolver implements TypeResolver {
     private final Map<Class<?>, String> exactClasses;
 
     private final Map<String, Class<?>> objectTypes;
+
+    private SchemaTypes current;
 
     // runtime class -> object type name, or the error message; held by the class itself, so never a strong reference
     // to it. The names are resolved against the schema of the request, so that a schema another component replaced
@@ -89,20 +91,23 @@ public final class AbstractTypeResolver implements TypeResolver {
     @Override
     public GraphQLObjectType getType(TypeResolutionEnvironment env) {
         GraphQLSchema schema = env.getSchema();
-        Resolution resolution = resolutions.get(env.getObject().getClass());
+        Class<?> objectClass = env.getObject().getClass();
 
-        if (resolution.objectTypeName() == null) {
-            throw new UnresolvedTypeException(
-                    resolution.error(),
-                    (GraphQLNamedOutputType) schema.getType(abstractTypeName)
-            );
+        SchemaTypes current = this.current;
+        if (current == null || current.schema != schema) {
+            current = new SchemaTypes(schema);
+            this.current = current;
         }
 
-        // getType, not getObjectType: the latter builds a message supplier on every call
-        if (schema.getType(resolution.objectTypeName()) instanceof GraphQLObjectType objectType) {
+        GraphQLObjectType objectType = current.objectTypes.get(objectClass);
+        if (objectType != null) {
             return objectType;
         }
-        return schema.getObjectType(resolution.objectTypeName());
+
+        throw new UnresolvedTypeException(
+                resolutions.get(objectClass).error(),
+                (GraphQLNamedOutputType) schema.getType(abstractTypeName)
+        );
     }
 
     private Resolution resolve(Class<?> objectClass) {
@@ -181,6 +186,33 @@ public final class AbstractTypeResolver implements TypeResolver {
     }
 
     private record Resolution(String objectTypeName, String error) {
+    }
+
+    // the object types of the schema that answered last, by runtime class; a request with another schema starts a new
+    // one, so that at most one schema is held, and only until the next request carries another
+    private final class SchemaTypes {
+
+        private final GraphQLSchema schema;
+
+        // null for a class that resolves to no object type
+        private final ClassValue<GraphQLObjectType> objectTypes = new ClassValue<>() {
+            @Override
+            protected GraphQLObjectType computeValue(Class<?> type) {
+                String name = resolutions.get(type).objectTypeName();
+                if (name == null) {
+                    return null;
+                }
+                // getType, not getObjectType: the latter builds a message supplier on every call
+                if (SchemaTypes.this.schema.getType(name) instanceof GraphQLObjectType found) {
+                    return found;
+                }
+                return SchemaTypes.this.schema.getObjectType(name);
+            }
+        };
+
+        private SchemaTypes(GraphQLSchema schema) {
+            this.schema = schema;
+        }
     }
 
 }

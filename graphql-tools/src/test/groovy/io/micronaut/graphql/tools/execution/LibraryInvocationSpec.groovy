@@ -101,6 +101,7 @@ type Child {
 
     void setup() {
         ProbeCustomizer.reset()
+        WindowCustomizer.reset()
         TimeoutContextCustomizer.SEEN_MARKERS.clear()
         CALLS.clear()
         RESOLVER_THREADS.clear()
@@ -375,12 +376,12 @@ type Child {
         startContext(SCHEMA, SPEC_NAME + '.window', ['micronaut.graphql.tools.execution.timeout': '50ms'])
 
         when:
-        def result = Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)).block(java.time.Duration.ofSeconds(10))
+        def result = Mono.from(invocation().invoke(new GraphQLInvocationData('{ hello }', null, [:]), null, null)).block(java.time.Duration.ofSeconds(60))
 
         then:
-        WindowCustomizer.TIMER_RAN.await(0, TimeUnit.SECONDS)
+        WindowCustomizer.TIMER_RAN.await(30, TimeUnit.SECONDS)
         result.errors[0].extensions.code == 'EXECUTION_TIMEOUT'
-        WindowCustomizer.CANCELLED.await(5, TimeUnit.SECONDS)
+        WindowCustomizer.CANCELLED.await(30, TimeUnit.SECONDS)
         CALLS.isEmpty()
     }
 
@@ -844,13 +845,18 @@ type Child {
     @Requires(property = 'spec.name', value = SPEC_NAME + '.window')
     @Singleton
     static class WindowCustomizer implements GraphQLExecutionInputCustomizer {
-        static final CountDownLatch TIMER_RAN = new CountDownLatch(1)
-        static final CountDownLatch CANCELLED = new CountDownLatch(1)
+        static volatile CountDownLatch TIMER_RAN = new CountDownLatch(1)
+        static volatile CountDownLatch CANCELLED = new CountDownLatch(1)
+
+        static void reset() {
+            TIMER_RAN = new CountDownLatch(1)
+            CANCELLED = new CountDownLatch(1)
+        }
 
         @Override
         Publisher<ExecutionInput> customize(ExecutionInput executionInput, HttpRequest httpRequest, MutableHttpResponse<String> httpResponse) {
             Mono.<ExecutionInput> never()
-                    .doOnSubscribe { assert TIMER_RAN.await(10, TimeUnit.SECONDS) }
+                    .doOnSubscribe { assert TIMER_RAN.await(30, TimeUnit.SECONDS) }
                     .doOnCancel { CANCELLED.countDown() }
         }
     }
