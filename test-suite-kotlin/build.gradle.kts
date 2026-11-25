@@ -68,11 +68,11 @@ java {
     targetCompatibility = JavaVersion.toVersion("21")
 }
 
-// The Micronaut BOM pins kotlin-stdlib to the Kotlin it was built with. Code compiled by a newer Kotlin needs the matching runtime library
+// The Micronaut BOM pins kotlin-stdlib and kotlin-reflect to the Kotlin it was built with. Code compiled by a newer Kotlin needs the matching runtime library
 // (its coroutine debug metadata and its helper classes), so the runtime follows the compiler plugin, which keeps the canary on the newest Kotlin honest.
 configurations.matching { !it.name.startsWith("ksp") }.configureEach {
     resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
+        if (requested.group == "org.jetbrains.kotlin" && (requested.name.startsWith("kotlin-stdlib") || requested.name == "kotlin-reflect")) {
             useVersion(org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion(logger))
             because("the runtime library follows the Kotlin compiler plugin")
         }
