@@ -1,59 +1,53 @@
-This page reports what the repository benchmarks measured for the 1.0 candidate against a baseline, with the settings and the commands to reproduce it. A figure is a measurement of one machine, not a promise: compare runs made on the same machine.
+This page reports what the repository benchmarks measured for the 1.0 candidate against a baseline, with the settings and the commands to reproduce it. All figures were measured on one machine. Compare only runs made on the same machine, and read a difference inside the ranges below as noise.
 
 == Where it was measured
 
 [cols="1,3"]
 |===
-|Candidate |Version `1.0.0-M4` development line, commit `0bc179d5`.
-|Baseline |Commit `f1c12a4d`, the first commit that has the JMH benchmarks module (`benchmarks/`). A benchmark that did not exist then has no baseline column.
+|Candidate |Version `1.0.0-M4` development line, with the merged type resolver cache.
+|Baseline |Commit `f1c12a4d`, the first commit that has the JMH benchmarks module (`benchmarks/`). A benchmark that did not exist then has no baseline.
 |JDK |Oracle GraalVM 25.0.5 (HotSpot VM, `25.0.5.0.3+1-LTS-jvmci-b01`), used by both sides.
-|Machine |Apple M1 Max, 10 cores, 64 GB, macOS. It was not dedicated to the runs, so read a difference inside the error as noise.
-|JMH |1.37, `gc` profiler, 2 forks, 5 warm-up and 5 measurement iterations of 1 s. The figure is the score with the 99.9 percent error that JMH prints.
-|graphql-java |Baseline 21.3 (what the transport managed then). Candidate: `default` leg 22.4 (what the transport manages now), `floor` leg 21.5 and `ceiling` leg 26.2.
+|Machine |Apple M1 Max, 10 cores, 64 GB, macOS. The machine was shared with other work: the one-minute load average read between 6 and 22 around the runs, so many rows were too noisy to use.
+|JMH |1.37, `gc` profiler, 2 forks, 5 warm-up and 5 measurement iterations of 1 s. `AbstractTypeBenchmark` runs on 4 threads, the others on 1.
+|graphql-java |Baseline 21.3 (what the transport managed then). Candidate: the `default` leg, 22.4.
 |===
-
-The baseline and the `default` leg do not run the same graphql-java, so the `floor` column (21.5, the nearest to the baseline) is the check on whether a change comes from graphql-java.
 
 == Hot path
 
-Time per operation, lower is better. `AbstractTypeBenchmark` runs on four threads; the others on one.
+The baseline, the candidate, the candidate and the baseline again were run back to back in this order with the same flags, each with `--rerun` so that JMH ran every time. The cells give the lowest and the highest score of the two runs of each side, in the unit shown, lower is better. Only rows whose JMH error stayed under 25 percent of the score in all four runs are listed, with one exception named below; the other rows of the suite were too noisy on this machine to report.
 
-[cols="2,1,1,1,1,1,1"]
+[cols="2,1,1,1"]
 |===
-|Benchmark |Baseline |Candidate, default |Change |Candidate, floor |Candidate, ceiling |B/op baseline / candidate
-|directiveWrappedFetcher |20.7 ± 1.5 ns |13.9 ± 1.5 ns |-33% |12.9 ± 1.5 |11.7 ± 1.8 |0 / 0
-|enumArgument |215.0 ± 35.2 ns |59.9 ± 3.9 ns |-72% |52.2 ± 2.6 |49.2 ± 4.9 |80 / 24
-|graphqlJavaPropertyFetch |62.2 ± 12.3 ns |43.2 ± 8.5 ns |-31% |41.4 ± 11.4 |36.7 ± 8.1 |12 / 12
-|inputObjectArgument |493.0 ± 50.0 ns |213.5 ± 17.1 ns |-57% |189.8 ± 20.1 |179.9 ± 11.4 |264 / 48
-|interfaceResolution |63.3 ± 5.0 ns |30.6 ± 6.2 ns |-52% |30.9 ± 2.2 |27.6 ± 3.1 |0 / 0
-|listOfInputsArgument |1636.1 ± 250.3 ns |727.8 ± 65.0 ns |-56% |636.6 ± 46.1 |628.4 ± 62.3 |976 / 176
-|propertyFetch |69.9 ± 10.5 ns |14.1 ± 1.0 ns |-80% |11.5 ± 0.7 |11.1 ± 1.3 |0 / 0
-|query1kObjects |5456.9 ± 753.5 µs |2203.5 ± 180.5 µs |-60% |3897.0 ± 519.7 |2189.1 ± 130.6 |4705405 / 3225967
-|query10kObjects |51062.2 ± 6216.1 µs |22841.7 ± 2066.5 µs |-55% |37032.8 ± 4774.0 |20024.4 ± 867.9 |44955134 / 31284145
-|rootMethod |16.4 ± 2.3 ns |11.3 ± 1.4 ns |-31% |10.3 ± 0.9 |9.5 ± 0.8 |0 / 0
-|scalarArgument |224.2 ± 27.3 ns |65.4 ± 5.4 ns |-71% |60.1 ± 5.5 |55.0 ± 6.1 |80 / 24
-|typeResolverMethod |84.4 ± 12.1 ns |40.2 ± 4.9 ns |-52% |37.3 ± 2.5 |35.4 ± 3.2 |80 / 24
-|typeResolverMethodWithArgument |275.5 ± 19.9 ns |79.6 ± 8.4 ns |-71% |79.7 ± 11.4 |65.0 ± 8.2 |80 / 24
-|unionResolution |65.2 ± 5.8 ns |27.7 ± 1.6 ns |-58% |26.3 ± 3.8 |23.7 ± 6.6 |0 / 0
+|Benchmark |Baseline |Candidate |B/op baseline / candidate
+|enumArgument |43.2 to 43.2 ns/op |16.5 to 16.7 ns/op |80 / 24
+|interfaceResolution |23.3 to 24.7 ns/op |23.8 to 26.9 ns/op |0 / 0
+|unionResolution |24.5 to 25.3 ns/op |20.8 to 25.6 ns/op |0 / 0
+|query1kObjects |916.2 to 1002.9 µs/op |577.0 to 607.5 µs/op |4640684 / 3672201
+|query10kObjects |8972.2 to 9494.7 µs/op |5888.4 to 7634.3 µs/op |44885500 / 31282515
 |===
 
-Benchmarks that exist only on the candidate (no baseline), `default` leg, ns per operation and bytes per operation: `injectedParameters` 104.2 ± 12.6 (32 B), `injectedStateParameters` 115.4 ± 11.0 (32 B), `instantCoercion` 178.6 ± 17.6 (144 B), `jsonCoercion` 166.1 ± 14.8 (0 B), `listOfScalarsArgument` 97.8 ± 10.0 (80 B), `localDateCoercion` 70.4 ± 7.6 (112 B), `nestedInputArgument` 445.6 ± 31.2 (120 B) and `recordInputArgument` 390.6 ± 59.1 (96 B). The other benchmarks of the suite (invocation, async boundary, observability, field decorators, security, document cache, binding rules) were not run for this report.
+`unionResolution` and `interfaceResolution` have overlapping ranges: no difference was measured between the baseline and the candidate (`unionResolution` is listed although one of its runs had an error of 27 percent, because it is the row that #744 tracks). `enumArgument`, `query1kObjects` and `query10kObjects` have ranges that do not overlap, with the candidate lower. This page does not say which change produced a difference.
 
-What the figures show, and what limits them:
+== Allocation
 
-* The argument conversion and type-resolver method rows are faster by 52 to 72 percent, and the bytes per operation fall with them (for example 264 B to 48 B for an input object). The same rows are as fast on the `floor` leg (graphql-java 21.5), so the newer graphql-java does not explain the gain. The change that produced it was not isolated by a separate measurement here.
-* `propertyFetch` and `rootMethod` have no allocation on either side; their time is the cost of the call itself plus graphql-java's own work.
-* `graphqlJavaPropertyFetch` runs plain graphql-java with no library code. It moved from 62.2 to 43.2 ns between the two builds with 12 B per operation on both sides. It runs no library code, so the difference is the machine and graphql-java between 21.3 and 22.4; the `floor` leg gives 41.4.
-* `unionResolution` and `interfaceResolution` were slower than the baseline on every leg (122.8 and 96.2 ns on the `default` leg) before the resolver cached the resolved object type per schema; with that change (the table) they are below the baseline, with no allocation on either side. These two rows were measured again on the final code; the other rows were measured before it. #744 tracks the remaining check of the replaced-schema case.
-* The queries over 1,000 and 10,000 objects are slower on the `floor` leg (3897.0 and 37032.8 µs) than on the `default` and `ceiling` legs. The library code is the same on every leg, so the difference comes from the graphql-java version.
+The bytes allocated per operation (`gc.alloc.rate.norm`) do not depend on the load of the machine. From the same runs, baseline and candidate:
 
-== Allocation gates
+[cols="2,1,1"]
+|===
+|Benchmark |Baseline B/op |Candidate B/op
+|enumArgument |80 |24
+|scalarArgument |80 |24
+|typeResolverMethod |80 |24
+|typeResolverMethodWithArgument |80 |24
+|inputObjectArgument |264 |48
+|listOfInputsArgument |976 |176
+|===
 
-`./gradlew :test-suite-benchmarks:allocationTest` passed on the `default`, `floor` and `ceiling` legs, on the same JDK. It fails when an operation allocates more than its baseline in `test-suite-benchmarks/allocation-baselines.properties`.
+`./gradlew :test-suite-benchmarks:allocationTest` passed on the `default`, `floor` and `ceiling` legs on the same JDK. It fails when an operation allocates more than its baseline in `test-suite-benchmarks/allocation-baselines.properties`.
 
-== Start-up and retained heap
+== Retained heap at start-up
 
-`startup-report.py` (below) binds generated schemas in a fresh JVM per sample, 5 forks per case, `default` leg. The retained heap is the figure to read: it does not depend on the load of the machine. The binding time of this run varies widely between forks (see the minimum and maximum in the script's output; for example the 3,000-field ring schema ranged from 4.1 s to 13.9 s), so no binding time is claimed here. There is no baseline for these benchmarks: the start-up benchmarks do not exist at the baseline commit.
+`startup-report.py` binds generated schemas in a fresh JVM per sample (5 forks per case, `default` leg). The retained heap is the figure that does not depend on the load of the machine; the binding time varied too much between forks on this machine to report. There is no baseline: the start-up benchmarks do not exist at the baseline commit.
 
 [cols="2,1,1"]
 |===
@@ -67,29 +61,15 @@ What the figures show, and what limits them:
 |interfaces, 20,000 fields |25.81 MB |29.65 MB
 |===
 
-Cold start of the 1,600-field ring schema, one fresh JVM per sample, 10 forks (`ContextStartBenchmark`, `FirstRequestBenchmark`, `StartAndFirstRequestBenchmark`), ms:
-
-[cols="2,1,1"]
-|===
-|Benchmark |`eager-init` true |`eager-init` false
-|Context start |2641.1 ± 514.0 |1009.4 ± 118.3
-|First query after the start |90.1 ± 30.6 |969.2 ± 57.2
-|Start and first query |1934.6 ± 80.9 |1852.6 ± 128.3
-|===
-
-With `eager-init` off the schema is bound on the first request, so the work moves from the start to the first query and the sum of the two is about the same.
-
 == Reproduce
 
 ----
 ./gradlew :test-suite-benchmarks:allocationTest -PgraphqlJavaLeg=<floor|default|ceiling>
-./gradlew :test-suite-benchmarks:jmh -PgraphqlJavaLeg=<floor|default|ceiling> -Pjmh.includes='(Fetcher|Query|AbstractType)Benchmark'
+./gradlew :test-suite-benchmarks:jmh --rerun -Pjmh.includes='(Fetcher|Query|AbstractType)Benchmark'
 python3 test-suite-benchmarks/scripts/startup-report.py --forks 5
-./gradlew :test-suite-benchmarks:jmhJar
-java -jar test-suite-benchmarks/build/libs/test-suite-benchmarks-*-jmh.jar '(ContextStart|FirstRequest|StartAndFirstRequest)Benchmark' -f 10 -wi 0 -i 1 -bm ss
 ----
 
-The baseline numbers come from a checkout of `f1c12a4d` with `./gradlew :benchmarks:jmh -Pjmh.includes='(Fetcher|Query|AbstractType)Benchmark'` on the same JDK. Compare two JMH JSON files with `python3 test-suite-benchmarks/scripts/jmh-compare.py <current.json> --previous <previous.json>`; the `Performance nightly` workflow does the same every night (see `CONTRIBUTING.md`).
+The baseline figures come from a checkout of `f1c12a4d` with `./gradlew :benchmarks:jmh --rerun -Pjmh.includes='(Fetcher|Query|AbstractType)Benchmark'` on the same JDK. Gradle treats an unchanged `jmh` task as up to date and would copy old results, hence `--rerun`. Compare two JMH JSON files with `python3 test-suite-benchmarks/scripts/jmh-compare.py <current.json> --previous <previous.json>`; the `Performance nightly` workflow does the same every night (see `CONTRIBUTING.md`).
 
 == Reads through an interface
 
