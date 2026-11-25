@@ -76,8 +76,6 @@ snippet::example.tck.EnumsScenario[project-base="test-suite", source="test", tag
 * A Java enum without an introspection fails the startup with `[class-not-introspected]`, and the message names `io.micronaut.core.annotation.Introspected`.
 * A schema value without a constant fails the startup with `[missing-enum-values]`.
 * A constant without a schema value is the check `unbound-enum-constant`; `@GraphQLIgnore` on the constant says that it is left out on purpose (see <<strictMode,Strict Mode>>).
-* A value that the schema does not define is a request error from graphql-java, and the resolver is not called.
-* A `GraphQLRuntimeWiringCustomizer` that registers its own `enumValues` for a bound enum replaces the library's wiring and fails the startup with `[runtime-wiring-override]`.
 
 [[mappingDictionary]]
 == The schema mapping dictionary

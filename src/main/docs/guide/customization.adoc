@@ -12,7 +12,7 @@ Three kinds of beans change what the library builds. Several beans of one kind c
 |`GraphQLSchemaCustomizer` |the generated `GraphQLSchema`, and returns the schema to use |last
 |===
 
-A `GraphQLRuntimeWiringCustomizer` adds wiring: scalars, directive wirings, field visibility. When it replaces a data fetcher, a default data fetcher, a type resolver, a scalar, a named directive wiring, the enum values provider of a bound enum or the wiring factory that the library registered, or puts one for a field or type that the library wired into a code registry, the startup fails with `[runtime-wiring-override]`, which names each replacement and the customizer that made it. The check runs when the application has a `GraphQLRuntimeWiringCustomizer` bean. Code registry entries for fields that the library does not wire are accepted.
+A `GraphQLRuntimeWiringCustomizer` adds wiring: scalars, directive wirings, field visibility. A replacement of something that the library registered is reported as `[runtime-wiring-override]` (see <<exceptions,Exceptions>>).
 
 To change the generated schema, use a `GraphQLSchemaCustomizer`; the library does not check what it changes. To wrap data fetchers, use a `GraphQLFieldFetcherDecorator` (see <<execution,Execution>>) or a `SchemaDirective` (see <<directives,Directives>>). A `GraphQLSchemaCustomizer` of the example suites handles the `@audit` directive of the schema definition, in the snippet of the <<directives,Directives>> page.
 
@@ -21,15 +21,12 @@ To change the generated schema, use a `GraphQLSchemaCustomizer`; the library doe
 A field that only a hand-written `DataFetcher` serves has no Java member, so the startup would fail with `[field-not-bound]`. The customizer declares the field by claiming it in `claimedFields()`, and registers the data fetcher in `customize`. The library does not bind or check a claimed field, and a data fetcher that the customizer registers for it is not a replacement.
 
 * A claim names a field of an object type of the schema, including a field that `extend type` adds. A claim for a type or a field that the schema does not define, or for an interface, fails the startup with `[invalid-claimed-fields]`, which names each coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
-* `claimedFields()` is read once, at startup, before a field is bound. A claimed field has a line of the kind `claimed` in the <<manifest,binding manifest>>, which names the customizer.
-* A type that a claimed field alone returns is not reached by the binding: list it in `allow.unreachable`, or bind it through another field.
-* The compile-time checks cannot see a claim, because customizers are runtime beans.
 
 == Configuring the `GraphQL` bean
 
 `GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean before it is built. The bean uses the selected `GraphQLSchema`: the library's, or an application schema that replaces it, lowest order first. They set a `PreparsedDocumentProvider`, the execution strategies, the default `DataFetcherExceptionHandler` and the like; the <<errors,Errors>> page has an example.
 
-The library collects the `Instrumentation` beans and installs them before the customizers run: one bean is installed as it is, and several are chained in a `ChainedInstrumentation`, lowest order first. With no `Instrumentation` bean the library sets none, and graphql-java keeps its default. When `protection.max-depth` or `protection.max-complexity` is not `0`, the library installs the matching protection instrumentation as well. A customizer that calls `instrumentation(...)` replaces what the library installed, so register an instrumentation as a bean.
+The library installs the `Instrumentation` beans before the customizers run; see <<observability,Observability>>.
 
 == Building the `GraphQL` bean yourself
 

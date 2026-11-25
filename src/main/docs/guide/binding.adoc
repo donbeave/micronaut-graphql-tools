@@ -50,7 +50,7 @@ A field can have both a member of the Java type and a type resolver method. `mic
 
 The two lenient values log each ambiguity at WARN and write a `!precedence-ambiguity` line to the <<manifest,binding manifest>>. A field can say which side it wants, and then the setting is not consulted:
 
-* a directive listed in `micronaut.graphql.tools.resolver-directives` on the field of the object type makes its type resolver method serve it (a directive written only on an interface field is not copied to the implementations) (a field that has just a member fails with `[resolver-required]`);
+* a directive listed in `micronaut.graphql.tools.resolver-directives` on the field of the object type makes its type resolver method serve it (a directive written only on an interface field is not copied to the implementations);
 * `@GraphQLSchemaCoordinate("Item.price")` on the type resolver method declares the coordinate;
 * `@GraphQLIgnore` on the member removes it from the candidates.
 
@@ -94,4 +94,4 @@ A resolver is an ordinary bean, so its scope decides which instance is used. A s
 
 snippet::example.tck.BeanScopesScenario[project-base="test-suite", source="test", tags="scopes", indent="0"]
 
-`@RequestScope` needs a current HTTP request. A field fetched with no current HTTP request fails with `IllegalStateException`. Kotlin classes of a proxied scope are `open`, as for any Micronaut proxy.
+`@RequestScope` needs a current HTTP request.

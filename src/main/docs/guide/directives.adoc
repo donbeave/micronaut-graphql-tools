@@ -35,7 +35,7 @@ A directive has either one `named` bean or any number of `everyElement` beans. A
 * `@Order` on a `named` bean has no effect: the library does not sort them, and they run in the order in which the schema applies the directives to the element.
 * The `everyElement` wirings run lowest order first (`@Order` or `Ordered` on the `SchemaDirective` bean), so the first one wraps a data fetcher innermost.
 
-To wrap the data fetchers of selected fields, a `GraphQLFieldFetcherDecorator` bean is asked once for each field and returns the fetcher it received for a field it does not select, while an `everyElement` wiring is visited for each schema element: see <<execution,Execution>>.
+To wrap the data fetchers of selected fields, see the `GraphQLFieldFetcherDecorator` on the <<execution,Execution>> page.
 
 == A wiring needs a registration
 
@@ -66,10 +66,5 @@ micronaut:
 
 `SchemaDirectiveWiring` has no hook for the schema definition or for the argument of a directive definition, so a wiring does not count there. A directive applied on `schema { }`, as `@audit` above, fails the check unless `allow.inert-directives` lists it or `allow.schema-customizer-directives` lists it because a `GraphQLSchemaCustomizer` handles it. The second list takes exact names of declared directives, and each has to be applied on the schema definition or on a directive argument: an entry that the schema does not apply there fails the startup.
 
-The check leaves out the built-in directives of graphql-java (`@deprecated`, `@specifiedBy`, `@oneOf`, `@include` and `@skip`), directives that the schema declares and never applies, and directives that it applies without declaring them (graphql-java reports those). A `SchemaDirective` name that the schema does not declare is logged at INFO and not used, so a module that is shared by several schemas can wire more directives than one schema applies.
 
 An `unwired-directive` finding is also a line of the <<manifest,binding manifest>>. The compile-time checks do not run this check, because it needs the whole program (see <<compileTimeLimits,Limits>>).
-
-== Cost
-
-An `everyElement` wiring is called for each schema element, so it returns the elements that do not carry its directive unchanged. A wiring that wraps a data fetcher adds one call to that field for each request, so wrap the fields that need it.
