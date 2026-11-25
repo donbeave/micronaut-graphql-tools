@@ -30,22 +30,22 @@ The library and the binding module read no classes through `java.lang.reflect` (
 |===
 |Need |Kind |Effect |Workaround
 |graphql-java internal types |Reflection |Covered by the metadata entry above while the build applies it. |Register the types in your own `reflect-config.json` when the build does not.
-|The Groovy runtime and the closures of a Groovy example |Reflection |Groovy 4.0.x ships no GraalVM metadata. |The Groovy example carries its own (see <<groovyNative,Groovy>> below); the smoke test fails without it.
-|graphql-java message bundles |Resource |A bundle that is not registered is missing at run time. |Register the bundles in your own `resource-config.json` when the build does not apply the entry above.
+|The Groovy runtime and the closures of a Groovy example |Reflection |Groovy 4.0.x ships no GraalVM metadata. |The Groovy example carries its own (see <<groovyNative,Groovy>> below).
+|graphql-java message bundles |Resource |A bundle that is not registered is not available to the native image. |Register the bundles in your own `resource-config.json` when the build does not apply the entry above.
 |`AuthenticationMode` constants of Micronaut Security |Class initialization |Read from the annotation metadata of its conditions. |The `micronaut-graphql-tools-security` jar ships `--initialize-at-build-time` for the class.
 |===
 
 [[nativeSettings]]
 == Build settings of the example suites
 
-The example suites build their images with `-H:+SharedArenaSupport`:
+The snippet below is a build setting, not application code. The example suites build their images with `-H:+SharedArenaSupport`:
 
 [source,kotlin]
 ----
 graalvmNative.binaries.configureEach { buildArgs.add("-H:+SharedArenaSupport") }
 ----
 
-The flag is there because Netty 4.2 on Java 25 releases direct buffers through a shared arena; `EventLoopShutdownTest` of the Java and the Kotlin suite checks that the event-loop thread ends. See `test-suite-java/build.gradle.kts` and `CONTRIBUTING.md`.
+The flag is there because Netty 4.2 on Java 25 releases direct buffers through a shared arena. `EventLoopShutdownTest` of the Java and the Kotlin suite checks that the event-loop thread ends; it runs in `:test-suite-java:nativeTest` and `:test-suite-kotlin:nativeTest`. See `test-suite-java/build.gradle.kts` and `CONTRIBUTING.md`.
 
 == What the native tests cover
 
@@ -56,9 +56,20 @@ Groovy has no native test, because Spock does not run natively. The Groovy examp
 
 == Build and run the native tests
 
-On Oracle GraalVM 25.0.5, `./gradlew :test-suite-java:nativeTest --no-parallel` built the test image and its JUnit run reported no failed test.
+On Oracle GraalVM 25.0.5, each command below was run with `--no-parallel` and finished with `BUILD SUCCESSFUL`:
 
-A native test build needs Oracle GraalVM 25 and a few GB of memory, so run them one after another:
+[cols="3,2,3", options="header"]
+|===
+|Command |Result |What it covers
+|`:test-suite-java:nativeTest` |252 tests, 0 failures, 0 errors, 9 skipped |The JUnit 5 tests of the Java example suite.
+|`:test-suite-kotlin:nativeTest` |251 tests, 0 failures, 0 errors, 10 skipped |The JUnit 5 tests of the Kotlin example suite.
+|`:test-suite-serde:nativeTest` |21 tests, 0 failures, 0 errors, 0 skipped |The Micronaut Serialization stack as a native binary.
+|`:test-suite-groovy:nativeSmokeTest` |`BUILD SUCCESSFUL` |The Groovy example's native executable answers the queries of the smoke test.
+|===
+
+The `native` job and the `native Groovy smoke` job of `.github/workflows/gradle.yml` run these commands on pull requests.
+
+The commands below are shell commands, not build settings. A native test build needs Oracle GraalVM 25 and a few GB of memory, so run them one after another:
 
 [source,bash]
 ----
