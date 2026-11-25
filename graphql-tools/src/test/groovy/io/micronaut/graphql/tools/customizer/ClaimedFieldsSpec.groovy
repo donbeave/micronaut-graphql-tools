@@ -128,7 +128,7 @@ interface Node {
         lines.any { it.startsWith('Query.hello: String -> root ; ') }
     }
 
-    void "an extension field nothing binds names claimedFields() in the failure, and a claim serves it"() {
+    void "an extension field nothing binds names getClaimedFields() in the failure, and a claim serves it"() {
         when:
         startContext(EXTENSION_SCHEMA, SPEC_NAME_EXTENSION)
         getGraphQLBean()
@@ -137,7 +137,7 @@ interface Node {
         def e = thrown(BeanInstantiationException)
         e.cause.message.contains('GraphQL coordinate: Book.isbn')
         e.cause.message.contains('GraphQL coordinate: Query.version')
-        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#getClaimedFields()')
         e.cause.message.count('[field-not-bound]') == 2
         !e.cause.message.contains('[field-not-bound] [field-not-bound]')
 
@@ -151,7 +151,7 @@ interface Node {
         result.data == [hello: 'world', version: '2.0', book: [title: 'title', isbn: '978-1']]
     }
 
-    void "replacing a bound field without claiming it still fails, and names claimedFields()"() {
+    void "replacing a bound field without claiming it still fails, and names getClaimedFields()"() {
         given: 'the customizer claims Query.version, but replaces the bound Query.hello through the code registry'
         startContext(SCHEMA, SPEC_NAME_UNCLAIMED)
 
@@ -165,7 +165,7 @@ interface Node {
         e.cause.replacements == [
                 "data fetcher of Query.hello, through the code registry (${ReplacesBoundAndClaims.name})".toString()
         ]
-        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#getClaimedFields()')
     }
 
     void "a stale claim fails the startup with the coordinate"() {
@@ -184,14 +184,14 @@ interface Node {
                 "Missing.field: the schema defines no type Missing (${StaleClaims.name})".toString(),
                 "Node.id: Node is not an object type: claim the field of each object type that implements it (${StaleClaims.name})".toString(),
         ]
-        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#claimedFields()')
+        e.cause.message.contains('GraphQLRuntimeWiringCustomizer#getClaimedFields()')
     }
 
     @Requires(property = 'spec.name', value = SPEC_NAME)
     @Singleton
     static class ClaimingCustomizer implements GraphQLRuntimeWiringCustomizer {
         @Override
-        Set<FieldCoordinates> claimedFields() {
+        Set<FieldCoordinates> getClaimedFields() {
             return [FieldCoordinates.coordinates('Query', 'version'),
                     FieldCoordinates.coordinates('Book', 'isbn')] as Set
         }
@@ -208,7 +208,7 @@ interface Node {
     @Singleton
     static class ClaimingExtensionFields implements GraphQLRuntimeWiringCustomizer {
         @Override
-        Set<FieldCoordinates> claimedFields() {
+        Set<FieldCoordinates> getClaimedFields() {
             return [FieldCoordinates.coordinates('Query', 'version'),
                     FieldCoordinates.coordinates('Book', 'isbn')] as Set
         }
@@ -224,7 +224,7 @@ interface Node {
     @Singleton
     static class ReplacesBoundAndClaims implements GraphQLRuntimeWiringCustomizer {
         @Override
-        Set<FieldCoordinates> claimedFields() {
+        Set<FieldCoordinates> getClaimedFields() {
             return [FieldCoordinates.coordinates('Query', 'version'),
                     FieldCoordinates.coordinates('Book', 'isbn')] as Set
         }
@@ -242,7 +242,7 @@ interface Node {
     @Singleton
     static class StaleClaims implements GraphQLRuntimeWiringCustomizer {
         @Override
-        Set<FieldCoordinates> claimedFields() {
+        Set<FieldCoordinates> getClaimedFields() {
             return [FieldCoordinates.coordinates('Query', 'version'),
                     FieldCoordinates.coordinates('Book', 'price'),
                     FieldCoordinates.coordinates('Missing', 'field'),

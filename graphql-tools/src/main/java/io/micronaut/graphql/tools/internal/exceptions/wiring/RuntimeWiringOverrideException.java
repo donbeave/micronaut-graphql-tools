@@ -37,7 +37,7 @@ public final class RuntimeWiringOverrideException extends SchemaBindingException
                 + String.join("\n  ", replacements)
                 + "\n  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field "
                 + "with the customizer's own data fetcher by returning its coordinate from "
-                + "GraphQLRuntimeWiringCustomizer#claimedFields() (or remove the registration to keep the library's binding), or change the built schema with a GraphQLSchemaCustomizer.");
+                + "GraphQLRuntimeWiringCustomizer#getClaimedFields() (or remove the registration to keep the library's binding), or change the built schema with a GraphQLSchemaCustomizer.");
 
         this.replacements = List.copyOf(replacements);
     }

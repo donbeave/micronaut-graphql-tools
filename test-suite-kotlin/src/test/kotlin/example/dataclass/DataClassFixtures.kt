@@ -93,7 +93,7 @@ class DataClassQuery {
     fun draft(input: DraftInput): String = when {
         input.summary.isOmitted -> "omitted"
         input.summary.isNull -> "null"
-        else -> "present:" + input.summary.get()
+        else -> "present:" + input.summary.getRequired()
     } + " note=" + input.note
 
     fun settings(input: SettingsInput): String = input.toString()

@@ -10,7 +10,7 @@ import java.util.Set;
 public class StaleClaims implements GraphQLRuntimeWiringCustomizer {
 
     @Override
-    public Set<FieldCoordinates> claimedFields() {
+    public Set<FieldCoordinates> getClaimedFields() {
         return Set.of(FieldCoordinates.coordinates("Book", "price"), FieldCoordinates.coordinates("Missing", "field"));
     }
 
