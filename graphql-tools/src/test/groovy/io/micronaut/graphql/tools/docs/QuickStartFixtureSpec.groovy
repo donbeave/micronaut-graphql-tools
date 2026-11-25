@@ -89,7 +89,8 @@ class QuickStartFixtureSpec extends Specification {
     def "the fixtures depend on the library and on no test suite"() {
         expect:
         LANGUAGES.keySet().every { language ->
-            def build = Files.readString(root.resolve("docs-examples-${language}/build.gradle.kts"))
+            def build = Files.readAllLines(root.resolve("docs-examples-${language}/build.gradle.kts"))
+                    .findAll { !it.trim().startsWith('//') }.join('\n')
             build.contains('projects.micronautGraphqlTools') && !build.contains('testSuite') && !build.contains('test-suite')
         }
     }
