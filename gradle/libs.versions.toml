@@ -2,14 +2,14 @@
 # Build-tool inputs, not dependency pins: micronaut-build reads `micronaut` (core BOM) and `micronaut-test` for the `mn` and
 # `mnTest` catalogs, the Micronaut Gradle plugin reads `micronaut-platform`.
 micronaut = "4.10.37"
-micronaut-platform = "4.10.24"
+micronaut-platform = "4.10.25"
 micronaut-docs = "3.0.0"
 micronaut-test = "4.10.3"
 micronaut-graphql = "4.8.0"
-# The versions that micronaut-platform 4.10.24 manages; the catalogs of these give the Micrometer, OpenTelemetry and security modules their compile-only APIs
+# The versions that micronaut-platform 4.10.25 manages; the catalogs of these give the Micrometer, OpenTelemetry and security modules their compile-only APIs
 micronaut-micrometer = "5.13.3"
 micronaut-tracing = "7.2.0"
-micronaut-security = "4.18.2"
+micronaut-security = "4.18.3"
 micronaut-serde = "2.16.2"
 micronaut-validation = "4.12.0"
 micronaut-rxjava2 = "2.9.0"
@@ -44,10 +44,10 @@ floor-graphql-java = "21.5"
 floor-extended-scalars = "21.0"
 floor-java-dataloader = "3.2.2"
 floor-extended-validation = "21.0"
-# ceiling: the newest tested line. graphql-java-extended-scalars has no 25.x or 26.x release; 24.0 links against 26.2.
+# ceiling: the newest tested line. graphql-java-extended-scalars has no 25.x or 26.x release; 24.1 links against 26.2.
 # extended-validation 21.0 calls a GraphQLCodeRegistry overload that 25.x removed; 24.0 does not.
 ceiling-graphql-java = "26.2"
-ceiling-extended-scalars = "24.0"
+ceiling-extended-scalars = "24.1"
 ceiling-java-dataloader = "6.0.0"
 ceiling-extended-validation = "24.0"
 
