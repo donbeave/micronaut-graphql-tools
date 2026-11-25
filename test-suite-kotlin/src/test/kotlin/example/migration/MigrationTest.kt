@@ -119,6 +119,8 @@ class MigrationTest {
 
         val settings = mapOf(
             "micronaut.graphql.tools.strict" to false,
+            "micronaut.graphql.tools.checks.unwired-directive" to "fail",
+            "micronaut.graphql.tools.checks.root-method-several-operations" to "fail",
             "micronaut.graphql.tools.precedence" to "resolver-first",
             "micronaut.graphql.tools.manifest.enabled" to true
         )

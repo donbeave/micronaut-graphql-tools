@@ -108,6 +108,8 @@ class MigrationTest extends Specification {
         given:
         Map<String, Object> settings = [
                 'micronaut.graphql.tools.strict'           : false,
+                'micronaut.graphql.tools.checks.unwired-directive': 'fail',
+                'micronaut.graphql.tools.checks.root-method-several-operations': 'fail',
                 'micronaut.graphql.tools.precedence'       : 'resolver-first',
                 'micronaut.graphql.tools.manifest.enabled' : true
         ]

@@ -113,6 +113,8 @@ class MigrationTest {
 
         Map<String, Object> settings = Map.of(
                 "micronaut.graphql.tools.strict", false,
+                "micronaut.graphql.tools.checks.unwired-directive", "fail",
+                "micronaut.graphql.tools.checks.root-method-several-operations", "fail",
                 "micronaut.graphql.tools.precedence", "resolver-first",
                 "micronaut.graphql.tools.manifest.enabled", true);
         try (ApplicationContext context = ApplicationContext.run(settings, MigrationFixtures.FINDINGS)) {
