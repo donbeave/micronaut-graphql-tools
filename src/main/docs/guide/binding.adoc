@@ -94,4 +94,4 @@ A resolver is an ordinary bean, so its scope decides which instance is used. A s
 
 snippet::example.tck.BeanScopesScenario[project-base="test-suite", source="test", tags="scopes", indent="0"]
 
-`@RequestScope` needs a current HTTP request. A field fetched outside one, such as a field of a subscription over a WebSocket connection, fails with `IllegalStateException`. Kotlin classes of a proxied scope are `open`, as for any Micronaut proxy.
+`@RequestScope` needs a current HTTP request. A field fetched with no current HTTP request fails with `IllegalStateException`. Kotlin classes of a proxied scope are `open`, as for any Micronaut proxy.

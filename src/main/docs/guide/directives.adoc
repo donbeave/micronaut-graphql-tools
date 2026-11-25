@@ -35,7 +35,7 @@ A directive has either one `named` bean or any number of `everyElement` beans. A
 * `@Order` on a `named` bean has no effect: the library does not sort them, and they run in the order in which the schema applies the directives to the element.
 * The `everyElement` wirings run lowest order first (`@Order` or `Ordered` on the `SchemaDirective` bean), so the first one wraps a data fetcher innermost.
 
-To wrap the data fetchers of selected fields, a `GraphQLFieldFetcherDecorator` bean is the cheaper choice: see <<execution,Execution>>.
+To wrap the data fetchers of selected fields, a `GraphQLFieldFetcherDecorator` bean is asked once for each field and returns the fetcher it received for a field it does not select, while an `everyElement` wiring is visited for each schema element: see <<execution,Execution>>.
 
 == A wiring needs a registration
 
