@@ -1,7 +1,7 @@
 # Tools for developers and CI. `mise install` installs them; the Gradle wrapper stays the build entry point.
 # CI selects a Temurin JDK with MISE_ENV=jdk17|jdk21|jdk25|jdk27 (mise.jdk<N>.toml overrides `java`).
 [tools]
-java = "oracle-graalvm-25.0.5.0.3"
+java = "oracle-graalvm-25.0.5.1"
 # the Maven samples of test-suite-build; the newest 3.9 line (the one micronaut-parent builds against)
 maven = "3.9.16"
 "github:jdx/jactionlint" = "2.6.0"
