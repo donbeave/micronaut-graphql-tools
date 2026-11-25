@@ -84,7 +84,7 @@ class ArgumentsQueries {
     fun presence(text: ArgumentValue<String>): String = when {
         text.isOmitted -> "omitted"
         text.isNull -> "null"
-        else -> "present:" + text.get()
+        else -> "present:" + text.getRequired()
     }
 
     fun total(numbers: List<Int>): Int = numbers.sum()

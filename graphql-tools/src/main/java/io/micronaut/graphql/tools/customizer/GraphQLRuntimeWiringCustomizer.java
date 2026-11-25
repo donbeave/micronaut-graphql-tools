@@ -51,7 +51,7 @@ import java.util.Set;
  * customizers finish.</p>
  *
  * <p>A customizer serves a field with a hand-written {@code DataFetcher} by <em>claiming</em> it in
- * {@link #claimedFields()} and registering the data fetcher in {@link #customize}. The library neither binds nor
+ * {@link #getClaimedFields()} and registering the data fetcher in {@link #customize}. The library neither binds nor
  * checks a claimed field, so no Java member is needed for it.</p>
  */
 @FunctionalInterface
@@ -81,7 +81,7 @@ public interface GraphQLRuntimeWiringCustomizer {
      * @return the coordinates this customizer serves, none by default
      */
     @NonNull
-    default Set<FieldCoordinates> claimedFields() {
+    default Set<FieldCoordinates> getClaimedFields() {
         return Set.of();
     }
 

@@ -21,6 +21,7 @@ snippet::example.tck.ReturnTypesScenario[project-base="test-suite", source="test
 * A `Mono` can be wrapped in `DataFetcherResult` or `Optional` inside, as `Mono<Optional<T>>`. For a `Flux`, the wrappers apply to each element: `Flux<DataFetcherResult<T>>`.
 * A `Flux` on a field that is not a list fails the startup, as does a `Publisher` inside a `CompletionStage`, inside a list, or on a bean property (a property is read, not invoked). An `Observable` of RxJava is not a `Publisher`; convert it with `toFlowable()` first.
 * A field of the subscription type is different: its `Publisher` is the stream of events and is not collected.
+* `DataFetcherResult<Publisher<T>>` on a field of the subscription type is rejected with `[unsupported-return-type]`.
 
 The adapted future completes on the thread that signals the publisher. The adaptation itself neither captures nor restores a propagated context: that belongs to the execution model of the library, and a reactive library that propagates the context on its own (as `micronaut-reactor` does) keeps doing so.
 

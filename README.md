@@ -112,11 +112,11 @@ public TypeDefinitionRegistry typeDefinitionRegistry(ResourceResolver resourceRe
 - `@GraphQLTypeResolver` Specifies a resolver for a specific GraphQL type field, enabling mapping of nested or complex fields within types.
 - `@GraphQLInput` Defines a GraphQL input type, representing structured input data for mutations or queries.
 - `@GraphQLModels(classes, packages)` On any class of the module that compiles the resolvers: generates the bean introspections of model classes that carry no annotation (generated classes, classes of another module or library), see the guide page Model Classes.
-- `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field. `@GraphQLField("name")` on a method or a property binds the field of that name, see [Binding a field to a differently named member](#binding-a-field-to-a-differently-named-member).
+- `@GraphQLField` Marks a method of a `@GraphQLType` class as a field resolver, so that methods with arguments (or a `DataFetchingEnvironment` parameter) can back a GraphQL field. `@GraphQLField("name")` on a method or a property binds the field of that name, see [Binding a field to a differently named member](src/main/docs/guide/binding.adoc).
 - `@GraphQLIgnore` Marks a method, a property or an enum constant that binds no field, so that strict mode does not report it, see [Escape hatches](#escape-hatches).
-- `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](#resolver-contracts).
+- `@GraphQLSchemaCoordinate("Type.field")` Names the field a resolver method binds; meant for resolver contracts (interfaces), see [Resolver contracts](src/main/docs/guide/resolverContracts.adoc).
 
-These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums (with `@Introspected`, see [Enums](#enums)), and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](#custom-types-mapping).
+These are all the annotations the library provides (package `io.micronaut.graphql.tools.annotation`). GraphQL enums map to Java enums (with `@Introspected`, see [Enums](src/main/docs/guide/typeSystem.adoc)), and unions and interfaces to Java interfaces, without an annotation of their own; the concrete classes of a union are registered as shown in [Custom types mapping](src/main/docs/guide/typeSystem.adoc).
 
 ## Schema discovery
 
@@ -174,6 +174,20 @@ sourceSets.main { resources.srcDir(schemaIndex) }
 
 Without the index a wildcard location fails the startup of the native image, naming the resource. On the JVM, a jar that
 has no directory entries cannot be listed. For `classpath*:` the index of such a jar is read next to the roots that were listed, and the files of both are merged; for `classpath:` the index is used only when no classpath entry has the directory.
+
+## Binding, types, scalars and customization
+
+These topics are in the guide, in `src/main/docs/guide`:
+
+| Topic | Guide page |
+| --- | --- |
+| Where a field gets its value, property or type resolver precedence, renaming, resolver scopes | [binding.adoc](src/main/docs/guide/binding.adoc) |
+| Resolver contracts and the marker interfaces | [resolverContracts.adoc](src/main/docs/guide/resolverContracts.adoc) |
+| Reactive return types, enums, unions, interfaces and the schema mapping dictionary | [typeSystem.adoc](src/main/docs/guide/typeSystem.adoc) |
+| Arguments, input classes and `ArgumentValue` | [inputs.adoc](src/main/docs/guide/inputs.adoc) |
+| Standard and custom scalars | [scalars.adoc](src/main/docs/guide/scalars.adoc) |
+| Customizers and replacing the `GraphQL` bean | [customization.adoc](src/main/docs/guide/customization.adoc) |
+| Instrumentation beans | [observability.adoc](src/main/docs/guide/observability.adoc) |
 
 ## Return types
 
@@ -261,10 +275,10 @@ Methods of beans without coordinates are matched by name. The coordinate is also
   form `Type.field`, names a type or field the schema does not have or a type that is neither an object type nor an
   interface, names a non-root type on a `@GraphQLRootResolver` or a root operation type on a
   `@GraphQLTypeResolver`, or sits on a bean that is neither. The method may have any name: the coordinate decides, see
-  [Binding a field to a differently named member](#binding-a-field-to-a-differently-named-member).
+  [Binding a field to a differently named member](src/main/docs/guide/binding.adoc).
 - It also fails when the method does not end up bound to exactly its coordinate: for example the type is mapped to a
   class that the `@GraphQLTypeResolver` does not resolve (a method that declares its coordinate wins over a property of
-  the mapped class, see [Property or type resolver](#property-or-type-resolver)). A coordinate whose type
+  the mapped class, see [Property or type resolver](src/main/docs/guide/binding.adoc)). A coordinate whose type
   is unreachable and allowed (see [Configuration](#configuration)) is not bound; with `unbound-resolver-method` at `fail` (the default)
   it is an error, otherwise it is logged as a warning.
 
@@ -320,115 +334,6 @@ in a build that does not run the processor, fails the startup with `[type-resolv
 the processor and where to add it (see [Compile-time checks](#compile-time-checks)). Add the processor,
 or annotate the bean class directly: a bean annotated directly binds without the processor (but a bean that is
 annotated directly and also inherits another contract needs the processor to see the inherited one).
-
-## Property or type resolver
-
-A field of an object type is bound by a member of its Java type (a property, or a `@GraphQLField` method) or by a
-type resolver method (of a `@GraphQLTypeResolver` for that type, or for the Java interface of an SDL interface that
-declares the field). One rule covers object and interface fields. When both exist for one field,
-`micronaut.graphql.tools.precedence` decides:
-
-- `fail` (default): the startup fails with `[precedence-ambiguity]` (match on `SchemaBindingException#getCode()`), naming the field
-  and both members. `strict` does not relax it. The value `strict`, the former name of this default, is rejected with
-  `[removed-configuration-key]` (BC-29).
-- `property-first`: the member of the Java type binds, and the type resolver method is never called. This was the
-  only behaviour before the option existed.
-- `resolver-first`: the type resolver method binds, and the member is not read. This is the migration setting for
-  applications that come from graphql-java-tools or graphql-java-kickstart, where the resolver wins.
-
-Under `property-first` and `resolver-first` every ambiguity is logged at WARN and written to the binding manifest as a
-`!precedence-ambiguity` line.
-
-A field may say which one it wants, and then the setting is not consulted and nothing is logged:
-
-- list directives in `micronaut.graphql.tools.resolver-directives`: a field that carries one of them is bound by its
-  type resolver method whatever the precedence;
-- declare the coordinate on the type resolver method with `@GraphQLSchemaCoordinate("Item.price")`, or the coordinate
-  of the interface (`@GraphQLSchemaCoordinate("Node.id")`): the method binds the field whatever the precedence. This
-  is how a Relay-style `Node.id` resolver sits next to an entity that has `getId()`;
-- annotate the member with `@GraphQLIgnore`: it is no member, so the type resolver method binds the field.
-
-The error message of an ambiguity names every one of these and says that `strict` does not change it.
-
-A field with a resolver directive fails the startup with `[resolver-required]` when only a member of the Java
-type could bind it. Every listed directive must be
-declared in the schema. The directive is read from the field of the object type: graphql-java does not carry
-directives of an SDL interface field over to the implementations, so a directive written only on the interface's
-field has no effect here (the field then follows the precedence).
-
-```graphql
-directive @computed on FIELD_DEFINITION
-
-type Item {
-  name: String!
-  price: Long! @computed
-}
-```
-
-```yaml
-micronaut:
-  graphql:
-    tools:
-      resolver-directives:
-        - computed
-```
-
-With the `fail` default, a getter that happens to have the name of a field a type resolver computes no longer
-shadows the type resolver silently. An application that relied on the getter winning sets `precedence: property-first`
-(and gets a warning that lists the fields where it applies). A field without both members binds as before in every
-mode.
-
-## Binding a field to a differently named member
-
-A member binds the field of its own name unless it says otherwise. Three forms bind a field to a member with another
-name: a field named like a Java keyword or an `Object` method (`class`, `default`, `new`, `hashCode`) cannot be bound any
-other way, and a migration often meets resolvers named `getAuthor(Book)` for the field `author`.
-
-**A member of the Java type: `@GraphQLField("name")`.** On a method of a `@GraphQLType` class, the method binds the field
-of that name. On a property (its field, its getter, or a Kotlin or Groovy property) the property binds it. The value is
-optional: `@GraphQLField` alone keeps the name of the method.
-
-```java
-// type Parcel { class: String!  headline: String! }
-@GraphQLType
-public class Parcel {
-    @GraphQLField("class")
-    public String kind() { ... }
-
-    @GraphQLField("headline")
-    private String title;
-}
-```
-
-A renamed member binds the field of its new name only; a field of its old name needs another member. When two members
-bind one field (a renamed one and another, or two renamed to the same field), the startup fails with
-`multiple-methods-found` (`MultipleMethodsFoundException`) naming the field coordinate and the members. A member marked
-`@GraphQLIgnore` binds nothing. On a resolver bean the value is not read: use the coordinate.
-
-**A resolver method: `@GraphQLSchemaCoordinate("Type.field")`.** The coordinate names the field, whatever the name of
-the method is (before, the startup failed when they differed):
-
-```java
-@Singleton
-@GraphQLTypeResolver(Parcel.class)
-public class ParcelResolver {
-    @GraphQLSchemaCoordinate("Parcel.class")
-    public String kind(Parcel parcel) { ... }
-}
-```
-
-The rest of [Resolver contracts](#resolver-contracts) holds: on a bean where one method declares a coordinate, only the
-methods that do bind, and two methods that declare one coordinate fail with `multiple-methods-found`.
-
-**Accessor prefixes: `micronaut.graphql.tools.resolver-accessor-prefixes`.** With `true` (default `false`) a resolver
-method of a bean without coordinates named `getX` or `isX` (an upper-case letter after the prefix) also binds the field
-`x`, besides the field named like the method. That lets resolvers written for other tools (`getAuthor(Book)`) bind
-without renaming. `getAuthor` and `author` in one class both bind `author` and fail the startup. Off, `getAuthor`
-binds the field `getAuthor` only. The compile-time checks read `micronaut.graphql.tools.processor.resolver.accessor.prefixes`: set it in the build when the
-runtime key is set, so that the checks judge the arguments and the return type of those methods. Without it they leave
-a method that only a prefix could bind unreported.
-
-All three are decided once at startup (and by the compile-time checks); a request does no name lookup.
 
 ## Resolver scopes
 
@@ -581,11 +486,11 @@ compile time (`unbound-resolver-method`, `root-method-several-operations`, `unbo
 - **`interface-read-through-implementation`** (`!interface-read-through-implementation Type`): an object type mapped
   to a Java interface that has no bean introspection of its own is read through the introspection of its one
   `@GraphQLType(TheInterface.class)` class, so a getter only the implementation declares binds silently (see
-  [Java interfaces as object types](#java-interfaces-as-object-types)). Annotate the interface with `@GraphQLType` or
+  [Java interfaces as object types](src/main/docs/guide/typeSystem.adoc)). Annotate the interface with `@GraphQLType` or
   `@Introspected`.
 - **`unmapped-input-property`** (`!unmapped-input-property InputClass#property`): a property the class can set
   (through a setter or the constructor) that no request can ever set. They are reported in one
-  `[unmapped-input-property]` (see [Input classes and input types](#input-classes-and-input-types)).
+  `[unmapped-input-property]` (see [Input classes and input types](src/main/docs/guide/inputs.adoc)).
 - **`nullable-primitive`** (`!nullable-primitive Query.field(argument:)`): an argument or input class property declared
   as a primitive (`int`, `boolean`, `double`, ...) for a nullable built-in scalar (`Int`, `Boolean`, `Float`,
   `Long`, ...): a `null` (omitted or explicit) cannot reach it, so it arrives as the primitive's default value or fails
@@ -657,229 +562,13 @@ The compile-time visitor in `micronaut-graphql-tools-processor` reads the same a
 `strict: false` does not change `precedence`: with the default `fail` precedence, a field that both a getter and a
 type resolver can bind still fails the startup (`[precedence-ambiguity]`).
 
-## Custom scalars
-
-GraphQL's own scalars (`String`, `Boolean`, `Int`, `Float`, `ID`) and the extended scalars `Long`, `Short`,
-`BigDecimal` and `BigInteger` are built in. Any other scalar of the schema needs a `GraphQLScalarMapping` bean: the
-graphql-java `GraphQLScalarType` that implements it, and the Java classes that stand for it. A bare `GraphQLScalarType`
-bean is not registered; wrap it in a mapping.
-
-```java
-@Factory
-public class ScalarsFactory {
-
-    @Bean
-    @Singleton
-    GraphQLScalarMapping localDate() {
-        // same Java classes for fields, arguments and input fields
-        return GraphQLScalarMapping.of(myLocalDateScalarType, LocalDate.class);
-    }
-
-    @Bean
-    @Singleton
-    GraphQLScalarMapping json() {
-        // different classes for output and input
-        return GraphQLScalarMapping.builder(ExtendedScalars.Json)
-                .outputClasses(Object.class)
-                .inputClasses(Object.class, Map.class)
-                .build();
-    }
-
-}
-```
-
-- **Output classes** are the classes the scalar's `serialize` accepts. A field of the scalar type may be backed by one
-  of them or a subclass.
-- **Input classes** are the classes an argument or an input object field of the scalar type may be declared as, exactly
-  one of them. They are normally the classes that `parseValue`/`parseLiteral` produce; a parsed value that is not an
-  instance of the declared class is converted by the Micronaut `ConversionService`.
-- A primitive matches its wrapper class. On the input side it is accepted only for a non-null GraphQL type
-  (`Count!`), because `null` cannot be passed to it.
-
-The library itself ships no scalar implementations beyond the built-in ones. The [standard scalars](#standard-scalars) module
-registers the common ones; graphql-java-extended-scalars and other libraries provide many more. A mapping only takes
-effect for scalars the schema declares.
-
-The startup fails:
-
-- with `[scalar-mapping-not-provided]` when a field, argument or input field uses a scalar that has no mapping;
-  the message names the coordinate;
-- with `[incorrect-class-mapping]` when the Java type is not one of the mapping's classes, when the mapping
-  declares no classes for that side, or when a primitive stands for a nullable input;
-- with `[invalid-scalar-mapping]` when two mappings have the same scalar name, or a mapping names a built-in
-  scalar.
-
-Values of custom scalars inside input objects reach the input class as the instances the scalar parsed. When the
-declared class is another one of the mapping's input classes, the value goes through the Micronaut `ConversionService`,
-which has the application's `TypeConverter` beans (see [Converting input values](#converting-input-values)).
-
-## Standard scalars
-
-The `micronaut-graphql-tools-scalars` module registers a `GraphQLScalarMapping` bean for the scalars that most services
-need: `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `OffsetTime`, `OffsetDateTime`, `ZonedDateTime`, `YearMonth`,
-`Year`, `Duration` and `Period` (ISO-8601 by default), `JSON` (converted with the application's `JsonMapper`, Micronaut
-Serialization in an application that uses it), and a selection of the extended scalars (`Url`, `UUID`, `Locale`,
-`Currency` and the signed `Int` and `Float` scalars). Add the dependency and declare the scalar in the schema.
-
-```
-implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-scalars:1.0.0-M4")
-```
-
-The module is available from `1.0.0-M4`; earlier milestones do not include it.
-
-Each scalar is configured under `micronaut.graphql.tools.scalars.<id>`: `name` renames the scalar in the schema, `format`
-changes the wire format of a `java.time` scalar (`iso`, a keyword such as `epoch-millis`, or a `DateTimeFormatter`
-pattern) and `enabled=false` turns the scalar off; `micronaut.graphql.tools.scalars.enabled=false` turns all of them off.
-The ids, the default names and formats are in the guide page on scalars.
-
-## Arguments and input objects
-
-### Binding by name
-
-A resolver method parameter is bound to the field argument **with the same name**, not to the argument at the same
-position. The source object (first parameter of a type resolver method) keeps its place, and a parameter of an injected kind
-(`DataFetchingEnvironment`, `GraphQLContext`, `@GraphQLContextValue`, `DataFetchingFieldSelectionSet`, `DataLoader`,
-`Locale`, `Principal`, the HTTP request and response; see the guide page "Resolver Parameters") takes any position after it;
-every other parameter is matched by name. Parameters may be declared in any order. The name-to-
-position plan is built once at startup, so a request does no name lookup.
-
-```java
-// type Query { page(first: Int!, offset: Int!): String! }
-String page(Integer offset, Integer first) { ... }   // page(first: 10, offset: 200) -> first=10, offset=200
-```
-
-Names come from Micronaut's compile-time metadata (`Argument.getName()`), not from reflection. A method declared in a
-class that Micronaut processes has the name of the source, so the compiler does not need `-parameters`. A method
-inherited from a class file has the name that the class file carries (`-parameters`, or, for a method with a body, `-g`, which Gradle and Maven pass
-by default; an abstract or interface method needs `-parameters`); a class file built with neither has `arg0`, and the failure says to compile it with `-parameters` or to use
-`@GraphQLArgument`. If a parameter name cannot match the argument name (for example `long` or `short`),
-bind it explicitly:
-
-```java
-String size(@GraphQLArgument("long") Integer length, @GraphQLArgument("short") Integer width) { ... }
-```
-
-The annotation on a parameter of an interface or superclass method also applies to the overriding method.
-
-The startup fails with the schema coordinate and the parameter when a parameter has no argument of that name
-(`[argument-mismatch]`), when two parameters bind to one argument, and when the numbers of parameters and arguments differ. The compile-time check (the visitor of `graphql-tools-processor`)
-applies the same rule and reports the same code, `argument-mismatch`, and coordinate. There is no positional opt-out.
-
-**Migration (breaking):** positional matching has ended. A resolver whose parameter names differ from the SDL argument
-names now fails the startup. Rename the parameters, or add `@GraphQLArgument("<argument name>")`.
-
-### Converting input values
-
-graphql-java hands a data fetcher the coerced argument values: scalar values, enum constants, a `Map` per input object
-and a `List` per list. The library converts each value into the declared Java type of the resolver parameter,
-including its type arguments (`List<SomeInput>`, `List<List<SomeInput>>`, `Set<SomeEnum>`). Every converter is built
-once at startup, from the declared type and the GraphQL type, and a request only runs it. There is no reflection on the
-request path:
-
-- a `String`, `Boolean`, `Integer` (also for an `int` parameter), `Long`, `Short`, `BigDecimal`, `BigInteger` or `Double`
-  value is the declared type already and is passed on as it is; a `Float` argument for a `float` parameter or property
-  is narrowed from graphql-java's `Double`;
-- an enum is the Java constant already, from the values provider of the enum (see [Enums](#enums));
-- a list becomes a new, mutable `ArrayList` for `List`, `Collection` and `Iterable`, a `LinkedHashSet` for `Set` (it
-  keeps the order of the list), a `TreeSet` for `SortedSet`, or a `LinkedList` for `Deque` and `Queue`; any other declared collection
-  fails the startup with `[unsupported-input-type]`;
-- an input object becomes an instance of its input class, built from the class's bean introspection
-  (`BeanIntrospection`, generated at compile time because `@GraphQLInput` is `@Introspected`): the introspected
-  constructor takes the fields that match its parameters (a record, a Kotlin data class or an immutable class), then
-  each remaining field is set through its property (`BeanProperty`). A field the client leaves out is not set, so the
-  class keeps its own default; an explicit `null` is set to `null`, and left out for a primitive property, which keeps its
-  default. A constructor parameter that no field provides gets `null`, or the default of a primitive;
-- a custom scalar value that is an instance of the declared input class is passed on; any other value goes through the
-  Micronaut `ConversionService`.
-
-Customization goes through Micronaut `TypeConverter` beans and the [scalar mapping](#custom-scalars), not through a
-mapper. A `TypeConverter<Map, SomeInput>` bean builds the instances of `SomeInput` itself (the class still needs its
-introspection, because the startup checks below read it, and the bean owns the whole instance, including its
-`ArgumentValue` properties: the library does not touch the result); a `TypeConverter` for another pair converts the values of a
-custom scalar that its scalar parsed to another class.
-
-An input field that the input class cannot take fails the startup (see [Input classes and input types](#input-classes-and-input-types)).
-
-A value that cannot be converted at request time (a custom scalar value that no class of the mapping or the
-`ConversionService` accepts, such as a list where the parameter is a `Map`, or an input class whose constructor or setter
-throws) is a GraphQL error of the field: `extensions.code` is `INPUT_CONVERSION_FAILED`, `extensions.coordinate` names the
-argument as `Type.field(argument)`, and `extensions.inputPath` the input fields and list indexes down to the value. The
-message is worded in GraphQL terms, with no Java class name and no stack detail; the cause is logged at debug level. The
-field is `null` and the other fields still run.
-
-### Input classes and input types
-
-Input classes are checked against their GraphQL input types at startup, in both directions:
-
-- Every field of an input type needs a settable property of the same name: a setter, a field or a constructor
-  parameter. A missing property fails the startup with `[field-not-bound]`; a read-only property that no
-  constructor parameter of the same name takes fails with `[input-field-not-settable]`, which names the field as
-  `InputType.field`. Such a field would otherwise fail every request that sends it, or be dropped silently.
-- A property the class can set (through a setter or the constructor) that the input type does not define fails the
-  startup (the check `unmapped-input-property`, see [strict mode](#strict-mode)), all of them in one
-  `[unmapped-input-property]`, because no request can set it. Each one is also an
-  `!unmapped-input-property InputClass#property` line of the binding manifest.
-  `micronaut.graphql.tools.checks.unmapped-input-property` set to `warn` or `ignore` accepts such properties. Read-only
-  properties, such as computed getters, are not checked.
-  A class that several input types map to is checked once: a property is unmapped only when none of those input types has a
-  field for it, so one class may serve a create and a rename input. `@GraphQLIgnore` excludes a server-populated property.
-
-Both checks apply wherever the input type is used: an argument, a list, another input type, an `ArgumentValue`.
-
-### Enums
-
-A GraphQL enum maps to a Java enum, which needs a bean introspection (`@Introspected`; a `@Serdeable` enum has one too).
-At startup the library reads the constants from the introspection (`EnumBeanIntrospection`, generated at compile time,
-never by reflection) and registers one values provider per bound enum, so graphql-java itself coerces an enum argument,
-an enum input field or a schema default value to the Java constant and serializes a returned constant by its schema
-name. The resolver receives the constant with no conversion call. A Java enum without an introspection fails the startup
-with `[class-not-introspected]`, which names the class and `io.micronaut.core.annotation.Introspected`. A schema
-value without a constant fails it with `[missing-enum-values]`; a constant without a schema value is reported in
-[strict mode](#strict-mode) (`@GraphQLIgnore` suppresses it, see [Escape hatches](#escape-hatches)). A value that the
-schema does not define is a request error from graphql-java and never reaches the resolver. The schema name is the Java
-constant name; the library has no rename annotation for enum values.
-
-A `GraphQLRuntimeWiringCustomizer` cannot register its own `enumValues` provider for a bound enum: that replaces the library's
-wiring and fails the startup with `[runtime-wiring-override]`.
-
-### Omitted values and `null`
-
-By default an omitted argument and an explicit `null` both reach the resolver as `null` (an input class property the
-client leaves out keeps the value the class gives it). Default values of the schema apply in any case, and enum values
-arrive as the Java enum constants of the same name.
-
-To tell them apart, declare the resolver parameter or the input class property as `ArgumentValue<T>`; nothing else is
-configured, and input types without an `ArgumentValue` pay nothing for it:
-
-```java
-String updateProfile(ArgumentValue<String> nickname, ArgumentValue<ProfileInput> profile) {
-    if (nickname.isOmitted()) { /* not sent: keep the stored value */ }
-    else if (nickname.isNull()) { /* sent as null: clear it */ }
-    else { /* nickname.get() */ }
-}
-```
-
-- `isOmitted()`: not provided and no schema default; `isNull()`: an explicit `null`; `isPresent()`: a value (provided
-  or the schema's default).
-- A variable the request does not provide counts as omitted.
-- `ArgumentValue` is allowed only for a nullable GraphQL type, not inside a list, and an input class property of that
-  type needs a setter or a constructor parameter (the library sets it to `ArgumentValue.omitted()` when the client
-  leaves it out, and also when the input type does not define it, for example when another input type backed by the
-  same class does). Otherwise, and without the option, the startup fails with `[unsupported-input-type]`.
-- A record component, a Kotlin data class `val` (a default argument is not used for it) or a constructor parameter of
-  the type is filled at construction: `ArgumentValue.omitted()` when the client leaves the field out and the schema
-  declares no default, otherwise `ArgumentValue.ofNullable(value)` (the schema default counts as the value). It works the same in nested input classes and in lists of them. A Groovy class
-  declares its constructor itself: `@TupleConstructor` and `@Immutable` add theirs after the introspection is built.
-- The conversion decides what is omitted from the keys of the `Map` that graphql-java coerced, while it builds the
-  instance. It calls no getter and never walks the converted object again: a write-only property is enough.
-
 ## Configuration
 
 | Property | Values (default first) | Meaning |
 |---|---|---|
 | `micronaut.graphql.tools.schema.locations` | list of locations (`classpath:graphql/**/*.graphqls`) | Where the schema files are read from when the application has no `TypeDefinitionRegistry` bean: `classpath:`, `classpath*:` (dependency jars too) or `file:`, then an Ant-style path. See [Schema discovery](#schema-discovery). |
-| `micronaut.graphql.tools.precedence` | `fail` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](#property-or-type-resolver). `fail` (default) fails the startup; a field that carries a resolver directive, or whose resolver method declares its coordinate, is not ambiguous. |
-| `micronaut.graphql.tools.resolver-accessor-prefixes` | `false` \| `true` | Whether a resolver method named `getX` or `isX` also binds the field `x`, see [Binding a field to a differently named member](#binding-a-field-to-a-differently-named-member). |
+| `micronaut.graphql.tools.precedence` | `fail` \| `property-first` \| `resolver-first` | What binds a field that both a member of its Java type and a type resolver method can bind, see [Property or type resolver](src/main/docs/guide/binding.adoc). `fail` (default) fails the startup; a field that carries a resolver directive, or whose resolver method declares its coordinate, is not ambiguous. |
+| `micronaut.graphql.tools.resolver-accessor-prefixes` | `false` \| `true` | Whether a resolver method named `getX` or `isX` also binds the field `x`, see [Binding a field to a differently named member](src/main/docs/guide/binding.adoc). |
 | `micronaut.graphql.tools.resolver-directives` | list of directive names (empty) | A field carrying one of these directives is bound by a type resolver method, and fails the startup if none binds it. Each must be declared in the schema. |
 | `micronaut.graphql.tools.strict` | `true` \| `false` | The shorthand for the severity of every check that has no `checks` entry: `true` leaves every check at `fail`, `false` makes every check `warn` (the findings are logged and listed in the manifest). It does not change `precedence`. See [Strict mode](#strict-mode). |
 | `micronaut.graphql.tools.checks` | map of check code to `fail` \| `warn` \| `ignore` (empty) | The severity of single checks, for example `checks.unwired-directive: ignore`: `unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`, `unreachable-type`, `unreachable-value-type`, `unused-dictionary-entry`, `interface-read-through-implementation`, `unwired-directive`. An entry wins over `strict`. An unknown code or severity fails the startup. The five compile-time checks (`unbound-resolver-method`, `root-method-several-operations`, `unbound-enum-constant`, `unmapped-input-property`, `nullable-primitive`) are not relaxed at compile time. |
@@ -945,139 +634,6 @@ class GraphQLSchemaBuildTest {
 Values a resolver returns are not checked by either: a `null` for a non-null field and the class of an object that a
 union or interface resolves are errors of the request, reported by graphql-java.
 
-## Custom types mapping
-
-GraphQL interfaces and union types often have multiple concrete implementations.
-
-Define a `GraphQLSchemaMappingDictionaryCustomizer` bean to register custom types if any. You may define several, for example one
-per module: all of them run, in `@Order`, on one dictionary. A GraphQL type that two of them map fails the startup.
-
-In the example below, the `GraphQLSchemaMappingDictionaryCustomizer` bean is used to register the Java classes of the members of the `Error` union type. This associates the GraphQL types `SecurityError` and `ValidationError` with their respective Java implementations (`SecurityError.class` and `ValidationError.class`).
-
-```java
-@Bean
-@Singleton
-public GraphQLSchemaMappingDictionaryCustomizer schemaMappingDictionaryCustomizer() {
-return schemaMappingDictionary -> schemaMappingDictionary
-        .registerType("SecurityError", SecurityError.class)
-        .registerType("ValidationError", ValidationError.class);
-}
-```
-
-A GraphQL type can be mapped to a class or to a Java interface. An interface and the classes annotated with
-`@GraphQLType(TheInterface.class)` are one mapping: for a union member or an implementation of an SDL interface that
-is mapped to `TheInterface`, an object of any of those classes resolves to that object type, and a field may declare
-either the interface or such a class for the same GraphQL type. The rules, each checked at startup:
-
-- A GraphQL type is mapped once, and a Java type to one GraphQL type. Both errors name the GraphQL types and the Java
-  types involved.
-- Mapping one GraphQL object type to an interface and another one to a class (or interface) implementing it fails
-  with `[ambiguous-type-mapping]`, which names both GraphQL types and both Java types: an object of that class
-  would match both.
-- A class and its subclass may be mapped to two GraphQL types. A union or interface resolves an object of either class by
-  its exact class; an object of a further subclass (such as a proxy) resolves to the most specific of them, as described below.
-- Two fields that declare different Java types for one GraphQL type fail with `[mapping-conflict]`, unless the
-  two types are an interface and a class annotated with `@GraphQLType(TheInterface.class)` that is read through the
-  same bean introspection.
-
-### Unions and interfaces
-
-- A field that returns a GraphQL union or interface declares a Java interface (for example `List<Section>` for
-  `[Section!]!`); a class fails the startup.
-- Every member of the union and every object type that implements the interface needs its class registered as above,
-  otherwise the startup fails (`[union-type-mapping-not-provided]`, `[interface-type-mapping-not-provided]`).
-  Each of these object types is bound like any other, so every field of the interface must be bound on every
-  implementation. That an object type declares all fields of its interfaces is checked by graphql-java.
-- Each of these object types must be mapped to a Java type that an object the field returns could be an instance of.
-  The startup fails with `[incorrect-member-mapping]` only for a provably disjoint mapping: a `final` class that
-  does not implement the declared Java interface, or two classes with no subtype relation. A mapped Java interface
-  that does not extend the declared one is accepted, because one class can implement both.
-- At runtime the object type of a returned object is chosen in two steps, and the result is cached per class:
-  1. **Exact class:** the class an object type is mapped to, or, for an object type mapped to a Java interface, a class
-     annotated with `@GraphQLType(TheInterface.class)`.
-  2. **Assignability:** otherwise, the object type whose Java type the object is an instance of: a subclass of a
-     mapped class (including runtime subclasses such as proxies) or any implementation of a mapped Java interface.
-     When the object is an instance of several, the **most specific** one wins: the object type whose Java type is a
-     subtype of the Java types of all the others (for `A` mapped to `Note` and `B` mapped to `LongNote extends Note`,
-     a proxy of `LongNote` resolves to `B`). The order of the mappings does not matter.
-
-  An object that matches no object type is a GraphQL error on that field (the data of the field is `null`), and so is
-  an object whose candidates have no single most specific one (unrelated Java types, such as a class that implements
-  two mapped interfaces, or two object types mapped to the same Java type). The error names the union or interface,
-  the path, the class and the candidates; the library never guesses between them:
-
-  ```
-  Can't resolve '/book/sections[1]'. Abstract type 'Section' must resolve to an Object type at runtime for field ...
-  The object of class com.example.UnknownSection is none of the object types of interface Section:
-  MediaSection (com.example.MediaSection), TextSection (com.example.TextSection).
-
-  Can't resolve '/bundle'. Abstract type 'Item' must resolve to an Object type at runtime for field 'Query.item'.
-  The object of class com.example.BundleModel is an instance of more than one object type of union Item, and none is
-  more specific than the others: Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph). Map its class to one of them, or let it
-  implement only one of their Java types.
-  ```
-
-  What is checked at startup is: the dictionary rules above (an interface and its implementation mapped to two
-  object types), the member types against the declared Java interface (provably disjoint mappings only) and, for every
-  concrete class with a bean introspection, the ambiguity of the members. Such a class that is not mapped by its exact
-  class, and is an instance of the Java types of several members of a returned union or interface of which none is more
-  specific, fails the startup with `[ambiguous-abstract-type]`, naming the class and the members. A class and its
-  sub-member (`B` mapped to `LongNote extends Note` mapped to `A`) is not ambiguous. The check runs once, from the
-  introspection metadata, which a native image has, and adds nothing per request:
-
-  ```
-  Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type
-  is the most specific one:
-    com.example.BundleModel is an instance of Digital (com.example.DigitalGraph), Printed (com.example.PrintedGraph) of union Item
-  Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement only one of their Java types.
-  ```
-
-  A class without an introspection, such as a proxy or a class generated at runtime, can only be checked at runtime,
-  where it is the GraphQL error above.
-- Interfaces may implement interfaces. An interface that no field returns but that a bound object type implements
-  (for example a common interface of the members of an error union) is bound too, and is not an unreachable type.
-- A `@GraphQLTypeResolver` for the Java interface that an SDL interface is mapped to binds the fields of that interface
-  on every implementing object type that does not bind them itself (the first parameter is the Java interface). Its
-  coordinate, if any, is the interface field (`Section.summary`). When an implementation binds such a field itself as
-  well (a property, a `@GraphQLField` method or its own type resolver), or two interfaces of it have a resolver for the
-  field, the startup fails with `[multiple-methods-found]` naming the object type, the field and both members.
-  Only interfaces that a field returns have a Java type, so a resolver for an interface that is only implemented is
-  not applied.
-
-## Java interfaces as object types
-
-A field may declare a Java interface for a GraphQL object type. Where its properties come from depends on whether the
-interface has a bean introspection of its own:
-
-- **The interface is annotated with `@GraphQLType` (or `@Introspected`)**, so that Micronaut generates an
-  introspection for it (the annotation processor has to run where the interface is compiled). The properties are the
-  getters of the interface, read from an object of any class that implements it. Any number of classes may implement
-  it, and they need no annotation; a class annotated with `@GraphQLType(TheInterface.class)` is read through the
-  interface as well. A `@GraphQLTypeResolver(TheInterface.class)` resolver receives the object as `TheInterface`.
-- **The interface has no introspection of its own.** Exactly one class annotated with `@GraphQLType(TheInterface.class)`
-  is read, with all of its getters, including getters that the interface does not declare (the library cannot read
-  the interface's methods without an introspection). No such class fails with `[implementation-not-found]` and
-  several with `[multiple-implementations-found]`; annotate the interface with `@GraphQLType` to read all of them
-  and to make implementation-only getters non-candidates. [Strict mode](#strict-mode), on by default, rejects this
-  case; it binds only with `strict: false`.
-
-At startup the library logs at INFO one line for each object type mapped to a Java interface, which names the interface
-and the mode the type uses, so that adding `@Introspected` to an interface for another reason is visible in the log.
-
-A getter that only an implementation class declares is not a property of an interface that has its own
-introspection. A GraphQL field that only such a getter could back fails at startup with `[field-not-bound]`,
-which names the GraphQL type, the field and the interface:
-
-```
-The property or method `draftNote` not found in example.ArticleGraph's type. Properties are read from the interface
-example.ArticleGraph, so a getter that only an implementation class declares is not a property.
-```
-
-Declare the getter on the interface, or resolve the field with a `@GraphQLTypeResolver(TheInterface.class)` method.
-**Behaviour change:** before, such an interface was read through its one annotated implementation class, so getters
-of that class bound even when the interface did not declare them. There is no option to keep that: the binding
-silently depended on which class happened to implement the interface.
-
 ## Customizing the schema
 
 Three kinds of beans change what the library builds. Each kind may have any number of beans; they run lowest order
@@ -1124,7 +680,7 @@ public GraphQLRuntimeWiringCustomizer hideInternalFields() {
 ### Fields a customizer serves
 
 A field that only a hand-written `DataFetcher` serves has no Java member, so the library would fail the startup with
-`[field-not-bound]`. The customizer declares such a field by **claiming** it in `claimedFields()` and registers the
+`[field-not-bound]`. The customizer declares such a field by **claiming** it in `getClaimedFields()` and registers the
 data fetcher in `customize`:
 
 ```java
@@ -1132,7 +688,7 @@ data fetcher in `customize`:
 class ServerVersionCustomizer implements GraphQLRuntimeWiringCustomizer {
 
     @Override
-    public Set<FieldCoordinates> claimedFields() {
+    public Set<FieldCoordinates> getClaimedFields() {
         return Set.of(FieldCoordinates.coordinates("Query", "serverVersion"));
     }
 
@@ -1151,8 +707,8 @@ class ServerVersionCustomizer implements GraphQLRuntimeWiringCustomizer {
   or field the schema does not define, or for an interface, fails the startup with `[invalid-claimed-fields]`, which
   names every such coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
 - `[runtime-wiring-override]`, and the `[field-not-bound]` of a field added by `extend type`, name
-  `claimedFields()` as the way out.
-- `claimedFields()` is read once, at startup, before any field is bound. Claimed fields have a line in the
+  `getClaimedFields()` as the way out.
+- `getClaimedFields()` is read once, at startup, before any field is bound. Claimed fields have a line in the
   [binding manifest](#binding-manifest) of kind `claimed`, naming the customizer.
 - Types that only a claimed field returns are not reached by the binding: list them in `allow.unreachable`, or bind
   them through another field.
@@ -1249,34 +805,6 @@ public GraphQLTypeDefinitionRegistryCustomizer validationDirectives() {
 
 Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 26.2 (21.0 calls a
 `GraphQLCodeRegistry` method that graphql-java 22.4 and later removed); the library's tests run all three.
-
-## Configuring the GraphQL bean
-
-`GraphQLBuilderCustomizer` beans receive the `GraphQL.Builder` of the library's `GraphQL` bean (created with the
-library's schema) before it is built, lowest order first (`@Order` or `Ordered`): a
-`PreparsedDocumentProvider`, execution strategies, the default `DataFetcherExceptionHandler`, and so on.
-
-Every `Instrumentation` bean is collected and installed before the customizers run: one bean is installed as it is, several
-are chained in a `ChainedInstrumentation`, lowest order first (`@Order` or `Ordered`), so the first `beginExecution` is the
-first bean's. With no `Instrumentation` bean the library sets none, and graphql-java keeps its default. The library never
-calls `doNotAddDefaultInstrumentations()`, which graphql-java 25 removed. A customizer that sets `instrumentation(...)`
-replaces what the beans installed, so register an instrumentation as a bean instead.
-
-```java
-@Singleton
-@Order(10)
-public class MyTracingInstrumentation extends SimplePerformantInstrumentation {
-    // ...
-}
-```
-
-```java
-@Bean
-@Singleton
-public GraphQLBuilderCustomizer tracing(MyTracingInstrumentation instrumentation) {
-    return builder -> builder.instrumentation(instrumentation);
-}
-```
 
 ## Observability
 
@@ -1448,7 +976,7 @@ To build or test against a role locally:
 |---|---|
 | Library | `io.micronaut.graphql.tools:micronaut-graphql-tools` |
 | Binding rules (internal, pulled in by the library) | `io.micronaut.graphql.tools:micronaut-graphql-tools-binding` |
-| Standard scalars ([`java.time`, JSON and extended scalars](#standard-scalars)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
+| Standard scalars ([`java.time`, JSON and extended scalars](src/main/docs/guide/scalars.adoc)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-scalars` |
 | Metrics ([Micrometer](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-micrometer` |
 | Tracing ([OpenTelemetry](#observability)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-opentelemetry` |
 | File upload ([`Upload` scalar and multipart route](#file-upload)) | `io.micronaut.graphql.tools:micronaut-graphql-tools-upload` |
@@ -1519,7 +1047,7 @@ module conventions in `buildSrc`.
 
 ## Why GraphQL Java Tools?
 
-* **Micronaut**:  Leverage the Micronaut framework effectively, ensuring high performance by avoiding reflection, which can slow down applications. Binding uses Micronaut's compile-time bean and introspection metadata; the one reflective read of class annotations is described in [Resolver contracts](#resolver-contracts).
+* **Micronaut**:  Leverage the Micronaut framework effectively, ensuring high performance by avoiding reflection, which can slow down applications. Binding uses Micronaut's compile-time bean and introspection metadata.
 * **Minimal Boilerplate**:  Skip manual configuration of GraphQL types, resolvers and options by using annotations like `GraphQLType`, `@GraphQLRootResolver`, and others.
 * **Schema First**:  Micronaut GraphQL Tools allows you to directly use your schema by [GraphQL schema language](http://graphql.org/learn/schema/) instead of code-driven approach.
 * **Class Validation**:  Micronaut GraphQL Tools will warn you if you provide classes/types that you don't need to, as well as erroring if you use the wrong Java class for a certain GraphQL type when it builds the schema.
