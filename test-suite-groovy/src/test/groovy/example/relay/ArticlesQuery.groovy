@@ -33,8 +33,11 @@ class ArticlesQuery {
     }
 
     ArticleConnection articles(int first, @Nullable String after) {
+        if (first < 0) {
+            throw new IllegalArgumentException('first must not be negative')
+        }
         int start = after == null ? 0 : offset(after) + 1
-        int end = Math.min(start + first, ARTICLES.size())
+        int end = start + Math.min(first, Math.max(0, ARTICLES.size() - start))
         List<ArticleEdge> edges = (start..<end).collect { int i ->
             new ArticleEdge(cursor: cursor(i), node: ARTICLES[i])
         }

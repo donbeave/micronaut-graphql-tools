@@ -81,6 +81,16 @@ class RelayTest {
     // end::paging[]
 
     @Test
+    void aNegativeFirstAndAHugeFirstAreHandled() {
+        try (ApplicationContext context = ApplicationContext.run(Map.of(), RelayFixtures.RELAY)) {
+            ExecutionResult result = GraphQL.newGraphQL(context.getBean(GraphQLSchema.class)).build()
+                    .execute(ExecutionInput.newExecutionInput().query(PAGE).variables(Map.of("first", -1)).build());
+            assertFalse(result.getErrors().isEmpty());
+            assertEquals(5, ((List<?>) page(context, Integer.MAX_VALUE, null).get("edges")).size());
+        }
+    }
+
+    @Test
     void aPageAfterTheLastCursorIsEmpty() {
         try (ApplicationContext context = ApplicationContext.run(Map.of(), RelayFixtures.RELAY)) {
             String last = (String) ((Map<?, ?>) page(context, 5, null).get("pageInfo")).get("endCursor");

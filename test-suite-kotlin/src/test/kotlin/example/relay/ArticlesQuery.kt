@@ -29,8 +29,9 @@ open class ArticlesQuery {
     private val articles = (1..5).map { Article(it.toString(), "Article $it") }
 
     open fun articles(first: Int, after: String?): ArticleConnection {
+        require(first >= 0) { "first must not be negative" }
         val start = if (after == null) 0 else offset(after) + 1
-        val end = minOf(start + first, articles.size)
+        val end = start + minOf(first, maxOf(0, articles.size - start))
         val edges = (start until end).map { ArticleEdge(cursor(it), articles[it]) }
         val pageInfo = PageInfo(hasNextPage = end < articles.size, hasPreviousPage = start > 0, startCursor = edges.firstOrNull()?.cursor, endCursor = edges.lastOrNull()?.cursor)
         return ArticleConnection(edges, pageInfo, articles.size)

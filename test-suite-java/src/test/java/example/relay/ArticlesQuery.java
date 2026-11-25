@@ -35,8 +35,11 @@ public class ArticlesQuery {
             .mapToObj(i -> new Article(String.valueOf(i), "Article " + i)).toList();
 
     public ArticleConnection articles(int first, @Nullable String after) {
+        if (first < 0) {
+            throw new IllegalArgumentException("first must not be negative");
+        }
         int start = after == null ? 0 : offset(after) + 1;
-        int end = Math.min(start + first, ARTICLES.size());
+        int end = start + Math.min(first, Math.max(0, ARTICLES.size() - start));
         List<ArticleEdge> edges = IntStream.range(start, end)
                 .mapToObj(i -> new ArticleEdge(cursor(i), ARTICLES.get(i))).toList();
         PageInfo pageInfo = new PageInfo(end < ARTICLES.size(), start > 0,

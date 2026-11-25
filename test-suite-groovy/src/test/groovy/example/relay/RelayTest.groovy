@@ -66,6 +66,22 @@ class RelayTest extends Specification {
     }
     // end::paging[]
 
+    void 'a negative first and a huge first are handled'() {
+        given:
+        ApplicationContext context = ApplicationContext.run([:], RelayFixtures.RELAY)
+
+        when:
+        def result = GraphQL.newGraphQL(context.getBean(GraphQLSchema)).build()
+                .execute(ExecutionInput.newExecutionInput().query(PAGE).variables([first: -1]).build())
+
+        then:
+        !result.errors.isEmpty()
+        (page(context, Integer.MAX_VALUE, null).edges as List).size() == 5
+
+        cleanup:
+        context?.close()
+    }
+
     void 'a page after the last cursor is empty'() {
         given:
         ApplicationContext context = ApplicationContext.run([:], RelayFixtures.RELAY)

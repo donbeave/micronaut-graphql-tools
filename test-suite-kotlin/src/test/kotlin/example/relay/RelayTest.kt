@@ -68,6 +68,16 @@ class RelayTest {
     // end::paging[]
 
     @Test
+    fun `a negative first and a huge first are handled`() {
+        ApplicationContext.run(mapOf(), RELAY).use { context ->
+            val result = GraphQL.newGraphQL(context.getBean(GraphQLSchema::class.java)).build()
+                .execute(ExecutionInput.newExecutionInput().query(page).variables(mapOf("first" to -1)).build())
+            assertFalse(result.errors.isEmpty())
+            assertEquals(5, (page(context, Int.MAX_VALUE, null)["edges"] as List<*>).size)
+        }
+    }
+
+    @Test
     fun `a page after the last cursor is empty`() {
         ApplicationContext.run(mapOf(), RELAY).use { context ->
             val last = (page(context, 5, null)["pageInfo"] as Map<*, *>)["endCursor"] as String
