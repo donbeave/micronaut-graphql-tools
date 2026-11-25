@@ -28,6 +28,7 @@ import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.Locale;
 
+// tag::directives[]
 @Factory
 public class DirectiveWirings {
 
@@ -72,3 +73,4 @@ public class DirectiveWirings {
     }
 
 }
+// end::directives[]

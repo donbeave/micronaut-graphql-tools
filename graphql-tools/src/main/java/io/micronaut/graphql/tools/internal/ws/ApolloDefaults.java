@@ -20,6 +20,7 @@ import io.micronaut.context.ApplicationContextConfigurer;
 import io.micronaut.context.annotation.ContextConfigurer;
 import io.micronaut.context.env.PropertySource;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.util.StringUtils;
 
 import java.util.Map;
 
@@ -40,6 +41,6 @@ public final class ApolloDefaults implements ApplicationContextConfigurer {
 
     @Override
     public void configure(ApplicationContextBuilder builder) {
-        builder.propertySources(PropertySource.of("graphql-tools-defaults", Map.of(ENABLED, "false"), Integer.MIN_VALUE));
+        builder.propertySources(PropertySource.of("graphql-tools-defaults", Map.of(ENABLED, StringUtils.FALSE), Integer.MIN_VALUE));
     }
 }

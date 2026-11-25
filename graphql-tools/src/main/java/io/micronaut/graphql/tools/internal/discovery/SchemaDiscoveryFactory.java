@@ -17,7 +17,6 @@ package io.micronaut.graphql.tools.internal.discovery;
 
 import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.context.BeanContext;
-import io.micronaut.context.annotation.Bean;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Secondary;
@@ -39,7 +38,6 @@ public final class SchemaDiscoveryFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(SchemaDiscoveryFactory.class);
 
-    @Bean
     @Singleton
     @Secondary
     @Requires(missingBeans = TypeDefinitionRegistry.class)

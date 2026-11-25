@@ -30,6 +30,8 @@ import java.util.List;
  * ({@link io.micronaut.core.annotation.Order @Order} on the class, or {@link io.micronaut.core.order.Ordered}); each gets the list that the
  * previous one returned. A response without an error never calls it. A customizer that throws is logged at ERROR and
  * skipped: the list stays as it was.</p>
+ *
+ * <p>Implement {@link io.micronaut.core.order.Ordered} or use {@code @Order}; lower runs first.</p>
  */
 @FunctionalInterface
 public interface GraphQLErrorsCustomizer {

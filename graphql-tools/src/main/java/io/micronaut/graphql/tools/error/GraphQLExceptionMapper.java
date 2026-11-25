@@ -36,6 +36,8 @@ import java.util.List;
  * {@code null} declines, and the next one is tried. Give two mappers whose types overlap different orders: with the same order
  * their sequence is not defined. The list of mappers of an exception class is computed once and cached.</p>
  *
+ * <p>Implement {@link io.micronaut.core.order.Ordered} or use {@code @Order}; lower runs first.</p>
+ *
  * <pre>
  * &#64;Singleton
  * class NotFoundMapper implements GraphQLExceptionMapper&lt;NotFoundException&gt; {

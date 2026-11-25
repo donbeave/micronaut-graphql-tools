@@ -1,5 +1,10 @@
 The library reads its settings from `micronaut.graphql.tools`, in `application.yml` or any other property source that Micronaut reads. The reference below is generated from the configuration class: each key has its type and its default. The topics with settings of their own have a child page: <<scalarSettings,Scalars>>, <<executionSettings,Execution>>, <<errorSettings,Errors>>, <<precedence,Precedence>> and <<checkSeverity,Check severity>>. The keys of protection and the binding of a renamed field are on this page.
 
+[[prefixes]]
+== Two prefixes
+
+The library has two prefixes. `graphql.*` belongs to the transport of Micronaut GraphQL: `graphql.enabled` switches the route and the library's invocation with it, and `graphql.path` sets the route. `micronaut.graphql.tools.*` belongs to the binding and the execution of the library, and this page lists it. There is no `micronaut.graphql.tools.enabled`: the library is on whenever its beans are on the classpath, and `graphql.enabled` is the one switch for the operations.
+
 == Keys at a glance
 
 The generated tables below list the type and the default of every key. This table adds the effect of each key and the page that explains it. Keys under `scalars` are on <<scalarSettings,Scalars>>.
@@ -66,7 +71,7 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 A member binds the field of its own name unless it says otherwise. There are three ways to bind a field to a member with another name, for example for a field named `class`, `default`, `new` or `hashCode`, which no Java member can be named:
 
-* `@GraphQLField("name")` on a method of a `@GraphQLType` class, or on a property (its field, its getter, or the Kotlin or Groovy property), binds the field `name`. A renamed member binds the new name only. A renamed member and another member for one field, or two members renamed to one field, fail the startup with `[multiple-methods-found]` and the coordinate of the field. A member marked `@GraphQLIgnore` binds nothing.
+* `@GraphQLField("name")` on a method of a @api:io.micronaut.graphql.tools.annotation.GraphQLType[] class, or on a property (its field, its getter, or the Kotlin or Groovy property), binds the field `name`. A renamed member binds the new name only. A renamed member and another member for one field, or two members renamed to one field, fail the startup with `[multiple-methods-found]` and the coordinate of the field. A member marked @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[] binds nothing.
 * `@GraphQLSchemaCoordinate("Type.field")` on a resolver method binds that field whatever the name of the method is. Before, the startup failed with `[unknown-schema-coordinate]` when the names differed. The coordinate rules of the annotation hold: only the methods of a bean that declare a coordinate bind, and two methods with one coordinate fail with `[multiple-methods-found]`.
 * `micronaut.graphql.tools.resolver-accessor-prefixes: true` lets a resolver method named `getX` or `isX` bind the field `x` as well, for resolvers written for other tools (`getAuthor(Book)` for `author`). It is off by default. `getAuthor` and `author` in one class both bind the field and fail the startup. The compile-time checks take the same setting as the processor option `micronaut.graphql.tools.processor.resolver.accessor.prefixes`; without it they do not judge a method that only a prefix could bind.
 
