@@ -72,6 +72,7 @@ snippet::example.migration.MigrationFixtures[project-base="test-suite", source="
 snippet::example.migration.MigrationFixtures[project-base="test-suite", source="test", tags="type-resolver", indent="0"]
 
 * An annotation of the library does not make a class a bean. Add a scope annotation such as `@Singleton` to a class that no factory exposes. A class with no scope annotation is not a bean, as <<resolverContracts,Resolver Contracts>> describes.
+* A type resolver class that implements an interface or extends a class needs `micronaut-graphql-tools-processor` from the start, because the build records the inherited contracts. Add it with the processor option `micronaut.graphql.tools.processor.checks=false` and remove the option when the manifest has no `!` line left (see <<resolverContracts,Resolver Contracts>>).
 * A class with `@GraphQLRootResolver` binds its public methods to the root fields of the same name. A method name that exists on several operation types, such as a query and a mutation both named `stock`, needs `@GraphQLSchemaCoordinate`.
 * A class that served several operations in the old setup can stay one class.
 
@@ -155,7 +156,7 @@ A resolver reads a value with a `@GraphQLContextValue("key")` parameter, or from
 
 == DataLoader registry
 
-With the library's invocation, a `DataLoaderRegistry` bean is not used, and its presence fails the startup with `[data-loader-registry-bean]`. Register each loader as a `BatchLoader` bean, and declare a `DataLoader<K, V>` parameter on the resolver method. The library creates the registry of each execution:
+With the library's invocation, a `DataLoaderRegistry` bean is not used, and its presence fails the startup with `[data-loader-registry-bean]`. Register each loader as a batch loader bean (`BatchLoader`, `MappedBatchLoader` or their `WithContext` variants), and declare a `DataLoader<K, V>` parameter on the resolver method. The library creates the registry of each execution:
 
 snippet::example.tck.DataLoaderScenario[project-base="test-suite", source="test", tags="loader", indent="0"]
 
@@ -196,7 +197,7 @@ The tests of the first four rows are in `MigrationTest` of the three example sui
 |`class-not-introspected` |A model class has no introspection. Add `@GraphQLType` or list it in `@GraphQLModels`.
 |`incorrect-class-mapping` |A parameter has a Java type that the GraphQL type cannot fill, such as `Optional`. Use `ArgumentValue` or the wrapper class.
 |`implementation-not-found` |An object type has an interface, such as `Map`, with no class behind it. Return a class.
-|`data-loader-registry-bean` |An application bean of type `DataLoaderRegistry`, with the library's invocation. Register `BatchLoader` beans.
+|`data-loader-registry-bean` |An application bean of type `DataLoaderRegistry`, with the library's invocation. Register batch loader beans.
 |`unbound-resolver-method` |A public method of a resolver binds no field. Remove it, bind it, or add `@GraphQLIgnore`.
 |`unreachable-type` |A schema type that no field reaches. Remove it, bind it, or list it in `allow.unreachable`.
 |===
