@@ -28,6 +28,9 @@ import io.micronaut.core.annotation.NonNull;
  * {@link io.micronaut.core.order.Ordered#getOrder()} if the bean implements {@code Ordered}. The library does not
  * check what a schema customizer changes: it is the last step, and the escape hatch for what the other customizers
  * cannot express.</p>
+ *
+ * <p>Implement {@link io.micronaut.core.order.Ordered} or use {@code @Order}; lower runs first. The order matters: a
+ * customizer sees the schema that the earlier ones built.</p>
  */
 @FunctionalInterface
 public interface GraphQLSchemaCustomizer {

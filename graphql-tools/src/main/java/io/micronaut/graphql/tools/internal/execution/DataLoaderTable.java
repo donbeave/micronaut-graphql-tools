@@ -15,8 +15,8 @@
  */
 package io.micronaut.graphql.tools.internal.execution;
 
+import io.micronaut.graphql.tools.internal.RequiresLibraryGraphQL;
 import io.micronaut.context.BeanContext;
-import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.order.OrderUtil;
@@ -47,7 +47,7 @@ import java.util.Map;
  */
 @Internal
 @Singleton
-@Requires(property = "graphql.enabled", notEquals = "false")
+@RequiresLibraryGraphQL
 public final class DataLoaderTable {
 
     private static final GraphQLDataLoaderOptionsCustomizer[] NO_CUSTOMIZERS = new GraphQLDataLoaderOptionsCustomizer[0];
