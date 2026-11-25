@@ -24,6 +24,7 @@ import graphql.schema.TypeResolver;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -92,8 +93,11 @@ public final class AbstractTypeResolver implements TypeResolver {
         Resolution resolution = resolutions.get(env.getObject().getClass());
 
         Bound bound = resolution.bound;
-        if (bound != null && bound.schema == schema) {
-            return bound.objectType;
+        if (bound != null && bound.schema.get() == schema) {
+            GraphQLObjectType cached = bound.objectType.get();
+            if (cached != null) {
+                return cached;
+            }
         }
 
         if (resolution.objectTypeName() == null) {
@@ -214,12 +218,13 @@ public final class AbstractTypeResolver implements TypeResolver {
 
     private static final class Bound {
 
-        private final GraphQLSchema schema;
-        private final GraphQLObjectType objectType;
+        // weak, so that a superseded schema is not kept alive by the classes that last saw it
+        private final WeakReference<GraphQLSchema> schema;
+        private final WeakReference<GraphQLObjectType> objectType;
 
         private Bound(GraphQLSchema schema, GraphQLObjectType objectType) {
-            this.schema = schema;
-            this.objectType = objectType;
+            this.schema = new WeakReference<>(schema);
+            this.objectType = new WeakReference<>(objectType);
         }
     }
 
