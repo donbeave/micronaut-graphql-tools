@@ -166,4 +166,33 @@ runs, and retained heap is unchanged. That is the cost of the lookup when it is 
 No resolver bean is bound to `Shared` in this schema, so the run measures the lookup that the unreturned-interface path adds, not the binding of a resolver method.
 A schema whose interfaces are all returned by a field never takes this path (the `returned` build).
 
+## The recorded start-up baseline
+
+`startup-baseline.json` is the JMH JSON of `scripts/startup-report.py`, the format that the `Startup benchmark` workflow reads
+(`--previous` takes it too). The workflow passes it as `--baseline`, so its report prints the change against it for every case.
+
+- Baseline commit: `7e4195fcfb20e4a743183ce545f46b01cefc8148`, which contains `BindingBenchmark`, `RetainedHeapBenchmark` and the report script.
+- Method: `MISE_ENV=jdk25 mise exec -- python3 test-suite-benchmarks/scripts/startup-report.py --forks 10 --json startup-baseline.json`: one jar per case, ten cold JVMs per case, single shot, no warm-up, graphql-java default leg.
+- Conditions: Temurin 25.0.5+8, Apple M1 Max (10 cores, 64 GB), macOS 27.2, arm64. The machine was not quiet: other Gradle builds ran during the whole run, and the load average at 30-second intervals ranged from 21.9 to 94.8. The spread of the forks is in the table and in the JSON (`rawData`).
+
+| Case | Median binding time | Minimum to maximum | Median retained heap |
+| --- | --- | --- | --- |
+| rings, 100 fields, manifest off | 1240.0 ms | 870.4 to 4375.9 | 7.86 MB |
+| rings, 100 fields, manifest on | 2880.9 ms | 1352.9 to 3396.6 | 7.90 MB |
+| rings, 1,600 fields, manifest off | 1170.9 ms | 909.9 to 2694.7 | 8.20 MB |
+| rings, 1,600 fields, manifest on | 1064.7 ms | 994.0 to 1819.3 | 8.49 MB |
+| rings, 3,000 fields, manifest off | 2787.6 ms | 1456.1 to 3695.5 | 10.01 MB |
+| rings, 3,000 fields, manifest on | 2279.3 ms | 2135.5 to 2680.6 | 10.49 MB |
+| rings, 10,000 fields, manifest off | 8143.9 ms | 3052.8 to 16934.8 | 19.51 MB |
+| rings, 10,000 fields, manifest on | 5364.9 ms | 3956.3 to 7938.4 | 21.05 MB |
+| rings, 20,000 fields, manifest off | 2289.9 ms | 2217.0 to 2546.4 | 32.75 MB |
+| rings, 20,000 fields, manifest on | 2575.2 ms | 2228.7 to 3102.6 | 36.08 MB |
+| interfaces, 3,000 fields, manifest off | 852.4 ms | 822.2 to 865.6 | 8.75 MB |
+| interfaces, 3,000 fields, manifest on | 858.4 ms | 834.6 to 876.0 | 9.36 MB |
+| interfaces, 20,000 fields, manifest off | 1768.6 ms | 1541.9 to 1864.3 | 23.94 MB |
+| interfaces, 20,000 fields, manifest on | 1599.0 ms | 1527.4 to 1657.8 | 27.99 MB |
+
+The binding times of this run are wide (the 10,000-field rings case ranges from 3.1 s to 16.9 s) because of the load, so read the
+retained heap first and treat the times as a loose reference. A run on a quiet machine replaces the file: run the command above and commit the JSON.
+
 The full description, including the cold start procedure, is the "Benchmarks" section of `CONTRIBUTING.md`.

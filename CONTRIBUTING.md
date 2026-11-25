@@ -388,6 +388,7 @@ change against the last successful run in the job summary, and is never part of 
 reported, not gated. Hosted runners are shared, so read the retained heap first and treat a binding-time change inside
 the spread of the forks as noise. To compare a change with master, run the command on each checkout with `--json` and
 pass the master JSON to `--previous`.
+The recorded reference is `test-suite-benchmarks/startup-baseline.json`; the workflow passes it as `--baseline`, and `test-suite-benchmarks/README.md` names its commit and run conditions.
 
 To compare two builds on a machine that is not idle, build one jar per checkout and case, and run
 `python3 test-suite-benchmarks/scripts/startup-ab.py --fields <fields> --shape <shape> --forks 25 base=<jar> branch=<jar>`. It starts the
