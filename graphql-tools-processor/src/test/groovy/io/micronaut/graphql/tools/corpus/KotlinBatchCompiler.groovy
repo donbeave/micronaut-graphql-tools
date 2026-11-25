@@ -298,7 +298,7 @@ plugins {
             Files.createDirectories(target.parent)
             Files.copy(file, target, StandardCopyOption.REPLACE_EXISTING)
         }
-        String micronaut = System.getProperty('corpus.micronaut.platform', '4.10.24')
+        String micronaut = System.getProperty('corpus.micronaut.platform', '4.10.25')
         // the unchecked build has the checks off and the schema of the case; the checked build has what the case asks for (CompileOptions).
         // Both options in every compile: under kapt, javac copies an option into the system properties of the compiler JVM and a
         // leftover value of another compilation can win over the argument
