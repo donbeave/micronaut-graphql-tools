@@ -29,7 +29,7 @@ import java.util.Set;
 public class JavaClaimingCustomizer implements GraphQLRuntimeWiringCustomizer {
 
     @Override
-    public Set<FieldCoordinates> claimedFields() {
+    public Set<FieldCoordinates> getClaimedFields() {
         return Set.of(FieldCoordinates.coordinates("Query", "version"), FieldCoordinates.coordinates("Book", "isbn"));
     }
 

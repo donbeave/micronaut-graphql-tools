@@ -391,7 +391,7 @@ graphql-java `default` leg and `ubuntu-latest`, and each states them in its name
   counts, the commit, the runner, and a row per benchmark with the previous and current score, the change, the error that JMH reports for each
   score (the spread of the repeated runs) and the bytes per operation. A row is flagged as a regression when the score is worse by more than 10
   percent (`--threshold`) and the two scores differ by more than the sum of their errors; the summary then lists each flagged benchmark with both numbers.
-- `startup` runs the command above and archives `startup-benchmark.json` as `startup-nightly-<ref>`; its summary prints the medians and the change.
+- `startup` runs the command above and archives `startup-benchmark.json` as `startup-nightly-<ref>`; its summary prints the medians, the change against the last successful run and the change against the recorded reference `test-suite-benchmarks/startup-baseline.json` (passed as `--baseline`; `test-suite-benchmarks/README.md` names its commit and run conditions).
 - `compile-time` runs `:test-suite-build:compileTimeBudget` and archives the profile as `compile-time-nightly-<ref>`.
 
 The previous run is the last successful run of the workflow. To read a result, open the run, read the summary and read the

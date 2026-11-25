@@ -1,0 +1,2914 @@
+[
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "100",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 889.9865679999999,
+      "scoreError": 63.78004146199892,
+      "scoreConfidence": [
+        826.206526538001,
+        953.7666094619989
+      ],
+      "scorePercentiles": {
+        "0.0": 831.016584,
+        "50.0": 897.060661,
+        "90.0": 955.0314664,
+        "95.0": 958.995687,
+        "99.0": 958.995687,
+        "99.9": 958.995687,
+        "99.99": 958.995687,
+        "99.999": 958.995687,
+        "99.9999": 958.995687,
+        "100.0": 958.995687
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          919.353481
+        ],
+        [
+          958.995687
+        ],
+        [
+          913.08787
+        ],
+        [
+          832.369916
+        ],
+        [
+          881.033452
+        ],
+        [
+          859.226402
+        ],
+        [
+          868.625866
+        ],
+        [
+          918.769393
+        ],
+        [
+          917.387029
+        ],
+        [
+          831.016584
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "100",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 875.9808047,
+      "scoreError": 41.0245057933391,
+      "scoreConfidence": [
+        834.9562989066609,
+        917.0053104933392
+      ],
+      "scorePercentiles": {
+        "0.0": 827.807298,
+        "50.0": 883.6878624999999,
+        "90.0": 908.6940359,
+        "95.0": 909.375369,
+        "99.0": 909.375369,
+        "99.9": 909.375369,
+        "99.99": 909.375369,
+        "99.999": 909.375369,
+        "99.9999": 909.375369,
+        "100.0": 909.375369
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          890.641094
+        ],
+        [
+          882.476019
+        ],
+        [
+          891.636028
+        ],
+        [
+          902.562038
+        ],
+        [
+          909.375369
+        ],
+        [
+          835.42727
+        ],
+        [
+          827.807298
+        ],
+        [
+          884.899706
+        ],
+        [
+          859.943599
+        ],
+        [
+          875.039626
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "100",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 906.3565729,
+      "scoreError": 61.38860739645902,
+      "scoreConfidence": [
+        844.9679655035409,
+        967.745180296459
+      ],
+      "scorePercentiles": {
+        "0.0": 863.287528,
+        "50.0": 890.8315015000001,
+        "90.0": 978.5287319,
+        "95.0": 981.443035,
+        "99.0": 981.443035,
+        "99.9": 981.443035,
+        "99.99": 981.443035,
+        "99.999": 981.443035,
+        "99.9999": 981.443035,
+        "100.0": 981.443035
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          863.307086
+        ],
+        [
+          888.157863
+        ],
+        [
+          863.287528
+        ],
+        [
+          952.300004
+        ],
+        [
+          981.443035
+        ],
+        [
+          875.017686
+        ],
+        [
+          935.492047
+        ],
+        [
+          928.473433
+        ],
+        [
+          882.581907
+        ],
+        [
+          893.50514
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 61753776.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          61753776.0,
+          61753776.0
+        ],
+        "scorePercentiles": {
+          "0.0": 6076128.0,
+          "50.0": 6190492.0,
+          "90.0": 6232661.6,
+          "95.0": 6233912.0,
+          "99.0": 6233912.0,
+          "99.9": 6233912.0,
+          "99.99": 6233912.0,
+          "99.999": 6233912.0,
+          "99.9999": 6233912.0,
+          "100.0": 6233912.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            6111296.0
+          ],
+          [
+            6208360.0
+          ],
+          [
+            6233912.0
+          ],
+          [
+            6190592.0
+          ],
+          [
+            6141064.0
+          ],
+          [
+            6190392.0
+          ],
+          [
+            6191032.0
+          ],
+          [
+            6221408.0
+          ],
+          [
+            6189592.0
+          ],
+          [
+            6076128.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "100",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 924.2551067999999,
+      "scoreError": 60.11871715877914,
+      "scoreConfidence": [
+        864.1363896412207,
+        984.3738239587791
+      ],
+      "scorePercentiles": {
+        "0.0": 863.134346,
+        "50.0": 916.6192255000001,
+        "90.0": 983.3196573,
+        "95.0": 984.304159,
+        "99.0": 984.304159,
+        "99.9": 984.304159,
+        "99.99": 984.304159,
+        "99.999": 984.304159,
+        "99.9999": 984.304159,
+        "100.0": 984.304159
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          958.060376
+        ],
+        [
+          905.45464
+        ],
+        [
+          863.134346
+        ],
+        [
+          903.873639
+        ],
+        [
+          941.791656
+        ],
+        [
+          984.304159
+        ],
+        [
+          974.459142
+        ],
+        [
+          896.120357
+        ],
+        [
+          927.783811
+        ],
+        [
+          887.568942
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 62263984.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          62263984.0,
+          62263984.0
+        ],
+        "scorePercentiles": {
+          "0.0": 6160208.0,
+          "50.0": 6227584.0,
+          "90.0": 6266464.8,
+          "95.0": 6267544.0,
+          "99.0": 6267544.0,
+          "99.9": 6267544.0,
+          "99.99": 6267544.0,
+          "99.999": 6267544.0,
+          "99.9999": 6267544.0,
+          "100.0": 6267544.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            6241568.0
+          ],
+          [
+            6236120.0
+          ],
+          [
+            6160208.0
+          ],
+          [
+            6215672.0
+          ],
+          [
+            6267544.0
+          ],
+          [
+            6256752.0
+          ],
+          [
+            6251480.0
+          ],
+          [
+            6207920.0
+          ],
+          [
+            6207672.0
+          ],
+          [
+            6219048.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "1600",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 1163.4783418000002,
+      "scoreError": 46.67715795095316,
+      "scoreConfidence": [
+        1116.801183849047,
+        1210.1554997509534
+      ],
+      "scorePercentiles": {
+        "0.0": 1130.207754,
+        "50.0": 1156.4132045000001,
+        "90.0": 1235.2001206,
+        "95.0": 1240.486682,
+        "99.0": 1240.486682,
+        "99.9": 1240.486682,
+        "99.99": 1240.486682,
+        "99.999": 1240.486682,
+        "99.9999": 1240.486682,
+        "100.0": 1240.486682
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1240.486682
+        ],
+        [
+          1156.293829
+        ],
+        [
+          1144.759186
+        ],
+        [
+          1156.53258
+        ],
+        [
+          1130.207754
+        ],
+        [
+          1146.984372
+        ],
+        [
+          1164.822444
+        ],
+        [
+          1187.621068
+        ],
+        [
+          1157.840017
+        ],
+        [
+          1149.235486
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "1600",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 1165.4860429,
+      "scoreError": 43.15020200269835,
+      "scoreConfidence": [
+        1122.3358408973018,
+        1208.6362449026983
+      ],
+      "scorePercentiles": {
+        "0.0": 1123.470807,
+        "50.0": 1166.3512125,
+        "90.0": 1222.6720092,
+        "95.0": 1227.28461,
+        "99.0": 1227.28461,
+        "99.9": 1227.28461,
+        "99.99": 1227.28461,
+        "99.999": 1227.28461,
+        "99.9999": 1227.28461,
+        "100.0": 1227.28461
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1227.28461
+        ],
+        [
+          1181.158602
+        ],
+        [
+          1171.223247
+        ],
+        [
+          1165.529522
+        ],
+        [
+          1123.470807
+        ],
+        [
+          1165.859782
+        ],
+        [
+          1173.121419
+        ],
+        [
+          1166.842643
+        ],
+        [
+          1148.182707
+        ],
+        [
+          1132.18709
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "1600",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 1228.807871,
+      "scoreError": 81.80042262261098,
+      "scoreConfidence": [
+        1147.007448377389,
+        1310.608293622611
+      ],
+      "scorePercentiles": {
+        "0.0": 1173.395602,
+        "50.0": 1224.425336,
+        "90.0": 1339.960505,
+        "95.0": 1348.962311,
+        "99.0": 1348.962311,
+        "99.9": 1348.962311,
+        "99.99": 1348.962311,
+        "99.999": 1348.962311,
+        "99.9999": 1348.962311,
+        "100.0": 1348.962311
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1191.048435
+        ],
+        [
+          1181.974258
+        ],
+        [
+          1249.580519
+        ],
+        [
+          1254.947765
+        ],
+        [
+          1348.962311
+        ],
+        [
+          1258.944251
+        ],
+        [
+          1204.262074
+        ],
+        [
+          1173.395602
+        ],
+        [
+          1244.588598
+        ],
+        [
+          1180.374897
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 81137416.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          81137416.0,
+          81137416.0
+        ],
+        "scorePercentiles": {
+          "0.0": 8061000.0,
+          "50.0": 8103340.0,
+          "90.0": 8179024.8,
+          "95.0": 8179104.0,
+          "99.0": 8179104.0,
+          "99.9": 8179104.0,
+          "99.99": 8179104.0,
+          "99.999": 8179104.0,
+          "99.9999": 8179104.0,
+          "100.0": 8179104.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            8074824.0
+          ],
+          [
+            8074176.0
+          ],
+          [
+            8156824.0
+          ],
+          [
+            8145552.0
+          ],
+          [
+            8061000.0
+          ],
+          [
+            8131856.0
+          ],
+          [
+            8062560.0
+          ],
+          [
+            8179104.0
+          ],
+          [
+            8073208.0
+          ],
+          [
+            8178312.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "1600",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 1207.4670164000001,
+      "scoreError": 47.44581361309759,
+      "scoreConfidence": [
+        1160.0212027869024,
+        1254.9128300130978
+      ],
+      "scorePercentiles": {
+        "0.0": 1173.407294,
+        "50.0": 1199.2969600000001,
+        "90.0": 1258.1346084,
+        "95.0": 1259.094735,
+        "99.0": 1259.094735,
+        "99.9": 1259.094735,
+        "99.99": 1259.094735,
+        "99.999": 1259.094735,
+        "99.9999": 1259.094735,
+        "100.0": 1259.094735
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1259.094735
+        ],
+        [
+          1204.070766
+        ],
+        [
+          1205.275449
+        ],
+        [
+          1240.617147
+        ],
+        [
+          1249.493469
+        ],
+        [
+          1179.657454
+        ],
+        [
+          1173.407294
+        ],
+        [
+          1194.523154
+        ],
+        [
+          1192.608194
+        ],
+        [
+          1175.922502
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 84271344.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          84271344.0,
+          84271344.0
+        ],
+        "scorePercentiles": {
+          "0.0": 8337168.0,
+          "50.0": 8421120.0,
+          "90.0": 8498210.4,
+          "95.0": 8501904.0,
+          "99.0": 8501904.0,
+          "99.9": 8501904.0,
+          "99.99": 8501904.0,
+          "99.999": 8501904.0,
+          "99.9999": 8501904.0,
+          "100.0": 8501904.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            8453840.0
+          ],
+          [
+            8393408.0
+          ],
+          [
+            8410728.0
+          ],
+          [
+            8501904.0
+          ],
+          [
+            8452008.0
+          ],
+          [
+            8420944.0
+          ],
+          [
+            8464968.0
+          ],
+          [
+            8337168.0
+          ],
+          [
+            8415080.0
+          ],
+          [
+            8421296.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "3000",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 1313.3064320999997,
+      "scoreError": 54.40483917238721,
+      "scoreConfidence": [
+        1258.9015929276125,
+        1367.711271272387
+      ],
+      "scorePercentiles": {
+        "0.0": 1257.974785,
+        "50.0": 1321.429524,
+        "90.0": 1374.1128575,
+        "95.0": 1377.82883,
+        "99.0": 1377.82883,
+        "99.9": 1377.82883,
+        "99.99": 1377.82883,
+        "99.999": 1377.82883,
+        "99.9999": 1377.82883,
+        "100.0": 1377.82883
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1319.755579
+        ],
+        [
+          1340.669105
+        ],
+        [
+          1326.781489
+        ],
+        [
+          1280.257474
+        ],
+        [
+          1323.103469
+        ],
+        [
+          1257.974785
+        ],
+        [
+          1377.82883
+        ],
+        [
+          1334.467832
+        ],
+        [
+          1273.018078
+        ],
+        [
+          1299.20768
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "3000",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 1338.3492474,
+      "scoreError": 34.857277289458004,
+      "scoreConfidence": [
+        1303.491970110542,
+        1373.2065246894579
+      ],
+      "scorePercentiles": {
+        "0.0": 1294.266106,
+        "50.0": 1337.6966619999998,
+        "90.0": 1377.7209059,
+        "95.0": 1379.59774,
+        "99.0": 1379.59774,
+        "99.9": 1379.59774,
+        "99.99": 1379.59774,
+        "99.999": 1379.59774,
+        "99.9999": 1379.59774,
+        "100.0": 1379.59774
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1339.589816
+        ],
+        [
+          1379.59774
+        ],
+        [
+          1347.241743
+        ],
+        [
+          1333.600366
+        ],
+        [
+          1294.266106
+        ],
+        [
+          1328.227996
+        ],
+        [
+          1335.803508
+        ],
+        [
+          1360.829399
+        ],
+        [
+          1345.312457
+        ],
+        [
+          1319.023343
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "3000",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 1402.0125368,
+      "scoreError": 66.68200687483377,
+      "scoreConfidence": [
+        1335.330529925166,
+        1468.6945436748338
+      ],
+      "scorePercentiles": {
+        "0.0": 1339.073161,
+        "50.0": 1402.029886,
+        "90.0": 1463.8391264,
+        "95.0": 1465.114049,
+        "99.0": 1465.114049,
+        "99.9": 1465.114049,
+        "99.99": 1465.114049,
+        "99.999": 1465.114049,
+        "99.9999": 1465.114049,
+        "100.0": 1465.114049
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1413.189452
+        ],
+        [
+          1435.274056
+        ],
+        [
+          1339.073161
+        ],
+        [
+          1341.893125
+        ],
+        [
+          1427.783531
+        ],
+        [
+          1390.87032
+        ],
+        [
+          1465.114049
+        ],
+        [
+          1452.364823
+        ],
+        [
+          1386.565952
+        ],
+        [
+          1367.996899
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 99447776.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          99447776.0,
+          99447776.0
+        ],
+        "scorePercentiles": {
+          "0.0": 9912456.0,
+          "50.0": 9940644.0,
+          "90.0": 9978313.6,
+          "95.0": 9978560.0,
+          "99.0": 9978560.0,
+          "99.9": 9978560.0,
+          "99.99": 9978560.0,
+          "99.999": 9978560.0,
+          "99.9999": 9978560.0,
+          "100.0": 9978560.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            9912456.0
+          ],
+          [
+            9913056.0
+          ],
+          [
+            9978560.0
+          ],
+          [
+            9936640.0
+          ],
+          [
+            9913280.0
+          ],
+          [
+            9971432.0
+          ],
+          [
+            9965616.0
+          ],
+          [
+            9944648.0
+          ],
+          [
+            9976096.0
+          ],
+          [
+            9935992.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "3000",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 1394.6936944,
+      "scoreError": 44.3596766590874,
+      "scoreConfidence": [
+        1350.3340177409125,
+        1439.0533710590873
+      ],
+      "scorePercentiles": {
+        "0.0": 1356.265613,
+        "50.0": 1392.887547,
+        "90.0": 1441.2442251999998,
+        "95.0": 1443.05588,
+        "99.0": 1443.05588,
+        "99.9": 1443.05588,
+        "99.99": 1443.05588,
+        "99.999": 1443.05588,
+        "99.9999": 1443.05588,
+        "100.0": 1443.05588
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1424.939332
+        ],
+        [
+          1401.830699
+        ],
+        [
+          1389.696181
+        ],
+        [
+          1443.05588
+        ],
+        [
+          1356.265613
+        ],
+        [
+          1383.026666
+        ],
+        [
+          1423.932589
+        ],
+        [
+          1358.077683
+        ],
+        [
+          1396.078913
+        ],
+        [
+          1370.033388
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 104877624.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          104877624.0,
+          104877624.0
+        ],
+        "scorePercentiles": {
+          "0.0": 10433480.0,
+          "50.0": 10484948.0,
+          "90.0": 10522630.4,
+          "95.0": 10523152.0,
+          "99.0": 10523152.0,
+          "99.9": 10523152.0,
+          "99.99": 10523152.0,
+          "99.999": 10523152.0,
+          "99.9999": 10523152.0,
+          "100.0": 10523152.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            10433480.0
+          ],
+          [
+            10476528.0
+          ],
+          [
+            10479432.0
+          ],
+          [
+            10497464.0
+          ],
+          [
+            10511576.0
+          ],
+          [
+            10468328.0
+          ],
+          [
+            10523152.0
+          ],
+          [
+            10490464.0
+          ],
+          [
+            10479264.0
+          ],
+          [
+            10517936.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "10000",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 2269.4585268,
+      "scoreError": 120.59007225146229,
+      "scoreConfidence": [
+        2148.8684545485376,
+        2390.0485990514626
+      ],
+      "scorePercentiles": {
+        "0.0": 2089.763314,
+        "50.0": 2282.9411895,
+        "90.0": 2372.5161289,
+        "95.0": 2374.966864,
+        "99.0": 2374.966864,
+        "99.9": 2374.966864,
+        "99.99": 2374.966864,
+        "99.999": 2374.966864,
+        "99.9999": 2374.966864,
+        "100.0": 2374.966864
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          2269.89365
+        ],
+        [
+          2280.076686
+        ],
+        [
+          2089.763314
+        ],
+        [
+          2220.726633
+        ],
+        [
+          2290.896429
+        ],
+        [
+          2310.925976
+        ],
+        [
+          2221.07051
+        ],
+        [
+          2374.966864
+        ],
+        [
+          2350.459513
+        ],
+        [
+          2285.805693
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "10000",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 2250.9181826,
+      "scoreError": 139.61701591081606,
+      "scoreConfidence": [
+        2111.301166689184,
+        2390.535198510816
+      ],
+      "scorePercentiles": {
+        "0.0": 2140.86261,
+        "50.0": 2259.5409874999996,
+        "90.0": 2395.3773624,
+        "95.0": 2398.532871,
+        "99.0": 2398.532871,
+        "99.9": 2398.532871,
+        "99.99": 2398.532871,
+        "99.999": 2398.532871,
+        "99.9999": 2398.532871,
+        "100.0": 2398.532871
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          2233.344186
+        ],
+        [
+          2140.86261
+        ],
+        [
+          2154.483105
+        ],
+        [
+          2305.902585
+        ],
+        [
+          2398.532871
+        ],
+        [
+          2286.82617
+        ],
+        [
+          2185.315725
+        ],
+        [
+          2366.977785
+        ],
+        [
+          2151.199
+        ],
+        [
+          2285.737789
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "10000",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 2292.5129978,
+      "scoreError": 137.17567582828642,
+      "scoreConfidence": [
+        2155.3373219717137,
+        2429.6886736282863
+      ],
+      "scorePercentiles": {
+        "0.0": 2186.613991,
+        "50.0": 2276.682935,
+        "90.0": 2491.2337426000004,
+        "95.0": 2507.235332,
+        "99.0": 2507.235332,
+        "99.9": 2507.235332,
+        "99.99": 2507.235332,
+        "99.999": 2507.235332,
+        "99.9999": 2507.235332,
+        "100.0": 2507.235332
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          2284.366177
+        ],
+        [
+          2282.925904
+        ],
+        [
+          2260.841369
+        ],
+        [
+          2186.613991
+        ],
+        [
+          2339.809831
+        ],
+        [
+          2232.45806
+        ],
+        [
+          2213.21991
+        ],
+        [
+          2347.219438
+        ],
+        [
+          2270.439966
+        ],
+        [
+          2507.235332
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 193329408.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          193329408.0,
+          193329408.0
+        ],
+        "scorePercentiles": {
+          "0.0": 19237200.0,
+          "50.0": 19312620.0,
+          "90.0": 19436560.8,
+          "95.0": 19437344.0,
+          "99.0": 19437344.0,
+          "99.9": 19437344.0,
+          "99.99": 19437344.0,
+          "99.999": 19437344.0,
+          "99.9999": 19437344.0,
+          "100.0": 19437344.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            19252032.0
+          ],
+          [
+            19413952.0
+          ],
+          [
+            19437344.0
+          ],
+          [
+            19315624.0
+          ],
+          [
+            19255112.0
+          ],
+          [
+            19429512.0
+          ],
+          [
+            19237200.0
+          ],
+          [
+            19371184.0
+          ],
+          [
+            19309616.0
+          ],
+          [
+            19307832.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "10000",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 2302.3899934000005,
+      "scoreError": 68.90583808047569,
+      "scoreConfidence": [
+        2233.4841553195247,
+        2371.2958314804764
+      ],
+      "scorePercentiles": {
+        "0.0": 2196.859556,
+        "50.0": 2308.0951285,
+        "90.0": 2358.685203,
+        "95.0": 2360.363493,
+        "99.0": 2360.363493,
+        "99.9": 2360.363493,
+        "99.99": 2360.363493,
+        "99.999": 2360.363493,
+        "99.9999": 2360.363493,
+        "100.0": 2360.363493
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          2288.476605
+        ],
+        [
+          2309.332138
+        ],
+        [
+          2306.858119
+        ],
+        [
+          2318.444638
+        ],
+        [
+          2360.363493
+        ],
+        [
+          2276.220911
+        ],
+        [
+          2343.580593
+        ],
+        [
+          2196.859556
+        ],
+        [
+          2288.254099
+        ],
+        [
+          2335.509782
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 211297592.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          211297592.0,
+          211297592.0
+        ],
+        "scorePercentiles": {
+          "0.0": 20929104.0,
+          "50.0": 21016712.0,
+          "90.0": 22062219.2,
+          "95.0": 22164536.0,
+          "99.0": 22164536.0,
+          "99.9": 22164536.0,
+          "99.99": 22164536.0,
+          "99.999": 22164536.0,
+          "99.9999": 22164536.0,
+          "100.0": 22164536.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            20999232.0
+          ],
+          [
+            21070464.0
+          ],
+          [
+            21031264.0
+          ],
+          [
+            22164536.0
+          ],
+          [
+            20929104.0
+          ],
+          [
+            21027912.0
+          ],
+          [
+            20971344.0
+          ],
+          [
+            20956856.0
+          ],
+          [
+            21141368.0
+          ],
+          [
+            21005512.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "20000",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 3173.8889059,
+      "scoreError": 160.01248329236515,
+      "scoreConfidence": [
+        3013.8764226076346,
+        3333.901389192365
+      ],
+      "scorePercentiles": {
+        "0.0": 2961.885088,
+        "50.0": 3164.6832175,
+        "90.0": 3333.5646659,
+        "95.0": 3334.015481,
+        "99.0": 3334.015481,
+        "99.9": 3334.015481,
+        "99.99": 3334.015481,
+        "99.999": 3334.015481,
+        "99.9999": 3334.015481,
+        "100.0": 3334.015481
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          3165.396642
+        ],
+        [
+          3183.302437
+        ],
+        [
+          3198.968462
+        ],
+        [
+          2961.885088
+        ],
+        [
+          3121.215999
+        ],
+        [
+          3133.404736
+        ],
+        [
+          3147.223091
+        ],
+        [
+          3329.50733
+        ],
+        [
+          3334.015481
+        ],
+        [
+          3163.969793
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "20000",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 3366.8954982000005,
+      "scoreError": 202.01161935657674,
+      "scoreConfidence": [
+        3164.8838788434236,
+        3568.9071175565773
+      ],
+      "scorePercentiles": {
+        "0.0": 3193.579324,
+        "50.0": 3346.2077425,
+        "90.0": 3570.0086059,
+        "95.0": 3575.995966,
+        "99.0": 3575.995966,
+        "99.9": 3575.995966,
+        "99.99": 3575.995966,
+        "99.999": 3575.995966,
+        "99.9999": 3575.995966,
+        "100.0": 3575.995966
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          3287.687592
+        ],
+        [
+          3240.093952
+        ],
+        [
+          3575.995966
+        ],
+        [
+          3294.051604
+        ],
+        [
+          3455.021954
+        ],
+        [
+          3516.122365
+        ],
+        [
+          3235.893581
+        ],
+        [
+          3472.144763
+        ],
+        [
+          3398.363881
+        ],
+        [
+          3193.579324
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "20000",
+      "record": "false",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 3413.5696682000003,
+      "scoreError": 197.05502334079515,
+      "scoreConfidence": [
+        3216.514644859205,
+        3610.6246915407955
+      ],
+      "scorePercentiles": {
+        "0.0": 3192.976838,
+        "50.0": 3423.2340415,
+        "90.0": 3571.946239,
+        "95.0": 3572.343825,
+        "99.0": 3572.343825,
+        "99.9": 3572.343825,
+        "99.99": 3572.343825,
+        "99.999": 3572.343825,
+        "99.9999": 3572.343825,
+        "100.0": 3572.343825
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          3192.976838
+        ],
+        [
+          3264.450177
+        ],
+        [
+          3293.65214
+        ],
+        [
+          3494.186255
+        ],
+        [
+          3388.05174
+        ],
+        [
+          3568.367965
+        ],
+        [
+          3515.199659
+        ],
+        [
+          3572.343825
+        ],
+        [
+          3442.988752
+        ],
+        [
+          3403.479331
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 327445592.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          327445592.0,
+          327445592.0
+        ],
+        "scorePercentiles": {
+          "0.0": 32657448.0,
+          "50.0": 32755536.0,
+          "90.0": 32814319.2,
+          "95.0": 32816840.0,
+          "99.0": 32816840.0,
+          "99.9": 32816840.0,
+          "99.99": 32816840.0,
+          "99.999": 32816840.0,
+          "99.9999": 32816840.0,
+          "100.0": 32816840.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            32772800.0
+          ],
+          [
+            32774976.0
+          ],
+          [
+            32657448.0
+          ],
+          [
+            32791632.0
+          ],
+          [
+            32694288.0
+          ],
+          [
+            32691392.0
+          ],
+          [
+            32751824.0
+          ],
+          [
+            32816840.0
+          ],
+          [
+            32735144.0
+          ],
+          [
+            32759248.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "20000",
+      "record": "true",
+      "shape": "rings"
+    },
+    "primaryMetric": {
+      "score": 3400.8912914000002,
+      "scoreError": 266.07456585920823,
+      "scoreConfidence": [
+        3134.816725540792,
+        3666.9658572592084
+      ],
+      "scorePercentiles": {
+        "0.0": 3088.621091,
+        "50.0": 3404.682653,
+        "90.0": 3692.499945,
+        "95.0": 3707.62474,
+        "99.0": 3707.62474,
+        "99.9": 3707.62474,
+        "99.99": 3707.62474,
+        "99.999": 3707.62474,
+        "99.9999": 3707.62474,
+        "100.0": 3707.62474
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          3484.603519
+        ],
+        [
+          3195.950932
+        ],
+        [
+          3375.549109
+        ],
+        [
+          3088.621091
+        ],
+        [
+          3329.26717
+        ],
+        [
+          3707.62474
+        ],
+        [
+          3556.37679
+        ],
+        [
+          3361.560453
+        ],
+        [
+          3475.542913
+        ],
+        [
+          3433.816197
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 360395760.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          360395760.0,
+          360395760.0
+        ],
+        "scorePercentiles": {
+          "0.0": 35904288.0,
+          "50.0": 36049192.0,
+          "90.0": 36122797.6,
+          "95.0": 36126856.0,
+          "99.0": 36126856.0,
+          "99.9": 36126856.0,
+          "99.99": 36126856.0,
+          "99.999": 36126856.0,
+          "99.9999": 36126856.0,
+          "100.0": 36126856.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            36029336.0
+          ],
+          [
+            36126856.0
+          ],
+          [
+            36006224.0
+          ],
+          [
+            36072160.0
+          ],
+          [
+            36028344.0
+          ],
+          [
+            36086272.0
+          ],
+          [
+            36069048.0
+          ],
+          [
+            35904288.0
+          ],
+          [
+            36003120.0
+          ],
+          [
+            36070112.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "3000",
+      "record": "false",
+      "shape": "interfaces"
+    },
+    "primaryMetric": {
+      "score": 1188.0589581999998,
+      "scoreError": 46.60610929235369,
+      "scoreConfidence": [
+        1141.452848907646,
+        1234.6650674923535
+      ],
+      "scorePercentiles": {
+        "0.0": 1140.499171,
+        "50.0": 1193.0317555000001,
+        "90.0": 1230.2207262,
+        "95.0": 1230.97524,
+        "99.0": 1230.97524,
+        "99.9": 1230.97524,
+        "99.99": 1230.97524,
+        "99.999": 1230.97524,
+        "99.9999": 1230.97524,
+        "100.0": 1230.97524
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1193.62077
+        ],
+        [
+          1217.28284
+        ],
+        [
+          1223.430102
+        ],
+        [
+          1160.403976
+        ],
+        [
+          1198.03011
+        ],
+        [
+          1192.442741
+        ],
+        [
+          1156.190988
+        ],
+        [
+          1140.499171
+        ],
+        [
+          1167.713644
+        ],
+        [
+          1230.97524
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "3000",
+      "record": "true",
+      "shape": "interfaces"
+    },
+    "primaryMetric": {
+      "score": 1266.173877,
+      "scoreError": 121.6513372360076,
+      "scoreConfidence": [
+        1144.5225397639924,
+        1387.8252142360075
+      ],
+      "scorePercentiles": {
+        "0.0": 1158.44004,
+        "50.0": 1247.4987030000002,
+        "90.0": 1394.2301003999999,
+        "95.0": 1397.54614,
+        "99.0": 1397.54614,
+        "99.9": 1397.54614,
+        "99.99": 1397.54614,
+        "99.999": 1397.54614,
+        "99.9999": 1397.54614,
+        "100.0": 1397.54614
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1397.54614
+        ],
+        [
+          1230.200771
+        ],
+        [
+          1248.571327
+        ],
+        [
+          1246.426079
+        ],
+        [
+          1355.64074
+        ],
+        [
+          1181.761163
+        ],
+        [
+          1263.891519
+        ],
+        [
+          1364.385744
+        ],
+        [
+          1214.875247
+        ],
+        [
+          1158.44004
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "3000",
+      "record": "false",
+      "shape": "interfaces"
+    },
+    "primaryMetric": {
+      "score": 1241.5977920999999,
+      "scoreError": 33.512607558888746,
+      "scoreConfidence": [
+        1208.0851845411112,
+        1275.1103996588886
+      ],
+      "scorePercentiles": {
+        "0.0": 1206.340893,
+        "50.0": 1238.00234,
+        "90.0": 1276.9276951,
+        "95.0": 1277.101571,
+        "99.0": 1277.101571,
+        "99.9": 1277.101571,
+        "99.99": 1277.101571,
+        "99.999": 1277.101571,
+        "99.9999": 1277.101571,
+        "100.0": 1277.101571
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1277.101571
+        ],
+        [
+          1275.362812
+        ],
+        [
+          1220.832946
+        ],
+        [
+          1246.359108
+        ],
+        [
+          1250.104308
+        ],
+        [
+          1206.340893
+        ],
+        [
+          1242.370229
+        ],
+        [
+          1232.834767
+        ],
+        [
+          1231.036836
+        ],
+        [
+          1233.634451
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 86885648.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          86885648.0,
+          86885648.0
+        ],
+        "scorePercentiles": {
+          "0.0": 8559728.0,
+          "50.0": 8719060.0,
+          "90.0": 8764928.8,
+          "95.0": 8764984.0,
+          "99.0": 8764984.0,
+          "99.9": 8764984.0,
+          "99.99": 8764984.0,
+          "99.999": 8764984.0,
+          "99.9999": 8764984.0,
+          "100.0": 8764984.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            8559728.0
+          ],
+          [
+            8718944.0
+          ],
+          [
+            8764984.0
+          ],
+          [
+            8730944.0
+          ],
+          [
+            8627744.0
+          ],
+          [
+            8752216.0
+          ],
+          [
+            8616792.0
+          ],
+          [
+            8630688.0
+          ],
+          [
+            8719176.0
+          ],
+          [
+            8764432.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "3000",
+      "record": "true",
+      "shape": "interfaces"
+    },
+    "primaryMetric": {
+      "score": 1339.3178529000002,
+      "scoreError": 175.42413438948256,
+      "scoreConfidence": [
+        1163.8937185105176,
+        1514.7419872894827
+      ],
+      "scorePercentiles": {
+        "0.0": 1232.453318,
+        "50.0": 1290.67915,
+        "90.0": 1577.4868912000002,
+        "95.0": 1588.328735,
+        "99.0": 1588.328735,
+        "99.9": 1588.328735,
+        "99.99": 1588.328735,
+        "99.999": 1588.328735,
+        "99.9999": 1588.328735,
+        "100.0": 1588.328735
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          1588.328735
+        ],
+        [
+          1479.910297
+        ],
+        [
+          1299.489795
+        ],
+        [
+          1262.142219
+        ],
+        [
+          1392.603656
+        ],
+        [
+          1255.977261
+        ],
+        [
+          1232.453318
+        ],
+        [
+          1253.884377
+        ],
+        [
+          1346.520366
+        ],
+        [
+          1281.868505
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 93429584.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          93429584.0,
+          93429584.0
+        ],
+        "scorePercentiles": {
+          "0.0": 9220768.0,
+          "50.0": 9333176.0,
+          "90.0": 9440328.8,
+          "95.0": 9442024.0,
+          "99.0": 9442024.0,
+          "99.9": 9442024.0,
+          "99.99": 9442024.0,
+          "99.999": 9442024.0,
+          "99.9999": 9442024.0,
+          "100.0": 9442024.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            9220768.0
+          ],
+          [
+            9318584.0
+          ],
+          [
+            9273168.0
+          ],
+          [
+            9442024.0
+          ],
+          [
+            9331840.0
+          ],
+          [
+            9391512.0
+          ],
+          [
+            9366816.0
+          ],
+          [
+            9425072.0
+          ],
+          [
+            9325288.0
+          ],
+          [
+            9334512.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "20000",
+      "record": "false",
+      "shape": "interfaces"
+    },
+    "primaryMetric": {
+      "score": 2618.4769366,
+      "scoreError": 109.23433002322106,
+      "scoreConfidence": [
+        2509.242606576779,
+        2727.711266623221
+      ],
+      "scorePercentiles": {
+        "0.0": 2489.315078,
+        "50.0": 2613.335892,
+        "90.0": 2735.3637458,
+        "95.0": 2738.192182,
+        "99.0": 2738.192182,
+        "99.9": 2738.192182,
+        "99.99": 2738.192182,
+        "99.999": 2738.192182,
+        "99.9999": 2738.192182,
+        "100.0": 2738.192182
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          2542.375112
+        ],
+        [
+          2606.383013
+        ],
+        [
+          2738.192182
+        ],
+        [
+          2633.136325
+        ],
+        [
+          2489.315078
+        ],
+        [
+          2645.7053
+        ],
+        [
+          2709.90782
+        ],
+        [
+          2601.819385
+        ],
+        [
+          2597.64638
+        ],
+        [
+          2620.288771
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.BindingBenchmark.bindLargeSchema",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "20000",
+      "record": "true",
+      "shape": "interfaces"
+    },
+    "primaryMetric": {
+      "score": 2673.3519741,
+      "scoreError": 174.6033166026408,
+      "scoreConfidence": [
+        2498.748657497359,
+        2847.955290702641
+      ],
+      "scorePercentiles": {
+        "0.0": 2483.316928,
+        "50.0": 2691.949619,
+        "90.0": 2868.8713077,
+        "95.0": 2882.609266,
+        "99.0": 2882.609266,
+        "99.9": 2882.609266,
+        "99.99": 2882.609266,
+        "99.999": 2882.609266,
+        "99.9999": 2882.609266,
+        "100.0": 2882.609266
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          2642.545109
+        ],
+        [
+          2741.137335
+        ],
+        [
+          2717.153674
+        ],
+        [
+          2483.316928
+        ],
+        [
+          2705.850409
+        ],
+        [
+          2616.640226
+        ],
+        [
+          2882.609266
+        ],
+        [
+          2678.048829
+        ],
+        [
+          2745.229683
+        ],
+        [
+          2520.988282
+        ]
+      ]
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "20000",
+      "record": "false",
+      "shape": "interfaces"
+    },
+    "primaryMetric": {
+      "score": 2621.0212254,
+      "scoreError": 247.67359229783008,
+      "scoreConfidence": [
+        2373.3476331021698,
+        2868.69481769783
+      ],
+      "scorePercentiles": {
+        "0.0": 2401.839742,
+        "50.0": 2635.7694785000003,
+        "90.0": 2892.5647329000003,
+        "95.0": 2907.542784,
+        "99.0": 2907.542784,
+        "99.9": 2907.542784,
+        "99.99": 2907.542784,
+        "99.999": 2907.542784,
+        "99.9999": 2907.542784,
+        "100.0": 2907.542784
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          2500.801362
+        ],
+        [
+          2401.878645
+        ],
+        [
+          2401.839742
+        ],
+        [
+          2907.542784
+        ],
+        [
+          2747.283809
+        ],
+        [
+          2693.219226
+        ],
+        [
+          2640.616872
+        ],
+        [
+          2757.762273
+        ],
+        [
+          2528.345456
+        ],
+        [
+          2630.922085
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 240246000.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          240246000.0,
+          240246000.0
+        ],
+        "scorePercentiles": {
+          "0.0": 23962344.0,
+          "50.0": 24015080.0,
+          "90.0": 24120357.6,
+          "95.0": 24127336.0,
+          "99.0": 24127336.0,
+          "99.9": 24127336.0,
+          "99.99": 24127336.0,
+          "99.999": 24127336.0,
+          "99.9999": 24127336.0,
+          "100.0": 24127336.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            24052480.0
+          ],
+          [
+            23962344.0
+          ],
+          [
+            24049880.0
+          ],
+          [
+            24016248.0
+          ],
+          [
+            23980176.0
+          ],
+          [
+            23983624.0
+          ],
+          [
+            24002448.0
+          ],
+          [
+            24013912.0
+          ],
+          [
+            24127336.0
+          ],
+          [
+            24057552.0
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "io.micronaut.graphql.tools.benchmarks.RetainedHeapBenchmark.retainedHeap",
+    "mode": "ss",
+    "threads": 1,
+    "forks": 10,
+    "jvm": "/home/runner/.local/share/mise/installs/java/temurin-25.0.5+8.0.LTS/bin/java",
+    "jvmArgs": [],
+    "jdkVersion": "25.0.5",
+    "vmName": "OpenJDK 64-Bit Server VM",
+    "vmVersion": "25.0.5+8-LTS",
+    "warmupIterations": 0,
+    "warmupTime": "single-shot",
+    "warmupBatchSize": 1,
+    "measurementIterations": 1,
+    "measurementTime": "single-shot",
+    "measurementBatchSize": 1,
+    "params": {
+      "fields": "20000",
+      "record": "true",
+      "shape": "interfaces"
+    },
+    "primaryMetric": {
+      "score": 2711.3703453000003,
+      "scoreError": 157.53944088467307,
+      "scoreConfidence": [
+        2553.830904415327,
+        2868.9097861846735
+      ],
+      "scorePercentiles": {
+        "0.0": 2572.408158,
+        "50.0": 2729.9552679999997,
+        "90.0": 2855.2285021,
+        "95.0": 2858.801326,
+        "99.0": 2858.801326,
+        "99.9": 2858.801326,
+        "99.99": 2858.801326,
+        "99.999": 2858.801326,
+        "99.9999": 2858.801326,
+        "100.0": 2858.801326
+      },
+      "scoreUnit": "ms/op",
+      "rawData": [
+        [
+          2858.801326
+        ],
+        [
+          2625.385418
+        ],
+        [
+          2572.408158
+        ],
+        [
+          2727.805805
+        ],
+        [
+          2823.073087
+        ],
+        [
+          2742.038422
+        ],
+        [
+          2818.815352
+        ],
+        [
+          2635.640521
+        ],
+        [
+          2732.104731
+        ],
+        [
+          2577.630633
+        ]
+      ]
+    },
+    "secondaryMetrics": {
+      "retainedBytes": {
+        "score": 278684008.0,
+        "scoreError": "NaN",
+        "scoreConfidence": [
+          278684008.0,
+          278684008.0
+        ],
+        "scorePercentiles": {
+          "0.0": 27746720.0,
+          "50.0": 27857196.0,
+          "90.0": 27985505.6,
+          "95.0": 27986208.0,
+          "99.0": 27986208.0,
+          "99.9": 27986208.0,
+          "99.99": 27986208.0,
+          "99.999": 27986208.0,
+          "99.9999": 27986208.0,
+          "100.0": 27986208.0
+        },
+        "scoreUnit": "#",
+        "rawData": [
+          [
+            27852840.0
+          ],
+          [
+            27869160.0
+          ],
+          [
+            27830616.0
+          ],
+          [
+            27979184.0
+          ],
+          [
+            27746720.0
+          ],
+          [
+            27986208.0
+          ],
+          [
+            27810520.0
+          ],
+          [
+            27910592.0
+          ],
+          [
+            27861552.0
+          ],
+          [
+            27836616.0
+          ]
+        ]
+      }
+    }
+  }
+]

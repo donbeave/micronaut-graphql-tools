@@ -14,6 +14,8 @@ dependencies {
     testImplementation(projects.micronautGraphqlTools)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.java)
+    // JavaParser: compiles the sources of GraphQLToolsVisitorSpec and ParameterNamesSpec in memory
+    testImplementation(mn.micronaut.inject.java.test)
     // the single-value return types of the binding corpus (#428)
     testImplementation(mnRxjava3.rxjava3)
     testImplementation(mnRxjava2.rxjava2)
