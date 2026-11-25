@@ -31,7 +31,8 @@ class BindingManifestEndpointTest {
 
     @Test
     fun `the endpoint serves the manifest as json`() {
-        run(mapOf("micronaut.graphql.tools.manifest.enabled" to true, "endpoints.graphql-binding.sensitive" to false)).use { server ->
+        run(mapOf("micronaut.graphql.tools.manifest.enabled" to true, "endpoints.graphql-binding.enabled" to true,
+            "endpoints.graphql-binding.sensitive" to false)).use { server ->
             client(server).use { client ->
                 val body = client.toBlocking().retrieve(HttpRequest.GET<Any>("/graphql-binding"), Map::class.java)
                 val manifest = server.applicationContext.getBean(BindingManifest::class.java)
@@ -58,7 +59,7 @@ class BindingManifestEndpointTest {
 
     @Test
     fun `the standard sensitive key decides whether the endpoint needs authentication`() {
-        val secured = mapOf("micronaut.graphql.tools.manifest.enabled" to true, "micronaut.security.enabled" to true,
+        val secured = mapOf("micronaut.graphql.tools.manifest.enabled" to true, "endpoints.graphql-binding.enabled" to true, "micronaut.security.enabled" to true,
             "endpoints.graphql-binding.sensitive" to true)
         run(secured).use { server ->
             client(server).use { client ->
@@ -72,6 +73,18 @@ class BindingManifestEndpointTest {
         run(open).use { server ->
             client(server).use { client ->
                 assertEquals(HttpStatus.OK, client.toBlocking().exchange(HttpRequest.GET<Any>("/graphql-binding"), String::class.java).status)
+            }
+        }
+    }
+
+    @Test
+    fun `the endpoint is off until it is enabled explicitly`() {
+        run(mapOf("micronaut.graphql.tools.manifest.enabled" to true, "endpoints.graphql-binding.sensitive" to false)).use { server ->
+            client(server).use { client ->
+                val e = assertThrows(HttpClientResponseException::class.java) {
+                    client.toBlocking().exchange(HttpRequest.GET<Any>("/graphql-binding"), String::class.java)
+                }
+                assertEquals(HttpStatus.NOT_FOUND, e.status)
             }
         }
     }

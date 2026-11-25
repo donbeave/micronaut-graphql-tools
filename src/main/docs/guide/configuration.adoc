@@ -17,7 +17,7 @@ The generated tables below list the type and the default of every key. This tabl
 |`eager-init` |`true` |Binds the schema when the application context starts, so a binding failure stops the start. |<<startupErrors,Startup Errors>>
 |`schema.locations` |`classpath:graphql/**/*.graphqls` |Where the schema files are read from. |<<schema,Schema>>
 |`manifest.enabled`, `manifest.path` |`false`, none |Record the binding manifest as a bean, and write it to the file at startup when a path is set. |<<manifest,Binding Manifest>>
-|`endpoints.graphql-binding.enabled`, `endpoints.graphql-binding.sensitive` (outside the prefix) |`true`, `true` |Switch off the read-only `graphql-binding` management endpoint, or set its sensitivity. It exists only with Micronaut Management on the classpath and `manifest.enabled` set. |<<manifestEndpoint,Management endpoint>>
+|`endpoints.graphql-binding.enabled`, `endpoints.graphql-binding.sensitive` (outside the prefix) |`false`, `true` |Switch on the read-only `graphql-binding` management endpoint, or set its sensitivity. It exists only with Micronaut Management on the classpath and `manifest.enabled` set. |<<manifestEndpoint,Management endpoint>>
 |`execution.executor` |`blocking` |The executor that every operation hops to, or `none`. |<<executionSettings,Execution>>
 |`execution.timeout` |none |How long an operation may take before the client gets an `EXECUTION_TIMEOUT` error. |<<protection,Protection>>
 |`execution.data-loader-statistics` |`false` |Counts the batches of each batch loader bean. |<<observability,Observability>>

@@ -41,7 +41,7 @@ class BindingManifestEndpointTest {
 
     @Test
     void theEndpointServesTheManifestAsJson() {
-        try (EmbeddedServer server = run(Map.of("micronaut.graphql.tools.manifest.enabled", true,
+        try (EmbeddedServer server = run(Map.of("micronaut.graphql.tools.manifest.enabled", true, "endpoints.graphql-binding.enabled", true,
                 "endpoints.graphql-binding.sensitive", false));
              HttpClient client = client(server)) {
             Map<?, ?> body = client.toBlocking().retrieve(HttpRequest.GET("/graphql-binding"), Map.class);
@@ -67,17 +67,29 @@ class BindingManifestEndpointTest {
 
     @Test
     void theStandardSensitiveKeyDecidesWhetherTheEndpointNeedsAuthentication() {
-        Map<String, Object> secured = Map.of("micronaut.graphql.tools.manifest.enabled", true,
+        Map<String, Object> secured = Map.of("micronaut.graphql.tools.manifest.enabled", true, "endpoints.graphql-binding.enabled", true,
                 "micronaut.security.enabled", true, "endpoints.graphql-binding.sensitive", true);
         try (EmbeddedServer server = run(secured); HttpClient client = client(server)) {
             HttpClientResponseException e = assertThrows(HttpClientResponseException.class,
                     () -> client.toBlocking().exchange(HttpRequest.GET("/graphql-binding")));
             assertEquals(HttpStatus.UNAUTHORIZED, e.getStatus());
         }
-        Map<String, Object> open = Map.of("micronaut.graphql.tools.manifest.enabled", true,
+        Map<String, Object> open = Map.of("micronaut.graphql.tools.manifest.enabled", true, "endpoints.graphql-binding.enabled", true,
                 "micronaut.security.enabled", true, "endpoints.graphql-binding.sensitive", false);
         try (EmbeddedServer server = run(open); HttpClient client = client(server)) {
             assertEquals(HttpStatus.OK, client.toBlocking().exchange(HttpRequest.GET("/graphql-binding")).getStatus());
+        }
+    }
+
+    @Test
+    void theEndpointIsOffUntilItIsEnabledExplicitly() {
+        try (EmbeddedServer server = run(Map.of("micronaut.graphql.tools.manifest.enabled", true,
+                "endpoints.graphql-binding.sensitive", false));
+             HttpClient client = client(server)) {
+            HttpClientResponseException e = assertThrows(HttpClientResponseException.class,
+                    () -> client.toBlocking().exchange(HttpRequest.GET("/graphql-binding")));
+
+            assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
         }
     }
 

@@ -508,8 +508,8 @@ the line kinds, the sorting, the escape of non-ASCII characters and the schema h
 of the schema files or of the extensions.
 
 With Micronaut Management on the classpath and the manifest recorded, the read-only endpoint `graphql-binding`
-(`GET /graphql-binding`) serves it as JSON: the `header` lines and the `lines` of the file output. The standard
-`endpoints.graphql-binding.enabled` and `endpoints.graphql-binding.sensitive` keys apply. Without Micronaut Management
+(`GET /graphql-binding`) serves it as JSON once `endpoints.graphql-binding.enabled` is `true` (it is off by default): the `header` lines and the `lines` of the file output.
+The standard `endpoints.graphql-binding.sensitive` key applies. Without Micronaut Management
 nothing is registered.
 
 ```

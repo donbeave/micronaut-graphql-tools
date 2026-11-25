@@ -25,7 +25,7 @@ Without `path` the manifest is recorded and can be read from the `BindingManifes
 [[manifestEndpoint]]
 == Management endpoint
 
-An application that has Micronaut Management on its classpath can read the manifest while it runs. Add `io.micronaut:micronaut-management` and set `micronaut.graphql.tools.manifest.enabled` to `true`: `GET /graphql-binding` answers with the manifest as JSON, read-only.
+An application that has Micronaut Management on its classpath can read the manifest while it runs. Add `io.micronaut:micronaut-management`, set `micronaut.graphql.tools.manifest.enabled` to `true` and enable the endpoint with `endpoints.graphql-binding.enabled: true`: `GET /graphql-binding` answers with the manifest as JSON, read-only.
 
 [source,json]
 ----
@@ -35,7 +35,7 @@ An application that has Micronaut Management on its classpath can read the manif
 }
 ----
 
-The `header` and the `lines` are those of the text format below, so the file output and the endpoint never differ. The standard keys of Micronaut endpoints apply: `endpoints.graphql-binding.enabled` switches the endpoint off, and `endpoints.graphql-binding.sensitive` decides whether it needs authentication when Micronaut Security is present. Without Micronaut Management, or without `manifest.enabled`, no endpoint is registered and the start is unchanged. The manifest is rendered when the endpoint is first read, so a request to the GraphQL endpoint never pays for it. The JSON is written by the JSON codec of the application: the library adds none.
+The `header` and the `lines` are those of the text format below, so the file output and the endpoint never differ. The standard keys of Micronaut endpoints apply: `endpoints.graphql-binding.enabled` is `false` by default, because the manifest names every bound class and method and a reachable listener without Micronaut Security would expose it, and `endpoints.graphql-binding.sensitive` decides whether it needs authentication when Micronaut Security is present. Without Micronaut Management, without `manifest.enabled`, or without the explicit enabling, no endpoint is registered and the start is unchanged. The manifest is rendered when the endpoint is first read, on the blocking executor, so a request to the GraphQL endpoint never pays for it. The JSON is written by the JSON codec of the application: the library adds none.
 
 == The format
 
