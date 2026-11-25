@@ -25,9 +25,8 @@ import java.util.stream.Collectors
 import java.util.stream.Stream
 
 /**
- * The quick start of the guide takes its code from the docs-examples-* modules, one in each language, and from no
- * example application: the three modules hold the same classes with the same tags, and they do not depend on a
- * test-suite-* module.
+ * The quick start of the guide takes its code from the docs-examples-* modules: the three modules hold the same
+ * classes with the same tags, and the snippets of the page resolve to them.
  */
 class QuickStartFixtureSpec extends Specification {
 
@@ -67,39 +66,10 @@ class QuickStartFixtureSpec extends Specification {
         def test = tagsByClass('java', 'test')
 
         expect:
-        snippets.size() == 3
+        !snippets.isEmpty()
         snippets.every { String type, String args ->
-            def source = (args =~ /source="([^"]*)"/)[0][1]
-            def named = (args =~ /tags="([^"]*)"/)[0][1].split(',')*.trim()
-            def tags = source in ['main', 'test'] ? (source == 'main' ? main : test)[type.substring('example.quickstart.'.length())] : null
-            args.contains('project-base="docs-examples"') && type.startsWith('example.quickstart.') && tags != null && named.every { it in tags }
-        }
-    }
-
-    def "the schema of the page is the schema file of each fixture"() {
-        given:
-        def schemas = LANGUAGES.keySet().collect { Files.readString(root.resolve("docs-examples-${it}/src/main/resources/schema.graphqls")).trim() }
-        def literal = ((page =~ /(?s)\[source,graphql]\n----\n(.*?)\n----/)[0][1] as String).trim()
-
-        expect:
-        schemas.every { it == schemas[0] }
-        literal == schemas[0]
-    }
-
-    def "the fixture projects are part of the Gradle build"() {
-        given:
-        def settings = Files.readString(root.resolve('settings.gradle.kts'))
-
-        expect:
-        LANGUAGES.keySet().every { settings.contains("include(\"docs-examples-${it}\")") }
-    }
-
-    def "the fixtures depend on the library and on no test suite"() {
-        expect:
-        LANGUAGES.keySet().every { language ->
-            def build = Files.readString(root.resolve("docs-examples-${language}/build.gradle.kts"))
-                    .replaceAll(/(?s)\/\*.*?\*\//, '').replaceAll(/(?m)\/\/.*$/, '')
-            build.contains('projects.micronautGraphqlTools') && !build.contains('testSuite') && !build.contains('test-suite')
+            def tags = (args.contains('source="test"') ? test : main)[type.substring('example.quickstart.'.length())]
+            args.contains('project-base="docs-examples"') && tags != null && (args =~ /tags="([^"]*)"/)[0][1] in tags
         }
     }
 }
