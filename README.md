@@ -954,7 +954,7 @@ are the base of every role.
 
 **Support policy.** The supported graphql-java lines are 21.x up to the ceiling line. They are tested at the newest patch of
 the floor, the default and the ceiling. A new graphql-java major enters through the `latest` canary and becomes the ceiling
-through a promotion issue once it is green. graphql-java-extended-scalars has no 25.x or 26.x release; 24.0 links against 26.2.
+through a promotion issue once it is green. graphql-java-extended-scalars has no 25.x or 26.x release; 24.1 links against 26.2.
 
 The published POM does not pin graphql-java: it arrives through `micronaut-graphql` (4.8.0 brings 22.4). Pin
 graphql-java in your build to the line you run, and use the matching extended-scalars version from the table.
