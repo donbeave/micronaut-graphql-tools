@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
  * <p>An object that matches no object type, or whose candidates have no single most specific one (their Java types
  * are unrelated, or two object types are mapped to the same Java type), is an
  * {@link UnresolvedTypeException}, which graphql-java reports as an error of that field, with its path; the message
- * names the abstract type, the class and the candidates. The result, with the name of the resolved object type, is
+ * names the abstract type, the class and the candidates. The result, with the name of the resolved object type and the object type of the schema that answered last, is
  * cached per class in a {@link ClassValue}: a lookup takes no lock, and the cache does not keep a class, or its class
  * loader, alive.</p>
  *
@@ -91,6 +91,11 @@ public final class AbstractTypeResolver implements TypeResolver {
         GraphQLSchema schema = env.getSchema();
         Resolution resolution = resolutions.get(env.getObject().getClass());
 
+        Bound bound = resolution.bound;
+        if (bound != null && bound.schema == schema) {
+            return bound.objectType;
+        }
+
         if (resolution.objectTypeName() == null) {
             throw new UnresolvedTypeException(
                     resolution.error(),
@@ -99,10 +104,14 @@ public final class AbstractTypeResolver implements TypeResolver {
         }
 
         // getType, not getObjectType: the latter builds a message supplier on every call
-        if (schema.getType(resolution.objectTypeName()) instanceof GraphQLObjectType objectType) {
-            return objectType;
+        GraphQLObjectType objectType;
+        if (schema.getType(resolution.objectTypeName()) instanceof GraphQLObjectType found) {
+            objectType = found;
+        } else {
+            objectType = schema.getObjectType(resolution.objectTypeName());
         }
-        return schema.getObjectType(resolution.objectTypeName());
+        resolution.bound = new Bound(schema, objectType);
+        return objectType;
     }
 
     private Resolution resolve(Class<?> objectClass) {
@@ -180,7 +189,38 @@ public final class AbstractTypeResolver implements TypeResolver {
         return result.isEmpty() ? "none is mapped" : result;
     }
 
-    private record Resolution(String objectTypeName, String error) {
+    private static final class Resolution {
+
+        private final String objectTypeName;
+        private final String error;
+
+        // the object type in the schema that answered last; a request with another schema looks it up again. A racing
+        // write stores an equally valid pair, and the final fields make the pair safe to publish without a lock.
+        private Bound bound;
+
+        private Resolution(String objectTypeName, String error) {
+            this.objectTypeName = objectTypeName;
+            this.error = error;
+        }
+
+        private String objectTypeName() {
+            return objectTypeName;
+        }
+
+        private String error() {
+            return error;
+        }
+    }
+
+    private static final class Bound {
+
+        private final GraphQLSchema schema;
+        private final GraphQLObjectType objectType;
+
+        private Bound(GraphQLSchema schema, GraphQLObjectType objectType) {
+            this.schema = schema;
+            this.objectType = objectType;
+        }
     }
 
 }
