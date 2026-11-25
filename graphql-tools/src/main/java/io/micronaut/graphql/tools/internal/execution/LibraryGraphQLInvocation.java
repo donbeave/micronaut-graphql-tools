@@ -423,7 +423,12 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
             if (claim == null || !claim.timesOut()) {
                 return;
             }
-            Runnable completion = () -> inContext(() -> super.complete(timedOut(timeout)));
+            Runnable completion = () -> inContext(() -> {
+                super.complete(timedOut(timeout));
+                // the cancellation task can run before the subscription is stored and before this future is done, so it
+                // may have found nothing to dispose and startCustomized may have seen a future that was not done yet
+                disposeCustomizer();
+            });
             if (!dispatch(completion)) {
                 completion.run();
             }
