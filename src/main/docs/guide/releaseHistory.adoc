@@ -5,6 +5,7 @@ This page records what each tagged milestone changed. The breaking changes of ea
 === What this release changes
 
 * In-process tester (#215): the module `micronaut-graphql-tools-testing` runs a document with variables, context values and headers through the application's `GraphQLInvocation` in a test, and returns a response with data, errors and extensions and fluent assertions on paths and errors. See the Testing page.
+* One accessor style in every public package (#652, BC-52): `GraphQLRuntimeWiringCustomizer#getClaimedFields()` and `ArgumentValue#getRequired()` replace `claimedFields()` and `get()`, and the architecture rule covers every public package.
 
 == 1.0.0-M4
 
