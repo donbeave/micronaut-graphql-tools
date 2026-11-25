@@ -49,7 +49,7 @@ The binding corpus (#142) is a directory of data cases under `graphql-tools-proc
 
 A class that must still reflect goes in `REFLECTION_ALLOWLIST` of the spec, with the exact accesses it may make, the reason and the issue that removes it; any other reflective access in that class still fails. The list may only shrink: the spec fails when an allowed access no longer happens, so delete the entry in the change that removes the reflection. `GraphQLResolversRegistry` is the one entry today (#34). To check a rule, add a violating class to `graphql-tools/src/main/java` and run `./gradlew :micronaut-graphql-tools:test --tests '*ArchitectureRulesSpec'`; remove it afterwards.
 
-The example applications are four separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
+The example applications are four separate Gradle projects:
 
 | Suite | Language | Run the JVM tests | Run the native tests (Oracle GraalVM 25) |
 | --- | --- | --- | --- |

@@ -91,7 +91,7 @@ Maven Central and the Gradle plugin portal sometimes answer HTTP 429. Gradle ret
 
 ## Releases
 
-GitHub Packages milestone releases are published: milestone versions `1.0.0-M<n>` go to the Maven registry of this repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. The 1.0 line ends with the release candidate `1.0.0-RC1`. Maven Central, GitHub Releases and snapshots stay out of scope until the Foundation contribution. The groupId stays `io.micronaut.graphql.tools`; every consumer-facing page says that the artifacts are unaffiliated milestone previews until contributed.
+GitHub Packages milestone releases are published: milestone versions `1.0.0-M<n>` go to the Maven registry of this repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. Maven Central, GitHub Releases and snapshots stay out of scope until the Foundation contribution. The groupId stays `io.micronaut.graphql.tools`; every consumer-facing page says that the artifacts are unaffiliated milestone previews until contributed.
 
 To cut a release:
 
