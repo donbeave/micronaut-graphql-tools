@@ -9,6 +9,8 @@ Run from anywhere. For each schema shape and size it builds a JMH jar that gener
   python3 test-suite-benchmarks/scripts/startup-report.py --json run.json       also keep the JMH JSON in run.json
   python3 test-suite-benchmarks/scripts/startup-report.py --from run.json --previous old.json
                                                                      medians of run.json and the change against old.json
+  python3 test-suite-benchmarks/scripts/startup-report.py --from run.json --baseline test-suite-benchmarks/startup-baseline.json
+                                                                     the same against the recorded 1.0 reference
 
 The median is taken over the per-fork values in the JMH JSON (rawData). The JSON is the only input of the report, so
 --from and --previous work on any run archived with `-rf json`. `retainedBytes` is a secondary result: JMH's text
@@ -69,12 +71,12 @@ def print_medians(results, out):
                   f"{statistics.median(retained) / MB:>21.2f}\n")
 
 
-def print_change(results, previous, out):
+def print_change(results, previous, out, title="the previous run"):
     now, before = cases(results), cases(previous)
-    out.write("\nChange against the previous run (medians, new against old):\n")
+    out.write(f"\nChange against {title} (medians, new against old):\n")
     for key in sorted(now):
         if key not in before:
-            out.write(f"  {label(key)}: not in the previous run\n")
+            out.write(f"  {label(key)}: not in {title}\n")
             continue
         for name, unit, scale in (("ms", "ms", 1.0), ("bytes", "MB", MB)):
             new = statistics.median(now[key][name]) / scale
@@ -122,6 +124,7 @@ def main():
     parser.add_argument("--json", help="keep the JMH JSON in this file (default: a temporary file)")
     parser.add_argument("--from", dest="source", help="report this JMH JSON file instead of running the benchmarks")
     parser.add_argument("--previous", help="JMH JSON of an earlier run: print the change per case")
+    parser.add_argument("--baseline", help="JMH JSON of the recorded reference: print the change per case")
     args = parser.parse_args()
 
     if args.source:
@@ -134,6 +137,8 @@ def main():
     print_medians(results, sys.stdout)
     if args.previous:
         print_change(results, load(args.previous), sys.stdout)
+    if args.baseline:
+        print_change(results, load(args.baseline), sys.stdout, "the recorded baseline")
 
 
 if __name__ == "__main__":

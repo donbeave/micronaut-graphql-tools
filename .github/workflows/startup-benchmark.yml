@@ -42,7 +42,7 @@ jobs:
         run: |
           set -o pipefail
           case "$FORKS" in ''|*[!0-9]*|0) echo "::error::forks must be a positive integer, not '$FORKS'"; exit 1 ;; esac
-          args=(--forks "$FORKS" --json startup-benchmark.json)
+          args=(--forks "$FORKS" --json startup-benchmark.json --baseline test-suite-benchmarks/startup-baseline.json)
           if [ -f previous/startup-benchmark.json ]; then args+=(--previous previous/startup-benchmark.json); fi
           python3 test-suite-benchmarks/scripts/startup-report.py "${args[@]}" | tee report.txt
           { echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
