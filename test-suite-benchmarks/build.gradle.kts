@@ -433,9 +433,9 @@ jmh {
     timeOnIteration = "1s"
     profilers = listOf("gc")
     resultFormat = "JSON"
-    // The start-up benchmarks are measured cold, one fresh JVM per sample, by scripts/startup-report.py. The warm-up of
-    // this task would start contexts in the same JVM first.
-    excludes = listOf("BindingBenchmark", "RetainedHeapBenchmark")
+    // The start-up benchmarks are measured cold, one fresh JVM per sample: the first two by scripts/startup-report.py, the
+    // context start and first request ones by the benchmark jar. The warm-up of this task would start contexts in the same JVM first.
+    excludes = listOf("BindingBenchmark", "RetainedHeapBenchmark", "ContextStartBenchmark", "FirstRequestBenchmark", "StartAndFirstRequestBenchmark")
     // The jar does the same by itself: its main class leaves them out unless a benchmark is named
     // (BenchmarkJarMain, which jmhJar below makes the Main-Class).
     includes = providers.gradleProperty("jmh.includes").map { listOf(it) }.orElse(listOf()).get()

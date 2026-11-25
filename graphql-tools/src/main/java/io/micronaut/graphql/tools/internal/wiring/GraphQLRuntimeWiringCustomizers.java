@@ -60,7 +60,7 @@ public final class GraphQLRuntimeWiringCustomizers {
         Map<String, String> claims = new TreeMap<>();
         List<String> problems = new ArrayList<>();
         for (GraphQLRuntimeWiringCustomizer customizer : customizers) {
-            for (FieldCoordinates claim : customizer.claimedFields()) {
+            for (FieldCoordinates claim : customizer.getClaimedFields()) {
                 String coordinate = claim.getTypeName() + "." + claim.getFieldName();
                 String problem = claimProblem(claim, registry);
                 if (problem == null) {

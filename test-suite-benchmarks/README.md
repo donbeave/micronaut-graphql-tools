@@ -33,6 +33,7 @@ runs, or when they claim a performance gain.
   the rules give the same findings for the elements as for the classes that the sources compile to. The
   `generateLargeSchema` task writes the large schema that the start-up benchmarks bind to `build/generated/large-schema`.
 - `test-suite-benchmarks/scripts/startup-report.py`: builds one jar per schema size and runs the start-up benchmarks cold, one JVM per sample.
+- `test-suite-benchmarks/scripts/jmh-compare.py`: compares two JMH JSON files (the nightly workflow's report) and flags a score that is worse by more than a threshold outside the reported error.
 
 ## Packages
 
@@ -165,5 +166,33 @@ The difference is +10.9 ms in run 1 (95 percent bootstrap interval +4.2 to +42.4
 runs, and retained heap is unchanged. That is the cost of the lookup when it is real: each of the 4,000 fields that `Shared` declares (`id` and `name` of 2,000 object types; the other 16,000 fields are declared by no unreturned interface) asks for the resolver methods of `Shared`, about 2.8 us a lookup (+11 ms over 4,000 lookups).
 No resolver bean is bound to `Shared` in this schema, so the run measures the lookup that the unreturned-interface path adds, not the binding of a resolver method.
 A schema whose interfaces are all returned by a field never takes this path (the `returned` build).
+
+## The recorded start-up baseline
+
+`startup-baseline.json` is the JMH JSON of `scripts/startup-report.py`, the format that the `startup` job of the `Performance nightly` workflow reads
+(`--previous` takes it too). The workflow passes it as `--baseline`, so its report prints the change against it for every case.
+
+- Baseline commit: `e0e820c52fe1a0e4d40f2d109dd7926b09d52ae3` of the default branch, which contains `BindingBenchmark`, `RetainedHeapBenchmark` and the report script. The run used the start-up benchmark workflow (now the `startup` job of `Performance nightly`) on a branch that adds the `--baseline` option and this file to that commit.
+- Method: the workflow's own command, `startup-report.py --forks 10`: one jar per case, ten cold JVMs per case, single shot, no warm-up, graphql-java default leg.
+- Conditions: the GitHub-hosted `ubuntu-latest` runner that the nightly run uses, Temurin 25.0.5+8, started by hand (`workflow_dispatch`). The runner is shared, so its load is not recorded. The spread of the forks is in the table and in the JSON (`rawData`).
+
+| Case | Median binding time | Minimum to maximum | Median retained heap |
+| --- | --- | --- | --- |
+| rings, 100 fields, manifest off | 897.1 ms | 831.0 to 959.0 | 6.19 MB |
+| rings, 100 fields, manifest on | 883.7 ms | 827.8 to 909.4 | 6.23 MB |
+| rings, 1,600 fields, manifest off | 1156.4 ms | 1130.2 to 1240.5 | 8.10 MB |
+| rings, 1,600 fields, manifest on | 1166.4 ms | 1123.5 to 1227.3 | 8.42 MB |
+| rings, 3,000 fields, manifest off | 1321.4 ms | 1258.0 to 1377.8 | 9.94 MB |
+| rings, 3,000 fields, manifest on | 1337.7 ms | 1294.3 to 1379.6 | 10.48 MB |
+| rings, 10,000 fields, manifest off | 2282.9 ms | 2089.8 to 2375.0 | 19.31 MB |
+| rings, 10,000 fields, manifest on | 2259.5 ms | 2140.9 to 2398.5 | 21.02 MB |
+| rings, 20,000 fields, manifest off | 3164.7 ms | 2961.9 to 3334.0 | 32.76 MB |
+| rings, 20,000 fields, manifest on | 3346.2 ms | 3193.6 to 3576.0 | 36.05 MB |
+| interfaces, 3,000 fields, manifest off | 1193.0 ms | 1140.5 to 1231.0 | 8.72 MB |
+| interfaces, 3,000 fields, manifest on | 1247.5 ms | 1158.4 to 1397.5 | 9.33 MB |
+| interfaces, 20,000 fields, manifest off | 2613.3 ms | 2489.3 to 2738.2 | 24.02 MB |
+| interfaces, 20,000 fields, manifest on | 2691.9 ms | 2483.3 to 2882.6 | 27.86 MB |
+
+Hosted runners are shared, so read the retained heap first and treat a binding-time change inside the spread of the forks as noise.
 
 The full description, including the cold start procedure, is the "Benchmarks" section of `CONTRIBUTING.md`.
