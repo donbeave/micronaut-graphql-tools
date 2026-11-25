@@ -8,7 +8,8 @@ error that JMH reports for each score (the spread of the repeated runs), and the
 (`gc.alloc.rate.norm`, from the gc profiler) of both runs. A row is flagged as a regression when the score is worse by
 more than the threshold (default 10) and the two scores differ by more than the sum of their errors, so a change inside
 the noise is not flagged. Lower is better for the average-time, sample-time and single-shot modes; higher is better for
-throughput. The exit status is 0 either way: the report informs, it does not gate.
+throughput. A benchmark whose mode or score unit differs between the two files is not compared: its row says so.
+The exit status is 0 either way: the report informs, it does not gate.
 """
 import argparse
 import json
@@ -67,6 +68,9 @@ def main():
         score, unit = metric["score"], metric["scoreUnit"]
         old = previous_by_key.get(name)
         flag, change, old_score, old_error, old_alloc = "", "-", None, None, None
+        if old is not None and (old["mode"] != result["mode"] or old["primaryMetric"]["scoreUnit"] != unit):
+            change = f"mode or unit changed ({old['mode']} {old['primaryMetric']['scoreUnit']} to {result['mode']} {unit})"
+            old = None
         if old is not None:
             old_score, old_error, old_alloc = old["primaryMetric"]["score"], error(old), alloc(old)
             if old_score:

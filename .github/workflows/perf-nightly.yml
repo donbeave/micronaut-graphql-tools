@@ -1,7 +1,8 @@
 name: Performance nightly
 # The full JMH suite with the gc profiler, the cold-start benchmarks and the compile-time profile, recorded every night
-# against stored baselines. Report only: never on pull_request, never on a push and never in the `required checks` gate
-# of gradle.yml, and no figure is gated (the allocation gate is `allocationTest`, which gradle.yml runs). Each job archives
+# against stored baselines. Never on pull_request, never on a push and never in the `required checks` gate of gradle.yml,
+# so a red run blocks no merge. The JMH and start-up jobs only report; the compile-time job fails when a median exceeds
+# its budget, as in gradle.yml. Each job archives
 # its JSON and prints the change against the last successful run in the job summary. Shared runners are noisy: read
 # the allocation and the retained heap first, and treat a time change inside the reported error as noise.
 # `ref` lists the lines to record. Before the 1.0.x branch is cut it holds `master` only; add `1.0.x` then.

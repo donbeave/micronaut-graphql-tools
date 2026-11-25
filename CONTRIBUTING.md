@@ -312,7 +312,7 @@ the dictionary validation and the registry lookups that the rings barely reach. 
 as the secondary result `retainedBytes`: the heap in use after a full collection with the context open, minus the heap
 in use before the start. JMH's text summary adds the forks up for a secondary result, so the figure per fork is read from
 the JSON. Both are measured cold, one fresh JVM per sample, only by `scripts/startup-report.py` (see below): the
-`./gradlew :test-suite-benchmarks:jmh` task excludes them, because its warm-up would start contexts in the same JVM first.
+`./gradlew :test-suite-benchmarks:jmh` task excludes them, and `ContextStartBenchmark`, `FirstRequestBenchmark` and `StartAndFirstRequestBenchmark` too, because its warm-up would start contexts in the same JVM first (run those three from the jar, below).
 
 The benchmark jar generates the 1,600-field ring schema only, as before, so the other start-up benchmarks bind the same
 schema as before. Each other size is generated into a jar of its own (`-PlargeFields=<fields>`, one size per build; add
