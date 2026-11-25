@@ -6,7 +6,7 @@ NOTE: This is not an official Micronaut module yet: it is developed in https://g
 
 * *Schema first*: the schema is the contract. The library reads `.graphqls` files (see <<schema,Schema>>) and binds each field to a method or a property of your classes.
 * *Micronaut metadata*: binding reads the bean definitions and the bean introspection that Micronaut generates at compile time. <<noReflection,No runtime reflection>> defines what that covers and what it does not.
-* *Minimal boilerplate*: annotations such as `@GraphQLType` and `@GraphQLRootResolver` replace the manual wiring of types and data fetchers.
+* *Minimal boilerplate*: annotations such as @api:io.micronaut.graphql.tools.annotation.GraphQLType[] and @api:io.micronaut.graphql.tools.annotation.GraphQLRootResolver[] replace the manual wiring of types and data fetchers.
 * *Checks*: the startup reports a schema field without a binding, a class the schema does not need, and a wrong Java class for a GraphQL type, each with a code (see <<exceptions,Exceptions>>). The compile-time checks report many of the same findings during the build (see <<compileTime,Compile-Time Verification>>).
 
 The examples in this guide are Java, Kotlin and Groovy, and each one is taken from a compiled application in the repository. <<architecture,Architecture>> shows where the library sits, and <<quickStart,Quick Start>> goes from an empty application to a first query.

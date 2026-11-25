@@ -94,13 +94,41 @@ subprojects {
     }
 }
 
-// The guide takes its code examples from the test-suite-* sources with the `snippet::` macro. The macro reads them behind
+// The guide takes its code examples from the docs-examples-* and test-suite-* sources with the `snippet::` macro. The macro reads them behind
 // Gradle's back, so without these inputs a changed or removed example would leave publishGuide up to date.
 tasks.named("publishGuide") {
-    inputs.files(fileTree(".") { include("test-suite-*/src/main/**", "test-suite-*/src/test/**", "test-suite-*/src/driftFixture/**") })
+    inputs.files(fileTree(".") { include("test-suite-*/src/main/**", "test-suite-*/src/test/**", "test-suite-*/src/driftFixture/**",
+        "docs-examples-*/src/main/**", "docs-examples-*/src/test/**") })
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("snippetSources")
 }
+
+// The `api:` macro of the guide links a type to its Javadoc page and does not fail on a type that is gone, so a renamed or removed
+// type would leave a dead link. This check fails the guide build on an `api:` link whose type has no source file in a module.
+val checkApiLinks by tasks.registering {
+    group = "verification"
+    description = "Checks that every api: link of the guide names a top-level type that exists in a library module."
+    val guide = fileTree(layout.projectDirectory.dir("src/main/docs/guide")) { include("**/*.adoc") }
+    val sources = fileTree(layout.projectDirectory) { include("graphql-tools*/src/main/java/**/*.java") }
+    inputs.files(guide).withPropertyName("guide").withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(sources).withPropertyName("sources").withPathSensitivity(PathSensitivity.RELATIVE)
+    val marker = layout.buildDirectory.file("checks/api-links.ok")
+    outputs.file(marker)
+    doLast {
+        val known = sources.files.map { it.invariantSeparatorsPath.substringAfter("/src/main/java/").removeSuffix(".java").replace('/', '.') }.toSet()
+        val link = Regex("""api:([\w.]+)\[""")
+        val missing = guide.files.sortedBy { it.name }.flatMap { page ->
+            page.readLines().flatMap { line -> link.findAll(line).map { it.groupValues[1] }.toList() }
+                .filter { type -> type !in known }
+                .map { "${page.name}: api:$it[]" }
+        }
+        if (missing.isNotEmpty()) {
+            throw GradleException("The guide has api: links to types that do not exist:\n" + missing.joinToString("\n"))
+        }
+        marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
+    }
+}
+tasks.named("publishGuide") { dependsOn(checkApiLinks) }
 
 // The vulnerability audit (.github/scripts/vulnerability-audit.sh) scans this file with osv-scanner. It lists what the published
 // modules resolve at runtime on the default graphql-java leg, in the format of a Gradle dependency lockfile.

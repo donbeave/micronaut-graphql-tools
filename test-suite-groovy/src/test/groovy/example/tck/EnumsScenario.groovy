@@ -25,10 +25,12 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 
 // The fixtures of the TCK scenario `enums`.
 
+// tag::enums[]
 @Introspected
 enum Level {
     LOW, MEDIUM, HIGH
 }
+// end::enums[]
 
 @CompileStatic
 @GraphQLInput
@@ -38,6 +40,7 @@ class Window {
     List<Level> only
 }
 
+// tag::enums[]
 @CompileStatic
 @Singleton
 @GraphQLRootResolver
@@ -65,3 +68,4 @@ class EnumsQueries {
         return "from=$window.from to=$window.to only=$window.only".toString()
     }
 }
+// end::enums[]

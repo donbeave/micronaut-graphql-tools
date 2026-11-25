@@ -28,6 +28,9 @@ and test it.
 | [`graphql-tools-testing`](graphql-tools-testing/README.md) | `:micronaut-graphql-tools-testing` | The in-process tester for application tests: run a document against the `GraphQL` bean and assert on the response, test scope. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
+| [`docs-examples-java`](docs-examples-java/README.md) | `:micronaut-docs-examples-java` | The guide examples in Java, with a test that runs the quickstart. |
+| [`docs-examples-kotlin`](docs-examples-kotlin/README.md) | `:micronaut-docs-examples-kotlin` | The guide examples in Kotlin, with a test that runs the quickstart. |
+| [`docs-examples-groovy`](docs-examples-groovy/README.md) | `:micronaut-docs-examples-groovy` | The guide examples in Groovy, with a test that runs the quickstart. |
 | [`test-suite-tck`](test-suite-tck/README.md) | `:test-suite-tck` | The execution-behaviour scenarios that the example suites run. |
 | [`test-suite-benchmarks`](test-suite-benchmarks/README.md) | `:test-suite-benchmarks` | JMH benchmarks and the allocation gate. |
 | [`test-suite-java`](test-suite-java/README.md) | `:test-suite-java` | The example application in Java, with its tests. |
@@ -1404,7 +1407,7 @@ replaces the controller of that dependency) serves whichever `GraphQL` bean exis
 Three example applications serve the same schema (the same resolvers, types and data) in each language:
 [test-suite-java](test-suite-java), [test-suite-kotlin](test-suite-kotlin) (KSP) and
 [test-suite-groovy](test-suite-groovy). Their classes have the same fully qualified names, so a documentation snippet can
-include a language's source by path.
+include a language's source by path. The guide's quickstart code is in the `docs-examples-*` modules, apart from these suites.
 
 ## Compatibility
 
