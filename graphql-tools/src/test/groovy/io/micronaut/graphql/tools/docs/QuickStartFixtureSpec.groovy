@@ -90,7 +90,7 @@ class QuickStartFixtureSpec extends Specification {
         expect:
         LANGUAGES.keySet().every { language ->
             def build = Files.readString(root.resolve("docs-examples-${language}/build.gradle.kts"))
-            build.contains('projects.micronautGraphqlTools') && !build.contains('testSuite')
+            build.contains('projects.micronautGraphqlTools') && !build.contains('testSuite') && !build.contains('test-suite')
         }
     }
 }
