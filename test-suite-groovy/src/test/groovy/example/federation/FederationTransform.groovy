@@ -35,6 +35,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 final class FederationTransform {
 
+    private static final int MAX_REPRESENTATIONS = 100
+
     private FederationTransform() {
     }
 
@@ -56,11 +58,18 @@ final class FederationTransform {
                     .type(GraphQLNonNull.nonNull(GraphQLList.list(entity))))
         }
         DataFetcher<Object> entitiesFetcher = { env ->
-            List<Map<String, Object>> representations = env.getArgument('representations')
-            return representations.collect { Map<String, Object> representation ->
-                Closure<Object> resolver = entities[(String) representation.__typename]
+            List<Object> representations = env.getArgument('representations')
+            if (representations.size() > MAX_REPRESENTATIONS) {
+                throw new IllegalArgumentException("At most ${MAX_REPRESENTATIONS} representations".toString())
+            }
+            return representations.collect { Object representation ->
+                if (!(representation instanceof Map) || !(((Map) representation).get('__typename') instanceof String)) {
+                    throw new IllegalArgumentException('A representation needs a __typename')
+                }
+                String typeName = ((Map) representation).get('__typename')
+                Closure<Object> resolver = entities[typeName]
                 if (resolver == null) {
-                    throw new IllegalArgumentException("No entity type ${representation.__typename}".toString())
+                    throw new IllegalArgumentException("No entity type ${typeName}".toString())
                 }
                 resolver.call(representation)
             }

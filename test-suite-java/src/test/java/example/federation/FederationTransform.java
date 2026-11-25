@@ -39,6 +39,8 @@ import static graphql.Scalars.GraphQLString;
 // tag::transform[]
 public final class FederationTransform {
 
+    private static final int MAX_REPRESENTATIONS = 100;
+
     private FederationTransform() {
     }
 
@@ -61,13 +63,21 @@ public final class FederationTransform {
                                 .type(GraphQLNonNull.nonNull(GraphQLList.list(GraphQLNonNull.nonNull(any)))))
                         .type(GraphQLNonNull.nonNull(GraphQLList.list(entity)))));
         DataFetcher<Object> entitiesFetcher = environment -> {
-            List<Map<String, Object>> representations = environment.getArgument("representations");
+            List<Object> representations = environment.getArgument("representations");
+            if (representations.size() > MAX_REPRESENTATIONS) {
+                throw new IllegalArgumentException("At most " + MAX_REPRESENTATIONS + " representations");
+            }
             return representations.stream().map(representation -> {
-                Function<Map<String, Object>, Object> resolver = entities.get((String) representation.get("__typename"));
-                if (resolver == null) {
-                    throw new IllegalArgumentException("No entity type " + representation.get("__typename"));
+                if (!(representation instanceof Map<?, ?> map) || !(map.get("__typename") instanceof String typeName)) {
+                    throw new IllegalArgumentException("A representation needs a __typename");
                 }
-                return resolver.apply(representation);
+                Function<Map<String, Object>, Object> resolver = entities.get(typeName);
+                if (resolver == null) {
+                    throw new IllegalArgumentException("No entity type " + typeName);
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> key = (Map<String, Object>) map;
+                return resolver.apply(key);
             }).toList();
         };
         TypeResolver typeResolver = environment -> {

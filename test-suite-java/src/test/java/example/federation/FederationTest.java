@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -81,6 +82,26 @@ class FederationTest {
             ExecutionResult result = execute(context, "{ product(id: \"p2\") { id name } }", Map.of());
             assertTrue(result.getErrors().isEmpty(), result.getErrors().toString());
             assertEquals(Map.of("product", Map.of("id", "p2", "name", "Product p2")), result.getData());
+        }
+    }
+
+    @Test
+    void invalidRepresentationsAreErrors() {
+        try (ApplicationContext context = ApplicationContext.run(SETTINGS, FederationFixtures.FEDERATION)) {
+            String query = "query ($r: [_Any!]!) { _entities(representations: $r) { __typename } }";
+            List<Object> huge = new java.util.ArrayList<>();
+            for (int i = 0; i < 101; i++) {
+                huge.add(Map.of("__typename", "Product", "id", "p" + i));
+            }
+            for (List<?> representations : List.<List<?>>of(
+                    List.of("Product"),
+                    List.of(Map.of("id", "p1")),
+                    List.of(Map.of("__typename", 7, "id", "p1")),
+                    List.of(Map.of("__typename", "Unknown", "id", "p1")),
+                    huge)) {
+                ExecutionResult result = execute(context, query, Map.of("r", representations));
+                assertFalse(result.getErrors().isEmpty(), representations.toString());
+            }
         }
     }
 

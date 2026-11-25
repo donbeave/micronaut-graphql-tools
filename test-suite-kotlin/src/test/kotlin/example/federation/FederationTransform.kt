@@ -33,6 +33,8 @@ import graphql.schema.idl.SchemaPrinter
 // tag::transform[]
 object FederationTransform {
 
+    private const val MAX_REPRESENTATIONS = 100
+
     fun apply(schema: GraphQLSchema, entities: Map<String, (Map<String, Any?>) -> Any>): GraphQLSchema {
         val sdl = SchemaPrinter(SchemaPrinter.Options.defaultOptions().includeSchemaDefinition(false)).print(schema)
         val any = GraphQLScalarType.newScalar(ExtendedScalars.Json).name("_Any").build()
@@ -58,11 +60,14 @@ object FederationTransform {
                 )
         }
         val entitiesFetcher = DataFetcher<Any> { environment ->
-            val representations = environment.getArgument<List<Map<String, Any?>>>("representations")!!
+            val representations = environment.getArgument<List<Any?>>("representations")!!
+            require(representations.size <= MAX_REPRESENTATIONS) { "At most $MAX_REPRESENTATIONS representations" }
             representations.map { representation ->
-                val resolver = entities[representation["__typename"] as String]
-                    ?: throw IllegalArgumentException("No entity type ${representation["__typename"]}")
-                resolver(representation)
+                val typeName = (representation as? Map<*, *>)?.get("__typename") as? String
+                    ?: throw IllegalArgumentException("A representation needs a __typename")
+                val resolver = entities[typeName] ?: throw IllegalArgumentException("No entity type $typeName")
+                @Suppress("UNCHECKED_CAST")
+                resolver(representation as Map<String, Any?>)
             }
         }
         val typeResolver = TypeResolver { environment ->

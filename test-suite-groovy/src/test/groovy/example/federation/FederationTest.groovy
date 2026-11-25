@@ -93,6 +93,25 @@ class FederationTest extends Specification {
         context?.close()
     }
 
+    void 'invalid representations are errors'() {
+        given:
+        ApplicationContext context = ApplicationContext.run(SETTINGS, FederationFixtures.FEDERATION)
+        String query = 'query ($r: [_Any!]!) { _entities(representations: $r) { __typename } }'
+        List<Object> invalid = [
+                ['Product'],
+                [[id: 'p1']],
+                [[__typename: 7, id: 'p1']],
+                [[__typename: 'Unknown', id: 'p1']],
+                (0..100).collect { [__typename: 'Product', id: "p${it}".toString()] }
+        ]
+
+        expect:
+        invalid.every { !execute(context, query, [r: it] as Map<String, Object>).errors.isEmpty() }
+
+        cleanup:
+        context?.close()
+    }
+
     // tag::strict[]
     void 'strict mode needs the two allow settings'() {
         expect:

@@ -22,6 +22,7 @@ import graphql.schema.GraphQLSchema
 import io.micronaut.context.ApplicationContext
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -88,6 +89,24 @@ class FederationTest {
             val result = execute(context, "{ product(id: \"p2\") { id name } }")
             assertTrue(result.errors.isEmpty(), result.errors.toString())
             assertEquals(mapOf("product" to mapOf("id" to "p2", "name" to "Product p2")), result.getData<Any>())
+        }
+    }
+
+    @Test
+    fun `invalid representations are errors`() {
+        ApplicationContext.run(settings, FEDERATION).use { context ->
+            val query = "query (\$r: [_Any!]!) { _entities(representations: \$r) { __typename } }"
+            val huge = (0..100).map { mapOf("__typename" to "Product", "id" to "p$it") }
+            val invalid = listOf<List<Any>>(
+                listOf("Product"),
+                listOf(mapOf("id" to "p1")),
+                listOf(mapOf("__typename" to 7, "id" to "p1")),
+                listOf(mapOf("__typename" to "Unknown", "id" to "p1")),
+                huge
+            )
+            invalid.forEach { representations ->
+                assertFalse(execute(context, query, mapOf("r" to representations)).errors.isEmpty(), representations.toString())
+            }
         }
     }
 

@@ -59,6 +59,7 @@ A setting that lists a directive the schema does not declare, or a type that is 
 
 == Limits
 
+* The fetcher of `_entities` returns an error for a request with more than 100 representations, for a representation that is not an object, for one without a string `__typename`, and for a type that has no resolver function. The limit of 100 is a constant of the recipe; `FederationTest` has a test for each of these cases.
 * The entity resolver functions are plain graphql-java data fetchers. They do not use data loaders or the resolver parameters of the library.
 * An entity that no root field reaches is not bound by the library. The recipe returns a `Map` for it. A class there would be read by graphql-java through reflection, which a native image needs metadata for.
 * The Java and Kotlin suites run `FederationTest` as a native test (`:test-suite-java:nativeTest` and `:test-suite-kotlin:nativeTest`). The Groovy example is a Spock specification, which does not run natively, so the page claims no native test for it. See <<nativeImage,Native Image>>.
