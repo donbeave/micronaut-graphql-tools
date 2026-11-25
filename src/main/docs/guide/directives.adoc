@@ -4,6 +4,10 @@ The example schema declares `@upper` and `@tagged(label)` for fields, and `@audi
 
 [source,graphql]
 ----
+schema @audit {
+  query: Query
+}
+
 directive @audit on SCHEMA
 directive @upper on FIELD_DEFINITION
 directive @tagged(label: String!) on FIELD_DEFINITION
