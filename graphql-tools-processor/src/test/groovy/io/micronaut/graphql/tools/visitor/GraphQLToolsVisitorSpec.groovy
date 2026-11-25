@@ -52,8 +52,8 @@ import java.util.concurrent.CompletionStage;
 import graphql.schema.DataFetchingEnvironment;
 '''
 
-    private static VisitorCompilation compilation(String... bodies) {
-        def compilation = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+    private static JavaParserCompilation compilation(String... bodies) {
+        def compilation = new JavaParserCompilation().schema('schema.graphqls', SCHEMA)
         bodies.each { String body ->
             def name = (body =~ /(?:class|interface)\s+(\w+)/)[0][1]
             compilation.source('example.' + name, HEADER + body)
@@ -395,7 +395,7 @@ public class QueryResolver {
 
     def "an @Introduction interface that is a resolver is a bean, and its abstract methods are checked"() {
         when:
-        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+        def result = new JavaParserCompilation().schema('schema.graphqls', SCHEMA)
                 .source('example.Answering', HEADER + '''
 @io.micronaut.aop.Introduction
 @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
@@ -467,7 +467,7 @@ public class Plain {
         }.join('\n')
 
         when:
-        def result = new VisitorCompilation()
+        def result = new JavaParserCompilation()
                 .schema('schema.graphqls', "type Query { search(filter: In0): String }\n" + types)
                 .source('example.Link', HEADER + '''
 @io.micronaut.core.annotation.Introspected
@@ -574,7 +574,7 @@ public class Fields {
 
     def "a declared @Introspected keeps its accessKind, includes and excludes next to @GraphQLModels"() {
         when:
-        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+        def result = new JavaParserCompilation().schema('schema.graphqls', SCHEMA)
                 .source('example.Fields', FIELDS)
                 .source('example.Models', HEADER + '''
 @GraphQLModels(classes = Fields.class)
@@ -589,7 +589,7 @@ public class Models { }''').compile()
 
     def "a class that @GraphQLModels lists is introspected with the default access without a declared @Introspected"() {
         when:
-        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+        def result = new JavaParserCompilation().schema('schema.graphqls', SCHEMA)
                 .source('example.Fields', FIELDS)
                 .source('example.Models', HEADER + '@GraphQLModels(classes = Fields.class) public class Models { }').compile()
 
@@ -600,7 +600,7 @@ public class Models { }''').compile()
 
     def "classes of @GraphQLModels and packages of a declared @Introspected are merged with a warning"() {
         when:
-        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+        def result = new JavaParserCompilation().schema('schema.graphqls', SCHEMA)
                 .source('example.Fields', FIELDS)
                 .source('example.Models', HEADER + '''
 @GraphQLModels(classes = Fields.class)
@@ -613,7 +613,7 @@ public class Models { }''').compile()
 
     def "classes of @GraphQLModels and classes of a declared @Introspected are merged without a warning"() {
         when:
-        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+        def result = new JavaParserCompilation().schema('schema.graphqls', SCHEMA)
                 .source('example.Fields', FIELDS)
                 .source('example.Models', HEADER + '''
 @GraphQLModels(classes = Fields.class)
@@ -626,7 +626,7 @@ public class Models { }''').compile()
 
     def "a package repeated in @GraphQLModels and in a declared @Introspected does not crash and raises no mixed-source warning"() {
         when:
-        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+        def result = new JavaParserCompilation().schema('schema.graphqls', SCHEMA)
                 .source('example.Fields', FIELDS)
                 .source('example.Models', HEADER + '''
 @GraphQLModels(classes = Fields.class, packages = {"example", "example"}, includedAnnotations = Deprecated.class)
@@ -640,7 +640,7 @@ public class Models { }''').compile()
 
     def "a class name of a declared @Introspected counts as a class in the mixed-source warning"() {
         when:
-        def result = new VisitorCompilation().schema('schema.graphqls', SCHEMA)
+        def result = new JavaParserCompilation().schema('schema.graphqls', SCHEMA)
                 .source('example.Fields', FIELDS)
                 .source('example.Models', HEADER + '''
 @GraphQLModels(packages = "example", includedAnnotations = Deprecated.class)

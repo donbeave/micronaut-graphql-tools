@@ -11,7 +11,7 @@ import java.util.Set;
 public class ClaimingCustomizer implements GraphQLRuntimeWiringCustomizer {
 
     @Override
-    public Set<FieldCoordinates> claimedFields() {
+    public Set<FieldCoordinates> getClaimedFields() {
         return Set.of(FieldCoordinates.coordinates("Query", "version"));
     }
 

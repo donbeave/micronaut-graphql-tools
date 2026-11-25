@@ -1,0 +1,67 @@
+This page is a recipe for a federated subgraph: an application that answers the `_service` and `_entities` fields that a federation gateway sends. The library has no federation support. The recipe uses a `GraphQLSchemaCustomizer` (the supported API that it relies on) to add the two fields after the binding, and the code of the transform is application code that the example suites own and test. The tests check the subgraph contract (`_service` and `_entities`); they do not compose the subgraph with a gateway.
+
+The transform of this page is written with graphql-java alone, so the recipe adds no dependency. An application can instead apply the transform of a federation library to the schema in the same customizer.
+
+== The schema
+
+The federation directives are declared in the schema like any other directive, and the entity types carry `@key`. `Product` is reachable from the root field `Query.product`. `Order` is an entity that no field returns, so only `_entities` reaches it:
+
+snippet::example.federation.FederationFixtures[project-base="test-suite", source="test", tags="schema", indent="0"]
+
+The recipe declares `@key` with `fields: String!`. This declaration is the one the tests cover. The recipe does not import the directives of the federation specification through a federation `@link` declaration, so it does not test the other directives (such as `@shareable`, `@external` or `@requires`) or their federation semantics. A schema that declares a directive in the same way has to list it in the setting below as well.
+
+== The transform
+
+The customizer receives the schema that the library built, after the binding and the strict checks. The transform adds:
+
+* `_Any`, a scalar that accepts the representations as a JSON value;
+* `_Entity`, a union of the object types that carry `@key`;
+* `_Service` with the field `sdl`;
+* the fields `Query._service` and `Query._entities(representations: [_Any!]!)`, each with a data fetcher, and a type resolver for `_Entity`.
+
+snippet::example.federation.FederationTransform[project-base="test-suite", source="test", tags="transform", indent="0"]
+
+The `sdl` is the schema printed by graphql-java before the transform, so it includes the applied `@key` directives and the types of the whole application, and not the three added fields. The printer writes a `schema { ... }` definition when the root types have names other than `Query`, `Mutation` and `Subscription`. An application that serves a part of its schema prints or reads that part itself.
+
+== Entity resolution
+
+A resolver function for each entity type turns a representation (the `__typename` and the key fields) into the entity. A function of this recipe returns an object of a `@GraphQLType` class (`ProductEntity`, which carries `@GraphQLType(name = "Product")`; a class without a name is matched by its simple name) or a `Map` that carries `__typename` (`Order`). The map is for an entity that no root field reaches: the binding does not bind a type that nothing reaches, so its fields are read by graphql-java's default data fetcher, which reads a `Map` without reflection. The customizer bean wires the functions to the transform. It carries `@Order(Ordered.LOWEST_PRECEDENCE)`, so that it runs after the other `GraphQLSchemaCustomizer` beans of the application and the SDL and the `_Entity` members include what they add (see <<customizerOrder,The order of customizers and decorators>>):
+
+snippet::example.federation.FederationFixtures[project-base="test-suite", source="test", tags="entities", indent="0"]
+
+A gateway sends the representations in a variable. The test sends one for each entity type and reads the results in the order of the representations:
+
+snippet::example.federation.FederationTest[project-base="test-suite", source="test", tags="entities-query", indent="0"]
+
+== Settings that strict mode needs
+
+The test suites run the example with strict mode at its default, and two checks find the federation schema. The directive `@key` has no wiring, and `Order` is reachable through `_entities` only, which is added after the checks run. Two settings accept them:
+
+snippet::example.federation.FederationTest[project-base="test-suite", source="test", tags="settings", indent="0"]
+
+In `application.properties` the same settings read:
+
+----
+micronaut.graphql.tools.allow.inert-directives=key
+micronaut.graphql.tools.allow.unreachable=Order
+----
+
+Without the first, the startup fails with `[unwired-directive]`; without the second, it fails with `[unreachable-type]`:
+
+snippet::example.federation.FederationTest[project-base="test-suite", source="test", tags="strict", indent="0"]
+
+A setting that lists a directive the schema does not declare, or a type that is reachable, fails the startup as well (`invalid-inert-directives`, `invalid-allow-unreachable`), so each entry has to match the schema. See <<configuration,Configuration>> for the `allow` settings.
+
+== What is recipe and what is supported API
+
+* Supported API that the recipe uses: `GraphQLSchemaCustomizer`, `GraphQLTypeDefinitionRegistryCustomizer`, `@GraphQLType`, `@GraphQLRootResolver`, and the `allow.inert-directives` and `allow.unreachable` settings.
+* Recipe, owned by the application: the `_Any`, `_Entity` and `_Service` types, the two fields, the entity resolver functions and the SDL that `_service` returns. The library does not test them against a federation gateway, and a change to the specification is not followed by the library.
+
+== Limits
+
+* The fetcher of `_entities` returns an error for a request with more than 100 representations, for a representation that is not an object, for one without a string `__typename`, and for a type that has no resolver function. The limit of 100 is a constant of the recipe; `FederationTest` has a test for each of these cases.
+* The type resolver of `_Entity` reads the name of a class from `@GraphQLType(name = ...)` or uses its simple name. A class that a `GraphQLSchemaMappingDictionaryCustomizer` maps to another name is not looked up there.
+* The data fetcher of `_entities` is registered after the library has applied its field decorators, so a `GraphQLFieldFetcherDecorator` and `@Secured` on a resolver bean do not run for it. The resolver function of an entity receives the representation and no request. A subgraph that is reachable by a caller that should not read an entity has to restrict the route itself (see <<security,Security>>), or check access inside the resolver functions. The same holds for `_service`: it returns the printed schema, and the `protection.introspection` setting hides `__schema` and `__type` only, so with the setting off the SDL is still readable through `_service` by a caller that reaches the route. The tests of the recipe do not cover authorization or that setting.
+* The entity resolver functions are plain graphql-java data fetchers. They do not use data loaders or the resolver parameters of the library.
+* An entity that no root field reaches is not bound by the library. The recipe returns a `Map` for it. A class there would be read by graphql-java through reflection, which a native image needs metadata for.
+* The Java and Kotlin suites run `FederationTest` as a native test (`:test-suite-java:nativeTest` and `:test-suite-kotlin:nativeTest`). The Groovy example is a Spock specification, which does not run natively, so the page claims no native test for it. See <<nativeImage,Native Image>>.

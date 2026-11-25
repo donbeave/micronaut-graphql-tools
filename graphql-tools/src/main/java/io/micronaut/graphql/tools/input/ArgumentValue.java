@@ -88,7 +88,7 @@ public final class ArgumentValue<T> {
      * @throws NoSuchElementException if the value is omitted or an explicit {@code null}
      */
     @NonNull
-    public T get() {
+    public T getRequired() {
         if (value == null) {
             throw new NoSuchElementException(omitted ? "The value is omitted" : "The value is null");
         }

@@ -325,13 +325,13 @@ input CreateW {
         ArgumentValue.ofNullable(null).isNull()
         !ArgumentValue.ofNullable(null).isOmitted()
         ArgumentValue.ofNullable('a').isPresent()
-        ArgumentValue.ofNullable('a').get() == 'a'
+        ArgumentValue.ofNullable('a').getRequired() == 'a'
         ArgumentValue.ofNullable(null).orElse('b') == 'b'
         ArgumentValue.ofNullable('a') == ArgumentValue.ofNullable('a')
         ArgumentValue.omitted() != ArgumentValue.ofNullable(null)
 
         when:
-        ArgumentValue.omitted().get()
+        ArgumentValue.omitted().getRequired()
 
         then:
         thrown(NoSuchElementException)
