@@ -48,6 +48,7 @@ and test it.
 | [`graphql-tools-upload`](graphql-tools-upload/README.md) | `:micronaut-graphql-tools-upload` | File upload: the `Upload` scalar and the multipart request route, optional. |
 | [`graphql-tools-security`](graphql-tools-security/README.md) | `:micronaut-graphql-tools-security` | Micronaut Security: the principal in resolvers, `@Secured` on resolver methods and the root fields hook, optional. |
 | [`graphql-tools-testing`](graphql-tools-testing/README.md) | `:micronaut-graphql-tools-testing` | The in-process tester for application tests: run a document against the `GraphQL` bean and assert on the response, test scope. |
+| [`graphql-tools-client`](graphql-tools-client/README.md) | `:micronaut-graphql-tools-client` | The GraphQL client for applications that call a server: the skeleton, with its packages and the check that keeps the server stack out. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`docs-examples-java`](docs-examples-java/README.md) | `:micronaut-docs-examples-java` | The guide examples in Java, with a test that runs the quickstart. |
@@ -76,6 +77,7 @@ guide is in `src/main/docs/guide`, and the build convention plugin is in `buildS
 | File upload | `io.micronaut.graphql.tools:micronaut-graphql-tools-upload` |
 | Security | `io.micronaut.graphql.tools:micronaut-graphql-tools-security` |
 | Testing | `io.micronaut.graphql.tools:micronaut-graphql-tools-testing` |
+| Client | `io.micronaut.graphql.tools:micronaut-graphql-tools-client` |
 | Annotation processor | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 
