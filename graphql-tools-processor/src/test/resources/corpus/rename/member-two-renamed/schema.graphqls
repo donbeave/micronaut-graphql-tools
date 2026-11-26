@@ -1,0 +1,11 @@
+schema {
+  query: Query
+}
+
+type Query {
+  slip: Slip
+}
+
+type Slip {
+  title: String!
+}

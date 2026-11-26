@@ -1,0 +1,4 @@
+Query -> object ; - ; - ; -
+Query.foo: String! -> root ; example.Query#getFoo() ; java.lang.String ; java.lang.String
+Query.getFoo: String! -> root ; example.Query#getFoo() ; java.lang.String ; java.lang.String
+String -> scalar ; String ; - ; -

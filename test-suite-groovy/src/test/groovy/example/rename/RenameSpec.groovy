@@ -68,8 +68,9 @@ class RenameSpec extends Specification {
 
     void 'a coordinate binds a resolver method with another name'() {
         expect:
-        run([:], RenameFixtures.COORDINATES, '{ default parcel { id class } }') ==
-                [default: 'plain', parcel: [id: '1', class: 'parcel']]
+        run([:], RenameFixtures.COORDINATES, '{ default parcel { id class hashCode headline tagline new(prefix: "a") } }') ==
+                [default: 'plain', parcel: [id: '1', class: 'parcel', hashCode: 42, headline: 'Fragile',
+                                           tagline: 'Handle with care', new: 'a parcel']]
     }
 
     void 'the accessor prefixes bind getX and isX resolver methods when they are on'() {
