@@ -22,7 +22,6 @@ import io.micronaut.core.util.ArgumentUtils;
 import io.micronaut.scheduling.TaskExecutors;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -44,11 +43,11 @@ public class GraphQLToolsConfiguration {
     public static final String EXECUTION_EXECUTOR = PREFIX + ".execution.executor";
 
     private Precedence precedence = Precedence.FAIL;
-    private List<String> resolverDirectives = Collections.emptyList();
+    private List<String> resolverDirectives = List.of();
     private boolean strict = true;
     private boolean resolverAccessorPrefixes;
     private String typeClassConvention;
-    private Map<String, CheckSeverity> checks = Collections.emptyMap();
+    private Map<String, CheckSeverity> checks = Map.of();
     private AllowConfiguration allow = new AllowConfiguration();
     private boolean eagerInit = true;
     private SchemaConfiguration schema = new SchemaConfiguration();
@@ -627,10 +626,10 @@ public class GraphQLToolsConfiguration {
     @ConfigurationProperties("allow")
     public static class AllowConfiguration {
 
-        private List<String> unreachable = Collections.emptyList();
-        private List<String> inertDirectives = Collections.emptyList();
-        private List<String> schemaCustomizerDirectives = Collections.emptyList();
-        private List<String> findings = Collections.emptyList();
+        private List<String> unreachable = List.of();
+        private List<String> inertDirectives = List.of();
+        private List<String> schemaCustomizerDirectives = List.of();
+        private List<String> findings = List.of();
 
         /**
          * @return the names of unreachable types that the checks accept

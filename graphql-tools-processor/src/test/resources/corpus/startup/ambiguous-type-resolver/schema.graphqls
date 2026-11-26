@@ -1,0 +1,14 @@
+type Query {
+  book: Novel
+}
+
+type Novel {
+  title: String
+  author: Writer
+  bookExtra: String
+}
+
+type Writer {
+  name: String
+  authorExtra: String
+}

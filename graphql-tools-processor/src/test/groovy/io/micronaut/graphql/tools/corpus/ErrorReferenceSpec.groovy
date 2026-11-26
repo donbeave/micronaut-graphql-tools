@@ -27,7 +27,7 @@ import java.nio.file.Path
  * The example messages of the error reference (the guide page {@code exceptions.adoc}). A block that follows a
  * {@code // corpus: <case>} line must be the message that the startup of that Java case reports, so that no message of
  * the page is written from memory. A block that follows a {@code // compile: <scenario>} line must be the message of the
- * compile error of that scenario of {@link ProcessorCodeScenarios}, for the codes that only the annotation processor raises.
+ * compile error of that scenario of {@link ProcessorCodeScenarios}, for the codes that only the annotation processor raises. The directory of the case is written as {@code <case directory>}.
  */
 class ErrorReferenceSpec extends Specification {
 
@@ -57,7 +57,8 @@ class ErrorReferenceSpec extends Specification {
 
         then:
         compiled.success
-        ((String) result.get('message')).readLines()*.stripTrailing().join('\n') == expected
+        ((String) result.get('message')).replace(corpusCase.dir.toAbsolutePath().toString(), '<case directory>')
+                .readLines()*.stripTrailing().join('\n') == expected
 
         cleanup:
         work.toFile().deleteDir()

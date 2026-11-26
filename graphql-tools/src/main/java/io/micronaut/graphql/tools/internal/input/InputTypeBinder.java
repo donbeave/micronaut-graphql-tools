@@ -25,7 +25,7 @@ import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.beans.BeanIntrospection;
@@ -90,7 +90,7 @@ public final class InputTypeBinder {
     private final BindingManifestRecorder manifestRecorder;
     private final InputClassChecks.Builder inputClassChecks = new InputClassChecks.Builder();
     private final RuntimeTypeModel typeModel;
-    private final ApplicationContext applicationContext;
+    private final BeanContext beanContext;
     private final Callbacks callbacks;
     // the converter of each input type, by the name of the type, registered before its fields are bound so that a type
     // that refers to itself finds it
@@ -103,18 +103,18 @@ public final class InputTypeBinder {
     private final ArrayDeque<Step> steps = new ArrayDeque<>();
     private TypeFrame current;
 
-  public   InputTypeBinder(TypeDefinitionRegistry typeDefinitionRegistry, ScalarMappings scalarMappings,
-                    GraphQLToolsConfiguration configuration, CheckPolicy policy,
-                    BindingManifestRecorder manifestRecorder,
-                    RuntimeTypeModel typeModel,
-                    ApplicationContext applicationContext, Callbacks callbacks) {
+    public InputTypeBinder(TypeDefinitionRegistry typeDefinitionRegistry, ScalarMappings scalarMappings,
+                           GraphQLToolsConfiguration configuration, CheckPolicy policy,
+                           BindingManifestRecorder manifestRecorder,
+                           RuntimeTypeModel typeModel,
+                           BeanContext beanContext, Callbacks callbacks) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.scalarMappings = scalarMappings;
         this.configuration = configuration;
         this.policy = policy;
         this.manifestRecorder = manifestRecorder;
         this.typeModel = typeModel;
-        this.applicationContext = applicationContext;
+        this.beanContext = beanContext;
         this.callbacks = callbacks;
     }
 
@@ -371,7 +371,7 @@ public final class InputTypeBinder {
     }
 
     private ConversionService conversionService() {
-        return applicationContext.getConversionService();
+        return beanContext.getConversionService();
     }
 
     /**
@@ -381,11 +381,11 @@ public final class InputTypeBinder {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private ValueConverter typeConverter(Class<?> target) {
-        for (BeanDefinition<TypeConverter> definition : applicationContext.getBeanDefinitions(TypeConverter.class)) {
+        for (BeanDefinition<TypeConverter> definition : beanContext.getBeanDefinitions(TypeConverter.class)) {
             var typeArguments = definition.getTypeArguments(TypeConverter.class);
             if (typeArguments.size() == 2 && typeArguments.get(1).getType().equals(target)
                     && typeArguments.get(0).getType().isAssignableFrom(Map.class)) {
-                TypeConverter converter = applicationContext.getBean(definition);
+                TypeConverter converter = beanContext.getBean(definition);
                 return value -> {
                     if (value == null || target.isInstance(value)) {
                         return value;

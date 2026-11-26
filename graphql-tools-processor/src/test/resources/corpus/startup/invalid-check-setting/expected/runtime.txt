@@ -1,0 +1,3 @@
+invalid-check-setting micronaut.graphql.tools.checks.field-not-bound -
+invalid-check-setting micronaut.graphql.tools.checks.unbound-enum-constant -
+invalid-check-setting micronaut.graphql.tools.checks.unbound-method -

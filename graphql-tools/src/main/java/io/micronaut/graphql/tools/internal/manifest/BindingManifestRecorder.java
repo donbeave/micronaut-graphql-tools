@@ -61,7 +61,7 @@ public final class BindingManifestRecorder {
     private final Set<String> scalars = new TreeSet<>();
     private final boolean recording;
 
-  public   BindingManifestRecorder(boolean recording) {
+    public BindingManifestRecorder(boolean recording) {
         this.recording = recording;
     }
 

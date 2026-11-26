@@ -49,8 +49,8 @@ public final class SchemaDirectiveWirings implements GraphQLRuntimeWiringCustomi
     private final Set<String> everyElementDirectiveNames = new LinkedHashSet<>();
     private final Set<String> directiveNames = new LinkedHashSet<>();
 
-  public   SchemaDirectiveWirings(Collection<BeanRegistration<SchemaDirectiveWiring>> wirings,
-                           Collection<BeanRegistration<SchemaDirective>> directives) {
+    public SchemaDirectiveWirings(Collection<BeanRegistration<SchemaDirectiveWiring>> wirings,
+                                  Collection<BeanRegistration<SchemaDirective>> directives) {
         List<BeanRegistration<SchemaDirective>> everyElement = new ArrayList<>();
         for (BeanRegistration<SchemaDirective> registration : directives) {
             SchemaDirective directive = registration.getBean();
