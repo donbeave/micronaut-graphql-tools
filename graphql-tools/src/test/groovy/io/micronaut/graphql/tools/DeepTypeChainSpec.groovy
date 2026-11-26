@@ -27,9 +27,9 @@ import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources
 import io.micronaut.graphql.tools.binding.internal.schema.TypeExtensions
-import io.micronaut.graphql.tools.internal.model.GraphQLBeanIntrospectionRegistry
 import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry
 import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
+import io.micronaut.graphql.tools.internal.wiring.WiringComponents
 
 /**
  * A schema that is a chain of thousands of types binds on the default thread stack: the walk from a field to the types
@@ -61,10 +61,11 @@ class DeepTypeChainSpec extends AbstractTest {
         startContext(chainSchema(types), SPEC_NAME, ["micronaut.graphql.tools.strict": true])
         TypeDefinitionRegistry registry = new TypeDefinitionRegistry().merge(new SchemaParser().parse(chainSchema(types)))
         SchemaSources.addImplicitRoots(registry)
-        def generator = new GraphQLRuntimeWiringGenerator(applicationContext, new GraphQLBeanIntrospectionRegistry(),
+        def generator = new GraphQLRuntimeWiringGenerator(applicationContext,
+                WiringComponents.of(applicationContext, applicationContext.getBean(GraphQLToolsConfiguration), []),
                 applicationContext.getBean(GraphQLResolversRegistry), TypeExtensions.merge(registry),
                 new SchemaMappingDictionary(), applicationContext.getBean(GraphQLToolsConfiguration),
-                TypeExtensions.objectExtensionFields(registry), [])
+                TypeExtensions.objectExtensionFields(registry))
 
         when:
         generator.generate([])

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.internal.wiring;
+package io.micronaut.graphql.tools.internal.wiring.interfaces;
 
 import graphql.language.FieldDefinition;
 import graphql.language.ObjectTypeDefinition;
@@ -42,7 +42,7 @@ public record InterfaceField(ObjectTypeDefinition objectTypeDefinition, FieldDef
         return objectTypeDefinition.getName() + "." + fieldDefinition.getName();
     }
 
-    TypeMappingContext mappingContext() {
+    public TypeMappingContext mappingContext() {
         return TypeMappingContext.forField(objectTypeDefinition, fieldDefinition.getName());
     }
 

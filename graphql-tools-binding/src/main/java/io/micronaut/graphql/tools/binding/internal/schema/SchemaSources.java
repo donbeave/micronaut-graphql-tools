@@ -127,7 +127,7 @@ public final class SchemaSources {
                 files = paths.filter(Files::isRegularFile)
                         .filter(it -> it.getFileName().toString().endsWith(EXTENSION))
                         .sorted()
-                        .collect(Collectors.toList());
+                        .toList();
             } catch (IOException | UncheckedIOException e) {
                 throw new SchemaSourceException("cannot list the schema files in " + directory.toAbsolutePath() + ": "
                         + e.getMessage(), e);

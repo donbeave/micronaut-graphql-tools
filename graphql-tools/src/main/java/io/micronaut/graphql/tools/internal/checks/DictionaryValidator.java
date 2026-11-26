@@ -39,7 +39,7 @@ public final class DictionaryValidator {
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final SchemaMappingDictionary schemaMappingDictionary;
 
-  public   DictionaryValidator(TypeDefinitionRegistry typeDefinitionRegistry, SchemaMappingDictionary schemaMappingDictionary) {
+    public DictionaryValidator(TypeDefinitionRegistry typeDefinitionRegistry, SchemaMappingDictionary schemaMappingDictionary) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.schemaMappingDictionary = schemaMappingDictionary;
     }

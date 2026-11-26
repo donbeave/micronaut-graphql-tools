@@ -69,8 +69,8 @@ public final class UnreachableTypeChecks {
     private final CheckPolicy policy;
     private final BindingManifestRecorder manifestRecorder;
 
-  public   UnreachableTypeChecks(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLToolsConfiguration configuration,
-                          CheckPolicy policy, BindingManifestRecorder manifestRecorder) {
+    public UnreachableTypeChecks(TypeDefinitionRegistry typeDefinitionRegistry, GraphQLToolsConfiguration configuration,
+                                 CheckPolicy policy, BindingManifestRecorder manifestRecorder) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.configuration = configuration;
         this.policy = policy;
