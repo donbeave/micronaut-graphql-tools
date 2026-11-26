@@ -78,8 +78,9 @@ Shared pieces:
   differs from the field name.
 - `TypeRef` is `Builtin`, `Mapped` (an external class from `typeMappings`), `Reference` (to another IR node by SDL name)
   or `ListOf`, and every node carries `nullable`. The IR keeps the GraphQL nullability exactly. Primitive or boxed
-  representation is an emitter rule over `nullable`: a non-null `Int`, `Float` or `Boolean` is a primitive, everything else
-  a reference type, and the golden snapshots pin it.
+  representation is an emitter rule over `nullable`: a non-null `Int`, `Float` or `Boolean` in a direct value position (a field, component,
+  argument or return type) is a primitive, and everything else, including every list element and every generic type
+  argument, is a reference type. The golden snapshots pin it.
 - `Docs(String description, Deprecation deprecation)`: the SDL description (or the comment, under
   `commentsAsDescriptions`) and the deprecation reason. Emitters turn them into Javadoc or KDoc and `@Deprecated`.
 - `Origin(String path, int line, int column)`: the schema file relative to the schema root, with `/` separators. It is
@@ -278,7 +279,7 @@ Measured, with the cold figure now stated end to end (parse, emit and write, wit
 | --- | --- | --- | --- | --- |
 | Cold, end to end, at most 1 s | 0.78 to 0.86 s | 0.78 to 0.86 s | 1.2 to 1.3 s | Confirmed for Java and Groovy, revised for Kotlin to 1.5 s |
 | Warm emit, at most 300 ms | 125 to 130 ms | 128 to 133 ms | 320 to 360 ms with per-type name classes, 440 to 470 ms with one name file | Confirmed for Java and Groovy, revised for Kotlin to 400 ms |
-| Unchanged | 0 ms | 0 ms | 0 ms | Confirmed by design, see below |
+| Unchanged | 0 ms under Gradle (task skipped) | 0 ms under Gradle | 0 ms under Gradle | Confirmed for Gradle; under Maven the fingerprint check costs 14 ms of hashing in a fresh JVM, see below |
 
 KotlinPoet is about 2.5 times slower than the JavaPoet fork on the same artifacts, and the plain-text floor shows how much
 of any poet is overhead. If Kotlin generation ever shows up in a build profile, the Kotlin emitter can be rewritten as
@@ -324,8 +325,8 @@ Name constants are generated as classes, not resources.
 - There is no type dictionary, in either form (see the settled points). A facts index is not emitted either: the
   compile-time checks see the generated contracts as ordinary sources in the application's own source set, and no consumer
   needs a second copy. The guide says so when the generator ships.
-- Layout: one class per object and input type (the types that have fields), `{Type}Names`, with a `TYPE` constant and one
-  constant per field, in the names package (a Kotlin `object` with `const val`). The names of enums, unions, interfaces and
+- Layout: one class per object, interface and input type (the types that have fields), `{Type}Names`, with a `TYPE` constant and one
+  constant per field, in the names package (a Kotlin `object` with `const val`). The names of enums, unions and
   scalars, and of every other type under `nameConstants = TYPES`, are constants of one class `GraphQLTypeNames`. `NONE`
   emits nothing. The spike emitted the per-type classes and did not emit `GraphQLTypeNames`.
 
