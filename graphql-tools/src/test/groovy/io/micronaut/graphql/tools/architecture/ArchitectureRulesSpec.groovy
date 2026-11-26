@@ -32,12 +32,14 @@ import com.tngtech.archunit.lang.SimpleConditionEvent
 import spock.lang.Shared
 import spock.lang.Specification
 
+import java.nio.file.Paths
+
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 
 /**
- * The bytecode of the library and the binding module (not the processor, which runs at compile time) obeys five rules:
+ * The bytecode of the library and the binding module (not the processor, which runs at compile time) obeys five rules, and the accessor rule also covers every published module:
  * no reflection outside a short allowlist, no Jackson, no internal type in the signature of the public API, no dependency of a public package on an internal one, and one accessor style in the public types of every public package. The rules
  * keep the native image free of reflection metadata and the public API free of types that can change in any release.
  */
@@ -63,12 +65,27 @@ class ArchitectureRulesSpec extends Specification {
             'getEnclosingConstructor', 'getGenericSuperclass', 'getTypeParameters', 'getGenericInterfaces',
     ] as Set
 
-    /** Methods without a parameter that return a value but are not accessors of state. */
-    static final Set<String> ACCESSOR_RULE_EXEMPT = ['hashCode', 'toString', 'build', 'render'] as Set
+    /**
+     * Methods without a parameter that return a value but are not accessors of state: they run an action. A method that
+     * implements a method of a type outside the library keeps the name of that type and is exempt as well.
+     */
+    static final Set<String> ACCESSOR_RULE_EXEMPT = ['hashCode', 'toString', 'build', 'render', 'execute', 'assertNoErrors'] as Set
 
     @Shared JavaClasses classes = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackages(ROOT)
+
+    @Shared JavaClasses publishedClasses = new ClassFileImporter()
+            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+            .importPaths(System.getProperty('published.modules.classes').split(File.pathSeparator).collect { Paths.get(it) })
+
+    void "the classes of every published module are found"() {
+        expect:
+        publishedClasses.contain('io.micronaut.graphql.tools.internal.GraphQLFactory')
+        publishedClasses.contain('io.micronaut.graphql.tools.binding.BindingCode')
+        publishedClasses.contain('io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor')
+        publishedClasses.size() > classes.size()
+    }
 
     void "the classes of the library and the binding module are found"() {
         expect:
@@ -155,13 +172,13 @@ class ArchitectureRulesSpec extends Specification {
         extensionPoints.every { it.simpleName.startsWith('GraphQL') }
     }
 
-    void "no public class or interface declares a record-style accessor"() {
+    void "no public class, interface or enum of a published module declares a record-style accessor"() {
         expect:
-        classes().that(publicApi()).and(DescribedPredicate.describe('not a record, an enum or an annotation', { JavaClass c ->
-            !c.record && !c.enum && !c.annotation
+        classes().that(publicApi()).and(DescribedPredicate.describe('not a record or an annotation', { JavaClass c ->
+            !c.record && !c.annotation
         })).should(declareNoRecordStyleAccessor())
-                .because('a public interface or class names its accessors getX and isX; only a record, which is the immutable data carrier, uses the component name (BC-44, BC-52)')
-                .check(classes)
+                .because('a public interface, class or enum names its accessors getX and isX; only a record, which is the immutable data carrier, uses the component name (BC-44, BC-52, BC-53)')
+                .check(publishedClasses)
     }
 
     void "the accessor rule fails on a class with a record-style accessor and names it"() {
@@ -233,10 +250,19 @@ class ArchitectureRulesSpec extends Specification {
                     m.modifiers.contains(JavaModifier.PUBLIC) && !m.modifiers.contains(JavaModifier.STATIC) &&
                             !m.modifiers.contains(JavaModifier.SYNTHETIC) && !m.modifiers.contains(JavaModifier.BRIDGE) &&
                             m.parameters.empty && m.rawReturnType.name != 'void' && !(m.name in ACCESSOR_RULE_EXEMPT) &&
-                            !(m.name =~ /^(get|is)[A-Z]/) && !(m.name =~ /^(to|as|new|decorates)[A-Z]/)
+                            !(m.name =~ /^(get|is)[A-Z]/) && !(m.name =~ /^(to|as|new|decorates)[A-Z]/) && !overridesForeignMethod(item, m)
                 }.each { JavaMethod m ->
                     events.add(SimpleConditionEvent.violated(m, "${m.fullName} is a record-style accessor in a class or interface"))
                 }
+            }
+        }
+    }
+
+    private static boolean overridesForeignMethod(JavaClass owner, JavaMethod method) {
+        (owner.allRawSuperclasses + owner.allRawInterfaces).any { JavaClass type ->
+            !type.packageName.startsWith(ROOT) && type.methods.any {
+                it.name == method.name && it.parameters.empty && !it.modifiers.contains(JavaModifier.STATIC) &&
+                        !it.modifiers.contains(JavaModifier.PRIVATE) && it.rawReturnType.name == method.rawReturnType.name
             }
         }
     }

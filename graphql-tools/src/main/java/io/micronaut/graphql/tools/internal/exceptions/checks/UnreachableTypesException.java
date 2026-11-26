@@ -47,8 +47,8 @@ public final class UnreachableTypesException extends SchemaBindingException {
     private static String checksOf(Map<String, String> types) {
         boolean values = types.values().stream().anyMatch(UnreachableTypesException::isValueType);
         boolean others = types.values().stream().anyMatch(it -> !isValueType(it));
-        return values && others ? BindingCode.UNREACHABLE_TYPE.code() + " and " + BindingCode.UNREACHABLE_VALUE_TYPE.code()
-                : codeOf(types).code();
+        return values && others ? BindingCode.UNREACHABLE_TYPE.getCode() + " and " + BindingCode.UNREACHABLE_VALUE_TYPE.getCode()
+                : codeOf(types).getCode();
     }
 
     private static boolean isValueType(String kind) {

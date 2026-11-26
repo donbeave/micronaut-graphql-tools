@@ -17,5 +17,7 @@ package example.quickstart
 
 import io.micronaut.core.annotation.Introspected
 
+// tag::model[]
 @Introspected
 data class Book(val id: String, val title: String)
+// end::model[]

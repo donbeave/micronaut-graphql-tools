@@ -27,11 +27,11 @@ import java.nio.file.Path
  * The example messages of the error reference (the guide page {@code exceptions.adoc}). A block that follows a
  * {@code // corpus: <case>} line must be the message that the startup of that Java case reports, so that no message of
  * the page is written from memory. A block that follows a {@code // compile: <scenario>} line must be the message of the
- * compile error of that scenario of {@link ProcessorCodeScenarios}, for the codes that only the annotation processor raises. The directory of the case is written as {@code <case directory>}.
+ * compile error of that scenario of {@link ProcessorCodeScenarios}, for the codes that only the annotation processor raises. The directory of the case is written as {@code <case directory>}. A block that follows a {@code // corpus-kotlin: <case>} line is the message of a Kotlin case, which {@link KotlinErrorReferenceSpec} compiles and starts.
  */
 class ErrorReferenceSpec extends Specification {
 
-    private static final Path PAGE = Path.of(System.getProperty('guide.errors', '../src/main/docs/guide/exceptions.adoc'))
+    static final Path PAGE = Path.of(System.getProperty('guide.errors', '../src/main/docs/guide/exceptions.adoc'))
 
     @Shared
     Corpus corpus = new Corpus(CorpusFixtures.root())
@@ -84,11 +84,11 @@ class ErrorReferenceSpec extends Specification {
         compileExamples.keySet() == ProcessorCodeScenarios.CODES.keySet()
     }
 
-    private static Map<String, String> readExamples() {
+    static Map<String, String> readExamples() {
         return readExamples('// corpus: ')
     }
 
-    private static Map<String, String> readExamples(String marker) {
+    static Map<String, String> readExamples(String marker) {
         List<String> lines = Files.readAllLines(PAGE)
         Map<String, String> found = new LinkedHashMap<>()
         for (int i = 0; i < lines.size(); i++) {

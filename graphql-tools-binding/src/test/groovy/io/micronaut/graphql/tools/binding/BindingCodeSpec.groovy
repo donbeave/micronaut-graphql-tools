@@ -64,34 +64,34 @@ class BindingCodeSpec extends Specification {
 
     void "no two codes share a token, and every token is lower-case kebab-case"() {
         expect:
-        BindingCode.values()*.code().toSet().size() == BindingCode.values().length
-        BindingCode.values().every { it.code() ==~ /[a-z]+(-[a-z]+)*/ }
+        BindingCode.values()*.getCode().toSet().size() == BindingCode.values().length
+        BindingCode.values().every { it.getCode() ==~ /[a-z]+(-[a-z]+)*/ }
     }
 
     void "the ten checks are the checks of the registry, and nothing else is a check"() {
         expect:
-        BindingCode.values().findAll { it.check() }*.code().sort() == CHECKS.sort()
+        BindingCode.values().findAll { it.isCheck() }*.getCode().sort() == CHECKS.sort()
     }
 
     void "the compile-time set is exactly the parity set plus the per-class failures and the compile-only codes"() {
         expect:
-        BindingCode.values().findAll { it.compileTime() }*.code().sort() == COMPILE_TIME.sort()
+        BindingCode.values().findAll { it.isCompileTime() }*.getCode().sort() == COMPILE_TIME.sort()
     }
 
     void "the whole-program checks run at startup only"() {
         expect:
         ['unreachable-type', 'unreachable-value-type', 'unused-dictionary-entry', 'interface-read-through-implementation',
-         'unwired-directive', 'precedence-ambiguity'].every { !BindingCode.fromCode(it).compileTime() }
+         'unwired-directive', 'precedence-ambiguity'].every { !BindingCode.fromCode(it).isCompileTime() }
     }
 
     void "every code has a summary sentence for the error reference"() {
         expect:
-        BindingCode.values().every { it.summary().endsWith('.') && it.summary().length() > 10 }
+        BindingCode.values().every { it.getSummary().endsWith('.') && it.getSummary().length() > 10 }
     }
 
     void "a code is found by its token, and an unknown token is not"() {
         expect:
-        BindingCode.values().every { BindingCode.fromCode(it.code()).is(it) }
+        BindingCode.values().every { BindingCode.fromCode(it.getCode()).is(it) }
         BindingCode.fromCode('strict-mode') == null
     }
 

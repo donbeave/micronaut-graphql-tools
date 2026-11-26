@@ -434,7 +434,7 @@ public final class ResolverClassFindings {
             sentence += " (inherited by " + resolver.name() + ")";
         }
         SchemaLocation location = schema != null && schemaCoordinate != null ? location(schema, schemaCoordinate) : null;
-        return new Finding(code.code(), coordinate, sentence, method.signature(), null, location, fix);
+        return new Finding(code.getCode(), coordinate, sentence, method.signature(), null, location, fix);
     }
 
     @Nullable

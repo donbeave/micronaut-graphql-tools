@@ -68,7 +68,7 @@ enum Genre {
         def e = thrown(BeanInstantiationException)
         e.cause instanceof SchemaBindingException
         e.cause.message == "[" + code + "] Invalid @GraphQLSchemaCoordinate declarations:\n  1) " + problem
-        e.cause.getCode().code() == code
+        e.cause.getCode().getCode() == code
         e.cause.problems == [problem]
 
         where:

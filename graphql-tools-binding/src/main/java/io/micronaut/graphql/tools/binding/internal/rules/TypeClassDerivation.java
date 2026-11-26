@@ -123,7 +123,7 @@ public final class TypeClassDerivation {
      * @return the finding
      */
     public static Finding ambiguity(String typeName, List<String> classes) {
-        return new Finding(BindingCode.AMBIGUOUS_TYPE_CLASS.code(), typeName,
+        return new Finding(BindingCode.AMBIGUOUS_TYPE_CLASS.getCode(), typeName,
                 "The object type " + typeName + " matches several classes: " + String.join(", ", classes) + ".",
                 null, null, null,
                 "declare the class with @GraphQLType(name = \"" + typeName + "\") on one class only, rename the others, or map "

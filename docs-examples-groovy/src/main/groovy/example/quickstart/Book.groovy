@@ -19,6 +19,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import io.micronaut.core.annotation.Introspected
 
+// tag::model[]
 @CompileStatic
 @Introspected
 @Immutable
@@ -26,3 +27,4 @@ class Book {
     String id
     String title
 }
+// end::model[]

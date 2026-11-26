@@ -52,7 +52,12 @@ final class RuntimeBinder implements Binder {
     Map<String, Object> start(BindRequest request) {
         CorpusCase corpusCase = request.corpusCase
         List<URL> urls = ([request.unchecked.classes] + request.unchecked.more).collect { it.toUri().toURL() }
-        System.getProperty('java.class.path').split(File.pathSeparator).each { urls.add(new File(it).toURI().toURL()) }
+        System.getProperty('java.class.path').split(File.pathSeparator).each {
+            File entry = new File(it)
+            if (!corpusCase.runtimeWithout.any { String prefix -> entry.name.startsWith(prefix) }) {
+                urls.add(entry.toURI().toURL())
+            }
+        }
         // the schema is found by the library's discovery, as in an application: the case directory, and a jar for the files under jar/
         List<String> locations = ["file:${corpusCase.dir.toAbsolutePath()}/*.graphqls".toString()]
         List<Path> jarFiles = corpusCase.jarSchemaFiles()

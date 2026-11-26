@@ -50,8 +50,8 @@ public final class StandardScalarsFactory {
     private GraphQLScalarMapping mapping(StandardScalar scalar, @Nullable Supplier<JsonMapper> mapper) {
         ScalarConfiguration scalarConfiguration = configuration.get(scalar);
         if (scalarConfiguration != null && !scalarConfiguration.isEnabled()) {
-            throw new DisabledBeanException("The scalar " + scalar.id() + " is switched off by " + ScalarsConfiguration.PREFIX + "."
-                    + scalar.id() + ".enabled");
+            throw new DisabledBeanException("The scalar " + scalar.getId() + " is switched off by " + ScalarsConfiguration.PREFIX + "."
+                    + scalar.getId() + ".enabled");
         }
         return StandardMappings.create(scalar, scalarConfiguration, mapper);
     }

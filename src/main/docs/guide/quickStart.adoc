@@ -36,6 +36,8 @@ In Maven, add the repository with the id `graphql-tools`; the `<server>` entry w
 To use a build of your own checkout instead, run `./gradlew publishToMavenLocal` in the repository and add `mavenLocal()` (Gradle) to the repositories; Maven reads its local repository without a declaration (see `CONTRIBUTING.md`). That publishes to your machine only.
 +
 The BOM (`micronaut-graphql-tools-bom`) sets the version of every module of the library, so the other module snippets of this guide name no version. Import it in Gradle with `implementation(platform("io.micronaut.graphql.tools:micronaut-graphql-tools-bom:1.0.0-M4"))`, or in the `dependencyManagement` of a Maven build with `<type>pom</type>` and `<scope>import</scope>`. The library does not bring a JSON codec (BC-26). Add the one your application uses, for example `micronaut-jackson-databind` or `micronaut-serde-jackson`, to the same `dependencies` block.
++
+The HTTP and WebSocket transport is the `io.micronaut.graphql:micronaut-graphql` module. `micronaut-graphql-tools` declares it as an API dependency, so it is already on the classpath, and the Micronaut platform BOM manages its version. To name it in your build, add `implementation("io.micronaut.graphql:micronaut-graphql")` (Gradle) or the same coordinates with no `<version>` (Maven). The endpoint also needs an HTTP server, for example the `netty` runtime that an application from Micronaut Launch has.
 
 2. Define the GraphQL schema in `.graphqls` files in the `src/main/resources/graphql` folder. The library finds them at startup (see the Schema page), and a `schema { }` block is optional:
 +
@@ -55,13 +57,28 @@ type Book {
 +
 snippet::example.quickstart.GraphQLFactory[project-base="docs-examples", source="main", tags="registry", indent="0"]
 
-4. Add a root resolver. The method name is the field name in the schema, and the class is bound by @api:io.micronaut.graphql.tools.annotation.GraphQLRootResolver[]. The annotation carries no bean stereotype, so the class also needs a scope annotation such as `@Singleton`. The resolver reads from a `BookRepository` that returns `Book` objects with an `id` and a `title`; they are classes of the example, so replace them with your own data source and model:
+4. Add a model class and a root resolver. The binding reads a returned class through its bean introspection (see <<models,Model Classes>>), so the class needs `@Introspected` or @api:io.micronaut.graphql.tools.annotation.GraphQLType[]; without it the startup fails with `[class-not-introspected]`. The `Book` class has an `id` and a `title`, the fields of the schema above:
++
+snippet::example.quickstart.Book[project-base="docs-examples", source="main", tags="model", indent="0"]
++
+The method name of the resolver is the field name in the schema, and the class is bound by @api:io.micronaut.graphql.tools.annotation.GraphQLRootResolver[]. The annotation carries no bean stereotype, so the class also needs a scope annotation such as `@Singleton`. The resolver reads from a `BookRepository` that returns `Book` objects; it is a class of the example, so replace it with your own data source:
 +
 snippet::example.quickstart.AllBooksQuery[project-base="docs-examples", source="main", tags="resolver", indent="0"]
 
-5. Run the first query. The test starts the application, takes the `GraphQL` bean and executes a query against the schema above. With the HTTP transport of micronaut-graphql on the classpath, the same query can be posted to the GraphQL endpoint (see <<transport,Transports>>). The query reads the `allBooks` field of the example; use a field of your schema:
+5. Run the first query. The test starts the application, takes the `GraphQL` bean and executes a query against the schema above. The query reads the `allBooks` field of the example; use a field of your schema:
 +
 snippet::example.quickstart.QuickStartTest[project-base="docs-examples", source="test", tags="query", indent="0"]
++
+To send the same query over HTTP, start the application (`./gradlew run` in Gradle) and post it to the endpoint, `/graphql` by default (see <<transport,Transports>>):
++
+[source,bash]
+----
+curl -X POST http://localhost:8080/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ allBooks { id title } }"}'
+----
++
+The response is `{"data":{"allBooks":[{"id":"ab","title":"The Fractured Sage"},{"id":"ax","title":"Considered for Duty"}]}}`.
 
 6. The compile-time checks are optional. Without them, the startup binds the schema when the application context starts (`eager-init`, see <<configuration,Configuration>>) and fails with a code such as `[field-not-bound]` when a field has no resolver. With the processor on the compiler path, the build reports many of the same failures first. See <<compileTimeSetup,Set up the build>> for each build tool and <<exceptions,Exceptions>> for the codes.
 

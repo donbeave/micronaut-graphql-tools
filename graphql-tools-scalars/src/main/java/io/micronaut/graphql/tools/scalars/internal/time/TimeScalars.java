@@ -62,7 +62,7 @@ public final class TimeScalars {
     public static Coercing<?, ?> coercing(StandardScalar scalar, String name, String format) {
         String wanted = format == null ? ISO : format;
         if (!scalar.isFormatConfigurable() && !ISO.equalsIgnoreCase(wanted)) {
-            throw new IllegalArgumentException("the scalar " + scalar.id() + " has one format and cannot be configured");
+            throw new IllegalArgumentException("the scalar " + scalar.getId() + " has one format and cannot be configured");
         }
         boolean iso = ISO.equalsIgnoreCase(wanted);
         switch (scalar) {
@@ -97,7 +97,7 @@ public final class TimeScalars {
             case PERIOD:
                 return new TextCoercing<>(name, Period.class, Period::parse, Period::toString, "ISO-8601 PnYnMnD");
             default:
-                throw new IllegalArgumentException("not a java.time scalar: " + scalar.id());
+                throw new IllegalArgumentException("not a java.time scalar: " + scalar.getId());
         }
     }
 

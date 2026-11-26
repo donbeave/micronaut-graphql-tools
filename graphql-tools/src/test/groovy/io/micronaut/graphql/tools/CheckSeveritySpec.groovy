@@ -80,9 +80,9 @@ class CheckSeveritySpec extends AbstractTest {
 
     void "the default table has every check at fail, and nothing else"() {
         expect:
-        DefaultSeverities.TABLE.keySet() == BindingCode.values().findAll { it.check() }.toSet()
+        DefaultSeverities.TABLE.keySet() == BindingCode.values().findAll { it.isCheck() }.toSet()
         DefaultSeverities.TABLE.values().every { it == Severity.FAIL }
-        BindingCode.values().findAll { it.check() }.every {
+        BindingCode.values().findAll { it.isCheck() }.every {
             DefaultSeverities.of(it, true) == Severity.FAIL && DefaultSeverities.of(it, false) == Severity.WARN
         }
     }

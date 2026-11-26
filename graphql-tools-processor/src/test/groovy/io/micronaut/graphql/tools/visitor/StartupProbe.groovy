@@ -42,7 +42,7 @@ final class StartupProbe {
             for (Throwable t = e; t != null && known == null; t = t.cause) {
                 known = t instanceof SchemaBindingException ? t : null
             }
-            return known == null ? e.toString() : "${((SchemaBindingException) known).getCode().code()}: ${known.message}".toString()
+            return known == null ? e.toString() : "${((SchemaBindingException) known).getCode().getCode()}: ${known.message}".toString()
         } finally {
             context?.close()
         }

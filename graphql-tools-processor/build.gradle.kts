@@ -90,6 +90,7 @@ tasks.register<Test>("corpusUpdate") {
 val corpusOnThisLeg = providers.gradleProperty("graphqlJavaLeg").orElse("default").get() == "default"
 tasks.named<Test>("test") {
     exclude("**/KotlinCorpusSpec*")
+    exclude("**/KotlinErrorReferenceSpec*")
     if (!corpusOnThisLeg && !project.hasProperty("corpus.update")) {
         exclude("**/BindingCorpusSpec*")
         exclude("**/ErrorReferenceSpec*")
@@ -112,6 +113,8 @@ tasks.register<Test>("corpusKotlin") {
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
     filter.includeTestsMatching("*KotlinCorpusSpec")
+    filter.includeTestsMatching("*KotlinErrorReferenceSpec")
+    systemProperty("corpus.kotlin.errors.dir", layout.buildDirectory.dir("corpus-kotlin-errors").get().asFile.absolutePath)
     systemProperty("corpus.gradle-user-home", gradle.gradleUserHomeDir.absolutePath)
     systemProperty("corpus.micronaut.platform", libs.versions.micronaut.platform.get())
     systemProperty("corpus.kotlin.version", pluginPin("org.jetbrains.kotlin.jvm"))

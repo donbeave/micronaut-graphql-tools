@@ -17,6 +17,8 @@ package example.quickstart;
 
 import io.micronaut.core.annotation.Introspected;
 
+// tag::model[]
 @Introspected
 public record Book(String id, String title) {
 }
+// end::model[]

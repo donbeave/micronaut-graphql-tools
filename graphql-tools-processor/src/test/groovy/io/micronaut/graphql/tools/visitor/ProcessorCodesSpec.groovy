@@ -53,7 +53,7 @@ class ProcessorCodesSpec extends Specification {
 
     void "the harness has a scenario for each code that only the processor raises, and no other"() {
         expect:
-        ProcessorCodeScenarios.CODES.values().toSet() == BindingCode.values().findAll { it.code().startsWith('processor-') }*.code().toSet()
+        ProcessorCodeScenarios.CODES.values().toSet() == BindingCode.values().findAll { it.getCode().startsWith('processor-') }*.getCode().toSet()
     }
 
 }

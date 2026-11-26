@@ -44,7 +44,7 @@ class NullabilityRulesSpec extends Specification {
     @Unroll
     void "an input declared #declared at #schema is #code"() {
         expect:
-        NullabilityRules.input(kotlin(declared), schema, 'argument')?.code()?.code() == code
+        NullabilityRules.input(kotlin(declared), schema, 'argument')?.code()?.getCode() == code
 
         where:
         declared             | schema   | code
@@ -58,7 +58,7 @@ class NullabilityRulesSpec extends Specification {
     @Unroll
     void "a return declared #declared at #schema is #code"() {
         expect:
-        NullabilityRules.returned(kotlin(declared), schema, plain())*.code()*.code() == (code ? [code] : [])
+        NullabilityRules.returned(kotlin(declared), schema, plain())*.code()*.getCode() == (code ? [code] : [])
 
         where:
         declared             | schema   | code
@@ -106,7 +106,7 @@ class NullabilityRulesSpec extends Specification {
                 false, false, true)
 
         expect:
-        NullabilityRules.returned(future, NON_NULL, plain(1))*.code()*.code() == [MISMATCH]
+        NullabilityRules.returned(future, NON_NULL, plain(1))*.code()*.getCode() == [MISMATCH]
     }
 
     void "the element of a list is compared with the element of the list type"() {
@@ -115,7 +115,7 @@ class NullabilityRulesSpec extends Specification {
         Type<?> schema = new NonNullType(new ListType(NON_NULL))
 
         expect:
-        NullabilityRules.returned(list, schema, plain(0, plain()))*.code()*.code() == [MISMATCH]
+        NullabilityRules.returned(list, schema, plain(0, plain()))*.code()*.getCode() == [MISMATCH]
         NullabilityRules.returned(list, new NonNullType(new ListType(NULLABLE)), plain(0, plain())).isEmpty()
     }
 }

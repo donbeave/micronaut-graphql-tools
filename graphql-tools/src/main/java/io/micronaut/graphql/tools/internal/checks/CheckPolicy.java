@@ -80,7 +80,7 @@ public final class CheckPolicy {
         for (BindingCode code : DefaultSeverities.TABLE.keySet()) {
             Severity set = explicit.get(code);
             severities.put(code, set != null ? set : DefaultSeverities.of(code, strict));
-            origins.put(code, set != null ? PREFIX + "checks." + code.code() + " is " + severities.get(code).token()
+            origins.put(code, set != null ? PREFIX + "checks." + code.getCode() + " is " + severities.get(code).token()
                     : PREFIX + "strict is " + strict);
         }
         this.allowedFindings = allowedFindings;
@@ -115,7 +115,7 @@ public final class CheckPolicy {
             String name = NameUtils.hyphenate(key.replace('.', '-').replace('_', '-'));
             BindingCode code = BindingCode.fromCode(name);
             CheckSeverity severity = ConversionService.SHARED.convert(value, CheckSeverity.class).orElse(null);
-            if (code == null || !code.check()) {
+            if (code == null || !code.isCheck()) {
                 problems.add(PREFIX + "checks." + key + ": "
                         + (code == null ? "not a code of the registry" : "a failure code, not a check")
                         + "; the checks are " + checkNames() + ".");
@@ -137,7 +137,7 @@ public final class CheckPolicy {
             String line = entry.strip();
             int space = line.indexOf(' ');
             BindingCode code = line.startsWith("!") && space > 1 ? BindingCode.fromCode(line.substring(1, space)) : null;
-            if (code == null || !code.check() || line.length() == space + 1) {
+            if (code == null || !code.isCheck() || line.length() == space + 1) {
                 badFindings.add(PREFIX + "allow.findings: \"" + entry + "\" is not a line of the binding manifest "
                         + "that a check writes (!<check> <subject>).");
             } else {
@@ -168,7 +168,7 @@ public final class CheckPolicy {
     }
 
     private static String checkNames() {
-        return DefaultSeverities.TABLE.keySet().stream().map(BindingCode::code).toList().toString();
+        return DefaultSeverities.TABLE.keySet().stream().map(BindingCode::getCode).toList().toString();
     }
 
     Severity severity(BindingCode code) {

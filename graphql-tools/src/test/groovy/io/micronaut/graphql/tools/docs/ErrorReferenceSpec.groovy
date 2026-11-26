@@ -54,12 +54,12 @@ class ErrorReferenceSpec extends Specification {
         def codes = Files.readAllLines(page).findAll { it.startsWith('|`') }.collect { it.split(' \\|')[0].substring(2).replace('`', '') }
 
         expect:
-        codes.sort() == BindingCode.values()*.code().sort()
+        codes.sort() == BindingCode.values()*.getCode().sort()
     }
 
     private static String rows(boolean check) {
-        BindingCode.values().findAll { it.check() == check }.collect {
-            "|`${it.code()}` |${it.check() ? 'check' : 'failure'} |${it.compileTime() ? 'yes' : 'no'} |${it.summary()}"
+        BindingCode.values().findAll { it.isCheck() == check }.collect {
+            "|`${it.getCode()}` |${it.isCheck() ? 'check' : 'failure'} |${it.isCompileTime() ? 'yes' : 'no'} |${it.getSummary()}"
         }.join('\n')
     }
 

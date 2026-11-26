@@ -69,7 +69,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     // The finding that a check of one class cannot prove: another class can make a class introspected with
     // @Introspected(classes) or (packages), and so can a dependency, and an isolating visitor sees neither. An error here
     // would be a compile error where the startup passes, so it is a warning, and the startup decides.
-    private static final String UNPROVEN = BindingCode.CLASS_NOT_INTROSPECTED.code();
+    private static final String UNPROVEN = BindingCode.CLASS_NOT_INTROSPECTED.getCode();
 
     private static final String INTROSPECTED = "io.micronaut.core.annotation.Introspected";
 
@@ -190,7 +190,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
             StringWriter trace = new StringWriter();
             e.printStackTrace(new PrintWriter(trace));
             current.failed = true;
-            report(context, new Finding(BindingCode.PROCESSOR_INTERNAL_ERROR.code(), element.getName(),
+            report(context, new Finding(BindingCode.PROCESSOR_INTERNAL_ERROR.getCode(), element.getName(),
                     "the compile-time check failed on " + element.getName() + ": " + e + "\n" + trace, null, null, null,
                     "report this, and compile with micronaut.graphql.tools.processor.checks=false until it is fixed"),
                     element);
@@ -400,7 +400,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     }
 
     private static void reportChecked(Compilation current, VisitorContext context, Finding finding, @Nullable Element at) {
-        if (BindingCode.KOTLIN_NULLABILITY_LOOSE.code().equals(finding.code())
+        if (BindingCode.KOTLIN_NULLABILITY_LOOSE.getCode().equals(finding.code())
                 && current.options.looseNullability() != Severity.FAIL) {
             // stricter than the schema: the code cannot fail for it, so it is off, or a warning, unless the build asks
             if (current.options.looseNullability() == Severity.WARN) {
@@ -416,7 +416,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     private void check(Compilation current, ClassElement element, VisitorContext context) {
         if (current.foreignOutput != null) {
             current.failed = true;
-            report(context, new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_CONFIGURED.code(), null,
+            report(context, new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_CONFIGURED.getCode(), null,
                     "the schema directory is not configured for this module: " + ProcessorOptions.SCHEMA_DIRS + " and "
                     + ProcessorOptions.MODULE_DIR + " belong to the module in " + current.moduleDir
                     + ", an earlier compilation of the same JVM, and this compilation writes to " + current.foreignOutput,
@@ -429,7 +429,7 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
         }
         if (current.options.schemaDirs().isEmpty()) {
             current.failed = true;
-            report(context, new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_CONFIGURED.code(), null,
+            report(context, new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_CONFIGURED.getCode(), null,
                     "the schema directory is not configured, so the resolver classes cannot be checked",
                     null, null, null, "set " + ProcessorOptions.SCHEMA_DIRS + " (see the compile-time checks of the guide for "
                     + "the setting of each build tool), or compile without checks with " + ProcessorOptions.CHECKS + "=false"),
