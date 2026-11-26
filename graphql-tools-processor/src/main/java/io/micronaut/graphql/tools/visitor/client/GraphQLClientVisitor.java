@@ -38,7 +38,6 @@ import io.micronaut.inject.visitor.VisitorContext;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.nio.file.Path;
 import java.util.Set;
 
 /**
@@ -211,11 +210,10 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
 
         ClientOperations operations() {
             if (built == null) {
-                Path moduleDir = options.moduleDir() != null ? options.moduleDir() : ModuleOwnership.projectDir(context);
-                Path foreignOutput = ModuleOwnership.foreignOutput(moduleDir, context);
-                String foreign = foreignOutput == null ? null : "the client directories and the schema directories belong to the "
-                        + "module in " + moduleDir + ", an earlier compilation of the same JVM, and this compilation writes to "
-                        + foreignOutput;
+                ModuleOwnership.Ownership ownership = ModuleOwnership.of(options.moduleDir(), context);
+                String foreign = ownership.foreignOutput() == null ? null : "the client directories and the schema directories belong "
+                        + "to the module in " + ownership.moduleDir() + ", an earlier compilation of the same JVM, and this compilation "
+                        + "writes to " + ownership.foreignOutput();
                 built = new ClientOperations(new ClientDirectories(options.clientDirs(), options.schemaDirs(), foreign), checks,
                         ClientSchemaBuilder.STACK_BYTES);
             }
