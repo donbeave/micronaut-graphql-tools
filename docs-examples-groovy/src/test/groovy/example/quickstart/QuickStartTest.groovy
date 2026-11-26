@@ -17,6 +17,7 @@ package example.quickstart
 
 import graphql.ExecutionResult
 import graphql.GraphQL
+import graphql.schema.GraphQLSchema
 import io.micronaut.context.ApplicationContext
 import io.micronaut.runtime.server.EmbeddedServer
 import spock.lang.Specification
@@ -44,6 +45,22 @@ class QuickStartTest extends Specification {
         context?.close()
     }
     // end::query[]
+
+    // tag::schema-build[]
+    def 'the schema builds'() {
+        given:
+        ApplicationContext context = ApplicationContext.run()
+
+        when:
+        GraphQLSchema schema = context.getBean(GraphQLSchema) // getting it builds the schema
+
+        then:
+        schema.queryType.getFieldDefinition('allBooks') != null
+
+        cleanup:
+        context?.close()
+    }
+    // end::schema-build[]
 
     def 'the same query over HTTP returns the response of the guide'() {
         given:
