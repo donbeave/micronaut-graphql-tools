@@ -21,6 +21,8 @@ import graphql.GraphQL
 import graphql.schema.GraphQLSchema
 import io.micronaut.context.ApplicationContext
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
+import io.micronaut.graphql.tools.security.GraphQLSecurity
+import io.micronaut.security.authentication.Authentication
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 // Runs on the JVM and as a native binary (nativeTest): a subgraph that serves _service and _entities, with strict mode at its default.
+// The caller of these tests is an operator that the guards of the recipe let through; FederationSecurityTest has the other callers.
 class FederationTest {
 
     private val prefix = "micronaut.graphql.tools."
@@ -39,9 +42,14 @@ class FederationTest {
     )
     // end::settings[]
 
+    private val operator = Authentication.build("operator", listOf("ROLE_ADMIN", "ROLE_BILLING"))
+
     private fun execute(context: ApplicationContext, query: String, variables: Map<String, Any> = emptyMap()): ExecutionResult =
         GraphQL.newGraphQL(context.getBean(GraphQLSchema::class.java)).build()
-            .execute(ExecutionInput.newExecutionInput().query(query).variables(variables).build())
+            .execute(
+                ExecutionInput.newExecutionInput().query(query).variables(variables)
+                    .graphQLContext(mapOf<String, Any>(GraphQLSecurity.AUTHENTICATION_KEY to operator)).build()
+            )
 
     @Test
     fun `the service field returns the sdl of the subgraph`() {

@@ -22,6 +22,8 @@ import graphql.schema.GraphQLSchema;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException;
+import io.micronaut.graphql.tools.security.GraphQLSecurity;
+import io.micronaut.security.authentication.Authentication;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -33,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 // Runs on the JVM and as a native binary (nativeTest): a subgraph that serves _service and _entities, with strict mode at its default.
+// The caller of these tests is an operator that the guards of the recipe let through; FederationSecurityTest has the other callers.
 class FederationTest {
 
     private static final String PREFIX = "micronaut.graphql.tools.";
@@ -43,9 +46,12 @@ class FederationTest {
             PREFIX + "allow.unreachable", List.of("Order"));
     // end::settings[]
 
+    private static final Authentication OPERATOR = Authentication.build("operator", List.of("ROLE_ADMIN", "ROLE_BILLING"));
+
     private static ExecutionResult execute(ApplicationContext context, String query, Map<String, Object> variables) {
         return GraphQL.newGraphQL(context.getBean(GraphQLSchema.class)).build()
-                .execute(ExecutionInput.newExecutionInput().query(query).variables(variables).build());
+                .execute(ExecutionInput.newExecutionInput().query(query).variables(variables)
+                        .graphQLContext(Map.of(GraphQLSecurity.AUTHENTICATION_KEY, OPERATOR)).build());
     }
 
     @Test

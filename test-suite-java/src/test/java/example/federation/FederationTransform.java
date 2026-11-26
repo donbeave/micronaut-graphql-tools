@@ -15,8 +15,12 @@
  */
 package example.federation;
 
+import graphql.GraphQLContext;
+import graphql.GraphqlErrorBuilder;
+import graphql.execution.DataFetcherResult;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLCodeRegistry;
@@ -33,10 +37,12 @@ import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanIntrospector;
 import io.micronaut.graphql.tools.annotation.GraphQLType;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static graphql.Scalars.GraphQLString;
 
@@ -45,7 +51,26 @@ public final class FederationTransform {
 
     private static final int MAX_REPRESENTATIONS = 100;
 
+    public static final String FORBIDDEN_CODE = "FORBIDDEN";
+
     private FederationTransform() {
+    }
+
+    /**
+     * An entity type: how to resolve a representation, and who may. Both are required, so that no entity is served without a
+     * decision about its callers.
+     *
+     * @param resolver turns a representation into the entity
+     * @param access   decides from the context of the execution whether the caller may read the entity
+     */
+    public record Entity(Function<Map<String, Object>, Object> resolver, Predicate<GraphQLContext> access) {
+    }
+
+    private static DataFetcherResult<Object> forbidden(DataFetchingEnvironment environment, String what) {
+        return DataFetcherResult.newResult()
+                .error(GraphqlErrorBuilder.newError(environment).message("Access to " + what + " is forbidden")
+                        .extensions(Map.of("code", FORBIDDEN_CODE)).build())
+                .build();
     }
 
     private static String typeName(Class<?> type) {
@@ -55,7 +80,7 @@ public final class FederationTransform {
                 .orElse(type.getSimpleName());
     }
 
-    public static GraphQLSchema apply(GraphQLSchema schema, Map<String, Function<Map<String, Object>, Object>> entities) {
+    public static GraphQLSchema apply(GraphQLSchema schema, Map<String, Entity> entities, Predicate<GraphQLContext> serviceAccess) {
         String sdl = new SchemaPrinter(SchemaPrinter.Options.defaultOptions()).print(schema);
         GraphQLScalarType any = GraphQLScalarType.newScalar(ExtendedScalars.Json).name("_Any").build();
         GraphQLUnionType entity = GraphQLUnionType.newUnionType().name("_Entity")
@@ -77,18 +102,27 @@ public final class FederationTransform {
             if (representations.size() > MAX_REPRESENTATIONS) {
                 throw new IllegalArgumentException("At most " + MAX_REPRESENTATIONS + " representations");
             }
-            return representations.stream().map(representation -> {
+            List<Entity> targets = new ArrayList<>();
+            for (Object representation : representations) {
                 if (!(representation instanceof Map<?, ?> map) || !(map.get("__typename") instanceof String typeName)) {
                     throw new IllegalArgumentException("A representation needs a __typename");
                 }
-                Function<Map<String, Object>, Object> resolver = entities.get(typeName);
-                if (resolver == null) {
+                Entity target = entities.get(typeName);
+                if (target == null) {
                     throw new IllegalArgumentException("No entity type " + typeName);
                 }
+                if (!target.access().test(environment.getGraphQlContext())) {
+                    return forbidden(environment, "the entity " + typeName);
+                }
+                targets.add(target);
+            }
+            List<Object> result = new ArrayList<>();
+            for (int i = 0; i < targets.size(); i++) {
                 @SuppressWarnings("unchecked")
-                Map<String, Object> key = (Map<String, Object>) map;
-                return resolver.apply(key);
-            }).toList();
+                Map<String, Object> key = (Map<String, Object>) representations.get(i);
+                result.add(targets.get(i).resolver().apply(key));
+            }
+            return result;
         };
         TypeResolver typeResolver = environment -> {
             Object object = environment.getObject();
@@ -97,7 +131,8 @@ public final class FederationTransform {
         };
         GraphQLCodeRegistry registry = schema.getCodeRegistry().transform(builder -> builder
                 .dataFetcher(FieldCoordinates.coordinates(query.getName(), "_service"),
-                        (DataFetcher<Object>) environment -> Map.of("sdl", sdl))
+                        (DataFetcher<Object>) environment -> serviceAccess.test(environment.getGraphQlContext())
+                                ? Map.of("sdl", sdl) : forbidden(environment, "_service"))
                 .dataFetcher(FieldCoordinates.coordinates(query.getName(), "_entities"), entitiesFetcher)
                 .typeResolver("_Entity", typeResolver));
         return schema.transform(builder -> builder.query(query).codeRegistry(registry).additionalType(entity));
