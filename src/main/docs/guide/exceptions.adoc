@@ -1234,7 +1234,7 @@ Declare @GraphQLType(name = "Book") on one class only, rename the others, or map
   Mapped method: search()
 ----
 
-*Fix.* Leave one class that matches the type by renaming or removing the others, or map the type in the `SchemaMappingDictionary`, which the startup message says always wins.
+*Fix.* Leave one class that matches the type by renaming or removing the others.
 
 *See.* <<typeSystem,Type System>>.
 
