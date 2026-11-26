@@ -987,7 +987,7 @@ To build or test against a role locally:
 
 ### Consuming milestone previews
 
-The 1.0 line ends with the release candidate `1.0.0-RC1`. Milestone versions (`1.0.0-M1`, `1.0.0-M2`, ...) are published to
+The 1.0 line ends with the release candidate `1.0.0-RC1`. Milestone versions (`1.0.0-M1`, `1.0.0-M2`, ...) and release candidates (`1.0.0-RC1`, ...) are published to
 the GitHub Packages Maven registry of this repository: `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. They keep the `io.micronaut.graphql.tools`
 group, but they are milestone previews from this repository: they are not affiliated with, and not published by, the
 Micronaut Foundation, and the group is not on Maven Central until the project is contributed. The versions are listed on the
@@ -1018,7 +1018,7 @@ In GitHub Actions of another repository, store such a token as a secret; that wo
 package only if the package grants the repository access.
 
 Milestone previews carry no compatibility promise: names and behaviour can change between milestones (see the migration
-notes). A published version is not replaced; a fix ships in the next milestone.
+notes). A published version is not replaced; a fix ships in the next milestone or release candidate.
 
 The version comes from `projectVersion` in `gradle.properties` (`1.0.0-SNAPSHOT` on `master`). To build a fixed
 version, override it on the command line; a version without `-SNAPSHOT` is published as a release version:
@@ -1054,7 +1054,7 @@ module conventions in `buildSrc`.
 
 ## Snapshots and Releases
 
-Milestone versions (`1.0.0-M<n>`) are published to the GitHub Packages Maven registry of this repository
+Milestone versions (`1.0.0-M<n>`) and release candidates (`1.0.0-RC<n>`) are published to the GitHub Packages Maven registry of this repository
 by the `Release` workflow (`.github/workflows/release.yml`), after the full build is green on the tagged commit. See
 [Consuming milestone previews](#consuming-milestone-previews) to use them. Nothing is published to Maven Central, no
 GitHub Release is created and there are no snapshots; that stays so until the project is contributed to the Micronaut

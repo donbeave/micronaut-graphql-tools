@@ -1,4 +1,4 @@
-This page binds a small schema to a resolver. The class examples are shown in Java, Kotlin and Groovy; pick a tab. The repository declarations of step 1 and the `curl` command of step 5 are plain source blocks, the same for every language.
+This page binds a small schema to a resolver. Every class example is a snippet of the examples, shown in three tabs. The other blocks are plain blocks, the same for every language: the repository declarations of step 1 (build configuration, in the syntax of the build tool), the schema of step 2 (GraphQL) and the `curl` command of step 5 (a shell command).
 
 The library is for Micronaut 4. Micronaut Launch offers Micronaut 5 by default, so choose a Micronaut 4 version there. A Launch application that is already on Micronaut 5 has to be changed by hand: set the Micronaut Gradle plugins (`io.micronaut.application` and `io.micronaut.aot`) to a 4.x version, `micronautVersion` in `gradle.properties` to a 4.10 platform version, and `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties` to a Gradle version that the 4.x plugin supports. The first query of this page ran on an empty application set up this way: plugins 4.6.2, `micronautVersion=4.10.25` and Gradle 8.14.3.
 
@@ -80,7 +80,7 @@ curl -X POST http://localhost:8080/graphql \
   -d '{"query":"{ allBooks { id title } }"}'
 ----
 +
-The response is `{"data":{"allBooks":[{"id":"ab","title":"The Fractured Sage"},{"id":"ax","title":"Considered for Duty"}]}}`.
+The response is `{"data":{"allBooks":[{"id":"ab","title":"The Fractured Sage"},{"id":"ax","title":"Considered for Duty"}]}}`. The `QuickStartTest` of each language also sends this request to a started server and asserts this exact response.
 
 6. The compile-time checks are optional. Without them, the startup binds the schema when the application context starts (`eager-init`, see <<configuration,Configuration>>) and fails with a code such as `[field-not-bound]` when a field has no resolver. With the processor on the compiler path, the build reports many of the same failures first. See <<compileTimeSetup,Set up the build>> for each build tool and <<exceptions,Exceptions>> for the codes.
 

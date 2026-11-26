@@ -20,6 +20,8 @@ micronaut {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    runtimeOnly(mn.micronaut.jackson.databind)
+    runtimeOnly(mn.micronaut.http.server.netty)
     implementation("org.apache.groovy:groovy")
     testImplementation(mnTest.micronaut.test.spock)
 }
