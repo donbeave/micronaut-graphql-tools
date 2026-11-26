@@ -50,7 +50,7 @@ class QuickStartTest {
 
     @Test
     void theSameQueryOverHttpReturnsTheResponseOfTheGuide() throws Exception {
-        try (EmbeddedServer server = ApplicationContext.run(EmbeddedServer.class)) {
+        try (EmbeddedServer server = ApplicationContext.run(EmbeddedServer.class, Map.of("micronaut.server.port", -1))) {
             HttpRequest request = HttpRequest.newBuilder(URI.create(server.getURL() + "/graphql"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString("{\"query\":\"{ allBooks { id title } }\"}"))

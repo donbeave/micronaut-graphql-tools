@@ -47,7 +47,7 @@ class QuickStartTest extends Specification {
 
     def 'the same query over HTTP returns the response of the guide'() {
         given:
-        EmbeddedServer server = ApplicationContext.run(EmbeddedServer)
+        EmbeddedServer server = ApplicationContext.run(EmbeddedServer, ['micronaut.server.port': -1])
         HttpRequest request = HttpRequest.newBuilder(URI.create(server.URL.toString() + '/graphql'))
                 .header('Content-Type', 'application/json')
                 .POST(HttpRequest.BodyPublishers.ofString('{"query":"{ allBooks { id title } }"}'))
