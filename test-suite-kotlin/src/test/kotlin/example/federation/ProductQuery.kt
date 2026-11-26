@@ -17,6 +17,7 @@ package example.federation
 
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.security.annotation.Secured
 import jakarta.inject.Singleton
 
 @Requires(env = [FEDERATION])
@@ -24,5 +25,6 @@ import jakarta.inject.Singleton
 @GraphQLRootResolver
 open class ProductQuery {
 
+    @Secured("ROLE_ADMIN")
     open fun product(id: String): ProductEntity? = ProductEntity(id, "Product $id")
 }

@@ -15,10 +15,12 @@
  */
 package example.federation
 
+import graphql.GraphQLContext
 import graphql.schema.idl.SchemaParser
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
@@ -26,12 +28,16 @@ import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer
 import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import jakarta.inject.Singleton
 
+import java.util.function.Predicate
+
 @CompileStatic
 @Factory
 class FederationFixtures {
 
     // The schema of one subgraph, next to the schema of the example
     static final String FEDERATION = 'federation-subgraph'
+
+    static final String UNGUARDED = 'federation-unguarded'
 
     // tag::schema[]
     @Bean
@@ -54,12 +60,35 @@ class FederationFixtures {
     @Requires(env = FederationFixtures.FEDERATION)
     @Order(Ordered.LOWEST_PRECEDENCE)
     GraphQLSchemaCustomizer federation() {
-        Map<String, Closure<Object>> entities = [
-                Product: { Map<String, Object> key -> new ProductEntity(id: key.id as String, name: "Product ${key.id}".toString()) },
-                Order  : { Map<String, Object> key -> [__typename: 'Order', id: key.id, total: 42] }
-        ] as Map<String, Closure<Object>>
-        return { schema -> FederationTransform.apply(schema, entities) } as GraphQLSchemaCustomizer
+        Map<String, FederationTransform.Entity> entities = [
+                Product: new FederationTransform.Entity(
+                        { Map<String, Object> key -> new ProductEntity(id: key.id as String, name: "Product ${key.id}".toString()) },
+                        FederationAccess.role('ROLE_ADMIN')),
+                Order  : new FederationTransform.Entity(
+                        { Map<String, Object> key -> [__typename: 'Order', id: key.id, total: 42] },
+                        FederationAccess.role('ROLE_BILLING'))
+        ]
+        return { schema ->
+            FederationTransform.apply(schema, entities, FederationAccess.role('ROLE_ADMIN'))
+        } as GraphQLSchemaCustomizer
     }
     // end::entities[]
+
+    // The same subgraph with every entity open to every caller: what the guard of the entities above prevents
+    @Bean
+    @Singleton
+    @Requires(env = FederationFixtures.FEDERATION)
+    @Requires(env = FederationFixtures.UNGUARDED)
+    @Replaces(bean = GraphQLSchemaCustomizer, factory = FederationFixtures)
+    @Order(Ordered.LOWEST_PRECEDENCE)
+    GraphQLSchemaCustomizer unguardedFederation() {
+        Predicate<GraphQLContext> everyone = { GraphQLContext context -> true } as Predicate<GraphQLContext>
+        Map<String, FederationTransform.Entity> entities = [
+                Product: new FederationTransform.Entity(
+                        { Map<String, Object> key -> new ProductEntity(id: key.id as String, name: "Product ${key.id}".toString()) },
+                        everyone)
+        ]
+        return { schema -> FederationTransform.apply(schema, entities, everyone) } as GraphQLSchemaCustomizer
+    }
 
 }
