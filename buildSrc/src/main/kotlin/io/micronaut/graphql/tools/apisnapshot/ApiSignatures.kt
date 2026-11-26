@@ -93,11 +93,18 @@ internal object ApiListing {
             .sortedWith(compareBy({ if (it.first.enumConstant) 0 else 1 }, { if (it.first.enumConstant) "" else it.second.first }))
             .map { it.second.first }
         return buildString {
-            appendLine(header(info, header))
+            appendLine(permits(info, header(info, header)))
             kept.forEach { appendLine("  $it") }
             appendLine("}")
         }
     }
+
+    private fun permits(info: ClassFileInfo, header: String): String =
+        if (info.permitted.isEmpty()) {
+            header
+        } else {
+            header.removeSuffix(" {") + " permits " + info.permitted.map { it.replace('/', '.') }.sorted().joinToString(", ") + " {"
+        }
 
     private fun header(info: ClassFileInfo, javapHeader: String): String {
         val flags = info.innerAccess ?: return javapHeader

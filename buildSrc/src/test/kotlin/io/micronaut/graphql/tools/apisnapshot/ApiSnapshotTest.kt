@@ -100,6 +100,17 @@ class ApiSnapshotTest {
     }
 
     @Test
+    fun `the permitted subclasses of a sealed type are part of the listing`() {
+        val open = mapOf("demo/Node.java" to "package demo; public interface Node {}", "demo/Leaf.java" to "package demo; public final class Leaf implements Node {}")
+        val sealed = mapOf(
+            "demo/Node.java" to "package demo; public sealed interface Node permits Leaf {}",
+            "demo/Leaf.java" to "package demo; public final class Leaf implements Node {}",
+        )
+        val message = failure(listing(sealed, "sealed"), listing(open, "open"))!!
+        assertTrue(message.contains("+ public interface demo.Node permits demo.Leaf"), message)
+    }
+
+    @Test
     fun `a build whose signatures did not change passes`() {
         val snapshot = listing(stubs, "before")
         val changedBody = stubs + ("demo/Shape.java" to stubs.getValue("demo/Shape.java").replace("return \"shape\";", "return \"other\";"))

@@ -21,7 +21,8 @@ internal class MemberInfo(val access: Int, val name: String, val descriptor: Str
 /**
  * The few facts of a class file that javap does not give: the binary name, whether the class or one of its members carries
  * `@Internal`, and the access flags of a nested class (which only the InnerClasses attribute holds). Fields come first in
- * [members], then methods, in class-file order, which is the order javap prints them in.
+ * [members], then methods, in class-file order, which is the order javap prints them in. [permitted] is the list of a sealed
+ * type's permitted subclasses, which javap does not print.
  */
 internal class ClassFileInfo(
     val file: File,
@@ -30,6 +31,7 @@ internal class ClassFileInfo(
     val internal: Boolean,
     val innerAccess: Int?,
     val members: List<MemberInfo>,
+    val permitted: List<String>,
 ) {
     val simpleFileName: String get() = name.substringAfterLast('/')
     val packageSegments: List<String> get() = name.split('/').dropLast(1)
@@ -93,8 +95,12 @@ internal class ClassFileInfo(
 
             val fields = readMembers()
             val methods = readMembers()
+            var permitted = emptyList<String>()
             val internal = readAttributes { attribute, _ ->
-                if (attribute == "InnerClasses") {
+                if (attribute == "PermittedSubclasses") {
+                    permitted = List(input.readUnsignedShort()) { utf8.getValue(classNames.getValue(input.readUnsignedShort())) }
+                    true
+                } else if (attribute == "InnerClasses") {
                     repeat(input.readUnsignedShort()) {
                         val inner = input.readUnsignedShort()
                         input.readUnsignedShort()
@@ -107,7 +113,7 @@ internal class ClassFileInfo(
                     false
                 }
             }
-            return ClassFileInfo(file, name, access, internal, innerAccess, fields + methods)
+            return ClassFileInfo(file, name, access, internal, innerAccess, fields + methods, permitted)
         }
 
         /** Reads an annotations attribute whole and tells whether one of its annotations is `@Internal`. */
