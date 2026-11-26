@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.corpus
 
+import io.micronaut.graphql.tools.visitor.ProcessorCodeScenarios
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -25,7 +26,8 @@ import java.nio.file.Path
 /**
  * The example messages of the error reference (the guide page {@code exceptions.adoc}). A block that follows a
  * {@code // corpus: <case>} line must be the message that the startup of that Java case reports, so that no message of
- * the page is written from memory.
+ * the page is written from memory. A block that follows a {@code // compile: <scenario>} line must be the message of the
+ * compile error of that scenario of {@link ProcessorCodeScenarios}, for the codes that only the annotation processor raises. The directory of the case is written as {@code <case directory>}.
  */
 class ErrorReferenceSpec extends Specification {
 
@@ -55,7 +57,8 @@ class ErrorReferenceSpec extends Specification {
 
         then:
         compiled.success
-        ((String) result.get('message')).readLines()*.stripTrailing().join('\n') == expected
+        ((String) result.get('message')).replace(corpusCase.dir.toAbsolutePath().toString(), '<case directory>')
+                .readLines()*.stripTrailing().join('\n') == expected
 
         cleanup:
         work.toFile().deleteDir()
@@ -64,14 +67,35 @@ class ErrorReferenceSpec extends Specification {
         [caseName, expected] << examples.collect { [it.key, it.value] }
     }
 
+    @Shared
+    Map<String, String> compileExamples = readExamples('// compile: ')
+
+    @Unroll
+    void "the example of the compile-time scenario #scenario is the message of the compile error"() {
+        expect:
+        ProcessorCodeScenarios.message(scenario) == expected
+
+        where:
+        [scenario, expected] << readExamples('// compile: ').collect { [it.key, it.value] }
+    }
+
+    void "the page has an example for each scenario of the compile-time harness"() {
+        expect:
+        compileExamples.keySet() == ProcessorCodeScenarios.CODES.keySet()
+    }
+
     private static Map<String, String> readExamples() {
+        return readExamples('// corpus: ')
+    }
+
+    private static Map<String, String> readExamples(String marker) {
         List<String> lines = Files.readAllLines(PAGE)
         Map<String, String> found = new LinkedHashMap<>()
         for (int i = 0; i < lines.size(); i++) {
-            if (lines[i].startsWith('// corpus: ')) {
+            if (lines[i].startsWith(marker)) {
                 int open = (i + 1..<lines.size()).find { lines[it] == '----' }
                 int close = (open + 1..<lines.size()).find { lines[it] == '----' }
-                found.put(lines[i].substring('// corpus: '.length()).trim(), lines.subList(open + 1, close)*.stripTrailing().join('\n'))
+                found.put(lines[i].substring(marker.length()).trim(), lines.subList(open + 1, close)*.stripTrailing().join('\n'))
             }
         }
         return found

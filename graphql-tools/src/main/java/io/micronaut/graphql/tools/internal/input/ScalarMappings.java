@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.internal.input;
 
 import graphql.language.ScalarTypeDefinition;
 import graphql.schema.GraphQLScalarType;
-import io.micronaut.context.ApplicationContext;
+import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping;
 import io.micronaut.graphql.tools.mapping.MappingContext;
@@ -42,13 +42,13 @@ public final class ScalarMappings {
 
     private final Map<String, GraphQLScalarMapping> byName;
     private final BindingManifestRecorder manifestRecorder;
-    private final ApplicationContext applicationContext;
+    private final BeanContext beanContext;
 
-  public   ScalarMappings(Collection<GraphQLScalarMapping> mappings, BindingManifestRecorder manifestRecorder,
-                   ApplicationContext applicationContext) {
+    public ScalarMappings(Collection<GraphQLScalarMapping> mappings, BindingManifestRecorder manifestRecorder,
+                          BeanContext beanContext) {
         this.byName = collect(mappings);
         this.manifestRecorder = manifestRecorder;
-        this.applicationContext = applicationContext;
+        this.beanContext = beanContext;
     }
 
     public Collection<GraphQLScalarMapping> all() {
@@ -87,7 +87,7 @@ public final class ScalarMappings {
 
     private boolean bareScalarTypeExists(String scalarName) {
         try {
-            return applicationContext.getBeansOfType(GraphQLScalarType.class).stream()
+            return beanContext.getBeansOfType(GraphQLScalarType.class).stream()
                     .anyMatch(it -> it.getName().equals(scalarName));
         } catch (RuntimeException e) {
             // The hint is best effort: a scalar bean that cannot be created must not hide the missing mapping.

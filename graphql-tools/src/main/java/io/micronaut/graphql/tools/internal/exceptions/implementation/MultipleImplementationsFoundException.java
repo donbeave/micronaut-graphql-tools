@@ -45,7 +45,7 @@ public final class MultipleImplementationsFoundException extends AbstractMapping
 
         this.implementationClasses = implementationClasses.stream()
                 .sorted(Comparator.comparing(Class::getName))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<Class<?>> getImplementationClasses() {

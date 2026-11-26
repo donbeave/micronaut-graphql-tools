@@ -19,7 +19,7 @@ import io.micronaut.context.ApplicationContext
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.internal.resolver.FlowAdapter
-import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
+import io.micronaut.graphql.tools.internal.wiring.FieldFetchers
 import io.micronaut.inject.ExecutableMethod
 import spock.lang.Specification
 
@@ -51,7 +51,7 @@ class FlowSupportSpec extends Specification {
         }
 
         when:
-        GraphQLRuntimeWiringGenerator.flowAdapter(context, method, 'Subscription.ticks')
+        FieldFetchers.flowAdapter(context, method, 'Subscription.ticks')
 
         then:
         SchemaBindingException e = thrown()

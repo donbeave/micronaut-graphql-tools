@@ -53,7 +53,8 @@ Each package has a `package-info.java`. The [API map](../CONTRIBUTING.md#api-map
 | `io.micronaut.graphql.tools.internal.discovery` | Internal | Schema discovery: reads the schema files into the type registry |
 | `io.micronaut.graphql.tools.internal.input` | Internal | The conversion of argument and input values, and the input type binder |
 | `io.micronaut.graphql.tools.internal.resolver` | Internal | The data fetchers and the type resolvers, and the planning of resolver arguments |
-| `io.micronaut.graphql.tools.internal.wiring` | Internal | The runtime wiring generator, the wiring factory, the interface field binder and the directive wirings |
+| `io.micronaut.graphql.tools.internal.wiring` | Internal | The runtime wiring generator, the wiring factory, the binders of root fields, object fields and returned types, and the directive wirings |
+| `io.micronaut.graphql.tools.internal.wiring.interfaces` | Internal | The binding of interface and union types and of the fields an object type shares with its interfaces |
 | `io.micronaut.graphql.tools.internal.checks` | Internal | The startup checks and validators |
 | `io.micronaut.graphql.tools.internal.manifest` | Internal | Recording and writing the binding manifest |
 | `io.micronaut.graphql.tools.internal.observer` | Internal | The observer SPI of the request hooks (`RequestObserver`) and the one `Instrumentation` bean that calls the observers; the Micrometer and OpenTelemetry modules contribute the observers |

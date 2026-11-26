@@ -63,10 +63,10 @@ public final class SchemaCoordinateValidator {
     private final GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry;
     private final CheckPolicy checkPolicy;
 
-  public   SchemaCoordinateValidator(TypeDefinitionRegistry typeDefinitionRegistry,
-                              GraphQLResolversRegistry graphQLResolversRegistry,
-                              GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry,
-                              CheckPolicy checkPolicy) {
+    public SchemaCoordinateValidator(TypeDefinitionRegistry typeDefinitionRegistry,
+                                     GraphQLResolversRegistry graphQLResolversRegistry,
+                                     GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry,
+                                     CheckPolicy checkPolicy) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
         this.graphQLResolversRegistry = graphQLResolversRegistry;
         this.graphQLBeanIntrospectionRegistry = graphQLBeanIntrospectionRegistry;

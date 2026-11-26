@@ -38,6 +38,7 @@ public final class GraphQLRootResolverMethodProcessor implements ExecutableMetho
         this.graphQLResolversRegistry = graphQLResolversRegistry;
     }
 
+    @Override
     public void process(BeanDefinition<?> beanDefinition, ExecutableMethod<?, ?> method) {
         graphQLResolversRegistry.registerRootResolverExecutableMethod(beanDefinition, (ExecutableMethod<Object, ?>) method);
     }

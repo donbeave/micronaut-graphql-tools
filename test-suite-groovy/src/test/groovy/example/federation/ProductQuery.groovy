@@ -19,6 +19,7 @@ import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
+import io.micronaut.security.annotation.Secured
 import jakarta.inject.Singleton
 
 @CompileStatic
@@ -28,6 +29,7 @@ import jakarta.inject.Singleton
 class ProductQuery {
 
     @Nullable
+    @Secured('ROLE_ADMIN')
     ProductEntity product(String id) {
         return new ProductEntity(id: id, name: "Product ${id}".toString())
     }

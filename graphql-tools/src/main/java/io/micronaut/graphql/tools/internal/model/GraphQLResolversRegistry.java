@@ -49,7 +49,6 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -60,7 +59,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static io.micronaut.graphql.tools.internal.MicronautUtils.getExecutableMethodFullName;
 
@@ -560,9 +558,9 @@ public final class GraphQLResolversRegistry {
         }
 
         List<Class<?>> resolvers = rootResolvers.keySet().stream()
-                .map(BeanDefinition::getBeanType)
+                .<Class<?>>map(BeanDefinition::getBeanType)
                 .sorted(Comparator.comparing((Function<Class<?>, String>) Class::getName))
-                .collect(Collectors.toList());
+                .toList();
 
         throw MethodNotFoundException.forRoot(methodName, mappingContext, resolvers,
                 operationTypeName + "." + methodName, unannotatedMethods(methodName));
@@ -592,7 +590,7 @@ public final class GraphQLResolversRegistry {
     public List<BeanDefinitionAndMethod> findTypeExecutableMethods(Class<?> beanType, String typeName, String methodName) {
         List<BeanDefinitionAndMethod> result = new ArrayList<>();
 
-        for (BeanDefinitionAndMethods item : typeResolvers.getOrDefault(beanType, Collections.emptyList())) {
+        for (BeanDefinitionAndMethods item : typeResolvers.getOrDefault(beanType, List.of())) {
             result.addAll(findMethods(item, methodName, Set.of(typeName + "." + methodName), null));
         }
 
@@ -604,9 +602,9 @@ public final class GraphQLResolversRegistry {
 
         List<Class<?>> resolvers = items != null
                 ? items.stream()
-                .map(it -> it.getBeanDefinition().getBeanType())
-                .collect(Collectors.toList())
-                : Collections.emptyList();
+                .<Class<?>>map(it -> it.getBeanDefinition().getBeanType())
+                .toList()
+                : List.of();
 
         return MethodNotFoundException.forType(methodName, mappingContext, beanType, resolvers);
     }

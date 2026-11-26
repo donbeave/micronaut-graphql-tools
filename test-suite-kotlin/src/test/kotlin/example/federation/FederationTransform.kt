@@ -15,9 +15,16 @@
  */
 package example.federation
 
+import graphql.ErrorClassification
+import graphql.ErrorType
+import graphql.GraphQLContext
+import graphql.GraphQLError
 import graphql.Scalars.GraphQLString
+import graphql.execution.DataFetcherResult
+import graphql.language.SourceLocation
 import graphql.scalars.ExtendedScalars
 import graphql.schema.DataFetcher
+import graphql.schema.DataFetchingEnvironment
 import graphql.schema.FieldCoordinates
 import graphql.schema.GraphQLArgument
 import graphql.schema.GraphQLFieldDefinition
@@ -37,11 +44,38 @@ object FederationTransform {
 
     private const val MAX_REPRESENTATIONS = 100
 
+    const val FORBIDDEN_CODE = "FORBIDDEN"
+
+    /**
+     * An entity type: how to resolve a representation, and who may. Both are required, so that no entity is served without a
+     * decision about its callers.
+     */
+    class Entity(
+        val resolver: (Map<String, Any?>) -> Any,
+        val access: (GraphQLContext) -> Boolean
+    )
+
+    // GraphqlErrorBuilder is not used: its self-referencing generics overflow the Kotlin compiler on graphql-java 26.2.
+    private class ForbiddenError(private val environment: DataFetchingEnvironment, private val text: String) : GraphQLError {
+        override fun getMessage(): String = text
+
+        override fun getLocations(): List<SourceLocation>? = listOfNotNull(environment.field.sourceLocation)
+
+        override fun getPath(): List<Any> = environment.executionStepInfo.path.toList()
+
+        override fun getErrorType(): ErrorClassification = ErrorType.DataFetchingException
+
+        override fun getExtensions(): Map<String, Any> = mapOf("code" to FORBIDDEN_CODE)
+    }
+
+    private fun forbidden(environment: DataFetchingEnvironment, what: String): Any =
+        DataFetcherResult.newResult<Any>().error(ForbiddenError(environment, "Access to $what is forbidden")).build()
+
     private fun typeName(type: Class<*>): String =
         BeanIntrospector.SHARED.findIntrospection(type).flatMap { it.stringValue(GraphQLType::class.java, "name") }
             .filter { it.isNotEmpty() }.orElse(type.simpleName)
 
-    fun apply(schema: GraphQLSchema, entities: Map<String, (Map<String, Any?>) -> Any>): GraphQLSchema {
+    fun apply(schema: GraphQLSchema, entities: Map<String, Entity>, serviceAccess: (GraphQLContext) -> Boolean): GraphQLSchema {
         val sdl = SchemaPrinter(SchemaPrinter.Options.defaultOptions()).print(schema)
         val any = GraphQLScalarType.newScalar(ExtendedScalars.Json).name("_Any").build()
         val entity = GraphQLUnionType.newUnionType().name("_Entity")
@@ -68,12 +102,19 @@ object FederationTransform {
         val entitiesFetcher = DataFetcher<Any> { environment ->
             val representations = environment.getArgument<List<Any?>>("representations")!!
             require(representations.size <= MAX_REPRESENTATIONS) { "At most $MAX_REPRESENTATIONS representations" }
-            representations.map { representation ->
+            val targets = ArrayList<Entity>()
+            for (representation in representations) {
                 val typeName = (representation as? Map<*, *>)?.get("__typename") as? String
                     ?: throw IllegalArgumentException("A representation needs a __typename")
-                val resolver = entities[typeName] ?: throw IllegalArgumentException("No entity type $typeName")
+                val target = entities[typeName] ?: throw IllegalArgumentException("No entity type $typeName")
+                if (!target.access(environment.graphQlContext)) {
+                    return@DataFetcher forbidden(environment, "the entity $typeName")
+                }
+                targets.add(target)
+            }
+            targets.mapIndexed { index, target ->
                 @Suppress("UNCHECKED_CAST")
-                resolver(representation as Map<String, Any?>)
+                target.resolver(representations[index] as Map<String, Any?>)
             }
         }
         val typeResolver = TypeResolver { environment ->
@@ -83,7 +124,9 @@ object FederationTransform {
         }
         val registry = schema.codeRegistry.transform { builder ->
             builder
-                .dataFetcher(FieldCoordinates.coordinates(query.name, "_service"), DataFetcher<Any> { mapOf("sdl" to sdl) })
+                .dataFetcher(FieldCoordinates.coordinates(query.name, "_service"), DataFetcher<Any> { environment ->
+                    if (serviceAccess(environment.graphQlContext)) mapOf("sdl" to sdl) else forbidden(environment, "_service")
+                })
                 .dataFetcher(FieldCoordinates.coordinates(query.name, "_entities"), entitiesFetcher)
                 .typeResolver("_Entity", typeResolver)
         }

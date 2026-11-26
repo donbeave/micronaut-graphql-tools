@@ -18,6 +18,7 @@ package example.federation;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver;
+import io.micronaut.security.annotation.Secured;
 import jakarta.inject.Singleton;
 
 @Requires(env = FederationFixtures.FEDERATION)
@@ -26,6 +27,7 @@ import jakarta.inject.Singleton;
 public class ProductQuery {
 
     @Nullable
+    @Secured("ROLE_ADMIN")
     public ProductEntity product(String id) {
         return new ProductEntity(id, "Product " + id);
     }
