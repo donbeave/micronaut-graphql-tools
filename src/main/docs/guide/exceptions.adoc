@@ -622,31 +622,6 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 
 *See.* <<schema,Schema>>.
 
-[[example-binding-failures]]
-=== `binding-failures`
-
-*Cause.* Several fields or types of the schema cannot be bound. The message lists each failure with its own code.
-
-// corpus: failure/three-binding-failures
-[source,text]
-----
-[binding-failures] The schema cannot be bound: 3 errors.
-  1) [field-not-bound] The property or method `isbn` not found in example.Book's type.
-     GraphQL coordinate: Book.isbn (schema.graphqls, line 13, column 3)
-  2) [incorrect-class-mapping] The field is mapped to the incorrect class.
-     GraphQL coordinate: Query.count (schema.graphqls, line 7, column 3)
-     Mapped class: example.Query
-     Mapped method: count()
-     Provided class: java.lang.String
-     Supported classes: int, java.lang.Integer
-  3) [field-not-bound] The method `missing` not found in any root resolvers: [example.Query].
-     GraphQL coordinate: Query.missing (schema.graphqls, line 8, column 3)
-----
-
-*Fix.* Fix each listed failure; the code in the brackets of each item says which entry of this page applies. `SchemaBindingException#getFailures()` returns the failures.
-
-*See.* <<startupErrors,Startup Errors>>.
-
 [[example-strict-findings]]
 === `strict-findings`
 
