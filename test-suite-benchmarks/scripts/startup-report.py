@@ -194,7 +194,7 @@ def main():
     parser.add_argument("--from", dest="source", help="report this JMH JSON file instead of running the benchmarks")
     parser.add_argument("--previous", help="JMH JSON of an earlier run: print the change per case")
     parser.add_argument("--baseline", help="JMH JSON of another run: print the change per case")
-    parser.add_argument("--reference-root", type=Path, help="checkout of the reference commit: build it too, run both builds in turn and "
+    parser.add_argument("--reference-root", type=lambda value: Path(value).resolve(), help="checkout of the reference commit: build it too, run both builds in turn and "
                                                           "print the change against it")
     parser.add_argument("--reference-json", help="keep the JMH JSON of the reference build in this file (default: next to --json)")
     parser.add_argument("--case", action="append", metavar="SHAPE:FIELDS",
