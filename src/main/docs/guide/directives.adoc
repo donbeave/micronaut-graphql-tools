@@ -29,6 +29,29 @@ The factory registers `upper` with `SchemaDirective.named`, `tagged` with `Schem
 
 A directive has either one `named` bean or any number of `everyElement` beans. A `named` bean and an `everyElement` bean that lists the same name would apply the directive twice, so the startup fails with `[duplicate-directive-wiring]`, which names the directive and both wirings. Remove the `named` bean, or take the name out of the `everyElement` wiring.
 
+== graphql-java-extended-validation
+
+graphql-java-extended-validation plugs in as a wiring for every element that names its constraint directives, and a `GraphQLTypeDefinitionRegistryCustomizer` can add their declarations unless the SDL declares them:
+
+[source,java]
+----
+@Bean
+@Singleton
+public SchemaDirective validation() {
+    DirectiveConstraints constraints = DirectiveConstraints.newDirectiveConstraints().build();
+    return SchemaDirective.everyElement(constraints.getConstraints().keySet(),
+            new ValidationSchemaWiring(ValidationRules.newValidationRules().build()));
+}
+
+@Bean
+@Singleton
+public GraphQLTypeDefinitionRegistryCustomizer validationDirectives() {
+    return registry -> registry.merge(DirectiveConstraints.newDirectiveConstraints().build().getDirectivesDeclaration());
+}
+----
+
+Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 26.2. Version 21.0 calls a `GraphQLCodeRegistry` method that graphql-java 22.4 and later removed. The library's tests run all three pairings.
+
 == The order of wirings
 
 * The `named` wirings run before the `everyElement` wirings, so a `named` wiring is the innermost one around a data fetcher.
