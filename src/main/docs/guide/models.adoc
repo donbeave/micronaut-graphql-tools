@@ -27,6 +27,12 @@ The rules:
 * The startup does no scan for models. It asks for the introspection of the classes the schema binds, as it does for a class you annotated yourself, so listing a package costs compile time and nothing at runtime. A change to a model class recompiles the module that lists it, and only that module.
 * On a native image the generated introspections are the only metadata that these classes need: there is nothing to add to `reflect-config.json`.
 
+== Records, sealed types and fluent accessors
+
+A record is a model like any other class: an `@Introspected` or `@GraphQLType` record is read through its component accessors, nested records and lists of records included, and a `@GraphQLInput` record is built through its canonical constructor (see <<inputs,Inputs>>, which also covers an `ArgumentValue` component).
+
+A union or an interface whose Java type is `sealed` takes its members from the permitted subclasses, and a member that the dictionary maps to a type resolves every record or class assignable to it. A record that implements an interface, or a `non-sealed` interface that a record and a class both implement, has to follow one rule: the properties of an interface are read through the interface's own introspection, so an interface with fluent accessors (`name()` instead of `getName()`) is annotated with `@AccessorsStyle(readPrefixes = "")`. Without it the startup fails with `[field-not-bound]` for the field that the fluent accessor would back, and the message names the interface.
+
 == When a class is not introspected
 
 The startup fails with `[class-not-introspected]` when a class that backs an object type has no introspection. The message names the class, the coordinate of the field that reaches it and the member that returns it, so for a root field that returns a class nothing lists:
