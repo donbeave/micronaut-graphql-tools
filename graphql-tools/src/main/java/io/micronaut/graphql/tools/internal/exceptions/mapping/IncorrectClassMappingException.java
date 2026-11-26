@@ -20,7 +20,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.mapping.MappingContext;
-import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable;
+import io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -206,7 +206,7 @@ public final class IncorrectClassMappingException extends AbstractMappingExcepti
         if (clazz.isEnum()) {
             return "an enum";
         }
-        if (ScalarTable.isJavaBuiltInClass(clazz)) {
+        if (ScalarCatalog.isJavaBuiltInClass(clazz)) {
             return "a built-in class";
         }
         return "a custom class";

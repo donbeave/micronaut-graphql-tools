@@ -31,7 +31,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isGraphQlBuiltInType;
+import static io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog.isGraphQlBuiltInType;
 
 /**
  * The custom scalar mappings of the application by scalar name, checked for duplicates and for the names of the built-in

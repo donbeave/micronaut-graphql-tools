@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.binding
 
 import graphql.schema.idl.SchemaParser
 import io.micronaut.graphql.tools.binding.internal.model.ResolverMarkers
-import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable
+import io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaCoordinates.ResolverKind
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel
@@ -102,19 +102,19 @@ enum Genre {
 
     void "the scalar table lists the Java classes of each built-in scalar"() {
         expect:
-        ScalarTable.isGraphQlBuiltInType('Long')
-        !ScalarTable.isGraphQlBuiltInType('DateTime')
-        ScalarTable.isJavaBuiltInClass(int)
-        !ScalarTable.isJavaBuiltInClass(Object)
+        ScalarCatalog.isGraphQlBuiltInType('Long')
+        !ScalarCatalog.isGraphQlBuiltInType('DateTime')
+        ScalarCatalog.isJavaBuiltInClass(int)
+        !ScalarCatalog.isJavaBuiltInClass(Object)
     }
 
     void "a String field accepts a GString and an ID field does not"() {
         expect:
-        ScalarTable.acceptsReturnClass('String', GString)
-        ScalarTable.acceptsReturnClass('String', String)
-        !ScalarTable.acceptsReturnClass('ID', GString)
-        !ScalarTable.acceptsReturnClass('Int', GString)
-        !ScalarTable.acceptsReturnClass('String', CharSequence)
+        ScalarCatalog.acceptsReturnClass('String', GString)
+        ScalarCatalog.acceptsReturnClass('String', String)
+        !ScalarCatalog.acceptsReturnClass('ID', GString)
+        !ScalarCatalog.acceptsReturnClass('Int', GString)
+        !ScalarCatalog.acceptsReturnClass('String', CharSequence)
     }
 
     void "a bean that mixes root and type contracts is checked per method on the side of its contract"() {
