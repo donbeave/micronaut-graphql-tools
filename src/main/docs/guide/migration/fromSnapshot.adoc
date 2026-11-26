@@ -423,7 +423,7 @@ public class FakePingQuery extends PingQuery {
 
 === BC-16: strict mode is on by default
 
-`micronaut.graphql.tools.strict` defaults to `true`. Strict mode fails the startup on bindings that work but are probably mistakes: stale resolver methods, Java enum constants without a schema value, dictionary entries for types that are not bound, interface-mapped types without their own introspection, unused enum, input and scalar types, and the other findings that the strict mode checks in the README list. Most findings are also a `!` line of the binding manifest. Some have no manifest line, for example interface-mapped types without their own introspection, and primitives for nullable built-in scalars; the startup exception is their only report.
+`micronaut.graphql.tools.strict` defaults to `true`. Strict mode fails the startup on bindings that work but are probably mistakes: stale resolver methods, Java enum constants without a schema value, dictionary entries for types that are not bound, interface-mapped types without their own introspection, unused enum, input and scalar types, and the other findings that the strict mode checks (see <<strictMode,Strict Mode>>). Most findings are also a `!` line of the binding manifest. Some have no manifest line, for example interface-mapped types without their own introspection, and primitives for nullable built-in scalars; the startup exception is their only report.
 
 Fix: fix each finding. A member that binds no field on purpose can carry `@GraphQLIgnore`. Or set `strict: false`.
 
@@ -768,7 +768,7 @@ The startup used to read `@GraphQLTypeResolver` from the class hierarchy of each
 
 What breaks: a build that does not run the processor, with a bean that is a type resolver only through an inherited annotation, fails the startup with `[type-resolver-contracts-not-found]`. Before, this worked on the JVM. The message names the processor and where to add it.
 
-Fix: put `micronaut-graphql-tools-processor` on the path of the compiler as the compile-time checks section of the README shows for each tool (`annotationProcessor`, `ksp` or `kapt`, `compileOnly`), or annotate the bean class directly. A bean annotated directly binds without the processor.
+Fix: put `micronaut-graphql-tools-processor` on the path of the compiler as the Set Up the Build guide page (compileTime/setup.adoc) shows for each tool (`annotationProcessor`, `ksp` or `kapt`, `compileOnly`), or annotate the bean class directly. A bean annotated directly binds without the processor.
 
 Status: breaking by design; no opt-out.
 

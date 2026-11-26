@@ -47,7 +47,8 @@ public final class TypeResolverContractsNotFoundException extends SchemaBindingE
                 : " only through an inherited annotation, but the build did not record its contracts. ")
                 + "Add micronaut-graphql-tools-processor to the path that your compiler reads "
                 + "Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for "
-                + "Groovy; the compile-time checks section of the README shows the setting of each tool, and "
+                + "Groovy; the Set Up the Build guide page "
+                + "(src/main/docs/guide/compileTime/setup.adoc) shows the setting of each tool, and "
                 + "micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the "
                 + "contracts)" + (annotatedDirectly ? "." : ", or annotate the bean class directly."));
 
@@ -69,7 +70,8 @@ public final class TypeResolverContractsNotFoundException extends SchemaBindingE
                 + "root resolver marker interface (QueryResolver, MutationResolver or SubscriptionResolver), but the build did "
                 + "not record its operation. Add micronaut-graphql-tools-processor to the path that your compiler reads "
                 + "Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for "
-                + "Groovy; the compile-time checks section of the README shows the setting of each tool, and "
+                + "Groovy; the Set Up the Build guide page "
+                + "(src/main/docs/guide/compileTime/setup.adoc) shows the setting of each tool, and "
                 + "micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the "
                 + "operation).");
     }
@@ -82,8 +84,9 @@ public final class TypeResolverContractsNotFoundException extends SchemaBindingE
         return new TypeResolverContractsNotFoundException(beanType, "The bean " + beanType.getName() + " implements the "
                 + "marker interface TypeResolver<T>, but the build did not record its source type. Add "
                 + "micronaut-graphql-tools-processor to the path that your compiler reads Micronaut processors from "
-                + "(annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for Groovy; the compile-time checks "
-                + "section of the README shows the setting of each tool, and micronaut.graphql.tools.processor.checks=false "
+                + "(annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for Groovy; the compile-time checks guide page "
+                + "(src/main/docs/guide/compileTime/setup.adoc) shows the setting of each tool, and "
+                + "micronaut.graphql.tools.processor.checks=false "
                 + "compiles without the checks and still records the source type).");
     }
 

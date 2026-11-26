@@ -29,6 +29,29 @@ The factory registers `upper` with `SchemaDirective.named`, `tagged` with `Schem
 
 A directive has either one `named` bean or any number of `everyElement` beans. A `named` bean and an `everyElement` bean that lists the same name would apply the directive twice, so the startup fails with `[duplicate-directive-wiring]`, which names the directive and both wirings. Remove the `named` bean, or take the name out of the `everyElement` wiring.
 
+== graphql-java-extended-validation
+
+graphql-java-extended-validation plugs in as a wiring for every element that names its constraint directives, and a `GraphQLTypeDefinitionRegistryCustomizer` can add their declarations unless the SDL declares them:
+
+[source,java]
+----
+@Bean
+@Singleton
+public SchemaDirective validation() {
+    DirectiveConstraints constraints = DirectiveConstraints.newDirectiveConstraints().build();
+    return SchemaDirective.everyElement(constraints.getConstraints().keySet(),
+            new ValidationSchemaWiring(ValidationRules.newValidationRules().build()));
+}
+
+@Bean
+@Singleton
+public GraphQLTypeDefinitionRegistryCustomizer validationDirectives() {
+    return registry -> registry.merge(DirectiveConstraints.newDirectiveConstraints().build().getDirectivesDeclaration());
+}
+----
+
+Use extended-validation 21.0 with graphql-java 21.5, 22.0 with 22.4 and 24.0 with 26.2. Version 21.0 calls a `GraphQLCodeRegistry` method that graphql-java 22.4 and later removed. The library's tests run all three pairings.
+
 == The order of wirings
 
 * The `named` wirings run before the `everyElement` wirings, so a `named` wiring is the innermost one around a data fetcher.
@@ -39,12 +62,13 @@ To wrap the data fetchers of selected fields, see the `GraphQLFieldFetcherDecora
 
 == A wiring needs a registration
 
-A `SchemaDirectiveWiring` bean is not applied on its own. When no `SchemaDirective` bean wraps it and no `GraphQLRuntimeWiringCustomizer` registers it, the startup fails with `[unwrapped-directive-wiring]`, which names the bean. The check runs after the customizers. To keep a wiring as a bean, inject it into the factory method of its `SchemaDirective`.
+A `SchemaDirectiveWiring` bean is not applied on its own. When no `SchemaDirective` bean wraps it and no `GraphQLRuntimeWiringCustomizer` registers it, the startup fails with `[unwrapped-directive-wiring]`, which names the bean. The check runs after the customizers. To keep a wiring as a bean, inject it into the factory method of its `SchemaDirective`. The check matches a singleton by instance and a `@Prototype` bean by its class, so an unwrapped `@Prototype` bean goes undetected when some wired instance of any bean has the same class.
 
 == Applied directives and wirings
 
 The check `unwired-directive` fails the startup when the schema applies a directive that nothing wires, and lists each such directive with the places where the schema applies it. A directive counts as wired when:
 
+* it is one that GraphQL specifies (`@deprecated`, `@specifiedBy`, `@oneOf`, `@include`, `@skip`), which needs no wiring and is rejected in `allow.inert-directives` with `[invalid-inert-directives]`,
 * a `SchemaDirective` bean names it,
 * a `GraphQLRuntimeWiringCustomizer` registers a wiring for it with `RuntimeWiring.Builder#directive`, or
 * `micronaut.graphql.tools.resolver-directives` lists it (see <<binding,Binding>>).

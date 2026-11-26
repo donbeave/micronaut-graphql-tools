@@ -68,7 +68,7 @@ include::{includedir}/configurationProperties/io.micronaut.graphql.tools.config.
 
 == Protection
 
-`micronaut.graphql.tools.protection.document-cache-size` (default `1000`, `0` for none) bounds the cache of parsed documents; `protection.max-depth` and `protection.max-complexity` (default `0`, no limit) reject expensive operations; `protection.introspection` (default `true`) switches `+__schema+` and `+__type+` off; `micronaut.graphql.tools.execution.timeout` (default none) cancels a slow operation. See <<protection,Protection>>.
+`micronaut.graphql.tools.protection.document-cache-size` (default `1000`, `0` for none) bounds the cache of parsed documents; `micronaut.graphql.tools.protection.max-depth` and `micronaut.graphql.tools.protection.max-complexity` (default `0`, no limit) reject expensive operations; `micronaut.graphql.tools.protection.introspection` (default `true`) switches `+__schema+` and `+__type+` off; `micronaut.graphql.tools.execution.timeout` (default none) cancels a slow operation. See <<protection,Protection>>.
 
 [[renaming]]
 == Binding a field to a differently named member

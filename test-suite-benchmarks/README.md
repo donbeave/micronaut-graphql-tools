@@ -167,32 +167,22 @@ runs, and retained heap is unchanged. That is the cost of the lookup when it is 
 No resolver bean is bound to `Shared` in this schema, so the run measures the lookup that the unreturned-interface path adds, not the binding of a resolver method.
 A schema whose interfaces are all returned by a field never takes this path (the `returned` build).
 
-## The recorded start-up baseline
+## The start-up reference
 
-`startup-baseline.json` is the JMH JSON of `scripts/startup-report.py`, the format that the `startup` job of the `Performance nightly` workflow reads
-(`--previous` takes it too). The workflow passes it as `--baseline`, so its report prints the change against it for every case.
+The `startup` job of the `Performance nightly` workflow compares the start-up of the checkout with the commit named in `startup-reference-commit`
+(`e0e820c52fe1a0e4d40f2d109dd7926b09d52ae3`), built and run in the same job. A binding time recorded on one machine is not
+a reference for another: a time stored from one hosted runner was 50 to 70 percent below the time of the first nightly run on another runner, in every case, while the retained heap
+stayed within 1 percent, and the same two commits measured side by side on one machine (Oracle GraalVM 25.0.5.1, Apple M1 Max, 6 cold JVMs per build in turn, rings with 100 and 1,600 fields)
+differed by at most 0.8 percent. So `scripts/startup-report.py --reference-root` builds the benchmark jar of both checkouts for every case and starts one cold JVM
+of each per round, in a rotating order. Both builds run on the same machine seconds apart, and the report prints the change between the two medians of the run.
 
-- Baseline commit: `e0e820c52fe1a0e4d40f2d109dd7926b09d52ae3` of the default branch, which contains `BindingBenchmark`, `RetainedHeapBenchmark` and the report script. The run used the start-up benchmark workflow (now the `startup` job of `Performance nightly`) on a branch that adds the `--baseline` option and this file to that commit.
-- Method: the workflow's own command, `startup-report.py --forks 10`: one jar per case, ten cold JVMs per case, single shot, no warm-up, graphql-java default leg.
-- Conditions: the GitHub-hosted `ubuntu-latest` runner that the nightly run uses, Temurin 25.0.5+8, started by hand (`workflow_dispatch`). The runner is shared, so its load is not recorded. The spread of the forks is in the table and in the JSON (`rawData`).
-
-| Case | Median binding time | Minimum to maximum | Median retained heap |
-| --- | --- | --- | --- |
-| rings, 100 fields, manifest off | 897.1 ms | 831.0 to 959.0 | 6.19 MB |
-| rings, 100 fields, manifest on | 883.7 ms | 827.8 to 909.4 | 6.23 MB |
-| rings, 1,600 fields, manifest off | 1156.4 ms | 1130.2 to 1240.5 | 8.10 MB |
-| rings, 1,600 fields, manifest on | 1166.4 ms | 1123.5 to 1227.3 | 8.42 MB |
-| rings, 3,000 fields, manifest off | 1321.4 ms | 1258.0 to 1377.8 | 9.94 MB |
-| rings, 3,000 fields, manifest on | 1337.7 ms | 1294.3 to 1379.6 | 10.48 MB |
-| rings, 10,000 fields, manifest off | 2282.9 ms | 2089.8 to 2375.0 | 19.31 MB |
-| rings, 10,000 fields, manifest on | 2259.5 ms | 2140.9 to 2398.5 | 21.02 MB |
-| rings, 20,000 fields, manifest off | 3164.7 ms | 2961.9 to 3334.0 | 32.76 MB |
-| rings, 20,000 fields, manifest on | 3346.2 ms | 3193.6 to 3576.0 | 36.05 MB |
-| interfaces, 3,000 fields, manifest off | 1193.0 ms | 1140.5 to 1231.0 | 8.72 MB |
-| interfaces, 3,000 fields, manifest on | 1247.5 ms | 1158.4 to 1397.5 | 9.33 MB |
-| interfaces, 20,000 fields, manifest off | 2613.3 ms | 2489.3 to 2738.2 | 24.02 MB |
-| interfaces, 20,000 fields, manifest on | 2691.9 ms | 2483.3 to 2882.6 | 27.86 MB |
-
-Hosted runners are shared, so read the retained heap first and treat a binding-time change inside the spread of the forks as noise.
+- The reference jar is built from the reference commit's own sources, with the same command and the same JDK as the current one. The two commits' start-up benchmarks
+  differ by the accessor names of `BindingCode` only.
+- The workflow archives both JSON files (`startup-benchmark.json`, `startup-reference.json`) as the `startup-nightly-<ref>` artifact. The change against the last successful run
+  is still printed, but it compares two machines: read the change against the reference first.
+- To move the reference, write another full commit hash into `startup-reference-commit`. The commit must contain `BindingBenchmark`, `RetainedHeapBenchmark` and
+  the `-PlargeFields` and `-PlargeShape` properties of the benchmark build.
+- By hand, `python3 test-suite-benchmarks/scripts/startup-report.py --forks 10 --reference-root <checkout of the reference commit> --reference-json reference.json`
+  does the same; `--case rings:1600` limits it to one case. Run on a machine that is not idle, and quote the load.
 
 The full description, including the cold start procedure, is the "Benchmarks" section of `CONTRIBUTING.md`.

@@ -1263,7 +1263,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
 // corpus: marker/no-processor-type-resolver
 [source,text]
 ----
-[type-resolver-contracts-not-found] The bean example.BookSummary implements the marker interface TypeResolver<T>, but the build did not record its source type. Add micronaut-graphql-tools-processor to the path that your compiler reads Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for Groovy; the compile-time checks section of the README shows the setting of each tool, and micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the source type).
+[type-resolver-contracts-not-found] The bean example.BookSummary implements the marker interface TypeResolver<T>, but the build did not record its source type. Add micronaut-graphql-tools-processor to the path that your compiler reads Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for Groovy; the compile-time checks guide page (src/main/docs/guide/compileTime/setup.adoc) shows the setting of each tool, and micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the source type).
 ----
 
 *Fix.* Put `micronaut-graphql-tools-processor` on the path that the compiler reads Micronaut processors from, as the message says.

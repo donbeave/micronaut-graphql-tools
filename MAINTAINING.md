@@ -85,6 +85,27 @@ Merge with "Squash and merge" only.
 
 The 1.0 line stays on the micronaut-build plugin 7.6.x (`io.micronaut.build.shared.settings` in `settings.gradle.kts`) and on Micronaut 4.10.x, for the whole line, release candidates included. Patch updates inside 7.6.x and 4.10.x are allowed. micronaut-build 8.x comes with Micronaut 5, so that move belongs to the 2.0 line.
 
+## Branch model
+
+Until the `1.0.0-RC1` tag exists, every change goes to `master` and the whole repository targets Micronaut 4. Micronaut 5 work does not start before that tag.
+
+After the tag, the repository has one branch per Micronaut major, like Micronaut's own modules:
+
+| Line | Branch | Micronaut | Tags | Accepts |
+| --- | --- | --- | --- | --- |
+| 1.0 | `1.0.x`, cut at the `1.0.0-RC1` tag commit | 4 | `1.0.0-RC<n>`, then `1.0.N` | Fixes and security only |
+| 2.0 | `2.0.x`, the renamed `master`, the default branch | 5 | `2.0.0-M<n>`, `2.0.0-RC<n>`, then `2.0.N` | Everything else: features, API changes, refactors, new modules, dependency majors |
+
+Rules for both lines:
+
+- The same rules apply to each line branch: squash merge only, linear history, `required checks`, no admin bypass.
+- A fix that exists on both lines goes to `1.0.x` first and is then forward-ported to `2.0.x`. A defect found only on `2.0.x` goes to `2.0.x`.
+- A merge-up is not possible with squash merges and linear history, so a forward-port is a pull request made with `git cherry-pick -x -s` of the squash commit. A fix that does not apply is marked as not applicable with a reason. The original issue closes with the last port.
+- A tag lies on its own line branch and publishes to GitHub Packages through the tag-triggered workflow only. The `2.x` versions are Micronaut 5, the `1.x` versions are Micronaut 4.
+- Micronaut 5 is in scope for the `2.0.x` line only. The `1.0.x` line and every branch before the cut stay on Micronaut 4.
+- The release candidate is the last version a maintainer tool publishes on a line. The final `1.0.0` and `2.0.0` are tagged by a human maintainer, never by automation.
+- `1.0.x` is supported as long as Micronaut 4.10.x receives releases.
+
 ## Dependency upgrades
 
 Renovate is configured in `.github/renovate.json`. Review its pull requests like any other: the same green `required checks` rule applies.
@@ -108,4 +129,26 @@ To cut a release:
 5. After the `Release` workflow for a tag (milestone, release candidate or final release) has succeeded, bump the dependency versions in `README.md` and the Quick Start page (`src/main/docs/guide/quickStart.adoc`). Do not bump them while the workflow is still running or after it failed, because the artifacts are not yet published.
 6. At each minor release, re-read the sources of the comparison table (`src/main/docs/guide/why/comparison.adoc`) against the versions it names, check whether newer versions of the other tools exist, and update the cells and the versions in the same change.
 
-A published version is not replaced. If a release is wrong, fix it on `master` and release the next milestone or release candidate; deleting a version needs repository admin rights (GitHub refuses it for a public version with more than 5,000 downloads). The workflow uses the repository's `GITHUB_TOKEN` with `packages: write` and runs only in `donbeave/micronaut-graphql-tools`. See "Consuming milestone previews" in [README.md](README.md) for how users read the packages. To build a version locally, see "Artifacts and versions" there.
+A published version is not replaced. If a release is wrong, fix it on `master` and release the next milestone or release candidate; deleting a version needs repository admin rights (GitHub refuses it for a public version with more than 5,000 downloads). The workflow uses the repository's `GITHUB_TOKEN` with `packages: write` and runs only in `donbeave/micronaut-graphql-tools`. See "Consuming milestone previews" in the compatibility guide (`src/main/docs/guide/compatibility.adoc`) for how users read the packages. To build a version locally, see "Artifacts and versions" in [README.md](README.md).
+
+## Foundation contribution checklist
+
+The project is intended for later contribution to the Micronaut Foundation. Only the Foundation can publish under `io.micronaut`, so the contribution itself is a maintainer task. Which line is contributed is decided separately, after the branch cut (#658).
+
+Done in this repository:
+
+- The `io.micronaut` group and packages are kept, and the repository slug and project URL are set in `gradle.properties`.
+- `README.md`, `CONTRIBUTING.md`, `MAINTAINING.md` and `SECURITY.md` say that this is not an official Micronaut module yet, and none of them claims Foundation ownership.
+- Contributions use the DCO sign-off, and `CONTRIBUTING.md` documents it.
+- The license header is one text (`config/HEADER`) on every Java, Kotlin and Groovy source of the library, the benchmarks and the test suites, and the build checks it.
+- No workflow can publish publicly: `release.yml` runs on a tag and publishes to the GitHub Packages registry of this repository only, and no workflow has a Maven Central, GitHub Release, snapshot or documentation site publish step.
+- No binary compatibility check runs. `findBaseline` reads only Maven Central and ignores milestones, so the check stays off until a first final release exists on Central.
+
+Owner: maintainer, at the contribution:
+
+- Replace `release.yml` and the init script with the Micronaut template workflows (Central Portal publishing, documentation to `gh-pages`), and delete the init script.
+- Enable the binary compatibility check with `enabledAfter(<first final release on Central>)`.
+- Review the badges and documentation URLs for the target repository, and move the security reporting address to the target repository.
+- Replace the contributor, maintainer and security documents with the Foundation templates, and sign whatever contributor agreement the Foundation requires.
+- Pick the contributed line (#658) and transfer or fork the repository.
+
