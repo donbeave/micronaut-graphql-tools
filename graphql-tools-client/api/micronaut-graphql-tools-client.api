@@ -1,0 +1,25 @@
+public interface io.micronaut.graphql.tools.client.annotation.GraphQLClient extends java.lang.annotation.Annotation {
+  public abstract java.lang.Class<? extends io.micronaut.http.client.HttpClientConfiguration> configuration();
+  public abstract java.lang.String endpoint();
+  public abstract java.lang.String id();
+  public abstract java.lang.String schema();
+  public abstract java.lang.String value();
+  public abstract java.lang.String webSocketEndpoint();
+}
+
+public interface io.micronaut.graphql.tools.client.annotation.GraphQLOperation extends java.lang.annotation.Annotation {
+  public abstract io.micronaut.graphql.tools.client.annotation.GraphQLOperation$Method method();
+  public abstract java.lang.String name();
+  public abstract java.lang.String value();
+}
+
+public static final class io.micronaut.graphql.tools.client.annotation.GraphQLOperation$Method extends java.lang.Enum<io.micronaut.graphql.tools.client.annotation.GraphQLOperation$Method> {
+  public static final io.micronaut.graphql.tools.client.annotation.GraphQLOperation$Method POST;
+  public static final io.micronaut.graphql.tools.client.annotation.GraphQLOperation$Method GET;
+  public static io.micronaut.graphql.tools.client.annotation.GraphQLOperation$Method valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.client.annotation.GraphQLOperation$Method[] values();
+}
+
+public interface io.micronaut.graphql.tools.client.annotation.GraphQLVariable extends java.lang.annotation.Annotation {
+  public abstract java.lang.String value();
+}

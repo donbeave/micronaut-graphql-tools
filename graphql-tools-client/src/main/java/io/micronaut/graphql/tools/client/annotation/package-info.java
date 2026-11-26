@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 /**
- * The annotations that mark a GraphQL client interface, its operations and its variables. The annotations are added with the
- * client annotations; this package holds no types yet.
+ * The annotations that mark a GraphQL client interface ({@code GraphQLClient}), its operations ({@code GraphQLOperation}) and
+ * its variables ({@code GraphQLVariable}).
  *
  * <p><b>Audience.</b> Public. An application that declares a client imports from here.</p>
  */
