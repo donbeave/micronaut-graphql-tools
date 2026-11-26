@@ -130,3 +130,25 @@ To cut a release:
 6. At each minor release, re-read the sources of the comparison table (`src/main/docs/guide/why/comparison.adoc`) against the versions it names, check whether newer versions of the other tools exist, and update the cells and the versions in the same change.
 
 A published version is not replaced. If a release is wrong, fix it on `master` and release the next milestone or release candidate; deleting a version needs repository admin rights (GitHub refuses it for a public version with more than 5,000 downloads). The workflow uses the repository's `GITHUB_TOKEN` with `packages: write` and runs only in `donbeave/micronaut-graphql-tools`. See "Consuming milestone previews" in [README.md](README.md) for how users read the packages. To build a version locally, see "Artifacts and versions" there.
+
+## Foundation contribution checklist
+
+The project is intended for later contribution to the Micronaut Foundation. Only the Foundation can publish under `io.micronaut`, so the contribution itself is a maintainer task. Which line is contributed is decided separately, after the branch cut (#658).
+
+Done in this repository:
+
+- The `io.micronaut` group and packages are kept, and the repository slug and project URL are set in `gradle.properties`.
+- `README.md`, `CONTRIBUTING.md`, `MAINTAINING.md` and `SECURITY.md` say that this is not an official Micronaut module yet, and none of them claims Foundation ownership.
+- Contributions use the DCO sign-off, and `CONTRIBUTING.md` documents it.
+- The license header is one text (`config/HEADER`) on every Java, Kotlin and Groovy source of the library, the benchmarks and the test suites, and the build checks it.
+- No workflow can publish publicly: `release.yml` runs on a tag and publishes to the GitHub Packages registry of this repository only, and no workflow has a Maven Central, GitHub Release, snapshot or documentation site publish step.
+- No binary compatibility check runs. `findBaseline` reads only Maven Central and ignores milestones, so the check stays off until a first final release exists on Central.
+
+Owner: maintainer, at the contribution:
+
+- Replace `release.yml` and the init script with the Micronaut template workflows (Central Portal publishing, documentation to `gh-pages`), and delete the init script.
+- Enable the binary compatibility check with `enabledAfter(<first final release on Central>)`.
+- Review the badges and documentation URLs for the target repository, and move the security reporting address to the target repository.
+- Replace the contributor, maintainer and security documents with the Foundation templates, and sign whatever contributor agreement the Foundation requires.
+- Pick the contributed line (#658) and transfer or fork the repository.
+
