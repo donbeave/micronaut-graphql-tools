@@ -16,7 +16,6 @@
 package io.micronaut.graphql.tools.execution;
 
 import graphql.GraphQLContext;
-import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.NonNull;
 
 /**
@@ -39,7 +38,6 @@ import io.micronaut.core.annotation.NonNull;
  * use. Without them, and with at least one contributor, it is a new empty registry for each execution. Without loader beans
  * and without contributors no registry is set, and graphql-java keeps its shared empty one.</p>
  */
-@Experimental
 @FunctionalInterface
 public interface GraphQLContextContributor {
 

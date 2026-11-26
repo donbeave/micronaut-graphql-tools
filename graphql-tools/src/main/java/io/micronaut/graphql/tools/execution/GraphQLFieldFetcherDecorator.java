@@ -16,7 +16,6 @@
 package io.micronaut.graphql.tools.execution;
 
 import graphql.schema.DataFetcher;
-import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.NonNull;
 
 /**
@@ -37,7 +36,6 @@ import io.micronaut.core.annotation.NonNull;
  *
  * <p>Implement {@link io.micronaut.core.order.Ordered} or use {@code @Order}; lower runs first.</p>
  */
-@Experimental
 public interface GraphQLFieldFetcherDecorator {
 
     /**
