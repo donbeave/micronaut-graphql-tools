@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CurrentUserQueryTest extends AbstractTest {
 
     @Test
-    void testGuest() {
+    void returnsNoUserForAGuest() {
         ApolloResponse<CurrentUserQuery.Data> response =
                 Rx3Apollo.single(apolloClient.query(new CurrentUserQuery())).blockingGet();
 
@@ -43,7 +43,7 @@ class CurrentUserQueryTest extends AbstractTest {
     }
 
     @Test
-    void testAuthenticated() {
+    void returnsTheAuthenticatedUser() {
         ApolloClient client = clientOf("test");
 
         ApolloResponse<CurrentUserQuery.Data> response =

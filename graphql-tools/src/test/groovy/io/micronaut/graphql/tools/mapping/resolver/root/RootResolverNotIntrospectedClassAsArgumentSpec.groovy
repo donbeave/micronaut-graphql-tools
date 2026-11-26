@@ -18,14 +18,14 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.binding.BindingCode
 import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
-class RootResolverNotIntrospectedClassAsArgumentSpec extends AbstractTest {
+class RootResolverNotIntrospectedClassAsArgumentSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RootResolverNotIntrospectedClassAsArgumentSpec"
 

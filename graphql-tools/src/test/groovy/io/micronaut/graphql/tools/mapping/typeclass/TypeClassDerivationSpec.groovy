@@ -19,7 +19,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.BindingCode
@@ -27,7 +27,7 @@ import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCusto
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
 
-class TypeClassDerivationSpec extends AbstractTest {
+class TypeClassDerivationSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "TypeClassDerivationSpec"
 

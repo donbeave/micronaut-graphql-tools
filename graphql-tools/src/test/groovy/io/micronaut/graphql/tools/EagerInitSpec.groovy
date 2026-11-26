@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class EagerInitSpec extends AbstractTest {
+class EagerInitSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "EagerInitSpec"
     static final String SPEC_NAME_OWN_GRAPHQL = "EagerInitSpec.ownGraphQL"

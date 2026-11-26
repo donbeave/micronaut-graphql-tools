@@ -19,7 +19,7 @@ import jakarta.inject.Singleton
 import graphql.execution.DataFetcherResult
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import org.intellij.lang.annotations.Language
@@ -29,7 +29,7 @@ import java.util.concurrent.CompletionStage
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class OptionalReturnTypeSpec extends AbstractTest {
+class OptionalReturnTypeSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "OptionalReturnTypeSpec"
     static final String SPEC_NAME_NON_NULL = "OptionalReturnTypeSpecNonNull"

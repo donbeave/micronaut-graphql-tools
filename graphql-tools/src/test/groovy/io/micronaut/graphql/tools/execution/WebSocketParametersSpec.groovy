@@ -20,7 +20,7 @@ import io.micronaut.core.convert.value.ConvertibleValues
 import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.http.context.ServerHttpRequestContext
 import io.micronaut.http.context.ServerRequestContext
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
 import io.micronaut.http.HttpRequest
@@ -39,7 +39,7 @@ import java.security.Principal
  * What the request, response and principal parameters get on a WebSocket operation: the upgrade request of the connection
  * and its principal, no response (a plain response parameter fails with HTTP_RESPONSE_UNAVAILABLE, see ResolverParametersSpec).
  */
-class WebSocketParametersSpec extends AbstractTest {
+class WebSocketParametersSpec extends AbstractSpec {
 
     static final String SPEC = 'WebSocketParametersSpec'
 

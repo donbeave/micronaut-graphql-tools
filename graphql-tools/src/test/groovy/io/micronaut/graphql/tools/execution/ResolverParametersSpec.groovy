@@ -25,7 +25,7 @@ import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLContextValue
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -43,7 +43,7 @@ import spock.lang.Unroll
 import java.security.Principal
 
 /** The injectable parameters of a resolver method: one slot of the argument plan for each kind. */
-class ResolverParametersSpec extends AbstractTest {
+class ResolverParametersSpec extends AbstractSpec {
 
     static final String SPEC = 'ResolverParametersSpec'
 

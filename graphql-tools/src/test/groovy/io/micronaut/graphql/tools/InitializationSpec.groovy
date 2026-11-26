@@ -20,7 +20,7 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
-class InitializationSpec extends AbstractTest {
+class InitializationSpec extends AbstractSpec {
 
     void "initialization"() {
         given:

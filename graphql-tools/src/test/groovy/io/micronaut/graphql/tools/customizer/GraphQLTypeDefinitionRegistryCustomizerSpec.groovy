@@ -20,13 +20,13 @@ import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class GraphQLTypeDefinitionRegistryCustomizerSpec extends AbstractTest {
+class GraphQLTypeDefinitionRegistryCustomizerSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "GraphQLTypeDefinitionRegistryCustomizerSpec"
 

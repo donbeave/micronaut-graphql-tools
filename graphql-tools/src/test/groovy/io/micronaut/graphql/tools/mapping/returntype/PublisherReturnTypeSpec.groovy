@@ -21,7 +21,7 @@ import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -37,7 +37,7 @@ import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.binding.internal.schema.WrapperRules
 
-class PublisherReturnTypeSpec extends AbstractTest {
+class PublisherReturnTypeSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "PublisherReturnTypeSpec"
     static final String SPEC_NAME_QUERY = "PublisherReturnTypeSpecQuery"

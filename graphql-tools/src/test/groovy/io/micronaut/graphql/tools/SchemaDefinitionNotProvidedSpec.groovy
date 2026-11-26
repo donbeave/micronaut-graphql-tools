@@ -20,7 +20,7 @@ import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class SchemaDefinitionNotProvidedSpec extends AbstractTest {
+class SchemaDefinitionNotProvidedSpec extends AbstractSpec {
 
     void "schema definition"() {
         given:

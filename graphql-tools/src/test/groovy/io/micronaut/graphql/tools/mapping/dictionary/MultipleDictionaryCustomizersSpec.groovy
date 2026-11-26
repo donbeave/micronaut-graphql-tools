@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.mapping.dictionary
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -26,7 +26,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class MultipleDictionaryCustomizersSpec extends AbstractTest {
+class MultipleDictionaryCustomizersSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "MultipleDictionaryCustomizersSpec"
     static final String CONFLICTING = "MultipleDictionaryCustomizersSpec.conflicting"

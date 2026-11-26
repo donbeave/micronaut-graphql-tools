@@ -19,7 +19,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLArgument
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -29,7 +29,7 @@ import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class DictionaryJavaInterfaceSpec extends AbstractTest {
+class DictionaryJavaInterfaceSpec extends AbstractSpec {
 
     static final Map NOT_STRICT = ['micronaut.graphql.tools.strict': false]
 

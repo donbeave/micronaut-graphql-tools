@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SearchProfileQueryTest extends AbstractTest {
 
     @Test
-    void testEmptyResults() {
+    void returnsNoProfilesWithoutAMatch() {
         SearchProfileQuery searchProfileQuery =
                 new SearchProfileQuery("Z", Optional.Absent.INSTANCE);
 
@@ -45,7 +45,7 @@ class SearchProfileQueryTest extends AbstractTest {
     }
 
     @Test
-    void testSingleResult() {
+    void returnsASingleProfile() {
         SearchProfileQuery searchProfileQuery =
                 new SearchProfileQuery("t", new Optional.Present<>(1));
 

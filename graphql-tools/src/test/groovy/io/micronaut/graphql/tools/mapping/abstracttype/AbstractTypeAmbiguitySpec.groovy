@@ -19,7 +19,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
@@ -37,7 +37,7 @@ import static io.micronaut.graphql.tools.mapping.abstracttype.JavaAmbiguousMembe
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class AbstractTypeAmbiguitySpec extends AbstractTest {
+class AbstractTypeAmbiguitySpec extends AbstractSpec {
 
     static final String UNION = "AbstractTypeAmbiguitySpec.union"
     static final String INTERFACE = "AbstractTypeAmbiguitySpec.interface"

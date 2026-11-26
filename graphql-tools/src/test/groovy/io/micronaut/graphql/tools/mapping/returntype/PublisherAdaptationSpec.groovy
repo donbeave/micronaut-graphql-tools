@@ -19,7 +19,7 @@ import jakarta.inject.Singleton
 import graphql.ExecutionResult
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -32,7 +32,7 @@ import reactor.core.publisher.Mono
 
 import java.util.concurrent.atomic.AtomicInteger
 
-class PublisherAdaptationSpec extends AbstractTest {
+class PublisherAdaptationSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "PublisherAdaptationSpec"
     static final String SPEC_NAME_PROPERTY = "PublisherAdaptationSpecProperty"

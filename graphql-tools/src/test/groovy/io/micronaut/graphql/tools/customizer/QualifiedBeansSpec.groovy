@@ -30,7 +30,7 @@ import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.inject.qualifiers.Qualifiers
@@ -39,7 +39,7 @@ import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 
-class QualifiedBeansSpec extends AbstractTest {
+class QualifiedBeansSpec extends AbstractSpec {
 
     static final String QUALIFIED_SCHEMA = "QualifiedBeansSpec.qualifiedSchema"
     static final String QUALIFIED_GRAPHQL = "QualifiedBeansSpec.qualifiedGraphQL"

@@ -35,7 +35,7 @@ import io.micronaut.graphql.tools.internal.wiring.WiringComponents
  * A schema that is a chain of thousands of types binds on the default thread stack: the walk from a field to the types
  * it returns, and from an input field to its input type, is not one recursive call per type.
  */
-class DeepTypeChainSpec extends AbstractTest {
+class DeepTypeChainSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "DeepTypeChainSpec"
 

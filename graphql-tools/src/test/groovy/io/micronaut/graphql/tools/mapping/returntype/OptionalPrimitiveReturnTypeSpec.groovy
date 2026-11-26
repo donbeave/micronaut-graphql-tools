@@ -18,13 +18,13 @@ package io.micronaut.graphql.tools.mapping.returntype
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class OptionalPrimitiveReturnTypeSpec extends AbstractTest {
+class OptionalPrimitiveReturnTypeSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "OptionalPrimitiveReturnTypeSpec"
     static final String SPEC_NAME_NON_NULL = "OptionalPrimitiveReturnTypeSpecNonNull"

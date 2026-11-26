@@ -20,7 +20,7 @@ import graphql.ExecutionResult
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.async.annotation.SingleResult
 import io.micronaut.core.async.publisher.CompletableFuturePublisher
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import org.intellij.lang.annotations.Language
@@ -30,7 +30,7 @@ import reactor.core.publisher.Flux
 import java.util.concurrent.CompletableFuture
 
 /** The single-value types of the shared return rule: RxJava, CompletableFuturePublisher and a {@code @SingleResult} method. */
-class SingleValuePublisherSpec extends AbstractTest {
+class SingleValuePublisherSpec extends AbstractSpec {
 
     static final String SPEC_NAME = 'SingleValuePublisherSpec'
 

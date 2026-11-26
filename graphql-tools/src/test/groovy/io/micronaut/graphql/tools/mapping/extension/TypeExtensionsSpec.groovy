@@ -18,14 +18,14 @@ package io.micronaut.graphql.tools.mapping.extension
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import org.intellij.lang.annotations.Language
 
-class TypeExtensionsSpec extends AbstractTest {
+class TypeExtensionsSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "TypeExtensionsSpec"
 

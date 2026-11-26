@@ -19,7 +19,7 @@ import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.beans.BeanIntrospector
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -34,7 +34,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules
 import io.micronaut.inject.BeanDefinition
 
 /** The runtime adapter of the type model, read from real beans and real introspections. */
-class RuntimeTypeModelSpec extends AbstractTest {
+class RuntimeTypeModelSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RuntimeTypeModelSpec"
 

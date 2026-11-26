@@ -21,7 +21,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -29,7 +29,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class InterfaceListDataFetcherResultSpec extends AbstractTest {
+class InterfaceListDataFetcherResultSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "InterfaceListDataFetcherResultSpec"
 

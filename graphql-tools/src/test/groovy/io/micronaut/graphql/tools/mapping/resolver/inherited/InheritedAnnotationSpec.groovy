@@ -16,7 +16,7 @@
 package io.micronaut.graphql.tools.mapping.resolver.inherited
 
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -24,7 +24,7 @@ import jakarta.inject.Singleton
 
 import java.lang.annotation.Inherited
 
-class InheritedAnnotationSpec extends AbstractTest {
+class InheritedAnnotationSpec extends AbstractSpec {
 
     static final String SPEC_NAME = 'InheritedAnnotationSpec'
 

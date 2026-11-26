@@ -27,7 +27,7 @@ import io.micronaut.configuration.graphql.GraphQLInvocation
 import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer
 import io.micronaut.graphql.tools.internal.error.LibraryDataFetcherExceptionHandler
@@ -45,7 +45,7 @@ import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicInteger
 
 /** The default error handling (#32): hidden messages, ordered mappers, details, the final error list. */
-class ErrorHandlingSpec extends AbstractTest {
+class ErrorHandlingSpec extends AbstractSpec {
 
     static final String SPEC = 'ErrorHandlingSpec'
     static final AtomicInteger CUSTOMIZER_CALLS = new AtomicInteger()

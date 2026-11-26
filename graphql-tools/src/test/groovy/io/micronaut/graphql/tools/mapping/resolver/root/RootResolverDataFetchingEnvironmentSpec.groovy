@@ -18,11 +18,11 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 import jakarta.inject.Singleton
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.intellij.lang.annotations.Language
 
-class RootResolverDataFetchingEnvironmentSpec extends AbstractTest {
+class RootResolverDataFetchingEnvironmentSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RootResolverDataFetchingEnvironmentSpec"
 
