@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * The directive types: the wiring of a schema directive and the custom wiring of a field. Key types: {@link io.micronaut.graphql.tools.directive.SchemaDirective}, {@link io.micronaut.graphql.tools.directive.CustomWiring}.
+ * The directive types: the wiring of a schema directive. Key type: {@link io.micronaut.graphql.tools.directive.SchemaDirective}.
  *
  * <p><b>Audience.</b> Public API. An application implements these interfaces as beans.</p>
  */

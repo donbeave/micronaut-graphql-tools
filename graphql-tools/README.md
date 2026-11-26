@@ -35,7 +35,7 @@ Each package has a `package-info.java`. The [API map](../CONTRIBUTING.md#api-map
 | `io.micronaut.graphql.tools.config` | Public API | The configuration class, `GraphQLToolsConfiguration` |
 | `io.micronaut.graphql.tools.customizer` | Public API | The five `*Customizer` interfaces |
 | `io.micronaut.graphql.tools.mapping` | Public API | `SchemaMappingDictionary`, `GraphQLScalarMapping` and the mapping contexts |
-| `io.micronaut.graphql.tools.directive` | Public API | `SchemaDirective` and `CustomWiring` |
+| `io.micronaut.graphql.tools.directive` | Public API | `SchemaDirective` |
 | `io.micronaut.graphql.tools.input` | Public API | `ArgumentValue` |
 | `io.micronaut.graphql.tools.manifest` | Public API | `BindingManifest` |
 | `io.micronaut.graphql.tools.annotation` | Public API | The annotations of resolvers and input classes |
@@ -75,7 +75,7 @@ The public API is what applications import. The package layout is reviewed in #3
 - `io.micronaut.graphql.tools.config`, `customizer`, `mapping`, `directive`, `input` and `manifest`: the extension points
   and the types around them: `GraphQLToolsConfiguration`; `GraphQLRuntimeWiringCustomizer`, `GraphQLSchemaMappingDictionaryCustomizer`,
   `GraphQLBuilderCustomizer`, `GraphQLSchemaCustomizer` and `GraphQLTypeDefinitionRegistryCustomizer`; `SchemaMappingDictionary`
-  and `GraphQLScalarMapping`; `SchemaDirective` and `CustomWiring`; `ArgumentValue`; `BindingManifest`. Every type of
+  and `GraphQLScalarMapping`; `SchemaDirective`; `ArgumentValue`; `BindingManifest`. Every type of
   these packages is public API; the root package `io.micronaut.graphql.tools` holds no types.
 - `io.micronaut.graphql.tools.exceptions`: the startup failure, `SchemaBindingException`. Match on its code.
 - `io.micronaut.graphql.tools.internal` (and its sub-packages): internal. Every

@@ -32,7 +32,7 @@ import graphql.language.SelectionSet;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.security.GraphQLSecurity;
-import io.micronaut.graphql.tools.security.RootFieldsHook;
+import io.micronaut.graphql.tools.security.GraphQLRootFieldsHook;
 import jakarta.inject.Singleton;
 
 import java.util.ArrayList;
@@ -41,20 +41,20 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Calls the {@link RootFieldsHook} beans once for each operation, after the document is parsed and validated and before the
+ * Calls the {@link GraphQLRootFieldsHook} beans once for each operation, after the document is parsed and validated and before the
  * first field is fetched. A bean exists only when the application has a hook, so the executions of an application without one
  * have no extra instrumentation.
  */
 @Internal
 @Singleton
-@Requires(beans = RootFieldsHook.class)
+@Requires(beans = GraphQLRootFieldsHook.class)
 @Requires(property = GraphQLSecurity.PREFIX + ".enabled", value = "true", defaultValue = "true")
 final class RootFieldsInstrumentation extends SimplePerformantInstrumentation {
 
-    private final RootFieldsHook[] hooks;
+    private final GraphQLRootFieldsHook[] hooks;
 
-    RootFieldsInstrumentation(List<RootFieldsHook> hooks) {
-        this.hooks = hooks.toArray(new RootFieldsHook[0]);
+    RootFieldsInstrumentation(List<GraphQLRootFieldsHook> hooks) {
+        this.hooks = hooks.toArray(new GraphQLRootFieldsHook[0]);
     }
 
     @Override
@@ -65,7 +65,7 @@ final class RootFieldsInstrumentation extends SimplePerformantInstrumentation {
         Set<String> names = new LinkedHashSet<>();
         collect(operation.getSelectionSet(), execution, names, new LinkedHashSet<>());
         List<String> rootFields = List.copyOf(new ArrayList<>(names));
-        for (RootFieldsHook hook : hooks) {
+        for (GraphQLRootFieldsHook hook : hooks) {
             hook.onRootFields(operation.getOperation(), rootFields, execution.getGraphQLContext());
         }
         return SimpleInstrumentationContext.noOp();
