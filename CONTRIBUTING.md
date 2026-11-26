@@ -49,7 +49,7 @@ The binding corpus (#142) is a directory of data cases under `graphql-tools-proc
 
 A class that must still reflect goes in `REFLECTION_ALLOWLIST` of the spec, with the exact accesses it may make, the reason and the issue that removes it; any other reflective access in that class still fails. The list may only shrink: the spec fails when an allowed access no longer happens, so delete the entry in the change that removes the reflection. `GraphQLResolversRegistry` is the one entry today (#34). To check a rule, add a violating class to `graphql-tools/src/main/java` and run `./gradlew :micronaut-graphql-tools:test --tests '*ArchitectureRulesSpec'`; remove it afterwards.
 
-The example applications are three separate Gradle projects with the same schema, resolvers and smoke tests over HTTP:
+The example applications are four separate Gradle projects:
 
 | Suite | Language | Run the JVM tests | Run the native tests (Oracle GraalVM 25) |
 | --- | --- | --- | --- |
@@ -295,7 +295,7 @@ The public API is split into its role packages (`annotation`, `config`, `customi
 
 ### How the build keeps this true
 
-`PackageDocumentationSpec` fails when a Java package of the four modules has no `package-info.java`, when a `package-info.java` has no description, when a package has more than 15 types without a listed exception, when the package list of this section differs from the packages of the code, or when `@Internal` on a package and the audience column of this section disagree.
+`PackageDocumentationSpec` fails when a Java package of a module in its list (the library modules and `test-suite-tck`) has no `package-info.java`, when a `package-info.java` has no description, when a package has more than 15 types without a listed exception, when the package list of this section differs from the packages of the code, or when `@Internal` on a package and the audience column of this section disagree.
 
 ## Benchmarks
 
@@ -453,6 +453,6 @@ The plugin also adds a new tab in the bottom of the IDE to run Checkstyle and sh
 
 ## Releases
 
-Only milestone versions (`1.0.0-M<n>`, later `1.0.0`) are published, to the GitHub Packages Maven registry of this repository. There is no Maven Central, GitHub Release or snapshot publishing. A maintainer cuts a release by pushing a version tag on `master`; the `Release` workflow (`.github/workflows/release.yml`) then builds the tagged commit, checks that the build version equals the tag and publishes the library, the annotation processor and the BOM. Contributors never publish. See [MAINTAINING.md](MAINTAINING.md#releases) for the steps and [README.md](README.md#consuming-milestone-previews) for how to consume a release.
+Milestone versions (`1.0.0-M<n>`) are published to the GitHub Packages Maven registry of this repository, and the 1.0 line ends with the release candidate `1.0.0-RC1`. There is no Maven Central, GitHub Release or snapshot publishing. A maintainer cuts a release by pushing a version tag on `master`; the `Release` workflow (`.github/workflows/release.yml`) then builds the tagged commit, checks that the build version equals the tag and publishes the library, the annotation processor and the BOM. Contributors never publish. See [MAINTAINING.md](MAINTAINING.md#releases) for the steps and [README.md](README.md#consuming-milestone-previews) for how to consume a release.
 
 CI is one workflow, `.github/workflows/gradle.yml` (`Java CI`: build and tests, the native image tests, the Groovy native smoke test, the guide, the workflow lint (the `actionlint` job, which runs `jactionlint`), plus the `required checks` gate), with the shared tool setup in `.github/actions/setup-build`.
