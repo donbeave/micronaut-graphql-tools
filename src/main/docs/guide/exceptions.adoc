@@ -621,3 +621,357 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 *Fix.* Correct the schema file at the position that the message gives. A schema file holds definitions, not operations.
 
 *See.* <<schema,Schema>>.
+
+[[example-binding-failures]]
+=== `binding-failures`
+
+*Cause.* Several fields or types of the schema cannot be bound. The message lists each failure with its own code.
+
+// corpus: failure/three-binding-failures
+[source,text]
+----
+[binding-failures] The schema cannot be bound: 3 errors.
+  1) [field-not-bound] The property or method `isbn` not found in example.Book's type.
+     GraphQL coordinate: Book.isbn (schema.graphqls, line 13, column 3)
+  2) [incorrect-class-mapping] The field is mapped to the incorrect class.
+     GraphQL coordinate: Query.count (schema.graphqls, line 7, column 3)
+     Mapped class: example.Query
+     Mapped method: count()
+     Provided class: java.lang.String
+     Supported classes: int, java.lang.Integer
+  3) [field-not-bound] The method `missing` not found in any root resolvers: [example.Query].
+     GraphQL coordinate: Query.missing (schema.graphqls, line 8, column 3)
+----
+
+*Fix.* Fix each listed failure; the code in the brackets of each item says which entry of this page applies. `SchemaBindingException#getFailures()` returns the failures.
+
+*See.* <<startupErrors,Startup Errors>>.
+
+[[example-strict-findings]]
+=== `strict-findings`
+
+*Cause.* The strict checks found problems. The message lists each finding with the code of its check.
+
+// corpus: strict/several-problems
+[source,text]
+----
+[strict-findings] The strict checks found problems in the binding of the schema:
+  1) [unbound-resolver-method] The resolver method example.ItemResolver#legacyName(example.Item) binds no schema field. Remove it, make it private, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
+  2) [unbound-resolver-method] The resolver method example.Query#helper(java.lang.String) binds no schema field. Remove it, make it private, or annotate the methods of the bean that bind fields with @GraphQLSchemaCoordinate.
+  3) [unbound-enum-constant] The enum constant example.Color#BLUE has no value in the schema enum Color. Add the value to the schema or remove the constant.
+  4) [unused-dictionary-entry] The SchemaMappingDictionary maps Ghost to example.Item, but the schema binds no type Ghost. Remove the entry or correct its name.
+  Fix them, allow them in micronaut.graphql.tools.allow.findings, or set micronaut.graphql.tools.checks.<code> to warn or ignore.
+----
+
+*Fix.* Fix the findings, allow them in `micronaut.graphql.tools.allow.findings`, or set `micronaut.graphql.tools.checks.<code>` to `warn` or `ignore`.
+
+*See.* <<strictMode,Strict Mode>> and <<checkSeverity,Check Severity>>.
+
+[[example-invalid-schema-customizer-directives]]
+=== `invalid-schema-customizer-directives`
+
+*Cause.* `allow.schema-customizer-directives` lists a directive that the schema does not declare.
+
+// corpus: directive/schema-customizer-undeclared
+[source,text]
+----
+[invalid-schema-customizer-directives] micronaut.graphql.tools.allow.schema-customizer-directives lists directives that are built in, not declared in the schema, or never applied to the schema definition or to a directive argument: @missing (not declared in the schema).
+  Remove them from the list.
+----
+
+*Fix.* Remove the directive from the list, or declare it in the schema.
+
+*See.* <<directives,Directives>>.
+
+[[example-ambiguous-type-mapping]]
+=== `ambiguous-type-mapping`
+
+*Cause.* A `SchemaMappingDictionary` maps one object type to an interface and another to a class that implements it, so an object of that class matches both types.
+
+// corpus: startup/ambiguous-type-mapping
+[source,text]
+----
+[ambiguous-type-mapping] The SchemaMappingDictionary maps GraphQL object types ambiguously:
+  `Book` is mapped to the interface example.BookGraph and `Novel` to example.NovelModel, which implements it
+An object of the implementing class would match both GraphQL types. Map each GraphQL object type to its own class, or map only one of them to the interface.
+----
+
+*Fix.* Map each object type to its own class, or map only one of the types to the interface.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-ambiguous-type-resolver]]
+=== `ambiguous-type-resolver`
+
+*Cause.* A bean implements several type resolver contracts, and a public method has a first parameter that is the class of none of them.
+
+// corpus: startup/ambiguous-type-resolver
+[source,text]
+----
+[ambiguous-type-resolver] The bean example.Resolvers is a @GraphQLTypeResolver for several classes through example.NovelContract (example.Novel) and example.WriterContract (example.Writer), and the first parameter of these methods is none of those classes, so they cannot be assigned to one: describe(java.lang.String text). Make them non-public or give them the source parameter of their contract.
+----
+
+*Fix.* Make the method non-public, or give it the source parameter of its contract.
+
+*See.* <<resolverContracts,Resolver Contracts>>.
+
+[[example-data-loader-not-found]]
+=== `data-loader-not-found`
+
+*Cause.* A `DataLoader` parameter of a resolver method matches no batch loader bean by its key and value types.
+
+// corpus: startup/data-loader-not-found
+[source,text]
+----
+[data-loader-not-found] Query.hello (parameter 'loader' of example.Query#hello) is DataLoader<java.lang.Integer, java.lang.Integer>, and no batch loader bean has these key and value types. The batch loader beans are: names (example.NameLoader, DataLoader<java.lang.String, java.lang.String>). Fix: register a BatchLoader, BatchLoaderWithContext, MappedBatchLoader or MappedBatchLoaderWithContext bean with these types.
+  GraphQL coordinate: Query.hello (schema.graphqls, line 2, column 3)
+  Mapped class: example.Query
+  Mapped method: hello(java.lang.String prefix, org.dataloader.DataLoader loader)
+----
+
+*Fix.* Register a batch loader bean with the types of the parameter, or name the loader with `@Named` when several match.
+
+*See.* <<dataLoaders,Data Loaders>>.
+
+[[example-data-loader-registry-bean]]
+=== `data-loader-registry-bean`
+
+*Cause.* The application has a `DataLoaderRegistry` bean, and the library creates a registry of its own for each operation.
+
+// corpus: startup/data-loader-registry-bean
+[source,text]
+----
+[data-loader-registry-bean] The application has a DataLoaderRegistry bean (example.RegistryFactory). The library's invocation does not use it: its loaders would be shared across operations on one WebSocket connection. Fix: register the loaders as BatchLoader beans (BatchLoader, BatchLoaderWithContext, MappedBatchLoader or MappedBatchLoaderWithContext), add them in a GraphQLContextContributor through the registry of the ExecutionInput, or provide your own GraphQLInvocation with @Replaces(DefaultGraphQLInvocation.class).
+----
+
+*Fix.* Register the loaders as batch loader beans, add them in a `GraphQLContextContributor`, or provide a `GraphQLInvocation` of the application.
+
+*See.* <<dataLoaders,Data Loaders>>.
+
+[[example-duplicate-data-loader]]
+=== `duplicate-data-loader`
+
+*Cause.* Two batch loader beans have the same name.
+
+// corpus: startup/duplicate-data-loader
+[source,text]
+----
+[duplicate-data-loader] Two batch loader beans are named 'shared': example.FirstShared and example.SecondShared. The name is the @Named qualifier of the bean, or else the simple class name with a lower-case first letter. Fix: give one of them a different @Named qualifier.
+----
+
+*Fix.* Give one of the beans another `@Named` qualifier.
+
+*See.* <<dataLoaders,Data Loaders>>.
+
+[[example-execute-on-property]]
+=== `execute-on-property`
+
+*Cause.* `@ExecuteOn` is on an accessor that binds a field as a property.
+
+// corpus: startup/execute-on-property
+[source,text]
+----
+[execute-on-property] @ExecuteOn is on an accessor that binds this field as a property, and a property is read, never run on another executor. Fix: make it a @GraphQLField method, or move the field to a type resolver, and put @ExecuteOn there.
+  GraphQL coordinate: Gadget.size (schema.graphqls, line 6, column 3)
+  Mapped class: example.Gadget
+  Mapped method: getSize()
+----
+
+*Fix.* Make the member a `@GraphQLField` method, or move the field to a type resolver and put `@ExecuteOn` there.
+
+*See.* <<executeOn,@ExecuteOn per field>>.
+
+[[example-execution-context-unavailable]]
+=== `execution-context-unavailable`
+
+*Cause.* A resolver parameter needs the HTTP request, and the application provides a `GraphQLInvocation` that replaces the library one.
+
+// corpus: startup/execution-context-unavailable
+[source,text]
+----
+[execution-context-unavailable] Query.hello (parameter 'request' of example.Query#hello) needs the HTTP request, which the library's GraphQLInvocation provides. The application provides example.OwnInvocation#OwnInvocation instead, so the library's invocation is not used. Fix: remove that need from the resolver, or remove the application's GraphQLInvocation (@Replaces(DefaultGraphQLInvocation.class) or @Primary).
+  GraphQL coordinate: Query.hello (schema.graphqls, line 2, column 3)
+  Mapped class: example.Query
+  Mapped method: hello(java.lang.String prefix, io.micronaut.http.HttpRequest request)
+----
+
+*Fix.* Remove the parameter, or remove the `GraphQLInvocation` of the application.
+
+*See.* <<httpAccess,HTTP Request and Response>>.
+
+[[example-incorrect-annotation]]
+=== `incorrect-annotation`
+
+*Cause.* `@GraphQLTypeResolver` is used on a class without a value class.
+
+// corpus: startup/incorrect-annotation
+[source,text]
+----
+[incorrect-annotation] Empty value member for @GraphQLTypeResolver annotation in example.UserResolver class.
+----
+
+*Fix.* Name the class of the type in the annotation value.
+
+*See.* <<binding,Binding>>.
+
+[[example-interface-type-mapping-not-provided]]
+=== `interface-type-mapping-not-provided`
+
+*Cause.* An object type that implements an interface has no registered class.
+
+// corpus: startup/interface-type-mapping-not-provided
+[source,text]
+----
+[interface-type-mapping-not-provided] Can not detect representation class for type MediaSection, implementation of Section interface. Ensure the representation class is registered via io.micronaut.graphql.tools.mapping.SchemaMappingDictionary, declared with @GraphQLType(name) or named by micronaut.graphql.tools.type-class-convention.
+  GraphQL coordinate: Book.sections (schema.graphqls, line 7, column 3)
+  Mapped class: example.BookResolver
+  Mapped method: sections(example.Book book)
+----
+
+*Fix.* Register the class in a `SchemaMappingDictionary`, declare it with `@GraphQLType(name)`, or name it by `type-class-convention`.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-invalid-allow-findings]]
+=== `invalid-allow-findings`
+
+*Cause.* An `allow.findings` entry matches no finding.
+
+// corpus: startup/invalid-allow-findings
+[source,text]
+----
+[invalid-allow-findings] The allow.findings setting lists findings that do not exist; remove the entries:
+  micronaut.graphql.tools.allow.findings: "!unbound-resolver-method example.Gone#method()" matches no finding.
+----
+
+*Fix.* Remove the entry, or correct it to a manifest line of a finding.
+
+*See.* <<strictModeEscape,Accept a finding>>.
+
+[[example-invalid-check-setting]]
+=== `invalid-check-setting`
+
+*Cause.* `checks` names a key that is not a check, or a value that is not a severity.
+
+// corpus: startup/invalid-check-setting
+[source,text]
+----
+[invalid-check-setting] The checks setting is invalid:
+  micronaut.graphql.tools.checks.field-not-bound: a failure code, not a check; the checks are [unbound-resolver-method, root-method-several-operations, unbound-enum-constant, unmapped-input-property, nullable-primitive, unreachable-type, unreachable-value-type, unused-dictionary-entry, interface-read-through-implementation, unwired-directive].
+  micronaut.graphql.tools.checks.unbound-enum-constant: "sometimes" is not a severity; use fail, warn, ignore.
+  micronaut.graphql.tools.checks.unbound-method: not a code of the registry; the checks are [unbound-resolver-method, root-method-several-operations, unbound-enum-constant, unmapped-input-property, nullable-primitive, unreachable-type, unreachable-value-type, unused-dictionary-entry, interface-read-through-implementation, unwired-directive].
+----
+
+*Fix.* Use one of the check codes that the message lists, and one of `fail`, `warn` or `ignore`.
+
+*See.* <<checkSeverity,Check Severity>>.
+
+[[example-invalid-scalar-mapping]]
+=== `invalid-scalar-mapping`
+
+*Cause.* Two `GraphQLScalarMapping` beans map the same scalar.
+
+// corpus: startup/invalid-scalar-mapping
+[source,text]
+----
+[invalid-scalar-mapping] Invalid io.micronaut.graphql.tools.mapping.GraphQLScalarMapping beans: the scalar LocalDate is mapped 2 times.
+----
+
+*Fix.* Keep one mapping of the scalar.
+
+*See.* <<scalars,Scalars>>.
+
+[[example-invalid-type-class-convention]]
+=== `invalid-type-class-convention`
+
+*Cause.* `type-class-convention` does not contain `{Type}` exactly once.
+
+// corpus: startup/invalid-type-class-convention
+[source,text]
+----
+[invalid-type-class-convention] micronaut.graphql.tools.type-class-convention is not valid:
+  the naming convention 'Graph' must contain {Type} exactly once, for the name of the object type
+----
+
+*Fix.* Write the convention with `{Type}` once, for example `{Type}Graph`.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-removed-configuration-key]]
+=== `removed-configuration-key`
+
+*Cause.* The configuration sets a key that was removed.
+
+// corpus: startup/removed-configuration-key
+[source,text]
+----
+[removed-configuration-key] The configuration uses keys that were removed (BC-27, BC-28, BC-45):
+  micronaut.graphql.tools.unreachable-types was removed; use micronaut.graphql.tools.checks.unreachable-type and micronaut.graphql.tools.checks.unreachable-value-type (fail, warn or ignore; the old ignore still logged the types and listed them in the manifest, so warn is its equivalent).
+----
+
+*Fix.* Use the key that the message names instead.
+
+*See.* <<checkSeverity,Check Severity>>.
+
+[[example-runtime-wiring-override]]
+=== `runtime-wiring-override`
+
+*Cause.* A `GraphQLRuntimeWiringCustomizer` replaced a data fetcher that the library wired.
+
+// corpus: startup/runtime-wiring-override
+[source,text]
+----
+[runtime-wiring-override] GraphQLRuntimeWiringCustomizer beans may only add to the runtime wiring, but they replaced what the library wired:
+  data fetcher of Query.hello (example.ReplaceFetcher)
+  Bind these fields with the library, wrap data fetchers with a SchemaDirective bean, serve a field with the customizer's own data fetcher by returning its coordinate from GraphQLRuntimeWiringCustomizer#getClaimedFields() (or remove the registration to keep the library's binding), or change the built schema with a GraphQLSchemaCustomizer.
+----
+
+*Fix.* Remove the registration, return the coordinate from `getClaimedFields()`, or change the built schema with a `GraphQLSchemaCustomizer`.
+
+*See.* <<customization,Customization>>.
+
+[[example-schema-not-found]]
+=== `schema-not-found`
+
+*Cause.* No schema file is found at the configured locations; the files that match are empty or hold only operations. The message names the locations and the skipped files, and the example writes the directory of the case as `<case directory>`.
+
+// corpus: startup/schema-not-found
+[source,text]
+----
+[schema-not-found] No GraphQL schema found for micronaut.graphql.tools.schema.locations=[file:<case directory>/*.graphqls]: every file that matched is empty or holds only operations, skipped: [schema.graphqls].
+----
+
+*Fix.* Add a schema file with definitions at one of the locations, or correct `micronaut.graphql.tools.schema.locations`.
+
+*See.* <<schema,Schema>>.
+
+[[example-unknown-executor]]
+=== `unknown-executor`
+
+*Cause.* `micronaut.graphql.tools.execution.executor` names the executor of scheduled tasks.
+
+// corpus: startup/unknown-executor
+[source,text]
+----
+[unknown-executor] micronaut.graphql.tools.execution.executor is 'scheduled', the executor of scheduled tasks, which does not run operations. Use 'blocking' (the default), 'io', 'virtual' (JDK 21 and later), an executor configured under micronaut.executors, or 'none' to run on the calling thread.
+----
+
+*Fix.* Use `blocking`, `io`, `none` or an executor that is configured under `micronaut.executors`.
+
+*See.* <<executionSettings,Execution>>.
+
+[[example-unwrapped-directive-wiring]]
+=== `unwrapped-directive-wiring`
+
+*Cause.* A `SchemaDirectiveWiring` bean is not wrapped by a `SchemaDirective` bean.
+
+// corpus: startup/unwrapped-directive-wiring
+[source,text]
+----
+[unwrapped-directive-wiring] SchemaDirectiveWiring beans that no SchemaDirective bean wraps: example.UpperWiring (Definition: example.WiringFactory).
+  The library applies a wiring only through a SchemaDirective: wrap each one in SchemaDirective.named(name, wiring) (called where the directive is applied) or SchemaDirective.everyElement(names, wiring) (called for every schema element), injecting the bean into the SchemaDirective's factory method, or remove the bean.
+----
+
+*Fix.* Wrap the bean with `SchemaDirective.named(name, wiring)` or `SchemaDirective.everyElement(names, wiring)`, or remove it.
+
+*See.* <<directives,Directives>>.

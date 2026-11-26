@@ -1,0 +1,13 @@
+type Query {
+  search(book: Boolean!): SearchResult
+}
+
+union SearchResult = Book | Novel
+
+type Book {
+  title: String!
+}
+
+type Novel {
+  title: String!
+}
