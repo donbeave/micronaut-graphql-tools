@@ -277,14 +277,14 @@ Measured, with the cold figure now stated end to end (parse, emit and write, wit
 
 | Target | Java (b) | Groovy (b) | Kotlin (b) | Verdict |
 | --- | --- | --- | --- | --- |
-| Cold, end to end, at most 1 s | 0.85 to 0.93 s | 0.85 to 0.93 s | 1.2 s | Confirmed for Java and Groovy, revised for Kotlin to 1.5 s |
+| Cold, end to end, at most 1 s | 0.85 to 0.93 s | about 0.85 to 0.95 s (estimate, see below) | 1.2 s | Confirmed for Java and Groovy, revised for Kotlin to 1.5 s |
 | Warm emit, at most 300 ms | 125 to 130 ms | 128 to 133 ms | 320 to 360 ms with per-type name classes, 440 to 470 ms with one name file | Confirmed for Java and Groovy, revised for Kotlin to 400 ms |
 | Unchanged | 0 ms under Gradle (task skipped) | 0 ms under Gradle | 0 ms under Gradle | Confirmed for Gradle; under Maven the fingerprint check costs 14 ms of hashing in a fresh JVM, see below |
 
 The cold figures use the default layout of one name class per type: for Java, parse 244 to 256 ms, emit 344 to 390 ms and
 write 262 to 285 ms (2,469 files); for Kotlin, 247 to 255, 685 to 696 and 258 to 280 ms. With one name file (1,620 files)
 Java is 0.78 to 0.86 s and Kotlin 1.2 to 1.3 s. Groovy emits through the same code as Java and was not measured with
-per-type name classes.
+per-type name classes, so its figure is an estimate from Java's (the one-file Groovy emit was within 5 percent of Java's).
 
 KotlinPoet is about 2.5 times slower than the JavaPoet fork on the same artifacts, and the plain-text floor shows how much
 of any poet is overhead. If Kotlin generation ever shows up in a build profile, the Kotlin emitter can be rewritten as
