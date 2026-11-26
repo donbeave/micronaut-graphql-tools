@@ -46,6 +46,7 @@ public final class ClientDirectories {
 
     private final List<Path> clientDirs;
     private final List<Path> serverDirs;
+    private final @Nullable String foreign;
     private List<String> names;
 
     /**
@@ -53,8 +54,19 @@ public final class ClientDirectories {
      * @param serverDirs the server schema directories, the schema of the name {@value #SERVER}
      */
     public ClientDirectories(List<Path> clientDirs, List<Path> serverDirs) {
+        this(clientDirs, serverDirs, null);
+    }
+
+    /**
+     * @param clientDirs the client directories, as the build passes them
+     * @param serverDirs the server schema directories, the schema of the name {@value #SERVER}
+     * @param foreign    why the directories are not those of this compilation (they were set for another module of the same
+     *                   JVM), or null when they are; every question that needs a directory then fails with this reason
+     */
+    public ClientDirectories(List<Path> clientDirs, List<Path> serverDirs, @Nullable String foreign) {
         this.clientDirs = List.copyOf(clientDirs);
         this.serverDirs = List.copyOf(serverDirs);
+        this.foreign = foreign;
     }
 
     /**
@@ -63,6 +75,11 @@ public final class ClientDirectories {
      * @return the layout of the schema, or a {@code client-schema-missing} finding
      */
     public Resolved resolve(String requested, String member) {
+        if (foreign != null) {
+            return new Resolved(null, missing(member, foreign, "set micronaut.graphql.tools.processor.client.dirs, "
+                    + "micronaut.graphql.tools.processor.schema.dirs and micronaut.graphql.tools.processor.module.dir in this "
+                    + "module, or compile without client checks with micronaut.graphql.tools.processor.client.checks=false"));
+        }
         String name = requested;
         if (requested.isEmpty()) {
             Finding problem = checkDirectories(member);

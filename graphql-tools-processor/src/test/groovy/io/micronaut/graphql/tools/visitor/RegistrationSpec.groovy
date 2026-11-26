@@ -20,8 +20,8 @@ import spock.lang.Specification
 import java.util.zip.ZipFile
 
 /**
- * The registration of the jar (#291): the visitor is the one compile-time engine of a build, so the jar registers it and nothing
- * else.
+ * The registration of the jar (#291): the two visitors, the resolver checks and the client checks, are the compile-time engine of a
+ * build, so the jar registers them in one service file and registers nothing else.
  */
 class RegistrationSpec extends Specification {
 
@@ -44,7 +44,8 @@ class RegistrationSpec extends Specification {
         then:
         jar.isFile()
         registrations.findAll { it.startsWith('META-INF/services/') || it.startsWith('META-INF/gradle/') } == [VISITOR_SERVICE]
-        visitors == ['io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor']
+        visitors == ['io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor',
+                     'io.micronaut.graphql.tools.visitor.client.GraphQLClientVisitor']
     }
 
     def "no class path entry of this module registers an annotation processor"() {

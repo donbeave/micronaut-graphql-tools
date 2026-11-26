@@ -114,12 +114,18 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`processor-schema-not-configured` |failure |yes |The processor has no schema directory option.
 |`processor-schema-not-found` |failure |yes |The configured schema directory has no schema file.
 |`processor-internal-error` |failure |yes |The processor failed with an internal error.
+|`client-schema-missing` |failure |yes |The client schema that a GraphQL client names does not exist: its directory is missing, or the client directories are not configured.
+|`client-schema-invalid` |failure |yes |A client schema cannot be parsed, merged or built.
+|`client-operation-not-found` |failure |yes |A GraphQL client operation selects an operation that its document or the client directory does not define.
+|`client-operation-ambiguous` |failure |yes |A GraphQL client operation selects several operations: its document defines more than one, or the client directory defines the name twice.
+|`client-document-invalid` |failure |yes |A GraphQL client document is not valid GraphQL, or does not validate against the client schema.
+|`client-document-too-large` |failure |yes |The assembled document of a GraphQL client operation is too large to be stored in the annotation metadata.
 // end generated: failures
 |===
 
 The message of `precedence-ambiguity` names the field coordinate, both members, and the ways out: a resolver directive, `@GraphQLSchemaCoordinate`, @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[] or the `precedence` setting.
 
-The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup emits it for a schema file that the discovery cannot parse or merge; a schema that graphql-java rejects later still fails with graphql-java's own `SchemaProblem`. `schema-definition-not-provided` is reported by both: a schema with no `schema` block and no object type named `Query` fails the compile-time check and the startup with the same code and no coordinate. `schema-not-found` is a startup code: no file at `micronaut.graphql.tools.schema.locations`, a missing literal file, or an invalid location.
+The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. The six `client-*` codes are raised by the compile-time check of the operations of a declarative client and have no startup form either; the <<clientCompileTime,client page>> describes the check. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup emits it for a schema file that the discovery cannot parse or merge; a schema that graphql-java rejects later still fails with graphql-java's own `SchemaProblem`. `schema-definition-not-provided` is reported by both: a schema with no `schema` block and no object type named `Query` fails the compile-time check and the startup with the same code and no coordinate. `schema-not-found` is a startup code: no file at `micronaut.graphql.tools.schema.locations`, a missing literal file, or an invalid location.
 
 `nullable-primitive` and `coordinate-on-non-resolver` are emitted at startup and at compile time with the same code. A primitive Java type for an argument or input field of a nullable built-in scalar fails the startup with `nullable-primitive` (not `incorrect-class-mapping`); a primitive for a nullable custom scalar keeps `incorrect-class-mapping`, because the compile-time check cannot see the scalar mapping. A `@GraphQLSchemaCoordinate` on a bean that is neither a @api:io.micronaut.graphql.tools.annotation.GraphQLRootResolver[] nor a @api:io.micronaut.graphql.tools.annotation.GraphQLTypeResolver[] fails the startup with `coordinate-on-non-resolver` (not `unknown-schema-coordinate`); the other invalid coordinates keep `unknown-schema-coordinate`, and a startup with both kinds reports both under `binding-failures`.
 
@@ -630,7 +636,7 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 // compile: unknown-option
 [source,text]
 ----
-[processor-option-unknown] -: the option micronaut.graphql.tools.processor.schema.dir is not known; the options are [micronaut.graphql.tools.processor.checks, micronaut.graphql.tools.processor.loose.nullability, micronaut.graphql.tools.processor.module.dir, micronaut.graphql.tools.processor.resolver.accessor.prefixes, micronaut.graphql.tools.processor.schema.dirs, micronaut.graphql.tools.processor.type.class.convention].
+[processor-option-unknown] -: the option micronaut.graphql.tools.processor.schema.dir is not known; the options are [micronaut.graphql.tools.processor.checks, micronaut.graphql.tools.processor.client.checks, micronaut.graphql.tools.processor.client.dirs, micronaut.graphql.tools.processor.loose.nullability, micronaut.graphql.tools.processor.module.dir, micronaut.graphql.tools.processor.resolver.accessor.prefixes, micronaut.graphql.tools.processor.schema.dirs, micronaut.graphql.tools.processor.type.class.convention].
 ----
 
 *Fix.* Use one of the options that the message lists.
@@ -712,6 +718,104 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 ----
 
 *Fix.* Report the failure, and compile with `micronaut.graphql.tools.processor.checks=false` until it is fixed. The startup still runs every check.
+
+[[example-client-schema-missing]]
+=== `client-schema-missing`
+
+*Cause.* An operation of a `@GraphQLClient` needs a client schema that does not exist: `client.dirs` is not set or names a directory that does not exist, the client directories have no subdirectory of the name that `schema` gives, the schema directory holds no `*.graphqls` file, or `schema` is empty and the client directories hold none or several schemas. Without a client, nothing reads the client directories, so no other build sees this.
+
+// client: schema-missing
+[source,text]
+----
+[client-schema-missing] example.BookClient#book(): the client directories [<client directory>] have no schema directory named library.
+    fix: add the directory library to a client directory, or set the schema member of the client to one of [books]
+----
+
+*Fix.* Add the schema directory, set `schema` to a schema that exists, or set `micronaut.graphql.tools.processor.client.dirs`. The name `server` reads `micronaut.graphql.tools.processor.schema.dirs`.
+
+*See.* <<compileTimeClientDirs,Client directories>>.
+
+[[example-client-schema-invalid]]
+=== `client-schema-invalid`
+
+*Cause.* The `*.graphqls` files of a client schema do not parse, conflict with each other, or do not build into a schema (a type that nothing defines, for example). The message quotes graphql-java and names the file when it knows it. A chain of type references that is too long for the build is the same code; the build runs on a thread with a large stack, so only a chain of many thousands of types fails.
+
+// client: schema-invalid
+[source,text]
+----
+[client-schema-invalid] books: the client schema books is not valid: The field type 'Missing' is not present when resolving type 'Query' [@1:1].
+    schema <client directory>/books/schema.graphqls:1:1
+    fix: correct the schema file at the position that the message gives, or compile with micronaut.graphql.tools.processor.client.checks=false
+----
+
+*Fix.* Correct the schema file at the position that the message gives.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-operation-not-found]]
+=== `client-operation-not-found`
+
+*Cause.* The operation that a `@GraphQLOperation` selects is not defined: the `value` is a name that no `*.graphql` file of the client schema defines, the `name` is not an operation of the inline document, or the inline document defines no operation.
+
+// client: operation-not-found
+[source,text]
+----
+[client-operation-not-found] example.BookClient#book(): no operation named FindBook in the document files of the client schema books, whose directories are [<client directory>/books].
+    fix: name an operation of the document with the name member, or write the operation in a .graphql file of the client directory of the schema
+----
+
+*Fix.* Write the operation in a `*.graphql` file of the schema directory, or correct the `value` or `name`.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-operation-ambiguous]]
+=== `client-operation-ambiguous`
+
+*Cause.* The selection matches more than one operation: an inline document defines several operations and `name` is not set, or two `*.graphql` files of the schema define an operation of the same name.
+
+// client: operation-ambiguous
+[source,text]
+----
+[client-operation-ambiguous] example.BookClient#book(): the document defines the operations [First, Second] and the name member names none.
+    fix: set the name member of @GraphQLOperation to the one operation to run
+----
+
+*Fix.* Set `name`, or rename one of the operations.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-document-invalid]]
+=== `client-document-invalid`
+
+*Cause.* A document does not parse, uses a fragment that neither the document nor the `*.graphql` files of the schema define, defines a fragment twice, or does not validate against the client schema (an undefined field, a wrong argument, a variable of the wrong type, and the other rules of the GraphQL specification). The position is a file, line and column for a document of the client directory, and `inline:<line>:<column>` for one written in the annotation. The sentence quotes graphql-java.
+
+// client: document-invalid
+[source,text]
+----
+[client-document-invalid] example.BookClient#book(): Validation error (FieldUndefined@[book/titel]) : Field 'titel' in type 'Book' is undefined.
+    document inline:3:5
+    fix: correct the document at the position that the message gives
+----
+
+*Fix.* Correct the document at the position that the message gives. With `micronaut.graphql.tools.processor.client.checks=false` a document is not validated, but one that does not parse still fails.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-document-too-large]]
+=== `client-document-too-large`
+
+*Cause.* The assembled document, the operation and the fragments it uses, does not fit in the annotation metadata: a class file holds a string constant of at most 65,535 bytes. The number in the message is the size of the printed document.
+
+// client: document-too-large
+[source,text]
+----
+[client-document-too-large] example.BookClient#book(): the assembled document is 140011 bytes, and the annotation metadata holds at most 65535 bytes of a string.
+    fix: split the operation, or select fewer fields; the assembled document is the operation and the fragments it uses
+----
+
+*Fix.* Split the operation into smaller ones, or select fewer fields.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
 
 [[example-strict-findings]]
 === `strict-findings`

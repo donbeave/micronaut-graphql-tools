@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.visitor;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.visitor.VisitorContext;
 
@@ -28,7 +29,8 @@ import java.nio.file.Path;
  * module as {@code module.dir}, which is stale in the same way; the output of this compilation is not, so a value whose
  * directory does not contain the output belongs to another module.
  */
-final class ModuleOwnership {
+@Internal
+public final class ModuleOwnership {
 
     private ModuleOwnership() {
     }
@@ -40,7 +42,7 @@ final class ModuleOwnership {
      * @return the output directory of this compilation when it lies outside {@code moduleDir}, null when it lies inside or when
      *         the compiler gives no output directory (kapt and KSP do not), so that the check does not apply
      */
-    static @Nullable Path foreignOutput(@Nullable Path moduleDir, VisitorContext context) {
+    public static @Nullable Path foreignOutput(@Nullable Path moduleDir, VisitorContext context) {
         if (moduleDir == null) {
             return null;
         }
@@ -57,7 +59,7 @@ final class ModuleOwnership {
      * @param context the context of this compilation
      * @return the project directory that the compiler reports, null when it reports none
      */
-    static @Nullable Path projectDir(VisitorContext context) {
+    public static @Nullable Path projectDir(VisitorContext context) {
         try {
             return context.getProjectDir().map(it -> it.toAbsolutePath().normalize()).orElse(null);
         } catch (RuntimeException e) {

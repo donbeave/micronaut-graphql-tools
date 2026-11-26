@@ -15,6 +15,8 @@
  */
 package io.micronaut.graphql.tools.binding.internal.client;
 
+import graphql.GraphQLError;
+import graphql.language.SourceLocation;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.idl.UnExecutableSchemaGenerator;
@@ -23,12 +25,14 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
+import io.micronaut.graphql.tools.binding.internal.finding.SchemaLocation;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSourceException;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaSources;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Builds the schema that a client document is validated against. graphql-java builds a schema recursively through the type
@@ -69,7 +73,7 @@ public final class ClientSchemaBuilder {
             worker.join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return new Built(null, invalid(name, "the build of the schema was interrupted", null));
+            return new Built(null, invalid(name, "the build of the schema was interrupted", null, null));
         }
         Throwable thrown = failure.get();
         if (thrown == null) {
@@ -78,13 +82,17 @@ public final class ClientSchemaBuilder {
         if (thrown instanceof StackOverflowError) {
             return new Built(null, invalid(name, "the schema has a chain of type references that is too long to build (the build "
                     + "ran out of stack)", "shorten the chain of type references, or compile with "
-                    + "micronaut.graphql.tools.processor.client.checks=false"));
+                    + "micronaut.graphql.tools.processor.client.checks=false", null));
         }
-        if (thrown instanceof SchemaSourceException || thrown instanceof SchemaProblem) {
-            return new Built(null, invalid(name, thrown.getMessage(), null));
+        if (thrown instanceof SchemaProblem problem) {
+            return new Built(null, invalid(name, problem.getErrors().stream().map(GraphQLError::getMessage)
+                    .collect(Collectors.joining("; ")), null, location(problem)));
+        }
+        if (thrown instanceof SchemaSourceException) {
+            return new Built(null, invalid(name, thrown.getMessage(), null, null));
         }
         if (thrown instanceof RuntimeException exception) {
-            return new Built(null, invalid(name, "the schema cannot be built: " + exception, null));
+            return new Built(null, invalid(name, "the schema cannot be built: " + exception, null, null));
         }
         if (thrown instanceof Error error) {
             throw error;
@@ -113,9 +121,21 @@ public final class ClientSchemaBuilder {
         return UnExecutableSchemaGenerator.makeUnExecutableSchema(registry);
     }
 
-    private static Finding invalid(String name, String sentence, @Nullable String fix) {
+    // the position of the first problem that names its file
+    private static @Nullable SchemaLocation location(SchemaProblem problem) {
+        for (GraphQLError error : problem.getErrors()) {
+            for (SourceLocation at : error.getLocations() == null ? List.<SourceLocation>of() : error.getLocations()) {
+                if (at.getSourceName() != null) {
+                    return new SchemaLocation(at.getSourceName(), at.getLine(), at.getColumn());
+                }
+            }
+        }
+        return null;
+    }
+
+    private static Finding invalid(String name, String sentence, @Nullable String fix, @Nullable SchemaLocation location) {
         return new Finding(BindingCode.CLIENT_SCHEMA_INVALID.getCode(), name, "the client schema " + name + " is not valid: "
-                + sentence, null, null, null, fix == null ? "correct the schema file at the position that the message gives, or "
+                + sentence, null, null, location, fix == null ? "correct the schema file at the position that the message gives, or "
                 + "compile with micronaut.graphql.tools.processor.client.checks=false" : fix);
     }
 

@@ -3,7 +3,7 @@
 
 [[compileTimeOptions]]
 
-The compile-time checks have six options. Every option name starts with `micronaut.graphql.tools.processor.`, and no other key under that prefix is accepted: an unknown option fails the build with `[processor-option-unknown]`, so that a typo cannot switch a check off. A value that does not parse fails with `[processor-option-invalid]`. A boolean is read as Micronaut reads booleans (`true`, `yes`, `on` and their opposites).
+The compile-time checks have eight options. Every option name starts with `micronaut.graphql.tools.processor.`, and no other key under that prefix is accepted: an unknown option fails the build with `[processor-option-unknown]`, so that a typo cannot switch a check off. A value that does not parse fails with `[processor-option-invalid]`. A boolean is read as Micronaut reads booleans (`true`, `yes`, `on` and their opposites).
 
 [cols="3,1,1,6", options="header"]
 |===
@@ -14,9 +14,31 @@ The compile-time checks have six options. Every option name starts with `microna
 |`micronaut.graphql.tools.processor.resolver.accessor.prefixes` |`true` or `false` |`false` |The value of `micronaut.graphql.tools.resolver-accessor-prefixes` that the checks apply when they decide which method binds a field. Set it to the value of the application, or the checks and the startup read different names.
 |`micronaut.graphql.tools.processor.loose.nullability` |`fail`, `warn` or `ignore` |`ignore` |What the checks do with a Kotlin type that is stricter than the schema type (`kotlin-nullability-loose`): a non-null return type at a nullable field, or a nullable parameter or property at a non-null position. `warn` reports a compiler warning and `fail` a compile error. The opposite direction, `kotlin-nullability-mismatch`, is always an error. See <<kotlinNullability,Kotlin nullability>>.
 |`micronaut.graphql.tools.processor.type.class.convention` |a pattern with `{Type}` once |none |The value of `micronaut.graphql.tools.type-class-convention` that the checks apply when they look for two classes of the module that match one object type of a union or interface (`[ambiguous-type-class]`). Set it to the value of the application. A pattern without `{Type}` fails the build with `[processor-option-invalid]`.
+|`micronaut.graphql.tools.processor.client.dirs` |directories, joined with the platform path separator |none |The directories of the client schemas. Each subdirectory is one client schema: its `*.graphqls` files are the schema, and its `*.graphql` files hold the operations and fragments. The reserved name `server` is the schema of `schema.dirs`. A `@GraphQLClient` names its schema with `schema`. The directories are an input of the compilation. See <<compileTimeClientDirs,Client directories>> and the <<clientCompileTime,client checks>>.
+|`micronaut.graphql.tools.processor.client.checks` |`true` or `false` |`true` |`false` still parses and assembles every operation of a client, and prints one note, but builds no schema and validates nothing. It is the escape hatch of the client checks; `checks=false` turns them off too. It is not a runtime key.
 |===
 
 The names are dot-separated lowercase segments, as every Micronaut `-A` option is (`micronaut.processing.use.context.classloader`, `micronaut.data.jpa.metamodel.enabled`): `javac` accepts only dot-separated identifiers as option names, and Micronaut has no camel case option. The runtime keys of the same settings are kebab-case, so `resolver.accessor.prefixes` is `resolver-accessor-prefixes` at runtime.
+
+[[compileTimeClientDirs]]
+== Client directories
+
+`client.dirs` is read by the client visitor, which checks the operations of the interfaces annotated with `@GraphQLClient` (see the <<clientCompileTime,client checks>>). Every entry is a directory, and each subdirectory of it is one client schema, so the same schema name in two entries is one schema read from both:
+
+----
+src/main/graphql/client/        <- an entry of client.dirs
+  github/                       <- the schema named github
+    schema.graphqls             <- the schema, as many *.graphqls files as it has
+    operations/*.graphql        <- operations and fragments, in any subdirectory
+  server/                       <- operations of the schema server (it holds no schema)
+    health.graphql
+----
+
+* `@GraphQLClient(schema = "github")` selects the subdirectory `github`. An empty `schema` selects the only subdirectory of the client directories, and fails with `[client-schema-missing]` when there are none or several, naming them.
+* The name `server` is reserved: its schema is `schema.dirs`, so an application can check a client of its own schema without a copy of it. A `server` subdirectory of a client directory only holds `*.graphql` files; its `*.graphqls` files are not read.
+* A client directory that does not exist, a name with no subdirectory and an unset option fail with `[client-schema-missing]` when an operation needs them: a compilation with no client reads no client directory. With `client.checks=false` an inline document needs no directory at all.
+* A schema directory without a `*.graphqls` file fails with `[client-schema-missing]`, and a schema that does not parse or build fails with `[client-schema-invalid]`.
+* Like `schema.dirs`, `client.dirs` is copied into system properties by Micronaut, so a module of a build with several modules sets `module.dir` as well, and a module that forgot `client.dirs` fails with `[client-schema-missing]` instead of reading the directory of an earlier module.
 
 == Setting `loose.nullability`
 
@@ -84,6 +106,6 @@ A runtime key (`micronaut.graphql.tools.schema.locations`, `micronaut.graphql.to
 |A directory without schema files fails with `processor-schema-not-found` |corpus `options/schema-dir-without-schema-files`
 |Several directories are read |corpus `options/several-schema-directories`
 |`checks=false` compiles with one note |`checksFalsePrintsItsNoteAndPasses` in both contracts; corpus `options/checks-off`
-|An unknown option or a bad value fails |corpus `options/unknown-option` and `options/invalid-checks-value`
+|An unknown option or a bad value fails |corpus `options/unknown-option` and `options/invalid-checks-value`; `GraphQLClientVisitorSpec`, `ProcessorOptionsSpec` for the client options
 |`module.dir` rejects another module's schema directory |`MultiModuleGradleSampleTest`, `MultiModuleMavenSampleTest`
 |===
