@@ -7,6 +7,8 @@
 //   ./gradlew publishAllPublicationsToGitHubPackagesRepository -PprojectVersion=<version> -I .github/gradle/publish-github-packages.init.gradle.kts
 //
 // Credentials come from the environment (GITHUB_ACTOR and GITHUB_TOKEN); the token needs `packages: write` for this repository.
+//
+// This file is temporary: it is kept through the 1.0 line and deleted at the Foundation contribution (#217).
 
 val registryUrl = "https://maven.pkg.github.com/donbeave/micronaut-graphql-tools"
 val repositoryUrl = "https://github.com/donbeave/micronaut-graphql-tools"

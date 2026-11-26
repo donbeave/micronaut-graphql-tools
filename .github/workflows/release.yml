@@ -6,6 +6,7 @@ name: Release
 # is published). The workflow definition and the publishing setup (.github/gradle/publish-github-packages.init.gradle.kts)
 # always come from the ref that runs the workflow; the sources that are built and published are always the tag's tree.
 # It never runs on a release or a pull request.
+# This workflow and the init script are temporary: they are kept through the 1.0 line and replaced at the Foundation contribution (#217).
 on:
   push:
     tags:

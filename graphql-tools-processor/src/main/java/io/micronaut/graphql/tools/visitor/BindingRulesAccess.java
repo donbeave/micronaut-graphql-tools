@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.visitor;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 import io.micronaut.graphql.tools.binding.internal.rules.ResolverClassFindings;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
@@ -29,6 +30,7 @@ import java.util.Optional;
  * {@link ClassElement} the way the visitor does, so that the benchmarks can measure that path without a class in this
  * package. It may change or disappear in any release without notice.
  */
+@Internal
 public final class BindingRulesAccess {
 
     private BindingRulesAccess() {

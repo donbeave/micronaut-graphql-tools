@@ -81,6 +81,10 @@ A pull request is ready to merge when:
 
 Merge with "Squash and merge" only.
 
+## Build plugin and Micronaut line
+
+The 1.0 line stays on the micronaut-build plugin 7.6.x (`io.micronaut.build.shared.settings` in `settings.gradle.kts`) and on Micronaut 4.10.x, for the whole line, release candidates included. Patch updates inside 7.6.x and 4.10.x are allowed. micronaut-build 8.x comes with Micronaut 5, so that move belongs to the 2.0 line.
+
 ## Dependency upgrades
 
 Renovate is configured in `.github/renovate.json`. Review its pull requests like any other: the same green `required checks` rule applies.
@@ -92,6 +96,8 @@ Maven Central and the Gradle plugin portal sometimes answer HTTP 429. Gradle ret
 ## Releases
 
 GitHub Packages milestone releases are published: milestone versions `1.0.0-M<n>` go to the Maven registry of this repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. Maven Central, GitHub Releases and snapshots stay out of scope until the Foundation contribution. The groupId stays `io.micronaut.graphql.tools`; every consumer-facing page says that the artifacts are unaffiliated milestone previews until contributed.
+
+`release.yml` and `.github/gradle/publish-github-packages.init.gradle.kts` are temporary files. They are kept through the 1.0 line, and at the Foundation contribution (#217) the Micronaut template workflows replace them and the init script is deleted.
 
 To cut a release:
 

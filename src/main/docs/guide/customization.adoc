@@ -74,4 +74,4 @@ The chains and what the order means for each:
 [[experimentalTypes]]
 == Types that are marked `@Experimental`
 
-`io.micronaut.core.annotation.Experimental` marks an API that can still change before the API freeze. These types of the library carry it: `GraphQLFieldFetcherDecorator`, `GraphQLTransport`, `DataLoaderBatchStatistics`, `GraphQLContextContributor` and `GraphQLConnectionInterceptor`. A change to one of them is listed on the page of breaking changes like any other.
+`io.micronaut.core.annotation.Experimental` marks an API that can still change within the 1.0 line. The <<publicApi,Public API>> page marks it. One type of the library carries it: `DataLoaderBatchStatistics`. A change to it is listed on the page of breaking changes like any other. `GraphQLContextContributor`, `GraphQLFieldFetcherDecorator`, `GraphQLConnectionInterceptor` and `GraphQLTransport` are stable since 1.0.0-M5, and the breaking-change policy covers them.

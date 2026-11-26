@@ -15,12 +15,11 @@
  */
 package io.micronaut.graphql.tools.execution;
 
-import io.micronaut.core.annotation.Experimental;
 
 /**
- * How an operation reached the library's invocation.
+ * How an operation reached the library's invocation. A minor release may add a constant, so a {@code switch}
+ * or {@code when} over it needs a default branch.
  */
-@Experimental
 public enum GraphQLTransport {
 
     /** An HTTP request to the GraphQL route. */
