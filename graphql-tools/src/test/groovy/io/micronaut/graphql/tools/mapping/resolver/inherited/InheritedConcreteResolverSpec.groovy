@@ -15,9 +15,9 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.inherited
 
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 
-class InheritedConcreteResolverSpec extends AbstractTest {
+class InheritedConcreteResolverSpec extends AbstractSpec {
 
     void "a bean that overrides a concrete resolver method of its superclass binds the field once"() {
         given:

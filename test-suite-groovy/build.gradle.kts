@@ -137,6 +137,31 @@ tasks.named<GroovyCompile>("compileGroovy") {
     groovyOptions.optimizationOptions = (groovyOptions.optimizationOptions ?: mutableMapOf()).apply { put("indy", false) }
 }
 
+// Groovy compiles every closure to a synthetic class whose name carries the holder class and the method, such as `example.data.BookRepository$_findById_closure1`,
+// and the call of a closure reflects over it. A hand-written list of those names broke on any rename, so the native metadata of the closures
+// is written from the compiled classes: a rename of a holder class or a method follows.
+val closureReflectConfig = layout.buildDirectory.dir("generated/native-image")
+val generateClosureReflectConfig by tasks.registering {
+    description = "Writes the reflection metadata of the compiled Groovy closure classes."
+    val classes = sourceSets.main.get().output.classesDirs
+    inputs.files(classes).withPropertyName("classes").withPathSensitivity(PathSensitivity.RELATIVE)
+    val config = closureReflectConfig.map { it.file("META-INF/native-image/example/test-suite-groovy-closures/reflect-config.json") }
+    outputs.dir(closureReflectConfig)
+    dependsOn(tasks.named("compileGroovy"))
+    doLast {
+        val closure = Regex("""[$]_[\w$]*_closure\d+$""")
+        val names = classes.files.filter { it.isDirectory }.flatMap { dir ->
+            dir.walkTopDown().filter { it.isFile && it.extension == "class" }
+                .map { it.relativeTo(dir).invariantSeparatorsPath.removeSuffix(".class").replace('/', '.') }
+                .filter { closure.containsMatchIn(it) }.toList()
+        }.sorted()
+        check(names.isNotEmpty()) { "no Groovy closure class found in ${classes.files}" }
+        val json = names.joinToString(",\n", "[\n", "\n]\n") { """  {"name": "$it", "allDeclaredMethods": true}""" }
+        config.get().asFile.apply { parentFile.mkdirs() }.writeText(json)
+    }
+}
+sourceSets.main { resources.srcDir(generateClosureReflectConfig.map { closureReflectConfig }) }
+
 // Spock cannot run natively, so the native executable of the application is smoke-tested instead (#276): the script
 // starts it, posts the queries of the Java and Kotlin smoke tests and asserts the response bodies. Not part of `check`:
 // a native build takes minutes and about 5 GB.

@@ -18,14 +18,14 @@ package io.micronaut.graphql.tools.mapping.interfacetype
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class InterfaceImplementsInterfaceSpec extends AbstractTest {
+class InterfaceImplementsInterfaceSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "InterfaceImplementsInterfaceSpec"
 

@@ -16,10 +16,10 @@
 package io.micronaut.graphql.tools.ws
 
 import io.micronaut.configuration.graphql.ws.apollo.GraphQLApolloWsKeepAlive
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.websocket.WebSocketBroadcaster
 
-class ApolloKeepAliveSpec extends AbstractTest {
+class ApolloKeepAliveSpec extends AbstractSpec {
 
     static final String SCHEMA = """
 type Query {

@@ -24,11 +24,11 @@ import graphql.execution.ResultPath
 import graphql.language.Field
 import graphql.schema.DataFetchingEnvironmentImpl
 import graphql.Scalars
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import org.intellij.lang.annotations.Language
 
 /** A field without a source location never adds a null entry to the {@code locations} of its error (#471). */
-class NoSourceLocationSpec extends AbstractTest {
+class NoSourceLocationSpec extends AbstractSpec {
 
     static final String SPEC = 'NoSourceLocationSpec'
 

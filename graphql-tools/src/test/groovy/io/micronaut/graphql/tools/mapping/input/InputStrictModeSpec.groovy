@@ -23,7 +23,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.convert.ConversionContext
 import io.micronaut.core.convert.TypeConverter
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class InputStrictModeSpec extends AbstractTest {
+class InputStrictModeSpec extends AbstractSpec {
 
     static final String SPEC_PRIMITIVE_ARGUMENT = "InputStrictModeSpecPrimitiveArgument"
     static final String SPEC_PRIMITIVE_PROPERTY = "InputStrictModeSpecPrimitiveProperty"

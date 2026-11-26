@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class AllBooksQueryTest extends AbstractTest {
 
     @Test
-    void testAll() {
+    void returnsAllBooks() {
         ApolloResponse<AllBooksQuery.Data> response =
                 Rx3Apollo.single(apolloClient.query(new AllBooksQuery())).blockingGet();
 

@@ -21,7 +21,7 @@ import io.micronaut.runtime.context.scope.Refreshable
 import io.micronaut.runtime.context.scope.refresh.RefreshEvent
 import io.micronaut.runtime.http.scope.RequestScope
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -30,7 +30,7 @@ import org.intellij.lang.annotations.Language
 
 import java.util.concurrent.atomic.AtomicInteger
 
-class ResolverScopeSpec extends AbstractTest {
+class ResolverScopeSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "ResolverScopeSpec"
 

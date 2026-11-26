@@ -40,7 +40,7 @@ import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
  * the allow lists. The four checks of {@link StrictModeSpec}'s schema stand for the strict checks; the corpus has one
  * case per check and severity.
  */
-class CheckSeveritySpec extends AbstractTest {
+class CheckSeveritySpec extends AbstractSpec {
 
     static final String SPEC_NAME = StrictModeSpec.SPEC_NAME
     static final String PREFIX = 'micronaut.graphql.tools.'

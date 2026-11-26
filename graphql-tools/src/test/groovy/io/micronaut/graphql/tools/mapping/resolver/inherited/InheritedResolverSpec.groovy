@@ -21,7 +21,7 @@ import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.binding.internal.meta.ResolverContracts
 import io.micronaut.inject.BeanDefinition
 import io.micronaut.graphql.tools.internal.model.GraphQLResolversRegistry
@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class InheritedResolverSpec extends AbstractTest {
+class InheritedResolverSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "InheritedResolverSpec"
 

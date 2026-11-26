@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
@@ -25,7 +25,7 @@ import spock.lang.Unroll
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
-class RootResolverScalarsExtendedAsCompletionStageFieldsSpec extends AbstractTest {
+class RootResolverScalarsExtendedAsCompletionStageFieldsSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RootResolverScalarsExtendedAsCompletionStageFieldsSpec"
 

@@ -33,7 +33,7 @@ import io.micronaut.graphql.tools.binding.BindingCode
  * reach with different classes is bound to the class of the first field that reaches it, and the later field is the one
  * that fails. The expected values were produced by the recursive walk that the work stack replaced.
  */
-class BindingVisitOrderSpec extends AbstractTest {
+class BindingVisitOrderSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "BindingVisitOrderSpec"
 

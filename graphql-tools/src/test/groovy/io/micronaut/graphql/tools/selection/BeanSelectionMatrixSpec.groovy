@@ -32,7 +32,7 @@ import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Secondary
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.internal.GraphQLFactory
 import io.micronaut.http.HttpRequest
@@ -54,7 +54,7 @@ import spock.lang.Shared
  * type (the library's invocation stays registered beside an application invocation). The observed matrix is also
  * written to build/bean-selection-matrix.txt, so that a deliberate change of the selection is a copy of that file.
  */
-class BeanSelectionMatrixSpec extends AbstractTest {
+class BeanSelectionMatrixSpec extends AbstractSpec {
 
     static final String SCHEMA = '''
 schema { query: Query }

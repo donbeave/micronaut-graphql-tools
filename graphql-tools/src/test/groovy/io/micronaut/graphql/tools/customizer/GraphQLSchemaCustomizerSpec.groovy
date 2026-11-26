@@ -28,7 +28,7 @@ import io.micronaut.context.event.BeanCreatedEvent
 import io.micronaut.context.event.BeanCreatedEventListener
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -36,7 +36,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLType
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class GraphQLSchemaCustomizerSpec extends AbstractTest {
+class GraphQLSchemaCustomizerSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "GraphQLSchemaCustomizerSpec"
     static final String SPEC_NAME_NULL = "GraphQLSchemaCustomizerSpec.null"

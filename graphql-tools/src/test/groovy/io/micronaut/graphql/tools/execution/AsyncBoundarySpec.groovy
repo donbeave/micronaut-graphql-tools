@@ -28,7 +28,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.core.convert.value.ConvertibleValues
 import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.core.propagation.PropagatedContextElement
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -55,7 +55,7 @@ import java.util.function.BiConsumer
  * The async boundary: a child of an async field sees the propagated context of the request and does not run on the thread
  * that completed its parent when that is an event-loop thread.
  */
-class AsyncBoundarySpec extends AbstractTest {
+class AsyncBoundarySpec extends AbstractSpec {
 
     static final String SPEC_NAME = 'AsyncBoundarySpec'
 

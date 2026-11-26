@@ -18,13 +18,13 @@ package io.micronaut.graphql.tools.mapping.type
 import jakarta.inject.Singleton
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import org.intellij.lang.annotations.Language
 
-class TypeDataFetchingEnvironmentSpec extends AbstractTest {
+class TypeDataFetchingEnvironmentSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "TypeDataFetchingEnvironmentSpec"
 

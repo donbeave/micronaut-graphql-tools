@@ -19,7 +19,7 @@ import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -28,7 +28,7 @@ import spock.lang.Unroll
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class TypeContractInterfaceSpec extends AbstractTest {
+class TypeContractInterfaceSpec extends AbstractSpec {
 
     static final String UNANNOTATED_IMPLEMENTATIONS = "TypeContractInterfaceSpec.unannotatedImplementations"
     static final String ANNOTATED_IMPLEMENTATIONS = "TypeContractInterfaceSpec.annotatedImplementations"

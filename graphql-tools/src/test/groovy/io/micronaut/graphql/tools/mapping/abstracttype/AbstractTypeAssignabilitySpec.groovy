@@ -19,7 +19,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -29,7 +29,7 @@ import spock.lang.Unroll
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class AbstractTypeAssignabilitySpec extends AbstractTest {
+class AbstractTypeAssignabilitySpec extends AbstractSpec {
 
     static final String UNION_SUBCLASS = "AbstractTypeAssignabilitySpec.unionSubclass"
     static final String UNION_CONTRACT = "AbstractTypeAssignabilitySpec.unionContract"

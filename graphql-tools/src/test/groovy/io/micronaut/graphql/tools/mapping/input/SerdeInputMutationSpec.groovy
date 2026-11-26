@@ -17,13 +17,13 @@ package io.micronaut.graphql.tools.mapping.input
 
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.serde.annotation.Serdeable
 import org.intellij.lang.annotations.Language
 
-class SerdeInputMutationSpec extends AbstractTest {
+class SerdeInputMutationSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "SerdeInputMutationSpec"
 

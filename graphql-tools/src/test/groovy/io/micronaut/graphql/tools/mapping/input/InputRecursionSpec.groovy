@@ -17,12 +17,12 @@ package io.micronaut.graphql.tools.mapping.input
 
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.intellij.lang.annotations.Language
 
-class InputRecursionSpec extends AbstractTest {
+class InputRecursionSpec extends AbstractSpec {
 
     static final String SPEC_NODE_FIRST = "InputRecursionSpecNodeFirst"
     static final String SPEC_EDGE_FIRST = "InputRecursionSpecEdgeFirst"

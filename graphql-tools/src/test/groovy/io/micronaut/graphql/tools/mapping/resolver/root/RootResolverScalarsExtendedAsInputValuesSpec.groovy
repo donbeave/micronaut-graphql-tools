@@ -17,13 +17,13 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
 
-class RootResolverScalarsExtendedAsInputValuesSpec extends AbstractTest {
+class RootResolverScalarsExtendedAsInputValuesSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RootResolverScalarsExtendedAsInputValuesSpec"
 

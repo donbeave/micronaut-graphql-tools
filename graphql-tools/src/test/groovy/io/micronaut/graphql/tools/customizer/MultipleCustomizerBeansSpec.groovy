@@ -20,7 +20,7 @@ import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeDefinitionRegistry
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.mapping.SchemaMappingDictionary
@@ -32,7 +32,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * One bean and several beans of a customizer type behave the same way: every bean runs, and a chain runs lowest order
  * first. The API freeze review (#98) lists each customizer that the library injects as a list.
  */
-class MultipleCustomizerBeansSpec extends AbstractTest {
+class MultipleCustomizerBeansSpec extends AbstractSpec {
 
     static final String SCHEMA = '''
 schema { query: Query }

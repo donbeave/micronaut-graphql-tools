@@ -18,11 +18,11 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.intellij.lang.annotations.Language
 
-class RootResolverIntrospectedEntityAsFieldSpec extends AbstractTest {
+class RootResolverIntrospectedEntityAsFieldSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RootResolverIntrospectedEntityAsFieldSpec"
 

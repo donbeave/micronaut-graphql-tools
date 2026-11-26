@@ -31,7 +31,7 @@ import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
-class BindingFailuresSpec extends AbstractTest {
+class BindingFailuresSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "BindingFailuresSpec"
 

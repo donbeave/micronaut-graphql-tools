@@ -21,7 +21,7 @@ import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -33,7 +33,7 @@ import java.util.concurrent.CompletionStage
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class DataFetcherResultReturnTypeSpec extends AbstractTest {
+class DataFetcherResultReturnTypeSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "DataFetcherResultReturnTypeSpec"
     static final String SPEC_NAME_NESTED = "DataFetcherResultReturnTypeSpecNested"
