@@ -15,6 +15,8 @@
  */
 package io.micronaut.graphql.tools.client.internal;
 
+import io.micronaut.core.annotation.Internal;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -28,6 +30,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  *
  * @author Alexey Zhokhov
  */
+@Internal
 @Documented
 @Retention(RUNTIME)
 @Target(ElementType.METHOD)
