@@ -1077,3 +1077,244 @@ An object of the implementing class would match both GraphQL types. Map each Gra
 *Fix.* Add `org.jetbrains.kotlinx:kotlinx-coroutines-reactive` to the dependencies of the application.
 
 *See.* <<subscriptions,Subscriptions>>, the section on Kotlin Flow.
+
+[[example-unmapped-input-property]]
+=== `unmapped-input-property`
+
+*Cause.* A settable property of an input class has no field in the GraphQL input type that the class is mapped to. The message names the input type, the class and the properties.
+
+// corpus: input/unmapped-input-property
+[source,text]
+----
+[unmapped-input-property] Input classes have properties that their GraphQL input types do not define (set micronaut.graphql.tools.checks.unmapped-input-property to warn or ignore to accept them):
+  GraphQL input object type: Filter, mapped class: example.Filter, properties: extra
+----
+
+*Fix.* Add the field to the input type, or remove the property from the class.
+
+*See.* <<inputs,Inputs>>.
+
+[[example-unreachable-value-type]]
+=== `unreachable-value-type`
+
+*Cause.* The schema defines an enum, input or scalar type that no reachable field or argument references, so nothing binds it. The message lists each type with its kind.
+
+// corpus: strict/unreachable-value-type
+[source,text]
+----
+[unreachable-value-type] The schema defines types that no field reachable from a root operation type returns, so nothing binds them: Filter (input), Size (enum).
+  Bind them through a field, remove them from the schema, list them in micronaut.graphql.tools.allow.unreachable, or set micronaut.graphql.tools.checks.unreachable-value-type to warn or ignore.
+----
+
+*Fix.* Reference the type from a reachable field or argument, remove it from the schema, or list it in `micronaut.graphql.tools.allow.unreachable`.
+
+*See.* <<schema,Schema>>.
+
+[[example-coordinate-on-non-resolver]]
+=== `coordinate-on-non-resolver`
+
+*Cause.* A `@GraphQLSchemaCoordinate` is on a method of a bean that is neither a `@GraphQLRootResolver` nor a `@GraphQLTypeResolver`.
+
+// corpus: coordinate/on-non-resolver
+[source,text]
+----
+[coordinate-on-non-resolver] Invalid @GraphQLSchemaCoordinate declarations:
+  1) @GraphQLSchemaCoordinate("Query.second") on example.Helper second(): the bean is neither a @GraphQLRootResolver nor a @GraphQLTypeResolver.
+----
+
+*Fix.* Annotate the bean with the resolver annotation that fits the coordinate, or remove the `@GraphQLSchemaCoordinate` from the method.
+
+*See.* <<binding,Binding>>.
+
+[[example-unsupported-return-type]]
+=== `unsupported-return-type`
+
+*Cause.* The return type of a method or property cannot be bound to the type of the field. The message says why; here a `java.util.Optional` is returned for a non-null field.
+
+// corpus: wrapper/optional-non-null
+[source,text]
+----
+[unsupported-return-type] The return type of the method or property is not supported for this field: java.util.Optional is only allowed for a nullable GraphQL type, the field type is String!. Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself instead of an Optional.
+  GraphQL coordinate: Book.title (schema.graphqls, line 11, column 3)
+  Mapped class: example.Book
+  Mapped method: getTitle()
+----
+
+*Fix.* Change the Java return type or the schema type so that they fit, as the message says.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-unsupported-input-type]]
+=== `unsupported-input-type`
+
+*Cause.* The Java type of an argument or input field cannot be used for the GraphQL type. The message says why; here a list is bound to a `java.util.ArrayDeque`.
+
+// corpus: input/unsupported-list-type
+[source,text]
+----
+[unsupported-input-type] The Java type is not supported for this argument or input field: a list is converted into a List, a Collection, an Iterable, a Set, a SortedSet, a Deque or a Queue, but the declared type is java.util.ArrayDeque.
+  GraphQL coordinate: Query.names(values:) (schema.graphqls, line 6, column 9)
+  GraphQL argument: values
+  Mapped class: example.Query
+  Mapped method: names(java.util.ArrayDeque values)
+----
+
+*Fix.* Change the Java type to one that the message lists, or change the schema type.
+
+*See.* <<inputs,Inputs>>.
+
+[[example-multiple-methods-found]]
+=== `multiple-methods-found`
+
+*Cause.* Several methods can bind one field, whichever classes or beans hold them. The message lists them.
+
+// corpus: failure/two-members-one-field
+[source,text]
+----
+[multiple-methods-found] Found multiple methods for one GraphQL field.
+  GraphQL coordinate: Book.title (schema.graphqls, line 11, column 3)
+  Methods:
+  1) example.Book getTitle()
+  2) example.Book title()
+  Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("Book.title") on one of them (two methods with the same coordinate still conflict).
+----
+
+*Fix.* Leave one method for the field, or follow the way out that the message names.
+
+*See.* <<binding,Binding>>.
+
+[[example-incorrect-member-mapping]]
+=== `incorrect-member-mapping`
+
+*Cause.* An object type of a union or an interface is mapped to a Java type that is disjoint from the Java type that the union or interface is returned as, so no object can resolve to it.
+
+// corpus: abstract/union-member-final-class
+[source,text]
+----
+[incorrect-member-mapping] The union SearchResult is returned as example.SearchResult, but its object type Magazine is mapped to example.Magazine, and no object can be an instance of both example.SearchResult and example.Magazine, so no object the field returns can resolve to Magazine. Map Magazine to a Java type that example.SearchResult can implement or extend.
+  GraphQL coordinate: Query.search (schema.graphqls, line 6, column 3)
+  Mapped class: example.Query
+  Mapped method: search()
+----
+
+*Fix.* Map the object type to a Java type that the declared Java type can implement or extend, as the message says.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-mapping-conflict]]
+=== `mapping-conflict`
+
+*Cause.* Two mappings of one schema type conflict: the type is mapped to two Java classes.
+
+// corpus: failure/one-type-two-classes
+[source,text]
+----
+[mapping-conflict] Unable to map GraphQL type `Book` to example.Novel, as it is already mapped to example.Book.
+  GraphQL coordinate: Query.search (schema.graphqls, line 7, column 3)
+  Mapped class: example.BookQuery
+  Mapped method: search(example.BookFilter filter)
+----
+
+*Fix.* Map the schema type to one Java class.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-ambiguous-type-class]]
+=== `ambiguous-type-class`
+
+*Cause.* Several classes match one object type of a union or interface, by `@GraphQLType(name)` or by the naming convention.
+
+// corpus: abstract/ambiguous-type-class
+[source,text]
+----
+[ambiguous-type-class] The object type Book matches several classes: example.BookGraph, example.BookRecord.
+Declare @GraphQLType(name = "Book") on one class only, rename the others, or map Book in the SchemaMappingDictionary, which always wins.
+  GraphQL coordinate: Query.search (schema.graphqls, line 6, column 3)
+  Mapped class: example.Query
+  Mapped method: search()
+----
+
+*Fix.* Leave one class that matches the type by renaming or removing the others, or map the type in the `SchemaMappingDictionary`, which the message says always wins.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-ambiguous-abstract-type]]
+=== `ambiguous-abstract-type`
+
+*Cause.* Objects of one class cannot be resolved to one object type of a union or interface, because no single object type is the most specific one. The message names the class and the object types.
+
+// corpus: abstract/ambiguous-members
+[source,text]
+----
+[ambiguous-abstract-type] Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type is the most specific one:
+  example.BoxedAndBagged is an instance of Bagged (example.Bagged), Boxed (example.Boxed) of union Holder
+Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement only one of their Java types.
+----
+
+*Fix.* Map the class to one of the object types with `@GraphQLType(TheJavaInterface.class)`, or let it implement only one of their Java types.
+
+*See.* <<typeSystem,Type System>>.
+
+[[example-type-resolver-contracts-not-found]]
+=== `type-resolver-contracts-not-found`
+
+*Cause.* A bean implements the `TypeResolver<T>` marker interface and the build did not record its source type, because the processor did not run for it.
+
+// corpus: marker/no-processor-type-resolver
+[source,text]
+----
+[type-resolver-contracts-not-found] The bean example.BookSummary implements the marker interface TypeResolver<T>, but the build did not record its source type. Add micronaut-graphql-tools-processor to the path that your compiler reads Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, compileOnly for Groovy; the compile-time checks section of the README shows the setting of each tool, and micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the source type).
+----
+
+*Fix.* Put `micronaut-graphql-tools-processor` on the path that the compiler reads Micronaut processors from, as the message says.
+
+*See.* <<compileTime,Compile-Time Checks>>.
+
+[[example-invalid-allow-unreachable]]
+=== `invalid-allow-unreachable`
+
+*Cause.* An entry of `micronaut.graphql.tools.allow.unreachable` is not an unreachable type of the schema. The message gives the reason for each entry.
+
+// corpus: strict/allow-unreachable-invalid
+[source,text]
+----
+[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Ghost (not defined in the schema), Query (is reachable).
+  Remove them from the list.
+----
+
+*Fix.* Remove the entries that the message lists.
+
+*See.* <<schema,Schema>>.
+
+[[example-duplicate-directive-wiring]]
+=== `duplicate-directive-wiring`
+
+*Cause.* A directive is wired by a named and an every-element `SchemaDirective` bean, so it would take effect twice.
+
+// corpus: directive/named-and-every-element
+[source,text]
+----
+[duplicate-directive-wiring] Directive @audit is wired by both a named and an every-element SchemaDirective bean, so it would take effect twice: named example.Directives$NoOp, every element example.Directives$NoOp. Use one of them: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.
+----
+
+*Fix.* Wire the directive through one of them, as the message says.
+
+*See.* <<directives,Directives>>.
+
+[[example-invalid-claimed-fields]]
+=== `invalid-claimed-fields`
+
+*Cause.* A `GraphQLRuntimeWiringCustomizer` claims a field that the schema does not define. The message lists each coordinate with the reason.
+
+// corpus: customizer/stale-claim
+[source,text]
+----
+[invalid-claimed-fields] GraphQLRuntimeWiringCustomizer beans claim fields that the schema does not define:
+  Book.price: Book defines no field price (example.StaleClaims)
+  Missing.field: the schema defines no type Missing (example.StaleClaims)
+  Correct or remove the coordinate in GraphQLRuntimeWiringCustomizer#getClaimedFields().
+----
+
+*Fix.* Correct or remove the coordinate in `GraphQLRuntimeWiringCustomizer#getClaimedFields()`.
+
+*See.* <<customization,Customization>>.
