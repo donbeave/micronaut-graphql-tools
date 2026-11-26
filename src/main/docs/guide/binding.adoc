@@ -96,7 +96,6 @@ snippet::example.tck.BeanScopesScenario[project-base="test-suite", source="test"
 
 `@RequestScope` needs a current HTTP request.
 
-A `@Refreshable` resolver follows a refresh of the context without a new schema build. A `@RequestScope` resolver called
-outside an HTTP request fails that field with `No request present`. Building a second `GraphQLSchema` in the same context
+A `@Refreshable` resolver follows a refresh of the context without a new schema build. Building a second `GraphQLSchema` in the same context
 binds the same fields as the first. The tests are `ResolverScopeSpec` (in `graphql-tools`) and `ResolverScopesTest` (in
 `test-suite-java` and `test-suite-kotlin`).

@@ -130,7 +130,7 @@ These changes have no BC number. Each can fail an application that started on 1.
 * *Native image.* Native tests run on Oracle GraalVM 25 in CI. Issue #285 (the native image selecting `JacksonDatabindMapper` over the Serde mapper) is open for 1.0.0-M3.
 * *Annotation processor.* The limitations listed in the 1.0.0-M1 notes still apply. The processor and the startup check do not agree on every case of unreachable types (#83) and of a superclass root-resolver method (#226); both are open for 1.0.0-M3.
 * *Input conversion.* The input conversion still goes through a Jackson `ObjectMapper` internally. It is not configurable through a public bean until #37 replaces it.
-* *Publishing.* Only GitHub Packages milestone versions are published, and downloading needs a token with `read:packages` even though the packages are public. See README.md#consuming-milestone-previews[Consuming milestone previews].
+* *Publishing.* Only GitHub Packages milestone versions are published, and downloading needs a token with `read:packages` even though the packages are public. See the quick start guide page, Milestone previews.
 
 == 1.0.0-M1
 

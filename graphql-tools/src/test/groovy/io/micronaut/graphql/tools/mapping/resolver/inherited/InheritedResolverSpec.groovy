@@ -380,7 +380,7 @@ type Writer {
         e.cause.message == "[type-resolver-contracts-not-found] The bean ${BothResolvers.name} is a @GraphQLTypeResolver only through an inherited " +
                 "annotation, but the build did not record its contracts. Add micronaut-graphql-tools-processor to the path that " +
                 "your compiler reads Micronaut processors from (annotationProcessor for Java, ksp or kapt for Kotlin, " +
-                "compileOnly for Groovy; the compile-time checks section of the README shows the setting of each tool, and " +
+                "compileOnly for Groovy; the Set Up the Build guide page (src/main/docs/guide/compileTime/setup.adoc) shows the setting of each tool, and " +
                 "micronaut.graphql.tools.processor.checks=false compiles without the checks and still records the " +
                 "contracts), or annotate the bean class directly."
     }

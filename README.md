@@ -142,7 +142,6 @@ The guide has the details of each topic. Its pages are in `src/main/docs/guide`,
 | Errors | [errors.adoc](src/main/docs/guide/errors.adoc) |
 | Testing | [testing.adoc](src/main/docs/guide/testing.adoc) |
 | Native image | [nativeImage.adoc](src/main/docs/guide/nativeImage.adoc) |
-| Compatibility, graphql-java lines and milestone previews | [compatibility.adoc](src/main/docs/guide/compatibility.adoc) |
 | Why this library | [why.adoc](src/main/docs/guide/why.adoc) |
 
 ## Compile-time checks
@@ -202,6 +201,5 @@ its own `TypeDefinitionRegistry` and `GraphQL` bean, and consumes only the libra
 | Annotation processor | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 
-How to add the GitHub Packages repository and a token, and how to publish to a local repository, is in the quick start
-guide page [quickStart.adoc](src/main/docs/guide/quickStart.adoc). Nothing is published to Maven Central, and the release
+Nothing is published to Maven Central, and the release
 history is on [releaseHistory.adoc](src/main/docs/guide/releaseHistory.adoc).

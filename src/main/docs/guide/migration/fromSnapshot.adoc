@@ -767,7 +767,7 @@ The startup used to read `@GraphQLTypeResolver` from the class hierarchy of each
 
 What breaks: a build that does not run the processor, with a bean that is a type resolver only through an inherited annotation, fails the startup with `[type-resolver-contracts-not-found]`. Before, this worked on the JVM. The message names the processor and where to add it.
 
-Fix: put `micronaut-graphql-tools-processor` on the path of the compiler as the compile-time checks section of the README shows for each tool (`annotationProcessor`, `ksp` or `kapt`, `compileOnly`), or annotate the bean class directly. A bean annotated directly binds without the processor.
+Fix: put `micronaut-graphql-tools-processor` on the path of the compiler as the Set Up the Build guide page (compileTime/setup.adoc) shows for each tool (`annotationProcessor`, `ksp` or `kapt`, `compileOnly`), or annotate the bean class directly. A bean annotated directly binds without the processor.
 
 Status: breaking by design; no opt-out.
 
