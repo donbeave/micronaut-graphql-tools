@@ -222,6 +222,14 @@ This section tells you which package holds what, which packages you may import f
 
 Do not import any type annotated `@Internal`, and nothing from a package named `internal`.
 
+### The public API snapshot
+
+Each published module with classes keeps a reviewed listing of its public member signatures, `<module directory>/api/<module name>.api` (for example `graphql-tools/api/micronaut-graphql-tools.api`). `./gradlew apiCheck` (also part of `check` and `build`) generates the listing from the main classes with `javap` and fails when it differs from the file, printing each removed and added signature. A build with no signature change passes without touching the files. `micronaut-graphql-tools-opentelemetry` has no public type, so its file is empty; `micronaut-graphql-tools-bom` has no classes and no file.
+
+The listing holds every `public` and `protected` member (with generic types and constant values) of every `public` type, and of its `public` and `protected` nested types, and the permitted subclasses of a sealed type. It leaves out the packages named `internal`, every type and member annotated `@Internal`, the nested types of an internal type and the generated Micronaut `$...` classes. Members are sorted, so the order in the source does not matter, except the constants of an enum, which keep their declared order because that order is their ordinal. It does not record annotations, parameter names or the defaults of annotation members, and it is not a binary compatibility check: japicmp stays off until a final release.
+
+When you change a public signature on purpose, run `./gradlew apiDump` (or `./gradlew :<module>:apiDump`), read the diff of the `api/` files, and commit it in the same pull request as the change. Another pull request that changes a public signature conflicts with the file: merge `master`, run `apiDump` again and review the result. The listing is the same on JDK 17, 21, 25 and 27 and on every graphql-java leg. The tasks of the listing are cacheable, and the tests of the tasks (`buildSrc/src/test`) run in `./gradlew buildSrcTest`, which `check` of the root project runs when `buildSrc` changed.
+
 ### Current layout
 
 This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration, `graphql-tools-testing` the in-process tester and `test-suite-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.

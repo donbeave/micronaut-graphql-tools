@@ -1,0 +1,10 @@
+public final class io.micronaut.graphql.tools.security.GraphQLSecurity {
+  public static final java.lang.String AUTHENTICATION_KEY = "micronaut.graphql.tools.security.authentication";
+  public static final java.lang.String FORBIDDEN_CODE = "FORBIDDEN";
+  public static final java.lang.String PREFIX = "micronaut.graphql.tools.security";
+  public static final java.lang.String UNAUTHENTICATED_CODE = "UNAUTHENTICATED";
+}
+
+public interface io.micronaut.graphql.tools.security.RootFieldsHook {
+  public abstract void onRootFields(graphql.language.OperationDefinition$Operation, java.util.List<java.lang.String>, graphql.GraphQLContext);
+}

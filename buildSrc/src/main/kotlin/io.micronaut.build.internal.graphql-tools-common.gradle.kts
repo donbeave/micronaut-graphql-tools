@@ -1,5 +1,6 @@
 plugins {
     id("io.micronaut.build.internal.graphql-tools-compatibility")
+    id("io.micronaut.build.internal.graphql-tools-api-snapshot")
 }
 
 // The configuration that every published module shares. A convention plugin applies a Micronaut module plugin first, then this one:
