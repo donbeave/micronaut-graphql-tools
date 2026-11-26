@@ -86,8 +86,8 @@ public class BindingBenchmark {
         properties.put("micronaut.graphql.tools.manifest.enabled", record);
         if ("ignore".equals(System.getProperty("benchmarks.checks"))) {
             for (BindingCode code : BindingCode.values()) {
-                if (code.check()) {
-                    properties.put("micronaut.graphql.tools.checks." + code.code(), "ignore");
+                if (code.isCheck()) {
+                    properties.put("micronaut.graphql.tools.checks." + code.getCode(), "ignore");
                 }
             }
         }

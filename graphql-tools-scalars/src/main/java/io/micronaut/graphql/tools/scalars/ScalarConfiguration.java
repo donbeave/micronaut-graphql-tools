@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 
 /**
  * The configuration of one standard scalar, under {@code micronaut.graphql.tools.scalars.<id>}, where the id is the
- * {@link StandardScalar#id()}.
+ * {@link StandardScalar#getId()}.
  *
  * @since 1.0.0
  */
@@ -48,7 +48,7 @@ public class ScalarConfiguration implements Toggleable {
      */
     public ScalarConfiguration(@Parameter String id) {
         this.id = id;
-        this.scalar = Arrays.stream(StandardScalar.values()).filter(s -> s.id().equals(id)).findFirst().orElse(null);
+        this.scalar = Arrays.stream(StandardScalar.values()).filter(s -> s.getId().equals(id)).findFirst().orElse(null);
     }
 
     /**
@@ -99,7 +99,7 @@ public class ScalarConfiguration implements Toggleable {
      */
     @NonNull
     public String getName() {
-        return name != null ? name : scalar != null ? scalar.defaultName() : id;
+        return name != null ? name : scalar != null ? scalar.getDefaultName() : id;
     }
 
     /**

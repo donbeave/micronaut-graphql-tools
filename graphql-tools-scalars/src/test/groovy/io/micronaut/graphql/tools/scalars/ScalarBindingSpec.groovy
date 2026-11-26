@@ -243,7 +243,7 @@ type Query {
         def names = applicationContext.getBeansOfType(io.micronaut.graphql.tools.mapping.GraphQLScalarMapping)*.name
 
         then:
-        names.toSorted() == StandardScalar.values()*.defaultName().toSorted()
+        names.toSorted() == StandardScalar.values()*.getDefaultName().toSorted()
     }
 
     private static SchemaBindingException rootCause(Throwable e) {

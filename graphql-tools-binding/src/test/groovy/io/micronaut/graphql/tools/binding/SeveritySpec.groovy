@@ -32,13 +32,13 @@ class SeveritySpec extends Specification {
     void "every check code is in the default table at fail, and no failure code is"() {
         expect:
         DefaultSeverities.TABLE.size() == 10
-        BindingCode.values().findAll { it.check() }.every { DefaultSeverities.TABLE[it] == Severity.FAIL }
-        BindingCode.values().findAll { !it.check() }.every { !DefaultSeverities.TABLE.containsKey(it) }
+        BindingCode.values().findAll { it.isCheck() }.every { DefaultSeverities.TABLE[it] == Severity.FAIL }
+        BindingCode.values().findAll { !it.isCheck() }.every { !DefaultSeverities.TABLE.containsKey(it) }
     }
 
     void "strict false is warn for every check"() {
         expect:
-        BindingCode.values().findAll { it.check() }.every { DefaultSeverities.of(it, false) == Severity.WARN }
+        BindingCode.values().findAll { it.isCheck() }.every { DefaultSeverities.of(it, false) == Severity.WARN }
     }
 
     void "a failure code has no default severity"() {

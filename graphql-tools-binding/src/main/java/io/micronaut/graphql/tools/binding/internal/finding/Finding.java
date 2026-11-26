@@ -22,7 +22,7 @@ import io.micronaut.core.annotation.Nullable;
 /**
  * One finding of a rule, before it is rendered.
  *
- * @param code           the code of the registry ({@link BindingCode#code()})
+ * @param code           the code of the registry ({@link BindingCode#getCode()})
  * @param coordinate     the schema coordinate, or {@code null} when the finding has none
  * @param sentence       one sentence that says what is wrong
  * @param member         the Java member as {@code binary.Name#member(parameter types)}, or {@code null}

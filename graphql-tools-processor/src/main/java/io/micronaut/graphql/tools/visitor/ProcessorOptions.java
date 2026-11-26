@@ -190,6 +190,6 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
     }
 
     private static Finding error(BindingCode code, String sentence) {
-        return new Finding(code.code(), null, sentence, null, null, null, null);
+        return new Finding(code.getCode(), null, sentence, null, null, null, null);
     }
 }

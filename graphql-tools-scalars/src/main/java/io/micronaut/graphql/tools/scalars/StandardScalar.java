@@ -123,7 +123,7 @@ public enum StandardScalar {
      * @return the id, the key of the scalar in the configuration: a lower-case kebab-case word
      */
     @NonNull
-    public String id() {
+    public String getId() {
         return id;
     }
 
@@ -131,7 +131,7 @@ public enum StandardScalar {
      * @return the name of the scalar in the schema when the configuration does not rename it
      */
     @NonNull
-    public String defaultName() {
+    public String getDefaultName() {
         return defaultName;
     }
 
@@ -139,7 +139,7 @@ public enum StandardScalar {
      * @return the Java class that stands for the scalar: the class of a field, argument or input field of this scalar
      */
     @NonNull
-    public Class<?> javaClass() {
+    public Class<?> getJavaClass() {
         return javaClass;
     }
 
@@ -147,7 +147,7 @@ public enum StandardScalar {
      * @return where the scalar comes from
      */
     @NonNull
-    public Group group() {
+    public Group getGroup() {
         return group;
     }
 
@@ -155,7 +155,7 @@ public enum StandardScalar {
      * @return the default wire format ({@code iso}), or {@code null} when the scalar has one format that cannot be configured
      */
     @Nullable
-    public String defaultFormat() {
+    public String getDefaultFormat() {
         return defaultFormat;
     }
 

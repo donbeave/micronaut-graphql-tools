@@ -97,7 +97,7 @@ final class CheckedSchema {
         List<Finding> result = new ArrayList<>();
         for (Path directory : directories) {
             if (!Files.isDirectory(directory)) {
-                result.add(new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_FOUND.code(), null,
+                result.add(new Finding(BindingCode.PROCESSOR_SCHEMA_NOT_FOUND.getCode(), null,
                         "the schema directory " + directory.toAbsolutePath() + " does not exist or is not a directory",
                         null, null, null, "correct " + ProcessorOptions.SCHEMA_DIRS));
             }
@@ -144,6 +144,6 @@ final class CheckedSchema {
     }
 
     private void problem(BindingCode code, String sentence, @Nullable String fix) {
-        problems = List.of(new Finding(code.code(), null, sentence, null, null, null, fix));
+        problems = List.of(new Finding(code.getCode(), null, sentence, null, null, null, fix));
     }
 }

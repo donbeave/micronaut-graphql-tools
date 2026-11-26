@@ -73,7 +73,7 @@ public class ScalarsConfiguration implements Toggleable {
     }
 
     /**
-     * @return the configuration of the scalars that have a key, by {@link StandardScalar#id()}
+     * @return the configuration of the scalars that have a key, by {@link StandardScalar#getId()}
      */
     @NonNull
     public Map<String, ScalarConfiguration> getScalars() {
@@ -98,7 +98,7 @@ public class ScalarsConfiguration implements Toggleable {
                 byId.put(scalar.getId(), scalar);
             } else if (scalar.isConfigured() || !ENABLED_KEY.equals(scalar.getId())) {
                 throw new ConfigurationException("The key " + PREFIX + "." + scalar.getId() + " is not a standard scalar. The valid ids are: "
-                        + Arrays.stream(StandardScalar.values()).map(StandardScalar::id).collect(Collectors.joining(", ")) + ".");
+                        + Arrays.stream(StandardScalar.values()).map(StandardScalar::getId).collect(Collectors.joining(", ")) + ".");
             }
         }
         this.scalars = Map.copyOf(byId);
@@ -120,7 +120,7 @@ public class ScalarsConfiguration implements Toggleable {
      */
     @Nullable
     public ScalarConfiguration get(@NonNull StandardScalar scalar) {
-        return scalars.get(scalar.id());
+        return scalars.get(scalar.getId());
     }
 
 }
