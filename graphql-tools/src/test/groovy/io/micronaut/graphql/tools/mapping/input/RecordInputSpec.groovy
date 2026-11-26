@@ -17,12 +17,12 @@ package io.micronaut.graphql.tools.mapping.input
 
 import jakarta.inject.Singleton
 import graphql.ExecutionInput
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.context.annotation.Requires
 import org.intellij.lang.annotations.Language
 
-class RecordInputSpec extends AbstractTest {
+class RecordInputSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RecordInputSpec"
     static final Map DETECT = [:]

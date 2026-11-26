@@ -25,7 +25,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestWriter
@@ -52,7 +52,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicInteger
 
-class BindingManifestSpec extends AbstractTest {
+class BindingManifestSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "BindingManifestSpec"
 

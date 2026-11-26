@@ -22,7 +22,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -34,7 +34,7 @@ import java.time.temporal.Temporal
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class CustomScalarMappingErrorsSpec extends AbstractTest {
+class CustomScalarMappingErrorsSpec extends AbstractSpec {
 
     static final String SPEC_UNMAPPED = "CustomScalarMappingErrorsSpecUnmapped"
     static final String SPEC_BARE = "CustomScalarMappingErrorsSpecBare"

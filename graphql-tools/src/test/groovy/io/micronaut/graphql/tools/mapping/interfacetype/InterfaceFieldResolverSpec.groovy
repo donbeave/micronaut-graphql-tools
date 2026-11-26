@@ -19,7 +19,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
@@ -30,7 +30,7 @@ import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class InterfaceFieldResolverSpec extends AbstractTest {
+class InterfaceFieldResolverSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "InterfaceFieldResolverSpec"
 

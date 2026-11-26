@@ -26,7 +26,7 @@ import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class AggregatedFindingsSpec extends AbstractTest {
+class AggregatedFindingsSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "AggregatedFindingsSpec"
 

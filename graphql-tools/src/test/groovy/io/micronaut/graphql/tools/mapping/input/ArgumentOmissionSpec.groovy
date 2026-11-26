@@ -20,7 +20,7 @@ import graphql.ExecutionInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.input.ArgumentValue
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
@@ -29,7 +29,7 @@ import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class ArgumentOmissionSpec extends AbstractTest {
+class ArgumentOmissionSpec extends AbstractSpec {
 
     static final String SPEC_DEFAULT = "ArgumentOmissionSpecDefault"
     static final String SPEC_WRAPPER_WITHOUT_OPTION = "ArgumentOmissionSpecWrapperWithoutOption"

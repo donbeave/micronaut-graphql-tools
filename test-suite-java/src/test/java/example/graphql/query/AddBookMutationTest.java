@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class AddBookMutationTest extends AbstractTest {
 
     @Test
-    void testNotAuthenticated() {
+    void rejectsAnUnauthenticatedCaller() {
         AddBookMutation addBookMutation =
                 new AddBookMutation("ab");
 
@@ -52,7 +52,7 @@ class AddBookMutationTest extends AbstractTest {
     }
 
     @Test
-    void testAddBook() {
+    void addsABook() {
         ApolloClient bob = clientOf("bob");
 
         AddBookMutation addBookMutation =

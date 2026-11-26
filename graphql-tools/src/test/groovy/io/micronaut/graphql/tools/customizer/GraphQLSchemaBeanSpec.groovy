@@ -24,12 +24,12 @@ import graphql.schema.idl.SchemaParser
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class GraphQLSchemaBeanSpec extends AbstractTest {
+class GraphQLSchemaBeanSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "GraphQLSchemaBeanSpec"
     static final String SPEC_NAME_OWN_GRAPHQL = "GraphQLSchemaBeanSpec.ownGraphQL"

@@ -21,7 +21,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class SchemaCoordinateSpec extends AbstractTest {
+class SchemaCoordinateSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "SchemaCoordinateSpec"
 

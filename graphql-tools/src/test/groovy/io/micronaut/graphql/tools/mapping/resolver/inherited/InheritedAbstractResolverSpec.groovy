@@ -15,10 +15,10 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.inherited
 
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.manifest.BindingManifest
 
-class InheritedAbstractResolverSpec extends AbstractTest {
+class InheritedAbstractResolverSpec extends AbstractSpec {
 
     void "the implementation of an abstract resolver method binds the field, once"() {
         given:

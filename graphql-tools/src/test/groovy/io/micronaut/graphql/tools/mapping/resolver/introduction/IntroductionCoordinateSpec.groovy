@@ -16,11 +16,11 @@
 package io.micronaut.graphql.tools.mapping.resolver.introduction
 
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class IntroductionCoordinateSpec extends AbstractTest {
+class IntroductionCoordinateSpec extends AbstractSpec {
 
     void "the schema coordinates of an introduction advice resolver are validated"() {
         when:

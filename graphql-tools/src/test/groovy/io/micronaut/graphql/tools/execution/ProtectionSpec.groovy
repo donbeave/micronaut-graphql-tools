@@ -26,7 +26,7 @@ import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /** The protection settings of the library's GraphQL bean: the document cache, the limits, introspection and the timeout. */
-class ProtectionSpec extends AbstractTest {
+class ProtectionSpec extends AbstractSpec {
 
     static final String SPEC_NAME = 'ProtectionSpec'
 

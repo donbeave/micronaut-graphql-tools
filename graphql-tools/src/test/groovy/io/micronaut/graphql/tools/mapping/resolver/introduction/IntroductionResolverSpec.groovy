@@ -15,9 +15,9 @@
  */
 package io.micronaut.graphql.tools.mapping.resolver.introduction
 
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 
-class IntroductionResolverSpec extends AbstractTest {
+class IntroductionResolverSpec extends AbstractSpec {
 
     void "an introduction advice resolver binds all its abstract methods"() {
         given:
