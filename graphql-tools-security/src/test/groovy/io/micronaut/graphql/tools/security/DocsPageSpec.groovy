@@ -34,7 +34,7 @@ class DocsPageSpec extends Specification {
 
         where:
         name << ["${GraphQLSecurity.PREFIX}.enabled".toString(), 'GraphQLSecurity.AUTHENTICATION_KEY', GraphQLSecurity.UNAUTHENTICATED_CODE,
-                 GraphQLSecurity.FORBIDDEN_CODE, 'RootFieldsHook', 'AbortExecutionException', '@Secured', 'SecurityService', 'Authentication', 'RolesFinder', 'ConfigurationException']
+                 GraphQLSecurity.FORBIDDEN_CODE, 'GraphQLRootFieldsHook', 'AbortExecutionException', '@Secured', 'SecurityService', 'Authentication', 'RolesFinder', 'ConfigurationException']
     }
 
 }

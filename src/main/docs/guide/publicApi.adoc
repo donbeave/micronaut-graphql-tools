@@ -30,7 +30,7 @@ A type marked `(experimental)` in the tables below carries `@Experimental` (`io.
 |`io.micronaut.graphql.tools.annotation` |`GraphQLArgument`, `GraphQLContextValue`, `GraphQLField`, `GraphQLIgnore`, `GraphQLInput`, `GraphQLModels`, `GraphQLRootResolver`, `GraphQLSchemaCoordinate`, `GraphQLType`, `GraphQLTypeResolver`
 |`io.micronaut.graphql.tools.config` |`CheckSeverity`, `GraphQLToolsConfiguration`
 |`io.micronaut.graphql.tools.customizer` |`GraphQLBuilderCustomizer`, `GraphQLErrorsCustomizer`, `GraphQLRuntimeWiringCustomizer`, `GraphQLSchemaCustomizer`, `GraphQLSchemaMappingDictionaryCustomizer`, `GraphQLTypeDefinitionRegistryCustomizer`
-|`io.micronaut.graphql.tools.directive` |`CustomWiring`, `SchemaDirective`
+|`io.micronaut.graphql.tools.directive` |`SchemaDirective`
 |`io.micronaut.graphql.tools.error` |`GraphQLExceptionContext`, `GraphQLExceptionMapper`
 |`io.micronaut.graphql.tools.exceptions` |`SchemaBindingException`
 |`io.micronaut.graphql.tools.execution` |`DataLoaderBatchStatistics` (experimental), `FieldDescriptor`, `FieldExecutionKind`, `GraphQLContextContributor`, `GraphQLDataLoaderOptionsCustomizer`, `GraphQLExecutionRequest`, `GraphQLFieldFetcherDecorator`, `GraphQLTransport`
@@ -88,7 +88,7 @@ A type marked `(experimental)` in the tables below carries `@Experimental` (`io.
 [cols="3,5", options="header"]
 |===
 |Package |Types
-|`io.micronaut.graphql.tools.security` |`GraphQLSecurity`, `RootFieldsHook`
+|`io.micronaut.graphql.tools.security` |`GraphQLSecurity`, `GraphQLRootFieldsHook`
 |===
 
 === micronaut-graphql-tools-testing

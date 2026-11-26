@@ -16,7 +16,7 @@ library does not depend on it and the beans of the module exist only when the ap
 - One `GraphQLFieldFetcherDecorator` that decides, at startup, which fields `@Secured` guards. A field without it, or with
   `isAnonymous()`, keeps the fetcher it was offered. A guarded field gets a fetcher that rejects an anonymous call with
   `UNAUTHENTICATED` and a call without the role with `FORBIDDEN`, as an error of the field.
-- `RootFieldsHook`: a bean interface, run by one `Instrumentation` that exists only when a hook bean does.
+- `GraphQLRootFieldsHook`: a bean interface, run by one `Instrumentation` that exists only when a hook bean does.
 - `micronaut.graphql.tools.security.enabled` switches the contributor, the decorator and the instrumentation of the hook off.
 - The decorator checks roles through the `RolesFinder` bean of the context, so a replaced bean decides; an expression in `@Secured` is rejected at startup with a `ConfigurationException` that names the field.
 
@@ -29,7 +29,7 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 
 | Package | Audience | Holds |
 | --- | --- | --- |
-| `io.micronaut.graphql.tools.security` | Public API | `GraphQLSecurity` (the prefix, the context key, the error codes) and `RootFieldsHook` |
+| `io.micronaut.graphql.tools.security` | Public API | `GraphQLSecurity` (the prefix, the context key, the error codes) and `GraphQLRootFieldsHook` |
 | `...security.internal` | Internal | The contributor, the decorator and fetcher of the secured fields and the instrumentation of the hook |
 
 ## Who uses it
@@ -38,7 +38,7 @@ Applications that use `micronaut-graphql-tools` with Micronaut Security.
 
 ## Public and internal
 
-- `GraphQLSecurity` and `RootFieldsHook` are the public types.
+- `GraphQLSecurity` and `GraphQLRootFieldsHook` are the public types.
 - Every class under `io.micronaut.graphql.tools.security.internal` is `@Internal`.
 - The behaviour and the cost are in the guide page on security (`src/main/docs/guide/security.adoc`).
 

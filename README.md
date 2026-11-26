@@ -875,7 +875,7 @@ implementation("io.micronaut.security:micronaut-security")
 A resolver declares `Principal` or `Authentication` as a parameter and gets the principal of the request, also in a field
 that runs after an async hop and over WebSocket (the principal of the upgrade request). `@Secured` on a resolver method
 guards its field: an anonymous call gets an `UNAUTHENTICATED` error of the field, a call without the role a `FORBIDDEN`
-one, and a field without `@Secured` keeps its fetcher. A `RootFieldsHook` bean sees the root fields of an operation after
+one, and a field without `@Secured` keeps its fetcher. A `GraphQLRootFieldsHook` bean sees the root fields of an operation after
 parsing, so an application need not parse the body in a filter. `micronaut.graphql.tools.security.enabled` (default `true`)
 turns the module off. A resolver also reads the HTTP request and changes the response (a header, a cookie) with the
 `HttpRequest` and `MutableHttpResponse` parameters. The guide pages on security and on the HTTP request and response have
