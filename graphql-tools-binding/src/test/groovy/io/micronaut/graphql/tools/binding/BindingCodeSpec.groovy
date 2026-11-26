@@ -60,6 +60,12 @@ class BindingCodeSpec extends Specification {
             'processor-schema-not-configured',
             'processor-schema-not-found',
             'processor-internal-error',
+            'client-schema-missing',
+            'client-schema-invalid',
+            'client-operation-not-found',
+            'client-operation-ambiguous',
+            'client-document-invalid',
+            'client-document-too-large',
     ]
 
     void "no two codes share a token, and every token is lower-case kebab-case"() {
