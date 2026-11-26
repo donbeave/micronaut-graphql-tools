@@ -1058,7 +1058,7 @@ Milestone versions (`1.0.0-M<n>`) are published to the GitHub Packages Maven reg
 by the `Release` workflow (`.github/workflows/release.yml`), after the full build is green on the tagged commit. See
 [Consuming milestone previews](#consuming-milestone-previews) to use them. Nothing is published to Maven Central, no
 GitHub Release is created and there are no snapshots; that stays so until the project is contributed to the Micronaut
-Foundation. CI (`.github/workflows/gradle.yml`) builds and tests the project.
+Foundation. The 1.0 line ends with the release candidate `1.0.0-RC1`. The final `1.0.0` release is a later manual step, taken after trials on real projects. CI (`.github/workflows/gradle.yml`) builds and tests the project.
 
 Releases are cut by the maintainers by pushing a version tag, as described in the [Releases](CONTRIBUTING.md#releases)
 section of CONTRIBUTING.md. To use unreleased code, build it yourself and publish it to a local or private repository as
