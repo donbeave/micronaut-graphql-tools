@@ -1,1 +1,26 @@
-NOTE: This page is pending. It will be written with the user guide (epic #97).
+The GraphQL context of an execution carries values from the transport to the resolvers. A api:io.micronaut.graphql.tools.execution.GraphQLContextContributor[] bean adds values to the `GraphQLContext` of each execution, and a resolver reads them with `DataFetchingEnvironment#getGraphQlContext()`.
+
+== Add values
+
+snippet::example.tck.PerExecutionContextScenario[project-base="test-suite", source="test", tags="contributor", indent="0"]
+
+== Read values
+
+A resolver method takes the `DataFetchingEnvironment` as a parameter, see <<resolverParameters,Resolver Parameters>>:
+
+snippet::example.tck.PerExecutionContextScenario[project-base="test-suite", source="test", tags="read-context", indent="0"]
+
+== Rules
+
+* Every contributor bean runs once per execution, in the order of `@Order` (or `Ordered#getOrder()`), lowest first. When there are no contributor beans the library does nothing here.
+* It runs on the execution executor, after the `GraphQLExecutionInputCustomizer` and before graphql-java, inside the propagated context of the request, see <<execution,Execution>>. A contributor may therefore block and may use request-scoped beans.
+* api:io.micronaut.graphql.tools.execution.GraphQLExecutionRequest[] is a read-only view of the execution: `getHttpRequest()` (null for a direct call), `getHttpResponse()` (empty on a WebSocket connection), `getTransport()` (`GraphQLTransport.HTTP`, `WEBSOCKET` or `DIRECT`), `getConnectionAttributes()` (empty except on a WebSocket connection) and `getExecutionInput()`.
+* A contributor rejects an operation by throwing a `graphql.GraphQLError` (for example `GraphqlErrorException`): its error is the only error of the response, with `data` of `null`, and no resolver runs. Any other exception is logged at ERROR and the response carries one generic error, `extensions.code` `INTERNAL_ERROR`, without the message of the exception. See <<errors,Errors>>.
+* State that belongs to one request lives in the context of its execution, never in a singleton: a singleton is shared by all concurrent requests.
+
+== Related pages
+
+* The module `micronaut-graphql-tools-security` puts the `Authentication` in the context with a contributor, see <<security,Security>>.
+* A contributor may register data loaders for its execution, see <<dataLoaders,Data Loaders>>.
+* A WebSocket connection carries its attributes to the contributors, see <<subscriptions,Subscriptions>>.
+* The test client puts values in the context with `context(key, value)`, see <<testing,Testing>>.

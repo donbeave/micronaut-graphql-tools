@@ -61,7 +61,9 @@ class RequestProbeLoader : BatchLoader<String, Boolean> {
 @Requires(property = "tck.scenario", value = "per-execution-context")
 class ContextQueries {
 
+    // tag::read-context[]
     fun contributed(environment: DataFetchingEnvironment): String = environment.graphQlContext.get<String>("tck.value")!!
+    // end::read-context[]
 
     fun executionNumber(environment: DataFetchingEnvironment): Int = environment.graphQlContext.get<Int>("tck.execution")!!
 
