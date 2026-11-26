@@ -423,7 +423,7 @@ public class FakePingQuery extends PingQuery {
 
 === BC-16: strict mode is on by default
 
-`micronaut.graphql.tools.strict` defaults to `true`. Strict mode fails the startup on bindings that work but are probably mistakes: stale resolver methods, Java enum constants without a schema value, dictionary entries for types that are not bound, interface-mapped types without their own introspection, unused enum, input and scalar types, and the other findings that the strict mode checks in the README list. Most findings are also a `!` line of the binding manifest. Some have no manifest line, for example interface-mapped types without their own introspection, and primitives for nullable built-in scalars; the startup exception is their only report.
+`micronaut.graphql.tools.strict` defaults to `true`. Strict mode fails the startup on bindings that work but are probably mistakes: stale resolver methods, Java enum constants without a schema value, dictionary entries for types that are not bound, interface-mapped types without their own introspection, unused enum, input and scalar types, and the other findings that the strict mode checks (see <<strictMode,Strict Mode>>). Most findings are also a `!` line of the binding manifest. Some have no manifest line, for example interface-mapped types without their own introspection, and primitives for nullable built-in scalars; the startup exception is their only report.
 
 Fix: fix each finding. A member that binds no field on purpose can carry `@GraphQLIgnore`. Or set `strict: false`.
 

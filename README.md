@@ -73,7 +73,7 @@ Maven (the repository goes in the POM, the credentials in `~/.m2/settings.xml`, 
 ```xml
 <repositories>
     <repository>
-        <id>github-graphql-tools</id>
+        <id>graphql-tools</id>
         <url>https://maven.pkg.github.com/donbeave/micronaut-graphql-tools</url>
     </repository>
 </repositories>

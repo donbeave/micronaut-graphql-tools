@@ -94,7 +94,7 @@ A resolver is an ordinary bean, so its scope decides which instance is used. A s
 
 snippet::example.tck.BeanScopesScenario[project-base="test-suite", source="test", tags="scopes", indent="0"]
 
-`@RequestScope` needs a current HTTP request.
+`@RequestScope` needs a current HTTP request. In Kotlin without the all-open compiler plugin, a resolver class with `@RequestScope` or `@Refreshable`, and its proxied methods, must be `open`, because Micronaut cannot create the scoped proxy of a final class.
 
 A `@Refreshable` resolver follows a refresh of the context without a new schema build. Building a second `GraphQLSchema` in the same context
 binds the same fields as the first. The tests are `ResolverScopeSpec` (in `graphql-tools`) and `ResolverScopesTest` (in

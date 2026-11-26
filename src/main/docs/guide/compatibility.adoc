@@ -11,7 +11,7 @@ The 1.0 line ends with the release candidate `1.0.0-RC1`. The final `1.0.0` rele
 
 GitHub Packages requires authentication to download, also for public packages. Create a personal access token (classic) with the `read:packages` scope, and hand it to the build:
 
-* Gradle: set `gpr.user` and `gpr.key` in `~/.gradle/gradle.properties`, or export `GITHUB_ACTOR` and `GITHUB_TOKEN`, and add the repository block of the quick start. Do not commit the token.
+* Gradle: set `gpr.user` and `gpr.key` in `~/.gradle/gradle.properties`, or export `GITHUB_ACTOR` and `GITHUB_TOKEN`, and add the repository block of the quick start. Do not commit the token. In GitHub Actions of another repository the default `GITHUB_TOKEN` cannot read the package unless that repository has been granted access to it; store a classic token as a secret instead.
 * Maven: add the repository to the POM, and a `<server>` with the same id, your GitHub user name and the token to `~/.m2/settings.xml`.
 
 Milestone previews carry no compatibility promise: names and behaviour can change between milestones.
