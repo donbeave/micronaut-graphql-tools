@@ -26,12 +26,12 @@ A type marked `(experimental)` in the tables below carries `@Experimental` (`io.
 |`io.micronaut.graphql.tools.directive` |`CustomWiring`, `SchemaDirective`
 |`io.micronaut.graphql.tools.error` |`GraphQLExceptionContext`, `GraphQLExceptionMapper`
 |`io.micronaut.graphql.tools.exceptions` |`SchemaBindingException`
-|`io.micronaut.graphql.tools.execution` |`DataLoaderBatchStatistics` (experimental), `FieldDescriptor`, `FieldExecutionKind`, `GraphQLContextContributor` (experimental), `GraphQLDataLoaderOptionsCustomizer`, `GraphQLExecutionRequest`, `GraphQLFieldFetcherDecorator` (experimental), `GraphQLTransport` (experimental)
+|`io.micronaut.graphql.tools.execution` |`DataLoaderBatchStatistics` (experimental), `FieldDescriptor`, `FieldExecutionKind`, `GraphQLContextContributor`, `GraphQLDataLoaderOptionsCustomizer`, `GraphQLExecutionRequest`, `GraphQLFieldFetcherDecorator`, `GraphQLTransport`
 |`io.micronaut.graphql.tools.input` |`ArgumentValue`
 |`io.micronaut.graphql.tools.manifest` |`BindingManifest`
 |`io.micronaut.graphql.tools.mapping` |`GraphQLScalarMapping`, `InputMappingContext`, `MappingContext`, `SchemaMappingDictionary`, `TypeMappingContext`
 |`io.micronaut.graphql.tools.resolver` |`MutationResolver`, `QueryResolver`, `SubscriptionResolver`, `TypeResolver`
-|`io.micronaut.graphql.tools.websocket` |`GraphQLConnectionInterceptor` (experimental), `GraphQLConnectionRequest`, `GraphQLConnectionResult`
+|`io.micronaut.graphql.tools.websocket` |`GraphQLConnectionInterceptor`, `GraphQLConnectionRequest`, `GraphQLConnectionResult`
 |===
 
 === micronaut-graphql-tools-binding

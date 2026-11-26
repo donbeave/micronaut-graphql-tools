@@ -154,6 +154,53 @@ class DocsCoverageSpec extends Specification {
         assert stale.empty : "Stale entries in docs-coverage-allowlist.txt:\n  " + stale.join('\n  ')
     }
 
+    def "every experimental type is called experimental on every page that names it"() {
+        given:
+        def types = experimentalTypes()
+        def problems = []
+        docFiles().each { page ->
+            def text = Files.readString(page)
+            types.each { type ->
+                if (Pattern.compile("(?<!\\w)${Pattern.quote(type)}(?!\\w)").matcher(text).find() &&
+                        !text.toLowerCase().contains('experimental')) {
+                    problems << "${root.relativize(page)} names ${type} but never says that it is experimental"
+                }
+            }
+        }
+
+        expect:
+        types.contains('DataLoaderBatchStatistics')
+        assert problems.empty : "Say 'experimental' on each page (link to <<experimentalTypes>>):\n  " + problems.join('\n  ')
+    }
+
+    def "the customization page lists exactly the experimental types"() {
+        given:
+        def page = Files.readString(root.resolve(GUIDE + '/customization.adoc'))
+        def sentence = Pattern.compile('carr(?:y|ies) it: ([^.]*)\\.').matcher(page)
+
+        expect:
+        sentence.find()
+        Pattern.compile('`(\\w+)`').matcher(sentence.group(1)).collect { it[1] }.toSorted() == experimentalTypes()
+    }
+
+    private List<String> experimentalTypes() {
+        def sources = Files.list(root).withCloseable { stream ->
+            stream.filter { it.fileName.toString().startsWith('graphql-tools') }
+                    .map { it.resolve('src/main/java') }
+                    .filter { Files.isDirectory(it) }
+                    .toList()
+        }
+        def types = sources.collectMany { dir ->
+            Files.walk(dir).withCloseable { stream ->
+                stream.filter { it.toString().endsWith('.java') && Files.readString(it).contains('\n@Experimental\n') }
+                        .map { it.fileName.toString() - '.java' }
+                        .toList()
+            }
+        }.toSorted()
+        assert !types.empty : 'No @Experimental type found in the library modules'
+        types
+    }
+
     private List<String> failures(String kind, Collection<String> names, String page) {
         def missing = names.findAll { !allowlist.containsKey("${kind}:${it}".toString()) && !isDocumented(kind, it) }
         assert missing.empty: "The ${kind} ${missing.size() == 1 ? 'is' : 'items are'} not documented: ${missing.sort().join(', ')}. " +
