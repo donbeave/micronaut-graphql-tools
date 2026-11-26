@@ -23,18 +23,25 @@ import graphql.execution.instrumentation.parameters.InstrumentationExecutionPara
 import graphql.language.Document
 import io.micronaut.configuration.graphql.GraphQLInvocation
 import io.micronaut.configuration.graphql.GraphQLInvocationData
+import io.micronaut.context.annotation.Bean
+import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.graphql.tools.AbstractTest
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import reactor.core.publisher.Mono
 
+import java.util.concurrent.AbstractExecutorService
+import java.util.concurrent.BlockingQueue
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -46,6 +53,7 @@ class ProtectionSpec extends AbstractTest {
     static final AtomicInteger PARSES = new AtomicInteger()
     static final AtomicInteger SECOND_CALLS = new AtomicInteger()
     static volatile CompletableFuture<Object> FIRST = new CompletableFuture<>()
+    static final HeldExecutor HELD = new HeldExecutor()
 
     @Language('GraphQL')
     static final String SCHEMA = """
@@ -69,6 +77,7 @@ type First {
         PARSES.set(0)
         SECOND_CALLS.set(0)
         FIRST = new CompletableFuture<>()
+        HELD.tasks.clear()
     }
 
     private ExecutionResult run(String query) {
@@ -216,6 +225,29 @@ type First {
         SECOND_CALLS.get() == 0
     }
 
+    void "a stage that completes after the client has its timeout answer does not start a later field, even when the cancellation task has not run"() {
+        given:
+        startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.execution.timeout': '200ms',
+                                         'micronaut.graphql.tools.execution.executor': 'held',
+                                         'spec.held': 'true'])
+
+        when:
+        def future = invoke('{ first { second } }').toFuture()
+        HELD.take().run()
+        def completion = HELD.take()
+        def cancellation = HELD.take()
+        completion.run()
+        ExecutionResult result = future.get(5, TimeUnit.SECONDS)
+        FIRST.complete(new First())
+        int secondCallsBeforeCancellation = SECOND_CALLS.get()
+        cancellation.run()
+
+        then:
+        result.errors[0].extensions.code == 'EXECUTION_TIMEOUT'
+        secondCallsBeforeCancellation == 0
+        SECOND_CALLS.get() == 0
+    }
+
     void "an operation that finishes within the timeout is not affected"() {
         given:
         startContext(SCHEMA, SPEC_NAME, ['micronaut.graphql.tools.execution.timeout': '5s'])
@@ -269,6 +301,58 @@ type First {
     private Mono<ExecutionResult> invoke(String query) {
         Mono.from(applicationContext.getBean(GraphQLInvocation)
                 .invoke(new GraphQLInvocationData(query, null, [:]), null, null))
+    }
+
+    /** An executor that queues every task until the test takes it, so that the test decides the order of the timeout work. */
+    static class HeldExecutor extends AbstractExecutorService {
+        final BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<>()
+
+        Runnable take() {
+            Runnable task = tasks.poll(5, TimeUnit.SECONDS)
+            assert task != null: 'the executor of the operations got no task'
+            task
+        }
+
+        @Override
+        void execute(Runnable command) {
+            tasks.add(command)
+        }
+
+        @Override
+        void shutdown() {
+        }
+
+        @Override
+        List<Runnable> shutdownNow() {
+            []
+        }
+
+        @Override
+        boolean isShutdown() {
+            false
+        }
+
+        @Override
+        boolean isTerminated() {
+            false
+        }
+
+        @Override
+        boolean awaitTermination(long timeout, TimeUnit unit) {
+            true
+        }
+    }
+
+    @Requires(property = 'spec.name', value = SPEC_NAME)
+    @Requires(property = 'spec.held')
+    @Factory
+    static class HeldExecutors {
+        @Bean
+        @Singleton
+        @Named('held')
+        ExecutorService held() {
+            HELD
+        }
     }
 
     @GraphQLType

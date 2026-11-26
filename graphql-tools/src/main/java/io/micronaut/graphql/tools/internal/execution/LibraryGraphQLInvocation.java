@@ -417,12 +417,16 @@ public final class LibraryGraphQLInvocation implements GraphQLInvocation {
          * scheduler: one completes the result, whose continuation is code of the application (errors customizers), and
          * one cancels the execution, which runs callbacks of the application. Neither waits for the other. When no
          * executor takes the completion, it runs on the timer thread, because the client must get its answer; a
-         * cancellation that no executor takes is dropped.
+         * cancellation that no executor takes is dropped. The cancelled flag is set before either task is submitted, as
+         * it is one volatile write that runs no code of the application: whenever the client has its answer, a stage
+         * that completes later aborts, so a later field never starts after the answer. Only the abort of the stages
+         * that are still pending waits for the cancellation task.
          */
         void timeOut() {
             if (claim == null || !claim.timesOut()) {
                 return;
             }
+            state.markCancelled();
             Runnable completion = () -> inContext(() -> super.complete(timedOut(timeout)));
             // the cancellation task can run before the subscription is stored and before this future is done, so it may
             // have found nothing to dispose and startCustomized may have seen a future that was not done yet: a task that

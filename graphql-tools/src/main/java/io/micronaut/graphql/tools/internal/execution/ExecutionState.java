@@ -210,7 +210,7 @@ public final class ExecutionState implements GraphQLExecutionRequest {
      * interrupted. A stage that already completed is not changed.
      */
     public void cancel() {
-        cancelled = true;
+        markCancelled();
         List<PendingStage> stages;
         synchronized (this) {
             if (pending == null) {
@@ -231,6 +231,15 @@ public final class ExecutionState implements GraphQLExecutionRequest {
         for (PendingStage stage : stages) {
             stage.abort();
         }
+    }
+
+    /**
+     * Sets the cancelled flag and nothing else: a pending stage is not aborted and no callback of the application runs, so
+     * it is safe on any thread, the timer thread included. A stage that completes afterwards finds the execution
+     * cancelled and aborts.
+     */
+    void markCancelled() {
+        cancelled = true;
     }
 
     /**
