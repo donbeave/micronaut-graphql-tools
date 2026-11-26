@@ -17,6 +17,7 @@
  * The compile-time checks as a Micronaut {@code TypeElementVisitor}: one implementation that runs under javac, KSP, kapt
  * and the Groovy compiler. The rules live in {@code graphql-tools-binding}; this package is the adapter over the
  * {@code ClassElement} model, the option handling and the diagnostics. The visitor is isolating, keeps its state per
- * compilation and reports only what a class and the schema decide.
+ * compilation and reports only what a class and the schema decide. {@code GraphQLToolsVisitor} is the one public type, loaded
+ * by the compiler and never imported; {@code BindingRulesAccess} is {@code @Internal}, for the benchmarks of this repository.
  */
 package io.micronaut.graphql.tools.visitor;

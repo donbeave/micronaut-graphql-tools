@@ -283,7 +283,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.security.internal` | graphql-tools-security | Internal | The context contributor, the decorator and fetcher of the secured fields and the instrumentation of the hook |
 | `io.micronaut.graphql.tools.testing` | graphql-tools-testing | Public API | `GraphQLTester`, `GraphQLTestRequest` and `GraphQLTestResponse`, the in-process tester and its fluent assertions |
 | `io.micronaut.graphql.tools.testing.internal` | graphql-tools-testing | Internal | The context contributor that copies the values of a test request into the GraphQL context |
-| `io.micronaut.graphql.tools.visitor` | graphql-tools-processor | Compiler plug-in | The compile-time `TypeElementVisitor`, loaded by the compiler and never imported |
+| `io.micronaut.graphql.tools.visitor` | graphql-tools-processor | Mixed: compiler plug-in | The compile-time `TypeElementVisitor`, loaded by the compiler and never imported, and `BindingRulesAccess`, which is `@Internal` and exists for the benchmarks |
 | `io.micronaut.graphql.tools.tck` | test-suite-tck | Test helper | The TCK runner; not published |
 
 Kotlin and Groovy sources need no `package-info`; the library modules are Java.
@@ -295,6 +295,8 @@ The public API is split into its role packages (`annotation`, `config`, `customi
 ### How the build keeps this true
 
 `PackageDocumentationSpec` fails when a Java package of a module in its list (the library modules and `test-suite-tck`) has no `package-info.java`, when a `package-info.java` has no description, when a package has more than 15 types without a listed exception, when the package list of this section differs from the packages of the code, or when `@Internal` on a package and the audience column of this section disagree.
+
+`PublicApiListingSpec` fails when the types of the Public API page of the guide (`src/main/docs/guide/publicApi.adoc`) differ from the public types of the modules or from their `@Experimental` marks. `BreakingChangeLedgerSpec` fails when a breaking change number is missing, is listed twice or sits under another release on the page of breaking changes than on the migration page.
 
 ## Benchmarks
 

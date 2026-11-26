@@ -1,0 +1,97 @@
+This page is the reviewed list of the public API of the 1.0 line. A type that is not on it is internal, even when it is `public` in Java, because Micronaut and the library need it to be.
+
+== What is public
+
+A type is public API when it is a top-level `public` type of a package whose name has no `internal` segment, and it is not annotated `@Internal` (`io.micronaut.core.annotation.Internal`). Everything else can change in any release, with no entry on the <<breaks,Breaking Changes>> page: the packages named `internal`, every type annotated `@Internal`, and the nested types of an internal type. The nested types of a public type belong to it.
+
+The modules `micronaut-graphql-tools-opentelemetry` and `micronaut-graphql-tools-bom` have no public type: the first one is configured by the keys of the <<observability,Observability>> page, and the second one holds versions. The test module `test-suite-tck` is not published.
+
+Configuration keys are listed on the <<configuration,Configuration>> page, the one public exception is described on the <<exceptions,Exceptions>> page, and the compile-time options are on the <<compileTimeOptions,Options>> page of the compile-time checks.
+
+[[experimentalMarks]]
+== Experimental types
+
+A type marked `(experimental)` in the tables below carries `@Experimental` (`io.micronaut.core.annotation.Experimental`). The meaning of the mark is explained in <<experimentalTypes,Types that are marked `@Experimental`>>, and every type that carries it is listed in the tables. A type without the mark is stable.
+
+== The modules
+
+=== micronaut-graphql-tools
+
+[cols="3,5", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.annotation` |`GraphQLArgument`, `GraphQLContextValue`, `GraphQLField`, `GraphQLIgnore`, `GraphQLInput`, `GraphQLModels`, `GraphQLRootResolver`, `GraphQLSchemaCoordinate`, `GraphQLType`, `GraphQLTypeResolver`
+|`io.micronaut.graphql.tools.config` |`CheckSeverity`, `GraphQLToolsConfiguration`
+|`io.micronaut.graphql.tools.customizer` |`GraphQLBuilderCustomizer`, `GraphQLErrorsCustomizer`, `GraphQLRuntimeWiringCustomizer`, `GraphQLSchemaCustomizer`, `GraphQLSchemaMappingDictionaryCustomizer`, `GraphQLTypeDefinitionRegistryCustomizer`
+|`io.micronaut.graphql.tools.directive` |`CustomWiring`, `SchemaDirective`
+|`io.micronaut.graphql.tools.error` |`GraphQLExceptionContext`, `GraphQLExceptionMapper`
+|`io.micronaut.graphql.tools.exceptions` |`SchemaBindingException`
+|`io.micronaut.graphql.tools.execution` |`DataLoaderBatchStatistics` (experimental), `FieldDescriptor`, `FieldExecutionKind`, `GraphQLContextContributor` (experimental), `GraphQLDataLoaderOptionsCustomizer`, `GraphQLExecutionRequest`, `GraphQLFieldFetcherDecorator` (experimental), `GraphQLTransport` (experimental)
+|`io.micronaut.graphql.tools.input` |`ArgumentValue`
+|`io.micronaut.graphql.tools.manifest` |`BindingManifest`
+|`io.micronaut.graphql.tools.mapping` |`GraphQLScalarMapping`, `InputMappingContext`, `MappingContext`, `SchemaMappingDictionary`, `TypeMappingContext`
+|`io.micronaut.graphql.tools.resolver` |`MutationResolver`, `QueryResolver`, `SubscriptionResolver`, `TypeResolver`
+|`io.micronaut.graphql.tools.websocket` |`GraphQLConnectionInterceptor` (experimental), `GraphQLConnectionRequest`, `GraphQLConnectionResult`
+|===
+
+=== micronaut-graphql-tools-binding
+
+[cols="3,5", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.binding` |`BindingCode`
+|===
+
+=== micronaut-graphql-tools-processor
+
+[cols="3,5", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.visitor` |`GraphQLToolsVisitor`
+|===
+
+`GraphQLToolsVisitor` is loaded by the compiler and is never imported by application code. The compile-time options are the API of this module.
+
+=== micronaut-graphql-tools-scalars
+
+[cols="3,5", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.scalars` |`ScalarConfiguration`, `ScalarsConfiguration`, `StandardScalar`
+|===
+
+=== micronaut-graphql-tools-micrometer
+
+[cols="3,5", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.micrometer` |`GraphQLMetrics`
+|===
+
+=== micronaut-graphql-tools-upload
+
+[cols="3,5", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.upload` |`GraphQLUpload`
+|===
+
+=== micronaut-graphql-tools-security
+
+[cols="3,5", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.security` |`GraphQLSecurity`, `RootFieldsHook`
+|===
+
+=== micronaut-graphql-tools-testing
+
+[cols="3,5", options="header"]
+|===
+|Package |Types
+|`io.micronaut.graphql.tools.testing` |`GraphQLTestRequest`, `GraphQLTestResponse`, `GraphQLTester`
+|===
+
+== How the build keeps this true
+
+`PublicApiListingSpec` reads the sources of the modules above and fails when the types of the tables differ from the public types of the code, or when the `(experimental)` marks differ from the `@Experimental` annotations. A new public type, a type that becomes internal and a new experimental mark each change this page in the same change. `ArchitectureRulesSpec` keeps internal types out of the signatures of these types, and `PackageDocumentationSpec` keeps the packages documented and small.
