@@ -38,6 +38,7 @@ class PublicApiListingSpec extends Specification {
     @Shared Map<String, String> moduleOfCode = [:]
     @Shared Map<String, String> moduleOnPage = [:]
     @Shared List<String> duplicatePackages = []
+    @Shared List<String> duplicateTypes = []
     @Shared Map<String, Map<String, Boolean>> code = readCode()
     @Shared Map<String, Map<String, Boolean>> listed = readPage()
 
@@ -76,6 +77,7 @@ class PublicApiListingSpec extends Specification {
 
         expect:
         assert duplicatePackages.empty: "Listed twice on the Public API page: ${duplicatePackages}"
+        assert duplicateTypes.empty: "Types listed twice on the Public API page: ${duplicateTypes}"
         assert wrong.empty: "The module headings of the Public API page are wrong:\n  " + wrong.join('\n  ')
     }
 
@@ -112,6 +114,9 @@ class PublicApiListingSpec extends Specification {
             cells[1].split(',').collect { it.trim() }.each { item ->
                 def m = item =~ /^`(\w+)`( \(experimental\))?$/
                 assert m.matches(): "Bad type cell in ${name}: ${item}"
+                if (types.containsKey(m.group(1))) {
+                    duplicateTypes << "${name}.${m.group(1)}".toString()
+                }
                 types[m.group(1)] = m.group(2) != null
             }
             result[name] = types
@@ -135,11 +140,13 @@ class PublicApiListingSpec extends Specification {
             }
             try (Stream<Path> stream = Files.walk(sources)) {
                 stream.filter { it.toString().endsWith('.java') && it.fileName.toString() != 'package-info.java' }.collect(Collectors.toList()).each { file ->
-                    def name = sources.relativize(file.parent).iterator().collect { it.toString() }.join('.')
+                    def text = Files.readString(file)
+                    def packageStatement = text =~ /(?m)^package\s+([\w.]+)\s*;/
+                    assert packageStatement.find(): "No package statement in ${root.relativize(file)}"
+                    def name = packageStatement.group(1)
                     if ('internal' in name.split('\\.').toList()) {
                         return
                     }
-                    def text = Files.readString(file)
                     def typeName = file.fileName.toString().replaceFirst(/\.java$/, '')
                     def declaration = DECLARATION.matcher(text)
                     boolean found = false
@@ -149,7 +156,7 @@ class PublicApiListingSpec extends Specification {
                     assert found: "No declaration of the type ${typeName} in ${root.relativize(file)}"
                     def header = text.substring(0, declaration.start()).split('\\*/|(?m:^import [^\\n]*$)|(?m:^package [^\\n]*$)').last()
                     def modifiers = declaration.group(0)
-                    def annotations = (header =~ /@(\w+)/).collect { it[1] }
+                    def annotations = micronautAnnotations(text, header)
                     if (modifiers.startsWith('public') && !('Internal' in annotations)) {
                         moduleOfCode[name] = module
                         result.computeIfAbsent(name) { new TreeMap<String, Boolean>() }[declaration.group(3)] = 'Experimental' in annotations
@@ -158,6 +165,15 @@ class PublicApiListingSpec extends Specification {
             }
         }
         result
+    }
+
+    /** The simple names of the annotations in the header that are the Micronaut ones: imported by name or wildcard, or written in full. */
+    private static List<String> micronautAnnotations(String text, String header) {
+        String base = 'io.micronaut.core.annotation'
+        (header =~ /@([\w.]+)/).collect { it[1] as String }.findAll { String annotation ->
+            annotation.startsWith(base + '.') ||
+                    (!annotation.contains('.') && (text.contains("import ${base}.${annotation};") || text.contains("import ${base}.*;")))
+        }.collect { it.substring(it.lastIndexOf('.') + 1) }
     }
 
 }

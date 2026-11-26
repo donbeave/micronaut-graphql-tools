@@ -103,6 +103,8 @@ class BreakingChangeLedgerSpec extends Specification {
             def heading = line =~ /^== (1\.0\.0-\S+)$/
             if (heading.find()) {
                 release = heading.group(1)
+            } else if (line =~ /^== /) {
+                release = null
             }
             def entry = line =~ /^\* #\d+ \(BC-(\d+)\)/
             if (release != null && entry.find()) {
