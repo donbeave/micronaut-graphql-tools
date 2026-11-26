@@ -1318,3 +1318,76 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
 *Fix.* Correct or remove the coordinate in `GraphQLRuntimeWiringCustomizer#getClaimedFields()`; a claim names a field of an object type, not of an interface.
 
 *See.* <<customization,Customization>>.
+
+[[example-unwired-directive]]
+=== `unwired-directive`
+
+*Cause.* The schema applies a directive that has no wiring, so it would be in the schema and have no effect. graphql-java calls no wiring for a directive applied to the schema definition or to a directive argument, so such a directive counts as wired only when `allow.schema-customizer-directives` lists it. In the example `@audit` is applied to the schema definition, and the `SchemaDirective` bean that names `audit` does not take effect there.
+
+// corpus: severity/unwired-directive-fail
+[source,text]
+----
+[unwired-directive] The schema applies directives that have no wiring: @audit (schema definition).
+  Wire each one with a SchemaDirective bean that names it (SchemaDirective.named, or SchemaDirective.everyElement for a wiring that sees every element), or list it in micronaut.graphql.tools.allow.inert-directives if it has no effect at runtime, or set micronaut.graphql.tools.checks.unwired-directive to warn or ignore.
+  graphql-java calls no wiring for the schema definition or for directive arguments (@name(arg:)), so a directive applied there must be listed in allow.inert-directives, or in micronaut.graphql.tools.allow.schema-customizer-directives if a GraphQLSchemaCustomizer handles it.
+----
+
+*Fix.* Wire the directive with a `SchemaDirective` bean that names it, list it in `micronaut.graphql.tools.allow.inert-directives` if it has no effect at runtime, or, for a directive applied to the schema definition, list it in `micronaut.graphql.tools.allow.schema-customizer-directives` when a `GraphQLSchemaCustomizer` handles it. Set `micronaut.graphql.tools.checks.unwired-directive` to `warn` or `ignore` to accept the directive without either.
+
+*See.* <<directives,Directives>> and <<checkSeverity,Check Severity>>.
+
+[[example-unexpected-binding-error]]
+=== `unexpected-binding-error`
+
+*Cause.* Binding a field failed with an exception that the binding does not expect. The message names the exception and its message, and the exception is attached as the cause. In the example the constructor of the resolver bean `Query` throws `IllegalStateException`, so the bean cannot be created when the field `Query.username` is bound.
+
+// corpus: exception/runtime-exception-first
+[source,text]
+----
+[unexpected-binding-error] BeanInstantiationException: Error instantiating bean of type  [example.Query]
+
+Message: no database
+Path Taken:
+new @j.i.Singleton e.Query()
+  GraphQL coordinate: Query.username (schema.graphqls, line 6, column 3)
+----
+
+*Fix.* Fix the exception that the message names. Here the constructor of `Query` must not throw: give the bean the state that it needs, or create it without the failing call.
+
+*See.* <<binding,Binding>>.
+
+[[example-kotlin-nullability-mismatch]]
+=== `kotlin-nullability-mismatch`
+
+*Cause.* A Kotlin type contradicts the schema in the direction that fails at run time. A return type or a list element is nullable where the schema field is non-null, so a `null` nulls out the parent. A parameter or an input property is non-null where the schema accepts `null`, so the client can send a value that the code cannot take. The check runs at compile time only, under KSP and under kapt, and the startup reports nothing for it.
+
+[source,text]
+----
+[kotlin-nullability-mismatch] Query.title: the return type is declared nullable (String?), but the GraphQL type String! is non-null, so a null result nulls out the parent in example.Query#title().
+  at example.Query#title()
+  schema schema.graphqls:6:3
+  fix: declare it non-null (String) or make the schema type nullable
+----
+
+*Fix.* Make the Kotlin type match the schema, as the `fix:` line says: declare the return type non-null, or make the schema type nullable. The same applies to a parameter or an input property, where the fix is to declare it nullable (`String?`) or to make the schema type non-null.
+
+*See.* <<kotlinNullability,Kotlin nullability>> and <<compileTimeOptions,Options>>.
+
+[[example-kotlin-nullability-loose]]
+=== `kotlin-nullability-loose`
+
+*Cause.* A Kotlin type is stricter than the schema in the other direction. A return type is non-null where the schema field is nullable, or a parameter or an input property is nullable where the schema requires a value. Nothing fails at run time, but the schema promises less, or more, than the code does. The check is off by default: the option `micronaut.graphql.tools.processor.loose.nullability` is `ignore` by default, `warn` reports it as a compiler warning, and `fail` as a compile error.
+
+With `warn`, the compiler prints the message below for each position:
+
+[source,text]
+----
+[kotlin-nullability-loose] Query.title: the return type is declared non-null (String), but the GraphQL type String is nullable, so the schema promises less than the code returns in example.Query#title().
+  at example.Query#title()
+  schema schema.graphqls:6:3
+  fix: make the schema type non-null or declare the return type nullable (String?)
+----
+
+*Fix.* Make the schema type non-null, or declare the Kotlin type nullable, as the `fix:` line says. If the looser contract is intended, leave the option at `ignore`.
+
+*See.* <<compileTimeOptions,Options>> and <<kotlinNullability,Kotlin nullability>>.
