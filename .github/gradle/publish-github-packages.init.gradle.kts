@@ -1,4 +1,4 @@
-// Publishes the consumer modules to the GitHub Packages Maven registry of this repository (milestone previews).
+// Publishes the consumer modules to the GitHub Packages Maven registry of this repository (milestone and release candidate previews).
 //
 // The release workflow passes this file with `-I`, so the tagged source tree is built unchanged: the repository, the POM
 // metadata and the safety checks are added to the publications at publish time, and nothing in the build files has to exist
@@ -19,8 +19,9 @@ val repositoryUrl = "https://github.com/donbeave/micronaut-graphql-tools"
 val publishable = setOf("micronaut-graphql-tools", "micronaut-graphql-tools-processor", "micronaut-graphql-tools-binding",
                         "micronaut-graphql-tools-scalars", "micronaut-graphql-tools-micrometer", "micronaut-graphql-tools-opentelemetry", "micronaut-graphql-tools-upload", "micronaut-graphql-tools-security", "micronaut-graphql-tools-testing", "micronaut-graphql-tools-bom")
 
-// A milestone (1.0.0-M<n>) or a final release (1.0.0). Snapshots and any other string are refused.
-val versionPattern = Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(-M[0-9]+)?$")
+// A milestone (1.0.0-M<n>), a release candidate (1.0.0-RC<n>, n from 1, no leading zero) or a final release (1.0.0).
+// Snapshots and any other string are refused. .github/scripts/test-release-tag.py keeps this pattern and the ones in release.yml equal.
+val versionPattern = Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(-(M[0-9]+|RC[1-9][0-9]*))?$")
 
 allprojects {
     if (name !in publishable) {
@@ -41,10 +42,10 @@ allprojects {
                 }
                 publications.withType<MavenPublication>().configureEach {
                     pom {
-                        // The repository is the source of truth for a milestone preview: the module is not an official
+                        // The repository is the source of truth for a pre-release preview: the module is not an official
                         // Micronaut module until the Foundation contribution.
                         description.set("${project.description ?: project.findProperty("projectDesc") ?: name.get()} " +
-                                "(milestone preview from github.com/donbeave/micronaut-graphql-tools; not an official Micronaut Foundation release)")
+                                "(pre-release preview from github.com/donbeave/micronaut-graphql-tools; not an official Micronaut Foundation release)")
                         url.set(repositoryUrl)
                         scm {
                             connection.set("scm:git:https://github.com/donbeave/micronaut-graphql-tools.git")
@@ -67,8 +68,8 @@ gradle.taskGraph.whenReady {
     publishTasks.forEach { task ->
         val version = task.project.version.toString()
         if (!versionPattern.matches(version)) {
-            throw GradleException("Refusing to publish ${task.path}: version '$version' is not a milestone or release " +
-                    "version (expected 1.0.0-M<n> or 1.0.0). Pass -PprojectVersion=<version>.")
+            throw GradleException("Refusing to publish ${task.path}: version '$version' is not a milestone, release candidate " +
+                    "or release version (expected 1.0.0-M<n>, 1.0.0-RC<n> or 1.0.0). Pass -PprojectVersion=<version>.")
         }
         if (task.project.name !in publishable) {
             throw GradleException("Refusing to publish ${task.path}: the project is not one of the published modules.")
