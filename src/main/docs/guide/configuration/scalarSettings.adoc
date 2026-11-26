@@ -1,4 +1,4 @@
-The keys of the `micronaut-graphql-tools-scalars` module are under `micronaut.graphql.tools.scalars`: `enabled` switches the module, and `<id>.enabled`, `<id>.name` and `<id>.format` configure one scalar. An id that is not a standard scalar, and a property of a scalar that is not one of these three, fails the startup. See <<scalars,Scalars>>.
+The keys of the `micronaut-graphql-tools-scalars` module are under `micronaut.graphql.tools.scalars`: `micronaut.graphql.tools.scalars.enabled` switches the module, and `micronaut.graphql.tools.scalars.*.enabled`, `micronaut.graphql.tools.scalars.*.name` and `micronaut.graphql.tools.scalars.*.format` configure one scalar, where `*` is the id of the scalar. An id that is not a standard scalar, and a property of a scalar that is not one of these three, fails the startup. See <<scalars,Scalars>>.
 
 include::{includedir}/configurationProperties/io.micronaut.graphql.tools.scalars.ScalarsConfiguration.adoc[]
 

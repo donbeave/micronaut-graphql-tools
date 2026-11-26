@@ -74,9 +74,25 @@ tasks.named<JavaCompile>("compileJava") {
 
 // DocsCoverageSpec reads the README, the guide and the snippet sources next to this module behind Gradle's back, so
 // they are declared as inputs: a documentation change must re-run the spec.
+// The published modules are the modules of settings.gradle.kts except the test suites, the documentation examples and the BOM
+// (the rule of .github/scripts/check-modules.py). DocsCoverageSpec and ArchitectureRulesSpec read their compiled output, so a new
+// published module is covered without a change to the specs.
+val publishedModulePaths = rootProject.subprojects.map { it.path }.filter { path ->
+    val name = path.removePrefix(":").removePrefix("micronaut-")
+    !name.startsWith("test-suite-") && !name.startsWith("docs-examples-") && name != "graphql-tools-bom"
+}.sorted()
+
 tasks.named<Test>("test") {
     val repositoryRoot = rootProject.layout.projectDirectory
     systemProperty("docs.root", repositoryRoot.asFile.absolutePath)
+    val publishedOutputs = publishedModulePaths.flatMap { path ->
+        listOf("java", "kotlin", "groovy").map { language -> project(path).layout.buildDirectory.dir("classes/$language/main") }
+    }
+    publishedModulePaths.forEach { path -> dependsOn("$path:classes") }
+    inputs.files(publishedOutputs).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("publishedModuleClasses")
+    jvmArgumentProviders.add(CommandLineArgumentProvider {
+        listOf("-Dpublished.modules.classes=" + publishedOutputs.filter { it.get().asFile.isDirectory }.joinToString(File.pathSeparator) { it.get().asFile.absolutePath })
+    })
     inputs.files(repositoryRoot.file("README.md"))
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("docsReadme")
