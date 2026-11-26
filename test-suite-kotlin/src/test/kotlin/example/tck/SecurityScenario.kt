@@ -23,7 +23,7 @@ import io.micronaut.core.async.publisher.Publishers
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
-import io.micronaut.graphql.tools.security.RootFieldsHook
+import io.micronaut.graphql.tools.security.GraphQLRootFieldsHook
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.authentication.Authentication
@@ -90,7 +90,7 @@ class SecurityExpressionQueries {
 // tag::root-fields-hook[]
 @Singleton
 @Requires(property = "tck.scenario", value = "security")
-class RecordingHook : RootFieldsHook {
+class RecordingHook : GraphQLRootFieldsHook {
 
     override fun onRootFields(operation: OperationDefinition.Operation, rootFields: List<String>, context: GraphQLContext) {
         context.put("tck.roots", rootFields.joinToString(","))

@@ -65,6 +65,9 @@ class ArchitectureRulesSpec extends Specification {
             'getEnclosingConstructor', 'getGenericSuperclass', 'getTypeParameters', 'getGenericInterfaces',
     ] as Set
 
+    /** The names that mark an interface an application implements as an extension point. */
+    static final List<String> EXTENSION_POINT_SUFFIXES = ['Customizer', 'Decorator', 'Contributor', 'Interceptor', 'Mapper', 'Hook']
+
     /**
      * Methods without a parameter that return a value but are not accessors of state: they run an action. A method that
      * implements a method of a type outside the library keeps the name of that type and is exempt as well.
@@ -162,14 +165,38 @@ class ArchitectureRulesSpec extends Specification {
 
     void "every public extension point interface starts with GraphQL"() {
         given:
-        def extensionPoints = classes.findAll {
-            it.interface && it.modifiers.contains(JavaModifier.PUBLIC) && !it.packageName.contains('.internal') &&
-                    (it.packageName == 'io.micronaut.graphql.tools.customizer' || it.simpleName.endsWith('Customizer') || it.simpleName.endsWith('Decorator'))
-        }
+        def extensionPoints = classes.findAll { isExtensionPoint(it) }
 
         expect:
         extensionPoints.size() >= 7
         extensionPoints.every { it.simpleName.startsWith('GraphQL') }
+    }
+
+    void "the extension point rule picks a hook and leaves out a marker interface"() {
+        given:
+        def found = new ClassFileImporter().importClasses(ExampleHook, MarkerHook, PlainRunner)
+
+        expect:
+        found.findAll { isExtensionPoint(it) }*.simpleName == ['ExampleHook']
+    }
+
+    interface ExampleHook {
+        void onEvent()
+    }
+
+    interface MarkerHook {
+    }
+
+    interface PlainRunner {
+        void run()
+    }
+
+    /** A public interface of a public package with an abstract method that an application implements: the suffix or the package says so. */
+    static boolean isExtensionPoint(JavaClass c) {
+        c.interface && c.modifiers.contains(JavaModifier.PUBLIC) && !c.packageName.contains('.internal') &&
+                c.methods.any { it.modifiers.contains(JavaModifier.ABSTRACT) } &&
+                (c.packageName == 'io.micronaut.graphql.tools.customizer' ||
+                        EXTENSION_POINT_SUFFIXES.any { c.simpleName.endsWith(it) })
     }
 
     void "no public class, interface or enum of a published module declares a record-style accessor"() {

@@ -35,7 +35,7 @@ import java.util.List;
  * the response and no field is fetched.</p>
  */
 @FunctionalInterface
-public interface RootFieldsHook {
+public interface GraphQLRootFieldsHook {
 
     /**
      * @param operation  the kind of the operation
