@@ -86,7 +86,7 @@ On a resolver method, `@GraphQLSchemaCoordinate("Type.field")` plays that role, 
 
 == Lifecycle methods
 
-A method annotated with `@EventListener`, `@Scheduled`, `@Schedules` or `@PreDestroy` on a resolver bean is not a resolver method: it is never reported as an `[unbound-resolver-method]`, and it needs no @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[]. It still binds a field if it has that field's name.
+A method annotated with `@EventListener`, `@Scheduled`, `@Schedules` or `@PreDestroy` on a resolver bean is not a resolver method: it is never reported as an `[unbound-resolver-method]`, and it needs no @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[].
 
 == Return types and arguments
 

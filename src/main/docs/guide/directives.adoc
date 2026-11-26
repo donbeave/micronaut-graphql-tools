@@ -68,6 +68,7 @@ A `SchemaDirectiveWiring` bean is not applied on its own. When no `SchemaDirecti
 
 The check `unwired-directive` fails the startup when the schema applies a directive that nothing wires, and lists each such directive with the places where the schema applies it. A directive counts as wired when:
 
+* it is one that GraphQL specifies (`@deprecated`, `@specifiedBy`, `@oneOf`, `@include`, `@skip`), which needs no wiring and is rejected in `allow.inert-directives` with `[invalid-inert-directives]`,
 * a `SchemaDirective` bean names it,
 * a `GraphQLRuntimeWiringCustomizer` registers a wiring for it with `RuntimeWiring.Builder#directive`, or
 * `micronaut.graphql.tools.resolver-directives` lists it (see <<binding,Binding>>).

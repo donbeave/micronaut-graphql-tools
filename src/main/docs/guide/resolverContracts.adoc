@@ -43,6 +43,6 @@ A @api:io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate[] on a meth
 
 == Inherited resolver classes
 
-A bean that implements several type resolver contracts binds each method for the class of its contract. A method whose
+A bean that implements several type resolver contracts binds each method for the class of its contract. When the bean declares @api:io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate[] on some of its methods, only those methods count. Otherwise a method whose
 first parameter is none of those classes fails the startup with `[ambiguous-type-resolver]`. The tests are
 `InheritedResolverSpec` in `graphql-tools`.
