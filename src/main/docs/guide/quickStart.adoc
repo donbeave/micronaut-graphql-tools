@@ -4,7 +4,7 @@ The library is for Micronaut 4. Micronaut Launch offers Micronaut 5 by default, 
 
 1. Add the dependency. The macro renders the Gradle and Maven declarations:
 +
-dependency:micronaut-graphql-tools[groupId=io.micronaut.graphql.tools,version=1.0.0-M4]
+dependency:micronaut-graphql-tools[groupId=io.micronaut.graphql.tools,version=1.0.0-M5]
 +
 Milestone previews are published to the https://github.com/donbeave/micronaut-graphql-tools/packages[GitHub Packages] Maven registry of the repository, not to Maven Central, so the build also needs that repository. GitHub Packages needs a token with the `read:packages` scope even to download a public package (see <<compatibility,Compatibility>>). In Gradle:
 +
@@ -37,7 +37,7 @@ In Maven, add the repository with the id `graphql-tools`; the `<server>` entry w
 +
 To use a build of your own checkout instead, run `./gradlew publishToMavenLocal` in the repository and add `mavenLocal()` (Gradle) to the repositories; Maven reads its local repository without a declaration (see `CONTRIBUTING.md`). That publishes to your machine only.
 +
-The BOM (`micronaut-graphql-tools-bom`) sets the version of every module of the library, so the other module snippets of this guide name no version. Import it in Gradle with `implementation(platform("io.micronaut.graphql.tools:micronaut-graphql-tools-bom:1.0.0-M4"))`, or in the `dependencyManagement` of a Maven build with `<type>pom</type>` and `<scope>import</scope>`. The library does not bring a JSON codec (BC-26). Add the one your application uses, for example `micronaut-jackson-databind` or `micronaut-serde-jackson`, to the same `dependencies` block.
+The BOM (`micronaut-graphql-tools-bom`) sets the version of every module of the library, so the other module snippets of this guide name no version. Import it in Gradle with `implementation(platform("io.micronaut.graphql.tools:micronaut-graphql-tools-bom:1.0.0-M5"))`, or in the `dependencyManagement` of a Maven build with `<type>pom</type>` and `<scope>import</scope>`. The library does not bring a JSON codec (BC-26). Add the one your application uses, for example `micronaut-jackson-databind` or `micronaut-serde-jackson`, to the same `dependencies` block.
 +
 The HTTP and WebSocket transport is the `io.micronaut.graphql:micronaut-graphql` module. `micronaut-graphql-tools` declares it as an API dependency, so it is already on the classpath, and the Micronaut platform BOM manages its version. To name it in your build, add `implementation("io.micronaut.graphql:micronaut-graphql")` (Gradle) or the same coordinates with no `<version>` (Maven). The endpoint also needs an HTTP server, for example the `netty` runtime that an application from Micronaut Launch has.
 
