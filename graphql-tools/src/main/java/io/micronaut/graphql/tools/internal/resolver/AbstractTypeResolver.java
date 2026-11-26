@@ -235,13 +235,15 @@ public final class AbstractTypeResolver implements TypeResolver {
         }
 
         void remember(Class<?> type, GraphQLObjectType objectType) {
-            if (objectType == null) {
+            if (objectType == null || second != null) {
                 return;
             }
-            if (first == null) {
-                first = new Hit(new WeakReference<>(type), objectType);
-            } else if (second == null && !first.type.refersTo(type)) {
-                second = new Hit(new WeakReference<>(type), objectType);
+            synchronized (this) {
+                if (first == null) {
+                    first = new Hit(new WeakReference<>(type), objectType);
+                } else if (second == null && !first.type.refersTo(type)) {
+                    second = new Hit(new WeakReference<>(type), objectType);
+                }
             }
         }
     }

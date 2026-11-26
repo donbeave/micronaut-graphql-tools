@@ -99,4 +99,4 @@ class loader is still not retained.
 `AbstractTypeBenchmark` (`unionResolution`, `interfaceResolution`) runs the resolver on four threads and allocates 0 B/op
 on both. Its threads share one operation object, so its figures include the contention on the call counter of that object.
 They compare two resolvers on one machine in one session, and are not the cost of a resolver alone. Compare them on your
-machine with `./gradlew :test-suite-benchmarks:jmh -Pjmh.includes=AbstractTypeBenchmark`.
+machine with `./gradlew :test-suite-benchmarks:jmh -Pjmh.includes=AbstractTypeBenchmark --rerun`.
