@@ -52,7 +52,7 @@ A subscription is timed until its stream is set up, not until it completes.
 
 === DataLoader metrics
 
-`graphql.dataloader.batches` counts the batches that the `DataLoader` of a batch loader bean dispatched, and `graphql.dataloader.batch.keys` the keys those batches loaded. Each is tagged with `loader`, the name of the batch loader bean. They are recorded when the request ends, from the counts that the library keeps for the execution (api:io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics[] in the GraphQL context). Counting adds two atomic increments to each batch, so the library counts nothing by default: set `micronaut.graphql.tools.execution.data-loader-statistics` to `true` to get these meters. Without it no DataLoader meter exists.
+`graphql.dataloader.batches` counts the batches that the `DataLoader` of a batch loader bean dispatched, and `graphql.dataloader.batch.keys` the keys those batches loaded. Each is tagged with `loader`, the name of the batch loader bean. They are recorded when the request ends, from the counts that the library keeps for the execution (api:io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics[] in the GraphQL context, an experimental type; see <<experimentalTypes>>). Counting adds two atomic increments to each batch, so the library counts nothing by default: set `micronaut.graphql.tools.execution.data-loader-statistics` to `true` to get these meters. Without it no DataLoader meter exists.
 
 [[resolverTimers]]
 === Timers for your own resolvers

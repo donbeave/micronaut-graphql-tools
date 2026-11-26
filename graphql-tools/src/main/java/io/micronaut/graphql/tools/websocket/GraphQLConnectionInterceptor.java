@@ -15,7 +15,6 @@
  */
 package io.micronaut.graphql.tools.websocket;
 
-import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.NonNull;
 
 /**
@@ -32,7 +31,6 @@ import io.micronaut.core.annotation.NonNull;
  * block, for example to validate a token. An exception that it throws rejects the connection with the close code
  * {@code 4403} and a generic reason, and is logged at WARN. Without a bean of this type every connection is accepted.</p>
  */
-@Experimental
 @FunctionalInterface
 public interface GraphQLConnectionInterceptor {
 
