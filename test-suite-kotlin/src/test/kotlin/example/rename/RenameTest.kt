@@ -69,8 +69,14 @@ class RenameTest {
     @Test
     fun `a coordinate binds a resolver method with another name`() {
         assertEquals(
-            mapOf("default" to "plain", "parcel" to mapOf("id" to "1", "class" to "parcel")),
-            run(mapOf(), RENAME_COORDINATES, "{ default parcel { id class } }")
+            mapOf(
+                "default" to "plain",
+                "parcel" to mapOf(
+                    "id" to "1", "class" to "parcel", "hashCode" to 42, "headline" to "Fragile",
+                    "tagline" to "Handle with care", "new" to "a parcel"
+                )
+            ),
+            run(mapOf(), RENAME_COORDINATES, "{ default parcel { id class hashCode headline tagline new(prefix: \"a\") } }")
         )
     }
 

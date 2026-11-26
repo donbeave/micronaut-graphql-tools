@@ -72,7 +72,7 @@ class RenameFixtures {
     GraphQLTypeDefinitionRegistryCustomizer coordinatesSchema() {
         return { registry ->
             registry.merge(new SchemaParser().parse(
-                    'type Parcel { id: ID! class: String! }\n' +
+                    'type Parcel { id: ID! class: String! hashCode: Int! headline: String! tagline: String! new(prefix: String!): String! }\n' +
                             'extend type Query { parcel: Parcel default: String! }\n'))
         } as GraphQLTypeDefinitionRegistryCustomizer
     }
@@ -195,6 +195,26 @@ class CoordinateParcelResolver {
     @GraphQLSchemaCoordinate('Parcel.class')
     String kind(CoordinateParcel parcel) {
         return 'parcel'
+    }
+
+    @GraphQLSchemaCoordinate('Parcel.hashCode')
+    int digest(CoordinateParcel parcel) {
+        return 42
+    }
+
+    @GraphQLSchemaCoordinate('Parcel.new')
+    String create(CoordinateParcel parcel, String prefix) {
+        return prefix + ' parcel'
+    }
+
+    @GraphQLSchemaCoordinate('Parcel.headline')
+    String title(CoordinateParcel parcel) {
+        return 'Fragile'
+    }
+
+    @GraphQLSchemaCoordinate('Parcel.tagline')
+    String subtitle(CoordinateParcel parcel) {
+        return 'Handle with care'
     }
 
 }
