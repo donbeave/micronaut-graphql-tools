@@ -14,10 +14,10 @@ val registryUrl = "https://maven.pkg.github.com/donbeave/micronaut-graphql-tools
 val repositoryUrl = "https://github.com/donbeave/micronaut-graphql-tools"
 
 // The only projects that are published: the library, the annotation processor, the shared binding rules module, the standard
-// scalars module, the Micrometer module, the OpenTelemetry module, the upload module, the testing module and the BOM.
-// Test suites, benchmarks and anything added later are never published unless they are listed here.
+// scalars module, the Micrometer module, the OpenTelemetry module, the upload module, the security module, the testing module,
+// the client module and the BOM. Test suites, benchmarks and anything added later are never published unless they are listed here.
 val publishable = setOf("micronaut-graphql-tools", "micronaut-graphql-tools-processor", "micronaut-graphql-tools-binding",
-                        "micronaut-graphql-tools-scalars", "micronaut-graphql-tools-micrometer", "micronaut-graphql-tools-opentelemetry", "micronaut-graphql-tools-upload", "micronaut-graphql-tools-security", "micronaut-graphql-tools-testing", "micronaut-graphql-tools-bom")
+                        "micronaut-graphql-tools-scalars", "micronaut-graphql-tools-micrometer", "micronaut-graphql-tools-opentelemetry", "micronaut-graphql-tools-upload", "micronaut-graphql-tools-security", "micronaut-graphql-tools-testing", "micronaut-graphql-tools-client", "micronaut-graphql-tools-bom")
 
 // A milestone (1.0.0-M<n>), a release candidate (1.0.0-RC<n>, n from 1, no leading zero) or a final release (1.0.0).
 // Snapshots and any other string are refused. .github/scripts/test-release-tag.py keeps this pattern and the ones in release.yml equal.
