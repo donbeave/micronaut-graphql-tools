@@ -61,5 +61,6 @@ migration:
   title: Migration
   fromSnapshot: Migrating from 1.0.0-SNAPSHOT
   fromGraphqlJavaTools: Migrating from graphql-java-tools
+publicApi: Public API
 compatibility: Compatibility
 repository: Repository
