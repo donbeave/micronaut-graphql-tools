@@ -40,3 +40,9 @@ The compile-time processor (`micronaut-graphql-tools-processor`) reads the marke
 The processor also records the contracts of a class that a factory method exposes (a `@Bean` method of a `@Factory` that returns the class), which needs no scope annotation of its own. That includes a Java record, and the compile-time checks run on such a class like on a bean class. A bean that implements a marker, and that was compiled without the processor, fails the startup with `[type-resolver-contracts-not-found]`, whichever marker it implements: `TypeResolver<T>`, or every root resolver of the application being a marker bean. The message names the bean and the processor. The compile-time checks and the startup use the same rules for the markers: the checks report a class that the startup also rejects, and nothing else.
 
 A @api:io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate[] on a method of a `QueryResolver`, `MutationResolver` or `SubscriptionResolver` contract that names a field of another operation type is reported at compile time as `[unknown-schema-coordinate]`, because the marker fixes the operation and the method is not bound to that field.
+
+== Inherited resolver classes
+
+A bean that implements several type resolver contracts binds each method for the class of its contract. When the bean declares @api:io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate[] on some of its methods, only those methods count. Otherwise a method whose
+first parameter is none of those classes fails the startup with `[ambiguous-type-resolver]`. The tests are
+`InheritedResolverSpec` in `graphql-tools`.

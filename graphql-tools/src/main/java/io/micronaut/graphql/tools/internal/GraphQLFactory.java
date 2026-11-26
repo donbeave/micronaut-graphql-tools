@@ -22,6 +22,7 @@ import graphql.analysis.MaxQueryComplexityInstrumentation;
 import graphql.analysis.MaxQueryDepthInstrumentation;
 import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import graphql.schema.visibility.NoIntrospectionGraphqlFieldVisibility;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Primary;

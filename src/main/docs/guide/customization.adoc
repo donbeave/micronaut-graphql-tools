@@ -18,9 +18,10 @@ To change the generated schema, use a `GraphQLSchemaCustomizer`; the library doe
 
 === Fields a customizer serves
 
-A field that only a hand-written `DataFetcher` serves has no Java member, so the startup would fail with `[field-not-bound]`. The customizer declares the field by claiming it in `getClaimedFields()`, and registers the data fetcher in `customize`. The library does not bind or check a claimed field, and a data fetcher that the customizer registers for it is not a replacement.
+A field that only a hand-written `DataFetcher` serves has no Java member, so the startup would fail with `[field-not-bound]`. The customizer declares the field by claiming it in `getClaimedFields()`, and registers the data fetcher in `customize`. The library does not bind or check a claimed field, and a data fetcher that the customizer registers for it is not a replacement. The compile-time checks do not read `getClaimedFields()`: a claimed field that also has a source resolver method can still fail the build with `[argument-mismatch]`, although the runtime binding succeeds.
 
 * A claim names a field of an object type of the schema, including a field that `extend type` adds. A claim for a type or a field that the schema does not define, or for an interface, fails the startup with `[invalid-claimed-fields]`, which names each coordinate and its customizer. To serve an interface field, claim it on each implementing object type.
+* Claiming a field does not make the types it returns reachable. When the claimed field is the only path to a return, input, enum or scalar type, bind that type through another field or list it in `allow.unreachable`, or the startup fails the unreachable-type checks.
 
 == Configuring the `GraphQL` bean
 
