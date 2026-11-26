@@ -33,6 +33,9 @@ The generated tables below list the type and the default of every key. This tabl
 |`protection.introspection` |`true` |Whether `+__schema+` and `+__type+` answer. |<<protection,Protection>>
 |===
 
+[[keyNames]]
+Key names: a boolean key names the feature that it turns on, for example `eager-init`, `execution.data-loader-statistics` and `resolver-accessor-prefixes`. Setting `resolver-accessor-prefixes: true` lets a resolver method named `getX` or `isX` bind the field `x`. `strict` sets the default severity of each check that has no entry in `checks`: `true` is `fail` and `false` is `warn`. An entry `checks.<code>` overrides that default for one check, and it is the way to set `ignore`. The processor option `micronaut.graphql.tools.processor.checks` is a different setting: a boolean that switches the compile-time checks off for a build. It is not the runtime key `checks`.
+
 [[processorOptions]]
 == Processor options and their runtime keys
 
