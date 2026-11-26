@@ -53,22 +53,34 @@ class BreakingChangeLedgerSpec extends Specification {
         assert UNUSED.every { !listed.contains(it) }
     }
 
-    def "every change has a summary row and an entry on the migration page, under the release of the page of breaking changes"() {
+    def "every change has one summary row and one entry on the migration page, under the release of the page of breaking changes"() {
         given:
         def problems = []
         def released = releaseOfBreaks()
-        def entries = releaseOfMigration()
+        def entries = occurrences(releaseOfMigration())
         def rows = migration.readLines().findAll { it.startsWith('| BC-') }.collect { (it =~ /^\| BC-(\d+) /)[0][1] as int }
+        def expected = (1..LAST_RANGED) + released.keySet()
         released.each { number, release ->
-            if (!entries.containsKey(number)) {
+            def sections = entries[number] ?: []
+            if (sections.empty) {
                 problems << "BC-${number}: no entry on the migration page"
-            } else if (entries[number] != release) {
-                problems << "BC-${number}: listed under ${release} on the page of breaking changes, and under ${entries[number]} on the migration page"
-            }
-            if (!rows.contains(number)) {
-                problems << "BC-${number}: no row in the summary table of the migration page"
+            } else if (sections != [release]) {
+                problems << "BC-${number}: listed under ${release} on the page of breaking changes, and under ${sections} on the migration page"
             }
         }
+        expected.each { number ->
+            def count = rows.count(number)
+            if (count != 1) {
+                problems << "BC-${number}: ${count} summary rows in the table of the migration page, want one"
+            }
+        }
+        (1..LAST_RANGED).each { number ->
+            def sections = entries[number] ?: []
+            if (sections != ['1.0.0-M1']) {
+                problems << "BC-${number}: entries ${sections} on the migration page, want one under 1.0.0-M1"
+            }
+        }
+        (rows.toSet() - expected).each { problems << "BC-${it}: a summary row on the migration page for a change that is not in the ledger" }
         entries.keySet().findAll { it > LAST_RANGED && !released.containsKey(it) }.each {
             problems << "BC-${it}: an entry on the migration page that the page of breaking changes does not list"
         }
@@ -99,8 +111,8 @@ class BreakingChangeLedgerSpec extends Specification {
         result
     }
 
-    private Map<Integer, String> releaseOfMigration() {
-        Map<Integer, String> result = [:]
+    private List<List> releaseOfMigration() {
+        List<List> result = []
         String release = null
         migration.readLines().each { line ->
             def heading = line =~ /^== Entries for (1\.0\.0-\S+)$/
@@ -111,9 +123,15 @@ class BreakingChangeLedgerSpec extends Specification {
             }
             def entry = line =~ /^=== BC-(\d+):/
             if (release != null && entry.find()) {
-                result[entry.group(1) as int] = release
+                result << [entry.group(1) as int, release]
             }
         }
+        result
+    }
+
+    private static Map<Integer, List<String>> occurrences(List<List> pairs) {
+        Map<Integer, List<String>> result = [:]
+        pairs.each { number, release -> result.computeIfAbsent(number) { [] } << release }
         result
     }
 
