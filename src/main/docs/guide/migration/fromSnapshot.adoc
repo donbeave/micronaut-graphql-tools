@@ -1,6 +1,6 @@
 This page is for applications built on `1.0.0-SNAPSHOT`. No release was published before `1.0.0-M1`, so no published API breaks here. The changes matter for snapshot builds and for anyone who moves to the milestone releases.
 
-The numbers `BC-01` to `BC-19` are the ones of 1.0.0-M1, `BC-20` is the one of 1.0.0-M2, `BC-21` to `BC-33` are the ones of 1.0.0-M3, `BC-34` to `BC-39` and `BC-49` are the ones of 1.0.0-M4, and the other numbers up to `BC-52` belong to 1.0.0-M5. `BC-48` is not used: the issue that reserved it (#511) made no breaking change. Every entry below is on `master` now, and each one sits under the release that carries it.
+The numbers `BC-01` to `BC-19` are the ones of 1.0.0-M1, `BC-20` is the one of 1.0.0-M2, `BC-21` to `BC-33` are the ones of 1.0.0-M3, `BC-34` to `BC-39` and `BC-49` are the ones of 1.0.0-M4, and the other numbers up to `BC-53` belong to 1.0.0-M5. `BC-48` is not used: the issue that reserved it (#511) made no breaking change. Every entry below is on `master` now, and each one sits under the release that carries it.
 
 Changes BC-01, BC-02, BC-04, BC-05, BC-06, BC-10, BC-11, BC-13, BC-15 and BC-17 have no opt-out. There is no legacy mode and no warning period for them. Each startup failure names its fix in the message.
 
