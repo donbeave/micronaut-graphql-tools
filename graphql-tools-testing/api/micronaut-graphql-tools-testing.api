@@ -1,0 +1,36 @@
+public final class io.micronaut.graphql.tools.testing.GraphQLTestRequest {
+  public io.micronaut.graphql.tools.testing.GraphQLTestRequest context(java.lang.String, java.lang.Object);
+  public io.micronaut.graphql.tools.testing.GraphQLTestRequest header(java.lang.String, java.lang.String);
+  public io.micronaut.graphql.tools.testing.GraphQLTestRequest operationName(java.lang.String);
+  public io.micronaut.graphql.tools.testing.GraphQLTestRequest timeout(java.time.Duration);
+  public io.micronaut.graphql.tools.testing.GraphQLTestRequest variable(java.lang.String, java.lang.Object);
+  public io.micronaut.graphql.tools.testing.GraphQLTestRequest variables(java.util.Map<java.lang.String, ?>);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse execute();
+}
+
+public final class io.micronaut.graphql.tools.testing.GraphQLTestResponse {
+  public <T> java.util.Optional<T> path(java.lang.String, java.lang.Class<T>);
+  public graphql.ExecutionResult getResult();
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertErrorCount(int);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertErrorExtension(java.lang.String, java.lang.Object);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertErrorMessage(java.lang.String);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertErrorPath(java.lang.String);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertExtension(java.lang.String, java.lang.Object);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertNoErrors();
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertPath(java.lang.String, java.lang.Object);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertPathNull(java.lang.String);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse assertPathPresent(java.lang.String);
+  public java.lang.String toString();
+  public java.util.List<graphql.GraphQLError> getErrors();
+  public java.util.Map<java.lang.Object, java.lang.Object> getExtensions();
+  public java.util.Map<java.lang.String, java.lang.Object> getData();
+  public java.util.Optional<java.lang.Object> path(java.lang.String);
+}
+
+public final class io.micronaut.graphql.tools.testing.GraphQLTester {
+  public io.micronaut.graphql.tools.testing.GraphQLTestRequest request(java.lang.String);
+  public io.micronaut.graphql.tools.testing.GraphQLTestResponse execute(java.lang.String);
+  public io.micronaut.graphql.tools.testing.GraphQLTester(io.micronaut.configuration.graphql.GraphQLInvocation);
+  public static final java.lang.String CONTEXT_ATTRIBUTE = "io.micronaut.graphql.tools.testing.context";
+  public static final java.time.Duration DEFAULT_TIMEOUT;
+}
