@@ -392,42 +392,6 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 
 *See.* <<startupErrors,Startup Errors>>.
 
-[[example-unsupported-return-type]]
-=== `unsupported-return-type`
-
-*Cause.* A method returns a wrapper type, such as `java.util.Optional`, for a field that is non-null.
-
-// corpus: wrapper/optional-non-null
-[source,text]
-----
-[unsupported-return-type] The return type of the method or property is not supported for this field: java.util.Optional is only allowed for a nullable GraphQL type, the field type is String!. Fix: make the GraphQL field type nullable (remove the trailing '!'), or return the value itself instead of an Optional.
-  GraphQL coordinate: Book.title (schema.graphqls, line 11, column 3)
-  Mapped class: example.Book
-  Mapped method: getTitle()
-----
-
-*Fix.* Make the GraphQL field nullable, or return the value itself.
-
-*See.* <<typeSystem,Type System>>.
-
-[[example-incorrect-member-mapping]]
-=== `incorrect-member-mapping`
-
-*Cause.* A union member is mapped to a Java class that the union's Java type cannot hold, such as a final class that does not implement the union interface.
-
-// corpus: abstract/union-member-final-class
-[source,text]
-----
-[incorrect-member-mapping] The union SearchResult is returned as example.SearchResult, but its object type Magazine is mapped to example.Magazine, and no object can be an instance of both example.SearchResult and example.Magazine, so no object the field returns can resolve to Magazine. Map Magazine to a Java type that example.SearchResult can implement or extend.
-  GraphQL coordinate: Query.search (schema.graphqls, line 6, column 3)
-  Mapped class: example.Query
-  Mapped method: search()
-----
-
-*Fix.* Map the member to a Java type that the Java type of the union can implement or extend.
-
-*See.* <<typeSystem,Type System>>.
-
 [[example-unused-dictionary-entry]]
 === `unused-dictionary-entry`
 
@@ -462,25 +426,6 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 
 *See.* <<resolverContracts,Resolver Contracts>>.
 
-[[example-unsupported-input-type]]
-=== `unsupported-input-type`
-
-*Cause.* An `ArgumentValue` parameter is declared for a non-null argument. `ArgumentValue` is for nullable types.
-
-// corpus: argument/argument-value-non-null
-[source,text]
-----
-[unsupported-input-type] The Java type is not supported for this argument or input field: io.micronaut.graphql.tools.input.ArgumentValue is only allowed for a nullable GraphQL type, the type is String!.
-  GraphQL coordinate: Query.book(title:) (schema.graphqls, line 6, column 17)
-  GraphQL argument: title
-  Mapped class: example.BookQuery
-  Mapped method: book(java.lang.String id, io.micronaut.graphql.tools.input.ArgumentValue title)
-----
-
-*Fix.* Use the plain Java type for a non-null argument, or make the GraphQL type nullable.
-
-*See.* <<inputs,Inputs>>.
-
 [[example-union-type-mapping-not-provided]]
 === `union-type-mapping-not-provided`
 
@@ -498,22 +443,6 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 *Fix.* Register the class in a `SchemaMappingDictionary`, declare it with `@GraphQLType(name)`, or name it by `type-class-convention`.
 
 *See.* <<typeSystem,Type System>>.
-
-[[example-invalid-allow-unreachable]]
-=== `invalid-allow-unreachable`
-
-*Cause.* An `allow.unreachable` entry names a type that the schema does not define, or a type that is reachable.
-
-// corpus: strict/allow-unreachable-invalid
-[source,text]
-----
-[invalid-allow-unreachable] micronaut.graphql.tools.allow.unreachable lists types that are not unreachable object, interface, union, enum, input or scalar types of the schema: Ghost (not defined in the schema), Query (is reachable).
-  Remove them from the list.
-----
-
-*Fix.* Remove the entries that the message lists.
-
-*See.* <<checkSeverity,Check severity>>.
 
 [[example-interface-read-through-implementation]]
 === `interface-read-through-implementation`
@@ -637,23 +566,6 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 ----
 
 *Fix.* Make the class implement the interface that the message names.
-
-*See.* <<typeSystem,Type System>>.
-
-[[example-ambiguous-abstract-type]]
-=== `ambiguous-abstract-type`
-
-*Cause.* Objects of one class are instances of two members of a union or interface, and no single object type is the most specific one.
-
-// corpus: abstract/ambiguous-members
-[source,text]
-----
-[ambiguous-abstract-type] Objects of these classes cannot be resolved to one object type of a union or interface, because no single object type is the most specific one:
-  example.BoxedAndBagged is an instance of Bagged (example.Bagged), Boxed (example.Boxed) of union Holder
-Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let it implement only one of their Java types.
-----
-
-*Fix.* Map the class to one of the members with `@GraphQLType(TheJavaInterface.class)`, or change the class so that it implements one of their Java types.
 
 *See.* <<typeSystem,Type System>>.
 
