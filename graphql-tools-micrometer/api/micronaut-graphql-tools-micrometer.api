@@ -1,0 +1,12 @@
+public final class io.micronaut.graphql.tools.micrometer.GraphQLMetrics {
+  public static final java.lang.String ANONYMOUS_OPERATION = "anonymous";
+  public static final java.lang.String DATA_LOADER_BATCHES = "graphql.dataloader.batches";
+  public static final java.lang.String DATA_LOADER_BATCH_KEYS = "graphql.dataloader.batch.keys";
+  public static final java.lang.String ERROR = "error";
+  public static final java.lang.String LOADER_TAG = "loader";
+  public static final java.lang.String OPERATION_TAG = "operation";
+  public static final java.lang.String OTHER_OPERATION = "other";
+  public static final java.lang.String OUTCOME_TAG = "outcome";
+  public static final java.lang.String REQUEST_TIMER = "graphql.request";
+  public static final java.lang.String SUCCESS = "success";
+}

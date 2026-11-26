@@ -8,6 +8,13 @@ The modules `micronaut-graphql-tools-opentelemetry` and `micronaut-graphql-tools
 
 Configuration keys are listed on the <<configuration,Configuration>> page, the one public exception is described on the <<exceptions,Exceptions>> page, and the compile-time options are on the <<compileTimeOptions,Options>> page of the compile-time checks.
 
+[[signatureSnapshot]]
+== The signature snapshot
+
+The member signatures of the types listed below are kept in the repository, one file per module, `api/<module>.api` in the directory of the module (for example `graphql-tools/api/micronaut-graphql-tools.api`). The build generates the same listing with `javap` and fails when it differs from the file, so a change to a public signature before the release candidate is a reviewed diff of that file in the same pull request, not something found by reading the code. Run `./gradlew apiCheck` to compare and `./gradlew apiDump` to rewrite the files after an intended change.
+
+A file lists every `public` and `protected` member, with its generic types and its constant value, of the public types of the module, as defined above. Annotations, parameter names and the defaults of annotation members are not part of the listing. The snapshot is not a binary compatibility check: japicmp stays off until the final release.
+
 [[experimentalMarks]]
 == Experimental types
 

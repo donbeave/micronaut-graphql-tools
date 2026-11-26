@@ -33,6 +33,8 @@ Run the checks that cover what you changed, and before you push run the full bui
 | Compile-time budget | `./gradlew :test-suite-build:compileTimeBudget -PgradleProfiler=<path to gradle-profiler>` | Changes to the compile-time checks or to `test-suite-build/profiler` (JDK 25, needs a gradle-profiler install; CI job `compile-time budget`, gated) |
 | Guide | `./gradlew docs` (as the bullet below says) | Docs or `snippet::` changes; then check the log (below) |
 | Benchmarks | `./gradlew :test-suite-benchmarks:check` | Hot path, allocation or startup changes |
+| Public API snapshot | `./gradlew apiCheck` (part of `check`); after an intended signature change `./gradlew apiDump`, then review and commit the `api/` files | Changes to a public or protected member of a published module (JDK 17, 21 or 25; same listing on every JDK and leg) |
+| Build logic tests | `./gradlew buildSrcTest` (part of the root `check`) | Changes under `buildSrc` |
 | Workflow lint | `mise exec -- jactionlint` and `python3 .github/scripts/check-gate.py` | Any change under `.github/` |
 | Vulnerability audit | `.github/scripts/vulnerability-audit.sh` (needs `osv-scanner` from mise, the network and JDK 25) | Dependency changes; the canary workflow runs it weekly and on demand (job `vulnerability audit`); accepted findings go in `osv-scanner.toml` with a reason |
 | Module lists | `python3 .github/scripts/check-modules.py` | Adding or renaming a module, or editing a list of modules (the `actionlint` job runs it) |

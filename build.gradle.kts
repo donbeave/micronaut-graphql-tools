@@ -209,3 +209,21 @@ val checkNativeCoverage by tasks.registering {
     }
 }
 tasks.matching { it.name == "check" }.configureEach { dependsOn(checkNativeCoverage) }
+
+// The tests of the build logic in buildSrc (the public API snapshot tasks, #784). Gradle does not run them with the build, so they
+// run as a build of their own, and only when something under buildSrc or the version catalog changed: the marker file keeps the
+// task up to date otherwise, at no cost.
+val buildSrcTest by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Runs the tests of the build logic in buildSrc."
+    val buildSrc = layout.projectDirectory.dir("buildSrc")
+    inputs.files(fileTree(buildSrc) { include("src/**", "*.kts") }, layout.projectDirectory.file("gradle/libs.versions.toml"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .withPropertyName("buildLogic")
+    val marker = layout.buildDirectory.file("checks/buildsrc-test.ok")
+    outputs.file(marker)
+    workingDir = layout.projectDirectory.asFile
+    commandLine(layout.projectDirectory.file("gradlew").asFile.absolutePath, "--project-dir", buildSrc.asFile.absolutePath, "test", "--console=plain")
+    doLast { marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n") }
+}
+tasks.matching { it.name == "check" }.configureEach { dependsOn(buildSrcTest) }
