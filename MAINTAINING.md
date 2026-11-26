@@ -85,6 +85,27 @@ Merge with "Squash and merge" only.
 
 The 1.0 line stays on the micronaut-build plugin 7.6.x (`io.micronaut.build.shared.settings` in `settings.gradle.kts`) and on Micronaut 4.10.x, for the whole line, release candidates included. Patch updates inside 7.6.x and 4.10.x are allowed. micronaut-build 8.x comes with Micronaut 5, so that move belongs to the 2.0 line.
 
+## Branch model
+
+Until the `1.0.0-RC1` tag exists, every change goes to `master` and the whole repository targets Micronaut 4. Micronaut 5 work does not start before that tag.
+
+After the tag, the repository has one branch per Micronaut major, like Micronaut's own modules:
+
+| Line | Branch | Micronaut | Tags | Accepts |
+| --- | --- | --- | --- | --- |
+| 1.0 | `1.0.x`, cut at the `1.0.0-RC1` tag commit | 4 | `1.0.0-RC<n>`, then `1.0.N` | Fixes and security only |
+| 2.0 | `2.0.x`, the renamed `master`, the default branch | 5 | `2.0.0-M<n>`, `2.0.0-RC<n>`, then `2.0.N` | Everything else: features, API changes, refactors, new modules, dependency majors |
+
+Rules for both lines:
+
+- The same rules apply to each line branch: squash merge only, linear history, `required checks`, no admin bypass.
+- A fix that exists on both lines goes to `1.0.x` first and is then forward-ported to `2.0.x`. A defect found only on `2.0.x` goes to `2.0.x`.
+- A merge-up is not possible with squash merges and linear history, so a forward-port is a pull request made with `git cherry-pick -x -s` of the squash commit. A fix that does not apply is marked as not applicable with a reason. The original issue closes with the last port.
+- A tag lies on its own line branch and publishes to GitHub Packages through the tag-triggered workflow only. The `2.x` versions are Micronaut 5, the `1.x` versions are Micronaut 4.
+- Micronaut 5 is in scope for the `2.0.x` line only. The `1.0.x` line and every branch before the cut stay on Micronaut 4.
+- The release candidate is the last version a maintainer tool publishes on a line. The final `1.0.0` and `2.0.0` are tagged by a human maintainer, never by automation.
+- `1.0.x` is supported as long as Micronaut 4.10.x receives releases.
+
 ## Dependency upgrades
 
 Renovate is configured in `.github/renovate.json`. Review its pull requests like any other: the same green `required checks` rule applies.
