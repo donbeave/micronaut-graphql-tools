@@ -95,7 +95,7 @@ Maven Central and the Gradle plugin portal sometimes answer HTTP 429. Gradle ret
 
 ## Releases
 
-GitHub Packages pre-releases are published: milestone versions `1.0.0-M<n>` and release candidates `1.0.0-RC<n>` go to the Maven registry of this repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. Maven Central, GitHub Releases and snapshots stay out of scope until the Foundation contribution. The groupId stays `io.micronaut.graphql.tools`; every consumer-facing page says that the artifacts are unaffiliated milestone previews until contributed.
+GitHub Packages pre-releases are published: milestone versions `1.0.0-M<n>` and release candidates `1.0.0-RC<n>` go to the Maven registry of this repository, `https://maven.pkg.github.com/donbeave/micronaut-graphql-tools`. The 1.0 line ends with the release candidate `1.0.0-RC1`; the final `1.0.0` release is a later manual step, taken after trials on real projects. Maven Central, GitHub Releases and snapshots stay out of scope until the Foundation contribution. The groupId stays `io.micronaut.graphql.tools`; every consumer-facing page says that the artifacts are unaffiliated milestone previews until contributed.
 
 `release.yml` and `.github/gradle/publish-github-packages.init.gradle.kts` are temporary files. They are kept through the 1.0 line, and at the Foundation contribution (#217) the Micronaut template workflows replace them and the init script is deleted.
 
