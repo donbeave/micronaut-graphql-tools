@@ -22,6 +22,8 @@ micronaut {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    runtimeOnly(mn.micronaut.jackson.databind)
+    runtimeOnly(mn.micronaut.http.server.netty)
     implementation("io.micronaut.kotlin:micronaut-kotlin-runtime")
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
