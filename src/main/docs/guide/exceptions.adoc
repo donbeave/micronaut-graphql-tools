@@ -621,3 +621,94 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 *Fix.* Correct the schema file at the position that the message gives. A schema file holds definitions, not operations.
 
 *See.* <<schema,Schema>>.
+
+[[example-processor-option-unknown]]
+=== `processor-option-unknown`
+
+*Cause.* A compiler option under `micronaut.graphql.tools.processor.` is not one of the options of the compile-time check.
+
+// compile: unknown-option
+[source,text]
+----
+[processor-option-unknown] -: the option micronaut.graphql.tools.processor.schema.dir is not known; the options are [micronaut.graphql.tools.processor.checks, micronaut.graphql.tools.processor.loose.nullability, micronaut.graphql.tools.processor.module.dir, micronaut.graphql.tools.processor.resolver.accessor.prefixes, micronaut.graphql.tools.processor.schema.dirs, micronaut.graphql.tools.processor.type.class.convention].
+----
+
+*Fix.* Use one of the options that the message lists.
+
+*See.* <<compileTimeOptions,Options>>.
+
+[[example-processor-option-invalid]]
+=== `processor-option-invalid`
+
+*Cause.* A compile-time option has a value that it does not accept.
+
+// compile: invalid-option
+[source,text]
+----
+[processor-option-invalid] -: micronaut.graphql.tools.processor.checks must be true or false (or yes/no, on/off), not 'maybe'.
+----
+
+*Fix.* Give the option a value that the message names.
+
+*See.* <<compileTimeOptions,Options>>.
+
+[[example-processor-option-removed]]
+=== `processor-option-removed`
+
+*Cause.* A compiler option that was removed or renamed is still set.
+
+// compile: removed-option
+[source,text]
+----
+[processor-option-removed] -: micronaut.graphql.tools.sdlDir was renamed to micronaut.graphql.tools.processor.schema.dirs: pass the schema directories there (several are joined with the path separator).
+----
+
+*Fix.* Set the option that the message names.
+
+*See.* <<compileTimeOptions,Options>>.
+
+[[example-processor-schema-not-configured]]
+=== `processor-schema-not-configured`
+
+*Cause.* The build applies the compile-time check to a resolver class and sets no schema directory.
+
+// compile: schema-not-configured
+[source,text]
+----
+[processor-schema-not-configured] -: the schema directory is not configured, so the resolver classes cannot be checked.
+    fix: set micronaut.graphql.tools.processor.schema.dirs (see the compile-time checks of the guide for the setting of each build tool), or compile without checks with micronaut.graphql.tools.processor.checks=false
+----
+
+*Fix.* Set `micronaut.graphql.tools.processor.schema.dirs`, or switch the checks off with `micronaut.graphql.tools.processor.checks=false`. The startup still runs every check.
+
+*See.* <<compileTimeSetup,Set Up the Build>>.
+
+[[example-processor-schema-not-found]]
+=== `processor-schema-not-found`
+
+*Cause.* A schema directory that the build names does not exist, or holds no `*.graphqls` file.
+
+// compile: schema-directory-missing
+[source,text]
+----
+[processor-schema-not-found] -: the schema directory /no/such/dir does not exist or is not a directory.
+    fix: correct micronaut.graphql.tools.processor.schema.dirs
+----
+
+*Fix.* Correct `micronaut.graphql.tools.processor.schema.dirs`.
+
+*See.* <<compileTimeSetup,Set Up the Build>>.
+
+[[example-processor-internal-error]]
+=== `processor-internal-error`
+
+*Cause.* The compile-time check of a class failed with an exception. The message also carries the stack trace of the failure, which the example leaves out.
+
+// compile: internal-error
+[source,text]
+----
+[processor-internal-error] example.QueryResolver: the compile-time check failed on example.QueryResolver: java.lang.IllegalStateException: the members cannot be read
+  fix: report this, and compile with micronaut.graphql.tools.processor.checks=false until it is fixed
+----
+
+*Fix.* Report the failure, and compile with `micronaut.graphql.tools.processor.checks=false` until it is fixed. The startup still runs every check.
