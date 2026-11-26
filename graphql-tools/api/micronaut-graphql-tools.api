@@ -173,12 +173,6 @@ public interface io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegi
   public abstract void customize(graphql.schema.idl.TypeDefinitionRegistry);
 }
 
-public class io.micronaut.graphql.tools.directive.CustomWiring implements graphql.schema.idl.SchemaDirectiveWiring {
-  public graphql.schema.GraphQLInputObjectField onInputObjectField(graphql.schema.idl.SchemaDirectiveWiringEnvironment<graphql.schema.GraphQLInputObjectField>);
-  public graphql.schema.GraphQLInputObjectType onInputObjectType(graphql.schema.idl.SchemaDirectiveWiringEnvironment<graphql.schema.GraphQLInputObjectType>);
-  public io.micronaut.graphql.tools.directive.CustomWiring();
-}
-
 public final class io.micronaut.graphql.tools.directive.SchemaDirective {
   public boolean isEveryElement();
   public graphql.schema.idl.SchemaDirectiveWiring getWiring();
