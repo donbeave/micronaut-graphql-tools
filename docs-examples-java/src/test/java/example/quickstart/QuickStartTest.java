@@ -17,6 +17,7 @@ package example.quickstart;
 
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.schema.GraphQLSchema;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.runtime.server.EmbeddedServer;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class QuickStartTest {
@@ -47,6 +49,17 @@ class QuickStartTest {
         }
     }
     // end::query[]
+
+    // tag::schema-build[]
+    @Test
+    void theSchemaBuilds() {
+        try (ApplicationContext context = ApplicationContext.run()) {
+            GraphQLSchema schema = context.getBean(GraphQLSchema.class); // getting it builds the schema
+
+            assertNotNull(schema.getQueryType().getFieldDefinition("allBooks"));
+        }
+    }
+    // end::schema-build[]
 
     @Test
     void theSameQueryOverHttpReturnsTheResponseOfTheGuide() throws Exception {
