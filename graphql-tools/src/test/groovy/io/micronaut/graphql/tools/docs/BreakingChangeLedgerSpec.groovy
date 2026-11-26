@@ -90,16 +90,17 @@ class BreakingChangeLedgerSpec extends Specification {
         assert problems.empty: "Ledger gaps:\n  " + problems.join('\n  ')
     }
 
-    def "the migration page has no section of changes that are not on master"() {
+    def "the migration page has no section of changes that are not on master, and no release is nested in another"() {
         expect:
         !migration.readLines().any { it =~ /^== Pending changes/ }
+        !breaks.readLines().any { it =~ /^={3,} 1\.0\.0-/ }
     }
 
     private Map<Integer, String> releaseOfBreaks() {
         Map<Integer, String> result = [:]
         String release = null
         breaks.readLines().each { line ->
-            def heading = line =~ /^={2,3} (1\.0\.0-\S+)$/
+            def heading = line =~ /^== (1\.0\.0-\S+)$/
             if (heading.find()) {
                 release = heading.group(1)
             }

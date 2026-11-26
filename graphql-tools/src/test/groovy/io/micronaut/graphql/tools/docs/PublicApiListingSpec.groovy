@@ -140,8 +140,13 @@ class PublicApiListingSpec extends Specification {
                         return
                     }
                     def text = Files.readString(file)
+                    def typeName = file.fileName.toString().replaceFirst(/\.java$/, '')
                     def declaration = DECLARATION.matcher(text)
-                    assert declaration.find(): "No type declaration in ${root.relativize(file)}"
+                    boolean found = false
+                    while (!found && declaration.find()) {
+                        found = declaration.group(3) == typeName
+                    }
+                    assert found: "No declaration of the type ${typeName} in ${root.relativize(file)}"
                     def header = text.substring(0, declaration.start()).split('\\*/|(?m:^import [^\\n]*$)|(?m:^package [^\\n]*$)').last()
                     def modifiers = declaration.group(0)
                     def annotations = (header =~ /@(\w+)/).collect { it[1] }
