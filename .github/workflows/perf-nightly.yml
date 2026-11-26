@@ -1,10 +1,12 @@
 name: Performance nightly
-# The full JMH suite with the gc profiler, the cold-start benchmarks and the compile-time profile, recorded every night
-# against stored baselines. Never on pull_request, never on a push and never in the `required checks` gate of gradle.yml,
+# The full JMH suite with the gc profiler, the cold-start benchmarks and the compile-time profile, recorded every night.
+# Never on pull_request, never on a push and never in the `required checks` gate of gradle.yml,
 # so a red run blocks no merge. The JMH and start-up jobs only report; the compile-time job fails when a median exceeds
 # its budget, as in gradle.yml. Each job archives
 # its JSON and prints the change against the last successful run in the job summary. Shared runners are noisy: read
-# the allocation and the retained heap first, and treat a time change inside the reported error as noise.
+# the allocation and the retained heap first, and treat a time change inside the reported error as noise. A time of one
+# run is not comparable with a time of another (the runners differ), so the start-up job also builds the commit named in
+# test-suite-benchmarks/startup-reference-commit and measures it in turn with the checkout, on the same runner.
 # `ref` lists the lines to record. Before the 1.0.x branch is cut it holds `master` only; add `1.0.x` then.
 on:
   schedule:
@@ -57,7 +59,13 @@ jobs:
         run: |
           set -o pipefail
           sha=$(git rev-parse HEAD)
-          cp test-suite-benchmarks/build/results/jmh/results.txt jmh.json
+          results=test-suite-benchmarks/build/results/jmh/results.json
+          if [ ! -s "$results" ] || ! python3 -c 'import json, sys; sys.exit(0 if json.load(open(sys.argv[1])) else 1)' "$results"; then
+            echo "::error::$results is missing or holds no result; the JMH task wrote:"
+            ls -la test-suite-benchmarks/build/results/jmh || true
+            exit 1
+          fi
+          cp "$results" jmh.json
           args=(jmh.json --note "ref $REF, commit $sha, graphql-java leg default, runner ${RUNNER_OS} ${RUNNER_ARCH} (${ImageOS:-unknown}), $(nproc) CPUs")
           if [ -f previous/jmh.json ]; then args+=(--previous previous/jmh.json); fi
           python3 test-suite-benchmarks/scripts/jmh-compare.py "${args[@]}" | tee jmh-report.md
@@ -98,13 +106,22 @@ jobs:
           if [ -n "$run_id" ]; then
             gh run download "$run_id" --name "startup-nightly-$REF" --dir previous || echo "No archived JSON in run $run_id"
           fi
+      - name: Read the reference commit
+        id: reference
+        run: echo "sha=$(tr -d '[:space:]' < test-suite-benchmarks/startup-reference-commit)" >> "$GITHUB_OUTPUT"
+      - name: Check out the reference commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.reference.outputs.sha }}
+          path: reference
+          fetch-depth: 1
       - name: Run the benchmark
         env:
           FORKS: ${{ inputs.forks || '10' }}
         run: |
           set -o pipefail
           case "$FORKS" in ''|*[!0-9]*|0) echo "::error::forks must be a positive integer, not '$FORKS'"; exit 1 ;; esac
-          args=(--forks "$FORKS" --json startup-benchmark.json --baseline test-suite-benchmarks/startup-baseline.json)
+          args=(--forks "$FORKS" --json startup-benchmark.json --reference-root reference --reference-json startup-reference.json)
           if [ -f previous/startup-benchmark.json ]; then args+=(--previous previous/startup-benchmark.json); fi
           python3 test-suite-benchmarks/scripts/startup-report.py "${args[@]}" | tee report.txt
           { echo '```'; cat report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
@@ -114,6 +131,7 @@ jobs:
           name: startup-nightly-${{ matrix.ref }}
           path: |
             startup-benchmark.json
+            startup-reference.json
             report.txt
           retention-days: 90
           if-no-files-found: error
