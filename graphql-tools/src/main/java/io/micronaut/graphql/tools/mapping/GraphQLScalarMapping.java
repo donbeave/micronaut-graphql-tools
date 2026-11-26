@@ -168,8 +168,8 @@ public final class GraphQLScalarMapping {
     public static final class Builder {
 
         private final GraphQLScalarType scalarType;
-        private Set<Class<?>> outputClasses = Collections.emptySet();
-        private Set<Class<?>> inputClasses = Collections.emptySet();
+        private Set<Class<?>> outputClasses = Set.of();
+        private Set<Class<?>> inputClasses = Set.of();
 
         private Builder(GraphQLScalarType scalarType) {
             this.scalarType = scalarType;

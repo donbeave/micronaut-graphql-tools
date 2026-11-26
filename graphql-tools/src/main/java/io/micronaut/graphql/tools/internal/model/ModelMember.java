@@ -21,7 +21,6 @@ import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.core.beans.BeanMethod;
 import io.micronaut.core.beans.BeanProperty;
 import io.micronaut.graphql.tools.internal.manifest.BindingManifestRecorder;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +40,7 @@ public record ModelMember(BeanIntrospection<Object> beanIntrospection,
 
     public Map<Class<?>, List<String>> members() {
         return beanProperty != null
-                ? toMap(Collections.emptyList(), beanProperty)
+                ? toMap(List.of(), beanProperty)
                 : toMap(List.of(beanMethod), List.of());
     }
 

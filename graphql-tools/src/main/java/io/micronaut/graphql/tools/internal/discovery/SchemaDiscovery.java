@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.internal.discovery;
 
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.util.NativeImageUtils;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaIndex;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaLocation;
@@ -46,7 +47,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -69,7 +69,7 @@ public final class SchemaDiscovery {
      *                                  file does not parse
      */
     public static SchemaSources.Loaded discover(List<String> locations, ClassLoader loader) {
-        return discover(locations, loader, System.getProperty("org.graalvm.nativeimage.imagecode") != null);
+        return discover(locations, loader, NativeImageUtils.inImageCode());
     }
 
     /**
@@ -154,7 +154,7 @@ public final class SchemaDiscovery {
             files = paths.filter(Files::isRegularFile)
                     .filter(it -> location.matches(it.toString().replace('\\', '/')))
                     .sorted()
-                    .collect(Collectors.toList());
+                    .toList();
         }
         for (Path file : files) {
             if (seen.add(key(file))) {
@@ -241,7 +241,7 @@ public final class SchemaDiscovery {
         String prefix = location.root();
         List<Path> files;
         try (Stream<Path> paths = Files.walk(directory)) {
-            files = paths.filter(Files::isRegularFile).collect(Collectors.toList());
+            files = paths.filter(Files::isRegularFile).toList();
         }
         for (Path file : files) {
             String name = prefix + directory.relativize(file).toString().replace('\\', '/');

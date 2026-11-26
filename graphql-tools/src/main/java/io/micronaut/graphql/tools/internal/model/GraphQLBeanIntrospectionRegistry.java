@@ -53,7 +53,7 @@ public final class GraphQLBeanIntrospectionRegistry {
 
     private boolean typeIntrospectionsLoaded = false;
 
-  public   GraphQLBeanIntrospectionRegistry() {
+    public GraphQLBeanIntrospectionRegistry() {
     }
 
     private void loadTypeIntrospections() {

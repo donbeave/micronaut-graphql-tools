@@ -22,7 +22,6 @@ import io.micronaut.graphql.tools.mapping.MappingContext;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author Alexey Zhokhov
@@ -44,7 +43,7 @@ public final class MultipleMethodsFoundException extends AbstractMappingExceptio
 
         int position = 0;
         for (Class<?> clazz : methods.keySet()) {
-            for (String methodName : methods.get(clazz).stream().sorted().collect(Collectors.toList())) {
+            for (String methodName : methods.get(clazz).stream().sorted().toList()) {
                 result.append("\n  ").append(++position).append(") ").append(clazz.getName()).append(" ")
                         .append(methodName);
             }

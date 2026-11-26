@@ -47,7 +47,7 @@ public final class AmbiguityLog {
     private final Map<String, String> ambiguousBindings = new TreeMap<>();
     private final Set<String> shadowedResolverMethods = new HashSet<>();
 
-  public   AmbiguityLog(Precedence precedence, BindingManifestRecorder manifestRecorder) {
+    public AmbiguityLog(Precedence precedence, BindingManifestRecorder manifestRecorder) {
         this.precedence = precedence;
         this.manifestRecorder = manifestRecorder;
     }

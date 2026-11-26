@@ -59,7 +59,7 @@ public final class StrictModeChecks {
     private final List<String> problems = new ArrayList<>();
     private final Map<BindingCode, List<String>> warnings = new EnumMap<>(BindingCode.class);
 
-  public   StrictModeChecks(BindingManifestRecorder manifestRecorder, CheckPolicy policy) {
+    public StrictModeChecks(BindingManifestRecorder manifestRecorder, CheckPolicy policy) {
         this.manifestRecorder = manifestRecorder;
         this.policy = policy;
     }

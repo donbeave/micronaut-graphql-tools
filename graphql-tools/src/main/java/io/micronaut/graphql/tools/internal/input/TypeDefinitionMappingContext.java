@@ -33,7 +33,7 @@ public final class TypeDefinitionMappingContext implements MappingContext {
     private final Class<?> mappedClass;
     private final MappingContext reachedFrom;
 
-  public   TypeDefinitionMappingContext(TypeDefinition<?> typeDefinition, Class<?> mappedClass, MappingContext reachedFrom) {
+    public TypeDefinitionMappingContext(TypeDefinition<?> typeDefinition, Class<?> mappedClass, MappingContext reachedFrom) {
         this.typeDefinition = typeDefinition;
         this.mappedClass = mappedClass;
         this.reachedFrom = reachedFrom;

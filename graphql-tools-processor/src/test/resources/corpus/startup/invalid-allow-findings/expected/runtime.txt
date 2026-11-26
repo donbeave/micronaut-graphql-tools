@@ -1,0 +1,1 @@
+invalid-allow-findings micronaut.graphql.tools.allow.findings -
