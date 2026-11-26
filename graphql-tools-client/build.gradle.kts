@@ -10,6 +10,13 @@ dependencies {
     api(mnSerde.micronaut.serde.api)
     compileOnly(mn.micronaut.websocket)
     compileOnly(mn.micronaut.retry)
+
+    testImplementation(mnTest.micronaut.test.spock)
+    testImplementation(mn.micronaut.inject.groovy)
+    testImplementation(mn.micronaut.inject.java)
+    testImplementation(mn.micronaut.http.client)
+    testAnnotationProcessor(mn.micronaut.inject.java)
+    testRuntimeOnly(mnLogging.logback.classic)
 }
 
 // The client runs in an application that calls a server, so it must not bring the server stack: no graphql-java and no
