@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.mapping.resolver.marker
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.AnnotationMetadata
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.BindingCode
@@ -34,7 +34,7 @@ import io.micronaut.inject.BeanDefinition
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class ResolverMarkersSpec extends AbstractTest {
+class ResolverMarkersSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "ResolverMarkersSpec"
 

@@ -20,7 +20,7 @@ import graphql.schema.DataFetchingEnvironment
 import io.micronaut.configuration.graphql.GraphQLInvocation
 import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -36,7 +36,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
 /** The batch sizes that the batch function of a loader sees in one subscription event and in one query. */
-class SubscriptionBatchSpec extends AbstractTest {
+class SubscriptionBatchSpec extends AbstractSpec {
 
     static final String SPEC = 'SubscriptionBatchSpec'
 

@@ -22,7 +22,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.input.ArgumentValue
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
@@ -33,7 +33,7 @@ import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class InputConversionShapesSpec extends AbstractTest {
+class InputConversionShapesSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "InputConversionShapesSpec"
     static final Map DETECT = [:]

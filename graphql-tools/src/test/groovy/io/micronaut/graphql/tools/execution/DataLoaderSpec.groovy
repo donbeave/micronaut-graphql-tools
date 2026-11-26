@@ -38,7 +38,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.core.propagation.PropagatedContextElement
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.internal.execution.LibraryGraphQLInvocation
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -71,7 +71,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /** The batch loader beans, the lazy registry of each execution and the typed DataLoader parameters. */
-class DataLoaderSpec extends AbstractTest {
+class DataLoaderSpec extends AbstractSpec {
 
     static final String SPEC = 'DataLoaderSpec'
     static final String LOADED = SPEC + '(\\.(concurrent|replaced))?'

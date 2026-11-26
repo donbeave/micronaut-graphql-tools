@@ -31,7 +31,7 @@ import io.micronaut.context.annotation.Prototype
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer
 import io.micronaut.graphql.tools.directive.SchemaDirective
 import io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer
@@ -41,7 +41,7 @@ import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class SchemaDirectiveWiringSpec extends AbstractTest {
+class SchemaDirectiveWiringSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "SchemaDirectiveWiringSpec"
     static final String SPEC_NAME_VALIDATION = "SchemaDirectiveWiringSpec.validation"

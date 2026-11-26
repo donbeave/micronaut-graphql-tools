@@ -19,14 +19,14 @@ import jakarta.inject.Singleton
 import graphql.ExecutionInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import org.intellij.lang.annotations.Language
 
-class InputGenericArgumentsSpec extends AbstractTest {
+class InputGenericArgumentsSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "InputGenericArgumentsSpec"
     static final String SPEC_JAVA = "InputGenericArgumentsSpecJava"

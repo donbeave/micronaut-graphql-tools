@@ -20,7 +20,7 @@ import graphql.scalars.ExtendedScalars
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.mapping.GraphQLScalarMapping
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -33,7 +33,7 @@ import java.time.OffsetDateTime
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class InputObjectConversionSpec extends AbstractTest {
+class InputObjectConversionSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "InputObjectConversionSpec"
     static final String SPEC_NAME_READ_ONLY = "InputObjectConversionSpecReadOnly"

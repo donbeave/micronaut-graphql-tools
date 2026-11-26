@@ -16,13 +16,13 @@
 package io.micronaut.graphql.tools.mapping.resolver.root
 
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class RootResolverNotFoundSpec extends AbstractTest {
+class RootResolverNotFoundSpec extends AbstractSpec {
 
     void "no any root resolvers found"() {
         given:

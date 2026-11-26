@@ -23,7 +23,7 @@ import ch.qos.logback.core.read.ListAppender
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.context.exceptions.ConfigurationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -39,7 +39,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicInteger
 
-class FieldBindingPrecedenceSpec extends AbstractTest {
+class FieldBindingPrecedenceSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "FieldBindingPrecedenceSpec"
 

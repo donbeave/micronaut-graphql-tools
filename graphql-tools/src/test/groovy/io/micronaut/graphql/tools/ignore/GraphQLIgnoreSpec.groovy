@@ -20,7 +20,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.event.StartupEvent
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore
 import io.micronaut.graphql.tools.annotation.GraphQLInput
@@ -35,7 +35,7 @@ import jakarta.annotation.PreDestroy
 import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
-class GraphQLIgnoreSpec extends AbstractTest {
+class GraphQLIgnoreSpec extends AbstractSpec {
 
     static final String SPEC_JAVA = "IgnoreSpec"
     static final String SPEC_GROOVY = "IgnoreSpecGroovy"

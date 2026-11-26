@@ -32,7 +32,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.internal.protection.GetMutationGuard
@@ -43,7 +43,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Function
 
-class GraphQLBuilderCustomizerSpec extends AbstractTest {
+class GraphQLBuilderCustomizerSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "GraphQLBuilderCustomizerSpec"
 

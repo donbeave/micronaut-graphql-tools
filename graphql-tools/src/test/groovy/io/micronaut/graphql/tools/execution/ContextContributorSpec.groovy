@@ -25,7 +25,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.core.propagation.PropagatedContextElement
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.http.HttpRequest
 import jakarta.inject.Singleton
@@ -33,7 +33,7 @@ import org.intellij.lang.annotations.Language
 import reactor.core.publisher.Mono
 
 /** The per-execution context contributors: order, thread, context, the request view and the failure rules. */
-class ContextContributorSpec extends AbstractTest {
+class ContextContributorSpec extends AbstractSpec {
 
     static final String SPEC = 'ContextContributorSpec'
 

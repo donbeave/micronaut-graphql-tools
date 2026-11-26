@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SignInMutationTest extends AbstractTest {
 
     @Test
-    void testSuccessAuthentication() {
+    void signsInAKnownUser() {
         SignInMutation signInMutation =
                 new SignInMutation("test", "test");
 
@@ -52,7 +52,7 @@ class SignInMutationTest extends AbstractTest {
     }
 
     @Test
-    void testUnknownUser() {
+    void rejectsAnUnknownUser() {
         SignInMutation signInMutation =
                 new SignInMutation("unknown-user", "test");
 
@@ -71,7 +71,7 @@ class SignInMutationTest extends AbstractTest {
     }
 
     @Test
-    void testWrongPassword() {
+    void rejectsAWrongPassword() {
         SignInMutation signInMutation =
                 new SignInMutation("test", "xyz");
 

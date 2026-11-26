@@ -19,7 +19,7 @@ import graphql.schema.DataFetcher
 import graphql.schema.FieldCoordinates
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.internal.execution.AsyncBoundaryDataFetcher
@@ -35,7 +35,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 
 /** A field fetcher decorator is asked once for each field at startup, and wraps outermost. */
-class GraphQLFieldFetcherDecoratorSpec extends AbstractTest {
+class GraphQLFieldFetcherDecoratorSpec extends AbstractSpec {
 
     static final String SPEC_NAME = 'GraphQLFieldFetcherDecoratorSpec'
 

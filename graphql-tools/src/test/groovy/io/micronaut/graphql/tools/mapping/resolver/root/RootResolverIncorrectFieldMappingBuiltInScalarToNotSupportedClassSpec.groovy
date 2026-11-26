@@ -18,14 +18,14 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class RootResolverIncorrectFieldMappingBuiltInScalarToNotSupportedClassSpec extends AbstractTest {
+class RootResolverIncorrectFieldMappingBuiltInScalarToNotSupportedClassSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RootResolverIncorrectFieldMappingBuiltInScalarToNotSupportedClassSpec"
 

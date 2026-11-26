@@ -21,14 +21,14 @@ import io.micronaut.configuration.graphql.GraphQLInvocation
 import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
 
 import java.util.concurrent.CopyOnWriteArrayList
 
-class CustomizerOrderSpec extends AbstractTest {
+class CustomizerOrderSpec extends AbstractSpec {
 
     static final String SCHEMA = '''
 schema { query: Query }

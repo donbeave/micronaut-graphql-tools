@@ -21,7 +21,7 @@ import graphql.schema.DataFetchingEnvironment
 import io.micronaut.configuration.graphql.GraphQLInvocation
 import io.micronaut.configuration.graphql.GraphQLInvocationData
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
@@ -44,7 +44,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
 /** The per-loader options customizer, caching off in a subscription and the context of the batch loader environment. */
-class DataLoaderOptionsSpec extends AbstractTest {
+class DataLoaderOptionsSpec extends AbstractSpec {
 
     static final String SPEC = 'DataLoaderOptionsSpec'
 

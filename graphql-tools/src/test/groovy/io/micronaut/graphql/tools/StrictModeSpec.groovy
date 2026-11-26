@@ -32,7 +32,7 @@ import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 
-class StrictModeSpec extends AbstractTest {
+class StrictModeSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "StrictModeSpec"
 

@@ -30,7 +30,7 @@ import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
 
-class UnreachableTypesSpec extends AbstractTest {
+class UnreachableTypesSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "UnreachableTypesSpec"
     static final String SPEC_NAME_EXTENSION = "UnreachableTypesSpecExtension"

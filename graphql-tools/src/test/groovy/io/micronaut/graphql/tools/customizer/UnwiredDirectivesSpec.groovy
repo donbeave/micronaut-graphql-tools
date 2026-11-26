@@ -26,7 +26,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.context.BeanRegistration
 import io.micronaut.graphql.tools.manifest.BindingManifest
 import io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class UnwiredDirectivesSpec extends AbstractTest {
+class UnwiredDirectivesSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "UnwiredDirectivesSpec"
     static final String SPEC_NAME_WIRED = "UnwiredDirectivesSpec.wired"

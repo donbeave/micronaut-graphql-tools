@@ -22,37 +22,5 @@
   {
     "name": "example.graphql.type.SecurityErrorCode",
     "allDeclaredConstructors": true
-  },
-  {
-    "name": "example.data.BookRepository$_findById_closure1",
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "example.data.BookSellerRepository$_findAllByBookIds_closure1",
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "example.data.UserRepository$_findByUsername_closure2",
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "example.data.UserRepository$_search_closure1",
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "example.ElapsedTimeInterceptor$_getMethodName_closure1",
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "example.graphql.BookSellerDataLoader$_load_lambda1$_closure2",
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "example.graphql.BookSellerDataLoader$_load_lambda1$_closure3",
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "example.graphql.query.SearchProfileQuery$_searchProfile_closure1",
-    "allDeclaredMethods": true
   }
 ]

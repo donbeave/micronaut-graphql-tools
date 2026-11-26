@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.mapping.rename
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.annotation.GraphQLIgnore
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
@@ -29,7 +29,7 @@ import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import org.intellij.lang.annotations.Language
 
-class FieldRenameSpec extends AbstractTest {
+class FieldRenameSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "FieldRenameSpec"
 

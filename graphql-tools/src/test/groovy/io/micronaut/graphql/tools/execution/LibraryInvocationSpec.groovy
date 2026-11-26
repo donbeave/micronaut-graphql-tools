@@ -39,7 +39,7 @@ import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.core.propagation.PropagatedContextElement
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.binding.BindingCode
@@ -73,7 +73,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ExecutorService
 
 /** The library's GraphQLInvocation: the executor hop, the call order, the step-aside rules and the startup failures. */
-class LibraryInvocationSpec extends AbstractTest {
+class LibraryInvocationSpec extends AbstractSpec {
 
     static final String SPEC_NAME = 'LibraryInvocationSpec'
 

@@ -28,7 +28,7 @@ import graphql.TrivialDataFetcher
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.Order
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
@@ -38,7 +38,7 @@ import java.util.concurrent.CompletableFuture
 /**
  * Every Instrumentation bean takes part in an execution, in bean order, and the library installs none when there is no bean.
  */
-class InstrumentationBeansSpec extends AbstractTest {
+class InstrumentationBeansSpec extends AbstractSpec {
 
     static final String CHAINED = "InstrumentationBeansSpecChained"
     static final String SINGLE = "InstrumentationBeansSpecSingle"

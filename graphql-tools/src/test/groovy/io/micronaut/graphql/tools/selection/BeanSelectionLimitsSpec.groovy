@@ -28,7 +28,7 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.exceptions.BeanInstantiationException
 import io.micronaut.context.exceptions.ConfigurationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MutableHttpResponse
@@ -41,7 +41,7 @@ import reactor.core.publisher.Mono
  * the message names: an application invocation that is only {@code @Secondary} ties with the library's, and a
  * {@code GraphQLSchema} or {@code GraphQL} template over every {@code GraphQLInvocation} cannot be built.
  */
-class BeanSelectionLimitsSpec extends AbstractTest {
+class BeanSelectionLimitsSpec extends AbstractSpec {
 
     static final String SCHEMA = '''
 schema { query: Query }

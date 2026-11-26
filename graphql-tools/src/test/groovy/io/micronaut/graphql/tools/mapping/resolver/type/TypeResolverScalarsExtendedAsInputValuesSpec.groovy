@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.mapping.resolver.type
 
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLInput
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
@@ -25,7 +25,7 @@ import io.micronaut.graphql.tools.annotation.GraphQLTypeResolver
 import org.intellij.lang.annotations.Language
 import spock.lang.Unroll
 
-class TypeResolverScalarsExtendedAsInputValuesSpec extends AbstractTest {
+class TypeResolverScalarsExtendedAsInputValuesSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "TypeResolverScalarsExtendedAsInputValuesSpec"
 

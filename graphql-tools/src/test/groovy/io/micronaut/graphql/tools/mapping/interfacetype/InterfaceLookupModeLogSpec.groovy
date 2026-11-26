@@ -20,7 +20,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.annotation.Introspected
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory
 /**
  * The startup logs one INFO line for each object type mapped to a Java interface, and names the lookup mode it uses.
  */
-class InterfaceLookupModeLogSpec extends AbstractTest {
+class InterfaceLookupModeLogSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "InterfaceLookupModeLogSpec"
 

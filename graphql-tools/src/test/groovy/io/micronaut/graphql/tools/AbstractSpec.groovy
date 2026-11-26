@@ -24,7 +24,7 @@ import io.micronaut.core.annotation.NonNull
 import io.micronaut.core.annotation.Nullable
 import spock.lang.Specification
 
-abstract class AbstractTest extends Specification {
+abstract class AbstractSpec extends Specification {
 
     protected ApplicationContext applicationContext
 

@@ -288,6 +288,8 @@ jobs:
         run: python3 .github/scripts/check-modules.py
       - name: Check that no Groovy DSL Gradle file is tracked
         run: python3 .github/scripts/check-gradle-dsl.py
+      - name: Check the names of the Spock specs and the Java test methods
+        run: python3 .github/scripts/check-test-names.py
       - name: Test the download retry wrapper
         run: .github/scripts/test-retry-on-download-failure.sh
 

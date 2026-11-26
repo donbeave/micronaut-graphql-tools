@@ -33,14 +33,14 @@ import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.core.value.PropertyCatalog
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.inject.qualifiers.Qualifiers
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.intellij.lang.annotations.Language
 
-class QualifiedBeansEdgesSpec extends AbstractTest {
+class QualifiedBeansEdgesSpec extends AbstractSpec {
 
     static final String REPLACED = 'QualifiedBeansEdgesSpec.replaced'
     static final String REPLACED_UNQUALIFIED = 'QualifiedBeansEdgesSpec.replacedUnqualified'

@@ -18,7 +18,7 @@ package io.micronaut.graphql.tools.mapping.input
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.exceptions.BeanInstantiationException
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.input.ArgumentValue
 import io.micronaut.graphql.tools.config.GraphQLToolsConfiguration
 import io.micronaut.graphql.tools.annotation.GraphQLInput
@@ -30,7 +30,7 @@ import org.intellij.lang.annotations.Language
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.binding.BindingCode
 
-class InputPropertiesSpec extends AbstractTest {
+class InputPropertiesSpec extends AbstractSpec {
 
     static final String SPEC_LIST_ARGUMENT = "InputPropertiesSpecListArgument"
     static final String SPEC_NESTED_LIST = "InputPropertiesSpecNestedList"

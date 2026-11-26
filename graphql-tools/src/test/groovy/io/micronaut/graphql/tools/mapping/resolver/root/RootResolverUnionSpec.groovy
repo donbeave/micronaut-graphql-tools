@@ -18,13 +18,13 @@ package io.micronaut.graphql.tools.mapping.resolver.root
 import jakarta.inject.Singleton
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Requires
-import io.micronaut.graphql.tools.AbstractTest
+import io.micronaut.graphql.tools.AbstractSpec
 import io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer
 import io.micronaut.graphql.tools.annotation.GraphQLRootResolver
 import io.micronaut.graphql.tools.annotation.GraphQLType
 import org.intellij.lang.annotations.Language
 
-class RootResolverUnionSpec extends AbstractTest {
+class RootResolverUnionSpec extends AbstractSpec {
 
     static final String SPEC_NAME = "RootResolverUnionSpec"
 
