@@ -1081,7 +1081,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
 [[example-unmapped-input-property]]
 === `unmapped-input-property`
 
-*Cause.* A settable property of an input class has no field in the GraphQL input type that the class is mapped to. The message names the input type, the class and the properties.
+*Cause.* A settable property of an input class has no matching field in any of the GraphQL input types that the class is mapped to. The message names the input type, the class and the properties.
 
 // corpus: input/unmapped-input-property
 [source,text]
@@ -1234,7 +1234,7 @@ Declare @GraphQLType(name = "Book") on one class only, rename the others, or map
   Mapped method: search()
 ----
 
-*Fix.* Leave one class that matches the type by renaming or removing the others, or map the type in the `SchemaMappingDictionary`, which the message says always wins.
+*Fix.* Leave one class that matches the type by renaming or removing the others, or map the type in the `SchemaMappingDictionary`, which the startup message says always wins.
 
 *See.* <<typeSystem,Type System>>.
 
@@ -1304,7 +1304,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
 [[example-invalid-claimed-fields]]
 === `invalid-claimed-fields`
 
-*Cause.* A `GraphQLRuntimeWiringCustomizer` claims a field that the schema does not define. The message lists each coordinate with the reason.
+*Cause.* A `GraphQLRuntimeWiringCustomizer` claims a coordinate that is not a field of an object type of the schema. The message lists each coordinate with the reason.
 
 // corpus: customizer/stale-claim
 [source,text]
@@ -1315,6 +1315,6 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
   Correct or remove the coordinate in GraphQLRuntimeWiringCustomizer#getClaimedFields().
 ----
 
-*Fix.* Correct or remove the coordinate in `GraphQLRuntimeWiringCustomizer#getClaimedFields()`.
+*Fix.* Correct or remove the coordinate in `GraphQLRuntimeWiringCustomizer#getClaimedFields()`; a claim names a field of an object type, not of an interface.
 
 *See.* <<customization,Customization>>.
