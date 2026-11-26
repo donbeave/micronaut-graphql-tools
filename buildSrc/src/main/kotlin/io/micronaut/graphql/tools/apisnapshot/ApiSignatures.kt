@@ -13,8 +13,6 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.spi.ToolProvider
 
-private val HEADER_MODIFIERS = setOf("public", "protected", "private", "static", "final", "abstract", "strictfp", "sealed")
-
 /**
  * Writes the public member signatures of the main classes of one module: every public or protected member of every public
  * type that is outside an `internal` package, is not annotated `@Internal` (nor nested in such a type), and is not a generated
@@ -37,6 +35,8 @@ abstract class ApiSignatures : DefaultTask() {
 
 /** The listing of the classes under the given directories; the task above only writes it, and the tests call it directly. */
 internal object ApiListing {
+    private val HEADER_MODIFIERS = setOf("public", "protected", "private", "static", "final", "abstract", "strictfp", "sealed")
+
     fun generate(classDirectories: Collection<File>): String {
         val all = classDirectories.filter { it.isDirectory }.flatMap { root ->
             root.walkTopDown().filter { it.isFile && it.extension == "class" }.map(ClassFileInfo::read).toList()

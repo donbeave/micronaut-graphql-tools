@@ -3,17 +3,19 @@ package io.micronaut.graphql.tools.apisnapshot
 import java.io.DataInputStream
 import java.io.File
 
-private const val ACC_PUBLIC = 0x0001
-private const val ACC_PROTECTED = 0x0004
-private const val ACC_ENUM = 0x4000
-private const val INTERNAL_MARKER = "Lio/micronaut/core/annotation/Internal;"
+private object Flags {
+    const val ACC_PUBLIC = 0x0001
+    const val ACC_PROTECTED = 0x0004
+    const val ACC_ENUM = 0x4000
+    const val INTERNAL_MARKER = "Lio/micronaut/core/annotation/Internal;"
+}
 
 /** One field or method of a class file, with the facts the API listing needs. */
 internal class MemberInfo(val access: Int, val name: String, val descriptor: String, val internal: Boolean) {
-    val exposed: Boolean get() = access and (ACC_PUBLIC or ACC_PROTECTED) != 0
+    val exposed: Boolean get() = access and (Flags.ACC_PUBLIC or Flags.ACC_PROTECTED) != 0
 
     /** An enum constant: kept in declaration order, because its position is its ordinal. */
-    val enumConstant: Boolean get() = access and ACC_ENUM != 0 && descriptor.startsWith("L")
+    val enumConstant: Boolean get() = access and Flags.ACC_ENUM != 0 && descriptor.startsWith("L")
 }
 
 /**
@@ -112,7 +114,7 @@ internal class ClassFileInfo(
         private fun annotationsMention(input: DataInputStream, utf8: Map<Int, String>): Boolean {
             var found = false
             repeat(input.readUnsignedShort()) {
-                if (readAnnotation(input, utf8) == INTERNAL_MARKER) found = true
+                if (readAnnotation(input, utf8) == Flags.INTERNAL_MARKER) found = true
             }
             return found
         }
