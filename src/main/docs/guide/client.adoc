@@ -1,0 +1,57 @@
+The `micronaut-graphql-tools-client` module is the GraphQL client of the library: a runtime for an application that calls a GraphQL server. It runs on the Micronaut HTTP client, so `micronaut.http.services.<id>.*`, filters and TLS apply unchanged. This page describes the annotations of the declarative client. The runtime that implements a client interface and the compile-time checks of its operations arrive in later milestones, so the annotations only declare a client today.
+
+== The annotations
+
+[cols="2,5", options="header"]
+|===
+| Annotation | Use
+
+| `@GraphQLClient`
+| Marks a client. On an interface it declares a client; on a field or a parameter it marks a low-level injection point.
+
+| `@GraphQLOperation`
+| Marks a method of a client interface as one GraphQL operation.
+
+| `@GraphQLVariable`
+| Binds a parameter of an operation method to a variable of the operation.
+|===
+
+== GraphQLClient
+
+`@GraphQLClient` is a stereotype of the Micronaut `@Client` annotation, so the members that name the service resolve like those of `@Client`:
+
+[cols="2,5", options="header"]
+|===
+| Member | Meaning
+
+| `value`, `id`
+| The service id or the URL of the server. Both are aliases of each other and of `@Client(id)`, so `@GraphQLClient("books")` reads the configuration under `micronaut.http.services.books`.
+
+| `endpoint`
+| The path of the GraphQL endpoint. An alias of `@Client(path)`.
+
+| `webSocketEndpoint`
+| The path of the WebSocket endpoint that subscriptions use. Empty means the value of `endpoint`.
+
+| `schema`
+| The name of the client schema that the operations are checked against at compile time.
+
+| `configuration`
+| The HTTP client configuration class. An alias of `@Client(configuration)`.
+|===
+
+[source,java]
+----
+@GraphQLClient(id = "books", endpoint = "/graphql")
+public interface BookClient {
+
+    @GraphQLOperation("query($id: ID!) { book(id: $id) { title } }")
+    Book book(@GraphQLVariable("id") String bookId);
+}
+----
+
+== GraphQLOperation and GraphQLVariable
+
+`@GraphQLOperation` takes the GraphQL document in `value`, or the name of an operation of the client directory. `name` selects one operation of a document that holds several, and `method` is `POST` (the default) or `GET`; only a query can use `GET`. A method without `@GraphQLOperation` is left to the Micronaut HTTP client.
+
+`@GraphQLVariable` names the variable that a parameter binds, without the dollar sign. A parameter without it binds the variable named like the parameter.
