@@ -47,10 +47,9 @@ import io.micronaut.graphql.tools.internal.resolver.ResolverInstances;
 import io.micronaut.graphql.tools.mapping.TypeMappingContext;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.scheduling.annotation.ExecuteOn;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static io.micronaut.graphql.tools.internal.MicronautUtils.getExecutableMethodFullName;
 import static io.micronaut.graphql.tools.internal.MicronautUtils.getPropertyMethodName;
@@ -96,7 +95,7 @@ final class ObjectFieldBinder {
         List<BeanMethod<Object, ?>> beanMethods = members.methods(fieldDefinition.getName()).stream()
                 .filter(it -> !isIgnored(it, BindingManifestRecorder.methodMember(it,
                         beanIntrospection.getBeanType())))
-                .collect(Collectors.toList());
+                .toList();
 
         if (beanProperties.size() + beanMethods.size() > 1) {
             throw new MultipleMethodsFoundException(mappingContext, toMap(beanMethods, beanProperties));
@@ -131,7 +130,7 @@ final class ObjectFieldBinder {
 
         if (beanDefinitionAndMethods.isEmpty() && !declaringInterfaces.isEmpty()) {
             s.unboundInterfaceFields.add(new InterfaceField(objectTypeDefinition, fieldDefinition,
-                    sourceClass, Collections.emptyMap(), null));
+                    sourceClass, Map.of(), null));
             return;
         }
 
@@ -153,7 +152,7 @@ final class ObjectFieldBinder {
 
         List<BeanDefinitionAndMethod> resolvers = sourceClass.isPrimitive() || sourceClass.isEnum()
                 || sourceClass.isAnnotation()
-                ? Collections.emptyList()
+                ? List.of()
                 : s.graphQLResolversRegistry.findTypeExecutableMethods(sourceClass, objectTypeDefinition.getName(),
                         fieldDefinition.getName());
 
