@@ -171,9 +171,11 @@ class DocsCoverageSpec extends Specification {
     }
 
     private static List<String> configurationKeys() {
-        def urls = Thread.currentThread().contextClassLoader.getResources('META-INF/spring-configuration-metadata.json').toList()
-        def keys = urls.collectMany { url ->
-            new JsonSlurper().parse(url).properties.collect { it.name }
+        def files = System.getProperty('published.modules.classes').split(File.pathSeparator).collect {
+            Paths.get(it).resolve('META-INF/spring-configuration-metadata.json')
+        }.findAll { Files.isRegularFile(it) }
+        def keys = files.collectMany { file ->
+            new JsonSlurper().parse(file.toFile()).properties.collect { it.name }
         }.findAll { it.startsWith(KEY_PREFIX) }
         assert !keys.empty: 'No generated configuration metadata found for ' + KEY_PREFIX
         keys.unique().sort()
