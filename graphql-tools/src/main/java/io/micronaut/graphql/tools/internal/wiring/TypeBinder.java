@@ -60,10 +60,10 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.acceptsReturnClass;
-import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.getSupportedClasses;
-import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isGraphQlBuiltInType;
-import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isJavaBuiltInClass;
+import static io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog.acceptsReturnClass;
+import static io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog.getSupportedClasses;
+import static io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog.isGraphQlBuiltInType;
+import static io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog.isJavaBuiltInClass;
 import static io.micronaut.graphql.tools.internal.GraphQLUtils.getType;
 import static io.micronaut.graphql.tools.internal.GraphQLUtils.getTypeName;
 import static io.micronaut.graphql.tools.internal.GraphQLUtils.requireTypeName;

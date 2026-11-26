@@ -66,8 +66,8 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.getSupportedClasses;
-import static io.micronaut.graphql.tools.binding.internal.schema.ScalarTable.isGraphQlBuiltInType;
+import static io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog.getSupportedClasses;
+import static io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog.isGraphQlBuiltInType;
 import static io.micronaut.graphql.tools.internal.GraphQLUtils.printType;
 import static io.micronaut.graphql.tools.internal.GraphQLUtils.requireTypeName;
 import static io.micronaut.graphql.tools.internal.GraphQLUtils.unsupportedTypeDefinition;

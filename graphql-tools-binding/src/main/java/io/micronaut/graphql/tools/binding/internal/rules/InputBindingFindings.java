@@ -39,7 +39,7 @@ import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules.Argument
 import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules.ClassProblem;
 import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules.FieldBinding;
 import io.micronaut.graphql.tools.binding.internal.rules.InputTypeRules.InputFields;
-import io.micronaut.graphql.tools.binding.internal.schema.ScalarTable;
+import io.micronaut.graphql.tools.binding.internal.schema.ScalarCatalog;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaModel;
 import io.micronaut.graphql.tools.binding.internal.schema.SchemaTypes;
 
@@ -161,8 +161,8 @@ public final class InputBindingFindings {
         if (!(unwrapped instanceof TypeName name)) {
             return;
         }
-        if (ScalarTable.isGraphQlBuiltInType(name.getName())) {
-            Set<String> supported = ScalarTable.getSupportedClasses(name).stream().map(Class::getName)
+        if (ScalarCatalog.isGraphQlBuiltInType(name.getName())) {
+            Set<String> supported = ScalarCatalog.getSupportedClasses(name).stream().map(Class::getName)
                     .collect(Collectors.toSet());
             if (leaf.array() || !supported.contains(leaf.rawName())) {
                 // a wrong class for a built-in scalar is a class mapping failure, which only the startup reports
@@ -247,8 +247,8 @@ public final class InputBindingFindings {
         if (!(unwrapped instanceof TypeName typeName)) {
             return Halt.SILENT;
         }
-        if (ScalarTable.isGraphQlBuiltInType(typeName.getName())) {
-            Set<String> supported = ScalarTable.getSupportedClasses(typeName).stream().map(Class::getName)
+        if (ScalarCatalog.isGraphQlBuiltInType(typeName.getName())) {
+            Set<String> supported = ScalarCatalog.getSupportedClasses(typeName).stream().map(Class::getName)
                     .collect(Collectors.toSet());
             if (declared.array() || !supported.contains(declared.rawName())) {
                 return Halt.SILENT;
