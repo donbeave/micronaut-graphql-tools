@@ -394,7 +394,7 @@ The start-up figures have one command. `python3 test-suite-benchmarks/scripts/st
 and runs `BindingBenchmark` and `RetainedHeapBenchmark` on each, with ten cold JVMs per case (`--forks` changes that). It
 prints, for each case, the median binding time with the minimum and maximum, and the median `retainedBytes`, all taken
 over the per-fork values in the JMH JSON. `--json <file>` keeps the JSON, `--previous <file>` prints the change against
-an earlier JSON, and `--from <file>` reports a JSON without running anything. The report prints the JDK, so quote it with
+an earlier JSON, `--reference-root <checkout>` runs another checkout's build in turn with this one and prints the change against it, and `--from <file>` reports a JSON without running anything. The report prints the JDK, so quote it with
 the figures. The last jar it builds is a one-size jar: run `./gradlew :test-suite-benchmarks:jmhJar` again before the other benchmarks.
 
 The `Performance nightly` workflow (`.github/workflows/perf-nightly.yml`) runs every night and on demand (Actions, "Run workflow"),
@@ -406,7 +406,7 @@ graphql-java `default` leg and `ubuntu-latest`, and each states them in its name
   counts, the commit, the runner, and a row per benchmark with the previous and current score, the change, the error that JMH reports for each
   score (the spread of the repeated runs) and the bytes per operation. A row is flagged as a regression when the score is worse by more than 10
   percent (`--threshold`) and the two scores differ by more than the sum of their errors; the summary then lists each flagged benchmark with both numbers.
-- `startup` runs the command above and archives `startup-benchmark.json` as `startup-nightly-<ref>`; its summary prints the medians, the change against the last successful run and the change against the recorded reference `test-suite-benchmarks/startup-baseline.json` (passed as `--baseline`; `test-suite-benchmarks/README.md` names its commit and run conditions).
+- `startup` runs the command above with `--reference-root` on a second checkout of the commit in `test-suite-benchmarks/startup-reference-commit`, and archives `startup-benchmark.json` and `startup-reference.json` as `startup-nightly-<ref>`. Both builds start their cold JVMs in turn on the same runner, so its summary prints the medians and the change against the reference of the same run; read that change first. The change against the last successful run is printed too, and it compares two runners (`test-suite-benchmarks/README.md`, "The start-up reference").
 - `compile-time` runs `:test-suite-build:compileTimeBudget` and archives the profile as `compile-time-nightly-<ref>`.
 
 The previous run is the last successful run of the workflow. To read a result, open the run, read the summary and read the

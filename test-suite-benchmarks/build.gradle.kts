@@ -433,6 +433,8 @@ jmh {
     timeOnIteration = "1s"
     profilers = listOf("gc")
     resultFormat = "JSON"
+    // perf-nightly.yml reads this file: name it here, so that the format and the file name cannot drift apart.
+    resultsFile = layout.buildDirectory.file("results/jmh/results.json")
     // The start-up benchmarks are measured cold, one fresh JVM per sample: the first two by scripts/startup-report.py, the
     // context start and first request ones by the benchmark jar. The warm-up of this task would start contexts in the same JVM first.
     excludes = listOf("BindingBenchmark", "RetainedHeapBenchmark", "ContextStartBenchmark", "FirstRequestBenchmark", "StartAndFirstRequestBenchmark")
