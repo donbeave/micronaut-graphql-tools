@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.internal.wiring;
+package io.micronaut.graphql.tools.internal.wiring.interfaces;
 
 import graphql.language.InterfaceTypeDefinition;
 import graphql.language.ObjectTypeDefinition;
@@ -64,7 +64,7 @@ public final class AbstractTypeWiring {
     private final List<AbstractTypeResolver> abstractTypeResolvers = new ArrayList<>();
     private Map<String, List<ObjectTypeDefinition>> implementations;
 
-    AbstractTypeWiring(TypeDefinitionRegistry typeDefinitionRegistry, SchemaMappingDictionary schemaMappingDictionary,
+    public AbstractTypeWiring(TypeDefinitionRegistry typeDefinitionRegistry, SchemaMappingDictionary schemaMappingDictionary,
                        GraphQLBeanIntrospectionRegistry graphQLBeanIntrospectionRegistry,
                        BindingManifestRecorder manifestRecorder, RuntimeWiring.Builder runtimeWiringBuilder,
                        @Nullable String typeClassConvention) {
@@ -83,16 +83,16 @@ public final class AbstractTypeWiring {
      * @return its class: the dictionary entry, else the derived class, else {@code null}
      */
     @Nullable
-    Class<?> findClass(ObjectTypeDefinition objectType, Class<?> declaredClass, TypeMappingContext mappingContext) {
+    public Class<?> findClass(ObjectTypeDefinition objectType, Class<?> declaredClass, TypeMappingContext mappingContext) {
         return typeClasses.find(objectType, declaredClass, mappingContext);
     }
 
     @Nullable
-    Class<?> findInterfaceClass(InterfaceTypeDefinition interfaceType, TypeMappingContext mappingContext) {
+    public Class<?> findInterfaceClass(InterfaceTypeDefinition interfaceType, TypeMappingContext mappingContext) {
         return typeClasses.find(interfaceType, mappingContext);
     }
 
-    void wireUnion(UnionTypeDefinition unionTypeDefinition, Class<?> targetClass, TypeMappingContext mappingContext,
+    public void wireUnion(UnionTypeDefinition unionTypeDefinition, Class<?> targetClass, TypeMappingContext mappingContext,
                    MemberBinder memberBinder, Consumer<List<Runnable>> inOrder) {
         Map<Class<?>, String> exactClasses = new HashMap<>();
         Map<String, Class<?>> objectTypes = new HashMap<>();
@@ -143,7 +143,7 @@ public final class AbstractTypeWiring {
      * @param processedTypes the Java class that each schema type was bound to
      * @return the interfaces that no field returns but a bound object type implements
      */
-    Set<String> wireInterfaces(Map<String, Class<?>> processedTypes) {
+    public Set<String> wireInterfaces(Map<String, Class<?>> processedTypes) {
         Set<String> implementedInterfaces = new TreeSet<>();
 
         List<InterfaceTypeDefinition> interfaceTypeDefinitions =
@@ -194,7 +194,7 @@ public final class AbstractTypeWiring {
         return implementedInterfaces;
     }
 
-    void checkAmbiguity() {
+    public void checkAmbiguity() {
         List<AbstractTypeResolver> resolvers = abstractTypeResolvers.stream()
                 .filter(it -> it.getObjectTypeCount() > 1)
                 .toList();
@@ -229,7 +229,7 @@ public final class AbstractTypeWiring {
         return schemaMappingDictionary.getTypes().getOrDefault(objectTypeDefinition.getName(), processedClass);
     }
 
-    static void checkMemberClass(String abstractTypeKind, String abstractTypeName, Class<?> declaredClass,
+    public static void checkMemberClass(String abstractTypeKind, String abstractTypeName, Class<?> declaredClass,
                                          String objectTypeName, Class<?> memberClass,
                                          TypeMappingContext mappingContext) {
         if (areDisjoint(declaredClass, memberClass)) {
@@ -258,7 +258,7 @@ public final class AbstractTypeWiring {
         return result;
     }
 
-    List<ObjectTypeDefinition> getImplementations(InterfaceTypeDefinition interfaceTypeDefinition) {
+    public List<ObjectTypeDefinition> getImplementations(InterfaceTypeDefinition interfaceTypeDefinition) {
         if (implementations == null) {
             implementations = indexImplementations();
         }
@@ -277,11 +277,11 @@ public final class AbstractTypeWiring {
         return index;
     }
 
-    @FunctionalInterface
     /**
      * Binds the Java class of one member type of an abstract type, as the type phase does for any object type.
      */
-    interface MemberBinder {
+    @FunctionalInterface
+    public interface MemberBinder {
 
         void bind(ObjectTypeDefinition objectTypeDefinition, Class<?> targetClass, TypeMappingContext mappingContext);
     }

@@ -19,7 +19,7 @@ import io.micronaut.context.ApplicationContext
 import io.micronaut.graphql.tools.binding.BindingCode
 import io.micronaut.graphql.tools.exceptions.SchemaBindingException
 import io.micronaut.graphql.tools.internal.execution.SuspendInvoker
-import io.micronaut.graphql.tools.internal.wiring.GraphQLRuntimeWiringGenerator
+import io.micronaut.graphql.tools.internal.wiring.FieldFetchers
 import io.micronaut.inject.ExecutableMethod
 import spock.lang.Specification
 
@@ -52,7 +52,7 @@ class SuspendSupportSpec extends Specification {
         }
 
         when:
-        GraphQLRuntimeWiringGenerator.suspendInvoker(context, method, 'Query.find')
+        FieldFetchers.suspendInvoker(context, method, 'Query.find')
 
         then:
         SchemaBindingException e = thrown()
@@ -73,7 +73,7 @@ class SuspendSupportSpec extends Specification {
         }
 
         expect:
-        GraphQLRuntimeWiringGenerator.suspendInvoker(context, method, 'Query.find') == null
+        FieldFetchers.suspendInvoker(context, method, 'Query.find') == null
 
         cleanup:
         context.close()

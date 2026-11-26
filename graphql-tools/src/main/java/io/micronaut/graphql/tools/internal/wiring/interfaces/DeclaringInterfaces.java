@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.micronaut.graphql.tools.internal.wiring;
+package io.micronaut.graphql.tools.internal.wiring.interfaces;
 
 import graphql.language.FieldDefinition;
 import graphql.language.InterfaceTypeDefinition;
@@ -42,7 +42,7 @@ public final class DeclaringInterfaces {
     private final TypeDefinitionRegistry typeDefinitionRegistry;
     private final Map<String, Map<String, List<InterfaceTypeDefinition>>> byObjectType = new HashMap<>();
 
-    DeclaringInterfaces(TypeDefinitionRegistry typeDefinitionRegistry) {
+    public DeclaringInterfaces(TypeDefinitionRegistry typeDefinitionRegistry) {
         this.typeDefinitionRegistry = typeDefinitionRegistry;
     }
 
@@ -51,7 +51,7 @@ public final class DeclaringInterfaces {
      * @param fieldName            the name of a field
      * @return the interfaces that the object type implements and that declare the field, by name
      */
-    List<InterfaceTypeDefinition> of(ObjectTypeDefinition objectTypeDefinition, String fieldName) {
+    public List<InterfaceTypeDefinition> of(ObjectTypeDefinition objectTypeDefinition, String fieldName) {
         return byObjectType.computeIfAbsent(objectTypeDefinition.getName(), it -> index(objectTypeDefinition))
                 .getOrDefault(fieldName, List.of());
     }

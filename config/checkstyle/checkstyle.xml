@@ -73,6 +73,12 @@
             <property name="message" value="Line has trailing spaces."/>
         </module> -->
 
+    <!-- A member modifier that is off the four-space grid, or followed by more than one space, is a mis-indented declaration -->
+    <module name="RegexpSingleline">
+        <property name="format" value="^ {1,3}(public|protected|private)\b|\b(public|protected|private) {2,}\w"/>
+        <property name="message" value="Member modifier is off the four-space indentation grid or followed by several spaces."/>
+    </module>
+
     <!-- Be able to ignore violations with @SuppressWarnings -->
     <!-- See https://checkstyle.org/config_filters.html#SuppressWarningsFilter -->
     <module name="SuppressWarningsFilter"/>

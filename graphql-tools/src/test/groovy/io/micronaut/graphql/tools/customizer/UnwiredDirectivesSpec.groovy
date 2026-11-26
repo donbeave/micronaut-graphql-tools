@@ -472,12 +472,12 @@ scalar Sc @onScalar
         'fail'   | ['micronaut.graphql.tools.strict': false] || true  | 0
     }
 
-    void "the wiring beans are injected into the schema factory method, so the DI graph shows them"() {
+    void "the wiring beans are injected into the schema binder, so the DI graph shows them"() {
         given:
         startContext(SCHEMA, SPEC_NAME, ALLOW + ['micronaut.graphql.tools.allow.inert-directives': ['auth', 'cached']])
 
         when:
-        def arguments = applicationContext.getBeanDefinition(GraphQLSchema).constructor.arguments.toList()
+        def arguments = applicationContext.getBeanDefinition(Class.forName('io.micronaut.graphql.tools.internal.SchemaBinder')).constructor.arguments.toList()
         def schemaDirectives = arguments.find { it.name == 'schemaDirectives' }
         def directiveWirings = arguments.find { it.name == 'directiveWirings' }
 
