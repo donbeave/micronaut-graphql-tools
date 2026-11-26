@@ -39,17 +39,6 @@ public final class ModuleOwnership {
     }
 
     /**
-     * What the question has found out about this compilation.
-     *
-     * @param option        the {@code module.dir} option that it was asked with, null when it was absent
-     * @param moduleDir     the directory of the module: {@code module.dir}, else the project directory that the compiler reports,
-     *                      null when there is neither
-     * @param foreignOutput the output directory of this compilation when it lies outside {@code moduleDir}, null otherwise
-     */
-    public record Ownership(@Nullable Path option, @Nullable Path moduleDir, @Nullable Path foreignOutput) {
-    }
-
-    /**
      * Answers the question once per compilation and remembers the answer in the context, which both visitors of this module share.
      * The compiler is asked for the project directory and the class output at most once: KSP creates a file of its own to answer each
      * of them, and a second request for the same file fails the build.
@@ -116,5 +105,16 @@ public final class ModuleOwnership {
         } catch (IOException | RuntimeException e) {
             return path;
         }
+    }
+
+    /**
+     * What the question has found out about this compilation.
+     *
+     * @param option        the {@code module.dir} option that it was asked with, null when it was absent
+     * @param moduleDir     the directory of the module: {@code module.dir}, else the project directory that the compiler reports,
+     *                      null when there is neither
+     * @param foreignOutput the output directory of this compilation when it lies outside {@code moduleDir}, null otherwise
+     */
+    public record Ownership(@Nullable Path option, @Nullable Path moduleDir, @Nullable Path foreignOutput) {
     }
 }
