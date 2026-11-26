@@ -1,5 +1,5 @@
 name: Release
-# Publishes a milestone (1.0.0-M<n>) or the final 1.0.0 to the GitHub Packages Maven registry of this repository.
+# Publishes a milestone (1.0.0-M<n>), a release candidate (1.0.0-RC<n>) or a final release (1.0.0) to the GitHub Packages Maven registry of this repository.
 # Nothing else is published: no Maven Central, no GitHub Release, no snapshots.
 #
 # Triggers: a pushed version tag, or a manual run with the tag to publish (this is how a tag that predates this workflow
@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to publish, for example 1.0.0-M1'
+        description: 'Existing tag to publish, for example 1.0.0-M1 or 1.0.0-RC1'
         required: true
         type: string
 permissions:
@@ -55,8 +55,8 @@ jobs:
           else
             tag="$REF_NAME"
           fi
-          if ! printf '%s' "$tag" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-M[0-9]+)?$'; then
-            echo "::error::Tag '$tag' is not a milestone or release version (1.0.0-M<n> or 1.0.0); nothing is published." >&2
+          if ! printf '%s' "$tag" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-(M[0-9]+|RC[1-9][0-9]*))?$'; then
+            echo "::error::Tag '$tag' is not a milestone, release candidate or release version (1.0.0-M<n>, 1.0.0-RC<n> or 1.0.0); nothing is published." >&2
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -161,8 +161,8 @@ jobs:
         working-directory: source
         run: |
           set -euo pipefail
-          if ! printf '%s' "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-M[0-9]+)?$'; then
-            echo "::error::Refusing to publish '$TAG': not a milestone or release version." >&2
+          if ! printf '%s' "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-(M[0-9]+|RC[1-9][0-9]*))?$'; then
+            echo "::error::Refusing to publish '$TAG': not a milestone, release candidate or release version." >&2
             exit 1
           fi
           ./gradlew publishAllPublicationsToGitHubPackagesRepository --no-daemon \
