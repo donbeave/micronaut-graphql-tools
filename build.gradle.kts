@@ -209,3 +209,34 @@ val checkNativeCoverage by tasks.registering {
     }
 }
 tasks.matching { it.name == "check" }.configureEach { dependsOn(checkNativeCoverage) }
+
+// The tests of the build logic in buildSrc (the public API snapshot tasks, #784). Gradle does not run them with the build, so they
+// run as a build of their own, on a copy of buildSrc: the build in progress already uses buildSrc/build, and a second build writing
+// the same directory made the tests fail on CI with classes missing from their classpath. Only when something under buildSrc or the
+// version catalog changed: the marker file keeps the task up to date otherwise, at no cost.
+val buildSrcTestCopy = layout.buildDirectory.dir("buildsrc-test")
+val prepareBuildSrcTest by tasks.registering(Sync::class) {
+    from(layout.projectDirectory.dir("buildSrc")) {
+        include("src/**", "*.kts")
+        into("buildSrc")
+    }
+    from(layout.projectDirectory.file("gradle/libs.versions.toml")) { into("gradle") }
+    into(buildSrcTestCopy)
+}
+val buildSrcTest by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Runs the tests of the build logic in buildSrc, on a copy of it."
+    dependsOn(prepareBuildSrcTest)
+    val copy = buildSrcTestCopy.map { it.dir("buildSrc").asFile }
+    val marker = layout.buildDirectory.file("checks/buildsrc-test.ok")
+    outputs.file(marker)
+    inputs.files(
+        fileTree(layout.projectDirectory.dir("buildSrc")) { include("src/**", "*.kts") },
+        layout.projectDirectory.file("gradle/libs.versions.toml"),
+    ).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("buildLogic")
+    workingDir = layout.projectDirectory.asFile
+    argumentProviders.add(CommandLineArgumentProvider { listOf("--project-dir", copy.get().absolutePath, "test", "--console=plain") })
+    executable(layout.projectDirectory.file("gradlew").asFile.absolutePath)
+    doLast { marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n") }
+}
+tasks.matching { it.name == "check" }.configureEach { dependsOn(buildSrcTest) }

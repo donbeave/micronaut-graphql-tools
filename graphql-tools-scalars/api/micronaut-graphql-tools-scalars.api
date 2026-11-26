@@ -1,0 +1,64 @@
+public class io.micronaut.graphql.tools.scalars.ScalarConfiguration implements io.micronaut.core.util.Toggleable {
+  public boolean isEnabled();
+  public io.micronaut.graphql.tools.scalars.ScalarConfiguration(java.lang.String);
+  public java.lang.String getFormat();
+  public java.lang.String getId();
+  public java.lang.String getName();
+  public void setEnabled(boolean);
+  public void setFormat(java.lang.String);
+  public void setName(java.lang.String);
+}
+
+public class io.micronaut.graphql.tools.scalars.ScalarsConfiguration implements io.micronaut.core.util.Toggleable {
+  public boolean isEnabled();
+  public io.micronaut.graphql.tools.scalars.ScalarConfiguration get(io.micronaut.graphql.tools.scalars.StandardScalar);
+  public io.micronaut.graphql.tools.scalars.ScalarsConfiguration();
+  public java.util.Map<java.lang.String, io.micronaut.graphql.tools.scalars.ScalarConfiguration> getScalars();
+  public static final boolean DEFAULT_ENABLED = true;
+  public static final java.lang.String ENABLED_CONFIG = "micronaut.graphql.tools.scalars.enabled";
+  public static final java.lang.String PREFIX = "micronaut.graphql.tools.scalars";
+  public void setEnabled(boolean);
+}
+
+public final class io.micronaut.graphql.tools.scalars.StandardScalar extends java.lang.Enum<io.micronaut.graphql.tools.scalars.StandardScalar> {
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar INSTANT;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar LOCAL_DATE;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar LOCAL_TIME;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar LOCAL_DATE_TIME;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar OFFSET_TIME;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar OFFSET_DATE_TIME;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar ZONED_DATE_TIME;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar YEAR_MONTH;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar YEAR;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar DURATION;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar PERIOD;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar JSON;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar URL;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar UUID;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar LOCALE;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar CURRENCY;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar POSITIVE_INT;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar NEGATIVE_INT;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar NON_POSITIVE_INT;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar NON_NEGATIVE_INT;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar POSITIVE_FLOAT;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar NEGATIVE_FLOAT;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar NON_POSITIVE_FLOAT;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar NON_NEGATIVE_FLOAT;
+  public boolean isFormatConfigurable();
+  public io.micronaut.graphql.tools.scalars.StandardScalar$Group getGroup();
+  public java.lang.Class<?> getJavaClass();
+  public java.lang.String getDefaultFormat();
+  public java.lang.String getDefaultName();
+  public java.lang.String getId();
+  public static io.micronaut.graphql.tools.scalars.StandardScalar valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.scalars.StandardScalar[] values();
+}
+
+public static final class io.micronaut.graphql.tools.scalars.StandardScalar$Group extends java.lang.Enum<io.micronaut.graphql.tools.scalars.StandardScalar$Group> {
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar$Group JAVA_TIME;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar$Group JSON;
+  public static final io.micronaut.graphql.tools.scalars.StandardScalar$Group EXTENDED;
+  public static io.micronaut.graphql.tools.scalars.StandardScalar$Group valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.scalars.StandardScalar$Group[] values();
+}

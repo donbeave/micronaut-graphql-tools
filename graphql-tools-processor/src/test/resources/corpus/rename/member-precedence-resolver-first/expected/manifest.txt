@@ -1,0 +1,6 @@
+!precedence-ambiguity Slip.title ; example.Slip#heading() | example.SlipResolver#title(example.Slip)
+Query -> object ; - ; - ; -
+Query.slip: Slip -> root ; example.Query#slip() ; example.Slip ; example.Slip
+Slip -> object ; example.Slip ; - ; -
+Slip.title: String! -> resolver ; example.SlipResolver#title(example.Slip) ; java.lang.String ; java.lang.String
+String -> scalar ; String ; - ; -

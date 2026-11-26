@@ -10,7 +10,7 @@ implementation("io.micronaut.security:micronaut-security")
 
 The version comes from the `micronaut-graphql-tools-bom` import of the quick start.
 
-`micronaut.graphql.tools.security.enabled` (default `true`) turns the beans of the module off: the contributor, the decorator of `@Secured` and the `Instrumentation` of the root fields hook. With it `false`, `@Secured` guards nothing, no api:io.micronaut.graphql.tools.security.RootFieldsHook[] bean is called, and a hook bean that nothing else injects is not even created. Micronaut Security authenticates the request as it always does, with its filter, its fetchers and its rules, and this module adds nothing to that. A URL rule on the GraphQL path decides who may reach the endpoint at all, for example `isAnonymous()` when the schema guards its own fields.
+`micronaut.graphql.tools.security.enabled` (default `true`) turns the beans of the module off: the contributor, the decorator of `@Secured` and the `Instrumentation` of the root fields hook. With it `false`, `@Secured` guards nothing, no api:io.micronaut.graphql.tools.security.GraphQLRootFieldsHook[] bean is called, and a hook bean that nothing else injects is not even created. Micronaut Security authenticates the request as it always does, with its filter, its fetchers and its rules, and this module adds nothing to that. A URL rule on the GraphQL path decides who may reach the endpoint at all, for example `isAnonymous()` when the schema guards its own fields.
 
 == The principal in a resolver
 
@@ -51,7 +51,7 @@ It is the same bean that decides on the URL rules of Micronaut Security, whose g
 
 == The root fields hook
 
-An application that decides on the fields of an operation, for example to rate limit a mutation, would parse the request body a second time in an HTTP filter. A `RootFieldsHook` bean sees the operation once the library's execution has parsed and validated it, before any field is fetched:
+An application that decides on the fields of an operation, for example to rate limit a mutation, would parse the request body a second time in an HTTP filter. A `GraphQLRootFieldsHook` bean sees the operation once the library's execution has parsed and validated it, before any field is fetched:
 
 snippet::example.tck.SecurityScenario[project-base="test-suite", source="test", tags="root-fields-hook", indent="0"]
 

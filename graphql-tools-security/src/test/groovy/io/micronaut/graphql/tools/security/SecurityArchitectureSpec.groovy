@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.security
 
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClasses
+import com.tngtech.archunit.core.domain.JavaModifier
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import spock.lang.Shared
@@ -58,6 +59,19 @@ class SecurityArchitectureSpec extends Specification {
     void "no class reads a thread-local request: the principal comes from the context of the execution"() {
         expect:
         noClasses().should().dependOnClassesThat(resideInAPackage('io.micronaut.http.context..')).check(classes)
+    }
+
+    void "every public extension point interface starts with GraphQL"() {
+        given:
+        def suffixes = ['Customizer', 'Decorator', 'Contributor', 'Interceptor', 'Mapper', 'Hook']
+        def extensionPoints = classes.findAll {
+            it.interface && it.modifiers.contains(JavaModifier.PUBLIC) && !it.packageName.contains('.internal') &&
+                    it.methods.any { m -> m.modifiers.contains(JavaModifier.ABSTRACT) } && suffixes.any { s -> it.simpleName.endsWith(s) }
+        }
+
+        expect:
+        !extensionPoints.empty
+        extensionPoints.every { it.simpleName.startsWith('GraphQL') }
     }
 
     void "no class looks up a class, member or annotation by reflection"() {

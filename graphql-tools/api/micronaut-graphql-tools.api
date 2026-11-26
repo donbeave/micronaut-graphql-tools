@@ -1,0 +1,399 @@
+public interface io.micronaut.graphql.tools.annotation.GraphQLArgument extends java.lang.annotation.Annotation {
+  public abstract java.lang.String value();
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLContextValue extends java.lang.annotation.Annotation {
+  public abstract java.lang.String value();
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLField extends java.lang.annotation.Annotation {
+  public abstract java.lang.String value();
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLIgnore extends java.lang.annotation.Annotation {
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLInput extends java.lang.annotation.Annotation {
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLModels extends java.lang.annotation.Annotation {
+  public abstract java.lang.Class<? extends java.lang.annotation.Annotation>[] includedAnnotations();
+  public abstract java.lang.Class<?>[] classes();
+  public abstract java.lang.String[] packages();
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLRootResolver extends java.lang.annotation.Annotation {
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLSchemaCoordinate extends java.lang.annotation.Annotation {
+  public abstract java.lang.String value();
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLType extends java.lang.annotation.Annotation {
+  public abstract java.lang.Class<?> value();
+  public abstract java.lang.String name();
+}
+
+public interface io.micronaut.graphql.tools.annotation.GraphQLTypeResolver extends java.lang.annotation.Annotation {
+  public abstract java.lang.Class value();
+}
+
+public final class io.micronaut.graphql.tools.config.CheckSeverity extends java.lang.Enum<io.micronaut.graphql.tools.config.CheckSeverity> {
+  public static final io.micronaut.graphql.tools.config.CheckSeverity FAIL;
+  public static final io.micronaut.graphql.tools.config.CheckSeverity WARN;
+  public static final io.micronaut.graphql.tools.config.CheckSeverity IGNORE;
+  public static io.micronaut.graphql.tools.config.CheckSeverity valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.config.CheckSeverity[] values();
+}
+
+public class io.micronaut.graphql.tools.config.GraphQLToolsConfiguration {
+  public boolean isEagerInit();
+  public boolean isResolverAccessorPrefixes();
+  public boolean isStrict();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$AllowConfiguration getAllow();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ErrorsConfiguration getErrors();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ExecutionConfiguration getExecution();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ManifestConfiguration getManifest();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence getPrecedence();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ProtectionConfiguration getProtection();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$SchemaConfiguration getSchema();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration();
+  public java.lang.String getTypeClassConvention();
+  public java.util.List<java.lang.String> getResolverDirectives();
+  public java.util.Map<java.lang.String, io.micronaut.graphql.tools.config.CheckSeverity> getChecks();
+  public static final java.lang.String EAGER_INIT = "micronaut.graphql.tools.eager-init";
+  public static final java.lang.String EXECUTION_EXECUTOR = "micronaut.graphql.tools.execution.executor";
+  public static final java.lang.String MANIFEST_ENABLED = "micronaut.graphql.tools.manifest.enabled";
+  public static final java.lang.String PREFIX = "micronaut.graphql.tools";
+  public void setAllow(io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$AllowConfiguration);
+  public void setChecks(java.util.Map<java.lang.String, io.micronaut.graphql.tools.config.CheckSeverity>);
+  public void setEagerInit(boolean);
+  public void setErrors(io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ErrorsConfiguration);
+  public void setExecution(io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ExecutionConfiguration);
+  public void setManifest(io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ManifestConfiguration);
+  public void setPrecedence(io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence);
+  public void setProtection(io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ProtectionConfiguration);
+  public void setResolverAccessorPrefixes(boolean);
+  public void setResolverDirectives(java.util.List<java.lang.String>);
+  public void setSchema(io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$SchemaConfiguration);
+  public void setStrict(boolean);
+  public void setTypeClassConvention(java.lang.String);
+}
+
+public static class io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$AllowConfiguration {
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$AllowConfiguration();
+  public java.util.List<java.lang.String> getFindings();
+  public java.util.List<java.lang.String> getInertDirectives();
+  public java.util.List<java.lang.String> getSchemaCustomizerDirectives();
+  public java.util.List<java.lang.String> getUnreachable();
+  public void setFindings(java.util.List<java.lang.String>);
+  public void setInertDirectives(java.util.List<java.lang.String>);
+  public void setSchemaCustomizerDirectives(java.util.List<java.lang.String>);
+  public void setUnreachable(java.util.List<java.lang.String>);
+}
+
+public static class io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ErrorsConfiguration {
+  public boolean isDetails();
+  public boolean isStackTraces();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ErrorsConfiguration();
+  public void setDetails(boolean);
+  public void setStackTraces(boolean);
+}
+
+public static class io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ExecutionConfiguration {
+  public boolean isDataLoaderStatistics();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ExecutionConfiguration();
+  public java.lang.String getExecutor();
+  public java.time.Duration getTimeout();
+  public static final java.lang.String DEFAULT_EXECUTOR = "blocking";
+  public static final java.lang.String NO_EXECUTOR = "none";
+  public void setDataLoaderStatistics(boolean);
+  public void setExecutor(java.lang.String);
+  public void setTimeout(java.time.Duration);
+}
+
+public static class io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ManifestConfiguration {
+  public boolean isEnabled();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ManifestConfiguration();
+  public java.lang.String getPath();
+  public void setEnabled(boolean);
+  public void setPath(java.lang.String);
+}
+
+public static final class io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence extends java.lang.Enum<io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence> {
+  public static final io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence FAIL;
+  public static final io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence PROPERTY_FIRST;
+  public static final io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence RESOLVER_FIRST;
+  public static io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$Precedence[] values();
+}
+
+public static class io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ProtectionConfiguration {
+  public boolean isIntrospection();
+  public int getDocumentCacheSize();
+  public int getMaxComplexity();
+  public int getMaxDepth();
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$ProtectionConfiguration();
+  public static final int DEFAULT_DOCUMENT_CACHE_SIZE = 1000;
+  public void setDocumentCacheSize(int);
+  public void setIntrospection(boolean);
+  public void setMaxComplexity(int);
+  public void setMaxDepth(int);
+}
+
+public static class io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$SchemaConfiguration {
+  public io.micronaut.graphql.tools.config.GraphQLToolsConfiguration$SchemaConfiguration();
+  public java.util.List<java.lang.String> getLocations();
+  public static final java.lang.String DEFAULT_SCHEMA_LOCATION = "classpath:graphql/**/*.graphqls";
+  public void setLocations(java.util.List<java.lang.String>);
+}
+
+public interface io.micronaut.graphql.tools.customizer.GraphQLBuilderCustomizer {
+  public abstract void customize(graphql.GraphQL$Builder);
+}
+
+public interface io.micronaut.graphql.tools.customizer.GraphQLErrorsCustomizer {
+  public abstract java.util.List<graphql.GraphQLError> customize(java.util.List<graphql.GraphQLError>);
+}
+
+public interface io.micronaut.graphql.tools.customizer.GraphQLRuntimeWiringCustomizer {
+  public abstract void customize(graphql.schema.idl.RuntimeWiring$Builder);
+  public default java.util.Set<graphql.schema.FieldCoordinates> getClaimedFields();
+}
+
+public interface io.micronaut.graphql.tools.customizer.GraphQLSchemaCustomizer {
+  public abstract graphql.schema.GraphQLSchema customize(graphql.schema.GraphQLSchema);
+}
+
+public interface io.micronaut.graphql.tools.customizer.GraphQLSchemaMappingDictionaryCustomizer {
+  public abstract void customize(io.micronaut.graphql.tools.mapping.SchemaMappingDictionary);
+}
+
+public interface io.micronaut.graphql.tools.customizer.GraphQLTypeDefinitionRegistryCustomizer {
+  public abstract void customize(graphql.schema.idl.TypeDefinitionRegistry);
+}
+
+public final class io.micronaut.graphql.tools.directive.SchemaDirective {
+  public boolean isEveryElement();
+  public graphql.schema.idl.SchemaDirectiveWiring getWiring();
+  public java.lang.String getName();
+  public java.lang.String toString();
+  public java.util.Set<java.lang.String> getDirectiveNames();
+  public static io.micronaut.graphql.tools.directive.SchemaDirective everyElement(java.util.Collection<java.lang.String>, graphql.schema.idl.SchemaDirectiveWiring);
+  public static io.micronaut.graphql.tools.directive.SchemaDirective named(java.lang.String, graphql.schema.idl.SchemaDirectiveWiring);
+}
+
+public interface io.micronaut.graphql.tools.error.GraphQLExceptionContext {
+  public abstract graphql.GraphQLError error(java.lang.String, java.util.Map<java.lang.String, java.lang.Object>);
+  public abstract graphql.GraphqlErrorBuilder<?> newError();
+  public abstract graphql.execution.ResultPath getPath();
+  public abstract graphql.language.SourceLocation getSourceLocation();
+  public abstract graphql.schema.DataFetchingEnvironment getEnvironment();
+}
+
+public interface io.micronaut.graphql.tools.error.GraphQLExceptionMapper<E extends java.lang.Throwable> {
+  public abstract graphql.GraphQLError map(E, io.micronaut.graphql.tools.error.GraphQLExceptionContext);
+  public default java.util.List<graphql.GraphQLError> mapAll(E, io.micronaut.graphql.tools.error.GraphQLExceptionContext);
+}
+
+public abstract class io.micronaut.graphql.tools.exceptions.SchemaBindingException extends io.micronaut.context.exceptions.ConfigurationException {
+  protected io.micronaut.graphql.tools.exceptions.SchemaBindingException(io.micronaut.graphql.tools.binding.BindingCode, java.lang.String);
+  protected io.micronaut.graphql.tools.exceptions.SchemaBindingException(io.micronaut.graphql.tools.binding.BindingCode, java.lang.String, io.micronaut.graphql.tools.mapping.MappingContext);
+  protected io.micronaut.graphql.tools.exceptions.SchemaBindingException(io.micronaut.graphql.tools.binding.BindingCode, java.lang.String, java.lang.Throwable);
+  protected java.lang.String describe(java.lang.String);
+  public final io.micronaut.graphql.tools.binding.BindingCode getCode();
+  public io.micronaut.graphql.tools.mapping.MappingContext getMappingContext();
+  public java.lang.String getCoordinate();
+  public java.lang.String getMessage();
+  public java.util.List<io.micronaut.graphql.tools.binding.BindingCode> getCodes();
+  public java.util.List<io.micronaut.graphql.tools.exceptions.SchemaBindingException> getFailures();
+}
+
+public interface io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics {
+  public abstract java.util.Map<java.lang.String, io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics$Counts> getCounts();
+  public static final java.lang.String CONTEXT_KEY = "io.micronaut.graphql.tools.data-loader-batch-statistics";
+  public static io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics of(graphql.GraphQLContext);
+}
+
+public static final class io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics$Counts extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.execution.DataLoaderBatchStatistics$Counts(long, long);
+  public long batches();
+  public long keys();
+}
+
+public final class io.micronaut.graphql.tools.execution.FieldDescriptor extends java.lang.Record {
+  public boolean hasArguments();
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public graphql.schema.FieldCoordinates coordinates();
+  public io.micronaut.core.annotation.AnnotationMetadata annotationMetadata();
+  public io.micronaut.graphql.tools.execution.FieldDescriptor(graphql.schema.FieldCoordinates, io.micronaut.graphql.tools.execution.FieldExecutionKind, boolean, java.util.concurrent.Executor, io.micronaut.core.annotation.AnnotationMetadata, java.lang.String);
+  public io.micronaut.graphql.tools.execution.FieldExecutionKind kind();
+  public java.lang.String resolver();
+  public java.util.concurrent.Executor fieldExecutor();
+}
+
+public final class io.micronaut.graphql.tools.execution.FieldExecutionKind extends java.lang.Enum<io.micronaut.graphql.tools.execution.FieldExecutionKind> {
+  public static final io.micronaut.graphql.tools.execution.FieldExecutionKind TRIVIAL;
+  public static final io.micronaut.graphql.tools.execution.FieldExecutionKind SYNCHRONOUS;
+  public static final io.micronaut.graphql.tools.execution.FieldExecutionKind ASYNC;
+  public static final io.micronaut.graphql.tools.execution.FieldExecutionKind STREAM;
+  public static io.micronaut.graphql.tools.execution.FieldExecutionKind valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.execution.FieldExecutionKind[] values();
+}
+
+public interface io.micronaut.graphql.tools.execution.GraphQLContextContributor {
+  public abstract void contribute(graphql.GraphQLContext, io.micronaut.graphql.tools.execution.GraphQLExecutionRequest);
+}
+
+public interface io.micronaut.graphql.tools.execution.GraphQLDataLoaderOptionsCustomizer extends io.micronaut.core.order.Ordered {
+  public abstract java.lang.String getLoaderName();
+  public abstract org.dataloader.DataLoaderOptions customize(org.dataloader.DataLoaderOptions);
+}
+
+public interface io.micronaut.graphql.tools.execution.GraphQLExecutionRequest {
+  public abstract graphql.ExecutionInput getExecutionInput();
+  public abstract io.micronaut.core.convert.value.ConvertibleValues<java.lang.Object> getConnectionAttributes();
+  public abstract io.micronaut.graphql.tools.execution.GraphQLTransport getTransport();
+  public abstract io.micronaut.http.HttpRequest<?> getHttpRequest();
+  public abstract java.util.Optional<io.micronaut.http.MutableHttpResponse<?>> getHttpResponse();
+}
+
+public interface io.micronaut.graphql.tools.execution.GraphQLFieldFetcherDecorator {
+  public abstract graphql.schema.DataFetcher<java.lang.Object> decorate(io.micronaut.graphql.tools.execution.FieldDescriptor, graphql.schema.DataFetcher<java.lang.Object>);
+  public default boolean decoratesFieldsWithoutArguments();
+  public default boolean decoratesTrivialFields();
+}
+
+public final class io.micronaut.graphql.tools.execution.GraphQLTransport extends java.lang.Enum<io.micronaut.graphql.tools.execution.GraphQLTransport> {
+  public static final io.micronaut.graphql.tools.execution.GraphQLTransport HTTP;
+  public static final io.micronaut.graphql.tools.execution.GraphQLTransport WEBSOCKET;
+  public static final io.micronaut.graphql.tools.execution.GraphQLTransport DIRECT;
+  public static io.micronaut.graphql.tools.execution.GraphQLTransport valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.execution.GraphQLTransport[] values();
+}
+
+public final class io.micronaut.graphql.tools.input.ArgumentValue<T> {
+  public T getRequired();
+  public T getValue();
+  public T orElse(T);
+  public boolean equals(java.lang.Object);
+  public boolean isNull();
+  public boolean isOmitted();
+  public boolean isPresent();
+  public int hashCode();
+  public java.lang.String toString();
+  public java.util.Optional<T> asOptional();
+  public static <T> io.micronaut.graphql.tools.input.ArgumentValue<T> ofNullable(T);
+  public static <T> io.micronaut.graphql.tools.input.ArgumentValue<T> omitted();
+  public void ifPresent(java.util.function.Consumer<? super T>);
+}
+
+public final class io.micronaut.graphql.tools.manifest.BindingManifest {
+  public java.lang.String render();
+  public java.util.List<java.lang.String> getDiagnostics();
+  public java.util.List<java.lang.String> getHeader();
+  public java.util.List<java.lang.String> getLines();
+  public static final java.lang.String FORMAT = "# graphql-binding-manifest 2";
+  public void write(java.nio.file.Path) throws java.io.IOException;
+}
+
+public final class io.micronaut.graphql.tools.mapping.GraphQLScalarMapping {
+  public boolean isInputClass(java.lang.Class<?>);
+  public boolean isOutputClass(java.lang.Class<?>);
+  public graphql.schema.GraphQLScalarType getScalarType();
+  public java.lang.String getName();
+  public java.lang.String toString();
+  public java.util.Set<java.lang.Class<?>> getInputClasses();
+  public java.util.Set<java.lang.Class<?>> getOutputClasses();
+  public static io.micronaut.graphql.tools.mapping.GraphQLScalarMapping of(graphql.schema.GraphQLScalarType, java.lang.Class<?>, java.lang.Class<?>...);
+  public static io.micronaut.graphql.tools.mapping.GraphQLScalarMapping$Builder builder(graphql.schema.GraphQLScalarType);
+}
+
+public static final class io.micronaut.graphql.tools.mapping.GraphQLScalarMapping$Builder {
+  public io.micronaut.graphql.tools.mapping.GraphQLScalarMapping build();
+  public io.micronaut.graphql.tools.mapping.GraphQLScalarMapping$Builder inputClasses(java.lang.Class<?>...);
+  public io.micronaut.graphql.tools.mapping.GraphQLScalarMapping$Builder outputClasses(java.lang.Class<?>...);
+}
+
+public final class io.micronaut.graphql.tools.mapping.InputMappingContext implements io.micronaut.graphql.tools.mapping.MappingContext {
+  public graphql.language.InputObjectTypeDefinition getInputObjectTypeDefinition();
+  public graphql.language.InputValueDefinition getInputValueDefinition();
+  public graphql.language.SourceLocation getSourceLocation();
+  public io.micronaut.graphql.tools.mapping.InputMappingContext(graphql.language.InputObjectTypeDefinition, java.lang.String, java.lang.Class<?>, java.lang.String);
+  public java.lang.Class<?> getMappedClass();
+  public java.lang.String getCoordinate();
+  public java.lang.String getGraphQlInputObjectType();
+  public java.lang.String getGraphQlInputValue();
+  public java.lang.String getMappedProperty();
+  public java.lang.String getMessage(java.lang.String);
+}
+
+public interface io.micronaut.graphql.tools.mapping.MappingContext {
+  public abstract java.lang.Class<?> getMappedClass();
+  public abstract java.lang.String getMessage(java.lang.String);
+  public default graphql.language.SourceLocation getSourceLocation();
+  public default java.lang.String getCoordinate();
+  public static java.lang.String describeCoordinate(java.lang.String, graphql.language.SourceLocation);
+}
+
+public class io.micronaut.graphql.tools.mapping.SchemaMappingDictionary {
+  public io.micronaut.graphql.tools.mapping.SchemaMappingDictionary registerType(java.lang.String, java.lang.Class<?>);
+  public io.micronaut.graphql.tools.mapping.SchemaMappingDictionary();
+  public java.util.Map<java.lang.String, java.lang.Class<?>> getTypes();
+}
+
+public final class io.micronaut.graphql.tools.mapping.TypeMappingContext implements io.micronaut.graphql.tools.mapping.MappingContext {
+  public graphql.language.FieldDefinition getFieldDefinition();
+  public graphql.language.ObjectTypeDefinition getObjectTypeDefinition();
+  public graphql.language.SourceLocation getSourceLocation();
+  public java.lang.Class<?> getMappedClass();
+  public java.lang.String getCoordinate();
+  public java.lang.String getGraphQlArgument();
+  public java.lang.String getGraphQlField();
+  public java.lang.String getGraphQlObjectType();
+  public java.lang.String getMappedMethod();
+  public java.lang.String getMessage(java.lang.String);
+  public java.util.Optional<graphql.language.InputValueDefinition> getInputValueDefinition();
+}
+
+public interface io.micronaut.graphql.tools.resolver.MutationResolver {
+}
+
+public interface io.micronaut.graphql.tools.resolver.QueryResolver {
+}
+
+public interface io.micronaut.graphql.tools.resolver.SubscriptionResolver {
+}
+
+public interface io.micronaut.graphql.tools.resolver.TypeResolver<T> {
+}
+
+public interface io.micronaut.graphql.tools.websocket.GraphQLConnectionInterceptor {
+  public abstract io.micronaut.graphql.tools.websocket.GraphQLConnectionResult intercept(io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest);
+}
+
+public final class io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.websocket.GraphQLConnectionRequest(java.util.Map<java.lang.String, java.lang.Object>, io.micronaut.http.HttpRequest<?>);
+  public io.micronaut.http.HttpRequest<?> httpRequest();
+  public java.util.Map<java.lang.String, java.lang.Object> payload();
+}
+
+public final class io.micronaut.graphql.tools.websocket.GraphQLConnectionResult {
+  public boolean isAccepted();
+  public int getCloseCode();
+  public java.lang.String getReason();
+  public java.util.Map<java.lang.String, java.lang.Object> getAttributes();
+  public static final int DEFAULT_REJECT_CODE = 4403;
+  public static io.micronaut.graphql.tools.websocket.GraphQLConnectionResult accept();
+  public static io.micronaut.graphql.tools.websocket.GraphQLConnectionResult accept(java.util.Map<java.lang.String, java.lang.Object>);
+  public static io.micronaut.graphql.tools.websocket.GraphQLConnectionResult reject();
+  public static io.micronaut.graphql.tools.websocket.GraphQLConnectionResult reject(int, java.lang.String);
+}

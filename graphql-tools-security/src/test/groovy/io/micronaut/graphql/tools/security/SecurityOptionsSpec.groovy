@@ -180,7 +180,7 @@ class SecurityOptionsSpec extends Specification {
 
     @Singleton
     @Requires(property = 'spec.name', value = 'SecurityOptionsSpec.hook')
-    static class CountingHook implements RootFieldsHook {
+    static class CountingHook implements GraphQLRootFieldsHook {
 
         CountingHook() {
             HOOK_CREATED.incrementAndGet()

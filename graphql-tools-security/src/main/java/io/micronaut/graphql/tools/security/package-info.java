@@ -15,7 +15,7 @@
  */
 /**
  * The names and the hook of the security module: the prefix of its configuration, the context key that holds the
- * {@code Authentication} of an execution, the error codes of a rejected field and the {@code RootFieldsHook} that an
+ * {@code Authentication} of an execution, the error codes of a rejected field and the {@code GraphQLRootFieldsHook} that an
  * application implements to see the root fields of an operation. The module integrates Micronaut Security: the principal in
  * the context of an execution, {@code @Secured} on resolver methods, and the hook.
  *

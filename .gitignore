@@ -40,3 +40,6 @@ src/main/docs/resources/img/micronaut-logo-white.svg
 
 # OpenCode files
 .sisyphus/
+
+# the Kotlin compiler session files (buildSrc and the modules)
+.kotlin/

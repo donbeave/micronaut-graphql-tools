@@ -277,7 +277,7 @@ type Me {
 
     @Singleton
     @Requires(property = 'spec.name', value = SPEC_NAME)
-    static class Hook implements RootFieldsHook {
+    static class Hook implements GraphQLRootFieldsHook {
 
         @Override
         void onRootFields(OperationDefinition.Operation operation, List<String> rootFields, GraphQLContext context) {

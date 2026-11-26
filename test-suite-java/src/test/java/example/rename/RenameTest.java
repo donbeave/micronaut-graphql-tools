@@ -69,8 +69,9 @@ class RenameTest {
 
     @Test
     void aCoordinateBindsAResolverMethodWithAnotherName() {
-        assertEquals(Map.of("default", "plain", "parcel", Map.of("id", "1", "class", "parcel")),
-                run(Map.of(), RenameFixtures.COORDINATES, "{ default parcel { id class } }"));
+        assertEquals(Map.of("default", "plain", "parcel", Map.of("id", "1", "class", "parcel", "hashCode", 42,
+                        "headline", "Fragile", "tagline", "Handle with care", "new", "a parcel")),
+                run(Map.of(), RenameFixtures.COORDINATES, "{ default parcel { id class hashCode headline tagline new(prefix: \"a\") } }"));
     }
 
     @Test

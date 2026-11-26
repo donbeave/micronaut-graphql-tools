@@ -1,0 +1,5 @@
+public final class io.micronaut.graphql.tools.upload.GraphQLUpload {
+  public static final java.lang.String INVALID_REQUEST_CODE = "INVALID_MULTIPART_REQUEST";
+  public static final java.lang.String PREFIX = "micronaut.graphql.tools.upload";
+  public static final java.lang.String SCALAR_NAME = "Upload";
+}
