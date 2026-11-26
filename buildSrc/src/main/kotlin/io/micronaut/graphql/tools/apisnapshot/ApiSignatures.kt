@@ -31,7 +31,14 @@ abstract class ApiSignatures : DefaultTask() {
 
     @TaskAction
     fun write() {
-        val all = classes.files.filter { it.isDirectory }.flatMap { root ->
+        listing.get().asFile.apply { parentFile.mkdirs() }.writeText(ApiListing.generate(classes.files))
+    }
+}
+
+/** The listing of the classes under the given directories; the task above only writes it, and the tests call it directly. */
+internal object ApiListing {
+    fun generate(classDirectories: Collection<File>): String {
+        val all = classDirectories.filter { it.isDirectory }.flatMap { root ->
             root.walkTopDown().filter { it.isFile && it.extension == "class" }.map(ClassFileInfo::read).toList()
         }.associateBy { it.name }
         val exposed = all.values.filter { isExposed(it, all) }.sortedBy { it.name }
@@ -40,7 +47,7 @@ abstract class ApiSignatures : DefaultTask() {
             val lines = javap(exposed.map { it.file })
             exposed.forEach { info -> text.append(render(info, lines.getValue(info.file))).append('\n') }
         }
-        listing.get().asFile.apply { parentFile.mkdirs() }.writeText(if (text.isEmpty()) "" else text.toString().trimEnd() + "\n")
+        return if (text.isEmpty()) "" else text.toString().trimEnd() + "\n"
     }
 
     private fun isExposed(info: ClassFileInfo, all: Map<String, ClassFileInfo>): Boolean {

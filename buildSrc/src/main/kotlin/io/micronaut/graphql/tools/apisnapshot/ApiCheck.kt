@@ -32,19 +32,31 @@ abstract class ApiCheck : DefaultTask() {
     @TaskAction
     fun check() {
         val file = snapshot.singleFile
-        val how = "If the change is intended, run `./gradlew ${dumpTask.get()}`, review the diff of ${snapshotPath.get()} and commit it " +
-            "with the change. Otherwise undo the change to the signature."
-        if (!file.isFile) {
-            throw GradleException("The snapshot of the public API ${snapshotPath.get()} does not exist. $how")
-        }
-        val difference = difference(parse(file.readText()), parse(listing.get().asFile.readText()))
-        if (difference.isNotEmpty()) {
-            throw GradleException("The public API differs from the reviewed snapshot ${snapshotPath.get()} (- snapshot, + build):\n\n" +
-                difference.joinToString("\n") + "\n\n$how")
-        }
+        val failure = ApiComparison.failure(
+            if (file.isFile) file.readText() else null,
+            listing.get().asFile.readText(),
+            snapshotPath.get(),
+            dumpTask.get(),
+        )
+        if (failure != null) throw GradleException(failure)
     }
+}
+
+/** The comparison behind [ApiCheck]: the failure message, or null when the listing equals the snapshot. The tests call it directly. */
+internal object ApiComparison {
+    private val TYPE_NAME = Regex("""\b(?:class|interface)\s+([^\s<]+)""")
 
     private class Type(val header: String, val members: List<String>)
+
+    fun failure(snapshot: String?, listing: String, snapshotPath: String, dumpTask: String): String? {
+        val how = "If the change is intended, run `./gradlew $dumpTask`, review the diff of $snapshotPath and commit it " +
+            "with the change. Otherwise undo the change to the signature."
+        if (snapshot == null) return "The snapshot of the public API $snapshotPath does not exist. $how"
+        val difference = difference(parse(snapshot), parse(listing))
+        if (difference.isEmpty()) return null
+        return "The public API differs from the reviewed snapshot $snapshotPath (- snapshot, + build):\n\n" +
+            difference.joinToString("\n") + "\n\n$how"
+    }
 
     /** The listing as type name to its header and member lines (verbatim). */
     private fun parse(text: String): Map<String, Type> {
@@ -84,9 +96,5 @@ abstract class ApiCheck : DefaultTask() {
                 }
             }
         }
-    }
-
-    private companion object {
-        val TYPE_NAME = Regex("""\b(?:class|interface)\s+([^\s<]+)""")
     }
 }
