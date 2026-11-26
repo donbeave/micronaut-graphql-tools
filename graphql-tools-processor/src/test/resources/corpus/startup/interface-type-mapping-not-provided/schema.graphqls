@@ -1,0 +1,22 @@
+type Query {
+  book(id: ID!): Book
+}
+
+type Book {
+  id: ID!
+  sections: [Section!]!
+}
+
+interface Section {
+  id: String!
+}
+
+type TextSection implements Section {
+  id: String!
+  text: String!
+}
+
+type MediaSection implements Section {
+  id: String!
+  url: String!
+}

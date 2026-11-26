@@ -1,0 +1,1 @@
+interface-type-mapping-not-provided Book.sections schema.graphqls:7:3

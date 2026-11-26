@@ -1,0 +1,7 @@
+type Query {
+  gadget: Gadget
+}
+
+type Gadget {
+  size: String
+}

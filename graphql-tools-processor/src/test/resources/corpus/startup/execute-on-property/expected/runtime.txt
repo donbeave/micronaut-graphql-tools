@@ -1,0 +1,1 @@
+execute-on-property Gadget.size schema.graphqls:6:3
