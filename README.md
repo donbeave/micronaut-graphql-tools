@@ -21,7 +21,7 @@ The guide sources are in `src/main/docs/guide`, listed in [`toc.yml`](src/main/d
 
 ```groovy
 dependencies {
-    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M4")
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M5")
 }
 ```
 
