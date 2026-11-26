@@ -20,6 +20,8 @@ micronaut {
 
 dependencies {
     implementation(projects.micronautGraphqlTools)
+    runtimeOnly(mn.micronaut.jackson.databind)
+    runtimeOnly(mn.micronaut.http.server.netty)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
