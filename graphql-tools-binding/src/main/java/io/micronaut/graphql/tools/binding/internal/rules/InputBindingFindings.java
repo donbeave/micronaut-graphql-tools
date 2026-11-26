@@ -431,7 +431,7 @@ public final class InputBindingFindings {
             }
             for (String property : entry.verdict().unmappedProperties()) {
                 String coordinate = entry.inputType() + "." + property;
-                result.add(new Finding(BindingCode.UNMAPPED_INPUT_PROPERTY.code(), coordinate,
+                result.add(new Finding(BindingCode.UNMAPPED_INPUT_PROPERTY.getCode(), coordinate,
                         "the settable property " + property + " of " + entry.inputClass().name()
                                 + " has no field in " + (entry.inputTypes().size() == 1
                                 ? "the input type " + entry.inputType()
@@ -489,8 +489,8 @@ public final class InputBindingFindings {
         }
         for (String constant : verdict.unboundConstants()) {
             String member = enumClass.name() + "#" + constant;
-            checks.putIfAbsent(BindingCode.UNBOUND_ENUM_CONSTANT.code() + " " + member,
-                    new Finding(BindingCode.UNBOUND_ENUM_CONSTANT.code(), member,
+            checks.putIfAbsent(BindingCode.UNBOUND_ENUM_CONSTANT.getCode() + " " + member,
+                    new Finding(BindingCode.UNBOUND_ENUM_CONSTANT.getCode(), member,
                             "the enum constant " + member + " has no value in the schema enum " + name,
                             site.member, null, null,
                             "add the value to the schema or remove the constant, or annotate the constant with @GraphQLIgnore"));
@@ -524,7 +524,7 @@ public final class InputBindingFindings {
             location = new SchemaLocation(site.location.getSourceName() == null ? "schema" : site.location.getSourceName(),
                     site.location.getLine(), site.location.getColumn());
         }
-        return new Finding(code.code(), site.coordinate, sentence, site.member, null, location, fix);
+        return new Finding(code.getCode(), site.coordinate, sentence, site.member, null, location, fix);
     }
 
     private boolean isAssignable(TypeRef type, String binaryName) {

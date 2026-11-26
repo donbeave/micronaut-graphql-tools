@@ -109,7 +109,7 @@ public final class MemberClassRules {
         if (returned.inheritedBy() != null) {
             sentence += " (inherited by " + returned.inheritedBy() + ")";
         }
-        return new Finding(BindingCode.INCORRECT_MEMBER_MAPPING.code(), returned.coordinate(), sentence, returned.member(),
+        return new Finding(BindingCode.INCORRECT_MEMBER_MAPPING.getCode(), returned.coordinate(), sentence, returned.member(),
                 null, returned.location(), "map " + objectType + " to a Java type that " + returned.declaredClass()
                 + " can implement or extend, or make " + member.name() + " implement it");
     }

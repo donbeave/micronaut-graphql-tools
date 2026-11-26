@@ -140,10 +140,10 @@ final class CorpusStartup {
         if (failure instanceof BindingFailuresException) {
             return failure.failures.collectMany { flatten(it) }
         } else if (failure instanceof AmbiguousTypeClassException) {
-            return [[failure.getCode().code(), failure.typeName, '-']]
+            return [[failure.getCode().getCode(), failure.typeName, '-']]
         } else if (failure instanceof AbstractMappingException) {
             SourceLocation at = failure.mappingContext.sourceLocation
-            return [[failure.getCode().code(), failure.mappingContext.coordinate, location(at)]]
+            return [[failure.getCode().getCode(), failure.mappingContext.coordinate, location(at)]]
         } else if (failure instanceof StrictModeException) {
             List<List<String>> problems = []
             failure.problems.eachWithIndex { String problem, int index -> problems.add(classify(failure.codes[index], problem)) }
@@ -170,10 +170,10 @@ final class CorpusStartup {
         } else if (failure instanceof InvalidSchemaCoordinateException) {
             return failure.problems.collect { String problem ->
                 Matcher matcher = (problem =~ SCHEMA_COORDINATE)
-                [failure.getCode().code(), matcher.find() ? matcher.group(1) : '-', '-']
+                [failure.getCode().getCode(), matcher.find() ? matcher.group(1) : '-', '-']
             }
         }
-        String code = ((SchemaBindingException) failure).getCode().code()
+        String code = ((SchemaBindingException) failure).getCode().getCode()
         // the exceptions that list their findings as lines: the first token of a line is the coordinate or the class
         List<String> lines = listOf(failure, 'getProblems') ?: listOf(failure, 'getAmbiguities')
         if (lines != null) {
@@ -199,7 +199,7 @@ final class CorpusStartup {
     /** A strict-mode problem: its code and, by the sentence of the check, the coordinate it is about. */
     private static List<String> classify(BindingCode code, String problem) {
         Matcher m = (problem =~ /^The (?:resolver method|root resolver method|enum constant|SchemaMappingDictionary maps|type|directive) (\S+)/)
-        return [code.code(), m.find() ? m.group(1) : '-', '-']
+        return [code.getCode(), m.find() ? m.group(1) : '-', '-']
     }
 
     private static String location(SourceLocation at) {

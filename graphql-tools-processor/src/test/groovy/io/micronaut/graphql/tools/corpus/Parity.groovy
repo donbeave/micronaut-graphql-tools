@@ -40,15 +40,15 @@ import io.micronaut.graphql.tools.binding.BindingCode
 final class Parity {
 
     static final Set<String> PER_CLASS_CODES = BindingCode.values()
-            .findAll { it.compileTime() && !it.code().startsWith('processor-') && it != BindingCode.SCHEMA_INVALID
+            .findAll { it.isCompileTime() && !it.getCode().startsWith('processor-') && it != BindingCode.SCHEMA_INVALID
                     && it != BindingCode.SCHEMA_DEFINITION_NOT_PROVIDED }
-            *.code() as Set<String>
+            *.getCode() as Set<String>
 
     /**
      * The codes of the options of the visitor and of its environment (no schema directory, an unknown option): the startup has no
      * such option, so these errors are outside the soundness rule (an internal error of the visitor is not: it stays a violation), and a case that shows one records {@code ok} at startup.
      */
-    static final Set<String> COMPILE_ONLY_CODES = BindingCode.values().findAll { it.code().startsWith('processor-') && it != BindingCode.PROCESSOR_INTERNAL_ERROR }*.code() as Set<String>
+    static final Set<String> COMPILE_ONLY_CODES = BindingCode.values().findAll { it.getCode().startsWith('processor-') && it != BindingCode.PROCESSOR_INTERNAL_ERROR }*.getCode() as Set<String>
 
     private Parity() {
     }
@@ -94,7 +94,7 @@ final class Parity {
         Set<String> codes = [] as Set<String>
         config.each { String key, String value ->
             if (key == 'micronaut.graphql.tools.strict' && value.trim().equalsIgnoreCase('false')) {
-                codes.addAll(BindingCode.values().findAll { it.check() }*.code())
+                codes.addAll(BindingCode.values().findAll { it.isCheck() }*.getCode())
             } else if (key.startsWith(prefix) && value.trim().toLowerCase() in ['warn', 'ignore']) {
                 codes.add(key.substring(prefix.length()))
             }

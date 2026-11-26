@@ -81,7 +81,7 @@ class DocsCoverageSpec extends Specification {
         def page = Files.readString(root.resolve(GUIDE + '/configuration/checkSeverity.adoc'))
 
         expect:
-        BindingCode.values().findAll { it.check() }.every { page.contains('`' + it.code() + '`') }
+        BindingCode.values().findAll { it.isCheck() }.every { page.contains('`' + it.getCode() + '`') }
     }
 
     def "every public annotation is documented"() {

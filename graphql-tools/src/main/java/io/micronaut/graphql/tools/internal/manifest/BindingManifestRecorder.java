@@ -152,7 +152,7 @@ public final class BindingManifestRecorder {
      * @return the {@code !} line that the manifest has for the finding, which is also what {@code allow.findings} lists
      */
     public static String diagnosticLine(BindingCode code, String... parts) {
-        return ManifestRenderer.diagnostic(code.code(), parts);
+        return ManifestRenderer.diagnostic(code.getCode(), parts);
     }
 
     public void ignored(String member) {

@@ -28,7 +28,7 @@ import java.util.Map;
  * check in the {@code checks} and {@code allow.findings} settings, the kind of a {@code !} line of the binding manifest, and the value
  * of {@code SchemaBindingException#getCode()}.
  *
- * <p>A code is a lower-case kebab-case word. {@link #compileTime()} says whether the compile-time check reports it; the
+ * <p>A code is a lower-case kebab-case word. {@link #isCompileTime()} says whether the compile-time check reports it; the
  * others are found only at startup, because they need the whole program (the bean set and code-defined wiring).</p>
  */
 public enum BindingCode {
@@ -289,21 +289,21 @@ public enum BindingCode {
      * @return the code token, for example {@code unbound-resolver-method}
      */
     @NonNull
-    public String code() {
+    public String getCode() {
         return code;
     }
 
     /**
      * @return {@code true} for a strict check (a key of the {@code checks} setting), {@code false} for a failure
      */
-    public boolean check() {
+    public boolean isCheck() {
         return check;
     }
 
     /**
      * @return {@code true} if the compile-time check reports this code, {@code false} if only the startup does
      */
-    public boolean compileTime() {
+    public boolean isCompileTime() {
         return compileTime;
     }
 
@@ -311,7 +311,7 @@ public enum BindingCode {
      * @return one sentence about what the code means, for the error reference
      */
     @NonNull
-    public String summary() {
+    public String getSummary() {
         return summary;
     }
 

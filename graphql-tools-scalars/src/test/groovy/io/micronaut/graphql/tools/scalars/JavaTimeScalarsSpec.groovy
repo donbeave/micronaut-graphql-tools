@@ -49,7 +49,7 @@ class JavaTimeScalarsSpec extends Specification {
     @Unroll
     void "#scalar with the format #format writes #wire and reads it back"() {
         given:
-        def coercing = TimeScalars.coercing(scalar, scalar.defaultName(), format)
+        def coercing = TimeScalars.coercing(scalar, scalar.getDefaultName(), format)
 
         expect:
         coercing.serialize(value, CONTEXT, Locale.ROOT) == wire
@@ -93,14 +93,14 @@ class JavaTimeScalarsSpec extends Specification {
     @Unroll
     void "#scalar rejects the input #input"() {
         given:
-        def coercing = TimeScalars.coercing(scalar, scalar.defaultName(), format)
+        def coercing = TimeScalars.coercing(scalar, scalar.getDefaultName(), format)
 
         when:
         coercing.parseValue(input, CONTEXT, Locale.ROOT)
 
         then:
         def e = thrown(CoercingParseValueException)
-        e.message.startsWith(scalar.defaultName() + ': ')
+        e.message.startsWith(scalar.getDefaultName() + ': ')
         !e.message.contains('java.')
 
         where:
@@ -235,7 +235,7 @@ class JavaTimeScalarsSpec extends Specification {
 
     void "a format that a scalar does not have is rejected when the coercion is built"() {
         when:
-        TimeScalars.coercing(scalar, scalar.defaultName(), format)
+        TimeScalars.coercing(scalar, scalar.getDefaultName(), format)
 
         then:
         thrown(IllegalArgumentException)
@@ -250,7 +250,7 @@ class JavaTimeScalarsSpec extends Specification {
 
     void "valueToLiteral takes the external input of parseValue and writes it in the wire format"() {
         given:
-        def coercing = TimeScalars.coercing(scalar, scalar.defaultName(), format)
+        def coercing = TimeScalars.coercing(scalar, scalar.getDefaultName(), format)
 
         expect:
         coercing.valueToLiteral(input, CONTEXT, Locale.ROOT).value == literal
@@ -293,7 +293,7 @@ class JavaTimeScalarsSpec extends Specification {
     @Unroll
     void "#scalar with the optional-section pattern #format reads #wire and writes #written"() {
         given:
-        def coercing = TimeScalars.coercing(scalar, scalar.defaultName(), format)
+        def coercing = TimeScalars.coercing(scalar, scalar.getDefaultName(), format)
         String era = java.time.format.DateTimeFormatter.ofPattern('G', Locale.ROOT).format(LocalDate.of(2026, 5, 1))
 
         expect: 'the era text is the one of the JDK, AD or CE'

@@ -51,9 +51,9 @@ final class StandardMappings {
      * @return the mapping
      */
     static GraphQLScalarMapping create(StandardScalar scalar, @Nullable ScalarConfiguration configuration, @Nullable Supplier<JsonMapper> mapper) {
-        String name = configuration == null ? scalar.defaultName() : configuration.getName();
+        String name = configuration == null ? scalar.getDefaultName() : configuration.getName();
         String format = configuration == null ? null : configuration.getFormat();
-        switch (scalar.group()) {
+        switch (scalar.getGroup()) {
             case JAVA_TIME:
                 return timeMapping(scalar, name, format);
             case JSON:
@@ -72,11 +72,11 @@ final class StandardMappings {
     private static GraphQLScalarMapping timeMapping(StandardScalar scalar, String name, @Nullable String format) {
         try {
             GraphQLScalarType type = GraphQLScalarType.newScalar().name(name)
-                    .description("A " + scalar.javaClass().getSimpleName() + " in the format " + (format == null ? TimeScalars.ISO : format))
+                    .description("A " + scalar.getJavaClass().getSimpleName() + " in the format " + (format == null ? TimeScalars.ISO : format))
                     .coercing(TimeScalars.coercing(scalar, name, format)).build();
-            return GraphQLScalarMapping.of(type, scalar.javaClass());
+            return GraphQLScalarMapping.of(type, scalar.getJavaClass());
         } catch (IllegalArgumentException e) {
-            throw new ConfigurationException("The format '" + format + "' of " + ScalarsConfiguration.PREFIX + "." + scalar.id()
+            throw new ConfigurationException("The format '" + format + "' of " + ScalarsConfiguration.PREFIX + "." + scalar.getId()
                     + ".format is not valid: " + e.getMessage(), e);
         }
     }
@@ -84,7 +84,7 @@ final class StandardMappings {
     private static GraphQLScalarMapping extended(StandardScalar scalar, String name) {
         GraphQLScalarType base = base(scalar);
         GraphQLScalarType type = base.getName().equals(name) ? base : GraphQLScalarType.newScalar(base).name(name).build();
-        Class<?> javaClass = scalar.javaClass();
+        Class<?> javaClass = scalar.getJavaClass();
         if (javaClass == Integer.class || javaClass == Double.class) {
             return GraphQLScalarMapping.builder(type).outputClasses(Number.class).inputClasses(javaClass).build();
         }
@@ -118,7 +118,7 @@ final class StandardMappings {
             case NON_NEGATIVE_FLOAT:
                 return ExtendedScalars.NonNegativeFloat;
             default:
-                throw new IllegalArgumentException("not an extended scalar: " + scalar.id());
+                throw new IllegalArgumentException("not an extended scalar: " + scalar.getId());
         }
     }
 

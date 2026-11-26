@@ -66,7 +66,7 @@ class ScalarConfigurationSpec extends Specification {
         then:
         def e = thrown(Exception)
         e.message.contains('micronaut.graphql.tools.scalars.local-dat')
-        StandardScalar.values().every { e.message.contains(it.id()) }
+        StandardScalar.values().every { e.message.contains(it.getId()) }
     }
 
     @Unroll

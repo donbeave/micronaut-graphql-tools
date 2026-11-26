@@ -28,10 +28,10 @@ class DocsPageSpec extends Specification {
     @Shared Path root = Paths.get(System.getProperty('docs.root'))
     @Shared String page = Files.readString(root.resolve('src/main/docs/guide/scalars.adoc'))
 
-    void "the table has a row for #scalar.id() with its name and Java class"() {
+    void "the table has a row for #scalar.id with its name and Java class"() {
         expect:
         page.readLines().any {
-            it.startsWith("| `${scalar.id()}` | `${scalar.defaultName()}` | `${scalar.javaClass().name}` |")
+            it.startsWith("| `${scalar.getId()}` | `${scalar.getDefaultName()}` | `${scalar.getJavaClass().name}` |")
         }
 
         where:
@@ -44,7 +44,7 @@ class DocsPageSpec extends Specification {
                 .collect { it.split(/ \| /)[0].replaceAll(/[|` ]/, '') }
 
         expect:
-        ids.toSorted() == StandardScalar.values()*.id().toSorted()
+        ids.toSorted() == StandardScalar.values()*.getId().toSorted()
     }
 
     void "the configuration keys are documented"() {

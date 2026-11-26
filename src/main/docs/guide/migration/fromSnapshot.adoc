@@ -63,6 +63,7 @@ Snippets are Java. The same changes apply to Kotlin and Groovy classes.
 | BC-51 a mutation over `GET` is refused (#691) | A `GET` request whose selected operation is a mutation is answered with `405` and `Allow: POST` before any resolver runs, under `application/json` and `application/graphql-response+json`. Before, the library executed it, so a link or a prefetch could change data. A query over `GET` and every operation over `POST` are unchanged. | Send the mutation with `POST`.
 | BC-45 manifest flags collapsed, check severity is an enum (#505) | `micronaut.graphql.tools.manifest.record` is removed and fails the startup with `[removed-configuration-key]`. `manifest.enabled` alone records the manifest (the `BindingManifest` bean can be read), and a startup write happens only when `manifest.path` is set; with no path, nothing is logged any more. `checks` is a `Map<String, CheckSeverity>` and `precedence` a `Precedence`, read by the core enum conversion, so a spelling that conversion does not accept stops working (the documented spellings keep working). | Replace `manifest.record: true` with `manifest.enabled: true`, and set `manifest.path` where the file is wanted. Use `fail`, `warn` or `ignore` for a check. | Status: breaking by design; no opt-out.
 | BC-52 `getClaimedFields()` and `ArgumentValue#getRequired()` (#652) | `GraphQLRuntimeWiringCustomizer#claimedFields()` is renamed `getClaimedFields()` and `ArgumentValue#get()` is renamed `getRequired()`. The architecture rule of BC-44 now covers every public package, so no public interface or class declares a record-style accessor. | Rename the method a customizer overrides and the calls of `ArgumentValue#get()`. In Groovy and Kotlin, read the property (`value.required`).
+| BC-53 the enum accessors are bean accessors (#779) | `BindingCode#code()`, `check()`, `compileTime()` and `summary()` are renamed `getCode()`, `isCheck()`, `isCompileTime()` and `getSummary()`. `StandardScalar#id()`, `defaultName()`, `javaClass()`, `group()` and `defaultFormat()` are renamed `getId()`, `getDefaultName()`, `getJavaClass()`, `getGroup()` and `getDefaultFormat()`. `BindingCode#tag(String)`, `fromCode(String)` and `StandardScalar#isFormatConfigurable()` keep their names. The architecture rule of BC-44 now covers enums, and the scalars module. | Rename the calls. In Groovy and Kotlin, read the property (`code.code`, `scalar.defaultName`).
 |===
 
 == Entries for 1.0.0-M1
@@ -1124,6 +1125,37 @@ request.getHttpRequest().getHeaders().get("X-Tenant", String.class);
 ----
 
 In Groovy and Kotlin, `request.httpRequest` reads the property. A class that implements `GraphQLDataLoaderOptionsCustomizer` renames `loaderName()` to `getLoaderName()` (in Kotlin, `override fun getLoaderName()`). Code that only calls `GraphQLConnectionRequest#payload()` or `httpRequest()` compiles as before.
+=== BC-53: the enum accessors are bean accessors (#779)
+
+BC-44 and BC-52 gave the classes and interfaces of every public package one accessor style, and left the enums out. The enums follow the same rule now, as Micronaut's own enums do (`HttpStatus#getCode()`).
+
+[cols="2,2"]
+|===
+| Before | Now
+
+| `BindingCode#code()` | `getCode()`
+| `BindingCode#check()` | `isCheck()`
+| `BindingCode#compileTime()` | `isCompileTime()`
+| `BindingCode#summary()` | `getSummary()`
+| `StandardScalar#id()` | `getId()`
+| `StandardScalar#defaultName()` | `getDefaultName()`
+| `StandardScalar#javaClass()` | `getJavaClass()`
+| `StandardScalar#group()` | `getGroup()`
+| `StandardScalar#defaultFormat()` | `getDefaultFormat()`
+|===
+
+`BindingCode#tag(String)`, the static `BindingCode#fromCode(String)` and `StandardScalar#isFormatConfigurable()` keep their names. In Groovy and Kotlin, `code.code` and `scalar.defaultName` read the properties.
+
+[source,java]
+----
+// Before
+String token = BindingCode.FIELD_NOT_BOUND.code();
+String name = StandardScalar.LOCAL_DATE.defaultName();
+// Now
+String token = BindingCode.FIELD_NOT_BOUND.getCode();
+String name = StandardScalar.LOCAL_DATE.getDefaultName();
+----
+
 === BC-52: `getClaimedFields()` and `ArgumentValue#getRequired()` (#652)
 
 BC-44 gave the public types of four packages one accessor style. The rule now covers every public package: an interface or a class names its accessors `getX` and `isX`, a conversion `toX` or `asX`, and an immutable data carrier is a record. Two methods were left over and are renamed.

@@ -35,7 +35,7 @@ public final class DefaultSeverities {
     static {
         Map<BindingCode, Severity> table = new EnumMap<>(BindingCode.class);
         for (BindingCode code : BindingCode.values()) {
-            if (code.check()) {
+            if (code.isCheck()) {
                 table.put(code, Severity.FAIL);
             }
         }
