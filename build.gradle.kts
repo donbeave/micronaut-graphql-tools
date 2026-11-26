@@ -71,6 +71,8 @@ subprojects {
         return@subprojects
     }
 
+    pluginManager.apply("io.micronaut.build.internal.graphql-tools-test-timeout")
+
     configurations.configureEach {
         val compileSide = name == "compileClasspath" || name.endsWith("AnnotationProcessor") || name == "annotationProcessor"
         val leg = if (compileSide) graphqlJavaCompileLeg else graphqlJavaLeg
