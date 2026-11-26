@@ -18,7 +18,12 @@ package example.quickstart
 import graphql.ExecutionResult
 import graphql.GraphQL
 import io.micronaut.context.ApplicationContext
+import io.micronaut.runtime.server.EmbeddedServer
 import spock.lang.Specification
+
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 
 class QuickStartTest extends Specification {
 
@@ -39,5 +44,24 @@ class QuickStartTest extends Specification {
         context?.close()
     }
     // end::query[]
+
+    def 'the same query over HTTP returns the response of the guide'() {
+        given:
+        EmbeddedServer server = ApplicationContext.run(EmbeddedServer)
+        HttpRequest request = HttpRequest.newBuilder(URI.create(server.URL.toString() + '/graphql'))
+                .header('Content-Type', 'application/json')
+                .POST(HttpRequest.BodyPublishers.ofString('{"query":"{ allBooks { id title } }"}'))
+                .build()
+
+        when:
+        HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString())
+
+        then:
+        response.statusCode() == 200
+        response.body() == '{"data":{"allBooks":[{"id":"ab","title":"The Fractured Sage"},{"id":"ax","title":"Considered for Duty"}]}}'
+
+        cleanup:
+        server?.close()
+    }
 
 }

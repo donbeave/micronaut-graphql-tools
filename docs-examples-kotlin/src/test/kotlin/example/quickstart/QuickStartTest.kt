@@ -17,9 +17,14 @@ package example.quickstart
 
 import graphql.GraphQL
 import io.micronaut.context.ApplicationContext
+import io.micronaut.runtime.server.EmbeddedServer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 
 class QuickStartTest {
 
@@ -37,5 +42,23 @@ class QuickStartTest {
         }
     }
     // end::query[]
+
+    @Test
+    fun theSameQueryOverHttpReturnsTheResponseOfTheGuide() {
+        ApplicationContext.run(EmbeddedServer::class.java).use { server ->
+            val request = HttpRequest.newBuilder(URI.create(server.url.toString() + "/graphql"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("""{"query":"{ allBooks { id title } }"}"""))
+                .build()
+
+            val response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString())
+
+            assertEquals(200, response.statusCode())
+            assertEquals(
+                """{"data":{"allBooks":[{"id":"ab","title":"The Fractured Sage"},{"id":"ax","title":"Considered for Duty"}]}}""",
+                response.body()
+            )
+        }
+    }
 
 }

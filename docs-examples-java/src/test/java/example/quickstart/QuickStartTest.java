@@ -18,8 +18,13 @@ package example.quickstart;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.runtime.server.EmbeddedServer;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
 
@@ -42,5 +47,20 @@ class QuickStartTest {
         }
     }
     // end::query[]
+
+    @Test
+    void theSameQueryOverHttpReturnsTheResponseOfTheGuide() throws Exception {
+        try (EmbeddedServer server = ApplicationContext.run(EmbeddedServer.class)) {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(server.getURL() + "/graphql"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString("{\"query\":\"{ allBooks { id title } }\"}"))
+                    .build();
+
+            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+            assertEquals(200, response.statusCode());
+            assertEquals("{\"data\":{\"allBooks\":[{\"id\":\"ab\",\"title\":\"The Fractured Sage\"},{\"id\":\"ax\",\"title\":\"Considered for Duty\"}]}}", response.body());
+        }
+    }
 
 }
