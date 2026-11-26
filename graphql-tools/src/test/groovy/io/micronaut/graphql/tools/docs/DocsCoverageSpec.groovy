@@ -86,10 +86,11 @@ class DocsCoverageSpec extends Specification {
 
     def "every public annotation is documented"() {
         given:
-        def names = publicClasses('annotation', java.lang.annotation.Annotation)
+        def names = publicAnnotations()
 
         expect:
         names.contains(GraphQLField.simpleName)
+        names.containsAll(['GraphQLClient', 'GraphQLOperation', 'GraphQLVariable'])
         failures('annotation', names, 'a guide page under src/main/docs/guide (or README.md)').empty
     }
 
@@ -138,7 +139,7 @@ class DocsCoverageSpec extends Specification {
         def stale = []
         def configurationKeys = configurationKeys()
         def exceptions = publicClasses('exceptions', Throwable)
-        def annotations = publicClasses('annotation', java.lang.annotation.Annotation)
+        def annotations = publicAnnotations()
         allowlist.each { key, entry ->
             def kind = entry.kind
             def name = entry.name
@@ -242,6 +243,24 @@ class DocsCoverageSpec extends Specification {
                     .map { it.simpleName }
                     .toList()
         }.toSorted()
+    }
+
+    private static List<String> publicAnnotations() {
+        def names = publicClasses('annotation', java.lang.annotation.Annotation)
+        def packageName = 'io.micronaut.graphql.tools.client.annotation'
+        def roots = System.getProperty('published.modules.classes').split(File.pathSeparator).collect { Paths.get(it) }
+        def clientNames = roots.findAll { Files.isDirectory(it.resolve(packageName.replace('.', '/'))) }.collectMany { root ->
+            def loader = new URLClassLoader([root.toUri().toURL()] as URL[], DocsCoverageSpec.classLoader)
+            Files.list(root.resolve(packageName.replace('.', '/'))).withCloseable { stream ->
+                stream.map { it.fileName.toString() }
+                        .filter { it.endsWith('.class') && !it.contains('$') && it != 'package-info.class' }
+                        .map { Class.forName("${packageName}.${it - '.class'}", false, loader) }
+                        .filter { Modifier.isPublic(it.modifiers) && java.lang.annotation.Annotation.isAssignableFrom(it) }
+                        .map { it.simpleName }
+                        .toList()
+            }
+        }
+        (names + clientNames).toSorted()
     }
 
     private List<Path> guidePages() {
