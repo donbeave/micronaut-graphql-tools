@@ -1007,7 +1007,7 @@ See the observability page.
 
 == Entries for 1.0.0-M5
 
-Not released yet. The entries below follow the last tagged milestone, 1.0.0-M4.
+Released as 1.0.0-M5. The entries below follow the previous tagged milestone, 1.0.0-M4.
 
 === BC-40: the scalars configuration is bound to a typed class (#497)
 
