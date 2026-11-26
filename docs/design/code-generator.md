@@ -286,8 +286,8 @@ templates behind the same interface: the golden files (#192) pin its output, so 
 option, not a v1 decision.
 
 Unchanged inputs cost nothing because the Gradle task is cacheable and skipped by its up-to-date check, so the generator does
-not run. For Maven, which has no up-to-date engine, the mojo compares a fingerprint of the schema files and the canonical
-option string before it generates. Hashing the 536 KB synthetic schema plus options took 14 ms in a fresh JVM and 0.5 ms
+not run. For Maven, which has no up-to-date engine, the mojo compares a fingerprint of the schema files, the canonical
+option string and the generator version before it generates. Hashing the 536 KB synthetic schema plus options took 14 ms in a fresh JVM and 0.5 ms
 warm. The generator also writes a file only when its content differs, so file times and downstream compile inputs stay
 untouched when a regeneration produces the same bytes.
 
@@ -324,9 +324,10 @@ Name constants are generated as classes, not resources.
 - There is no type dictionary, in either form (see the settled points). A facts index is not emitted either: the
   compile-time checks see the generated contracts as ordinary sources in the application's own source set, and no consumer
   needs a second copy. The guide says so when the generator ships.
-- Layout: one class per GraphQL type, `{Type}Names`, with a `TYPE` constant and one constant per field, in the names
-  package (a Kotlin `object` with `const val`). With `nameConstants = TYPES`, one class `GraphQLTypeNames` holds only the
-  type names. `NONE` emits nothing.
+- Layout: one class per object and input type (the types that have fields), `{Type}Names`, with a `TYPE` constant and one
+  constant per field, in the names package (a Kotlin `object` with `const val`). The names of enums, unions, interfaces and
+  scalars, and of every other type under `nameConstants = TYPES`, are constants of one class `GraphQLTypeNames`. `NONE`
+  emits nothing. The spike emitted the per-type classes and did not emit `GraphQLTypeNames`.
 
 Why a class per type and not one class for the schema:
 
@@ -337,7 +338,7 @@ Why a class per type and not one class for the schema:
 - It also generates faster in Kotlin: 685 to 696 ms cold and 318 to 361 ms warm with a class per type, against 782 to 830
   and 447 to 474 with one nested file. In Java it makes no difference to emit time.
 
-The cost, measured on the synthetic schema in Java: 849 more files, so writing took 262 to 285 ms instead of 184 to 206 ms,
+The cost, measured on the synthetic schema in Java (850 per-type classes instead of one nested file, so 849 more files), writing took 262 to 285 ms instead of 184 to 206 ms,
 and compiling only the name classes took 0.98 s instead of 0.84 s. Field-level constants are about half of the generated
 bytes (1.2 MB of 2.5 MB) and about 40 percent of the javac time of the whole output (about 1 s of 2.4 s). That is why
 `nameConstants` exists: the default `FIELDS` suits typical schemas, and a very large schema can choose `TYPES` or `NONE`
