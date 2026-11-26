@@ -1179,7 +1179,7 @@ An object of the implementing class would match both GraphQL types. Map each Gra
   Fix: if one bean is meant to override another, annotate the overriding bean with @Replaces(<overridden bean>.class) ('@Requires(env = ...)' alone does not drop a bean); if the methods serve different operation types, annotate each with the @GraphQLSchemaCoordinate("<Operation>.<field>") of its own operation type, for this field @GraphQLSchemaCoordinate("Book.title") on one of them (two methods with the same coordinate still conflict).
 ----
 
-*Fix.* Leave one method for the field, or follow the way out that the message names.
+*Fix.* Leave one method for the field: remove or rename the others, or exclude one with @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[].
 
 *See.* <<binding,Binding>>.
 
@@ -1258,7 +1258,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
 [[example-type-resolver-contracts-not-found]]
 === `type-resolver-contracts-not-found`
 
-*Cause.* A bean implements the `TypeResolver<T>` marker interface and the build did not record its source type, because the processor did not run for it.
+*Cause.* A bean implements a resolver marker interface and the build did not record the contract that the binding needs, because the processor did not run for it. In the example the missing contract is the source type of a `TypeResolver<T>`.
 
 // corpus: marker/no-processor-type-resolver
 [source,text]
@@ -1289,7 +1289,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
 [[example-duplicate-directive-wiring]]
 === `duplicate-directive-wiring`
 
-*Cause.* A directive is wired by a named and an every-element `SchemaDirective` bean, so it would take effect twice.
+*Cause.* A directive is wired by more than one `SchemaDirective` bean, so it would take effect twice. In the example one bean is named and one is every-element.
 
 // corpus: directive/named-and-every-element
 [source,text]
@@ -1297,7 +1297,7 @@ Map each class to one of them with @GraphQLType(TheJavaInterface.class), or let 
 [duplicate-directive-wiring] Directive @audit is wired by both a named and an every-element SchemaDirective bean, so it would take effect twice: named example.Directives$NoOp, every element example.Directives$NoOp. Use one of them: remove the named bean, or make the every-element wiring stop handling the directive and then drop its name.
 ----
 
-*Fix.* Wire the directive through one of them, as the message says.
+*Fix.* Wire the directive through one bean.
 
 *See.* <<directives,Directives>>.
 
