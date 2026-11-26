@@ -79,14 +79,8 @@ A `GraphQLExecutionInputCustomizer` that returns an input with another `DataLoad
 
 == Context contributors
 
-A `GraphQLContextContributor` bean adds values to the `GraphQLContext` of each execution, where resolvers read them with `DataFetchingEnvironment#getGraphQlContext()`.
+A `GraphQLContextContributor` bean adds values to the `GraphQLContext` of each execution. The <<context,Context>> page describes contributors and the rules they follow. A contributor can also register loaders:
 
-snippet::example.tck.PerExecutionContextScenario[project-base="test-suite", source="test", tags="contributor", indent="0"]
-
-* Every contributor bean runs once per execution, in the order of `@Order` (or `Ordered#getOrder()`), lowest first. The beans are resolved once at startup; when there are none the library does nothing here.
-* It runs on the execution executor (see the Execution page), after the `GraphQLExecutionInputCustomizer` and before graphql-java, inside the propagated context of the request. A contributor may therefore block and may use request-scoped beans.
-* api:io.micronaut.graphql.tools.execution.GraphQLExecutionRequest[] is a read-only view of the execution: `getHttpRequest()` (null for a direct call), `getHttpResponse()` (empty on a WebSocket connection), `getTransport()` (`GraphQLTransport.HTTP`, `WEBSOCKET` or `DIRECT`), `getConnectionAttributes()` (empty except on a WebSocket connection) and `getExecutionInput()`.
-* A contributor rejects an operation by throwing a `graphql.GraphQLError` (for example `GraphqlErrorException`): its error is the only error of the response, with `data` of `null`, and no resolver runs. Any other exception is logged at ERROR and the response carries one generic error, `extensions.code` `INTERNAL_ERROR`, without the message of the exception.
 * `request.getExecutionInput().getDataLoaderRegistry()` is a registry of this execution, and a contributor may register loaders in it: with loader beans it is the library's registry, and without them it is a new, mutable registry for each execution. A loader that a contributor registers lives and caches for that execution only, and a resolver reads it with `DataFetchingEnvironment#getDataLoader(String)`.
 
 snippet::example.tck.ContributorLoaderScenario[project-base="test-suite", source="test", tags="contributor-loader", indent="0"]

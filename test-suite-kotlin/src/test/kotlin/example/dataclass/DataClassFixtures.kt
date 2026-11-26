@@ -58,9 +58,12 @@ class DataClassFixtures {
     }
 }
 
+// tag::model[]
 @GraphQLType
 data class Account(val name: String, val nickname: String? = null, val level: Int = 1, val tags: List<String> = emptyList())
+// end::model[]
 
+// tag::input[]
 @GraphQLInput
 data class AccountInput(
     val name: String,
@@ -68,6 +71,7 @@ data class AccountInput(
     val level: Int? = 1,
     val tags: List<String> = listOf("new"),
 )
+// end::input[]
 
 @GraphQLInput
 data class DraftInput(

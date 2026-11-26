@@ -45,7 +45,6 @@ compileTime:
   options: Options
   buildManifest: Build Manifest
   limits: Limits
-codegen: Code Generation
 nativeImage: Native Image
 testing: Testing
 performance: Performance

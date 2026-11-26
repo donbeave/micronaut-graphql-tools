@@ -38,7 +38,7 @@ The test suites run these examples with strict mode at its default, and the star
 
 * The recipe backs the schema with own classes. The types of `graphql.relay` (`DefaultConnection`, `DefaultEdge`, `DefaultPageInfo`) have no introspection, and `Connection<T>` is an interface, so the recipe does not use them. A class that you wrote can carry the annotation; one of graphql-java cannot, and the recipe does not list it in `@GraphQLModels`.
 * One connection type per node type: a generic class such as `Connection<T>` is not a model of this recipe, so each list has its own connection class and its own edge class. `PageInfo` is shared.
-* The library does not generate connection types, cursors or the `first` and `after` arguments. Generating them from a schema is a code generation topic, see <<codegen,Code Generation>>.
+* The library does not generate connection types, cursors or the `first` and `after` arguments.
 * The cursor, the paging of the data source and the `before` and `last` arguments are the application's. The example pages forward only.
 
 == Native image

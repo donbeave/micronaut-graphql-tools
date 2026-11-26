@@ -74,9 +74,11 @@ public final class PerExecutionContextScenario {
     @Requires(property = "tck.scenario", value = "per-execution-context")
     public static class ContextQueries {
 
+        // tag::read-context[]
         public String contributed(DataFetchingEnvironment environment) {
             return environment.getGraphQlContext().get("tck.value");
         }
+        // end::read-context[]
 
         public int executionNumber(DataFetchingEnvironment environment) {
             return environment.getGraphQlContext().get("tck.execution");
