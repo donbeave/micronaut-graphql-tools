@@ -87,7 +87,11 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
     /** wall time of the Gradle build, in milliseconds, or -1 before it ran */
     long buildMillis = -1
 
-    KotlinBatchCompiler(Corpus corpus, Path buildDir, Processor processor = Processor.KSP) {
+    /** the regular expression for the names of the cases to build, or {@code null} for every Kotlin case */
+    private final String only
+
+    KotlinBatchCompiler(Corpus corpus, Path buildDir, Processor processor = Processor.KSP, String only = CorpusFixtures.only()) {
+        this.only = only
         this.corpus = corpus
         this.buildDir = buildDir
         this.processor = processor
@@ -193,7 +197,6 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
     private void build() {
         buildDir.toFile().deleteDir()
         Files.createDirectories(buildDir)
-        String only = CorpusFixtures.only()
         List<CorpusCase> cases = corpus.cases.findAll { covers(processor, it) && (only == null || it.name ==~ only) }
         List<String> projects = cases.collectMany { it.processorAbsent() ? [projectName(it)] : [projectName(it), checkedName(it)] }
         // `a-b/c` and `a/b-c` would share the project `a-b-c`: refuse instead of mixing two cases

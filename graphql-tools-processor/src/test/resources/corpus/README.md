@@ -9,7 +9,7 @@ Issue #142.
 
 ```
 <category>/<case>/
-  case.properties            description=...  tags=lang:all,area:...  environments=  config.<key>=<value>  compile.processor=absent
+  case.properties            description=...  tags=lang:all,area:...  environments=  runtime.without=<jar name prefixes>  config.<key>=<value>  compile.processor=absent
   schema.graphqls            one or more *.graphqls files (merged into one TypeDefinitionRegistry)
   java/example/*.java        sources per language; a language directory is a language the case covers
   groovy/example/*.groovy

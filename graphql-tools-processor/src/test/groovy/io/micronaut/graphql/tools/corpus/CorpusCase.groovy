@@ -29,7 +29,7 @@ import java.util.stream.Stream
  *
  * <pre>
  * &lt;case&gt;/
- *   case.properties            description, tags, environments, config.&lt;key&gt; (the runtime configuration)
+ *   case.properties            description, tags, environments, runtime.without, config.&lt;key&gt; (the runtime configuration)
  *   schema.graphqls            one or more *.graphqls files
  *   java/ groovy/ kotlin/      the sources of each language the case covers, as packages, or as module-&lt;name&gt;/ directories that
  *                              are compiled one after the other (Java and Groovy)
@@ -48,7 +48,7 @@ final class CorpusCase {
     static final String JAR = 'jar'
     static final String MODULE_PREFIX = 'module-'
     static final List<String> EXPECTED_FILES = ['runtime.txt', 'compile.txt', 'compile.kapt.txt', 'manifest.txt']
-    static final Set<String> PROPERTY_KEYS = ['description', 'tags', 'environments'] as Set<String>
+    static final Set<String> PROPERTY_KEYS = ['description', 'tags', 'environments', 'runtime.without'] as Set<String>
     static final String CONFIG_PREFIX = 'config.'
     static final String COMPILE_PREFIX = 'compile.'
     /** {@code compile.processor=absent}: the case is compiled without the processor on the compiler path, as a build that does not register it */
@@ -60,6 +60,8 @@ final class CorpusCase {
     final String description
     final List<String> tags
     final List<String> environments
+    /** {@code runtime.without}: file name prefixes of the class path entries that the startup of the case does not see, as an application that lacks that library */
+    final List<String> runtimeWithout
     final Map<String, String> config
     /** the options of the checked compilation, see {@link CompileOptions}, keys without the {@code compile.} prefix */
     final Map<String, String> compile
@@ -74,6 +76,7 @@ final class CorpusCase {
         this.description = properties.getProperty('description', '')
         this.tags = split(properties.getProperty('tags', ''))
         this.environments = split(properties.getProperty('environments', ''))
+        this.runtimeWithout = split(properties.getProperty('runtime.without', ''))
         Map<String, String> config = new TreeMap<>()
         Map<String, String> compile = new TreeMap<>()
         properties.stringPropertyNames().sort().each { String key ->

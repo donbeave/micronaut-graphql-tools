@@ -1,0 +1,17 @@
+schema {
+  query: Query
+  subscription: Subscription
+}
+
+type Query {
+  book(id: ID!): Book
+}
+
+type Subscription {
+  published: Book!
+}
+
+type Book {
+  id: ID!
+  title: String!
+}

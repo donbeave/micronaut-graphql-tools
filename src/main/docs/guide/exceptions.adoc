@@ -132,7 +132,7 @@ The compile-time check reports the findings of the inputs and enums that a resol
 [[examples]]
 == Entries with an example
 
-Each entry gives the cause, a message and the fix. The message is the text that the startup of a small Java case of the binding corpus reports, and `ErrorReferenceSpec` compares each block below with that text, so the examples are not written from memory. The line numbers are those of the schema of the case. A code without an entry here is described in the tables above.
+Each entry gives the cause, a message and the fix. The message is the text that the startup of a small case of the binding corpus reports (a Java case, and a Kotlin case for `suspend-without-coroutines` and `flow-without-reactive-coroutines`), and `ErrorReferenceSpec` and `KotlinErrorReferenceSpec` compare each block below with that text, so the examples are not written from memory. The line numbers are those of the schema of the case. A code without an entry here is described in the tables above.
 
 [[example-field-not-bound]]
 === `field-not-bound`
@@ -1041,3 +1041,39 @@ An object of the implementing class would match both GraphQL types. Map each Gra
 *Fix.* Wrap the bean with `SchemaDirective.named(name, wiring)` or `SchemaDirective.everyElement(names, wiring)`, or remove it.
 
 *See.* <<directives,Directives>>.
+
+[[example-suspend-without-coroutines]]
+=== `suspend-without-coroutines`
+
+*Cause.* A resolver method is a Kotlin `suspend` function, and `kotlinx-coroutines-core` is not on the classpath of the application.
+
+// corpus-kotlin: startup/kotlin-suspend-without-coroutines
+[source,text]
+----
+[suspend-without-coroutines] The field Query.book binds the Kotlin suspend function book(java.lang.String id, kotlin.coroutines.Continuation continuation), which needs kotlinx-coroutines-core on the classpath, and it is not there. Fix: add org.jetbrains.kotlinx:kotlinx-coroutines-core to the dependencies of the application.
+  GraphQL coordinate: Query.book (schema.graphqls, line 6, column 3)
+  Mapped class: example.Query
+  Mapped method: book(java.lang.String id, kotlin.coroutines.Continuation continuation)
+----
+
+*Fix.* Add `org.jetbrains.kotlinx:kotlinx-coroutines-core` to the dependencies of the application.
+
+*See.* <<execution,Execution>>, the section on Kotlin suspend resolvers.
+
+[[example-flow-without-reactive-coroutines]]
+=== `flow-without-reactive-coroutines`
+
+*Cause.* A method of a subscription field returns a Kotlin `Flow`, and `kotlinx-coroutines-reactive` is not on the classpath of the application.
+
+// corpus-kotlin: startup/kotlin-flow-without-reactive-coroutines
+[source,text]
+----
+[flow-without-reactive-coroutines] The field Subscription.published binds the Kotlin Flow method published(), which needs kotlinx-coroutines-reactive on the classpath, and it is not there. Fix: add org.jetbrains.kotlinx:kotlinx-coroutines-reactive to the dependencies of the application.
+  GraphQL coordinate: Subscription.published (schema.graphqls, line 11, column 3)
+  Mapped class: example.Subscription
+  Mapped method: published()
+----
+
+*Fix.* Add `org.jetbrains.kotlinx:kotlinx-coroutines-reactive` to the dependencies of the application.
+
+*See.* <<subscriptions,Subscriptions>>, the section on Kotlin Flow.
