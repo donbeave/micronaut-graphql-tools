@@ -211,8 +211,8 @@ public final class AbstractTypeResolver implements TypeResolver {
 
         // the first two classes that resolved, checked before the ClassValue; immutable, so that a thread that sees one
         // sees both of its fields
-        private Hit first;
-        private Hit second;
+        private volatile Hit first;
+        private volatile Hit second;
 
         // null for a class that resolves to no object type
         private final ClassValue<GraphQLObjectType> objectTypes = new ClassValue<>() {

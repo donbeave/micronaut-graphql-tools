@@ -92,31 +92,11 @@ property of each of two interfaces of the same class compare as follows:
 == Union and interface resolution
 
 The type resolver of a union or interface looks the object type up in the schema of the request, so that a schema another
-component replaced after the binding is the one that answers. `AbstractTypeBenchmark` measures it on four threads next to two
-controls: a resolver that caches the object type per class in a `ClassValue` and never looks at the schema
-(`unionResolutionCachedType`), and a resolver that returns one object type (`unionResolutionControl`, the cost of the
-benchmark loop itself, about 7 to 8 ns).
+component replaced after the binding is the one that answers. It remembers the first two classes that resolve, weakly, so
+that a hit on one of them is a reference comparison; any other class takes a `ClassValue` lookup, and a class of a discarded
+class loader is still not retained.
 
-The schema check is not where the time goes: the variant without it is as slow as the resolver was, so the cost is the
-`ClassValue` lookup. The resolver now also remembers the first two classes that resolve, weakly, so that a hit on one of
-them is a reference comparison; any other class takes the `ClassValue`, and a class of a discarded class loader is still
-not retained.
-
-Measured with JMH (4 threads, two forks, `gc` profiler, Oracle GraalVM 25.0.5), the resolver before and after run back to
-back on one machine under a load average of 6 to 11. The error of one run reaches 8 ns on a shared machine, so the figures
-show the direction and the order of magnitude, not a precise difference:
-
-[cols="1,1,1,1"]
-|===
-| Leg | Resolver | `unionResolution` | `interfaceResolution`
-
-| default | before | 27.5 ns | 26.3 ns
-| default | now | 17.5 ns | 17.0 ns
-| floor | before | 25.3 ns | 27.6 ns
-| floor | now | 23.2 ns | 21.7 ns
-|===
-
-The resolver that caches the object type with no schema check measured 25 to 31 ns in the same runs, and the loop control
-about 7 to 8 ns.
-
-Allocation is 0 B/op on both benchmarks on both legs.
+`AbstractTypeBenchmark` (`unionResolution`, `interfaceResolution`) runs the resolver on four threads and allocates 0 B/op
+on both. Its threads share one operation object, so its figures include the contention on the call counter of that object.
+They compare two resolvers on one machine in one session, and are not the cost of a resolver alone. Compare them on your
+machine with `./gradlew :test-suite-benchmarks:jmh -Pjmh.includes=AbstractTypeBenchmark`.
