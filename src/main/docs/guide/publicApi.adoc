@@ -91,7 +91,3 @@ A type marked `(experimental)` in the tables below carries `@Experimental` (`io.
 |Package |Types
 |`io.micronaut.graphql.tools.testing` |`GraphQLTestRequest`, `GraphQLTestResponse`, `GraphQLTester`
 |===
-
-== How the build keeps this true
-
-`PublicApiListingSpec` reads the sources of the modules above and fails when the types of the tables differ from the public types of the code, or when the `(experimental)` marks differ from the `@Experimental` annotations. A new public type, a type that becomes internal and a new experimental mark each change this page in the same change. `ArchitectureRulesSpec` keeps internal types out of the signatures of these types, and `PackageDocumentationSpec` keeps the packages documented and small.

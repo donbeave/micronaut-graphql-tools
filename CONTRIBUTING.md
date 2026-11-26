@@ -297,8 +297,6 @@ The public API is split into its role packages (`annotation`, `config`, `customi
 
 `PackageDocumentationSpec` fails when a Java package of a module in its list (the library modules and `test-suite-tck`) has no `package-info.java`, when a `package-info.java` has no description, when a package has more than 15 types without a listed exception, when the package list of this section differs from the packages of the code, or when `@Internal` on a package and the audience column of this section disagree.
 
-`PublicApiListingSpec` fails when the types of the Public API page of the guide (`src/main/docs/guide/publicApi.adoc`) differ from the public types of the modules or from their `@Experimental` marks. `BreakingChangeLedgerSpec` fails when a breaking change number is missing, is listed twice or sits under another release on the page of breaking changes than on the migration page.
-
 ## Benchmarks
 
 The `test-suite-benchmarks` module measures the request hot path: a property fetch, a root method, a type resolver method
