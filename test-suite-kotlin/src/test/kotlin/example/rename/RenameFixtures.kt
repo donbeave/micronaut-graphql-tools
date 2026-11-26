@@ -76,7 +76,7 @@ class RenameFixtures {
     fun coordinatesSchema() = GraphQLTypeDefinitionRegistryCustomizer { registry ->
         registry.merge(
             SchemaParser().parse(
-                "type Parcel { id: ID! class: String! }\n" +
+                "type Parcel { id: ID! class: String! hashCode: Int! headline: String! tagline: String! new(prefix: String!): String! }\n" +
                     "extend type Query { parcel: Parcel default: String! }\n"
             )
         )
@@ -167,6 +167,18 @@ open class CoordinateParcelResolver {
 
     @GraphQLSchemaCoordinate("Parcel.class")
     open fun kind(parcel: CoordinateParcel): String = "parcel"
+
+    @GraphQLSchemaCoordinate("Parcel.hashCode")
+    open fun digest(parcel: CoordinateParcel): Int = 42
+
+    @GraphQLSchemaCoordinate("Parcel.new")
+    open fun create(parcel: CoordinateParcel, prefix: String): String = "$prefix parcel"
+
+    @GraphQLSchemaCoordinate("Parcel.headline")
+    open fun title(parcel: CoordinateParcel): String = "Fragile"
+
+    @GraphQLSchemaCoordinate("Parcel.tagline")
+    open fun subtitle(parcel: CoordinateParcel): String = "Handle with care"
 }
 
 @GraphQLType
