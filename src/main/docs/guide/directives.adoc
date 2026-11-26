@@ -62,7 +62,7 @@ To wrap the data fetchers of selected fields, see the `GraphQLFieldFetcherDecora
 
 == A wiring needs a registration
 
-A `SchemaDirectiveWiring` bean is not applied on its own. When no `SchemaDirective` bean wraps it and no `GraphQLRuntimeWiringCustomizer` registers it, the startup fails with `[unwrapped-directive-wiring]`, which names the bean. The check runs after the customizers. To keep a wiring as a bean, inject it into the factory method of its `SchemaDirective`.
+A `SchemaDirectiveWiring` bean is not applied on its own. When no `SchemaDirective` bean wraps it and no `GraphQLRuntimeWiringCustomizer` registers it, the startup fails with `[unwrapped-directive-wiring]`, which names the bean. The check runs after the customizers. To keep a wiring as a bean, inject it into the factory method of its `SchemaDirective`. The check matches a singleton by instance and a `@Prototype` bean by its class, so an unwrapped `@Prototype` bean goes undetected when some wired instance of any bean has the same class.
 
 == Applied directives and wirings
 

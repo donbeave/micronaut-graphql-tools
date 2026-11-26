@@ -84,6 +84,10 @@ snippet::example.rename.RenameFixtures[project-base="test-suite", source="test",
 
 On a resolver method, `@GraphQLSchemaCoordinate("Type.field")` plays that role, and `micronaut.graphql.tools.resolver-accessor-prefixes` lets a resolver method named `getX` or `isX` serve the field `x`. The <<renaming,configuration reference>> lists the three forms and their limits.
 
+== Lifecycle methods
+
+A method annotated with `@EventListener`, `@Scheduled`, `@Schedules` or `@PreDestroy` on a resolver bean is not a resolver method: it is never reported as an `[unbound-resolver-method]`, and it needs no @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[]. It still binds a field if it has that field's name.
+
 == Return types and arguments
 
 A field may return the mapped type inside the wrappers that the <<typeSystem,Type System>> page lists (`CompletionStage`, `Publisher`, `DataFetcherResult` and `Optional`). The parameters of a method are bound by name, and the <<resolverParameters,Resolver Parameters>> page lists the kinds that the library fills in, such as the `DataFetchingEnvironment`.
