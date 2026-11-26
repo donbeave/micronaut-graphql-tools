@@ -85,11 +85,13 @@ val publishedModulePaths = rootProject.subprojects.map { it.path }.filter { path
 tasks.named<Test>("test") {
     val repositoryRoot = rootProject.layout.projectDirectory
     systemProperty("docs.root", repositoryRoot.asFile.absolutePath)
-    val publishedOutputs = publishedModulePaths.map { path -> project(path).layout.buildDirectory.dir("classes/java/main") }
+    val publishedOutputs = publishedModulePaths.flatMap { path ->
+        listOf("java", "kotlin", "groovy").map { language -> project(path).layout.buildDirectory.dir("classes/$language/main") }
+    }
     publishedModulePaths.forEach { path -> dependsOn("$path:classes") }
     inputs.files(publishedOutputs).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("publishedModuleClasses")
     jvmArgumentProviders.add(CommandLineArgumentProvider {
-        listOf("-Dpublished.modules.classes=" + publishedOutputs.joinToString(File.pathSeparator) { it.get().asFile.absolutePath })
+        listOf("-Dpublished.modules.classes=" + publishedOutputs.filter { it.get().asFile.isDirectory }.joinToString(File.pathSeparator) { it.get().asFile.absolutePath })
     })
     inputs.files(repositoryRoot.file("README.md"))
         .withPathSensitivity(PathSensitivity.RELATIVE)

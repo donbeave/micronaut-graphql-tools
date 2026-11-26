@@ -260,7 +260,10 @@ class ArchitectureRulesSpec extends Specification {
 
     private static boolean overridesForeignMethod(JavaClass owner, JavaMethod method) {
         (owner.allRawSuperclasses + owner.allRawInterfaces).any { JavaClass type ->
-            !type.packageName.startsWith(ROOT) && type.methods.any { it.name == method.name && it.parameters.empty }
+            !type.packageName.startsWith(ROOT) && type.methods.any {
+                it.name == method.name && it.parameters.empty && !it.modifiers.contains(JavaModifier.STATIC) &&
+                        !it.modifiers.contains(JavaModifier.PRIVATE) && it.rawReturnType.name == method.rawReturnType.name
+            }
         }
     }
 
