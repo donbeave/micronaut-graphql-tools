@@ -7,8 +7,9 @@ Gradle project `:micronaut-graphql-tools-codegen`, folder `graphql-tools-codegen
 
 The code generator of the library, as a plain Java library: the Gradle plugin and the Maven plugin map their configuration one
 to one onto it and add only wiring. This module holds the entry point, the options model, the diagnostics, the schema loader and
-the intermediate representation (IR). The emitters are added to it by the generator phases, so this version produces no file
-yet: it checks the options, loads the schema files, builds the IR and reports what is wrong.
+the intermediate representation (IR). The Java emitter (`JavaEmitter`, behind the package-private `Emitter` interface) writes the
+enums of the IR; the other languages and the other types produce no file yet.
+Each package that holds a generated type gets a `package-info.java`.
 
 ## Responsibility
 
