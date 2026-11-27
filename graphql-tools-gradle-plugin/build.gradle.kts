@@ -110,6 +110,8 @@ tasks.register<Test>("functionalTest") {
     systemProperty("plugin.gradle-user-home", gradle.gradleUserHomeDir.absolutePath)
     systemProperty("plugin.kotlin", pluginPin("org.jetbrains.kotlin.jvm"))
     systemProperty("plugin.ksp", pluginPin("com.google.devtools.ksp"))
+    systemProperty("plugin.micronaut-platform", libs.versions.micronaut.platform.get())
+    systemProperty("plugin.groovy", libs.versions.groovy.get())
     outputs.upToDateWhen { false }
     testLogging {
         showStandardStreams = true
