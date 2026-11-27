@@ -45,7 +45,7 @@ class GraphQLCodeGeneratorSpec extends Specification {
                 .withOptions(Options.builder().packageName('p').build()).build()
 
         expect:
-        generator.outputDirectory() == dir.resolve('out')
+        generator.getOutputDirectory() == dir.resolve('out')
         generator.generate().diagnostics().empty
     }
 

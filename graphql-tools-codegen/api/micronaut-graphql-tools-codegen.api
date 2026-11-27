@@ -46,7 +46,7 @@ public final class io.micronaut.graphql.tools.codegen.GenerationResult extends j
 
 public final class io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator {
   public io.micronaut.graphql.tools.codegen.GenerationResult generate();
-  public java.nio.file.Path outputDirectory();
+  public java.nio.file.Path getOutputDirectory();
   public static io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator$Builder builder();
 }
 

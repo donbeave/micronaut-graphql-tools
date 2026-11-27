@@ -72,7 +72,7 @@ public final class GraphQLCodeGenerator {
      *
      * @return the directory that the generated files are relative to
      */
-    public Path outputDirectory() {
+    public Path getOutputDirectory() {
         return outputDirectory;
     }
 
