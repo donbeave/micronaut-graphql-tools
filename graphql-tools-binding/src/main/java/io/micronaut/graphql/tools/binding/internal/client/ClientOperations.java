@@ -111,6 +111,12 @@ public final class ClientOperations {
      * @return the assembled operation, or the findings
      */
     public ClientOutcome resolve(ClientRequest request) {
+        String[] type = new String[1];
+        ClientOutcome outcome = resolve(request, type);
+        return outcome.selectedType() == null && type[0] != null ? new ClientOutcome(outcome.operation(), outcome.findings(), type[0]) : outcome;
+    }
+
+    private ClientOutcome resolve(ClientRequest request, String[] selectedType) {
         List<Finding> findings = new ArrayList<>();
         boolean inline = !request.value().isEmpty() && !NAME.matcher(request.value()).matches();
         SchemaState state = null;
@@ -126,24 +132,37 @@ public final class ClientOperations {
             findings.addAll(selected.findings);
             return ClientOutcome.failed(findings);
         }
+        selectedType[0] = selected.operation.getOperation().name().toLowerCase(Locale.ROOT);
+        if (request.get() && selected.operation.getOperation() != OperationDefinition.Operation.QUERY) {
+            findings.add(ClientRules.getOnNonQuery(request.member(), selected.operation.getOperation().name().toLowerCase(Locale.ROOT)));
+        }
         Map<String, FragmentDefinition> fragments = new TreeMap<>();
         if (!collectFragments(request, selected, fragments, state, findings)) {
             return ClientOutcome.failed(findings);
         }
-        Document assembled = Document.newDocument().definitions(definitions(selected.operation, fragments)).build();
+        OperationDefinition operation = selected.operation;
         if (checks) {
             GraphQLSchema schema = schema(request, state, findings);
             if (schema == null) {
                 return ClientOutcome.failed(findings);
             }
+            Document assembled = Document.newDocument().definitions(definitions(operation, fragments)).build();
             for (ValidationError error : validator.validateDocument(schema, assembled, Locale.ENGLISH)) {
                 findings.add(ClientDocuments.invalid(request.member(), error.getMessage(), location(error)));
+            }
+            if (findings.isEmpty()) {
+                ClientTypenames.Injected injected = ClientTypenames.inject(schema, operation, fragments);
+                injected.reserved().forEach(field -> findings.add(ClientDocuments.invalid(request.member(), "the alias " + ClientTypenames.TYPENAME
+                        + " is reserved: the selection of an interface or union gets the field " + ClientTypenames.TYPENAME + " for the type "
+                        + "name of its value, and this field has the same response key as the fields of such a selection", ClientDocuments.location(field.getSourceLocation()))));
+                operation = injected.operation();
+                fragments = injected.fragments();
             }
         }
         if (!findings.isEmpty()) {
             return ClientOutcome.failed(findings);
         }
-        String document = AstPrinter.printAstCompact(assembled);
+        String document = AstPrinter.printAstCompact(Document.newDocument().definitions(definitions(operation, fragments)).build());
         int bytes = modifiedUtf8Length(document);
         if (bytes > MAX_DOCUMENT_BYTES) {
             return ClientOutcome.failed(List.of(new Finding(BindingCode.CLIENT_DOCUMENT_TOO_LARGE.getCode(), request.member(),
@@ -152,7 +171,6 @@ public final class ClientOperations {
                     + "is the operation and the fragments it uses")));
         }
         operations++;
-        OperationDefinition operation = selected.operation;
         return ClientOutcome.of(new ClientOperation(document, operation.getName() == null ? "" : operation.getName(),
                 operation.getOperation().name().toLowerCase(Locale.ROOT), variables(operation), payload(operation, fragments)));
     }
@@ -185,7 +203,10 @@ public final class ClientOperations {
     }
 
     private Selected selectNamed(ClientRequest request, SchemaState state, List<Finding> findings) {
-        ClientDocuments.Index index = index(state, findings);
+        ClientDocuments.Index index = index(state, findings, request.member());
+        if (state.layout.documentsProblem() != null) {
+            return Selected.failed();
+        }
         String name = !request.name().isEmpty() ? request.name() : request.value().isEmpty() ? request.methodName() : request.value();
         List<OperationDefinition> defined = index.operations().getOrDefault(name, List.of());
         if (defined.size() == 1) {
@@ -210,11 +231,18 @@ public final class ClientOperations {
             Node<?> node = work.pop();
             if (node instanceof FragmentSpread spread && seen.add(spread.getName())) {
                 FragmentDefinition fragment = selected.own.get(spread.getName());
+                SchemaState from = null;
                 if (fragment == null) {
-                    SchemaState from = state != null ? state : quietState(request);
+                    from = state != null ? state : quietState(request);
                     if (from != null) {
-                        List<FragmentDefinition> defined = index(from, findings).fragments().get(spread.getName());
+                        List<FragmentDefinition> defined = index(from, findings, request.member()).fragments().get(spread.getName());
                         fragment = defined == null ? null : defined.get(0);
+                        // a directory that cannot be read may hold another definition of the fragment, so every request that reads
+                        // the documents fails, and the problem is reported once
+                        if (from.layout.documentsProblem() != null) {
+                            complete = false;
+                            continue;
+                        }
                     }
                 }
                 if (fragment == null) {
@@ -316,7 +344,7 @@ public final class ClientOperations {
     private Resolution resolution(ClientRequest request) {
         Resolution resolution = resolutions.get(request.schema());
         if (resolution == null) {
-            ClientDirectories.Resolved resolved = directories.resolve(request.schema(), request.member());
+            ClientDirectories.Resolved resolved = directories.resolve(request.schema(), request.member(), checks);
             SchemaState state = resolved.layout() == null ? null
                     : states.computeIfAbsent(resolved.layout().name(), name -> new SchemaState(resolved.layout()));
             resolution = new Resolution(state, resolved.problem());
@@ -325,13 +353,19 @@ public final class ClientOperations {
         return resolution;
     }
 
-    private ClientDocuments.Index index(SchemaState state, List<Finding> findings) {
+    private ClientDocuments.Index index(SchemaState state, List<Finding> findings, String member) {
         if (state.index == null) {
             state.index = ClientDocuments.index(state.layout.documentDirs());
         }
         if (!state.indexReported) {
             state.indexReported = true;
             findings.addAll(state.index.problems());
+            Finding problem = state.layout.documentsProblem();
+            if (problem != null) {
+                // the finding is made once for the layout, and names the method that reads the documents first
+                findings.add(new Finding(problem.code(), member, problem.sentence(), problem.member(), problem.declaredIn(),
+                        problem.schemaLocation(), problem.fix(), problem.documentLocation()));
+            }
         }
         return state.index;
     }
@@ -374,6 +408,11 @@ public final class ClientOperations {
 
         static Selected failed(Finding finding) {
             return new Selected(null, Map.of(), List.of(finding));
+        }
+
+        // the cause was reported through the findings of the request, or by an earlier request
+        static Selected failed() {
+            return new Selected(null, Map.of(), List.of());
         }
     }
 

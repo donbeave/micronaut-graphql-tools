@@ -25,7 +25,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 final class ClientCodeScenarios {
 
-    static final String SCHEMA = 'type Query {\n  book(id: ID!): Book\n  version: String\n}\ntype Book {\n  id: ID!\n  title: String\n}\n'
+    static final String SCHEMA = 'type Query {\n  book(id: ID!): Book\n  version: String\n}\ntype Mutation {\n  save(title: String!): Book\n}\ntype Book {\n  id: ID!\n  title: String\n}\n'
 
     /** The scenarios and the code that each one raises. */
     static final Map<String, String> CODES = [
@@ -35,18 +35,21 @@ final class ClientCodeScenarios {
             'operation-ambiguous': 'client-operation-ambiguous',
             'document-invalid'   : 'client-document-invalid',
             'document-too-large' : 'client-document-too-large',
+            'get-mutation'       : 'client-get-mutation',
+            'retry-mutation'     : 'client-retry-mutation',
     ]
 
     private static final String CLIENT = '''package example;
 
 import io.micronaut.graphql.tools.client.annotation.GraphQLClient;
 import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
+import io.micronaut.retry.annotation.Retryable;
 
-@GraphQLClient(schema = "%s")
+%s@GraphQLClient(schema = "%s")
 public interface BookClient {
 
-    @GraphQLOperation("%s")
-    String book();
+    @GraphQLOperation(%s)
+    String book(%s);
 
 }'''
 
@@ -60,6 +63,9 @@ public interface BookClient {
         String operation = '{ version }'
         Map<String, String> files = [:]
         boolean checks = true
+        String typeAnnotations = ''
+        String arguments = null
+        String parameters = ''
         switch (scenario) {
             case 'schema-missing':
                 schema = 'library'
@@ -81,11 +87,21 @@ public interface BookClient {
                 checks = false
                 files = ['books/huge.graphql': 'query Huge { ' + (0..<20000).collect { String.format('f%05d', it) }.join(' ') + ' }']
                 break
+            case 'get-mutation':
+                operation = 'mutation Save($title: String!) { save(title: $title) { id } }'
+                arguments = 'value = "' + operation + '", method = GraphQLOperation.Method.GET'
+                parameters = 'String title'
+                break
+            case 'retry-mutation':
+                operation = 'mutation Save($title: String!) { save(title: $title) { id } }'
+                typeAnnotations = '@Retryable\n'
+                parameters = 'String title'
+                break
             default:
                 throw new IllegalArgumentException('no scenario ' + scenario)
         }
         JavaParserCompilation compilation = new JavaParserCompilation().clientFile('books/schema.graphqls', schemaText)
-                .source('example.BookClient', String.format(CLIENT, schema, operation))
+                .source('example.BookClient', String.format(CLIENT, typeAnnotations, schema, arguments ?: '"' + operation + '"', parameters))
         files.each { path, text -> compilation.clientFile(path, text) }
         if (!checks) {
             compilation.option(ProcessorOptions.CLIENT_CHECKS, 'false')

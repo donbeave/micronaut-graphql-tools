@@ -66,6 +66,8 @@ class BindingCodeSpec extends Specification {
             'client-operation-ambiguous',
             'client-document-invalid',
             'client-document-too-large',
+            'client-get-mutation',
+            'client-retry-mutation',
     ]
 
     void "no two codes share a token, and every token is lower-case kebab-case"() {

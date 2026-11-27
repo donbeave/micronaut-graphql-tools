@@ -136,12 +136,14 @@ A conditional bean (`@Requires`, `@Replaces`) gets the same per-class compile-ti
 |`client-operation-ambiguous` |failure |yes |A GraphQL client operation selects several operations: its document defines more than one, or the client directory defines the name twice.
 |`client-document-invalid` |failure |yes |A GraphQL client document is not valid GraphQL, or does not validate against the client schema.
 |`client-document-too-large` |failure |yes |The assembled document of a GraphQL client operation is too large to be stored in the annotation metadata.
+|`client-get-mutation` |failure |yes |A GraphQL client operation is sent with GET and is a mutation or a subscription; only a query can be sent with GET.
+|`client-retry-mutation` |failure |yes |A GraphQL client interface that declares a mutation carries a type-level retry annotation, which would repeat the mutation.
 // end generated: failures
 |===
 
 The message of `precedence-ambiguity` names the field coordinate, both members, and the ways out: a resolver directive, `@GraphQLSchemaCoordinate`, @api:io.micronaut.graphql.tools.annotation.GraphQLIgnore[] or the `precedence` setting.
 
-The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. The six `client-*` codes are raised by the compile-time check of the operations of a declarative client and have no startup form either; the <<clientCompileTime,client page>> describes the check. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup emits it for a schema file that the discovery cannot parse or merge; a schema that graphql-java rejects later still fails with graphql-java's own `SchemaProblem`. `schema-definition-not-provided` is reported by both: a schema with no `schema` block and no object type named `Query` fails the compile-time check and the startup with the same code and no coordinate. `schema-not-found` is a startup code: no file at `micronaut.graphql.tools.schema.locations`, a missing literal file, or an invalid location.
+The codes that run at compile time and have no startup form (`processor-option-unknown`, `processor-option-invalid`, `processor-option-removed`, `processor-schema-not-configured`, `processor-schema-not-found`, `processor-internal-error`) are errors of the compile-time check itself. The `client-*` codes are raised by the compile-time check of the operations of a declarative client and have no startup form either; the <<clientCompileTime,client page>> describes the check. `schema-invalid` is a compile-time code: the compile-time check reports a schema that cannot be parsed or merged. The startup emits it for a schema file that the discovery cannot parse or merge; a schema that graphql-java rejects later still fails with graphql-java's own `SchemaProblem`. `schema-definition-not-provided` is reported by both: a schema with no `schema` block and no object type named `Query` fails the compile-time check and the startup with the same code and no coordinate. `schema-not-found` is a startup code: no file at `micronaut.graphql.tools.schema.locations`, a missing literal file, or an invalid location.
 
 `nullable-primitive` and `coordinate-on-non-resolver` are emitted at startup and at compile time with the same code. A primitive Java type for an argument or input field of a nullable built-in scalar fails the startup with `nullable-primitive` (not `incorrect-class-mapping`); a primitive for a nullable custom scalar keeps `incorrect-class-mapping`, because the compile-time check cannot see the scalar mapping. A `@GraphQLSchemaCoordinate` on a bean that is neither a @api:io.micronaut.graphql.tools.annotation.GraphQLRootResolver[] nor a @api:io.micronaut.graphql.tools.annotation.GraphQLTypeResolver[] fails the startup with `coordinate-on-non-resolver` (not `unknown-schema-coordinate`); the other invalid coordinates keep `unknown-schema-coordinate`, and a startup with both kinds reports both under `binding-failures`.
 
@@ -830,6 +832,38 @@ Each entry gives the cause, a message and the fix. The message is the text that 
 ----
 
 *Fix.* Split the operation into smaller ones, or select fewer fields.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-get-mutation]]
+=== `client-get-mutation`
+
+*Cause.* An operation is sent with `method = GET` and is a mutation or a subscription. Only a query can be sent with GET: a GET request must be safe, a server answers a mutation sent with GET with `405`, and a subscription is not an HTTP request. The check runs whatever `client.checks` says, because the operation type comes from the document, which is always parsed.
+
+// client: get-mutation
+[source,text]
+----
+[client-get-mutation] example.BookClient#book(java.lang.String): the operation is a mutation and is sent with GET, and only a query can be: a GET request must be safe, a server answers a mutation sent with GET with 405, and a subscription is not an HTTP request.
+    fix: remove method = GET from @GraphQLOperation, or write the operation as a query
+----
+
+*Fix.* Remove `method = GET` from `@GraphQLOperation`, or write the operation as a query.
+
+*See.* <<clientCompileTime,Client compile-time checks>>.
+
+[[example-client-retry-mutation]]
+=== `client-retry-mutation`
+
+*Cause.* An interface annotated with `@GraphQLClient` carries a retry annotation of Micronaut (`@Retryable`, or an annotation that carries it such as `@CircuitBreaker`) on the type, and declares a mutation. The annotation applies to every method of the interface, so a mutation would be repeated when its response is lost and could run twice. A retry annotation on one method is not a finding: it is a decision about that method. The finding is reported once for the interface and lists the mutations.
+
+// client: retry-mutation
+[source,text]
+----
+[client-retry-mutation] example.BookClient: the interface carries a retry annotation, which applies to every method, and declares a mutation: a retry repeats the mutation when the response is lost, so it can run twice; the mutations are [example.BookClient#book(java.lang.String)].
+    fix: annotate the query methods with @Retryable one by one instead of the interface, or move the mutations to an interface without retry
+----
+
+*Fix.* Annotate the query methods with `@Retryable` one by one, or move the mutations to an interface that carries no retry annotation.
 
 *See.* <<clientCompileTime,Client compile-time checks>>.
 

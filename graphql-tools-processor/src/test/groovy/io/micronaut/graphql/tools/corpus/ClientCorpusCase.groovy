@@ -43,14 +43,14 @@ final class ClientCorpusCase {
 
     static final String PROPERTIES = 'case.properties'
     static final Set<String> PROPERTY_KEYS = ['description', 'tags'] as Set<String>
-    static final List<String> CLIENT_DIRS = ['case', 'none', 'missing']
+    static final List<String> CLIENT_DIRS = ['case', 'none', 'missing', 'case+missing']
     static final List<String> SCHEMA_DIRS = ['case', 'none']
 
     final String name
     final Path dir
     final String description
     final List<String> tags
-    /** {@code compile.client-dirs}: the client directory of the case, none, or one that does not exist */
+    /** {@code compile.client-dirs}: the client directory of the case, none, one that does not exist, or the one of the case and one that does not exist */
     final String clientDirs
     /** {@code compile.schema-dirs}: the schema directory of the case (when it has one), or none */
     final String schemaDirs
@@ -150,7 +150,7 @@ final class ClientCorpusCase {
         if (compile != null && compile != 'ok' && Files.isRegularFile(expectedFile('metadata.txt'))) {
             problems.add('expected/metadata.txt exists for a case that does not compile'.toString())
         }
-        if (clientDirs == 'case' && !Files.isDirectory(clientDir()) && !options.containsKey('micronaut.graphql.tools.processor.client.dirs')) {
+        if (clientDirs in ['case', 'case+missing'] && !Files.isDirectory(clientDir()) && !options.containsKey('micronaut.graphql.tools.processor.client.dirs')) {
             problems.add('the case compiles with its client directory and has no client/ directory'.toString())
         }
         if (schemaDirs == 'case' && Files.isDirectory(schemaDir()) && list(schemaDir()).findAll { it.fileName.toString().endsWith('.graphqls') }.empty) {
