@@ -22,6 +22,23 @@ try (ApplicationContext context = ApplicationContext.run()) {
 }
 ----
 
+[[clientErrors]]
+== Client errors
+
+The client of the `graphql-tools-client` module throws one base exception, api:io.micronaut.graphql.tools.client.exceptions.GraphQLClientException[], a `RuntimeException`, and two subclasses. Each one has a code with the same rules as the binding codes: a lower-case kebab-case word that never changes after a release, the token in square brackets at the start of the message (`[graphql-errors] ...`) and the value of `getCode()` (the `code` property in Groovy and Kotlin). A new failure adds a new code.
+
+[cols="3,3,6", options="header"]
+|===
+|Code |Exception |Meaning
+|`graphql-errors` |api:io.micronaut.graphql.tools.client.exceptions.GraphQLErrorsException[] |The server answered with GraphQL errors. `getErrors()` lists them and `getResponse()` is the response, which may hold partial data. It is thrown by `GraphQLResponse#dataOrThrow()`.
+|`transport-error` |api:io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException[] |The call failed below GraphQL: a connection error, or an HTTP response that is not a GraphQL response. `getStatus()` is the HTTP status, or `-1` when none was received, `getHeaders()` the headers of the response and `getCause()` the underlying failure.
+|`transport-timeout` |api:io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException[] |The call timed out; `isTimeout()` is `true`.
+|`no-data` |api:io.micronaut.graphql.tools.client.exceptions.GraphQLClientException[] |The response has neither `data` nor `errors`. It is thrown by `GraphQLResponse#dataOrThrow()`.
+|`decode-error` |api:io.micronaut.graphql.tools.client.exceptions.GraphQLClientException[] |A request cannot be encoded, or a response body is not valid JSON or does not fit the requested type, or its `data` has no single root field to unwrap. The cause is the Micronaut Serialization failure.
+|===
+
+A response with `"data": null` and no errors is not a failure: `GraphQLResponse#hasData()` tells it from a response with no `data` entry, and `dataOrThrow()` returns `null` for it.
+
 == Checks
 
 A check is a strict-mode finding. In the compile-time column, `yes` means the compile-time check reports it too, with the same code and coordinate; the other checks need the whole program and run at startup only.

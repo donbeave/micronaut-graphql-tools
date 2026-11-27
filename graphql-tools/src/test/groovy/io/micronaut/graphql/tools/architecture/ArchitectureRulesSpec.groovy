@@ -139,6 +139,36 @@ class ArchitectureRulesSpec extends Specification {
                 .check(classes)
     }
 
+    void "the client classes are found"() {
+        expect:
+        clientClasses().contain('io.micronaut.graphql.tools.client.GraphQLRequest')
+        clientClasses().contain('io.micronaut.graphql.tools.client.internal.serde.GraphQLCodec')
+    }
+
+    void "no class of the client depends on Jackson"() {
+        expect:
+        noClasses().should().dependOnClassesThat(resideInAPackage('com.fasterxml.jackson..'))
+                .because('the client uses Micronaut Serialization only, never Jackson (#684)')
+                .check(clientClasses())
+    }
+
+    void "no class of the client reflects"() {
+        expect:
+        noClasses().should(reflects(false))
+                .because('reflection needs native-image metadata and the client has none: the codec reads and writes through the Serde API (#684)')
+                .check(clientClasses())
+    }
+
+    void "the public API of the client exposes no internal type and no public package of it depends on an internal one"() {
+        expect:
+        classes().that(publicApi()).should(exposeNoInternalType()).check(clientClasses())
+        noClasses().that(inPublicPackage()).should(dependOnInternalPackage()).check(clientClasses())
+    }
+
+    private JavaClasses clientClasses() {
+        publishedClasses.that(resideInAPackage('io.micronaut.graphql.tools.client..'))
+    }
+
     void "the public API exposes no internal type in a public or protected signature"() {
         expect:
         classes().that(publicApi()).should(exposeNoInternalType())
