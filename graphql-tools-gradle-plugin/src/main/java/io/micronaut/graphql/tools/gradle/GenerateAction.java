@@ -22,6 +22,7 @@ import io.micronaut.graphql.tools.codegen.GraphQLCodeGenerator;
 import io.micronaut.graphql.tools.codegen.Options;
 import io.micronaut.graphql.tools.codegen.OptionsResult;
 import io.micronaut.graphql.tools.codegen.schema.SchemaFileSelector;
+import io.micronaut.graphql.tools.codegen.schema.TypeMappingsFile;
 import org.gradle.api.GradleException;
 import org.gradle.workers.WorkAction;
 import org.slf4j.Logger;
@@ -40,7 +41,7 @@ import java.util.stream.Collectors;
 
 /**
  * The work that {@link GenerateGraphQLTask} submits. It runs in a class loader that holds the generator, reads the options from
- * their string form, runs the generator and writes each generated file whose content differs from what the file holds.
+ * their string form, runs the generator and writes each generated file whose content differs from what the file holds: the type mappings file into the resources directory, every other file into the sources directory.
  * An error diagnostic fails the build with every message.
  */
 public abstract class GenerateAction implements WorkAction<GenerateParameters> {
@@ -64,14 +65,16 @@ public abstract class GenerateAction implements WorkAction<GenerateParameters> {
         GenerationResult result = GraphQLCodeGenerator.builder()
                 .withSchemaFiles(schemaFiles)
                 .withOutputDirectory(parameters.getOutputDirectory().get().getAsFile().toPath())
+                .withDependencies(parameters.getDependencies().getFiles().stream().map(File::toPath).toList())
                 .withOptions(parsed.options())
                 .build()
                 .generate();
         report(result.diagnostics().stream().filter(diagnostic -> !validation.contains(diagnostic)).toList());
         fail(result.diagnostics());
-        Path root = parameters.getOutputDirectory().get().getAsFile().toPath().toAbsolutePath().normalize();
+        Path sources = parameters.getOutputDirectory().get().getAsFile().toPath().toAbsolutePath().normalize();
+        Path resources = parameters.getResourcesDirectory().get().getAsFile().toPath().toAbsolutePath().normalize();
         for (GeneratedFile file : result.files()) {
-            write(root, file);
+            write(TypeMappingsFile.PATH.equals(file.path()) ? resources : sources, file);
         }
     }
 

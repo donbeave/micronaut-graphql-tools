@@ -15,6 +15,8 @@
  */
 package io.micronaut.graphql.tools.maven;
 
+import io.micronaut.graphql.tools.codegen.schema.TypeMappingsFile;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -58,9 +60,12 @@ final class GeneratedSources {
      * @param options          the string form of the options
      * @param schemaDirectory  the schema directory that the paths of the files are relative to
      * @param schemaFiles      the schema files, in the order they are read
+     * @param dependencies     the jars and class directories whose type mappings file the generator reads: each path and the bytes of
+     *                         that file (or its absence) are part of the fingerprint, so a new version of a dependency regenerates
      * @return the SHA-256 of the inputs, in hexadecimal
      */
-    static String fingerprint(String generatorVersion, Map<String, String> options, Path schemaDirectory, List<Path> schemaFiles) {
+    static String fingerprint(String generatorVersion, Map<String, String> options, Path schemaDirectory, List<Path> schemaFiles,
+                              List<Path> dependencies) {
         MessageDigest digest = sha256();
         update(digest, "generator");
         update(digest, generatorVersion);
@@ -80,7 +85,38 @@ final class GeneratedSources {
                 throw new java.io.UncheckedIOException(e);
             }
         }
+        update(digest, "dependencies");
+        for (Path dependency : new java.util.TreeSet<>(dependencies)) {
+            update(digest, dependency.toString().replace('\\', '/'));
+            byte[] mappings = mappingsOf(dependency);
+            update(digest, mappings == null ? "none" : Integer.toString(mappings.length));
+            if (mappings != null) {
+                digest.update(mappings);
+            }
+        }
         return HexFormat.of().formatHex(digest.digest());
+    }
+
+    private static byte[] mappingsOf(Path dependency) {
+        try {
+            if (Files.isDirectory(dependency)) {
+                Path file = dependency.resolve(TypeMappingsFile.PATH);
+                return Files.isRegularFile(file) ? Files.readAllBytes(file) : null;
+            }
+            if (Files.isRegularFile(dependency)) {
+                try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(dependency.toFile())) {
+                    java.util.zip.ZipEntry entry = zip.getEntry(TypeMappingsFile.PATH);
+                    if (entry != null) {
+                        try (java.io.InputStream in = zip.getInputStream(entry)) {
+                            return in.readAllBytes();
+                        }
+                    }
+                }
+            }
+        } catch (IOException | IllegalArgumentException e) {
+            return ("unreadable:" + e.getMessage()).getBytes(StandardCharsets.UTF_8);
+        }
+        return null;
     }
 
     /**
