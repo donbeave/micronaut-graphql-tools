@@ -166,7 +166,7 @@ final class KotlinBatchCompiler implements CheckedCaseCompiler {
     }
 
     /** Groups the lines of a task into messages: a line with the prefix {@code <kind>: } starts one, an indented line continues it. */
-    private List<String> messages(List<String> lines, String kind) {
+    static List<String> messages(List<String> lines, String kind) {
         List<String> result = []
         StringBuilder current = null
         lines.each { String line ->
@@ -277,7 +277,7 @@ plugins {
      * The plain console prints {@code > Task :<project>:<task>} when the output of another task starts, so the lines after a
      * header belong to its project, in a parallel build as well.
      */
-    private static Map<String, List<String>> attribute(List<String> lines) {
+    static Map<String, List<String>> attribute(List<String> lines) {
         Map<String, List<String>> byProject = [:]
         String project = null
         lines.each { String line ->
@@ -373,7 +373,7 @@ ${options}
     }
 
     /** The jars and class directories of the library under test: this test JVM's class path without this module's own output, the Kotlin libraries and the test tooling (Gradle API, Groovy, Spock, JUnit). */
-    private static List<String> libraries() {
+    static List<String> libraries() {
         return System.getProperty('java.class.path').split(File.pathSeparator).findAll {
             // the Kotlin libraries come from the plugin's own version, never from the test class path (it may hold a newer
             // stdlib than the compiler of the build can read)
@@ -385,7 +385,7 @@ ${options}
     }
 
     /** The visitor and what it needs besides the processor API: this module's classes, the binding module and graphql-java. */
-    private static List<String> visitorPath() {
+    static List<String> visitorPath() {
         return System.getProperty('java.class.path').split(File.pathSeparator).findAll {
             String name = new File(it).name
             (it.contains('graphql-tools-processor/build/classes/java/main')) ||

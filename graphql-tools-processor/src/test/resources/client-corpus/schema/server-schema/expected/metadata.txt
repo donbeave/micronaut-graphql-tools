@@ -1,0 +1,2 @@
+BookClient#named type=query name=FromServerDirectory payload=field variables=- document=queryFromServerDirectory{version}
+BookClient#version type=query name=- payload=field variables=- document={version}

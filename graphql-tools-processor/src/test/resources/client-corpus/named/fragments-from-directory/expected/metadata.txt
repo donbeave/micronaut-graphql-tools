@@ -1,0 +1,2 @@
+BookClient#inline type=query name=- payload=field variables=- document={books{...Titled...Authored}}fragmentAuthoredonBook{author}fragmentTitledonBook{id}
+BookClient#named type=query name=Named payload=field variables=- document=queryNamed{books{...Titled}}fragmentTitledonBook{title}
