@@ -7,8 +7,8 @@ Gradle project `:micronaut-graphql-tools-maven-plugin`, folder `graphql-tools-ma
 
 The Maven plugin of the code generator: the goal `graphql-tools:generate` maps a `<configuration>` one to one onto the options of
 `graphql-tools-codegen`, writes the generated sources, and adds the source directory of the language to the project. The generator
-produces no source file yet (it checks the options and the schema files), so the plugin writes what the generator returns and the
-build wiring is already final.
+emits the enums and the name constants of the Java language and no other source file yet, so the plugin writes what the generator
+returns and the build wiring is already final.
 
 ## Responsibility
 
@@ -79,4 +79,5 @@ with the Maven plugin testing harness (so it reads the hand-written `plugin.xml`
 root of each language; `IncrementalRunSpec` and `GeneratedSourcesSpec` cover the skip, the regeneration and the
 deletion of a stale file, and `SchemaFileSelectorSpec` of the code generator covers the file selection; `PluginDescriptorSpec` is the parity of the descriptor. `GenerateMojoSpec` also covers the dependency mappings (a jar of the compile class path, the option off, the project's own classes left out) and the
 resource root. The second command needs `mvn` and the network: it
-builds the samples `maven-plugin-java`, `maven-plugin-kotlin` and `maven-plugin-groovy` of `test-suite-build` with the published plugin.
+builds the samples `maven-plugin-java`, `maven-plugin-kotlin` and `maven-plugin-groovy` of `test-suite-build` with the published plugin;
+the Java sample compiles the sources that the goal generated, the other two a placed source file until their emitters exist.
