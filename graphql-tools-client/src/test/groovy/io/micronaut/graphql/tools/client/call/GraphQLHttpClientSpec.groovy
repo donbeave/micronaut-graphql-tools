@@ -36,7 +36,9 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
+import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
 class GraphQLHttpClientSpec extends Specification {
@@ -300,13 +302,21 @@ class GraphQLHttpClientSpec extends Specification {
     }
 
     void "the reactive and the future variants complete on the event loop of the client"() {
+        given:
+        def gate = server.closeGate()
+        def reactiveThread = new CompletableFuture<String>()
+        def futureThread = new CompletableFuture<String>()
+        Mono.from(clients.gated.execute(query())).subscribe { reactiveThread.complete(Thread.currentThread().name) }
+        clients.gated.executeAsync(query()).thenAccept { futureThread.complete(Thread.currentThread().name) }
+
         when:
-        def reactive = Mono.from(clients.stub.execute(query())).map { Thread.currentThread().name }.block()
-        def future = clients.stub.executeAsync(query()).thenApply { Thread.currentThread().name }.get()
+        gate.complete(true)
+        def reactive = reactiveThread.get(10, TimeUnit.SECONDS)
+        def future = futureThread.get(10, TimeUnit.SECONDS)
 
         then:
-        reactive.toLowerCase().contains('eventloopgroup')
-        future.toLowerCase().contains('eventloopgroup')
+        assert reactive.toLowerCase().contains('eventloopgroup'): "the reactive variant completed on thread '$reactive'"
+        assert future.toLowerCase().contains('eventloopgroup'): "the future variant completed on thread '$future'"
     }
 
     void "a blocking call on an event loop thread fails with its own code, and one on a worker thread works"() {

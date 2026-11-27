@@ -35,6 +35,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.Map;
 
 /**
@@ -65,6 +66,7 @@ public class StubController {
 
     private final GraphQLHttpClient loop;
     private volatile Seen last;
+    private volatile CompletableFuture<Boolean> gate = CompletableFuture.completedFuture(true);
 
     public StubController(@GraphQLClient("stub") GraphQLHttpClient loop) {
         this.loop = loop;
@@ -72,6 +74,18 @@ public class StubController {
 
     public Seen last() {
         return last;
+    }
+
+    /**
+     * Holds the answers of {@code /gated} until the returned future completes, so a test can attach a continuation to a call before its
+     * response can arrive.
+     *
+     * @return the gate to open
+     */
+    public CompletableFuture<Boolean> closeGate() {
+        CompletableFuture<Boolean> closed = new CompletableFuture<>();
+        gate = closed;
+        return closed;
     }
 
     @Post(uris = {"/graphql", "/api/graphql"})
@@ -87,6 +101,11 @@ public class StubController {
     @Post("/slow")
     public Publisher<HttpResponse<String>> slow() {
         return Mono.delay(java.time.Duration.ofSeconds(2)).map(ignored -> HttpResponse.ok("{\"data\":{\"a\":1}}").contentType(MediaType.APPLICATION_JSON_TYPE));
+    }
+
+    @Post("/gated")
+    public Publisher<HttpResponse<String>> gated() {
+        return Mono.fromFuture(gate).map(ignored -> HttpResponse.ok("{\"data\":{\"a\":1}}").contentType(MediaType.APPLICATION_JSON_TYPE));
     }
 
     @Get("/blocks-on-the-event-loop")
