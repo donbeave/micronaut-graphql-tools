@@ -1,0 +1,1 @@
+BookClient#missing type=query name=- payload=field variables=- document={notInTheSchema}

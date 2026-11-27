@@ -1,0 +1,1 @@
+client-document-invalid - <client>/books/b.graphql:1:1

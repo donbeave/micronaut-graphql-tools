@@ -1,0 +1,2 @@
+fragment Titled on Book { title }
+fragment Authored on Book { author }

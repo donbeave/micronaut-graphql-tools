@@ -1,0 +1,15 @@
+package example;
+
+import io.micronaut.graphql.tools.client.annotation.GraphQLClient;
+import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
+
+@GraphQLClient(schema = "broken")
+public interface BookClient {
+
+    @GraphQLOperation("{ a }")
+    String first();
+
+    @GraphQLOperation("{ a }")
+    String second();
+
+}

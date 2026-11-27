@@ -1,0 +1,1 @@
+client-schema-missing example.BookClient#version() -

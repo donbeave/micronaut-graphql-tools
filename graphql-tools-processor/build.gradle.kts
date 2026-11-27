@@ -34,8 +34,16 @@ dependencies {
 // The binding corpus (#142): the cases are data under src/test/resources/corpus, read from the project directory.
 // `-Pcorpus.update` (task corpusUpdate) rewrites the expected files instead of comparing; the diff is the review.
 val corpusDir = layout.projectDirectory.dir("src/test/resources/corpus")
+// The client corpus (#666): the cases of the client visitor, data under src/test/resources/client-corpus. `-Pclient.corpus.update`
+// rewrites the expected files from the Java run instead of comparing; the diff is the review.
+val clientCorpusDir = layout.projectDirectory.dir("src/test/resources/client-corpus")
 tasks.withType<Test>().configureEach {
     inputs.files(corpusDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("corpus")
+    inputs.files(clientCorpusDir).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("clientCorpus")
+    systemProperty("client.corpus.dir", clientCorpusDir.asFile.absolutePath)
+    if (project.hasProperty("client.corpus.update")) {
+        systemProperty("client.corpus.update", "true")
+    }
     // The corpus compiles about 300 units in process and starts the application of each in a class loader of its own, in one JVM. Two
     // retentions used to keep every unit's loader (about 14 MB of metaspace and 6 MB of heap per unit), found with a heap dump:
     // - Groovy keeps its ClassInfo of a class in a java.lang.ClassValue, and a ClassValue stores the value in the Class it is asked
@@ -76,6 +84,15 @@ tasks.register<Test>("corpusMutation") {
     }
     outputs.upToDateWhen { false }
 }
+tasks.register<Test>("clientCorpusUpdate") {
+    description = "Rewrites the expected files of the client corpus from what the Java run of each case says; review the diff."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    filter.includeTestsMatching("io.micronaut.graphql.tools.corpus.ClientCorpusSpec")
+    systemProperty("client.corpus.update", "true")
+    outputs.upToDateWhen { false }
+}
 tasks.register<Test>("corpusUpdate") {
     description = "Rewrites the expected files of the binding corpus from what the binders say; review the diff."
     group = "verification"
@@ -93,6 +110,11 @@ val corpusOnThisLeg = providers.gradleProperty("graphqlJavaLeg").orElse("default
 tasks.named<Test>("test") {
     exclude("**/KotlinCorpusSpec*")
     exclude("**/KotlinErrorReferenceSpec*")
+    exclude("**/KotlinClientCorpusSpec*")
+    if (!corpusOnThisLeg && !project.hasProperty("client.corpus.update")) {
+        // the positions of a syntax error come from the parser of graphql-java, which differs between releases
+        exclude("**/ClientCorpusSpec*")
+    }
     if (!corpusOnThisLeg && !project.hasProperty("corpus.update")) {
         exclude("**/BindingCorpusSpec*")
         exclude("**/ErrorReferenceSpec*")
@@ -116,7 +138,9 @@ tasks.register<Test>("corpusKotlin") {
     classpath = sourceSets["test"].runtimeClasspath
     filter.includeTestsMatching("*KotlinCorpusSpec")
     filter.includeTestsMatching("*KotlinErrorReferenceSpec")
+    filter.includeTestsMatching("*KotlinClientCorpusSpec")
     systemProperty("corpus.kotlin.errors.dir", layout.buildDirectory.dir("corpus-kotlin-errors").get().asFile.absolutePath)
+    systemProperty("corpus.kotlin.client.dir", layout.buildDirectory.dir("corpus-kotlin-client").get().asFile.absolutePath)
     systemProperty("corpus.gradle-user-home", gradle.gradleUserHomeDir.absolutePath)
     systemProperty("corpus.micronaut.platform", libs.versions.micronaut.platform.get())
     systemProperty("corpus.kotlin.version", pluginPin("org.jetbrains.kotlin.jvm"))
