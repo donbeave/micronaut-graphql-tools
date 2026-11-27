@@ -1,0 +1,5 @@
+query FindNames($contains: String!) {
+  searchProfile(contains: $contains) {
+    ...ProfileName
+  }
+}

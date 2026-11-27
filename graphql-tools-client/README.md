@@ -7,8 +7,10 @@ Gradle project `:micronaut-graphql-tools-client`, folder `graphql-tools-client/`
 
 The GraphQL client of the library for Micronaut 4: the runtime that an application uses to call a GraphQL server. The module
 holds the packages, the dependencies, the check that keeps the server stack out and the annotations of the declarative client
-(`@GraphQLClient`, `@GraphQLOperation` and `@GraphQLVariable`, described in the guide page Client). The types of a call (request, response, error, exceptions) and the Serde codec of the wire format are here too. The low-level client, `GraphQLHttpClient`, is here: reactive, `CompletableFuture` and blocking calls over the Micronaut HTTP client, an injection-point factory (`@Inject @GraphQLClient("id") GraphQLHttpClient`), the classification of responses and GET queries. The runtime that
-implements a client interface arrives with the client phases.
+(`@GraphQLClient`, `@GraphQLOperation` and `@GraphQLVariable`, described in the guide page Client). The types of a call (request, response, error, exceptions) and the Serde codec of the wire format are here too. The low-level client, `GraphQLHttpClient`, is here: reactive, `CompletableFuture` and blocking calls over the Micronaut HTTP client, an injection-point factory (`@Inject @GraphQLClient("id") GraphQLHttpClient`), the classification of responses and GET queries. The declarative client is here too:
+`GraphQLClientIntroductionAdvice` is the Micronaut introduction advice of an interface annotated with `@GraphQLClient`. It implements each method that carries
+`@GraphQLOperation` from a plan that it builds on the first call (the compiled operation that the processor wrote, and the signature of the method), and leaves
+any other method to the Micronaut HTTP client.
 
 ## Responsibility
 
@@ -33,8 +35,8 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 | `io.micronaut.graphql.tools.client` | Public API | The low-level client, the request, response, error, operation type, media types and request attributes |
 | `...client.annotation` | Public API | `GraphQLClient`, `GraphQLOperation` and `GraphQLVariable` |
 | `...client.exceptions` | Public API | The exceptions of a client call |
-| `...client.internal` | Internal | The call path (the implementation of `GraphQLHttpClient`, the response classifier and the factory of the injection points), the startup check for Micronaut Serialization and `GraphQLOperationMetadata`, the annotation that the compile-time visitor writes on an operation method |
-| `...client.internal.serde` | Internal | The Serde codec of the request and the response envelope |
+| `...client.internal` | Internal | The call path (the implementation of `GraphQLHttpClient`, the response classifier and the factory of the injection points), the introduction advice of the declarative client with its per-method `OperationPlan`, the startup check for Micronaut Serialization and `GraphQLOperationMetadata`, the annotation that the compile-time visitor writes on an operation method |
+| `...client.internal.serde` | Internal | The Serde codec of the request, with the array-backed request of a declarative call, and of the response envelope |
 | `...client.internal.ws` | Internal | The WebSocket transport, present with the Micronaut WebSocket client |
 
 ## Who uses it
@@ -62,5 +64,5 @@ Run from the repository root:
 ./gradlew :micronaut-graphql-tools-client:check
 ```
 
-The module compiles with `--release 17`, so the check also runs on JDK 17. The Spock specs run the codec on Micronaut Serialization, and `GraphQLHttpClientSpec` runs the client against a stub server on an embedded Netty server (the matrix of statuses by body kind, the POST and GET requests, the filters, the discovery by service id, the timeouts and the blocking call on an event loop). `ClientAnnotationsSpec` checks that the aliases of `@GraphQLClient` resolve to `@Client`. `checkNoGraphQLJava` runs as
+The module compiles with `--release 17`, so the check also runs on JDK 17. The Spock specs run the codec on Micronaut Serialization, and `GraphQLHttpClientSpec` runs the client against a stub server on an embedded Netty server (the matrix of statuses by body kind, the POST and GET requests, the filters, the discovery by service id, the timeouts and the blocking call on an event loop). `ClientAnnotationsSpec` checks that the aliases of `@GraphQLClient` resolve to `@Client`. `DeclarativeClientSpec` runs declarative clients, with hand-written compiled operations, against an echo server: every return type, the variables and their encoding, headers and cookies, GET, errors, Micronaut Retry, a filter by service id and the refusals of an unsupported signature. The end-to-end run, with the compiled operations that the processor writes, is `DeclarativeLibraryClientTest` in `test-suite-serde`. `checkNoGraphQLJava` runs as
 part of `check`.

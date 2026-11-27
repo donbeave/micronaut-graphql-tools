@@ -25,10 +25,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RecordingFilter {
 
     static final AtomicInteger CALLS = new AtomicInteger();
+    static volatile String lastTrace;
+    static volatile String lastDeclared;
 
     @RequestFilter
     public void filter(MutableHttpRequest<?> request) {
         CALLS.incrementAndGet();
         request.header("X-Filter", "ran");
+        lastTrace = request.getHeaders().get("X-Trace");
+        lastDeclared = request.getHeaders().get("X-Declared");
     }
 }

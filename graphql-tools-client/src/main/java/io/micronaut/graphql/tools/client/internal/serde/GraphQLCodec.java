@@ -37,6 +37,7 @@ import java.util.Map;
 public final class GraphQLCodec {
 
     private static final Argument<Map<String, Object>> MAP = Argument.mapOf(String.class, Object.class);
+    private static final Argument<OperationRequest> OPERATION = Argument.of(OperationRequest.class);
 
     private final ObjectMapper mapper;
 
@@ -63,6 +64,20 @@ public final class GraphQLCodec {
     }
 
     /**
+     * Encodes the call of a declarative client as the JSON body of an HTTP request.
+     *
+     * @param request the call
+     * @return the body
+     */
+    public byte[] encode(OperationRequest request) {
+        try {
+            return mapper.writeValueAsBytes(OPERATION, request);
+        } catch (IOException e) {
+            throw new GraphQLClientException(GraphQLClientException.DECODE_ERROR, "The request cannot be encoded: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Encodes the variables or the extensions of a request as the JSON text of a URL parameter.
      *
      * @param value the map
@@ -77,6 +92,18 @@ public final class GraphQLCodec {
     }
 
     /**
+     * Returns the type that {@link #decode(byte[], Argument, boolean)} reads a response as. A caller that decodes many responses
+     * of one type creates it once.
+     *
+     * @param dataType the type of the {@code data}, or of the root field when it is unwrapped
+     * @param unwrap   whether the {@code data} is an object with one root field and the result is the value of that field
+     * @return the type of the response
+     */
+    public Argument<?> responseType(Argument<?> dataType, boolean unwrap) {
+        return unwrap ? Argument.of(UnwrappedResponse.class, dataType) : Argument.of(GraphQLResponse.class, dataType);
+    }
+
+    /**
      * Decodes a response.
      *
      * @param body     the JSON body
@@ -86,11 +113,7 @@ public final class GraphQLCodec {
      */
     @SuppressWarnings("unchecked")
     public <D> GraphQLResponse<D> decode(byte[] body, Argument<D> dataType) {
-        try {
-            return (GraphQLResponse<D>) mapper.readValue(body, Argument.of(GraphQLResponse.class, dataType));
-        } catch (IOException e) {
-            throw decodeFailure(e);
-        }
+        return (GraphQLResponse<D>) decode(body, responseType(dataType, false), false);
     }
 
     /**
@@ -103,8 +126,21 @@ public final class GraphQLCodec {
      */
     @SuppressWarnings("unchecked")
     public <D> GraphQLResponse<D> decodeUnwrapped(byte[] body, Argument<D> dataType) {
+        return (GraphQLResponse<D>) decode(body, responseType(dataType, true), true);
+    }
+
+    /**
+     * Decodes a response as a type that {@link #responseType(Argument, boolean)} made.
+     *
+     * @param body         the JSON body
+     * @param responseType the type of the response
+     * @param unwrap       the {@code unwrap} that made the type
+     * @return the response
+     */
+    public GraphQLResponse<?> decode(byte[] body, Argument<?> responseType, boolean unwrap) {
         try {
-            return ((UnwrappedResponse<D>) mapper.readValue(body, Argument.of(UnwrappedResponse.class, dataType))).response();
+            Object decoded = mapper.readValue(body, responseType);
+            return unwrap ? ((UnwrappedResponse<?>) decoded).response() : (GraphQLResponse<?>) decoded;
         } catch (IOException e) {
             throw decodeFailure(e);
         }
