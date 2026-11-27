@@ -1,0 +1,1 @@
+client-variable-type example.BookClient#books(example.Genre) inline:1:13

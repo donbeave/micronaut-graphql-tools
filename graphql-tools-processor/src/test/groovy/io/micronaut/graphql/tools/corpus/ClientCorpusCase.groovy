@@ -117,10 +117,13 @@ final class ClientCorpusCase {
         return list(root).collectMany { Path entry -> walk(entry) }.findAll { it.fileName.toString().endsWith(language.extension) }
     }
 
-    /** @return the binary names of the client interfaces: one per source file, as the files are named after the interface they hold */
+    /**
+     * @return the binary names of the client interfaces: one per source file that is annotated with {@code @GraphQLClient}, as the files are
+     * named after the interface they hold; the other files are the types that the interfaces use (a record of a variable, an enum)
+     */
     List<String> clients(Language language) {
         Path root = dir.resolve(language.dir)
-        return sources(language).collect { root.relativize(it).toString().replace(File.separator, '.').replaceFirst(/\.[a-z]+$/, '') }.sort()
+        return sources(language).findAll { Files.readString(it).contains('@GraphQLClient') }.collect { root.relativize(it).toString().replace(File.separator, '.').replaceFirst(/\.[a-z]+$/, '') }.sort()
     }
 
     boolean hasTag(String tag) {

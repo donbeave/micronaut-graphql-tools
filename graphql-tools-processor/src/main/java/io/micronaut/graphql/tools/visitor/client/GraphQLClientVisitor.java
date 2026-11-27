@@ -24,9 +24,12 @@ import io.micronaut.graphql.tools.binding.internal.client.ClientOperations;
 import io.micronaut.graphql.tools.binding.internal.client.ClientOutcome;
 import io.micronaut.graphql.tools.binding.internal.client.ClientRequest;
 import io.micronaut.graphql.tools.binding.internal.client.ClientRules;
+import io.micronaut.graphql.tools.binding.internal.client.method.ClientScalars;
 import io.micronaut.graphql.tools.binding.internal.client.ClientSchemaBuilder;
+import io.micronaut.graphql.tools.binding.internal.client.method.ClientVariableRules;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 import io.micronaut.graphql.tools.binding.internal.finding.FindingRenderer;
+import io.micronaut.graphql.tools.visitor.ClientElements;
 import io.micronaut.graphql.tools.visitor.ModuleOwnership;
 import io.micronaut.graphql.tools.visitor.ProcessorOptions;
 import io.micronaut.inject.ast.ClassElement;
@@ -116,8 +119,10 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
             return;
         }
         List<String> mutations = new ArrayList<>();
+        // the custom scalars that this client has mapped so far: one client reads a scalar as one Java type
+        ClientScalars scalars = new ClientScalars();
         for (MethodElement method : element.getEnclosedElements(ElementQuery.ALL_METHODS.onlyDeclared())) {
-            if (method.hasDeclaredAnnotation(OPERATION) && visitOperation(current, element, method, context)) {
+            if (method.hasDeclaredAnnotation(OPERATION) && visitOperation(current, element, method, scalars, context)) {
                 mutations.add(member(method));
             }
         }
@@ -128,7 +133,8 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
     }
 
     // whether the method is an operation that was resolved and is a mutation
-    private boolean visitOperation(Compilation current, ClassElement client, MethodElement method, VisitorContext context) {
+    private boolean visitOperation(Compilation current, ClassElement client, MethodElement method, ClientScalars scalars,
+                                   VisitorContext context) {
         try {
             ClientRequest request = new ClientRequest(member(method), method.getName(),
                     client.getAnnotationMetadata().stringValue(CLIENT, "schema").orElse(""),
@@ -142,7 +148,15 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
             }
             ClientOperation operation = outcome.operation();
             if (operation != null && outcome.findings().isEmpty()) {
-                write(method, operation);
+                List<Finding> rules = ClientVariableRules.check(current.elements.method(method, request.member()), operation,
+                        current.elements.model(), scalars);
+                for (Finding finding : rules) {
+                    current.findings++;
+                    context.fail(FindingRenderer.render(finding), method);
+                }
+                if (rules.isEmpty()) {
+                    write(method, operation);
+                }
             }
             // a mutation that fails for another reason still counts for the retry rule: its type was selected
             return MUTATION.equals(outcome.selectedType());
@@ -215,6 +229,7 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
         final ProcessorOptions options;
         final boolean checks;
         final VisitorContext context;
+        final ClientElements elements = new ClientElements();
         // built on the first operation: a compilation with no client reads no directory
         @Nullable
         ClientOperations built;

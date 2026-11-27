@@ -1,0 +1,1 @@
+client-variable-missing example.BookClient#book() inline:1:12

@@ -25,7 +25,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 final class ClientCodeScenarios {
 
-    static final String SCHEMA = 'type Query {\n  book(id: ID!): Book\n  version: String\n}\ntype Mutation {\n  save(title: String!): Book\n}\ntype Book {\n  id: ID!\n  title: String\n}\n'
+    static final String SCHEMA = 'type Query {\n  book(id: ID!): Book\n  at(moment: DateTime): String\n  version: String\n}\nscalar DateTime\ntype Mutation {\n  save(title: String!): Book\n}\ntype Book {\n  id: ID!\n  title: String\n}\n'
 
     /** The scenarios and the code that each one raises. */
     static final Map<String, String> CODES = [
@@ -37,6 +37,10 @@ final class ClientCodeScenarios {
             'document-too-large' : 'client-document-too-large',
             'get-mutation'       : 'client-get-mutation',
             'retry-mutation'     : 'client-retry-mutation',
+            'variable-missing'   : 'client-variable-missing',
+            'variable-type'      : 'client-variable-type',
+            'parameter-unbound'  : 'client-parameter-unbound',
+            'scalar-conflict'    : 'client-scalar-conflict',
     ]
 
     private static final String CLIENT = '''package example;
@@ -48,10 +52,15 @@ import io.micronaut.retry.annotation.Retryable;
 %s@GraphQLClient(schema = "%s")
 public interface BookClient {
 
-    @GraphQLOperation(%s)
-    String book(%s);
-
+%s
 }'''
+
+    private static final String METHOD = '''    @GraphQLOperation(%s)
+    String %s(%s);
+'''
+
+    private static final String BOOK = 'query Book($id: ID!) { book(id: $id) { title } }'
+
 
     private ClientCodeScenarios() {
     }
@@ -66,6 +75,7 @@ public interface BookClient {
         String typeAnnotations = ''
         String arguments = null
         String parameters = ''
+        String methods = null
         switch (scenario) {
             case 'schema-missing':
                 schema = 'library'
@@ -97,11 +107,26 @@ public interface BookClient {
                 typeAnnotations = '@Retryable\n'
                 parameters = 'String title'
                 break
+            case 'variable-missing':
+                operation = BOOK
+                break
+            case 'variable-type':
+                operation = BOOK
+                parameters = 'int id'
+                break
+            case 'parameter-unbound':
+                operation = BOOK
+                parameters = 'String id, int limit'
+                break
+            case 'scalar-conflict':
+                methods = String.format(METHOD, '"query At($moment: DateTime) { at(moment: $moment) }"', 'at', 'java.time.Instant moment') + '\n' +
+                        String.format(METHOD, '"query Again($moment: DateTime) { at(moment: $moment) }"', 'atAgain', 'String moment')
+                break
             default:
                 throw new IllegalArgumentException('no scenario ' + scenario)
         }
         JavaParserCompilation compilation = new JavaParserCompilation().clientFile('books/schema.graphqls', schemaText)
-                .source('example.BookClient', String.format(CLIENT, typeAnnotations, schema, arguments ?: '"' + operation + '"', parameters))
+                .source('example.BookClient', String.format(CLIENT, typeAnnotations, schema, methods ?: String.format(METHOD, arguments ?: '"' + operation + '"', 'book', parameters)))
         files.each { path, text -> compilation.clientFile(path, text) }
         if (!checks) {
             compilation.option(ProcessorOptions.CLIENT_CHECKS, 'false')
