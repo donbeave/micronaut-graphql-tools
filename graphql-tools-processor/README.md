@@ -9,10 +9,11 @@ The compile-time checks. The annotation processor reads the schema files while `
 fails the build on drift that the startup would otherwise report, for example an object type that nothing reachable
 returns. Each error names the schema coordinate and the schema file line. The guide page is `src/main/docs/guide/compileTime.adoc`.
 
-The compile-time engine is a `TypeElementVisitor` (`GraphQLToolsVisitor`, package `io.micronaut.graphql.tools.visitor`), registered in
-`META-INF/services/io.micronaut.inject.visitor.TypeElementVisitor` of the jar. The jar holds that service file and no other
+The compile-time engine is two `TypeElementVisitor`s, `GraphQLToolsVisitor` (package `io.micronaut.graphql.tools.visitor`, the checks of the
+resolvers) and `GraphQLClientVisitor` (package `io.micronaut.graphql.tools.visitor.client`, the checks of the operations of a declarative
+client), both registered in `META-INF/services/io.micronaut.inject.visitor.TypeElementVisitor` of the jar. The jar holds that service file and no other
 (`RegistrationSpec`): it registers no `javax.annotation.processing.Processor` and no
-`META-INF/gradle/incremental.annotation.processors`, so the visitor is the one compile-time engine of a build.
+`META-INF/gradle/incremental.annotation.processors`, so the two visitors are the compile-time engine of a build.
 
 ## Responsibility
 
@@ -25,13 +26,21 @@ The visitor (package `io.micronaut.graphql.tools.visitor`):
   failures (the arguments, the input classes and enums they reach, the return type), then the strict checks, which the
   startup runs only after a binding that failed nowhere. It keeps its state per `start()`, looks up no class by name, asks for no project directory (it reads the class output only to compare it with `module.dir`) and
   writes no file (`VisitorArchitectureSpec`).
-- `ProcessorOptions`: the six options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
+- `GraphQLClientVisitor` (package `...visitor.client`): an isolating `TypeElementVisitor` that checks each method that carries
+  `@GraphQLOperation` in a `@GraphQLClient` type. It declares its two annotations by name (the module does not depend on the client), takes the document of the
+  method (inline, or an operation of the client directory), asks `graphql-tools-binding` (`binding.internal.client`) to assemble and validate it, writes the
+  result as `GraphQLOperationMetadata` on the method with `Element#annotate`, and reports each finding with its code, the method and the position in the document. The rules live in the
+  binding module so that the code generator can reuse them. It builds the client schema on a thread with a large stack and keeps its state per `start()`, like the other visitor (`VisitorArchitectureSpec` covers both).
+- `ProcessorOptions`: the eight options, `micronaut.graphql.tools.processor.schema.dirs` (directories joined with the path
   separator), `micronaut.graphql.tools.processor.module.dir` (the directory of the module that sets `schema.dirs`, see
   "Resolvers in several modules"), `micronaut.graphql.tools.processor.checks` (`true` or `false`),
   `micronaut.graphql.tools.processor.resolver.accessor.prefixes` (`true` or `false`, the runtime
   `resolver-accessor-prefixes`; camel case because `javac` rejects a hyphen in an option name),
   `micronaut.graphql.tools.processor.loose.nullability` (`fail`, `warn` or `ignore`, what a Kotlin type that is stricter than the schema type is) and
-  `micronaut.graphql.tools.processor.type.class.convention` (the runtime `type-class-convention`). An unknown key under
+  `micronaut.graphql.tools.processor.type.class.convention` (the runtime `type-class-convention`),
+  `micronaut.graphql.tools.processor.client.dirs` (the directories of the client schemas, one subdirectory each, the name `server` reads `schema.dirs`) and
+  `micronaut.graphql.tools.processor.client.checks` (`true` or `false`, whether the client operations are validated). The record is read by both
+  visitors, so one place validates every option and reports an error once. An unknown key under
   `micronaut.graphql.tools.processor.` is an error; a runtime key that is present as a system property is not.
 - `CheckedSchema`: reads the schema once per compilation, on the first class that is checked.
 - `ElementTypeModel`: the adapter of the type model over `ClassElement` and `MethodElement`; the properties of an input class
@@ -101,7 +110,8 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 
 | Package | Audience | Holds |
 | --- | --- | --- |
-| `io.micronaut.graphql.tools.visitor` | Compiler plug-in | The compile-time `TypeElementVisitor`; loaded by the compiler, never imported |
+| `io.micronaut.graphql.tools.visitor` | Compiler plug-in | The compile-time `TypeElementVisitor` of the resolvers; loaded by the compiler, never imported |
+| `io.micronaut.graphql.tools.visitor.client` | Compiler plug-in | The compile-time `TypeElementVisitor` of the client operations; loaded by the compiler, never imported |
 
 ## Who uses it
 
@@ -116,10 +126,11 @@ can run the per-class rules over compiler elements without a class in this packa
 
 ## Relation to other modules
 
-- Depends on `graphql-tools-binding` (`implementation`): the schema reader (`SchemaSources`, `SchemaSourceException`).
+- Depends on `graphql-tools-binding` (`implementation`): the schema reader (`SchemaSources`, `SchemaSourceException`) and the client rules (`binding.internal.client`).
 - Depends on `graphql-java` (`implementation`).
 - Tests depend on `graphql-tools` (`testImplementation`): the binding corpus runs each case through the runtime binder and
-  the compile-time binder and compares their verdicts.
+  the compile-time binder and compares their verdicts. They depend on `graphql-tools-client` as well (`testImplementation`), for the annotations
+  that the client visitor reads and the metadata annotation it writes; the processor itself never depends on the client.
 - Used by `test-suite-java` (`annotationProcessor`), `test-suite-kotlin` (`ksp`) and `test-suite-groovy` (`compileOnly`); each has
   a `src/driftFixture` source set whose compilation must fail (`driftFixtureTest`). `test-suite-build` applies the visitor in sample projects (the options, the schema
   directory as a task input, the build cache) and builds them with Gradle TestKit.
@@ -133,8 +144,8 @@ The module compiles with `--release 17`, like the other library modules, and `ch
 ./gradlew :micronaut-graphql-tools-processor:check
 ```
 
-`check` runs the unit tests (the visitor under javac in process: `GraphQLToolsVisitorSpec`, `ProcessorOptionsSpec`,
-`ContractsGateSpec`), the binding corpus (`BindingCorpusSpec`, about 70 seconds on the default graphql-java
+`check` runs the unit tests (the visitors under javac in process: `GraphQLToolsVisitorSpec`, `GraphQLClientVisitorSpec`, `ProcessorOptionsSpec`,
+`ContractsGateSpec`; `ClientErrorReferenceSpec` compares the client examples of the error reference with the compile errors), the binding corpus (`BindingCorpusSpec`, about 70 seconds on the default graphql-java
 leg), `ParitySpec` (the soundness and completeness rules and the exception list), `ProcessorOptionsDocsSpec` (it fails when a compile-time option is not named in the options page) and
 `checkNoRuntimeDependency`. The floor and ceiling legs skip the corpus.
 

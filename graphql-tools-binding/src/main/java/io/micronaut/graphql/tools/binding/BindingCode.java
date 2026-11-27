@@ -261,7 +261,28 @@ public enum BindingCode {
             "The configured schema directory has no schema file."),
     /** Compile-time failure: an internal error of the processor. */
     PROCESSOR_INTERNAL_ERROR("processor-internal-error", false, true,
-            "The processor failed with an internal error.");
+            "The processor failed with an internal error."),
+
+    /** Compile-time failure: the client schema of a client has no directory, or the client directories are not set. */
+    CLIENT_SCHEMA_MISSING("client-schema-missing", false, true,
+            "The client schema that a GraphQL client names does not exist: its directory is missing, or the client directories "
+                    + "are not configured."),
+    /** Compile-time failure: a client schema cannot be parsed, merged or built. */
+    CLIENT_SCHEMA_INVALID("client-schema-invalid", false, true,
+            "A client schema cannot be parsed, merged or built."),
+    /** Compile-time failure: a client operation names no operation of its document or of the client directory. */
+    CLIENT_OPERATION_NOT_FOUND("client-operation-not-found", false, true,
+            "A GraphQL client operation selects an operation that its document or the client directory does not define."),
+    /** Compile-time failure: a client operation selects several operations. */
+    CLIENT_OPERATION_AMBIGUOUS("client-operation-ambiguous", false, true,
+            "A GraphQL client operation selects several operations: its document defines more than one, or the client "
+                    + "directory defines the name twice."),
+    /** Compile-time failure: a client document does not parse or does not validate against its schema. */
+    CLIENT_DOCUMENT_INVALID("client-document-invalid", false, true,
+            "A GraphQL client document is not valid GraphQL, or does not validate against the client schema."),
+    /** Compile-time failure: the assembled client document does not fit in the annotation metadata. */
+    CLIENT_DOCUMENT_TOO_LARGE("client-document-too-large", false, true,
+            "The assembled document of a GraphQL client operation is too large to be stored in the annotation metadata.");
 
     private static final Map<String, BindingCode> BY_CODE;
 

@@ -185,6 +185,77 @@ public class QueryResolver {
                 .compile().success
     }
 
+    def "the client options are read, and an unknown key under the client segment is an unknown option, reported once"() {
+        expect:
+        ProcessorOptions.read([:]).clientChecks()
+        ProcessorOptions.read([:]).clientDirs().empty
+        !ProcessorOptions.read([(ProcessorOptions.CLIENT_CHECKS): 'off']).clientChecks()
+        ProcessorOptions.read([(ProcessorOptions.CLIENT_DIRS): "a${File.pathSeparator}b".toString()]).clientDirs()*.toString() == ['a', 'b']
+
+        when:
+        def result = compilation().option('micronaut.graphql.tools.processor.client.dir', '/x').compile()
+
+        then:
+        !result.success
+        result.findings == ['[processor-option-unknown] -']
+        result.errors[0].contains(ProcessorOptions.CLIENT_DIRS)
+        result.errors[0].contains(ProcessorOptions.CLIENT_CHECKS)
+    }
+
+    def "a client.checks value that is not a boolean, and a client directory that is not a path, are option errors, reported once"() {
+        when:
+        def result = compilation().option(ProcessorOptions.CLIENT_CHECKS, 'maybe').compile()
+        def options = ProcessorOptions.read([(ProcessorOptions.CLIENT_DIRS): "ok${File.pathSeparator}bad\u0000path".toString()])
+
+        then:
+        result.findings == ['[processor-option-invalid] -']
+        result.errors[0].contains(ProcessorOptions.CLIENT_CHECKS)
+        options.errors()*.code() == ['processor-option-invalid']
+        options.errors()[0].sentence().contains(ProcessorOptions.CLIENT_DIRS)
+        options.clientDirs()*.toString() == ['ok']
+    }
+
+    def "a client whose options are wrong is not checked, and the build fails on the option alone"() {
+        when:
+        def result = new VisitorCompilation().option(ProcessorOptions.CLIENT_CHECKS, 'maybe')
+                .clientFile('books/schema.graphqls', 'type Query { version: String }')
+                .source('example.BookClient', '''
+package example;
+import io.micronaut.graphql.tools.client.annotation.*;
+@GraphQLClient(schema = "books")
+public interface BookClient {
+    @GraphQLOperation("{ notInTheSchema }")
+    String version();
+}''').compile()
+
+        then:
+        result.findings == ['[processor-option-invalid] -']
+    }
+
+    def "the client visitor guards the client directories with the module marker, as the resolver visitor guards the schema"() {
+        given:
+        def other = java.nio.file.Files.createTempDirectory('client-other-module')
+
+        when:
+        def result = new VisitorCompilation().option(ProcessorOptions.MODULE_DIR, other.toString())
+                .clientFile('books/schema.graphqls', 'type Query { version: String }')
+                .source('example.BookClient', '''
+package example;
+import io.micronaut.graphql.tools.client.annotation.*;
+@GraphQLClient(schema = "books")
+public interface BookClient {
+    @GraphQLOperation("{ version }")
+    String version();
+}''').compile()
+
+        then:
+        result.findings == ['[client-schema-missing] example.BookClient#version()']
+        result.errors[0].contains('an earlier compilation of the same JVM')
+
+        cleanup:
+        other.toFile().deleteDir()
+    }
+
     def "a directory that does not exist, and a directory without a schema file, fail the build"() {
         when:
         def missing = new VisitorCompilation().withoutSchemaOption().option(ProcessorOptions.SCHEMA_DIRS, '/no/such/dir')

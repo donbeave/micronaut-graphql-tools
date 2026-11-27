@@ -29,15 +29,33 @@ import io.micronaut.core.annotation.Nullable;
  * @param declaredIn     the binary name of the contract that declares an inherited member, or {@code null}
  * @param schemaLocation where the schema defines the coordinate, or {@code null}
  * @param fix            the change or hatch that resolves it, or {@code null}
+ * @param documentLocation where a client document has the problem, or {@code null}
  */
 @Internal
 public record Finding(String code, @Nullable String coordinate, String sentence, @Nullable String member,
-                      @Nullable String declaredIn, @Nullable SchemaLocation schemaLocation, @Nullable String fix) {
+                      @Nullable String declaredIn, @Nullable SchemaLocation schemaLocation, @Nullable String fix,
+                      @Nullable DocumentLocation documentLocation) {
 
     public Finding {
         if (BindingCode.fromCode(code) == null) {
             throw new IllegalArgumentException("Not a code of the registry: " + code);
         }
+    }
+
+    /**
+     * A finding that has no position in a client document.
+     *
+     * @param code           the code of the registry
+     * @param coordinate     the schema coordinate, or {@code null} when the finding has none
+     * @param sentence       one sentence that says what is wrong
+     * @param member         the Java member, or {@code null}
+     * @param declaredIn     the binary name of the contract that declares an inherited member, or {@code null}
+     * @param schemaLocation where the schema defines the coordinate, or {@code null}
+     * @param fix            the change or hatch that resolves it, or {@code null}
+     */
+    public Finding(String code, @Nullable String coordinate, String sentence, @Nullable String member,
+                   @Nullable String declaredIn, @Nullable SchemaLocation schemaLocation, @Nullable String fix) {
+        this(code, coordinate, sentence, member, declaredIn, schemaLocation, fix, null);
     }
 
     /**

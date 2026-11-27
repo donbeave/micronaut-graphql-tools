@@ -22,6 +22,7 @@ The module owns, under `io.micronaut.graphql.tools.binding.internal`:
 - `finding/`: findings and how they are rendered.
 - `manifest/`: the binding manifest renderer and the schema hash.
 - `meta/`: resolver contracts.
+- `client/`: the compile-time rules of the GraphQL client. `ClientDirectories` is the layout of the client directories (one subdirectory per client schema, the reserved name `server`), `ClientDocuments` parses a document and indexes the `*.graphql` files, `ClientSchemaBuilder` builds a client schema on a thread with a large stack, and `ClientOperations` selects an operation, assembles it with the fragments it uses, validates it and returns a `ClientOperation` or findings. The processor writes the result into the annotation metadata and the code generator reuses it, so the document and its mode are the same in both.
 
 `io.micronaut.graphql.tools.binding.BindingCode` is the registry of the codes of the startup and compile-time failures.
 
@@ -35,6 +36,7 @@ Each package has a `package-info.java`. All packages below `internal` are implem
 | Package | Audience | Holds |
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.binding` | Public API | `BindingCode` |
+| `...binding.internal.client` | Internal | The rules of the client: the client directories, the assembly of an operation document and its validation against a client schema |
 | `...binding.internal.finding` | Internal | Findings and their rendering |
 | `...binding.internal.manifest` | Internal | The manifest renderer and the schema hash |
 | `...binding.internal.membership` | Internal | The rule that a union or interface member is not mapped to a disjoint class |
