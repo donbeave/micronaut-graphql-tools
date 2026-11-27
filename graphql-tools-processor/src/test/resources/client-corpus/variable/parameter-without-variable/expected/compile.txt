@@ -1,0 +1,3 @@
+client-parameter-unbound example.BookClient#book(java.lang.String,int) -
+client-parameter-unbound example.BookClient#queried(java.lang.String,java.lang.String) -
+client-parameter-unbound example.BookClient#tagged(java.lang.String,java.lang.String) -

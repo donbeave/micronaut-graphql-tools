@@ -141,8 +141,9 @@ public final class ClientOperations {
             return ClientOutcome.failed(findings);
         }
         OperationDefinition operation = selected.operation;
+        GraphQLSchema schema = null;
         if (checks) {
-            GraphQLSchema schema = schema(request, state, findings);
+            schema = schema(request, state, findings);
             if (schema == null) {
                 return ClientOutcome.failed(findings);
             }
@@ -172,7 +173,8 @@ public final class ClientOperations {
         }
         operations++;
         return ClientOutcome.of(new ClientOperation(document, operation.getName() == null ? "" : operation.getName(),
-                operation.getOperation().name().toLowerCase(Locale.ROOT), variables(operation), payload(operation, fragments)));
+                operation.getOperation().name().toLowerCase(Locale.ROOT), variables(operation), payload(operation, fragments),
+                operation, fragments, schema));
     }
 
     private Selected selectInline(ClientRequest request) {

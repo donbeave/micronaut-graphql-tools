@@ -1,0 +1,1 @@
+client-variable-type example.BookClient#book(java.util.Optional) inline:1:12

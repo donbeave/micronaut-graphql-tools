@@ -267,6 +267,17 @@ A value of an interface or a union is decoded as one of the object types that im
 
 `@GraphQLOperation(method = GET)` sends a query in the URL, so an operation that is a mutation or a subscription with `method = GET` fails with `[client-get-mutation]`. A retry annotation of Micronaut (`@Retryable`, `@CircuitBreaker`) on the interface applies to every method of it, so an interface that carries one and declares a mutation fails with `[client-retry-mutation]`: the retry would repeat a mutation whose response was lost. A retry annotation on a single method is a decision about that method and is accepted. Both checks run with the checks switched off, because the operation type comes from the document that is always parsed.
 
+=== Parameters and variables
+
+A parameter of an operation method is one of three things: a variable of the operation, bound by its name or by `@GraphQLVariable`, a header (`@Header`), or a cookie (`@CookieValue`). A parameter bound by any other HTTP annotation, a parameter that names a variable the operation does not declare, and two parameters for one variable fail with `[client-parameter-unbound]`; the runtime refuses such a method at its first call, and this rule moves the failure to the build, whatever `client.checks` says.
+
+With the checks on, the variables of the operation are matched with the parameters:
+
+* A variable that is non-null and has no default value needs a parameter, or the build fails with `[client-variable-missing]`. A nullable variable and one with a default need none; they are left out of the request.
+* The declared type of a parameter fits the type of its variable, or the build fails with `[client-variable-type]`. A scalar is looked up in the scalar catalog (`Int` takes `int` and `Integer`, `Float` takes `float` and `double`, `ID` and `String` take `String`, `Instant` takes `java.time.Instant`, and so on), a list needs an array, a `List`, a `Set` or another `Collection`, an enum needs a Java enum all of whose constants are values of the schema enum (or a `String`), and an input object needs a class, a record or a data class with a property for each required field and no property that is not a field (`@JsonProperty` renames a property, `@JsonIgnore` leaves it out). An `Optional`, or a nullable Kotlin type, at a non-null variable fails too, because it could send `null`. A `Map` or an `Object` is accepted at any position and not checked.
+
+A scalar that the catalog does not know, such as `DateTime`, is mapped by the Java type that the position declares, and one client interface must map it to one type: the second use with another type fails with `[client-scalar-conflict]`.
+
 [[clientMetadata]]
 === Metadata
 
@@ -305,13 +316,25 @@ A finding carries a code, the method as `binary.Name#method(parameter types)`, t
 
 | `client-retry-mutation`
 | An interface with a type-level retry annotation declares a mutation.
+
+| `client-variable-missing`
+| A variable that is non-null and has no default has no parameter.
+
+| `client-variable-type`
+| The declared type of a parameter does not fit the type of its variable.
+
+| `client-parameter-unbound`
+| A parameter binds no variable, is bound by an unsupported HTTP annotation, or binds a variable that another parameter binds.
+
+| `client-scalar-conflict`
+| One client maps a custom scalar to two Java types.
 |===
 
 Each code is described on the <<exceptions,Exceptions>> page.
 
 === Switching the checks off
 
-`micronaut.graphql.tools.processor.client.checks=false`, or `micronaut.graphql.tools.processor.checks=false` for the whole compilation, builds no schema and validates nothing. Every operation is still parsed and assembled, because the runtime needs its type, its variables and its payload mode, so a document that does not parse still fails the build. The processor prints one note.
+`micronaut.graphql.tools.processor.client.checks=false`, or `micronaut.graphql.tools.processor.checks=false` for the whole compilation, builds no schema and validates nothing. Every operation is still parsed and assembled, because the runtime needs its type, its variables and its payload mode, so a document that does not parse still fails the build, and so do the rules that need no schema: `client-get-mutation`, `client-retry-mutation` and `client-parameter-unbound`. The processor prints one note.
 
 === What is checked once
 

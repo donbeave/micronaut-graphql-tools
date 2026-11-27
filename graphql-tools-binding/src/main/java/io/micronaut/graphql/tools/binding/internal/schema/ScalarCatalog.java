@@ -113,7 +113,55 @@ public final class ScalarCatalog {
             .flatMap(Set::stream)
             .collect(Collectors.toSet());
 
+    private static final Map<String, String> BOXES = Map.of("boolean", "java.lang.Boolean", "byte", "java.lang.Byte",
+            "char", "java.lang.Character", "double", "java.lang.Double", "float", "java.lang.Float", "int", "java.lang.Integer",
+            "long", "java.lang.Long", "short", "java.lang.Short");
+
     private ScalarCatalog() {
+    }
+
+    /**
+     * @param scalarName the name of a scalar
+     * @return whether the catalog maps the scalar to Java classes: a GraphQL built-in, a built-in extension or a standard scalar
+     */
+    public static boolean isKnown(@NonNull String scalarName) {
+        ArgumentUtils.requireNonNull("scalarName", scalarName);
+        return SYSTEM_TYPES.containsKey(scalarName) || STANDARD_SCALARS.containsKey(scalarName);
+    }
+
+    /**
+     * The same question as {@link #acceptsReturnClass(String, Class)}, asked by name, for the compile-time checks, which hold the
+     * name of a class and never the class. A primitive and its wrapper are the same class here, and the scalar {@code JSON} takes
+     * any class.
+     *
+     * @param scalarName the name of a scalar of the catalog
+     * @param className  the binary name of the Java class, or of a primitive
+     * @return whether the scalar accepts the class
+     */
+    public static boolean acceptsClassName(@NonNull String scalarName, @NonNull String className) {
+        ArgumentUtils.requireNonNull("scalarName", scalarName);
+        ArgumentUtils.requireNonNull("className", className);
+        Set<Class<?>> supported = SYSTEM_TYPES.get(scalarName);
+        if (supported != null) {
+            return supported.stream().anyMatch(it -> it.getName().equals(className))
+                    || "String".equals(scalarName) && GSTRING.equals(className);
+        }
+        Class<?> standard = STANDARD_SCALARS.get(scalarName);
+        return standard != null && (standard == Object.class || standard.getName().equals(BOXES.getOrDefault(className, className)));
+    }
+
+    /**
+     * @param scalarName the name of a scalar of the catalog
+     * @return the simple names of the classes the scalar accepts, sorted, as a sentence part such as {@code Integer or int}
+     */
+    public static @NonNull String acceptedClassNames(@NonNull String scalarName) {
+        ArgumentUtils.requireNonNull("scalarName", scalarName);
+        Set<Class<?>> supported = SYSTEM_TYPES.get(scalarName);
+        if (supported == null) {
+            Class<?> standard = STANDARD_SCALARS.get(scalarName);
+            return standard == null ? "" : standard == Object.class ? "any class" : standard.getSimpleName();
+        }
+        return supported.stream().map(Class::getSimpleName).sorted().collect(Collectors.joining(" or "));
     }
 
     /**

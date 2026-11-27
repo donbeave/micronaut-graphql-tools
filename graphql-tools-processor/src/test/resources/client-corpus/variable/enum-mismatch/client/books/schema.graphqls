@@ -1,0 +1,36 @@
+type Query {
+  book(id: ID!): Book
+  books(genre: Genre, limit: Int, ids: [ID!], first: Int! = 10): [Book!]!
+  search(filter: BookFilter!): [Book!]!
+  at(moment: DateTime): String
+  version: String
+}
+
+type Mutation {
+  save(input: BookInput!): Book
+}
+
+enum Genre {
+  FICTION
+  SCIENCE
+}
+
+scalar DateTime
+
+input BookFilter {
+  title: String
+  tags: [String!]
+  genre: Genre
+  limit: Int!
+  nested: BookFilter
+}
+
+input BookInput {
+  title: String!
+  pages: Int
+}
+
+type Book {
+  id: ID!
+  title: String
+}

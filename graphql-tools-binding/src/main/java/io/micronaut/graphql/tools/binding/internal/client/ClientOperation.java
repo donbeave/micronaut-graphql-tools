@@ -15,9 +15,14 @@
  */
 package io.micronaut.graphql.tools.binding.internal.client;
 
+import graphql.language.FragmentDefinition;
+import graphql.language.OperationDefinition;
+import graphql.schema.GraphQLSchema;
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * An operation of a client, assembled: the operation and the fragments it uses as one document, and what the runtime needs to
@@ -28,12 +33,17 @@ import java.util.List;
  * @param operationType {@code query}, {@code mutation} or {@code subscription}
  * @param variables     the names of the variables the operation declares, without the dollar sign, in declaration order
  * @param payload       whether the payload is the value of the only root field or the whole {@code data} object
+ * @param definition    the operation as it is printed in the document, with the type name injected
+ * @param fragments     the fragments that the operation uses, as printed, by name
+ * @param schema        the client schema that the document was validated against, null when the checks are off
  */
 @Internal
 public record ClientOperation(String document, String operationName, String operationType, List<String> variables,
-                              PayloadMode payload) {
+                              PayloadMode payload, OperationDefinition definition, Map<String, FragmentDefinition> fragments,
+                              @Nullable GraphQLSchema schema) {
 
     public ClientOperation {
         variables = List.copyOf(variables);
+        fragments = Map.copyOf(fragments);
     }
 }
