@@ -61,6 +61,9 @@ sourceSets.main {
 tasks.processResources {
     dependsOn(generatePluginVersion)
 }
+tasks.withType<Jar>().configureEach {
+    dependsOn(generatePluginVersion)
+}
 
 // java-gradle-plugin adds a `pluginMaven` publication of the same artifact as the `maven` publication of the module convention.
 // Only `maven` is published; the marker publication of the plugin id stays.
