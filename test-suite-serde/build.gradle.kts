@@ -20,6 +20,8 @@ dependencies {
     testImplementation(mn.reactor)
     annotationProcessor(mnSerde.micronaut.serde.processor)
     testAnnotationProcessor(mnSerde.micronaut.serde.processor)
+    // The client visitor writes the compiled operations of the declarative clients of the tests (#687)
+    testAnnotationProcessor(projects.micronautGraphqlToolsProcessor)
     runtimeOnly(mnLogging.logback.classic)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -57,6 +59,32 @@ abstract class GraphQLSchemaDirs : CommandLineArgumentProvider {
     override fun asArguments() = listOf(
         "-Amicronaut.graphql.tools.processor.schema.dirs=" + dirs.files.joinToString(File.pathSeparator) { it.absolutePath },
         "-Amicronaut.graphql.tools.processor.module.dir=" + moduleDir.get().asFile.absolutePath)
+}
+
+abstract class GraphQLClientDirs : CommandLineArgumentProvider {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val schemaDirs: ConfigurableFileCollection
+
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val clientDirs: ConfigurableFileCollection
+
+    @get:Internal
+    abstract val moduleDir: DirectoryProperty
+
+    override fun asArguments() = listOf(
+        "-Amicronaut.graphql.tools.processor.schema.dirs=" + schemaDirs.files.joinToString(File.pathSeparator) { it.absolutePath },
+        "-Amicronaut.graphql.tools.processor.client.dirs=" + clientDirs.files.joinToString(File.pathSeparator) { it.absolutePath },
+        "-Amicronaut.graphql.tools.processor.module.dir=" + moduleDir.get().asFile.absolutePath)
+}
+
+tasks.named<JavaCompile>("compileTestJava") {
+    options.compilerArgumentProviders.add(objects.newInstance<GraphQLClientDirs>().apply {
+        schemaDirs.from(files("src/main/resources"))
+        clientDirs.from(files("src/test/graphql/client"))
+        moduleDir.set(layout.projectDirectory)
+    })
 }
 
 tasks.named<JavaCompile>("compileJava") {

@@ -118,7 +118,9 @@ public class io.micronaut.graphql.tools.client.exceptions.GraphQLClientException
   public java.lang.String getCode();
   public static final java.lang.String BLOCKING_ON_EVENT_LOOP = "blocking-on-event-loop";
   public static final java.lang.String DECODE_ERROR = "decode-error";
+  public static final java.lang.String MISSING_OPERATION = "missing-operation";
   public static final java.lang.String NO_DATA = "no-data";
+  public static final java.lang.String UNSUPPORTED_SIGNATURE = "unsupported-signature";
 }
 
 public class io.micronaut.graphql.tools.client.exceptions.GraphQLErrorsException extends io.micronaut.graphql.tools.client.exceptions.GraphQLClientException {

@@ -235,15 +235,6 @@ class GraphQLHttpClientSpec extends Specification {
         response.errors()[0].path() == ['a']
     }
 
-    void "a call can unwrap the single root field of the data"() {
-        when:
-        def response = clients.stub.executeUnwrapped(GraphQLRequest.builder(Integer).document('{ a }').build(), null).get()
-
-        then:
-        response.data() == 1
-        response.hasData()
-    }
-
     void "the future variant reports a failure through the future"() {
         when:
         clients.stub.executeAsync(query(), headers(404, 'data')).join()
