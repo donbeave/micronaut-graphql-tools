@@ -1,0 +1,1 @@
+BookClient#findBooks type=query name=FindBooks payload=field variables=genre document=queryFindBooks($genre:String){books(genre:$genre){idtitle}}

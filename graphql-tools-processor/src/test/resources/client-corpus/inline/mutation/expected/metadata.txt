@@ -1,0 +1,1 @@
+BookClient#save type=mutation name=Save payload=field variables=title document=mutationSave($title:String!){save(title:$title){id}}

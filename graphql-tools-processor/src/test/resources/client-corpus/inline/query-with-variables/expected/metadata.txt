@@ -1,0 +1,1 @@
+BookClient#book type=query name=Book payload=field variables=id document=queryBook($id:ID!){book(id:$id){idtitle}}
