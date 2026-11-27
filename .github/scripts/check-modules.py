@@ -66,11 +66,11 @@ def section(text, start, end=r"\n(?=## |\n\n)"):
 
 
 def artifacts_in(text):
-    return re.findall(r"micronaut-graphql-tools(?:-[a-z]+)?(?![\w-])", text)
+    return re.findall(r"micronaut-graphql-tools(?:-[a-z]+)*(?![\w-])", text)
 
 
 def gradle_checks(text):
-    return [a for a in re.findall(r":(micronaut-graphql-tools(?:-[a-z]+)?):check", text)]
+    return [a for a in re.findall(r":(micronaut-graphql-tools(?:-[a-z]+)*):check", text)]
 
 
 library_artifacts = [artifact(m) for m in libraries]
@@ -81,17 +81,17 @@ m = re.search(r"val publishable = setOf\((.*?)\)", init, re.S)
 compare("publish-github-packages.init.gradle.kts", re.findall(r'"([^"]+)"', m.group(1)) if m else [], published_artifacts, "`publishable` list")
 
 release = read(".github/workflows/release.yml")
-compare("release.yml", re.findall(r"echo \"- io\.micronaut\.graphql\.tools:(micronaut-graphql-tools(?:-[a-z]+)?):\$\{TAG\}", release), published_artifacts, "published-artifacts summary")
+compare("release.yml", re.findall(r"echo \"- io\.micronaut\.graphql\.tools:(micronaut-graphql-tools(?:-[a-z]+)*):\$\{TAG\}", release), published_artifacts, "published-artifacts summary")
 
 gradle = read(".github/workflows/gradle.yml")
 compare("gradle.yml", gradle_checks(gradle), library_artifacts, "JDK 17 `check` command")
 rule = re.search(r"The library modules \(([^)]*)\)", gradle)
-compare("gradle.yml", re.findall(r"graphql-tools(?:-[a-z]+)?", rule.group(1)) if rule else [], libraries, "comment that lists the JDK 17 library modules")
+compare("gradle.yml", re.findall(r"graphql-tools(?:-[a-z]+)*", rule.group(1)) if rule else [], libraries, "comment that lists the JDK 17 library modules")
 
 agents = read("AGENTS.md")
 compare("AGENTS.md", gradle_checks(agents), library_artifacts, "JDK 17 `check` command")
 rule = re.search(r"Library modules \(([^)]*)\) compile with", agents)
-compare("AGENTS.md", re.findall(r"graphql-tools(?:-[a-z]+)?", rule.group(1)) if rule else [], libraries, "`Java 17 target` rule")
+compare("AGENTS.md", re.findall(r"graphql-tools(?:-[a-z]+)*", rule.group(1)) if rule else [], libraries, "`Java 17 target` rule")
 
 contributing = read("CONTRIBUTING.md")
 commands = [l for l in contributing.splitlines() if ":micronaut-graphql-tools:check" in l]
@@ -104,7 +104,7 @@ bom = read("graphql-tools-bom/README.md")
 bullet = section(bom, r"- Manage the versions of", r"\n(?=- |\n|## )")
 compare("graphql-tools-bom/README.md", artifacts_in(bullet), library_artifacts, "list of managed artifacts")
 managed = re.search(r"The modules it manages are ([^\n]*)", bom)
-compare("graphql-tools-bom/README.md", re.findall(r"graphql-tools(?:-[a-z]+)?", managed.group(1)) if managed else [], libraries, "`The modules it manages are` list")
+compare("graphql-tools-bom/README.md", re.findall(r"graphql-tools(?:-[a-z]+)*", managed.group(1)) if managed else [], libraries, "`The modules it manages are` list")
 
 readme = read("README.md")
 table = re.findall(r"^\| \[`([^`]+)`\]\([^)]*\) \| `:([^`]+)` \|", readme, re.M)
@@ -113,12 +113,12 @@ for f, gradle_path in table:
     expected_path = artifact(f) if f in published or f.startswith("docs-examples-") else f
     if gradle_path != expected_path:
         problems.append(f"README.md: the module table gives `:{gradle_path}` for `{f}`, expected `:{expected_path}`")
-coordinates = re.findall(r"^\| .*\| `io\.micronaut\.graphql\.tools:(micronaut-graphql-tools(?:-[a-z]+)?)` \|$", readme, re.M)
+coordinates = re.findall(r"^\| .*\| `io\.micronaut\.graphql\.tools:(micronaut-graphql-tools(?:-[a-z]+)*)` \|$", readme, re.M)
 compare("README.md", coordinates, published_artifacts, "artifact coordinates table")
 
 maintaining = read("MAINTAINING.md")
 layout = section(maintaining, r"## Module layout")
-bullets = re.findall(r"^- `(graphql-tools(?:-[a-z]+)?)`", layout, re.M) + (["graphql-tools"] if re.search(r"`graphql-tools` \(the runtime\)", layout) else [])
+bullets = re.findall(r"^- `(graphql-tools(?:-[a-z]+)*)`", layout, re.M) + (["graphql-tools"] if re.search(r"`graphql-tools` \(the runtime\)", layout) else [])
 compare("MAINTAINING.md", bullets, libraries, "module layout")
 
 spec = read("graphql-tools/src/test/groovy/io/micronaut/graphql/tools/docs/PackageDocumentationSpec.groovy")
