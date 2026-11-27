@@ -713,13 +713,15 @@ union SearchResult = Book | Magazine
         when:
         def same = operations().resolve(request('{ node(id: "1") { __typename: id } }', '', 'nodes'))
         def inFragment = operations().resolve(request('{ node(id: "1") { ...N } } fragment N on Node { __typename: id }', '', 'nodes'))
+        def concrete = operations().resolve(request('{ node(id: "1") { id ... on Book { __typename: title } } }', '', 'nodes'))
         def object = operations().resolve(request('{ book { __typename: title } }', '', 'nodes'))
 
         then:
+        codes(concrete) == ['client-document-invalid']
         codes(same) == ['client-document-invalid']
         same.findings()[0].documentLocation().toString() == 'inline:1:19'
         codes(inFragment) == ['client-document-invalid']
-        object.findings().isEmpty()
+        codes(object) == ['client-document-invalid']
     }
 
     void "a missing client root stays fatal for every request that reads the documents of the schema server, and is reported once"() {
@@ -737,5 +739,34 @@ union SearchResult = Book | Magazine
         first.operation() == null
         second.operation() == null
         codes(second) == []
+    }
+
+    void "the finding of a missing document root names the method that reads the documents, not the one that resolved the layout"() {
+        given:
+        write(server, 'schema.graphqls', SCHEMA)
+        write(clients.resolve('server'), 'ops.graphql', 'query FindVersion { version }')
+        def shared = operations([clients, work.resolve('gone')], [server])
+
+        when:
+        def inline = shared.resolve(new ClientRequest('example.BookClient#plain()', 'plain', 'server', '{ version }', ''))
+        def named = shared.resolve(new ClientRequest('example.BookClient#named()', 'named', 'server', 'FindVersion', ''))
+
+        then:
+        inline.findings().isEmpty()
+        named.findings()[0].coordinate() == 'example.BookClient#named()'
+    }
+
+    void "a request that fails after its operation was selected still knows the type of the operation"() {
+        given:
+        schemaDir('books')
+
+        when:
+        def failed = operations().resolve(get('mutation { save(title: 1) { id } }'))
+        def missing = operations().resolve(request('FindNothing'))
+
+        then:
+        failed.operation() == null
+        failed.selectedType() == 'mutation'
+        missing.selectedType() == null
     }
 }

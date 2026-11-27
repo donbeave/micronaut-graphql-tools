@@ -111,6 +111,12 @@ public final class ClientOperations {
      * @return the assembled operation, or the findings
      */
     public ClientOutcome resolve(ClientRequest request) {
+        String[] type = new String[1];
+        ClientOutcome outcome = resolve(request, type);
+        return outcome.selectedType() == null && type[0] != null ? new ClientOutcome(outcome.operation(), outcome.findings(), type[0]) : outcome;
+    }
+
+    private ClientOutcome resolve(ClientRequest request, String[] selectedType) {
         List<Finding> findings = new ArrayList<>();
         boolean inline = !request.value().isEmpty() && !NAME.matcher(request.value()).matches();
         SchemaState state = null;
@@ -126,6 +132,7 @@ public final class ClientOperations {
             findings.addAll(selected.findings);
             return ClientOutcome.failed(findings);
         }
+        selectedType[0] = selected.operation.getOperation().name().toLowerCase(Locale.ROOT);
         if (request.get() && selected.operation.getOperation() != OperationDefinition.Operation.QUERY) {
             findings.add(ClientRules.getOnNonQuery(request.member(), selected.operation.getOperation().name().toLowerCase(Locale.ROOT)));
         }
@@ -147,7 +154,7 @@ public final class ClientOperations {
                 ClientTypenames.Injected injected = ClientTypenames.inject(schema, operation, fragments);
                 injected.reserved().forEach(field -> findings.add(ClientDocuments.invalid(request.member(), "the alias " + ClientTypenames.TYPENAME
                         + " is reserved: the selection of an interface or union gets the field " + ClientTypenames.TYPENAME + " for the type "
-                        + "name of its value, and this field has the same response key", ClientDocuments.location(field.getSourceLocation()))));
+                        + "name of its value, and this field has the same response key as the fields of such a selection", ClientDocuments.location(field.getSourceLocation()))));
                 operation = injected.operation();
                 fragments = injected.fragments();
             }
@@ -196,7 +203,7 @@ public final class ClientOperations {
     }
 
     private Selected selectNamed(ClientRequest request, SchemaState state, List<Finding> findings) {
-        ClientDocuments.Index index = index(state, findings);
+        ClientDocuments.Index index = index(state, findings, request.member());
         if (state.layout.documentsProblem() != null) {
             return Selected.failed();
         }
@@ -228,7 +235,7 @@ public final class ClientOperations {
                 if (fragment == null) {
                     from = state != null ? state : quietState(request);
                     if (from != null) {
-                        List<FragmentDefinition> defined = index(from, findings).fragments().get(spread.getName());
+                        List<FragmentDefinition> defined = index(from, findings, request.member()).fragments().get(spread.getName());
                         fragment = defined == null ? null : defined.get(0);
                         // a directory that cannot be read may hold another definition of the fragment, so every request that reads
                         // the documents fails, and the problem is reported once
@@ -346,15 +353,18 @@ public final class ClientOperations {
         return resolution;
     }
 
-    private ClientDocuments.Index index(SchemaState state, List<Finding> findings) {
+    private ClientDocuments.Index index(SchemaState state, List<Finding> findings, String member) {
         if (state.index == null) {
             state.index = ClientDocuments.index(state.layout.documentDirs());
         }
         if (!state.indexReported) {
             state.indexReported = true;
             findings.addAll(state.index.problems());
-            if (state.layout.documentsProblem() != null) {
-                findings.add(state.layout.documentsProblem());
+            Finding problem = state.layout.documentsProblem();
+            if (problem != null) {
+                // the finding is made once for the layout, and names the method that reads the documents first
+                findings.add(new Finding(problem.code(), member, problem.sentence(), problem.member(), problem.declaredIn(),
+                        problem.schemaLocation(), problem.fix(), problem.documentLocation()));
             }
         }
         return state.index;

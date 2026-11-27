@@ -143,8 +143,9 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
             ClientOperation operation = outcome.operation();
             if (operation != null && outcome.findings().isEmpty()) {
                 write(method, operation);
-                return MUTATION.equals(operation.operationType());
             }
+            // a mutation that fails for another reason still counts for the retry rule: its type was selected
+            return MUTATION.equals(outcome.selectedType());
         } catch (RuntimeException e) {
             if (isControlFlow(e)) {
                 throw e;

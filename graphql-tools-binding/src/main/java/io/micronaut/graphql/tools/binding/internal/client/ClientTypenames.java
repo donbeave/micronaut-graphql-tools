@@ -86,7 +86,9 @@ public final class ClientTypenames {
         for (Selection<?> selection : set.getSelections()) {
             if (selection instanceof Field field) {
                 selected |= isTypename(field);
-                if (isAbstract(parent) && !field.getName().equals(TYPENAME) && TYPENAME.equals(field.getResultKey())) {
+                // the alias is reserved in the whole document: a field under a concrete fragment shares the response keys of the
+                // abstract selection that the fragment is in
+                if (!field.getName().equals(TYPENAME) && TYPENAME.equals(field.getResultKey())) {
                     reserved.add(field);
                 }
                 result.add(inside(schema, field, parent, reserved));
@@ -129,8 +131,8 @@ public final class ClientTypenames {
      *
      * @param operation the operation
      * @param fragments the fragments, by name
-     * @param reserved  the fields of an abstract selection that are aliased to {@code __typename}, whose response key the injected field
-     *                  would share
+     * @param reserved  the fields that are aliased to {@code __typename}, whose response key the field injected into an abstract
+     *                  selection would share
      */
     public record Injected(OperationDefinition operation, Map<String, FragmentDefinition> fragments, List<Field> reserved) {
     }

@@ -25,21 +25,23 @@ import java.util.List;
  * What a request resolves to: the operation, or the findings that say why there is none. A request that fails for a cause
  * that an earlier request of the same schema already reported has neither: the finding is reported once.
  *
- * @param operation the assembled operation, null when the request failed
- * @param findings  the findings of the request, empty when it passed or when its cause was reported before
+ * @param operation    the assembled operation, null when the request failed
+ * @param findings     the findings of the request, empty when it passed or when its cause was reported before
+ * @param selectedType the type of the operation that was selected ({@code query}, {@code mutation} or {@code subscription}), null when
+ *                     none was; a request that fails after the selection still knows it
  */
 @Internal
-public record ClientOutcome(@Nullable ClientOperation operation, List<Finding> findings) {
+public record ClientOutcome(@Nullable ClientOperation operation, List<Finding> findings, @Nullable String selectedType) {
 
     public ClientOutcome {
         findings = List.copyOf(findings);
     }
 
     static ClientOutcome of(ClientOperation operation) {
-        return new ClientOutcome(operation, List.of());
+        return new ClientOutcome(operation, List.of(), operation.operationType());
     }
 
     static ClientOutcome failed(List<Finding> findings) {
-        return new ClientOutcome(null, findings);
+        return new ClientOutcome(null, findings, null);
     }
 }
