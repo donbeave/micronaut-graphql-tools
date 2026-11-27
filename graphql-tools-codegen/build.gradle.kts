@@ -57,6 +57,9 @@ tasks.named("check") {
 tasks.named<Test>("test") {
     // OptionsDocumentationSpec reads the Javadoc of Options behind Gradle's back.
     systemProperty("codegen.sources", layout.projectDirectory.dir("src/main/java/io/micronaut/graphql/tools/codegen").asFile.absolutePath)
+    // IrGoldenSpec compares the IR snapshots in src/test/resources/golden; -Pcodegen.golden.update=true rewrites them.
+    systemProperty("codegen.golden", layout.projectDirectory.dir("src/test/resources/golden").asFile.absolutePath)
+    providers.gradleProperty("codegen.golden.update").orNull?.let { systemProperty("codegen.golden.update", it) }
     inputs.files(layout.projectDirectory.dir("src/main/java").asFileTree)
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("codegenSources")

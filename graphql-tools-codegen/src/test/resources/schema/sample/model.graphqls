@@ -1,0 +1,61 @@
+"A date without a time zone."
+scalar Date
+
+scalar Money @specifiedBy(url: "https://example.com/money")
+
+"An object with an identifier."
+interface Node {
+  id: ID!
+}
+
+"A resource that can be fetched."
+interface Resource implements Node {
+  id: ID!
+  url: String
+}
+
+"""
+An item that is for sale.
+"""
+type Product implements Node & Resource @entity(table: "products", cached: true) {
+  id: ID!
+  url: String
+  name: String!
+  stars: Float!
+  reviews(first: Int = 10, after: String): [Review!]!
+  color: Color
+  oldName: String @deprecated(reason: "Use name.")
+}
+
+type Review implements Node {
+  id: ID!
+  stars: Int!
+  body: String
+}
+
+type Category {
+  id: ID!
+  products: [Product!]
+}
+
+union SearchResult = Product | Review
+
+"The colors of a product."
+enum Color {
+  RED
+  GREEN @deprecated
+  "Cool"
+  BLUE
+}
+
+input ProductFilter {
+  minStars: Int! = 3
+  color: Color = RED
+  tags: [String!] = ["new", "sale"]
+}
+
+input ReviewInput {
+  productId: ID!
+  stars: Int!
+  body: String
+}

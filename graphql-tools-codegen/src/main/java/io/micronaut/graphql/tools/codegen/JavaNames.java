@@ -32,6 +32,10 @@ final class JavaNames {
     private JavaNames() {
     }
 
+    static boolean isReserved(String text) {
+        return RESERVED.contains(text);
+    }
+
     static boolean isIdentifier(String text) {
         if (text.isEmpty() || RESERVED.contains(text) || !Character.isJavaIdentifierStart(text.codePointAt(0))) {
             return false;
