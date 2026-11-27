@@ -28,13 +28,18 @@ import java.util.Objects;
  *
  * @param sdlName    the name in the schema
  * @param name       the name in the generated code; the SDL name until a renaming rule exists
- * @param type       the type of the field
+ * @param type       the type of the field. For a list that an implemented interface declares with another element type, it is the
+ *                   list type of the interface with the nullability of this field: Java generics are invariant, so a record cannot
+ *                   implement {@code List<Node>} with {@code List<Folder>}.
+ * @param boxed      whether the value is a reference type although {@code type} is a non-null {@code Int}, {@code Float} or
+ *                   {@code Boolean}: an implemented interface declares the field with a nullable type, and a primitive return
+ *                   cannot override a boxed one. {@code false} for every other field.
  * @param arguments  the arguments of the field in schema order
  * @param docs       the description and the deprecation
  * @param directives the applied directives, without {@code @deprecated}
  * @param origin     where the field is defined: the file of the {@code extend} block for a field that an extension adds
  */
-public record Field(String sdlName, String name, TypeRef type, List<Argument> arguments, Docs docs,
+public record Field(String sdlName, String name, TypeRef type, boolean boxed, List<Argument> arguments, Docs docs,
                     List<AppliedDirective> directives, Origin origin) {
 
     /**
