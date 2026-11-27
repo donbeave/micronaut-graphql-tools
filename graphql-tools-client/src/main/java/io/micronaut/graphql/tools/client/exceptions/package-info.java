@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 /**
- * The exceptions that a client call throws, one per failure that a caller can match on. The exceptions are added with the
- * client types; this package holds no types yet.
+ * The exceptions that a client call throws, one per failure that a caller can match on:
+ * {@link io.micronaut.graphql.tools.client.exceptions.GraphQLErrorsException} for GraphQL errors and
+ * {@link io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException} for a failure below GraphQL, both a
+ * {@link io.micronaut.graphql.tools.client.exceptions.GraphQLClientException}.
  *
  * <p><b>Audience.</b> Public. A caller catches these to tell a failed call from a failed server.</p>
  */
