@@ -84,6 +84,8 @@ final class Lowering {
             Operation.MUTATION, "io.micronaut.graphql.tools.resolver.MutationResolver",
             Operation.SUBSCRIPTION, "io.micronaut.graphql.tools.resolver.SubscriptionResolver");
 
+    private static final Set<String> ROOT_TYPE_NAMES = Set.of("Query", "Mutation", "Subscription");
+
     private static final Set<String> OBJECT_METHODS = Set.of(
             "clone", "finalize", "getClass", "hashCode", "notify", "notifyAll", "toString", "wait");
 
@@ -133,7 +135,7 @@ final class Lowering {
                 default -> throw new IllegalStateException(type.kind.name());
             }
         }
-        List<ResolverContract> contracts = options.rootContracts() ? contracts() : List.of();
+        List<ResolverContract> contracts = contracts();
         nameConstants();
         collisions();
         checkOptionEntries();
@@ -281,22 +283,43 @@ final class Lowering {
         for (MergedType type : schema.types.values()) {
             if (type.kind == Kind.UNION) {
                 for (String member : type.members) {
-                    if (!schema.types.containsKey(member)) {
+                    MergedType target = schema.types.get(member);
+                    if (target == null) {
                         error(Diagnostic.UNKNOWN_TYPE, "The union '" + type.name + "' (" + type.origin + ") lists the member '" + member
                                 + "', which is not defined in the schema files.", type.origin);
+                    } else if (target.kind != Kind.OBJECT) {
+                        error(Diagnostic.INVALID_UNION_MEMBER, "The union '" + type.name + "' (" + type.origin + ") lists the member '"
+                                + member + "', which is " + article(target.kind) + ", not an object type. A union has object types as members.",
+                                type.origin);
                     }
                     unionsOf.computeIfAbsent(member, key -> new ArrayList<>()).add(type.name);
                 }
             } else if (type.kind == Kind.OBJECT || type.kind == Kind.INTERFACE) {
                 for (String implemented : type.implemented) {
-                    if (!schema.types.containsKey(implemented)) {
+                    MergedType target = schema.types.get(implemented);
+                    if (target == null) {
                         error(Diagnostic.UNKNOWN_TYPE, "The type '" + type.name + "' (" + type.origin + ") implements '" + implemented
                                 + "', which is not defined in the schema files.", type.origin);
+                    } else if (target.kind != Kind.INTERFACE) {
+                        error(Diagnostic.INVALID_IMPLEMENTS, "The " + type.kind.name().toLowerCase(Locale.ROOT) + " type '" + type.name
+                                + "' (" + type.origin + ") implements '" + implemented + "', which is " + article(target.kind)
+                                + ", not an interface. Only an interface can be implemented.", type.origin);
                     }
                     implementers.computeIfAbsent(implemented, key -> new ArrayList<>()).add(type.name);
                 }
             }
         }
+    }
+
+    private static String article(Kind kind) {
+        return switch (kind) {
+            case OBJECT -> "an object type";
+            case INTERFACE -> "an interface type";
+            case UNION -> "a union type";
+            case ENUM -> "an enum type";
+            case INPUT -> "an input type";
+            case SCALAR -> "a scalar";
+        };
     }
 
     private List<Names> generatedNames(Iterable<String> typeNames) {
@@ -453,19 +476,35 @@ final class Lowering {
             }
             for (FieldDefinition definition : type.fields) {
                 Field field = field(type.name, definition);
-                Wrapper wrapper = operation == Operation.SUBSCRIPTION ? Wrapper.generic(options.subscriptionReturnType())
-                        : options.kotlinSuspend() ? Wrapper.SUSPEND : Wrapper.PLAIN;
-                ContractMethod method = new ContractMethod(field.name(), new Coordinate(type.name, field.sdlName()), field.type(),
-                        field.arguments(), wrapper, field.docs(), field.directives(), field.origin());
-                String simple = options.contractNameTemplate().replace("{Field}", capitalize(field.name()))
-                        .replace("{Operation}", type.name);
-                Names contractNames = new Names(type.name + "." + field.sdlName(), options.effectiveResolverPackage(), simple);
-                units.add(new Unit(contractNames.packageName(), simple, "the resolver contract of the field '" + method.coordinate()
-                        + "' (" + field.origin() + ")", field.origin()));
-                contracts.add(new ResolverContract(operation, contractNames, MARKERS.get(operation), List.of(method), field.origin()));
+                if (options.rootContracts()) {
+                    contracts.add(contract(operation, type, field));
+                }
             }
         }
         return contracts;
+    }
+
+    private ResolverContract contract(Operation operation, MergedType type, Field field) {
+        Wrapper wrapper = operation == Operation.SUBSCRIPTION ? Wrapper.generic(options.subscriptionReturnType())
+                : options.kotlinSuspend() ? Wrapper.SUSPEND : Wrapper.PLAIN;
+        ContractMethod method = new ContractMethod(field.name(), new Coordinate(type.name, field.sdlName()), field.type(),
+                field.arguments(), wrapper, field.docs(), field.directives(), field.origin());
+        String simple = options.contractNameTemplate().replace("{Field}", capitalize(field.name()))
+                .replace("{Operation}", type.name);
+        Names contractNames = new Names(type.name + "." + field.sdlName(), options.effectiveResolverPackage(), simple);
+        String description = "the resolver contract of the field '" + method.coordinate() + "' (" + field.origin() + ")";
+        if (ROOT_TYPE_NAMES.contains(simple)) {
+            error(Diagnostic.RESERVED_CONTRACT_NAME, "The option contractNameTemplate '" + options.contractNameTemplate() + "' names "
+                    + description + " '" + simple + "', which is the name of a root type. Add text around the placeholders, for example"
+                    + " {Field}{Operation}Resolver.", field.origin());
+        }
+        String problem = ReservedNames.typeNameProblem(options.language(), simple);
+        if (problem != null) {
+            error(Diagnostic.RESERVED_NAME, "The option contractNameTemplate '" + options.contractNameTemplate() + "' names " + description
+                    + " '" + simple + "', which is a " + problem + ".", field.origin());
+        }
+        units.add(new Unit(contractNames.packageName(), simple, description, field.origin()));
+        return new ResolverContract(operation, contractNames, MARKERS.get(operation), List.of(method), field.origin());
     }
 
     private static String capitalize(String name) {
@@ -476,10 +515,10 @@ final class Lowering {
 
     private void register(MergedType type, String kindName) {
         Names generated = names.get(type.name);
-        String language = ReservedNames.languageOf(options.language(), generated.simpleName());
-        if (language != null) {
+        String problem = ReservedNames.typeNameProblem(options.language(), generated.simpleName());
+        if (problem != null) {
             error(Diagnostic.RESERVED_NAME, "The " + kindName + " '" + type.name + "' (" + type.origin + ") cannot be generated as the class "
-                    + generated.simpleName() + ": it is a " + language + " keyword. Rename it in the schema or set typeNamePrefix or typeNameSuffix.",
+                    + generated.simpleName() + ": it is a " + problem + ". Rename it in the schema or set typeNamePrefix or typeNameSuffix.",
                     type.origin);
         }
         units.add(new Unit(generated.packageName(), generated.simpleName(), "the " + kindName + " '" + type.name + "' (" + type.origin + ")",

@@ -138,7 +138,7 @@ type, or a `ListOf`. An interface that implements an interface keeps it in `impl
 mapped to an external class. A model lists the unions it belongs to in `memberOf`. The root types are not models: each field of
 `Query`, `Mutation` and `Subscription` is a `ResolverContract` named by `contractNameTemplate` in `resolverPackage`, extending
 `QueryResolver`, `MutationResolver` or `SubscriptionResolver`. With `kotlinSuspend` a query or mutation method has the wrapper `SUSPEND`;
-a subscription method is wrapped in `subscriptionReturnType`. `rootContracts=false` generates none. Every list is in schema order.
+a subscription method is wrapped in `subscriptionReturnType`. `rootContracts=false` generates none, and the fields of the root types are still validated. An `extend schema` block without a `schema` block adds its operations to the implicit roots (`Query`, `Mutation`, `Subscription`) that the files define. Every list is in schema order.
 
 **Documentation.** The description is the SDL description, or with `commentsAsDescriptions` the `#` comment lines before a definition
 (a line that holds only `#` ends them), as graphql-java reads them. Neither JavaPoet nor KotlinPoet escapes comment text, so the loader
@@ -158,7 +158,10 @@ become character references such as `&#47;`, and line endings become `\n`.
 | `extension-kind-mismatch` | error | An `extend` is of another kind than its base, such as `extend type` of an enum |
 | `unknown-type` | error | A field, argument, union, interface or root operation names a type that is defined nowhere and not in `typeMappings` |
 | `unmapped-scalar` | error | A custom scalar has no `typeMappings` entry; there is no silent `String` |
-| `reserved-name` | error | A type, field, argument or enum value name is a Java keyword (and a Kotlin or Groovy keyword for that language) |
+| `reserved-name` | error | A type, field, argument or enum value name is a Java keyword (and a Kotlin or Groovy keyword for that language); a generated type or contract name is `record`, `var`, `sealed`, `permits` or `yield`, which Java restricts as type names in every output language |
+| `invalid-implements` | error | A type implements a type that is not an interface, such as an object type or an enum |
+| `invalid-union-member` | error | A union has a member that is not an object type |
+| `reserved-contract-name` | error | `contractNameTemplate` resolves a contract to `Query`, `Mutation` or `Subscription`, the name of a root type |
 | `object-method-name` | error | A field is named like a method of `java.lang.Object` (`clone`, `finalize`, `getClass`, `hashCode`, `notify`, `notifyAll`, `toString`, `wait`) |
 | `name-collision` | error | Two schema elements, or an element and a generated helper class (`GraphQLTypeNames`, `<Type>Names`), generate the same class; the comparison folds the case of the path, because two names such as `Foo` and `foo` overwrite each other on a case-insensitive file system |
 | `root-type-reference` | error | A field or argument has a root operation type as its type (map it with `typeMappings`) |
