@@ -104,4 +104,15 @@ class CookieJarSpec extends Specification {
         '/api/gql'  || '/api'
         ''          || '/'
     }
+
+    void "the legacy cookie date formats are understood"() {
+        when:
+        jar.store(["a=1; Expires=\$date"], '/graphql')
+
+        then:
+        jar.snapshot()*.expires() == [Instant.parse('2031-06-09T10:18:14Z')]
+
+        where:
+        date << ['Mon, 09-Jun-2031 10:18:14 GMT', 'Mon, 09-Jun-31 10:18:14 GMT', 'Monday, 09-Jun-31 10:18:14 GMT']
+    }
 }

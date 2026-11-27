@@ -38,7 +38,7 @@ import java.util.List;
 public interface GraphQLSession extends GraphQLHttpClient {
 
     /**
-     * Returns the cookies that the session would send now, the expired ones left out.
+     * Returns the cookies that the session holds, the expired ones left out. A cookie is sent only on a call whose endpoint path is under its path.
      *
      * @return a snapshot of the cookies
      */

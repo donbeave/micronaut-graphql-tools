@@ -37,6 +37,12 @@ import java.util.Map;
 @Internal
 final class CookieJar {
 
+    private static final List<DateTimeFormatter> DATE_FORMATS = List.of(
+            DateTimeFormatter.RFC_1123_DATE_TIME,
+            DateTimeFormatter.ofPattern("EEE, dd-MMM-yyyy HH:mm:ss zzz", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("EEE, dd-MMM-yy HH:mm:ss zzz", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("EEEE, dd-MMM-yy HH:mm:ss zzz", Locale.ENGLISH));
+
     private final Clock clock;
     private final Map<String, Cookie> cookies = new LinkedHashMap<>();
 
@@ -151,11 +157,14 @@ final class CookieJar {
 
     @Nullable
     private static Instant date(String value) {
-        try {
-            return ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant();
-        } catch (DateTimeParseException e) {
-            return null;
+        for (DateTimeFormatter format : DATE_FORMATS) {
+            try {
+                return ZonedDateTime.parse(value, format).toInstant();
+            } catch (DateTimeParseException e) {
+                continue;
+            }
         }
+        return null;
     }
 
     private static String defaultPath(String requestPath) {
