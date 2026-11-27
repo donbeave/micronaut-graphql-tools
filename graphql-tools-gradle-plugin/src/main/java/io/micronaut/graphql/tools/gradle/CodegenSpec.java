@@ -261,7 +261,8 @@ public abstract class CodegenSpec implements Named {
      * @return one file tree per directory
      */
     List<FileTree> schemaFileTrees(Project project) {
-        List<String> includes = getIncludes().getOrElse(DEFAULT_INCLUDES);
+        List<String> configured = getIncludes().getOrElse(List.of());
+        List<String> includes = configured.isEmpty() ? DEFAULT_INCLUDES : configured;
         List<String> excludes = getExcludes().getOrElse(List.of());
         List<FileTree> trees = new ArrayList<>();
         for (File dir : getSchemaDirs().getFiles()) {

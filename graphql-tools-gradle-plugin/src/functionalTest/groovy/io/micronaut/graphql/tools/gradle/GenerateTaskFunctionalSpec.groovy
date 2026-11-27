@@ -25,6 +25,7 @@ class GenerateTaskFunctionalSpec extends PluginFunctionalSpec {
         given:
         settings()
         schema()
+        write('src/main/resources/graphql/notes.txt', 'not a schema file: the default includes leave it out')
         write('build.gradle.kts', kotlinBuild())
 
         when:
