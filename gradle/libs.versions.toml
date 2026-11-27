@@ -22,6 +22,9 @@ micronaut-logging = "1.7.5"
 groovy = "4.0.33"
 
 # Not managed by the Micronaut BOMs or catalogs
+# micronaut-reactor, test scope of the client module (Mono and Flux conversion), at the version that micronaut-platform 4.10.25 manages. The `mn` catalog
+# has reactor-core only, and the module's own catalog is not imported because every job fetches an imported catalog at settings time and Maven Central answered 429
+micronaut-reactor = "3.9.1"
 apollo = "5.2.0"
 # Apollo Kotlin 5 moved its Java API (client and RxJava 3 support) to a separate project; apollo-rx3-support has no 5.x release
 apollo-java = "1.0.0"
@@ -82,6 +85,7 @@ apollo-java-rx3 = { module = "com.apollographql.java:rx3", version.ref = "apollo
 apollo-api = { module = "com.apollographql.apollo:apollo-api", version.ref = "apollo" }
 archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
+micronaut-reactor = { module = "io.micronaut.reactor:micronaut-reactor", version.ref = "micronaut-reactor" }
 graphql-java-datetime = { module = "com.tailrocks.graphql:graphql-java-datetime", version.ref = "graphql-java-datetime" }
 maven-plugin-api = { module = "org.apache.maven:maven-plugin-api", version.ref = "maven" }
 maven-core = { module = "org.apache.maven:maven-core", version.ref = "maven" }
