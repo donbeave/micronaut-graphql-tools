@@ -19,6 +19,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.MutableHttpRequest;
 import org.reactivestreams.Publisher;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -104,4 +105,20 @@ public interface GraphQLHttpClient {
      * @throws io.micronaut.graphql.tools.client.exceptions.GraphQLClientException when the response cannot be decoded, or the call is made on an event loop thread
      */
     <D> GraphQLResponse<D> executeBlocking(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer);
+
+    /**
+     * Starts a session: a {@link GraphQLSession} that keeps the cookies that the responses set and replays them on its next calls. This
+     * client keeps no cookies, because every caller shares it.
+     *
+     * @return a new session with an empty cookie jar
+     */
+    GraphQLSession newSession();
+
+    /**
+     * Starts a session that also sends fixed headers on every call.
+     *
+     * @param headers the headers to send, by name
+     * @return a new session with an empty cookie jar
+     */
+    GraphQLSession newSession(Map<String, String> headers);
 }
