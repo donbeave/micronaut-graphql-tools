@@ -159,6 +159,10 @@ leg), `ParitySpec` (the soundness and completeness rules and the exception list)
   `corpus-language-differences.txt` (empty, and it may only shrink). `-Pcorpus.only='<regex>'` runs the cases that match.
 - `./gradlew :micronaut-graphql-tools-processor:corpusUpdate` rewrites the expected files of the corpus from what the
   binders say (Java and Groovy). Review the diff.
+- The client corpus (`src/test/resources/client-corpus`, its README says how to add a case) holds the cases of `GraphQLClientVisitor`: a client interface in each
+  language, a client directory, and the findings (code, member, position) or the metadata that the visitor wrote on each operation method. `ClientCorpusSpec` compiles each case with javac and
+  with the Groovy compiler in process, as part of `test` on the default graphql-java leg; `KotlinClientCorpusSpec` compiles the Kotlin cases in one Gradle TestKit build with KSP2 (`corpusKotlin`; kapt with
+  `-Pcorpus.kotlin.processor=kapt`). `./gradlew :micronaut-graphql-tools-processor:clientCorpusUpdate` records the expected files of the cases from the Java run. The case `document/too-large` is the document of 70 KB.
 - `./gradlew :micronaut-graphql-tools-processor:corpusKotlin` runs the Kotlin cases against the real visitor under KSP2: one
   Gradle TestKit build with two subprojects per case (the unchecked one is started, the checked one runs `kspKotlin` with the schema
   of the case, and its `e: [ksp] [code] coordinate` lines are compared with `expected/compile.txt`). It needs the network and is not

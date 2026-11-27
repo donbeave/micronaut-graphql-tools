@@ -1,0 +1,1 @@
+BookClient#added type=subscription name=- payload=field variables=- document=subscription{bookAdded{idtitle}}

@@ -1,0 +1,2 @@
+client-document-invalid example.BookClient#first() inline:1:3
+client-operation-not-found example.BookClient#second() -

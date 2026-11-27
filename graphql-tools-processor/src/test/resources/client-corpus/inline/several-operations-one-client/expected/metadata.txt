@@ -1,0 +1,3 @@
+BookClient#book type=query name=Book payload=field variables=id document=queryBook($id:ID!){book(id:$id){title}}
+BookClient#plain type=query name=plain payload=field variables=- document=queryplain{books{id}}
+BookClient#versionOnly type=query name=- payload=field variables=- document={version}
