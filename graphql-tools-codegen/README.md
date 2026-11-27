@@ -7,8 +7,8 @@ Gradle project `:micronaut-graphql-tools-codegen`, folder `graphql-tools-codegen
 
 The code generator of the library, as a plain Java library: the Gradle plugin and the Maven plugin map their configuration one
 to one onto it and add only wiring. This module holds the entry point, the options model, the diagnostics, the schema loader and
-the intermediate representation (IR). The emitters are added to it by the generator phases, so this version produces no file
-yet: it checks the options, loads the schema files, builds the IR and reports what is wrong.
+the intermediate representation (IR). The emitters are added to it by the generator phases, so this version produces no source file
+yet, only the type mappings file: it checks the options, loads the schema files, builds the IR and reports what is wrong.
 
 ## Responsibility
 
@@ -60,12 +60,48 @@ reference; this is the summary.
 | `contractNameTemplate` | string with `{Field}` and `{Operation}` | `{Field}{Operation}Resolver` |
 | `kotlinSuspend` | `true` or `false` | `false`; needs `language` `KOTLIN` |
 | `subscriptionReturnType` | class name | `org.reactivestreams.Publisher` |
-| `typeMappings` | map from an SDL name or `Type.field` to a class | empty |
+| `typeMappings` | map from an SDL name or `Type.field` to a class | empty, plus the scalar presets below |
+| `typeMappingsFromDependencies` | `true` or `false` | `true`; reads the mappings of the dependency jars the caller gives the generator |
 | `nameConstants` | `NONE`, `TYPES` or `FIELDS` | `FIELDS` |
 | `includes`, `excludes` | list of globs | `**/*.graphqls` and `**/*.graphql`; none |
 | `commentsAsDescriptions` | `true` or `false` | `false`; must match the runtime setting |
 
 An unmapped custom scalar is always a diagnostic, never an option: there is no silent fallback to `String`.
+
+## Type mappings
+
+A `typeMappings` key is the SDL name of a scalar, or of an object, enum or input type (the class is an existing one and nothing
+is generated for the type), or `Type.field` for a field whose type is a scalar (it replaces the named type of that field inside
+any list). A `Type.field` key for a field of another kind is the error `field-mapping-not-scalar`: a GraphQL type has one Java
+type, so map the type itself. An object type that is mapped and is a member of a union, or implements an interface, cannot be
+generated as a permitted subtype: the union or interface is then a plain interface and the generator reports the warning
+`mapped-member`; the application registers the class as a member itself.
+
+A scalar that the library registers at runtime has a preset, so a schema that declares it needs no entry, and the class matches the
+runtime `GraphQLScalarMapping`. A preset applies to a scalar only, and an entry of `typeMappings` wins over it. The scalars module
+and the generator are checked against each other, so the table follows `StandardScalar`.
+
+| Scalar | Class |
+| --- | --- |
+| `Long`, `Short` | `java.lang.Long`, `java.lang.Short` |
+| `BigDecimal`, `BigInteger` | `java.math.BigDecimal`, `java.math.BigInteger` |
+| `JSON` | `java.lang.Object` |
+| `Upload` | `io.micronaut.http.multipart.CompletedFileUpload` |
+| `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `OffsetTime`, `OffsetDateTime`, `ZonedDateTime`, `YearMonth`, `Year`, `Duration`, `Period` | the `java.time` class of the same name |
+| `Url`, `UUID`, `Locale`, `Currency` | `java.net.URL`, `java.util.UUID`, `java.util.Locale`, `java.util.Currency` |
+| `PositiveInt`, `NegativeInt`, `NonPositiveInt`, `NonNegativeInt` | `java.lang.Integer` |
+| `PositiveFloat`, `NegativeFloat`, `NonPositiveFloat`, `NonNegativeFloat` | `java.lang.Double` |
+
+`ScalarPresets.presets()` returns the table. Any other custom scalar needs an entry; the error names it.
+
+**Mappings between modules.** The generator writes `META-INF/micronaut-graphql-tools/type-mappings.properties` for its own output:
+one `SdlName=qualified.ClassName` line for each type it generates and each custom scalar it maps, sorted by name, with no date, so
+the bytes only change when the mappings do (`GraphQLCodeGenerator.generate()` returns it as a `GeneratedFile`; a build plugin puts it
+in a resource directory). A module that depends on it passes the dependency jars or class directories (`withDependencies`, or the
+`dependencies` argument of `IrBuilder`), and with `typeMappingsFromDependencies` on the generator reads that file from each of
+them. The order of precedence is the `typeMappings` option, then the dependencies, then the presets. The jars are read in the order of
+their paths and the first mapping of a name wins; two jars that map a name to different classes, an unreadable jar and a value that is
+no class name are the warning `dependency-type-mappings`.
 
 The string form of a list is `name.size` followed by `name.0`, `name.1` and so on (an empty list is `name.size=0`); the
 string form of a map is `name.<key>`, for example `typeMappings.Date=java.time.LocalDate`. An absent key has its default.
@@ -124,6 +160,9 @@ become character references such as `&#47;`, and line endings become `\n`.
 | `object-method-name` | error | A field is named like a method of `java.lang.Object` (`clone`, `finalize`, `getClass`, `hashCode`, `notify`, `notifyAll`, `toString`, `wait`) |
 | `name-collision` | error | Two schema elements, or an element and a generated helper class (`GraphQLTypeNames`, `<Type>Names`), generate the same class; the comparison folds the case of the path, because two names such as `Foo` and `foo` overwrite each other on a case-insensitive file system |
 | `root-type-reference` | error | A field or argument has a root operation type as its type (map it with `typeMappings`) |
+| `field-mapping-not-scalar` | error | A `Type.field` entry of `typeMappings` names a field whose type is an object, interface, union, enum or input type |
+| `mapped-member` | warning | A union has a member, or an interface an implementing type, that `typeMappings` maps to an external class; the union or interface is not sealed |
+| `dependency-type-mappings` | warning | The mappings of a dependency conflict with another's, are unreadable or are not class names |
 | `unused-type-mapping` | warning | A `typeMappings` entry names no type or field of the schema |
 | `unused-interface-type` | warning | An `interfaceTypes` entry names no object type of the schema |
 
@@ -137,7 +176,7 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 | Package | Audience | Holds |
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.codegen` | Public API | `GraphQLCodeGenerator`, `Options`, its enums, `OptionsResult`, `GenerationResult`, `GeneratedFile`, `Diagnostic` and `Origin` |
-| `io.micronaut.graphql.tools.codegen.schema` | Public API | `IrBuilder`, `IrResult` and `SchemaSource`; the loader and the rules are package-private |
+| `io.micronaut.graphql.tools.codegen.schema` | Public API | `IrBuilder`, `IrResult`, `SchemaSource`, `ScalarPresets` and `TypeMappingsFile`; the loader and the rules are package-private |
 | `io.micronaut.graphql.tools.codegen.ir` | Public API | The IR nodes (`Ir`, `ModelType`, `InputType`, `EnumType`, `AbstractType`, `ScalarType`, `ResolverContract`, `Field`, `Argument` and the rest) and `IrSnapshot` |
 | `io.micronaut.graphql.tools.codegen.ir.shared` | Public API | The pieces of the nodes: `Names`, `Docs`, `AppliedDirective`, `TypeRef`, `BuiltinScalar`, `Coordinate`, `Operation` and `Wrapper` |
 

@@ -40,17 +40,17 @@ class IrGoldenSpec extends Specification {
         def result = IrBuilder.fromDirectory(SAMPLE, options)
 
         then:
-        result.diagnostics().empty
+        result.diagnostics()*.code() == codes
         result.skippedFiles() == ['client.graphql']
         matches(name, IrSnapshot.print(result.ir()))
 
         where:
-        name     | options
-        'default' | base().build()
+        name     | options | codes
+        'default' | base().build() | []
         'styled' | base().language(Language.KOTLIN).kotlinSuspend(true).typeNamePrefix('Gql').typeNameSuffix('Dto')
                 .interfaceTypes(['Review']).resolverPackage('com.example.api').contractNameTemplate('{Operation}{Field}')
                 .subscriptionReturnType('kotlinx.coroutines.flow.Flow')
-                .typeMappings(MAPPINGS + ['Product.price': 'java.lang.String', 'Category': 'com.example.ext.Category']).build()
+                .typeMappings(MAPPINGS + ['Product.price': 'java.lang.String', 'Category': 'com.example.ext.Category']).build() | ['mapped-member']
     }
 
     static final Map<String, String> MAPPINGS = [Date: 'java.time.LocalDate', Money: 'java.math.BigDecimal']
