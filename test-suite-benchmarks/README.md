@@ -22,7 +22,8 @@ runs, or when they claim a performance gain.
   wraps every field; each configuration checks its result against the first and what the decorator did at startup; no allocation gate),
   and the per-class binding rules over a compiler `ClassElement` (`BindingRulesBenchmark`: a resolver class, an input class with
   properties and an input class with constructor arguments; its allocation gate is `BindingRulesAllocationTest`),
-  and the codec of the GraphQL client (`ClientCodecBenchmark`: encode a request, decode data, decode with the single root field unwrapped, decode errors; its allocation gates are `clientEncodeRequest`, `clientDecodeData`, `clientDecodeUnwrap` and `clientDecodeErrors`).
+  and the codec of the GraphQL client (`ClientCodecBenchmark`: encode a request, decode data, decode with the single root field unwrapped, decode errors; its allocation gates are `clientEncodeRequest`, `clientDecodeData`, `clientDecodeUnwrap` and `clientDecodeErrors`; unwrapping may add at most 80 B/op to the data decode),
+  and a blocking call of an embedded server that answers a fixed body of 1 KB (`ClientLoopbackBenchmark`: the declarative client, the low-level `GraphQLHttpClient` and a plain declarative `@Client` as the reference; the classes are in the package `loopback`, active only with `benchmarks.loopback=true`; its allocation gates are `clientDeclarativeLoopback`, `clientLowLevelLoopback` and `clientRawLoopback`, the first two measured in one JVM with the third: at most +512 B/op and +256 B/op on the calling thread; the threads of the event loop are not counted by the gate, so read `-prof gc` for the total; the figures differ between macOS and Linux, so the baselines of these three cases are recorded for macOS only (`.macos` in the key) and the other platforms enforce the budgets alone).
 - `src/allocationTest/java`: the allocation gate. It fails when an operation allocates more bytes than its baseline in
   `allocation-baselines.properties`.
 - `src/jmhSmokeTest/java`: runs every JMH benchmark once, so that the benchmarks compile and start. Its numbers mean nothing.
@@ -56,7 +57,7 @@ Nothing here is a library API. The module is not in the BOM (`graphql-tools-bom`
 ## Relation to other modules
 
 - Depends on `micronaut-graphql-tools` (`implementation`), the library under measurement, on `micronaut-graphql-tools-client` and
-  Micronaut Serialization (the client codec cases), and on `micronaut-inject` (annotation processing for the benchmark beans).
+  Micronaut Serialization (the client codec cases), on the Netty server and the HTTP client (the loopback cases), and on `micronaut-inject` (annotation processing for the benchmark beans).
 - JMH is the benchmark framework (`jmh` and `jmhAnnotationProcessor` configurations).
 - Nothing depends on this module.
 
