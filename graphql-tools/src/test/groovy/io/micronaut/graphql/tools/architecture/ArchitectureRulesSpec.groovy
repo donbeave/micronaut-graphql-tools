@@ -72,7 +72,7 @@ class ArchitectureRulesSpec extends Specification {
      * Methods without a parameter that return a value but are not accessors of state: they run an action. A method that
      * implements a method of a type outside the library keeps the name of that type and is exempt as well.
      */
-    static final Set<String> ACCESSOR_RULE_EXEMPT = ['hashCode', 'toString', 'build', 'render', 'execute', 'assertNoErrors'] as Set
+    static final Set<String> ACCESSOR_RULE_EXEMPT = ['hashCode', 'toString', 'build', 'render', 'execute', 'assertNoErrors', 'generate'] as Set
 
     @Shared JavaClasses classes = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
