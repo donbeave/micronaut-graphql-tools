@@ -159,6 +159,7 @@ public interface BookClient {
     @GraphQLOperation(ECHO)
     @GraphQLOperationMetadata(document = ECHO, operationName = "Echo", variables = {"count"}, payload = "field")
     @Header(name = "X-Method", value = "method")
+    @Header(name = "X-Same", value = "X-Same")
     Map<String, Object> echoHeaders(int count, @Header("X-Token") String token, @Header String requestId, @CookieValue("session") String session,
                                     @Nullable @Header("X-Absent") String absent, @Header("X-Number") int number);
 

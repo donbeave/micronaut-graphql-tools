@@ -156,6 +156,7 @@ class DeclarativeClientSpec extends Specification {
         result.headers['x-number'] == ['5']
         result.headers['x-static'] == ['type']
         result.headers['x-method'] == ['method']
+        result.headers['x-same'] == ['X-Same']
         !result.headers.containsKey('x-absent')
         result.cookies == [session: 'sess']
         result.variables == [count: 3]

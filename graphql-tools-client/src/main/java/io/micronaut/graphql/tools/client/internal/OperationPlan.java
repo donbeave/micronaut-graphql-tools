@@ -200,7 +200,7 @@ final class OperationPlan {
         for (AnnotationValue<Header> header : metadata.getAnnotationValuesByType(Header.class)) {
             String name = header.stringValue("name").orElse("");
             String value = header.stringValue().orElse("");
-            if (!name.isEmpty() && !value.isEmpty() && !name.equals(value)) {
+            if (!name.isEmpty() && !value.isEmpty()) {
                 staticNames.add(name);
                 staticValues.add(value);
             }
@@ -325,7 +325,9 @@ final class OperationPlan {
     }
 
     private static Argument<?> boxed(Argument<?> argument) {
-        return argument.getType().isPrimitive() ? Argument.of(ReflectionUtils.getWrapperType(argument.getType())) : argument;
+        return argument.getType().isPrimitive()
+                ? Argument.of(ReflectionUtils.getWrapperType(argument.getType()), argument.getName(), argument.getAnnotationMetadata())
+                : argument;
     }
 
     private static GraphQLClientException unsupported(String member, String reason) {
