@@ -55,9 +55,10 @@ A type marked `(experimental)` in the tables below carries `@Experimental` (`io.
 |===
 |Package |Types
 |`io.micronaut.graphql.tools.visitor` |`GraphQLToolsVisitor`
+|`io.micronaut.graphql.tools.visitor.client` |`GraphQLClientVisitor`
 |===
 
-`GraphQLToolsVisitor` is loaded by the compiler and is never imported by application code. The compile-time options are the API of this module.
+`GraphQLToolsVisitor` and `GraphQLClientVisitor` are loaded by the compiler and are never imported by application code. The compile-time options are the API of this module.
 
 === micronaut-graphql-tools-scalars
 
@@ -104,7 +105,7 @@ A type marked `(experimental)` in the tables below carries `@Experimental` (`io.
 [cols="3,5", options="header"]
 |===
 |Package |Types
-|`io.micronaut.graphql.tools.client` |`GraphQLClientAttributes`, `GraphQLError`, `GraphQLMediaTypes`, `GraphQLRequest`, `GraphQLResponse`, `OperationType`
+|`io.micronaut.graphql.tools.client` |`GraphQLClientAttributes`, `GraphQLError`, `GraphQLHttpClient`, `GraphQLMediaTypes`, `GraphQLRequest`, `GraphQLResponse`, `OperationType`
 |`io.micronaut.graphql.tools.client.exceptions` |`GraphQLClientException`, `GraphQLErrorsException`, `GraphQLTransportException`
 |===
 

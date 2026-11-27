@@ -14,6 +14,10 @@ dependencies {
     implementation(projects.micronautGraphqlTools)
     implementation(mnSerde.micronaut.serde.jackson)
     annotationProcessor(projects.micronautGraphqlToolsProcessor)
+    // The client, tested against the server of this application (#685). Test scope: the application itself does not use it.
+    testImplementation(projects.micronautGraphqlToolsClient)
+    testImplementation(mn.micronaut.http.client)
+    testImplementation(mn.reactor)
     annotationProcessor(mnSerde.micronaut.serde.processor)
     testAnnotationProcessor(mnSerde.micronaut.serde.processor)
     runtimeOnly(mnLogging.logback.classic)

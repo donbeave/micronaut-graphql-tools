@@ -7,13 +7,13 @@ Gradle project `:micronaut-graphql-tools-client`, folder `graphql-tools-client/`
 
 The GraphQL client of the library for Micronaut 4: the runtime that an application uses to call a GraphQL server. The module
 holds the packages, the dependencies, the check that keeps the server stack out and the annotations of the declarative client
-(`@GraphQLClient`, `@GraphQLOperation` and `@GraphQLVariable`, described in the guide page Client). The types of a call (request, response, error, exceptions) and the Serde codec of the wire format are here too. The runtime that
+(`@GraphQLClient`, `@GraphQLOperation` and `@GraphQLVariable`, described in the guide page Client). The types of a call (request, response, error, exceptions) and the Serde codec of the wire format are here too. The low-level client, `GraphQLHttpClient`, is here: reactive, `CompletableFuture` and blocking calls over the Micronaut HTTP client, an injection-point factory (`@Inject @GraphQLClient("id") GraphQLHttpClient`), the classification of responses and GET queries. The runtime that
 implements a client interface arrives with the client phases.
 
 ## Responsibility
 
 - The public packages of the client: `io.micronaut.graphql.tools.client` (the root), `...client.annotation` and
-  `...client.exceptions`. The root holds `GraphQLRequest`, `GraphQLResponse`, `GraphQLError`, `OperationType`, `GraphQLMediaTypes` and
+  `...client.exceptions`. The root holds `GraphQLHttpClient`, `GraphQLRequest`, `GraphQLResponse`, `GraphQLError`, `OperationType`, `GraphQLMediaTypes` and
   `GraphQLClientAttributes`; the annotation package holds the three annotations; the exceptions package holds `GraphQLClientException`,
   `GraphQLErrorsException` and `GraphQLTransportException`.
 - The internal packages: `...client.internal` (the call path), `...client.internal.serde` (the Micronaut Serialization codec: it
@@ -30,10 +30,10 @@ Each package has a `package-info.java`. See the [API map](../CONTRIBUTING.md#api
 
 | Package | Audience | Holds |
 | --- | --- | --- |
-| `io.micronaut.graphql.tools.client` | Public API | The request, response, error, operation type, media types and request attributes |
+| `io.micronaut.graphql.tools.client` | Public API | The low-level client, the request, response, error, operation type, media types and request attributes |
 | `...client.annotation` | Public API | `GraphQLClient`, `GraphQLOperation` and `GraphQLVariable` |
 | `...client.exceptions` | Public API | The exceptions of a client call |
-| `...client.internal` | Internal | The call path, the wiring of the client beans and `GraphQLOperationMetadata`, the annotation that the compile-time visitor writes on an operation method |
+| `...client.internal` | Internal | The call path (the implementation of `GraphQLHttpClient`, the response classifier and the factory of the injection points), the startup check for Micronaut Serialization and `GraphQLOperationMetadata`, the annotation that the compile-time visitor writes on an operation method |
 | `...client.internal.serde` | Internal | The Serde codec of the request and the response envelope |
 | `...client.internal.ws` | Internal | The WebSocket transport, present with the Micronaut WebSocket client |
 
@@ -62,5 +62,5 @@ Run from the repository root:
 ./gradlew :micronaut-graphql-tools-client:check
 ```
 
-The module compiles with `--release 17`, so the check also runs on JDK 17. The Spock specs run the codec on Micronaut Serialization. `ClientAnnotationsSpec` checks that the aliases of `@GraphQLClient` resolve to `@Client`. `checkNoGraphQLJava` runs as
+The module compiles with `--release 17`, so the check also runs on JDK 17. The Spock specs run the codec on Micronaut Serialization, and `GraphQLHttpClientSpec` runs the client against a stub server on an embedded Netty server (the matrix of statuses by body kind, the POST and GET requests, the filters, the discovery by service id, the timeouts and the blocking call on an event loop). `ClientAnnotationsSpec` checks that the aliases of `@GraphQLClient` resolve to `@Client`. `checkNoGraphQLJava` runs as
 part of `check`.
