@@ -1,3 +1,5 @@
+NOTE: These artifacts are milestone previews from this repository. They are not affiliated with, and not published by, the Micronaut Foundation or the Micronaut team, even though the group id is `io.micronaut.graphql.tools`.
+
 The Gradle plugin has the id `io.micronaut.graphql.tools` and the version of the library. Nothing is published to the Gradle Plugin Portal or to Maven Central, so a build resolves the plugin from a repository that it declares in `pluginManagement`, from Maven Local, or from an included build.
 
 [[codegenGradlePluginRepository]]
