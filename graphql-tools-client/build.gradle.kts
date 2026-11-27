@@ -1,3 +1,6 @@
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+
 plugins {
     id("io.micronaut.build.internal.graphql-tools-module")
 }
@@ -14,6 +17,7 @@ dependencies {
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.groovy)
     testImplementation(mn.micronaut.inject.java)
+    testImplementation(mn.micronaut.http.client)
     testImplementation(libs.jetbrains.annotations)
     // The codec specs run on Micronaut Serialization with its JSON implementation, and no Jackson databind is on the test classpath.
     testImplementation(mnSerde.micronaut.serde.jackson)
@@ -25,19 +29,27 @@ dependencies {
 }
 
 // The client runs in an application that calls a server, so it must not bring the server stack: no graphql-java and no
-// graphql-tools runtime on either main classpath. The check reads the resolved components, as checkNoRuntimeDependency does.
+// graphql-tools runtime on either main classpath. The check reads the resolved components by their identifier, not by a display
+// name: a project is `project <path>` (the core is `:micronaut-graphql-tools` under the standardized project names), a module is
+// `group:name` (the core's artifact is `io.micronaut.graphql.tools:micronaut-graphql-tools`).
 val checkNoGraphQLJava by tasks.registering {
     description = "Fails when a main classpath of this module contains graphql-java or the graphql-tools runtime."
     group = "verification"
     val components = listOf("compileClasspath", "runtimeClasspath").map { name ->
         configurations.named(name).map { configuration ->
-            configuration.incoming.resolutionResult.allComponents.map { it.id.displayName }
+            configuration.incoming.resolutionResult.allComponents.map { component ->
+                when (val id = component.id) {
+                    is ProjectComponentIdentifier -> "project ${id.projectPath}"
+                    is ModuleComponentIdentifier -> "${id.group}:${id.module}"
+                    else -> id.displayName
+                }
+            }
         }
     }
     inputs.property("components", providers.provider { components.flatMap { it.get() } })
     doLast {
         val forbidden = components.flatMap { it.get() }.filter {
-            it.startsWith("com.graphql-java:") || it == "project :graphql-tools" || it.startsWith("io.micronaut.graphql.tools:micronaut-graphql-tools:")
+            it.startsWith("com.graphql-java:") || it == "project :micronaut-graphql-tools" || it == "io.micronaut.graphql.tools:micronaut-graphql-tools"
         }
         check(forbidden.isEmpty()) { "graphql-tools-client must not depend on graphql-java or the graphql-tools runtime, found: $forbidden" }
     }

@@ -185,6 +185,10 @@ repositories {
 }
 ```
 
+## Design notes
+
+Design documents for work that is not built yet live in `docs/design`. [`code-generator.md`](docs/design/code-generator.md) describes the schema-to-code generator: the IR, the options model, the emitter strategy with its measurements, determinism, the placement of name constants and the client mode.
+
 ## API map
 
 This section tells you which package holds what, which packages you may import from, and which ones are implementation. Every Java package of the library modules has a `package-info.java` that says the same thing in the Javadoc, and the build checks that each of them exists.
@@ -234,7 +238,7 @@ When you change a public signature on purpose, run `./gradlew apiDump` (or `./gr
 
 ### Current layout
 
-This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration, `graphql-tools-testing` the in-process tester, `graphql-tools-client` the GraphQL client (so far its request, response, error and exception types) and `test-suite-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
+This is the layout of the code now. `graphql-tools` is the library, `graphql-tools-binding` the shared binding rules, `graphql-tools-processor` the compile-time checks, `graphql-tools-scalars` the standard scalars, `graphql-tools-micrometer` the request metrics, `graphql-tools-opentelemetry` the request and field spans, `graphql-tools-upload` the file upload, `graphql-tools-security` the Micronaut Security integration, `graphql-tools-testing` the in-process tester, `graphql-tools-client` the GraphQL client (so far its annotations and its request, response, error and exception types) and `test-suite-tck` the execution-behaviour TCK of this repository. In the audience column, `Mixed` means the package holds public API and `@Internal` types, and `Internal` means every type is implementation.
 
 | Package | Module | Audience | Holds |
 | --- | --- | --- | --- |
@@ -301,9 +305,9 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.testing` | graphql-tools-testing | Public API | `GraphQLTester`, `GraphQLTestRequest` and `GraphQLTestResponse`, the in-process tester and its fluent assertions |
 | `io.micronaut.graphql.tools.testing.internal` | graphql-tools-testing | Internal | The context contributor that copies the values of a test request into the GraphQL context |
 | `io.micronaut.graphql.tools.client` | graphql-tools-client | Public API | `GraphQLRequest`, `GraphQLResponse`, `GraphQLError`, `OperationType`, `GraphQLMediaTypes` and `GraphQLClientAttributes`, the types of a call |
-| `io.micronaut.graphql.tools.client.annotation` | graphql-tools-client | Public API | No types yet: the annotations of a client |
+| `io.micronaut.graphql.tools.client.annotation` | graphql-tools-client | Public API | The annotations of a client: `GraphQLClient`, `GraphQLOperation` and `GraphQLVariable` |
 | `io.micronaut.graphql.tools.client.exceptions` | graphql-tools-client | Public API | `GraphQLClientException` and its subclasses `GraphQLErrorsException` and `GraphQLTransportException` |
-| `io.micronaut.graphql.tools.client.internal` | graphql-tools-client | Internal | The call path and the wiring of the client beans |
+| `io.micronaut.graphql.tools.client.internal` | graphql-tools-client | Internal | The call path, the wiring of the client beans and the metadata annotation of an operation method |
 | `io.micronaut.graphql.tools.client.internal.serde` | graphql-tools-client | Internal | The Serde codec: the request serializer, the response envelope and the unwrapping deserializer |
 | `io.micronaut.graphql.tools.client.internal.ws` | graphql-tools-client | Internal | The WebSocket transport of the client |
 | `io.micronaut.graphql.tools.visitor` | graphql-tools-processor | Mixed: compiler plug-in | The compile-time `TypeElementVisitor`, loaded by the compiler and never imported, and `BindingRulesAccess`, which is `@Internal` and exists for the benchmarks |

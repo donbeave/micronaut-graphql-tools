@@ -21,7 +21,7 @@ The guide sources are in `src/main/docs/guide`, listed in [`toc.yml`](src/main/d
 
 ```groovy
 dependencies {
-    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M4")
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools:1.0.0-M5")
 }
 ```
 
@@ -48,7 +48,7 @@ and test it.
 | [`graphql-tools-upload`](graphql-tools-upload/README.md) | `:micronaut-graphql-tools-upload` | File upload: the `Upload` scalar and the multipart request route, optional. |
 | [`graphql-tools-security`](graphql-tools-security/README.md) | `:micronaut-graphql-tools-security` | Micronaut Security: the principal in resolvers, `@Secured` on resolver methods and the root fields hook, optional. |
 | [`graphql-tools-testing`](graphql-tools-testing/README.md) | `:micronaut-graphql-tools-testing` | The in-process tester for application tests: run a document against the `GraphQL` bean and assert on the response, test scope. |
-| [`graphql-tools-client`](graphql-tools-client/README.md) | `:micronaut-graphql-tools-client` | The GraphQL client for applications that call a server: the request, response, error and exception types and the Serde codec, with the check that keeps the server stack out. |
+| [`graphql-tools-client`](graphql-tools-client/README.md) | `:micronaut-graphql-tools-client` | The GraphQL client for applications that call a server: its annotations (`@GraphQLClient`, `@GraphQLOperation`, `@GraphQLVariable`), the request, response, error and exception types, the Serde codec and the check that keeps the server stack out. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`docs-examples-java`](docs-examples-java/README.md) | `:micronaut-docs-examples-java` | The guide examples in Java, with a test that runs the quickstart. |

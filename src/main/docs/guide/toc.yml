@@ -34,6 +34,7 @@ protection: Protection
 transport: Transports
 customization: Customization
 federation: Federation
+client: Client
 safety:
   title: Safety
   startupErrors: Startup Errors
