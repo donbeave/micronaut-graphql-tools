@@ -43,27 +43,6 @@
 
   <build>
     <plugins>
-      <plugin>
-        <!-- stands in for the generator, which emits no file yet: puts a source file of java into the generated directory before the goal runs -->
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>place-source</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/generated-sources/graphql-tools/java</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/placed/java</directory>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <!-- tag::plugin[] -->
       <plugin>
         <groupId>io.micronaut.graphql.tools</groupId>

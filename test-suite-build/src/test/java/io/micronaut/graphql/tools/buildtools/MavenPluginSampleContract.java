@@ -30,9 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * compiled with the project, an unchanged run is skipped, a changed input runs again, a plugin property reaches the configuration, and
  * a missing option fails with its diagnostic.
  *
- * <p>The generator emits no file in this version, so each sample puts one source file of its language into the generated directory
- * with the resources plugin before the goal runs. The goal leaves it alone (it is not in the manifest) and the compiler has to
- * find it through the registered source root.</p>
+ * <p>The generator emits Java only, so the Java sample compiles what it generated. The Kotlin and Groovy samples put one source file
+ * of their language into the generated directory with the resources plugin before the goal runs, until their emitters exist. The goal
+ * leaves it alone (it is not in the manifest) and the compiler has to find it through the registered source root.</p>
  */
 abstract class MavenPluginSampleContract {
 
@@ -53,9 +53,14 @@ abstract class MavenPluginSampleContract {
         assertEquals(0, built.exitCode(), built.output());
         assertTrue(built.output().contains(GENERATED_NOTE), "the goal ran at generate-sources:\n" + built.output());
         assertTrue(java.nio.file.Files.isRegularFile(sample.file(GENERATED + "/.graphql-tools-generated")), "the manifest is written");
+        assertGeneratedSourcesCompiled(sample, built);
+        assertTrue(java.nio.file.Files.isRegularFile(sample.file("target/classes/example/Main.class")), built.output());
+    }
+
+    /** What a run shows about the generated directory; the default is the source file that the sample places there. */
+    void assertGeneratedSourcesCompiled(MavenSample sample, MavenSample.Result built) {
         assertTrue(java.nio.file.Files.isRegularFile(sample.file("target/classes/placed/Placed.class")),
                 "the source file in the generated directory was compiled:\n" + built.output());
-        assertTrue(java.nio.file.Files.isRegularFile(sample.file("target/classes/example/Main.class")), built.output());
     }
 
     @Test

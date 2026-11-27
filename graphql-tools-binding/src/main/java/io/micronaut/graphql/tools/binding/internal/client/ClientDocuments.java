@@ -135,7 +135,7 @@ public final class ClientDocuments {
      * @param at a source location of a node
      * @return the location, with the source name of the node as its path
      */
-    static @Nullable DocumentLocation location(@Nullable SourceLocation at) {
+    public static @Nullable DocumentLocation location(@Nullable SourceLocation at) {
         return at == null ? null : new DocumentLocation(at.getSourceName(), at.getLine(), at.getColumn());
     }
 

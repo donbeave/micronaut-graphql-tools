@@ -289,6 +289,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.internal.manifest` | graphql-tools | Internal | Recording and writing the binding manifest at startup |
 | `io.micronaut.graphql.tools.internal.model` | graphql-tools | Internal | The runtime model the binding reads: the resolver registry, the introspection registry, the type and bean models |
 | `io.micronaut.graphql.tools.binding.internal.client` | graphql-tools-binding | Internal | The rules of the client: the client directories, the assembly of an operation document and its validation against a client schema |
+| `io.micronaut.graphql.tools.binding.internal.client.method` | graphql-tools-binding | Internal | The rules of the methods of a client: the parameters against the variables of the operation, and the result type against the selection |
 | `io.micronaut.graphql.tools.binding.internal.finding` | graphql-tools-binding | Internal | Findings and their rendering |
 | `io.micronaut.graphql.tools.binding.internal.manifest` | graphql-tools-binding | Internal | The binding manifest renderer and the schema hash |
 | `io.micronaut.graphql.tools.binding.internal.membership` | graphql-tools-binding | Internal | The rule that a union or interface member is not mapped to a disjoint class |

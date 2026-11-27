@@ -13,7 +13,7 @@ change when one is added.
   case.properties            description=...  tags=lang:all  compile.client-dirs=case|none|missing|case+missing  compile.schema-dirs=case|none  compile.option.<full key>=<value>
   client/<schema>/...        the client directory: one subdirectory per client schema, with *.graphqls and *.graphql files
   schema/*.graphqls          optional: the schema directory of the resolvers, which is the client schema named server
-  java/example/*.java        the client interfaces, one per file, named after the interface; a language directory is a language the case covers
+  java/example/*.java        the client interfaces, one per file, named after the interface, and the types that they use (a file without @GraphQLClient is not a client); a language directory is a language the case covers
   groovy/example/*.groovy
   kotlin/example/*.kt
   expected/

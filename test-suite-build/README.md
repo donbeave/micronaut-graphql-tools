@@ -35,8 +35,9 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   module built last: Maven compiles the reactor in one JVM, so without the check that module would pass against the schema of the one before it.
 - `samples/maven-plugin-<language>` (`maven-plugin-java`, `maven-plugin-kotlin`, `maven-plugin-groovy`): Maven projects that declare the
   `generate` goal of `micronaut-graphql-tools-maven-plugin` (the tagged `plugin` snippet of the guide) and compile with their language. The
-  generator emits no source file yet, so each sample copies one source file of its language into the generated directory in the
-  same phase, before the goal, and `Main` uses it: the build proves that the registered source root is compiled. `MavenPluginSampleContract`
+  generator emits Java only, so the Java sample compiles the enum and the name constants that the goal generated for its schema (and a
+  removed schema file leaves no stale source), and the Kotlin and Groovy samples copy one source file of their language into the generated
+  directory in the same phase, before the goal, and `Main` uses it: the build proves that the registered source root is compiled. `MavenPluginSampleContract`
   asserts the goal runs at `generate-sources`, an unchanged run is skipped and a changed schema runs again, `-Dmicronaut.graphql.tools.codegen.package.name`
   and `.skip` bind, a missing option and a syntax error fail with their diagnostics; the Groovy sample shows that GMavenPlus ignores the
   compile source roots (the `sources` snippet is required), and the Kotlin sample records that the Kotlin plugin reads them even with `sourceDirs`.

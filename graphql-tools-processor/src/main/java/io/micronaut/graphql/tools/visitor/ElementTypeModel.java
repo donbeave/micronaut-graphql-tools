@@ -101,6 +101,14 @@ final class ElementTypeModel implements TypeModel {
     }
 
     /**
+     * @param parameter a parameter of a method of a class that was read here
+     * @return the parameter as the rules see it
+     */
+    JParameter parameter(ParameterElement parameter) {
+        return new ElementParameter(parameter);
+    }
+
+    /**
      * @param signature a method signature as {@link JMethod#signature()} prints it
      * @return the element of a method that this model handed out, or {@code null}
      */

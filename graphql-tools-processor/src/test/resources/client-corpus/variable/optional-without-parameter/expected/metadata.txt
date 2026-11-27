@@ -1,0 +1,1 @@
+BookClient#books type=query name=Books payload=field variables=genre,limit,ids,first document=queryBooks($genre:Genre,$limit:Int,$ids:[ID!],$first:Int!=10){books(genre:$genre,limit:$limit,ids:$ids,first:$first){title}}
