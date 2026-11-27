@@ -35,8 +35,9 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   module built last: Maven compiles the reactor in one JVM, so without the check that module would pass against the schema of the one before it.
 - `samples/maven-plugin-<language>` (`maven-plugin-java`, `maven-plugin-kotlin`, `maven-plugin-groovy`): Maven projects that declare the
   `generate` goal of `micronaut-graphql-tools-maven-plugin` (the tagged `plugin` snippet of the guide) and compile with their language. The
-  generator emits no source file yet, so each sample copies one source file of its language into the generated directory in the
-  same phase, before the goal, and `Main` uses it: the build proves that the registered source root is compiled. `MavenPluginSampleContract`
+  generator emits Java only, so the Java sample compiles the enum and the name constants that the goal generated for its schema (and a
+  removed schema file leaves no stale source), and the Kotlin and Groovy samples copy one source file of their language into the generated
+  directory in the same phase, before the goal, and `Main` uses it: the build proves that the registered source root is compiled. `MavenPluginSampleContract`
   asserts the goal runs at `generate-sources`, an unchanged run is skipped and a changed schema runs again, `-Dmicronaut.graphql.tools.codegen.package.name`
   and `.skip` bind, a missing option and a syntax error fail with their diagnostics; the Groovy sample shows that GMavenPlus ignores the
   compile source roots (the `sources` snippet is required), and the Kotlin sample records that the Kotlin plugin reads them even with `sourceDirs`.
@@ -50,6 +51,10 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   `[code] coordinate` and the schema location, a missing option fails with `processor-schema-not-configured`,
   `checks=false` compiles with one note, and the build cache outcome of a clean rebuild and of a relocated project is
   recorded (it is asserted for javac: `FROM_CACHE`). One subclass per sample names the compile task.
+  The client options (#663) have the same three scenarios on the `catalog` client of each sample (`src/main/graphql/client`):
+  an edit of an operation or of the client schema reruns the compile task, a drifted operation fails with
+  `[client-document-invalid]`, a missing `client.dirs` fails with `[client-schema-missing]`, and `client.checks=false` passes
+  with its note. Maven needs `mvn clean verify` after a client document edit; the Maven spec records what each sample does without it.
   `MavenSampleContract` is the Maven counterpart: the option arrives, a drifted class fails `mvn clean verify` with
   `[code] coordinate`, a missing option fails, and `-Dgraphql.checks=false` passes with the note. Maven does not track the
   schema directory: the compiler plugin of a Java project calls the classes up to date after a schema edit, so the

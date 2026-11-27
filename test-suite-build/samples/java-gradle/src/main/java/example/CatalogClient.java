@@ -13,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package placed;
+package example;
 
-public final class Placed {
+import io.micronaut.graphql.tools.client.annotation.GraphQLClient;
+import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
 
-    private Placed() {
-    }
+// tag::client[]
+@GraphQLClient(schema = "catalog")
+public interface CatalogClient {
 
-    public static String value() {
-        return "placed";
-    }
+    @GraphQLOperation("Books")
+    String books();
 }
+// end::client[]

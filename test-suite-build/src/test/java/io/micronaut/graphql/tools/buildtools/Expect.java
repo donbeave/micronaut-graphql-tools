@@ -28,6 +28,12 @@ final class Expect {
     static final String BOUND_ARGUMENT = "books(limit: Int)";
     static final String RENAMED_ARGUMENT = "books(max: Int)";
 
+    /** The client schema of every sample, its operation, and the edit that makes the operation drift from the schema. */
+    static final String CLIENT_SCHEMA = "src/main/graphql/client/catalog/schema.graphqls";
+    static final String CLIENT_OPERATION = "src/main/graphql/client/catalog/books.graphql";
+    static final String BOUND_FIELD = "    title\n";
+    static final String RENAMED_FIELD = "    name\n";
+
     private Expect() {
     }
 
@@ -36,6 +42,18 @@ final class Expect {
         String note = "checked 1 resolver class against 1 schema file in [" + schemaDirectory + "]; "
                 + findings + (findings == 1 ? " finding." : " findings.");
         assertTrue(output.contains(note), "the build prints the note '" + note + "':\n" + output);
+    }
+
+    /** The note of the client visitor: the operations were validated against the client schema. */
+    static void clientChecked(String output) {
+        String note = "checked 1 client operation against 1 client schema.";
+        assertTrue(output.contains(note), "the build prints the note '" + note + "':\n" + output);
+    }
+
+    static void clientChecksOff(String output) {
+        assertTrue(output.contains("GraphQL client checks are off (micronaut.graphql.tools.processor.client.checks=false)"),
+                "the build prints the note that the client checks are off:\n" + output);
+        assertFalse(output.contains("[client-document-invalid]"), output);
     }
 
     static void diagnostic(String output, String code, String coordinate) {

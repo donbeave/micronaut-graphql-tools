@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * What every Gradle sample proves: the option reaches the compiler, a schema edit reruns the compile
@@ -41,6 +42,11 @@ abstract class GradleSampleContract {
     /** The task that builds the sample and depends on the checked one. */
     String buildTask() {
         return "classes";
+    }
+
+    /** Whether the sample has a client schema and a {@code @GraphQLClient} interface. */
+    boolean hasClient() {
+        return true;
     }
 
     /** The schema file that the checks read, relative to the sample. */
@@ -92,6 +98,65 @@ abstract class GradleSampleContract {
         // the repaired project is what the last successful build compiled: the outcome may also be up to date or from the cache
         BuildResult repaired = sample.build(tasks());
         assertNotEquals(TaskOutcome.FAILED, GradleSample.outcome(repaired, checkedTask()));
+    }
+
+    @Test
+    void aClientDocumentEditRerunsTheCheckedTask() {
+        assumeTrue(hasClient(), "the sample has no client");
+        GradleSample sample = GradleSample.copyOf(sample(), "client-edit");
+        Path operation = sample.file(Expect.CLIENT_OPERATION);
+
+        BuildResult first = sample.build(tasks());
+        assertEquals(TaskOutcome.SUCCESS, GradleSample.outcome(first, checkedTask()));
+        Expect.clientChecked(first.getOutput());
+
+        BuildResult unchanged = sample.build(tasks());
+        assertEquals(TaskOutcome.UP_TO_DATE, GradleSample.outcome(unchanged, checkedTask()),
+                "nothing changed, so the checked task is up to date");
+
+        Files.replace(operation, "query Books {", "# a comment that changes the file\nquery Books {");
+        BuildResult edited = sample.build(tasks());
+        assertEquals(TaskOutcome.SUCCESS, GradleSample.outcome(edited, checkedTask()),
+                "an operation edit reruns the checked task, because the build declares the client directory as its input");
+        Expect.clientChecked(edited.getOutput());
+
+        Files.replace(sample.file(Expect.CLIENT_SCHEMA), "title: String!", "title: String");
+        BuildResult schemaEdited = sample.build(tasks());
+        assertEquals(TaskOutcome.SUCCESS, GradleSample.outcome(schemaEdited, checkedTask()),
+                "a client schema edit reruns the checked task too");
+
+        Files.replace(operation, Expect.BOUND_FIELD, Expect.RENAMED_FIELD);
+        BuildResult drifted = sample.buildAndFail(tasks());
+        assertEquals(TaskOutcome.FAILED, GradleSample.outcome(drifted, checkedTask()));
+        Expect.diagnostic(drifted.getOutput(), "client-document-invalid", "example.CatalogClient#books()");
+
+        Files.replace(operation, Expect.RENAMED_FIELD, Expect.BOUND_FIELD);
+        BuildResult repaired = sample.build(tasks());
+        assertNotEquals(TaskOutcome.FAILED, GradleSample.outcome(repaired, checkedTask()));
+    }
+
+    @Test
+    void aMissingClientOptionFails() {
+        assumeTrue(hasClient(), "the sample has no client");
+        GradleSample sample = GradleSample.copyOf(sample(), "missing-client-option");
+        Files.removeTagged(sample.file(buildFile()), "client-dirs");
+
+        BuildResult failed = sample.buildAndFail(tasks());
+
+        assertEquals(TaskOutcome.FAILED, GradleSample.outcome(failed, checkedTask()));
+        Expect.diagnostic(failed.getOutput(), "client-schema-missing", "example.CatalogClient#books()");
+    }
+
+    @Test
+    void clientChecksFalsePrintsItsNoteAndPasses() {
+        assumeTrue(hasClient(), "the sample has no client");
+        GradleSample sample = GradleSample.copyOf(sample(), "client-checks-off");
+        Files.replace(sample.file(Expect.CLIENT_OPERATION), Expect.BOUND_FIELD, Expect.RENAMED_FIELD);
+
+        BuildResult passed = sample.build(tasks("-PgraphqlClientChecks=false"));
+
+        assertEquals(TaskOutcome.SUCCESS, GradleSample.outcome(passed, checkedTask()));
+        Expect.clientChecksOff(passed.getOutput());
     }
 
     @Test

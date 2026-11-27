@@ -21,6 +21,10 @@
     <micronaut.graphql.tools.version>1.0.0-SNAPSHOT</micronaut.graphql.tools.version>
     <!-- mvn verify -Dgraphql.checks=false compiles without the checks -->
     <graphql.checks>true</graphql.checks>
+    <!-- tag::client-checks-property[] -->
+    <!-- mvn verify -Dgraphql.client.checks=false parses the client operations without validating them -->
+    <graphql.client.checks>true</graphql.client.checks>
+    <!-- end::client-checks-property[] -->
   </properties>
 
   <repositories>
@@ -57,6 +61,12 @@
       <groupId>io.micronaut.graphql.tools</groupId>
       <artifactId>micronaut-graphql-tools</artifactId>
     </dependency>
+    <!-- tag::client-dependency[] -->
+    <dependency>
+      <groupId>io.micronaut.graphql.tools</groupId>
+      <artifactId>micronaut-graphql-tools-client</artifactId>
+    </dependency>
+    <!-- end::client-dependency[] -->
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-stdlib</artifactId>
@@ -102,6 +112,12 @@
                 <!-- tag::schema-dirs[] -->
                 <annotationProcessorArg>micronaut.graphql.tools.processor.schema.dirs=${project.basedir}/src/main/resources/graphql</annotationProcessorArg>
                 <!-- end::schema-dirs[] -->
+                <!-- tag::client-dirs[] -->
+                <annotationProcessorArg>micronaut.graphql.tools.processor.client.dirs=${project.basedir}/src/main/graphql/client</annotationProcessorArg>
+                <!-- end::client-dirs[] -->
+                <!-- tag::client-checks[] -->
+                <annotationProcessorArg>micronaut.graphql.tools.processor.client.checks=${graphql.client.checks}</annotationProcessorArg>
+                <!-- end::client-checks[] -->
                 <!-- tag::checks[] -->
                 <annotationProcessorArg>micronaut.graphql.tools.processor.checks=${graphql.checks}</annotationProcessorArg>
                 <!-- end::checks[] -->

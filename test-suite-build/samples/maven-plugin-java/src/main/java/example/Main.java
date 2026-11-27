@@ -15,12 +15,15 @@
  */
 package example;
 
+import example.api.model.Color;
+import example.api.names.QueryNames;
+
 public final class Main {
 
     private Main() {
     }
 
     public static String greeting() {
-        return placed.Placed.value();
+        return QueryNames.HELLO + ":" + Color.RED;
     }
 }
