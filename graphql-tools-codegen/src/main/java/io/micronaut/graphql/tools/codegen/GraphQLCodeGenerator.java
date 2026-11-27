@@ -15,12 +15,9 @@
  */
 package io.micronaut.graphql.tools.codegen;
 
-import graphql.parser.InvalidSyntaxException;
-import graphql.parser.Parser;
+import io.micronaut.graphql.tools.codegen.schema.IrBuilder;
+import io.micronaut.graphql.tools.codegen.schema.IrResult;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,21 +36,29 @@ import java.util.Objects;
  *         .generate();
  * }</pre>
  *
- * <p>The generator checks the options and reads each schema file with the graphql-java parser. Every problem is a
- * {@link Diagnostic} in the result; nothing is thrown for the content of an option or a schema. The generator is a plain object
- * with no Gradle, Maven or Micronaut types, so a build plugin maps its configuration onto the builder and {@link Options}.</p>
+ * <p>The generator checks the options, loads the schema files and lowers them into the intermediate representation ({@link
+ * #toIr()}). Every problem is a {@link Diagnostic} in the result; nothing is thrown for the content of an option or a schema.
+ * The generator is a plain object with no Gradle, Maven or Micronaut types, so a build plugin maps its configuration onto the
+ * builder and {@link Options}.</p>
  *
- * <p>This version produces no files yet: the schema model and the emitters arrive in later changes, and the result lists no
- * file until they do.</p>
+ * <p>The schema files are given as files ({@code withSchemaFiles}) or as a directory ({@code withSchemaDirectory}); with neither,
+ * the directory {@value #DEFAULT_SCHEMA_DIRECTORY} relative to the working directory is read. This version produces no files
+ * yet: the emitters arrive in later changes, and the result lists no file until they do.</p>
  */
 public final class GraphQLCodeGenerator {
 
+    /** The schema directory that is read when the builder is given neither files nor a directory. */
+    public static final String DEFAULT_SCHEMA_DIRECTORY = "src/main/resources/graphql";
+
     private final List<Path> schemaFiles;
+    private final Path schemaDirectory;
     private final Path outputDirectory;
     private final Options options;
 
     private GraphQLCodeGenerator(Builder builder) {
         this.schemaFiles = List.copyOf(builder.schemaFiles);
+        this.schemaDirectory = builder.schemaDirectory != null || !builder.schemaFiles.isEmpty() ? builder.schemaDirectory
+                : Path.of(DEFAULT_SCHEMA_DIRECTORY);
         this.outputDirectory = builder.outputDirectory;
         this.options = builder.options;
     }
@@ -82,31 +87,17 @@ public final class GraphQLCodeGenerator {
      * @return the files and the diagnostics; there is no file when a diagnostic is an error
      */
     public GenerationResult generate() {
-        List<Diagnostic> diagnostics = new ArrayList<>(options.validate());
-        for (Path schemaFile : schemaFiles) {
-            check(schemaFile, diagnostics);
-        }
-        return new GenerationResult(List.of(), diagnostics);
+        return new GenerationResult(List.of(), toIr().diagnostics());
     }
 
-    private static void check(Path schemaFile, List<Diagnostic> diagnostics) {
-        String path = schemaFile.toString().replace('\\', '/');
-        String text;
-        try {
-            text = Files.readString(schemaFile, StandardCharsets.UTF_8);
-        } catch (IOException | RuntimeException e) {
-            diagnostics.add(new Diagnostic(Diagnostic.Severity.ERROR, Diagnostic.SCHEMA_FILE_UNREADABLE,
-                    "The schema file " + path + " cannot be read: " + e.getMessage(), null, new Origin(path, 0, 0)));
-            return;
-        }
-        try {
-            new Parser().parseDocument(text);
-        } catch (InvalidSyntaxException e) {
-            int line = e.getLocation() != null ? e.getLocation().getLine() : 0;
-            int column = e.getLocation() != null ? e.getLocation().getColumn() : 0;
-            diagnostics.add(new Diagnostic(Diagnostic.Severity.ERROR, Diagnostic.SCHEMA_SYNTAX_ERROR,
-                    "The schema file " + path + " is not valid GraphQL: " + e.getMessage(), null, new Origin(path, line, column)));
-        }
+    /**
+     * Checks the options, loads the schema files and builds the intermediate representation. The result holds the IR, which is
+     * empty when a diagnostic is an error, the diagnostics, and the schema files that were skipped.
+     *
+     * @return the IR and the diagnostics
+     */
+    public IrResult toIr() {
+        return schemaDirectory != null ? IrBuilder.fromDirectory(schemaDirectory, options) : IrBuilder.fromFiles(schemaFiles, options);
     }
 
     /**
@@ -115,6 +106,7 @@ public final class GraphQLCodeGenerator {
     public static final class Builder {
 
         private final List<Path> schemaFiles = new ArrayList<>();
+        private Path schemaDirectory;
         private Path outputDirectory;
         private Options options;
 
@@ -124,7 +116,7 @@ public final class GraphQLCodeGenerator {
         /**
          * Adds schema files.
          *
-         * @param files the files, in the order to read them
+         * @param files the files, in any order: they are sorted by path before they are read
          * @return this builder
          */
         public Builder withSchemaFiles(Path... files) {
@@ -134,11 +126,23 @@ public final class GraphQLCodeGenerator {
         /**
          * Adds schema files.
          *
-         * @param files the files, in the order to read them
+         * @param files the files, in any order: they are sorted by path before they are read
          * @return this builder
          */
         public Builder withSchemaFiles(Collection<Path> files) {
             files.forEach(file -> schemaFiles.add(Objects.requireNonNull(file, "schema file")));
+            return this;
+        }
+
+        /**
+         * Sets the directory that holds the schema files. The files are those whose path relative to the directory matches the
+         * options {@code includes} and not {@code excludes}, and the origins of the diagnostics are relative to it.
+         *
+         * @param directory the schema root
+         * @return this builder
+         */
+        public Builder withSchemaDirectory(Path directory) {
+            this.schemaDirectory = Objects.requireNonNull(directory, "schemaDirectory");
             return this;
         }
 
@@ -168,12 +172,12 @@ public final class GraphQLCodeGenerator {
          * Builds the generator.
          *
          * @return the generator
-         * @throws IllegalStateException when there is no schema file, no output directory or no options: the caller wired the
-         *                               generator wrongly, which is not a problem of an option value
+         * @throws IllegalStateException when there are both schema files and a schema directory, or no output directory or no
+         *                               options: the caller wired the generator wrongly, which is not a problem of an option value
          */
         public GraphQLCodeGenerator build() {
-            if (schemaFiles.isEmpty()) {
-                throw new IllegalStateException("withSchemaFiles was not called with a schema file");
+            if (!schemaFiles.isEmpty() && schemaDirectory != null) {
+                throw new IllegalStateException("withSchemaFiles and withSchemaDirectory are alternatives: call only one");
             }
             if (outputDirectory == null) {
                 throw new IllegalStateException("withOutputDirectory was not called");
