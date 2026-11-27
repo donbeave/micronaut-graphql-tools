@@ -18,6 +18,9 @@ dependencies {
     implementation("com.squareup:kotlinpoet")
 
     testImplementation(mnTest.micronaut.test.spock)
+    // ScalarPresetsSpec compares the presets with the runtime catalog and the standard scalars.
+    testImplementation(projects.micronautGraphqlToolsBinding)
+    testImplementation(projects.micronautGraphqlToolsScalars)
     testRuntimeOnly(mnLogging.logback.classic)
 }
 
@@ -60,6 +63,8 @@ tasks.named<Test>("test") {
     // IrGoldenSpec compares the IR snapshots in src/test/resources/golden; -Pcodegen.golden.update=true rewrites them.
     systemProperty("codegen.golden", layout.projectDirectory.dir("src/test/resources/golden").asFile.absolutePath)
     providers.gradleProperty("codegen.golden.update").orNull?.let { systemProperty("codegen.golden.update", it) }
+    systemProperty("codegen.readme", layout.projectDirectory.file("README.md").asFile.absolutePath)
+    inputs.file(layout.projectDirectory.file("README.md")).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("codegenReadme")
     inputs.files(layout.projectDirectory.dir("src/main/java").asFileTree)
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .withPropertyName("codegenSources")

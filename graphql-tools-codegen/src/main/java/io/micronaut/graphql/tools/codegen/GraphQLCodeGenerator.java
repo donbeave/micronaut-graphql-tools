@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.codegen;
 
 import io.micronaut.graphql.tools.codegen.schema.IrBuilder;
 import io.micronaut.graphql.tools.codegen.schema.IrResult;
+import io.micronaut.graphql.tools.codegen.schema.TypeMappingsFile;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -42,8 +43,9 @@ import java.util.Objects;
  * builder and {@link Options}.</p>
  *
  * <p>The schema files are given as files ({@code withSchemaFiles}) or as a directory ({@code withSchemaDirectory}); with neither,
- * the directory {@value #DEFAULT_SCHEMA_DIRECTORY} relative to the working directory is read. This version produces no files
- * yet: the emitters arrive in later changes, and the result lists no file until they do.</p>
+ * the directory {@value #DEFAULT_SCHEMA_DIRECTORY} relative to the working directory is read. For the Java language the enums are
+ * emitted; the other types and the other languages list no source file until their emitters arrive. The type mappings file
+ * {@value TypeMappingsFile#PATH} maps the types of the module to their classes.</p>
  */
 public final class GraphQLCodeGenerator {
 
@@ -54,6 +56,7 @@ public final class GraphQLCodeGenerator {
     private final Path schemaDirectory;
     private final Path outputDirectory;
     private final Options options;
+    private final List<Path> dependencies;
 
     private GraphQLCodeGenerator(Builder builder) {
         this.schemaFiles = List.copyOf(builder.schemaFiles);
@@ -61,6 +64,7 @@ public final class GraphQLCodeGenerator {
                 : Path.of(DEFAULT_SCHEMA_DIRECTORY);
         this.outputDirectory = builder.outputDirectory;
         this.options = builder.options;
+        this.dependencies = List.copyOf(builder.dependencies);
     }
 
     /**
@@ -84,10 +88,22 @@ public final class GraphQLCodeGenerator {
     /**
      * Checks the options and the schema files, and generates the files.
      *
-     * @return the files and the diagnostics; there is no file when a diagnostic is an error
+     * @return the files and the diagnostics; there is no file when a diagnostic is an error, and none for a language whose emitter
+     *         does not exist yet
      */
     public GenerationResult generate() {
-        return new GenerationResult(List.of(), toIr().diagnostics());
+        IrResult result = toIr();
+        List<GeneratedFile> files = new ArrayList<>();
+        if (!result.hasErrors()) {
+            if (options.language() == Language.JAVA) {
+                files.addAll(new JavaEmitter().emit(result.ir(), options));
+            }
+            GeneratedFile mappings = TypeMappingsFile.of(result.ir());
+            if (mappings != null) {
+                files.add(mappings);
+            }
+        }
+        return new GenerationResult(files, result.diagnostics());
     }
 
     /**
@@ -97,7 +113,8 @@ public final class GraphQLCodeGenerator {
      * @return the IR and the diagnostics
      */
     public IrResult toIr() {
-        return schemaDirectory != null ? IrBuilder.fromDirectory(schemaDirectory, options) : IrBuilder.fromFiles(schemaFiles, options);
+        return schemaDirectory != null ? IrBuilder.fromDirectory(schemaDirectory, options, dependencies)
+                : IrBuilder.fromFiles(schemaFiles, options, dependencies);
     }
 
     /**
@@ -107,6 +124,7 @@ public final class GraphQLCodeGenerator {
 
         private final List<Path> schemaFiles = new ArrayList<>();
         private Path schemaDirectory;
+        private final List<Path> dependencies = new ArrayList<>();
         private Path outputDirectory;
         private Options options;
 
@@ -143,6 +161,18 @@ public final class GraphQLCodeGenerator {
          */
         public Builder withSchemaDirectory(Path directory) {
             this.schemaDirectory = Objects.requireNonNull(directory, "schemaDirectory");
+            return this;
+        }
+
+        /**
+         * Adds dependency jars or class directories. When the option {@code typeMappingsFromDependencies} is on, the generator reads
+         * {@value TypeMappingsFile#PATH} from each of them and applies the mappings below {@code typeMappings}.
+         *
+         * @param paths the jars and directories, in any order: they are sorted by path before they are read
+         * @return this builder
+         */
+        public Builder withDependencies(Collection<Path> paths) {
+            paths.forEach(path -> dependencies.add(Objects.requireNonNull(path, "dependency")));
             return this;
         }
 

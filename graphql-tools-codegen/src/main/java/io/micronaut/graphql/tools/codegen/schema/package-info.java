@@ -17,7 +17,7 @@
  * The loader and the rules of the code generator. The loader reads schema files with the graphql-java parser only (the one package
  * that touches graphql-java) and merges the definitions and the type extensions in a defined order; the rules lower the merged
  * definitions and the options into the {@link io.micronaut.graphql.tools.codegen.ir.Ir} and report diagnostics. The entry points
- * are {@link io.micronaut.graphql.tools.codegen.schema.IrBuilder} and its {@link io.micronaut.graphql.tools.codegen.schema.IrResult};
+ * are {@link io.micronaut.graphql.tools.codegen.schema.IrBuilder} and its {@link io.micronaut.graphql.tools.codegen.schema.IrResult}, and {@link io.micronaut.graphql.tools.codegen.schema.SchemaFileSelector} selects the schema files of a directory for a build plugin;
  * the rest of the package is package-private.
  *
  * <p><b>Audience.</b> Public. It is meant for build plugins and for code that runs a build step; an application never has it on

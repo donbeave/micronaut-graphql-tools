@@ -306,6 +306,7 @@ class OptionsSpec extends Specification {
                 .contractNameTemplate('{Operation}{Field}Contract').kotlinSuspend(true)
                 .subscriptionReturnType('kotlinx.coroutines.flow.Flow')
                 .typeMappings([Date: 'java.time.LocalDate', 'Query.now': 'java.time.Instant', 'DateTime': 'java.time.OffsetDateTime'])
+                .typeMappingsFromDependencies(false)
                 .nameConstants(NameConstants.TYPES).includes(['schema/**/*.graphqls']).excludes(['**/draft/**', '**/old.graphqls'])
                 .commentsAsDescriptions(true).build()
     }

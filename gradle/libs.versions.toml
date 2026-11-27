@@ -30,6 +30,12 @@ jmh = "1.37"
 jetbrains-annotations = "26.1.0"
 # architecture rules (ArchitectureRulesSpec); the Micronaut catalogs do not manage it
 archunit = "1.5.1"
+# The Maven plugin (#195): the Maven line it is compiled against and supports (3.9.x; a plugin built against 3.9.11 runs on any later 3.9
+# and on Maven 4), the annotations of the mojo, and the testing harness that binds a <configuration> to the mojo
+maven = "3.9.11"
+maven-plugin-annotations = "3.15.2"
+maven-plugin-testing-harness = "3.4.0"
+
 # test oracle for the scalar SPI: the date/time scalars many graphql-java applications use
 graphql-java-datetime = "6.0.0"
 
@@ -79,3 +85,8 @@ apollo-api = { module = "com.apollographql.apollo:apollo-api", version.ref = "ap
 archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 graphql-java-datetime = { module = "com.tailrocks.graphql:graphql-java-datetime", version.ref = "graphql-java-datetime" }
+maven-plugin-api = { module = "org.apache.maven:maven-plugin-api", version.ref = "maven" }
+maven-core = { module = "org.apache.maven:maven-core", version.ref = "maven" }
+maven-compat = { module = "org.apache.maven:maven-compat", version.ref = "maven" }
+maven-plugin-annotations = { module = "org.apache.maven.plugin-tools:maven-plugin-annotations", version.ref = "maven-plugin-annotations" }
+maven-plugin-testing-harness = { module = "org.apache.maven.plugin-testing:maven-plugin-testing-harness", version.ref = "maven-plugin-testing-harness" }

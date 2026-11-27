@@ -66,16 +66,19 @@ class IrStructureSpec extends Specification {
 
     def "a member that is mapped to an external class makes the union and the interface open"() {
         when:
-        def ir = build('''
+        def result = IrBuilder.fromSources([new SchemaSource('schema.graphqls', '''
             type Query { q: Int }
             interface Node { id: ID! }
             type Book implements Node { id: ID! }
             type Ext implements Node { id: ID! }
             union Result = Book | Ext
-        ''', OPTIONS.toBuilder().typeMappings(['Ext': 'com.other.Ext']).build()).ir()
+        ''')], OPTIONS.toBuilder().typeMappings(['Ext': 'com.other.Ext']).build())
+        def ir = result.ir()
         def byName = ir.abstractTypes().collectEntries { [(it.names().sdlName()): it] }
 
         then:
+        !result.hasErrors()
+        result.diagnostics()*.code() == ['mapped-member', 'mapped-member']
         ir.models()*.names()*.sdlName() == ['Book']
         byName.Node.members()*.sdlName() == ['Book']
         !byName.Node.sealed()
