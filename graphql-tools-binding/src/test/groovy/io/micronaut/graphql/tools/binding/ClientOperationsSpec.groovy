@@ -603,7 +603,7 @@ union SearchResult = Book | Magazine
 
     void "an operation sent with GET must be a query, whatever the checks say"() {
         given:
-        schemaDir('books')
+        schemaDir('books', SCHEMA + 'type Subscription {\n  bookAdded: Book\n}\n')
 
         expect:
         codes(operations(checks).resolve(get('mutation Save($t: String!) { save(title: $t) { id } }'))) == ['client-get-mutation']
