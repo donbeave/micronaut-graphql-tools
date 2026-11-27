@@ -99,10 +99,11 @@ tasks.register<Test>("functionalTest") {
     testClassesDirs = functionalTest.output.classesDirs
     classpath = functionalTest.runtimeClasspath
     useJUnitPlatform()
-    dependsOn(":micronaut-graphql-tools-codegen:publishAllPublicationsToBuildRepository")
+    dependsOn(":micronaut-graphql-tools-codegen:publishAllPublicationsToBuildRepository", "publishAllPublicationsToBuildRepository")
     inputs.dir(functionalTestRepository).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("repository")
     systemProperty("plugin.repository", functionalTestRepository.get().asFile.absolutePath)
     systemProperty("plugin.version", project.version.toString())
+    systemProperty("plugin.repository-root", rootProject.projectDir.absolutePath)
     systemProperty("plugin.lowest-gradle", lowestGradle)
     systemProperty("plugin.current-gradle", gradle.gradleVersion)
     systemProperty("plugin.compat-java-home", compatJavaHome.get())
