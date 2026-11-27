@@ -86,7 +86,7 @@ class GenerateCacheFunctionalSpec extends PluginFunctionalSpec {
         schema(SCHEMA + GENRE)
         write('build.gradle.kts', kotlinBuild())
         build(gradle, 'generateGraphQL')
-        def first = snapshot('build/generated/sources/graphqlTools/main')
+        def first = snapshot('build/generated/sources/graphqlTools/main') + snapshot('build/generated/resources/graphqlTools/main')
         project = Files.createTempDirectory('second-machine')
         buildCache = Files.createTempDirectory('second-cache')
 
@@ -99,7 +99,7 @@ class GenerateCacheFunctionalSpec extends PluginFunctionalSpec {
         then:
         outcome == TaskOutcome.SUCCESS
         !first.isEmpty()
-        snapshot('build/generated/sources/graphqlTools/main') == first
+        snapshot('build/generated/sources/graphqlTools/main') + snapshot('build/generated/resources/graphqlTools/main') == first
 
         cleanup:
         project.toFile().deleteDir()
@@ -138,6 +138,9 @@ class GenerateCacheFunctionalSpec extends PluginFunctionalSpec {
 
     private Map<String, String> snapshot(String directory) {
         Path root = project.resolve(directory)
+        if (!Files.exists(root)) {
+            return [:]
+        }
         Files.walk(root).withCloseable { stream ->
             stream.filter { Files.isRegularFile(it) }.collect(Collectors.toMap(
                     { root.relativize(it).toString() }, { new String(Files.readAllBytes(it), 'UTF-8') }))

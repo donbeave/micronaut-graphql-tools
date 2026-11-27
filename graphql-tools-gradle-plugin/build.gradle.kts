@@ -112,6 +112,7 @@ tasks.register<Test>("functionalTest") {
     systemProperty("plugin.ksp", pluginPin("com.google.devtools.ksp"))
     outputs.upToDateWhen { false }
     testLogging {
+        showStandardStreams = true
         events("passed", "skipped", "failed")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }

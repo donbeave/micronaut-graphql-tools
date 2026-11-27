@@ -19,18 +19,17 @@ import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.TempDir
 
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 
 /**
- * The plugin as a user receives it, without the TestKit plugin class path: from a Maven Local repository, and from an included build
- * of this repository that also supplies the generator. The build repository that the other scenarios use holds the layout that
- * publishToMavenLocal writes, so the first scenario uses a copy of it as the Maven Local repository.
+ * The plugin as a user receives it, without the TestKit plugin class path: from a repository, from a Maven Local repository that the
+ * task publishToMavenLocal of this repository filled, and from an included build of this repository that also supplies the generator.
  */
 class PublishingFunctionalSpec extends PluginFunctionalSpec {
 
     private static final String REPOSITORY_ROOT = System.getProperty('plugin.repository-root').replace('\\', '/')
+
+    private static final String GENRE = '\nenum Genre {\n  FANTASY\n}\n'
 
     @TempDir
     Path mavenLocal
@@ -46,15 +45,47 @@ class PublishingFunctionalSpec extends PluginFunctionalSpec {
         }
     '''
 
+    def "the plugin id resolves from a repository through its marker and so does the generator"() {
+        given:
+        def repository = new File(System.getProperty('plugin.repository')).toURI()
+        write('settings.gradle.kts', """
+            pluginManagement { repositories { maven { url = uri("${repository}") }; mavenCentral() } }
+            rootProject.name = "sample"
+        """.stripIndent())
+        write('gradle.properties', "org.gradle.vfs.watch=false\n")
+        schema(SCHEMA + GENRE)
+        write('build.gradle.kts', """
+            plugins {
+                java
+                id("io.micronaut.graphql.tools") version "${VERSION}"
+            }
+            repositories {
+                maven { url = uri("${repository}") }
+                mavenCentral()
+            }
+            graphqlTools {
+                addRuntimeDependency = false
+                codegen { packageName = "example" }
+            }
+        """.stripIndent())
+
+        when:
+        def generated = runner(CURRENT, 'generateGraphQL').build()
+
+        then:
+        generated.task(':generateGraphQL').outcome == TaskOutcome.SUCCESS
+        exists('build/generated/sources/graphqlTools/main/example/model/Genre.java')
+    }
+
     def "the plugin id resolves from Maven Local and so does the generator"() {
         given:
-        copyRepository(mavenLocal)
+        publishToMavenLocal()
         write('settings.gradle.kts', """
             pluginManagement { repositories { mavenLocal(); mavenCentral() } }
             rootProject.name = "sample"
         """.stripIndent())
         write('gradle.properties', "org.gradle.vfs.watch=false\n")
-        schema(SCHEMA + '\nenum Genre {\n  FANTASY\n}\n')
+        schema(SCHEMA + GENRE)
         write('build.gradle.kts', """
             plugins {
                 java
@@ -76,8 +107,8 @@ class PublishingFunctionalSpec extends PluginFunctionalSpec {
         then:
         generated.task(':generateGraphQL').outcome == TaskOutcome.SUCCESS
         exists('build/generated/sources/graphqlTools/main/example/model/Genre.java')
-        generated.output.contains('PLUGIN=file:') && generated.output.contains('/io.micronaut.graphql.tools/micronaut-graphql-tools-gradle-plugin/' + VERSION + '/')
-        generated.output =~ /GENERATOR=\[[^\n]*\/io.micronaut.graphql.tools\/micronaut-graphql-tools-codegen\/\Q${VERSION}\E\//
+        generated.output.contains("PLUGIN=file:${mavenLocal}/io/micronaut/graphql/tools/micronaut-graphql-tools-gradle-plugin/${VERSION}/")
+        generated.output.contains("GENERATOR=[${mavenLocal}/io/micronaut/graphql/tools/micronaut-graphql-tools-codegen/${VERSION}/")
     }
 
     def "the plugin id and the generator resolve from an included build"() {
@@ -88,7 +119,7 @@ class PublishingFunctionalSpec extends PluginFunctionalSpec {
             rootProject.name = "sample"
         """.stripIndent())
         write('gradle.properties', "org.gradle.vfs.watch=false\n")
-        schema(SCHEMA + '\nenum Genre {\n  FANTASY\n}\n')
+        schema(SCHEMA + GENRE)
         write('build.gradle.kts', """
             plugins {
                 java
@@ -121,17 +152,13 @@ class PublishingFunctionalSpec extends PluginFunctionalSpec {
                 .withArguments(['--stacktrace', '--warning-mode=none'] + arguments.toList())
     }
 
-    private static void copyRepository(Path target) {
-        Path source = new File(System.getProperty('plugin.repository')).toPath()
-        Files.walk(source).withCloseable { stream ->
-            stream.each { Path path ->
-                Path copy = target.resolve(source.relativize(path).toString())
-                if (Files.isDirectory(path)) {
-                    Files.createDirectories(copy)
-                } else {
-                    Files.copy(path, copy, StandardCopyOption.REPLACE_EXISTING)
-                }
-            }
-        }
+    private void publishToMavenLocal() {
+        GradleRunner.create()
+                .withGradleVersion(CURRENT)
+                .withProjectDir(new File(REPOSITORY_ROOT))
+                .withTestKitDir(new File(System.getProperty('plugin.gradle-user-home')))
+                .withArguments('--stacktrace', '--warning-mode=none', "-Dmaven.repo.local=${mavenLocal}",
+                        ':micronaut-graphql-tools-codegen:publishToMavenLocal', ':micronaut-graphql-tools-gradle-plugin:publishToMavenLocal')
+                .build()
     }
 }
