@@ -78,4 +78,19 @@ class GraphQLToolsPluginSpec extends Specification {
         java.extensions.getByType(GraphQLToolsExtension).codegenSpecs.getByName('main').language.get() == 'JAVA'
         groovy.extensions.getByType(GraphQLToolsExtension).codegenSpecs.getByName('main').language.get() == 'GROOVY'
     }
+
+    def "a client spec generates Java even when the Groovy plugin is applied"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+        project.pluginManager.apply('groovy')
+        project.pluginManager.apply('io.micronaut.graphql.tools')
+        def extension = project.extensions.getByType(GraphQLToolsExtension)
+
+        when:
+        extension.codegen('client') { it.mode.set('CLIENT') }
+
+        then:
+        extension.codegenSpecs.getByName('client').language.get() == 'JAVA'
+        extension.codegenSpecs.getByName('main').language.get() == 'GROOVY'
+    }
 }

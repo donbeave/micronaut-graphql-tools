@@ -95,7 +95,7 @@ public class GraphQLToolsPlugin implements Plugin<Project> {
     }
 
     private static void configure(Project project, GraphQLToolsExtension extension, CodegenSpec spec) {
-        spec.getLanguage().convention(project.provider(() -> inferLanguage(project)));
+        spec.getLanguage().convention(project.provider(() -> inferLanguage(project, spec)));
         spec.getSchemaDirs().convention(extension.getSchemaDirs());
         spec.getOutputDirectory().convention(project.getLayout().getBuildDirectory().dir("generated/sources/graphqlTools/" + spec.getName()));
         project.getTasks().register(taskName(spec.getName()), GenerateGraphQLTask.class, task -> {
@@ -108,7 +108,10 @@ public class GraphQLToolsPlugin implements Plugin<Project> {
         });
     }
 
-    private static String inferLanguage(Project project) {
+    private static String inferLanguage(Project project, CodegenSpec spec) {
+        if (CLIENT.equals(spec.getMode().getOrElse(SERVER))) {
+            return JAVA;
+        }
         if (project.getPluginManager().hasPlugin("org.jetbrains.kotlin.jvm")) {
             return KOTLIN;
         }
