@@ -25,8 +25,14 @@ options and the schema files and reports what is wrong.
 - The `checkNoBuildToolOrRuntimeDependency` task, part of `check`: it fails when a main classpath holds a Gradle, Maven or
   Micronaut runtime dependency, or another module of this repository.
 
-Not in this module: the Gradle plugin and the Maven plugin, the schema loader and the IR, the emitters and the golden
-harness.
+- The golden harness, test code in `io.micronaut.graphql.tools.codegen.golden` (#192): `GoldenFiles` compares the files of a
+  case, or an IR text, with `src/test/resources/golden/<case>/`; `Determinism` checks two runs, shuffled schema orders, `\n`
+  line endings, no timestamp and a `@Generated` without a date; `InMemoryCompiler` compiles all files of a case in memory
+  (`JavaInMemoryCompiler` with javac, `GroovyInMemoryCompiler` with groovyc; a Kotlin emitter adds one `compile` method with
+  kotlinc). `./gradlew :micronaut-graphql-tools-codegen:test -PupdateGolden` rewrites the snapshots; review the diff and commit it.
+  Keep the 1k-type compile out of the unit suites.
+
+Not in this module: the Gradle plugin and the Maven plugin, the schema loader and the IR, and the emitters.
 
 ## Options
 
