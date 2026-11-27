@@ -23,6 +23,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface CatalogClient {
 
     @GraphQLOperation('Books')
-    String books()
+    Object books()
 }
 // end::client[]

@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
 public interface BookClient {
 
     @GraphQLOperation("{ books { ...Titled ...Authored } } fragment Titled on Book { id }")
-    String inline();
+    Object inline();
 
     @GraphQLOperation("Named")
-    String named();
+    Object named();
 
 }

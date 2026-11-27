@@ -1,0 +1,3 @@
+package example
+
+interface Hit

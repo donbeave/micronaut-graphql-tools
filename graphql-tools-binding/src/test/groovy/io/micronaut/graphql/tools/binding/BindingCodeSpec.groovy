@@ -72,6 +72,7 @@ class BindingCodeSpec extends Specification {
             'client-variable-type',
             'client-parameter-unbound',
             'client-scalar-conflict',
+            'client-result-shape',
     ]
 
     void "no two codes share a token, and every token is lower-case kebab-case"() {

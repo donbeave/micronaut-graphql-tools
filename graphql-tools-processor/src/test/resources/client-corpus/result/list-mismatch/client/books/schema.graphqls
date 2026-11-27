@@ -1,0 +1,52 @@
+type Query {
+  book(id: ID!): Book
+  books(genre: Genre): [Book!]!
+  maybeBooks: [Book]
+  search(term: String!): [SearchResult!]!
+  node(id: ID!): Node
+  version: String
+  count: Int!
+  stamp: DateTime
+  labels: [[String!]!]!
+}
+
+type Mutation {
+  save(title: String!): Book
+}
+
+type Subscription {
+  bookAdded: Book
+}
+
+enum Genre {
+  FICTION
+  SCIENCE
+}
+
+scalar DateTime
+
+interface Node {
+  id: ID!
+}
+
+type Book implements Node {
+  id: ID!
+  title: String
+  pages: Int!
+  rating: Int
+  author: Author
+  genre: Genre
+  tags: [String!]
+}
+
+type Author {
+  name: String!
+  born: DateTime
+}
+
+type Magazine implements Node {
+  id: ID!
+  issue: Int!
+}
+
+union SearchResult = Book | Magazine

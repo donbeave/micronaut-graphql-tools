@@ -47,9 +47,29 @@ public interface AnnotationView {
     List<String> classValues(String annotation, String member);
 
     /**
+     * @param annotation  the binary name of an annotation
+     * @param member      the member that holds an array of annotations
+     * @param classMember the member of each of those annotations that holds a class
+     * @param nameMember  the member of each of those annotations that holds a name
+     * @return the class and the name of each annotation of the member, in order; empty when the element has none
+     */
+    default List<NamedClass> namedClasses(String annotation, String member, String classMember, String nameMember) {
+        return List.of();
+    }
+
+    /**
      * @return a view of an element without annotations
      */
     static AnnotationView none() {
         return NoAnnotations.INSTANCE;
+    }
+
+    /**
+     * A class that an annotation names, with the name it is known by.
+     *
+     * @param className the binary name of the class
+     * @param name      the name, empty when the annotation gives none
+     */
+    record NamedClass(String className, String name) {
     }
 }

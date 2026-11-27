@@ -20,9 +20,11 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.client.ClientDirectories;
 import io.micronaut.graphql.tools.binding.internal.client.ClientOperation;
+import io.micronaut.graphql.tools.binding.internal.client.method.ClientMethod;
 import io.micronaut.graphql.tools.binding.internal.client.ClientOperations;
 import io.micronaut.graphql.tools.binding.internal.client.ClientOutcome;
 import io.micronaut.graphql.tools.binding.internal.client.ClientRequest;
+import io.micronaut.graphql.tools.binding.internal.client.method.ClientResultRules;
 import io.micronaut.graphql.tools.binding.internal.client.ClientRules;
 import io.micronaut.graphql.tools.binding.internal.client.method.ClientScalars;
 import io.micronaut.graphql.tools.binding.internal.client.ClientSchemaBuilder;
@@ -148,8 +150,9 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
             }
             ClientOperation operation = outcome.operation();
             if (operation != null && outcome.findings().isEmpty()) {
-                List<Finding> rules = ClientVariableRules.check(current.elements.method(method, request.member()), operation,
-                        current.elements.model(), scalars);
+                ClientMethod shape = current.elements.method(method, request.member());
+                List<Finding> rules = new ArrayList<>(ClientVariableRules.check(shape, operation, current.elements.model(), scalars));
+                rules.addAll(ClientResultRules.check(shape, operation, current.elements.model(), scalars));
                 for (Finding finding : rules) {
                     current.findings++;
                     context.fail(FindingRenderer.render(finding), method);
@@ -229,7 +232,7 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
         final ProcessorOptions options;
         final boolean checks;
         final VisitorContext context;
-        final ClientElements elements = new ClientElements();
+        final ClientElements elements;
         // built on the first operation: a compilation with no client reads no directory
         @Nullable
         ClientOperations built;
@@ -241,6 +244,7 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
             this.options = options;
             this.checks = options.checks() && options.clientChecks();
             this.context = context;
+            this.elements = new ClientElements(context);
         }
 
         ClientOperations operations() {

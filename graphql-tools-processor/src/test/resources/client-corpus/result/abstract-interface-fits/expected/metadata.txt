@@ -1,0 +1,2 @@
+BookClient#node type=query name=Node payload=field variables=id document=queryNode($id:ID!){node(id:$id){__typenameid...onBook{title}}}
+BookClient#plain type=query name=Plain payload=field variables=id document=queryPlain($id:ID!){node(id:$id){__typenameid}}

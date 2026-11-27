@@ -1,0 +1,1 @@
+client-result-shape example.BookClient#book() inline:1:43

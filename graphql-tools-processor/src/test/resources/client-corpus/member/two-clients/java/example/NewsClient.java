@@ -7,9 +7,9 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
 public interface NewsClient {
 
     @GraphQLOperation("{ headline }")
-    String headline();
+    Object headline();
 
     @GraphQLOperation("{ version }")
-    String wrong();
+    Object wrong();
 
 }

@@ -7,6 +7,6 @@ import io.micronaut.graphql.tools.client.annotation.GraphQLOperation
 interface BookClient {
 
     @GraphQLOperation("{ notInTheSchema }")
-    fun missing(): String
+    fun missing(): Any?
 
 }

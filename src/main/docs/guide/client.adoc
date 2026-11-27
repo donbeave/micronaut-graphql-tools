@@ -278,6 +278,35 @@ With the checks on, the variables of the operation are matched with the paramete
 
 A scalar that the catalog does not know, such as `DateTime`, is mapped by the Java type that the position declares, and one client interface must map it to one type: the second use with another type fails with `[client-scalar-conflict]`.
 
+=== Result types
+
+The result of an operation method is checked against the selection of its operation, so a response that the declared type cannot read fails at the build, not at the first call. The payload is the declared return type without its wrapper: `CompletableFuture`, `CompletionStage`, `Publisher`, `Mono`, `Flux`, a Kotlin `Flow` or `Optional` of it, and `GraphQLResponse` of it, are peeled (a `suspend` function declares its payload), and a method that returns `void` or `Unit` has none. When the operation selects one root field, counted by response key, the payload is the value of that field. Otherwise it is the `data` object, and each root field is a property of it. The payload is compared with the schema level by level, and each finding is reported with `[client-result-shape]` at the position of the field in the document:
+
+* Every selected field has a property of the same name: a record component, a constructor parameter, a settable property, a Kotlin or Groovy property. The response key is the name, so an alias names the property, and `@JsonProperty` renames one. A field named `__typename` needs none. A property that no field selects is not an error, so one class can serve several operations.
+* A primitive does not fit a field that can be null, and a non-null Kotlin type does not either. A field that `@skip` or `@include` can leave out of the response counts as nullable, even when its schema type is non-null. A nullable Java type, a nullable Kotlin type and `Optional` fit any position.
+* A list field needs an array, a `List`, a `Set` or another `Collection`, with the element checked the same way, and an object, scalar or enum field does not take one.
+* A scalar is looked up in the scalar catalog, as for the variables. A scalar that the catalog does not know is mapped by the Java type that the position declares, and one client must map it to one type (`[client-scalar-conflict]`).
+* An enum field needs a Java enum with a constant for every value of the schema enum, so that no response fails to decode, or a constant marked `@JsonEnumDefaultValue` that reads the others, or a `String`.
+* An object field needs a class, a record or a data class, and the check goes on into the selection of that field.
+* A `Map` or an `Object` fits any position and is not checked below it.
+
+==== Interfaces and unions
+
+A selection on an interface or union that names object types, with inline fragments or fragments, has a different class for each object type. The result type is a polymorphic type: an interface (a `sealed` one is the natural choice) or an abstract class annotated with `@JsonTypeInfo(use = NAME, property = "__typename", defaultImpl = Other.class)` and `@JsonSubTypes`, with one subtype for each object type that the selection names, by its simple class name or by the name that `@JsonSubTypes.Type` or `@JsonTypeName` gives, and a default branch for the object types that the client does not know. Each subtype is checked against the fields that its object type selects, the fields that every type gets included; the default branch against the fields that every type gets. The processor puts `__typename` first in the selection, so the client can tell the types apart. A selection of the common fields of an interface alone needs no polymorphic type: one class reads them.
+
+[source,java]
+----
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "__typename", defaultImpl = Other.class)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = BookHit.class, name = "Book"),
+        @JsonSubTypes.Type(value = MagazineHit.class, name = "Magazine")
+})
+public sealed interface Hit permits BookHit, MagazineHit, Other {
+}
+----
+
+The library declares no dependency on Jackson: the annotations are those that Micronaut Serialization reads, and the processor reads `@JsonTypeInfo`, `@JsonSubTypes` and `@JsonTypeName` by their names, and the subtypes that `@JsonSubTypes` lists by the names of their classes, so that no Jackson type appears in the API of the library.
+
 [[clientMetadata]]
 === Metadata
 
@@ -328,13 +357,16 @@ A finding carries a code, the method as `binary.Name#method(parameter types)`, t
 
 | `client-scalar-conflict`
 | One client maps a custom scalar to two Java types.
+
+| `client-result-shape`
+| The declared result type does not fit the selection of the operation.
 |===
 
 Each code is described on the <<exceptions,Exceptions>> page.
 
 === Switching the checks off
 
-`micronaut.graphql.tools.processor.client.checks=false`, or `micronaut.graphql.tools.processor.checks=false` for the whole compilation, builds no schema and validates nothing. Every operation is still parsed and assembled, because the runtime needs its type, its variables and its payload mode, so a document that does not parse still fails the build, and so do the rules that need no schema: `client-get-mutation`, `client-retry-mutation` and `client-parameter-unbound`. The processor prints one note.
+`micronaut.graphql.tools.processor.client.checks=false`, or `micronaut.graphql.tools.processor.checks=false` for the whole compilation, builds no schema and validates nothing. Every operation is still parsed and assembled, because the runtime needs its type, its variables and its payload mode, so a document that does not parse still fails the build, and so do the rules that need no schema: `client-get-mutation`, `client-retry-mutation` and `client-parameter-unbound`; the rules that compare types with the schema (`client-variable-missing`, `client-variable-type`, `client-result-shape`) do not run. The processor prints one note.
 
 === What is checked once
 

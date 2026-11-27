@@ -53,10 +53,10 @@ import io.micronaut.graphql.tools.client.annotation.*
 @GraphQLClient(id = 'books', schema = 'books')
 interface BookClient {
     @GraphQLOperation('query Book($id: ID!) { book(id: $id) { title } }')
-    String book(String id)
+    Object book(String id)
 
     @GraphQLOperation('FindVersion')
-    String version()
+    Object version()
 }''', [:], ['ops.graphql': 'query FindVersion { version }'])
 
         then:
@@ -78,7 +78,7 @@ import io.micronaut.graphql.tools.client.annotation.*
 @GraphQLClient(schema = 'books')
 interface BookClient {
     @GraphQLOperation('query {\\n  books {\\n    id\\n  }\\n}')
-    String books()
+    Object books()
 }''')
 
         then:
@@ -95,7 +95,7 @@ import io.micronaut.graphql.tools.client.annotation.*
 @GraphQLClient(schema = 'books')
 interface BookClient {
     @GraphQLOperation('{ notInTheSchema }')
-    String missing()
+    Object missing()
 }''', [(ProcessorOptions.CLIENT_CHECKS): 'false'])
 
         then:
