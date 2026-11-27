@@ -44,6 +44,14 @@ class KotlinClientCorpusSpec extends Specification {
     @Shared
     ClientCorpusRunner runner = new ClientCorpusRunner(corpus, [kotlin], Boolean.getBoolean('client.corpus.update'))
 
+    // the one Gradle build of all the cases is a fixture of the spec, not of the first case: the time limit of a test (5 minutes, from
+    // the test timeout of the build) is for a hung test, and the build grows with the corpus, so it is bounded by the budget below
+    void setupSpec() {
+        if (!runner.units().empty) {
+            kotlin.prepare()
+        }
+    }
+
     @Unroll
     void "#corpusCase.name [kotlin]"() {
         expect:
