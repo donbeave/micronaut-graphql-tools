@@ -19,6 +19,9 @@ dependencies {
     // here and the other cases do not use
     implementation(projects.micronautGraphqlToolsClient)
     implementation(mnSerde.micronaut.serde.jackson)
+    // the loopback cases (#686) call an embedded server through the client and through a plain HTTP client
+    implementation(mn.micronaut.http.server.netty)
+    implementation(mn.micronaut.http.client)
     annotationProcessor(platform(libs.micronaut.platform))
     annotationProcessor(mnSerde.micronaut.serde.processor)
     implementation(mnSecurity.micronaut.security)
