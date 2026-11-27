@@ -25,7 +25,7 @@ options and the schema files and reports what is wrong.
 - The `checkNoBuildToolOrRuntimeDependency` task, part of `check`: it fails when a main classpath holds a Gradle, Maven or
   Micronaut runtime dependency, or another module of this repository.
 
-Not in this module: the Gradle plugin and the Maven plugin, the schema loader and the IR, the emitters and the golden
+Not in this module: the Gradle plugin and the Maven plugin (`graphql-tools-maven-plugin`), the schema loader and the IR, the emitters and the golden
 harness.
 
 ## Options

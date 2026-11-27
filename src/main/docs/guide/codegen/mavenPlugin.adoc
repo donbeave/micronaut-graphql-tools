@@ -1,0 +1,101 @@
+:repo: https://github.com/{githubSlug}/blob/master
+:samples: {sourcedir}/test-suite-build/samples
+:tests: {repo}/test-suite-build/src/test/java/io/micronaut/graphql/tools/buildtools
+
+The Maven plugin `micronaut-graphql-tools-maven-plugin` has one goal, `graphql-tools:generate`. It reads the schema files of a directory, runs the code generator and writes the sources under `target/generated-sources/graphql-tools/<language>`, with `<language>` one of `java`, `kotlin` and `groovy`. It adds that directory to the compile source roots of the project, so the compiler of the language compiles it with the application. Each snippet below is a tagged part of a sample under `test-suite-build/samples`, and the sample is built by a test with the real `mvn` ({tests}/MavenPluginSampleContract.java[MavenPluginSampleContract]), so a documented snippet is one that has run.
+
+[[codegenMavenPluginSetup]]
+== Declare the execution
+
+The goal is bound to `generate-sources` by default, but the lifecycle mapping of a packaging cannot take a goal of a third-party plugin, so the project declares an execution. The minimal declaration sets the one required option, the package:
+
+[source,xml]
+----
+include::{samples}/maven-plugin-java/pom.xml[tags=plugin]
+----
+
+The plugin needs Maven 3.9 or later and a JDK 17 or later. The plugin has the version of the library and is published to the same repository.
+
+== Parameters
+
+A parameter is a component of `Options` of the generator, with the same name and default (the Javadoc of `Options` is the reference for the meaning), and its value is the string form of the option: an enum is its constant name, a list is a list of child elements, a map is child elements named by key. Three parameters belong to the plugin: `skip`, `schemaDirectory` and `outputDirectory`.
+
+[cols="2,3,3"]
+|===
+| Parameter | Property | Default
+
+| `skip` | `micronaut.graphql.tools.codegen.skip` | `false`
+| `schemaDirectory` | `micronaut.graphql.tools.codegen.schema.directory` | `${project.basedir}/src/main/resources/graphql`
+| `outputDirectory` | `micronaut.graphql.tools.codegen.output.directory` | `${project.build.directory}/generated-sources/graphql-tools`
+| `language` | `micronaut.graphql.tools.codegen.language` | `JAVA`
+| `mode` | `micronaut.graphql.tools.codegen.mode` | `SERVER`
+| `packageName` | `micronaut.graphql.tools.codegen.package.name` | required
+| `modelPackage` | `micronaut.graphql.tools.codegen.model.package` | `<packageName>.model`
+| `resolverPackage` | `micronaut.graphql.tools.codegen.resolver.package` | `<packageName>.resolver`
+| `namesPackage` | `micronaut.graphql.tools.codegen.names.package` | `<packageName>.names`
+| `generatedAnnotation` | `micronaut.graphql.tools.codegen.generated.annotation` | `javax.annotation.processing.Generated`
+| `modelStyle` | `micronaut.graphql.tools.codegen.model.style` | `RECORD`
+| `interfaceTypes` | none (a list) | empty
+| `typeNamePrefix` | `micronaut.graphql.tools.codegen.type.name.prefix` | empty
+| `typeNameSuffix` | `micronaut.graphql.tools.codegen.type.name.suffix` | empty
+| `nullableAnnotation` | `micronaut.graphql.tools.codegen.nullable.annotation` | `io.micronaut.core.annotation.Nullable` (client mode: `org.jspecify.annotations.Nullable`)
+| `rootContracts` | `micronaut.graphql.tools.codegen.root.contracts` | `true`
+| `contractNameTemplate` | `micronaut.graphql.tools.codegen.contract.name.template` | `{Field}{Operation}Resolver`
+| `kotlinSuspend` | `micronaut.graphql.tools.codegen.kotlin.suspend` | `false`
+| `subscriptionReturnType` | `micronaut.graphql.tools.codegen.subscription.return.type` | `org.reactivestreams.Publisher`
+| `typeMappings` | none (a map) | empty
+| `nameConstants` | `micronaut.graphql.tools.codegen.name.constants` | `FIELDS`
+| `includes` | `micronaut.graphql.tools.codegen.includes` (comma separated) | `**/*.graphqls`, `**/*.graphql`
+| `excludes` | `micronaut.graphql.tools.codegen.excludes` (comma separated) | empty
+| `commentsAsDescriptions` | `micronaut.graphql.tools.codegen.comments.as.descriptions` | `false`
+|===
+
+`includes` and `excludes` are globs relative to `schemaDirectory`; the selected files are read in the order of their relative path. An empty element is an absent value in Maven, which has the default, so the options that name a class and are empty for none (`generatedAnnotation` and `nullableAnnotation`) take the word `none` for no annotation. A list is written as child elements, a map by key:
+
+[source,xml]
+----
+<configuration>
+  <packageName>example.api</packageName>
+  <generatedAnnotation>none</generatedAnnotation>
+  <typeMappings>
+    <Date>java.time.LocalDate</Date>
+    <Book.title>example.Title</Book.title>
+  </typeMappings>
+  <excludes>
+    <exclude>**/draft/**</exclude>
+  </excludes>
+</configuration>
+----
+
+An invalid value or combination, an unreadable schema file or a syntax error fails the build with the code, the option or the file and line, for example `[missing-option]` when `packageName` is not set, or `[schema-syntax-error]` with the schema location. Nothing is written when the generation fails.
+
+== Kotlin
+
+Set `language` to `KOTLIN`. The goal registers `target/generated-sources/graphql-tools/kotlin`, and `kotlin-maven-plugin` reads the compile source roots of the project. List the directory in `sourceDirs` as well: a Kotlin plugin with explicit `sourceDirs` may compile only those, depending on the goal and the version, and listing it is correct for all of them.
+
+[source,xml]
+----
+include::{samples}/maven-plugin-kotlin/pom.xml[tags=kotlin-source-dirs]
+----
+
+On the Kotlin version of the sample the build passes without the second entry too, because its `compile` goal also reads the compile source roots; the test records that outcome.
+
+== Groovy
+
+Set `language` to `GROOVY`. GMavenPlus compiles the `sources` of its own configuration and does not read the compile source roots, so the generated directory must be a source of it. Without it the build fails with `package placed does not exist` (the sample class that uses a generated type), which the test asserts:
+
+[source,xml]
+----
+include::{samples}/maven-plugin-groovy/pom.xml[tags=groovy-sources]
+----
+
+== Incremental runs
+
+Maven has no up-to-date engine, so the plugin keeps its own state in `.graphql-tools-generated` in the output directory: the fingerprint of the run and the paths of the files it wrote. The fingerprint covers the relative path and the content of each selected schema file, the canonical string form of the options and the version of the generator.
+
+* A run whose fingerprint is the same, and whose files all still exist, is skipped (`The generated GraphQL sources in ... are up to date`). Hashing a large schema takes a few milliseconds.
+* A change to a schema file, to an option or to the plugin version runs the generator again, so upgrading the plugin regenerates.
+* A file is written only when its bytes differ, so an unchanged file keeps its modification time and the compiler sees no change.
+* A file that the manifest lists and the new run does not emit is deleted, together with its empty directories, so a removed schema type leaves no stale source. Only the files of the manifest are ever deleted, and only inside the output directory.
+
+`mvn clean` removes the output directory with the manifest, as it removes everything under `target`.

@@ -10,7 +10,7 @@ that imports the BOM uses matching versions of the library, the binding module, 
 ## Responsibility
 
 - Manage the versions of `micronaut-graphql-tools`, `micronaut-graphql-tools-binding`, `micronaut-graphql-tools-processor`,
-  `micronaut-graphql-tools-scalars`, `micronaut-graphql-tools-micrometer`, `micronaut-graphql-tools-opentelemetry`, `micronaut-graphql-tools-upload`, `micronaut-graphql-tools-security`, `micronaut-graphql-tools-testing`, `micronaut-graphql-tools-client` and `micronaut-graphql-tools-codegen` (the generated POM lists these eleven in `dependencyManagement`).
+  `micronaut-graphql-tools-scalars`, `micronaut-graphql-tools-micrometer`, `micronaut-graphql-tools-opentelemetry`, `micronaut-graphql-tools-upload`, `micronaut-graphql-tools-security`, `micronaut-graphql-tools-testing`, `micronaut-graphql-tools-client` `micronaut-graphql-tools-codegen` and `micronaut-graphql-tools-maven-plugin` (the generated POM lists these twelve in `dependencyManagement`).
 - Nothing else: no code, no dependencies of its own. The build applies the Micronaut BOM convention
   (`io.micronaut.build.internal.bom`) from `micronaut-build`.
 
@@ -27,7 +27,7 @@ in it.
 
 - Depends on nothing in this repository.
 - Its version is the `projectVersion` in `gradle.properties`.
-- The modules it manages are `graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`, `graphql-tools-micrometer`, `graphql-tools-opentelemetry`, `graphql-tools-upload`, `graphql-tools-security`, `graphql-tools-testing`, `graphql-tools-client` and `graphql-tools-codegen`.
+- The modules it manages are `graphql-tools`, `graphql-tools-binding`, `graphql-tools-processor`, `graphql-tools-scalars`, `graphql-tools-micrometer`, `graphql-tools-opentelemetry`, `graphql-tools-upload`, `graphql-tools-security`, `graphql-tools-testing`, `graphql-tools-client`, `graphql-tools-codegen` and `graphql-tools-maven-plugin`.
 
 ## Build and test
 

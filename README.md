@@ -49,6 +49,7 @@ and test it.
 | [`graphql-tools-security`](graphql-tools-security/README.md) | `:micronaut-graphql-tools-security` | Micronaut Security: the principal in resolvers, `@Secured` on resolver methods and the root fields hook, optional. |
 | [`graphql-tools-testing`](graphql-tools-testing/README.md) | `:micronaut-graphql-tools-testing` | The in-process tester for application tests: run a document against the `GraphQL` bean and assert on the response, test scope. |
 | [`graphql-tools-client`](graphql-tools-client/README.md) | `:micronaut-graphql-tools-client` | The GraphQL client for applications that call a server: its annotations (`@GraphQLClient`, `@GraphQLOperation`, `@GraphQLVariable`), its packages and the check that keeps the server stack out. |
+| [`graphql-tools-maven-plugin`](graphql-tools-maven-plugin/README.md) | `:micronaut-graphql-tools-maven-plugin` | The Maven plugin with the `generate` goal: it runs the code generator from a `<configuration>` that maps one to one onto the generator options; a build tool, never on an application's classpath. |
 | [`graphql-tools-codegen`](graphql-tools-codegen/README.md) | `:micronaut-graphql-tools-codegen` | The code generator library: the entry point, the immutable options model with its string form and the diagnostics; used by the build plugins, never on an application's classpath. |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
@@ -80,6 +81,7 @@ guide is in `src/main/docs/guide`, and the build convention plugin is in `buildS
 | Testing | `io.micronaut.graphql.tools:micronaut-graphql-tools-testing` |
 | Client | `io.micronaut.graphql.tools:micronaut-graphql-tools-client` |
 | Code generator | `io.micronaut.graphql.tools:micronaut-graphql-tools-codegen` |
+| Maven plugin | `io.micronaut.graphql.tools:micronaut-graphql-tools-maven-plugin` |
 | Annotation processor | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 
