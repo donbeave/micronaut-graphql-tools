@@ -150,6 +150,38 @@ Each parameter is one of these:
 
 The request is the one of the low-level client: POST with the compiled document, the operation name and the variables, or, for `@GraphQLOperation(method = GET)`, a GET with the parameters in the URL. The request attributes `graphql.operation.name` and `graphql.operation.type` are set for the filters. The responses are classified as the <<clientResponses,responses of the low-level client>> are.
 
+== Sessions
+
+The client keeps no cookies, because one client is shared by every caller. A caller that needs a cookie session, for example a login followed by calls that depend on it, starts a `GraphQLSession` with `newSession()`. A session is itself a `GraphQLHttpClient`: it has the same methods, and it also stores the cookies that the responses of its calls set, sends them on its next calls, and sends fixed headers that `newSession(Map<String, String>)` takes. The code that starts the session owns it and decides how long it lives; two sessions share nothing, and the client that started them never keeps a cookie.
+
+[source,java]
+----
+GraphQLSession session = client.newSession(Map.of("X-Tenant", "books"));
+session.executeBlocking(login);   // the response sets a cookie
+session.executeBlocking(viewer);  // the cookie is sent
+session.clearCookies();
+----
+
+[source,kotlin]
+----
+val session = client.newSession(mapOf("X-Tenant" to "books"))
+session.executeBlocking(login) // the response sets a cookie
+session.executeBlocking(viewer) // the cookie is sent
+session.clearCookies()
+----
+
+[source,groovy]
+----
+GraphQLSession session = client.newSession([ 'X-Tenant': 'books' ])
+session.executeBlocking(login) // the response sets a cookie
+session.executeBlocking(viewer) // the cookie is sent
+session.clearCookies()
+----
+
+A cookie is kept by its name and path, with its value and its expiry. A response that sets the same name and path replaces it, and one that expires it (`Max-Age` of zero or less, or an `Expires` in the past) removes it. A cookie whose expiry has passed is not sent. A cookie is sent when its path is a prefix of the path of the endpoint by the rules of RFC 6265; a cookie that sets no `Path` takes the directory of the endpoint path, which is `/` for `/graphql`. `Domain`, `Secure` and `HttpOnly` are not interpreted: a session sends its cookies to the service id it was started from and never rewrites a domain. `getCookies()` returns the cookies the session holds, the expired ones left out, as `GraphQLSession.Cookie` values with a name, a value, a path and an optional expiry.
+
+A response stores its cookies before the call completes, so the next call sees them, including the cookies of a 4xx or 5xx response. A session is thread safe: concurrent calls each send the cookies that were stored when they started. The fixed headers are set first and the cookie header after them, and the customizer of a call runs last, so it can replace either. `newSession()` on a session starts a new, independent session.
+
 == The annotations
 
 [cols="2,5", options="header"]
@@ -227,6 +259,14 @@ The `value` of `@GraphQLOperation` is one of these:
 
 The assembled document holds the selected operation and the fragments it uses, directly or through other fragments, and nothing else. The fragments of the operation's own document come first; a fragment that the document does not define is taken from the `*.graphql` files of the client schema, so a fragment can be shared by every operation of a schema. A fragment that neither defines fails with `[client-document-invalid]`. The document is printed compactly, the operation first and the fragments after it in name order, and that text is what the client sends.
 
+=== The type name
+
+A value of an interface or a union is decoded as one of the object types that implement it, and the client chooses by the `__typename` of the value. The processor therefore puts `__typename` first in every selection set of an interface or union type that does not select it, in the operation, in an inline fragment and in a fragment, and the metadata holds the document with it. A `__typename` that the document selects without an alias or a directive is left where it is, and an aliased one does not count. The alias `__typename` is reserved: a field aliased to it, anywhere in a document that is checked, fails with `[client-document-invalid]`, because the field that is injected into a selection set of an interface or union would share its response key. A selection set of an object type is not changed. The types come from the client schema, so a compilation with `client.checks=false` adds nothing.
+
+=== The HTTP method and the retry policy
+
+`@GraphQLOperation(method = GET)` sends a query in the URL, so an operation that is a mutation or a subscription with `method = GET` fails with `[client-get-mutation]`. A retry annotation of Micronaut (`@Retryable`, `@CircuitBreaker`) on the interface applies to every method of it, so an interface that carries one and declares a mutation fails with `[client-retry-mutation]`: the retry would repeat a mutation whose response was lost. A retry annotation on a single method is a decision about that method and is accepted. Both checks run with the checks switched off, because the operation type comes from the document that is always parsed.
+
 [[clientMetadata]]
 === Metadata
 
@@ -259,6 +299,12 @@ A finding carries a code, the method as `binary.Name#method(parameter types)`, t
 
 | `client-document-too-large`
 | The assembled document is over the limit of the metadata.
+
+| `client-get-mutation`
+| An operation that is a mutation or a subscription is sent with `method = GET`.
+
+| `client-retry-mutation`
+| An interface with a type-level retry annotation declares a mutation.
 |===
 
 Each code is described on the <<exceptions,Exceptions>> page.

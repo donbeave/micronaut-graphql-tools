@@ -1,0 +1,2 @@
+client-get-mutation example.BookClient#save(java.lang.String) -
+client-retry-mutation example.BookClient -

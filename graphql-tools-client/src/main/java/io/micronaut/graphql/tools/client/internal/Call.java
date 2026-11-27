@@ -16,16 +16,19 @@
 package io.micronaut.graphql.tools.client.internal;
 
 import io.micronaut.core.annotation.Internal;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException;
 import io.micronaut.graphql.tools.client.internal.serde.GraphQLCodec;
+import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /**
  * One call: it subscribes to the single HTTP response, classifies it and completes with what its {@link Outcome} says, or with the
@@ -40,9 +43,11 @@ final class Call<R> extends CompletableFuture<R> implements Subscriber<HttpRespo
     private final Argument<?> responseType;
     private final boolean unwrap;
     private final Outcome outcome;
+    private final Consumer<HttpHeaders> observer;
     private volatile Subscription subscription;
 
-    Call(GraphQLCodec codec, Argument<?> responseType, boolean unwrap, Outcome outcome) {
+    Call(GraphQLCodec codec, Argument<?> responseType, boolean unwrap, Outcome outcome, @Nullable Consumer<HttpHeaders> observer) {
+        this.observer = observer;
         this.codec = codec;
         this.responseType = responseType;
         this.unwrap = unwrap;
@@ -72,6 +77,7 @@ final class Call<R> extends CompletableFuture<R> implements Subscriber<HttpRespo
     @Override
     public void onNext(HttpResponse<byte[]> response) {
         try {
+            observe(response);
             finish(ResponseClassifier.classify(codec, responseType, unwrap, response, response.body()));
         } catch (Throwable e) {
             completeExceptionally(e);
@@ -83,6 +89,7 @@ final class Call<R> extends CompletableFuture<R> implements Subscriber<HttpRespo
         try {
             if (failure instanceof HttpClientResponseException e && e.getResponse() != null) {
                 HttpResponse<?> response = e.getResponse();
+                observe(response);
                 byte[] body = response.getBody(byte[].class).orElse(null);
                 finish(ResponseClassifier.classify(codec, responseType, unwrap, response, body));
             } else {
@@ -90,6 +97,12 @@ final class Call<R> extends CompletableFuture<R> implements Subscriber<HttpRespo
             }
         } catch (Throwable e) {
             completeExceptionally(e);
+        }
+    }
+
+    private void observe(HttpResponse<?> response) {
+        if (observer != null) {
+            observer.accept(response.getHeaders());
         }
     }
 

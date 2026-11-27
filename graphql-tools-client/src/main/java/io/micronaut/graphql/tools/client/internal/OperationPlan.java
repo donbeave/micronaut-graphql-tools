@@ -260,7 +260,8 @@ final class OperationPlan {
                     + "io.micronaut.graphql.tools:micronaut-graphql-tools-processor to the module that declares the client (annotationProcessor, ksp or kapt), "
                     + "and make sure that it ran on this interface.");
         }
-        DefaultGraphQLHttpClient client = new DefaultGraphQLHttpClient(registry.getClient(metadata), codec, GraphQLHttpClientFactory.endpoint(metadata));
+        DefaultGraphQLHttpClient client = new DefaultGraphQLHttpClient(registry.getClient(metadata), codec, GraphQLHttpClientFactory.endpoint(metadata),
+                GraphQLHttpClientFactory.path(metadata));
         return new OperationPlan(context, client, codec, conversionService, document);
     }
 

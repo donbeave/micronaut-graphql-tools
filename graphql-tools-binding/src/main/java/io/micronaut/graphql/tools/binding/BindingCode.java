@@ -282,7 +282,13 @@ public enum BindingCode {
             "A GraphQL client document is not valid GraphQL, or does not validate against the client schema."),
     /** Compile-time failure: the assembled client document does not fit in the annotation metadata. */
     CLIENT_DOCUMENT_TOO_LARGE("client-document-too-large", false, true,
-            "The assembled document of a GraphQL client operation is too large to be stored in the annotation metadata.");
+            "The assembled document of a GraphQL client operation is too large to be stored in the annotation metadata."),
+    /** Compile-time failure: a GET operation is a mutation or a subscription. */
+    CLIENT_GET_MUTATION("client-get-mutation", false, true,
+            "A GraphQL client operation is sent with GET and is a mutation or a subscription; only a query can be sent with GET."),
+    /** Compile-time failure: a client interface that declares a mutation is retryable as a whole. */
+    CLIENT_RETRY_MUTATION("client-retry-mutation", false, true,
+            "A GraphQL client interface that declares a mutation carries a type-level retry annotation, which would repeat the mutation.");
 
     private static final Map<String, BindingCode> BY_CODE;
 

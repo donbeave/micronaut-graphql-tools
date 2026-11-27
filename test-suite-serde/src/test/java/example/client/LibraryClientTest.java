@@ -19,6 +19,7 @@ import io.micronaut.core.io.socket.SocketUtils;
 import io.micronaut.graphql.tools.client.GraphQLHttpClient;
 import io.micronaut.graphql.tools.client.GraphQLRequest;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
+import io.micronaut.graphql.tools.client.GraphQLSession;
 import io.micronaut.graphql.tools.client.annotation.GraphQLClient;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLErrorsException;
 import io.micronaut.http.HttpMethod;
@@ -155,5 +156,20 @@ class LibraryClientTest implements TestPropertyProvider {
     void aBlockingCallIsRefusedOnAnEventLoopAndWorksOnAWorker() {
         assertEquals("blocking-on-event-loop", http.toBlocking().retrieve("/client-probe/event-loop"));
         assertEquals("{currentUser=null}", http.toBlocking().retrieve("/client-probe/worker"));
+    }
+
+    @Test
+    void aSessionReplaysTheCookieOfAResponseAndTheSharedClientKeepsNone() {
+        GraphQLSession session = client.newSession();
+        GraphQLRequest<Map<String, Object>> request = GraphQLRequest.builder().document("{ currentUser { username } }").build();
+
+        session.executeBlocking(request, http -> http.header("X-Set-Cookie", "sid=abc; Path=/; Max-Age=60"));
+        session.executeBlocking(request);
+        assertEquals("sid=abc", SessionCookieFilter.SEEN.get());
+
+        client.newSession().executeBlocking(request);
+        assertNull(SessionCookieFilter.SEEN.get());
+        client.executeBlocking(request);
+        assertNull(SessionCookieFilter.SEEN.get());
     }
 }
