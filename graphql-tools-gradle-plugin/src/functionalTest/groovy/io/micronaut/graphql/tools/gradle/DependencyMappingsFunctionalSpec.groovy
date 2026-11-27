@@ -112,11 +112,8 @@ class DependencyMappingsFunctionalSpec extends PluginFunctionalSpec {
     @Unroll
     def "the mappings file of a project dependency is read on Gradle #gradle"() {
         given:
-        write('settings.gradle.kts', """
-            rootProject.name = "sample"
-            include("lib")
-        """.stripIndent())
-        write('gradle.properties', 'org.gradle.vfs.watch=false\n')
+        settings()
+        write('settings.gradle.kts', Files.readString(project.resolve('settings.gradle.kts')) + 'include("lib")\n')
         write('lib/build.gradle.kts', 'plugins { `java-library` }\n')
         write('lib/src/main/resources/' + MAPPINGS, 'Pet=org.lib.Pet\nMoney=org.lib.Money\n')
         schema(SCHEMA_WITH_MAPPED_TYPES)
