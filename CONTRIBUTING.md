@@ -185,6 +185,10 @@ repositories {
 }
 ```
 
+## Design notes
+
+Design documents for work that is not built yet live in `docs/design`. [`code-generator.md`](docs/design/code-generator.md) describes the schema-to-code generator: the IR, the options model, the emitter strategy with its measurements, determinism, the placement of name constants and the client mode.
+
 ## API map
 
 This section tells you which package holds what, which packages you may import from, and which ones are implementation. Every Java package of the library modules has a `package-info.java` that says the same thing in the Javadoc, and the build checks that each of them exists.
