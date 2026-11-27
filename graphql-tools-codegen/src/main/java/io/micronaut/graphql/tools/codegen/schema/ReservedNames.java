@@ -33,6 +33,8 @@ final class ReservedNames {
             "short", "static", "strictfp", "super", "switch", "synchronized", "this", "throw", "throws", "transient", "try",
             "void", "volatile", "while", "_", "true", "false", "null");
 
+    private static final Set<String> RESTRICTED_TYPE_NAMES = Set.of("permits", "record", "sealed", "var", "yield");
+
     private static final Set<String> KOTLIN = Set.of(
             "as", "break", "class", "continue", "do", "else", "false", "for", "fun", "if", "in", "interface", "is", "null",
             "object", "package", "return", "super", "this", "throw", "true", "try", "typealias", "typeof", "val", "var", "when",
@@ -59,5 +61,22 @@ final class ReservedNames {
             return "Groovy";
         }
         return null;
+    }
+
+    /**
+     * Whether a generated class cannot have the name, either because the name is a keyword of the output language or because Java
+     * restricts it as a type name ({@code record}, {@code var}, {@code sealed}, {@code permits}, {@code yield}). The generated types are
+     * read through Java introspection, so the restriction holds for every output language.
+     *
+     * @param language the output language
+     * @param name     the simple class name
+     * @return the reason, such as {@code Java keyword} or {@code Java restricted type name}, or {@code null} when the name is allowed
+     */
+    static String typeNameProblem(Language language, String name) {
+        String keyword = languageOf(language, name);
+        if (keyword != null) {
+            return keyword + " keyword";
+        }
+        return RESTRICTED_TYPE_NAMES.contains(name) ? "Java restricted type name" : null;
     }
 }
