@@ -20,7 +20,7 @@ dependencies {
     testImplementation(mn.micronaut.http.client)
     testImplementation(mn.micronaut.http.server.netty)
     testImplementation(mn.reactor)
-    testImplementation(mnReactor.micronaut.reactor)
+    testImplementation(libs.micronaut.reactor)
     testImplementation(mn.micronaut.retry)
     testImplementation(libs.jetbrains.annotations)
     // The codec specs run on Micronaut Serialization with its JSON implementation, and no Jackson databind is on the test classpath.

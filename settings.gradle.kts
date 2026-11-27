@@ -47,7 +47,6 @@ configure<io.micronaut.build.MicronautBuildSettingsExtension> {
     importMicronautCatalog("micronaut-security")
     importMicronautCatalog("micronaut-serde")
     importMicronautCatalog("micronaut-validation")
-    importMicronautCatalog("micronaut-reactor")
     importMicronautCatalog("micronaut-rxjava2")
     importMicronautCatalog("micronaut-rxjava3")
     importMicronautCatalog("micronaut-kotlin")

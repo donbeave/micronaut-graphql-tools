@@ -12,7 +12,6 @@ micronaut-tracing = "7.2.0"
 micronaut-security = "4.18.3"
 micronaut-serde = "2.16.2"
 micronaut-validation = "4.12.0"
-micronaut-reactor = "3.9.1"
 micronaut-rxjava2 = "2.9.0"
 micronaut-rxjava3 = "3.9.0"
 micronaut-kotlin = "4.7.0"
@@ -23,6 +22,8 @@ micronaut-logging = "1.7.5"
 groovy = "4.0.33"
 
 # Not managed by the Micronaut BOMs or catalogs
+# test scope of the client module: Mono and Flux conversion. Its version catalog is not imported, because a catalog is fetched by every job at settings time
+micronaut-reactor = "3.9.1"
 apollo = "5.2.0"
 # Apollo Kotlin 5 moved its Java API (client and RxJava 3 support) to a separate project; apollo-rx3-support has no 5.x release
 apollo-java = "1.0.0"
@@ -71,7 +72,6 @@ micronaut-tracing = { module = "io.micronaut.tracing:micronaut-tracing-bom", ver
 micronaut-security = { module = "io.micronaut.security:micronaut-security-bom", version.ref = "micronaut-security" }
 micronaut-serde = { module = "io.micronaut.serde:micronaut-serde-bom", version.ref = "micronaut-serde" }
 micronaut-validation = { module = "io.micronaut.validation:micronaut-validation-bom", version.ref = "micronaut-validation" }
-micronaut-reactor = { module = "io.micronaut.reactor:micronaut-reactor-bom", version.ref = "micronaut-reactor" }
 micronaut-rxjava2 = { module = "io.micronaut.rxjava2:micronaut-rxjava2-bom", version.ref = "micronaut-rxjava2" }
 micronaut-rxjava3 = { module = "io.micronaut.rxjava3:micronaut-rxjava3-bom", version.ref = "micronaut-rxjava3" }
 micronaut-kotlin = { module = "io.micronaut.kotlin:micronaut-kotlin-bom", version.ref = "micronaut-kotlin" }
@@ -84,6 +84,7 @@ apollo-java-rx3 = { module = "com.apollographql.java:rx3", version.ref = "apollo
 apollo-api = { module = "com.apollographql.apollo:apollo-api", version.ref = "apollo" }
 archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
+micronaut-reactor = { module = "io.micronaut.reactor:micronaut-reactor", version.ref = "micronaut-reactor" }
 graphql-java-datetime = { module = "com.tailrocks.graphql:graphql-java-datetime", version.ref = "graphql-java-datetime" }
 maven-plugin-api = { module = "org.apache.maven:maven-plugin-api", version.ref = "maven" }
 maven-core = { module = "org.apache.maven:maven-core", version.ref = "maven" }
