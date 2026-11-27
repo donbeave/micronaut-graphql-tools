@@ -188,4 +188,39 @@ class GenerateMojoSpec extends Specification {
         thrown(MojoFailureException)
         !java.nio.file.Files.exists(dir.resolve('target/generated-sources/graphql-tools/.graphql-tools-generated'))
     }
+
+    def "an empty selection is a warning, removes the stale files and does not fail"() {
+        given:
+        def output = dir.resolve('target/generated-sources/graphql-tools')
+        def built = MojoProject.create(rule, dir, '<packageName>example.api</packageName>',
+                ['src/main/resources/graphql/notes.txt': 'not a schema'])
+        GeneratedSources.reconcile(output, 'old', ['java/example/Old.java': 'class Old {}'])
+
+        when:
+        built.mojo.execute()
+
+        then:
+        noExceptionThrown()
+        !java.nio.file.Files.exists(output.resolve('java/example/Old.java'))
+        GeneratedSources.readManifest(output).files() == []
+    }
+
+    def "an unreadable schema file fails the goal with the diagnostic code"() {
+        given:
+        def built = MojoProject.create(rule, dir, '<packageName>example.api</packageName>',
+                ['src/main/resources/graphql/schema.graphqls': 'type Query { a: String }'])
+        def file = dir.resolve('src/main/resources/graphql/schema.graphqls')
+        java.nio.file.Files.setPosixFilePermissions(file, [] as Set)
+        org.junit.Assume.assumeFalse('a file owner who can read anything', java.nio.file.Files.isReadable(file))
+
+        when:
+        built.mojo.execute()
+
+        then:
+        def e = thrown(MojoFailureException)
+        e.message.contains('[schema-file-unreadable]')
+
+        cleanup:
+        java.nio.file.Files.setPosixFilePermissions(file, ['OWNER_READ', 'OWNER_WRITE'].collect { java.nio.file.attribute.PosixFilePermission.valueOf(it) } as Set)
+    }
 }

@@ -98,4 +98,6 @@ Maven has no up-to-date engine, so the plugin keeps its own state in `.graphql-t
 * A file is written only when its bytes differ, so an unchanged file keeps its modification time and the compiler sees no change.
 * A file that the manifest lists and the new run does not emit is deleted, together with its empty directories, so a removed schema type leaves no stale source. Only the files of the manifest are ever deleted, and only inside the output directory.
 
+The manifest belongs to the output directory, not to an execution: two executions need two `outputDirectory` values, or the second would delete the files of the first as stale.
+
 `mvn clean` removes the output directory with the manifest, as it removes everything under `target`.

@@ -32,6 +32,7 @@ import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -180,12 +181,21 @@ public class GenerateMojo extends AbstractMojo {
         project.addCompileSourceRoot(outputRoot.resolve(languageDirectory).toString());
 
         List<Path> schemaFiles = SchemaFiles.select(schemaRoot, options.includes(), options.excludes());
-        if (schemaFiles.isEmpty()) {
-            getLog().warn("No schema file in " + schemaRoot + " matches the includes " + options.includes() + ".");
+        String fingerprint;
+        try {
+            fingerprint = GeneratedSources.fingerprint(generatorVersion(), options.toMap(), schemaRoot, schemaFiles);
+        } catch (UncheckedIOException e) {
+            String message = "[" + Diagnostic.SCHEMA_FILE_UNREADABLE + "] A schema file cannot be read: " + e.getCause().getMessage();
+            getLog().error(message);
+            throw new MojoFailureException(message, e);
         }
-        String fingerprint = GeneratedSources.fingerprint(generatorVersion(), options.toMap(), schemaRoot, schemaFiles);
         if (GeneratedSources.isUpToDate(outputRoot, fingerprint)) {
             getLog().info("The generated GraphQL sources in " + outputRoot + " are up to date.");
+            return;
+        }
+        if (schemaFiles.isEmpty()) {
+            getLog().warn("No schema file in " + schemaRoot + " matches the includes " + options.includes() + ".");
+            reconcile(outputRoot, fingerprint, Map.of());
             return;
         }
 
@@ -204,9 +214,13 @@ public class GenerateMojo extends AbstractMojo {
         for (GeneratedFile file : result.files()) {
             files.put(languageDirectory + "/" + file.path(), file.content());
         }
+        reconcile(outputRoot, fingerprint, files);
+    }
+
+    private void reconcile(Path outputRoot, String fingerprint, Map<String, String> files) throws MojoExecutionException {
         try {
             GeneratedSources.Outcome outcome = GeneratedSources.reconcile(outputRoot, fingerprint, files);
-            getLog().info("Generated GraphQL sources in " + outputRoot.resolve(languageDirectory) + ": " + outcome.written() + " written, "
+            getLog().info("Generated GraphQL sources in " + outputRoot + ": " + outcome.written() + " written, "
                     + outcome.unchanged() + " unchanged, " + outcome.deleted() + " deleted.");
         } catch (IOException | RuntimeException e) {
             throw new MojoExecutionException("The generated sources cannot be written under " + outputRoot + ": " + e.getMessage(), e);
