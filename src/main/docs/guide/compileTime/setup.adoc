@@ -40,9 +40,9 @@ The processor goes on `annotationProcessor`. The schema directory is the `@Input
 
 [source,kotlin]
 ----
-include::{samples}/java-gradle/build.gradle.kts[tags=dependencies]
+include::{samples}/java-gradle/build.gradle.kts[tags=dependencies;!client-dependency]
 
-include::{samples}/java-gradle/build.gradle.kts[tags=schema-dirs]
+include::{samples}/java-gradle/build.gradle.kts[tags=schema-dirs;!client-dirs;!client-checks]
 ----
 
 === Gradle with Kotlin and KSP
@@ -51,9 +51,9 @@ The processor goes on `ksp`. KSP2 does not track the schema files by itself, so 
 
 [source,kotlin]
 ----
-include::{samples}/kotlin-ksp/build.gradle.kts[tags=dependencies]
+include::{samples}/kotlin-ksp/build.gradle.kts[tags=dependencies;!client-dependency]
 
-include::{samples}/kotlin-ksp/build.gradle.kts[tags=schema-dirs]
+include::{samples}/kotlin-ksp/build.gradle.kts[tags=schema-dirs;!client-dirs;!client-checks]
 ----
 
 === Gradle with Kotlin and kapt
@@ -62,9 +62,9 @@ The processor goes on `kapt`. Under kapt, `compileJava` runs with `-proc:none`, 
 
 [source,kotlin]
 ----
-include::{samples}/kotlin-kapt/build.gradle.kts[tags=dependencies]
+include::{samples}/kotlin-kapt/build.gradle.kts[tags=dependencies;!client-dependency]
 
-include::{samples}/kotlin-kapt/build.gradle.kts[tags=schema-dirs]
+include::{samples}/kotlin-kapt/build.gradle.kts[tags=schema-dirs;!client-dirs;!client-checks]
 ----
 
 === Gradle with Groovy
@@ -73,9 +73,9 @@ The Groovy compiler loads Micronaut's visitors from its compile classpath, so th
 
 [source,kotlin]
 ----
-include::{samples}/groovy-gradle/build.gradle.kts[tags=dependencies]
+include::{samples}/groovy-gradle/build.gradle.kts[tags=dependencies;!client-dependency]
 
-include::{samples}/groovy-gradle/build.gradle.kts[tags=schema-dirs]
+include::{samples}/groovy-gradle/build.gradle.kts[tags=schema-dirs;!client-dirs;!client-checks]
 ----
 
 === Maven with Java
@@ -86,7 +86,7 @@ The processor goes on `annotationProcessorPaths` of `maven-compiler-plugin`, and
 ----
 include::{samples}/java-maven/pom.xml[tags=bom]
 
-include::{samples}/java-maven/pom.xml[tags=processor]
+include::{samples}/java-maven/pom.xml[tags=processor;!client-dirs;!client-checks]
 ----
 
 === Maven with Kotlin and kapt
@@ -95,7 +95,7 @@ The processor goes on the `annotationProcessorPaths` of the `kapt` execution of 
 
 [source,xml]
 ----
-include::{samples}/kotlin-kapt-maven/pom.xml[tags=processor]
+include::{samples}/kotlin-kapt-maven/pom.xml[tags=processor;!client-dirs;!client-checks]
 ----
 
 === Maven with Groovy
@@ -104,9 +104,9 @@ The processor goes on the `provided` scope. The Groovy compiler reads the option
 
 [source,xml]
 ----
-include::{samples}/groovy-maven/pom.xml[tags=processor]
+include::{samples}/groovy-maven/pom.xml[tags=processor;!client-dirs;!client-checks]
 
-include::{samples}/groovy-maven/pom.xml[tags=schema-dirs]
+include::{samples}/groovy-maven/pom.xml[tags=schema-dirs;!client-dirs;!client-checks]
 ----
 
 === Switch the checks off
@@ -130,7 +130,7 @@ A build that has `@GraphQLClient` interfaces adds the client module and passes `
 include::{samples}/java-gradle/src/main/java/example/CatalogClient.java[tags=client]
 ----
 
-Edit the document and the compilation runs again: the Gradle snippets below declare the client directory as an input of the compile task, as `schema.dirs` is, so an edited operation or client schema reruns it. Maven does not track the directory, so after an edit of a client document run `mvn clean verify`; a build without `clean` keeps the classes it compiled before. A build prints `checked 1 client operation against 1 client schema.` when the checks ran, and `-PgraphqlClientChecks=false` (Gradle) or `-Dgraphql.client.checks=false` (Maven) switches only the client checks off.
+Edit the document and the compilation runs again: the Gradle snippets below declare the client directory as an input of the compile task, as `schema.dirs` is, so an edited operation or client schema reruns it. Maven does not track the directory, and the Java compiler plugin treats the classes as up to date after an edit, so after an edit of a client document run `mvn clean verify` (the kapt and Groovy builds of the samples see the edit without `clean`, which is the safe command for every Maven build). The Maven snippets read the checks value from a property whose default is `true`; keep that property with the argument. A build prints `checked 1 client operation against 1 client schema.` when the checks ran, and `-PgraphqlClientChecks=false` (Gradle) or `-Dgraphql.client.checks=false` (Maven) switches only the client checks off.
 
 === A client with Gradle and Java
 
@@ -184,6 +184,8 @@ include::{samples}/java-maven/pom.xml[tags=client-dependency]
 
 include::{samples}/java-maven/pom.xml[tags=client-dirs]
 
+include::{samples}/java-maven/pom.xml[tags=client-checks-property]
+
 include::{samples}/java-maven/pom.xml[tags=client-checks]
 ----
 
@@ -195,6 +197,8 @@ include::{samples}/kotlin-kapt-maven/pom.xml[tags=client-dependency]
 
 include::{samples}/kotlin-kapt-maven/pom.xml[tags=client-dirs]
 
+include::{samples}/kotlin-kapt-maven/pom.xml[tags=client-checks-property]
+
 include::{samples}/kotlin-kapt-maven/pom.xml[tags=client-checks]
 ----
 
@@ -205,6 +209,8 @@ include::{samples}/kotlin-kapt-maven/pom.xml[tags=client-checks]
 include::{samples}/groovy-maven/pom.xml[tags=client-dependency]
 
 include::{samples}/groovy-maven/pom.xml[tags=client-dirs]
+
+include::{samples}/groovy-maven/pom.xml[tags=client-checks-property]
 
 include::{samples}/groovy-maven/pom.xml[tags=client-checks]
 ----

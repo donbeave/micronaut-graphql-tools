@@ -20,8 +20,10 @@
     <micronaut.graphql.tools.version>1.0.0-SNAPSHOT</micronaut.graphql.tools.version>
     <!-- mvn verify -Dgraphql.checks=false compiles without the checks -->
     <graphql.checks>true</graphql.checks>
+    <!-- tag::client-checks-property[] -->
     <!-- mvn verify -Dgraphql.client.checks=false parses the client operations without validating them -->
     <graphql.client.checks>true</graphql.client.checks>
+    <!-- end::client-checks-property[] -->
     <!-- tag::loose-nullability-property[] -->
     <!-- ignore (the default), warn or fail: what the checks do with a Kotlin type that is stricter than the schema type -->
     <graphql.looseNullability>ignore</graphql.looseNullability>
