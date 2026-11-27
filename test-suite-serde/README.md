@@ -4,7 +4,7 @@ Gradle project `:test-suite-serde`, folder `test-suite-serde/`. Not published.
 
 ## Purpose
 
-The null-field checks (#45) on the Micronaut Serialization stack (`micronaut-serde-jackson`). That stack makes its
+The null-field checks (#45) and the checks of the GraphQL client (#685) on the Micronaut Serialization stack (`micronaut-serde-jackson`). The client needs Serde, so it runs here and not in `test-suite-java`. That stack makes its
 `JsonMapper` win over Jackson databind, so the two cannot share a classpath: `test-suite-java` runs the Jackson databind
 stack, this module the Serde stack.
 
@@ -14,6 +14,9 @@ stack, this module the Serde stack.
   checks query.
 - `src/test/java/example/nullfields`: raw HTTP checks that `null` values keep their keys, with the default inclusion,
   `NON_NULL` and `ALWAYS` (`micronaut.serde.serialization.inclusion`).
+- `src/test/java/example/client`: `GraphQLHttpClient` against the GraphQL endpoint of this application: typed and dynamic
+  queries, GET, a mutation with a union, the 405 of a mutation over GET, request and field errors, `@ClientFilter(serviceId)`
+  and the blocking call on an event loop and on a worker. They run in the native test too.
 
 ## Packages
 
@@ -29,7 +32,7 @@ Nothing here is a library API. Do not import from `example.*` in application cod
 
 ## Relation to other modules
 
-- Depends on `micronaut-graphql-tools` (`implementation`) and puts `micronaut-graphql-tools-processor` on its
+- Depends on `micronaut-graphql-tools` (`implementation`), on `micronaut-graphql-tools-client` (`testImplementation`) and puts `micronaut-graphql-tools-processor` on its
   `annotationProcessor` path.
 - `test-suite-java` runs the same checks on the Jackson databind stack; the two modules share no code.
 
