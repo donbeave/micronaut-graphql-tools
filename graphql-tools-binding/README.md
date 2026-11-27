@@ -37,6 +37,7 @@ Each package has a `package-info.java`. All packages below `internal` are implem
 | --- | --- | --- |
 | `io.micronaut.graphql.tools.binding` | Public API | `BindingCode` |
 | `...binding.internal.client` | Internal | The rules of the client: the client directories, the assembly of an operation document and its validation against a client schema |
+| `...binding.internal.client.method` | Internal | The rules of the methods of a client: the parameters against the variables of the operation, and the result type against the selection |
 | `...binding.internal.finding` | Internal | Findings and their rendering |
 | `...binding.internal.manifest` | Internal | The manifest renderer and the schema hash |
 | `...binding.internal.membership` | Internal | The rule that a union or interface member is not mapped to a disjoint class |

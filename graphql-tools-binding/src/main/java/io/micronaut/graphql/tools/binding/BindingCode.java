@@ -288,7 +288,19 @@ public enum BindingCode {
             "A GraphQL client operation is sent with GET and is a mutation or a subscription; only a query can be sent with GET."),
     /** Compile-time failure: a client interface that declares a mutation is retryable as a whole. */
     CLIENT_RETRY_MUTATION("client-retry-mutation", false, true,
-            "A GraphQL client interface that declares a mutation carries a type-level retry annotation, which would repeat the mutation.");
+            "A GraphQL client interface that declares a mutation carries a type-level retry annotation, which would repeat the mutation."),
+    /** Compile-time failure: a required variable of a client operation has no parameter. */
+    CLIENT_VARIABLE_MISSING("client-variable-missing", false, true,
+            "A GraphQL client operation declares a non-null variable without a default that no parameter of the method binds."),
+    /** Compile-time failure: the type of a parameter does not fit the type of the variable it binds. */
+    CLIENT_VARIABLE_TYPE("client-variable-type", false, true,
+            "The declared type of a GraphQL client parameter does not fit the type of the variable it binds."),
+    /** Compile-time failure: a parameter of a client operation method binds no variable. */
+    CLIENT_PARAMETER_UNBOUND("client-parameter-unbound", false, true,
+            "A parameter of a GraphQL client operation method binds no variable of the operation, or two parameters bind one."),
+    /** Compile-time failure: one client maps a custom scalar to two Java types. */
+    CLIENT_SCALAR_CONFLICT("client-scalar-conflict", false, true,
+            "One GraphQL client maps a custom scalar to two different Java types.");
 
     private static final Map<String, BindingCode> BY_CODE;
 
