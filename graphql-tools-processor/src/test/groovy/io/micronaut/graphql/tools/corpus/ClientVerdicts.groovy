@@ -38,7 +38,7 @@ final class ClientVerdicts {
         if (compiled.success && compiled.errors.empty) {
             return 'ok'
         }
-        List<String> lines = compiled.errors.collectMany { String error -> findings(error, compiled) }.sort().unique()
+        List<String> lines = compiled.errors.collectMany { String error -> findings(error, compiled) }.sort()
         return lines.empty ? 'UNEXPECTED the compilation failed without a message' : lines.join('\n')
     }
 

@@ -156,6 +156,12 @@ final class ClientCorpusCase {
         if (schemaDirs == 'case' && Files.isDirectory(schemaDir()) && list(schemaDir()).findAll { it.fileName.toString().endsWith('.graphqls') }.empty) {
             problems.add('schema/ holds no *.graphqls file'.toString())
         }
+        list(dir).each { Path entry ->
+            String entryName = entry.fileName.toString()
+            if (!(entryName in [PROPERTIES, 'client', 'schema', 'expected'] + Language.values()*.dir)) {
+                problems.add("unknown entry ${entryName}".toString())
+            }
+        }
         if (Files.isDirectory(dir.resolve('expected'))) {
             list(dir.resolve('expected')).each { Path file ->
                 if (!(file.fileName.toString() in ['compile.txt', 'metadata.txt'])) {

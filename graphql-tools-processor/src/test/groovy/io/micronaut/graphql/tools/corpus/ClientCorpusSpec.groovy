@@ -42,6 +42,7 @@ class ClientCorpusSpec extends Specification {
         !runner.corpus.cases.empty
     }
 
+    @IgnoreIf({ Boolean.getBoolean('client.corpus.update') })
     void "the client corpus covers every client code"() {
         given:
         Set<String> codes = runner.corpus.cases.collectMany { ClientCorpusCase c -> (c.expected('compile.txt') ?: '').readLines().collect { it.split(' ')[0] } }.toSet()
