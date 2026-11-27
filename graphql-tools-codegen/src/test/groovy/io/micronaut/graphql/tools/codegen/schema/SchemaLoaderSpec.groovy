@@ -237,6 +237,28 @@ class SchemaLoaderSpec extends Specification {
         result.ir().contracts()*.names()*.sdlName() == ['Query.a']
     }
 
+    def "an extend schema block without a schema block resolves the roots it declares and the implicit ones"() {
+        when:
+        def result = IrBuilder.fromSources([
+                new SchemaSource('a.graphqls', 'type Query { a: Int }\ntype Mutation { unused: Int }\ntype Edits { b: Int }'),
+                new SchemaSource('b.graphqls', 'extend schema { mutation: Edits }')], OPTIONS)
+
+        then:
+        result.diagnostics().empty
+        result.ir().contracts()*.names()*.sdlName() == ['Query.a', 'Edits.b']
+    }
+
+    def "an extend schema block without a schema block and without a Query type still declares its operation"() {
+        when:
+        def result = IrBuilder.fromSources([
+                new SchemaSource('a.graphqls', 'type Q { a: Int }\ntype Subscription { s: Int }'),
+                new SchemaSource('b.graphqls', 'extend schema { query: Q }')], OPTIONS)
+
+        then:
+        result.diagnostics().empty
+        result.ir().contracts()*.names()*.sdlName() == ['Q.a', 'Subscription.s']
+    }
+
     def "files of a directory that cannot be read are reported in path order"() {
         given:
         ['b.graphqls', 'c.graphqls', 'a.graphqls'].each { Files.write(dir.resolve(it), [(byte) 0xff, (byte) 0xfe, (byte) 0xfd] as byte[]) }

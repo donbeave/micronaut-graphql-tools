@@ -14,13 +14,16 @@ public final class io.micronaut.graphql.tools.codegen.Diagnostic extends java.la
   public static final java.lang.String EXTENSION_KIND_MISMATCH = "extension-kind-mismatch";
   public static final java.lang.String EXTENSION_WITHOUT_BASE = "extension-without-base";
   public static final java.lang.String FIELD_MAPPING_NOT_SCALAR = "field-mapping-not-scalar";
+  public static final java.lang.String INVALID_IMPLEMENTS = "invalid-implements";
   public static final java.lang.String INVALID_OPTION_COMBINATION = "invalid-option-combination";
   public static final java.lang.String INVALID_OPTION_VALUE = "invalid-option-value";
+  public static final java.lang.String INVALID_UNION_MEMBER = "invalid-union-member";
   public static final java.lang.String MAPPED_MEMBER = "mapped-member";
   public static final java.lang.String MISSING_OPTION = "missing-option";
   public static final java.lang.String NAME_COLLISION = "name-collision";
   public static final java.lang.String NO_SCHEMA_FILES = "no-schema-files";
   public static final java.lang.String OBJECT_METHOD_NAME = "object-method-name";
+  public static final java.lang.String RESERVED_CONTRACT_NAME = "reserved-contract-name";
   public static final java.lang.String RESERVED_NAME = "reserved-name";
   public static final java.lang.String ROOT_TYPE_REFERENCE = "root-type-reference";
   public static final java.lang.String SCHEMA_FILE_UNREADABLE = "schema-file-unreadable";

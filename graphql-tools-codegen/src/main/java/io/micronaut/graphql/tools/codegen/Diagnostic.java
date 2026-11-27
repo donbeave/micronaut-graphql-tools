@@ -68,6 +68,15 @@ public record Diagnostic(Severity severity, String code, String message, String 
     /** The code of a type, field, argument or enum value name that is a keyword of the output language. */
     public static final String RESERVED_NAME = "reserved-name";
 
+    /** The code of a type that implements something other than an interface, such as an object type. */
+    public static final String INVALID_IMPLEMENTS = "invalid-implements";
+
+    /** The code of a union member that is not an object type. */
+    public static final String INVALID_UNION_MEMBER = "invalid-union-member";
+
+    /** The code of a resolver contract name, from {@code contractNameTemplate}, that is a root type name. */
+    public static final String RESERVED_CONTRACT_NAME = "reserved-contract-name";
+
     /** The code of a field name that a record component or a bean property cannot have because {@code java.lang.Object} has it. */
     public static final String OBJECT_METHOD_NAME = "object-method-name";
 

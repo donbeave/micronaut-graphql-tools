@@ -281,14 +281,14 @@ final class SchemaLoader {
             return;
         }
         MergedType query = schema.types.get("Query");
-        if (query == null || query.kind != Kind.OBJECT) {
+        if (!schema.roots.containsKey(Operation.QUERY) && (query == null || query.kind != Kind.OBJECT)) {
             return;
         }
         for (Operation operation : Operation.values()) {
             String name = operation.name().charAt(0) + operation.name().substring(1).toLowerCase(Locale.ROOT);
             MergedType type = schema.types.get(name);
             if (type != null && type.kind == Kind.OBJECT) {
-                schema.roots.put(operation, new MergedSchema.Root(name, type.origin));
+                schema.roots.putIfAbsent(operation, new MergedSchema.Root(name, type.origin));
             }
         }
     }
