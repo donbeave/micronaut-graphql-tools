@@ -45,6 +45,10 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import io.micronaut.configuration.graphql.GraphQLInvocation;
 import io.micronaut.configuration.graphql.GraphQLInvocationData;
 import io.micronaut.context.ApplicationContext;
+import io.micronaut.core.type.Argument;
+import io.micronaut.graphql.tools.benchmarks.Fixtures.ClientBook;
+import io.micronaut.graphql.tools.client.GraphQLRequest;
+import io.micronaut.graphql.tools.client.internal.serde.GraphQLCodec;
 import io.micronaut.graphql.tools.security.GraphQLSecurity;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.context.ApplicationContextBuilder;
@@ -68,6 +72,7 @@ import io.micronaut.graphql.tools.scalars.internal.time.TimeScalars;
 
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -115,6 +120,14 @@ public final class BenchmarkCases implements AutoCloseable {
     public static final String SECURITY_UNSECURED_FIELD = "securityUnsecuredField";
     /** A field of {@code @Secured} that the caller may call, with the security module installed. */
     public static final String SECURITY_SECURED_FIELD_PASSES = "securitySecuredFieldPasses";
+    /** The body of a request: a document, an operation name and variables, encoded by the client codec. */
+    public static final String CLIENT_ENCODE_REQUEST = "clientEncodeRequest";
+    /** A response with data, decoded to a record. */
+    public static final String CLIENT_DECODE_DATA = "clientDecodeData";
+    /** A response whose single root field is unwrapped while it is decoded. */
+    public static final String CLIENT_DECODE_UNWRAP = "clientDecodeUnwrap";
+    /** A response of errors with locations, a path and extensions. */
+    public static final String CLIENT_DECODE_ERRORS = "clientDecodeErrors";
     public static final String QUERY_1K = "query1kObjects";
     public static final String QUERY_10K = "query10kObjects";
 
@@ -348,6 +361,24 @@ public final class BenchmarkCases implements AutoCloseable {
             return chosen;
         });
         ops.put(GET_MUTATION_GUARD, getMutationGuard());
+        GraphQLCodec codec = context.getBean(GraphQLCodec.class);
+        GraphQLRequest<ClientBook> clientRequest = GraphQLRequest.builder(ClientBook.class)
+                .document("query Book($id: ID!) { book(id: $id) { id title pages tags } }")
+                .operationName("Book")
+                .variable("id", "b-1")
+                .variable("limit", 10)
+                .build();
+        Argument<ClientBook> bookType = Argument.of(ClientBook.class);
+        byte[] bookData = ("{\"data\":{\"id\":\"b-1\",\"title\":\"Dune\",\"pages\":412,\"tags\":[\"scifi\",\"classic\"]}}")
+                .getBytes(StandardCharsets.UTF_8);
+        byte[] bookUnwrap = ("{\"data\":{\"book\":{\"id\":\"b-1\",\"title\":\"Dune\",\"pages\":412,\"tags\":[\"scifi\",\"classic\"]}}}")
+                .getBytes(StandardCharsets.UTF_8);
+        byte[] errors = ("{\"errors\":[{\"message\":\"Not found\",\"locations\":[{\"line\":1,\"column\":9}],"
+                + "\"path\":[\"book\"],\"extensions\":{\"code\":\"NOT_FOUND\"}}],\"data\":null}").getBytes(StandardCharsets.UTF_8);
+        ops.put(CLIENT_ENCODE_REQUEST, () -> codec.encode(clientRequest));
+        ops.put(CLIENT_DECODE_DATA, () -> codec.decode(bookData, bookType));
+        ops.put(CLIENT_DECODE_UNWRAP, () -> codec.decodeUnwrapped(bookUnwrap, bookType));
+        ops.put(CLIENT_DECODE_ERRORS, () -> codec.decode(errors, bookType));
         ops.put(ASYNC_BOUNDARY_OTHER_THREAD, pendingFetch("Query", "asyncPending"));
         Resolvers.Query resolver = new Resolvers.Query();
         ops.put(ASYNC_PENDING_SOURCE, resolver::asyncPending);
