@@ -33,6 +33,9 @@ dependencies {
     kapt(graphqlToolsBom)
     implementation("io.micronaut.graphql.tools:micronaut-graphql-tools")
     kapt("io.micronaut.graphql.tools:micronaut-graphql-tools-processor")
+    // tag::client-dependency[]
+    implementation("io.micronaut.graphql.tools:micronaut-graphql-tools-client")
+    // end::client-dependency[]
 }
 // end::dependencies[]
 
@@ -66,3 +69,29 @@ kapt {
     }
 }
 // end::checks[]
+
+// tag::client-dirs[]
+// The directories of the client schemas: each subdirectory is one schema, with its *.graphqls files and its *.graphql operations.
+val graphqlClientDirs = files("src/main/graphql/client")
+
+kapt {
+    arguments {
+        arg("micronaut.graphql.tools.processor.client.dirs", graphqlClientDirs.files.joinToString(File.pathSeparator) { it.absolutePath })
+    }
+}
+
+// kapt does not track the client documents by itself: declare them as an input of its tasks, so that an edited operation reruns them.
+tasks.matching { it.name == "kaptKotlin" || it.name == "kaptGenerateStubsKotlin" }.configureEach {
+    inputs.files(graphqlClientDirs).withPropertyName("graphqlClientDirs").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+// end::client-dirs[]
+
+// tag::client-checks[]
+// ./gradlew build -PgraphqlClientChecks=false parses and assembles the client operations without validating them: the build prints
+// one note.
+kapt {
+    arguments {
+        arg("micronaut.graphql.tools.processor.client.checks", providers.gradleProperty("graphqlClientChecks").getOrElse("true"))
+    }
+}
+// end::client-checks[]

@@ -26,7 +26,7 @@ dependencies {
 }
 
 val libraryModules = listOf(":micronaut-graphql-tools", ":micronaut-graphql-tools-binding", ":micronaut-graphql-tools-processor",
-    ":micronaut-graphql-tools-bom", ":micronaut-graphql-tools-codegen", ":micronaut-graphql-tools-maven-plugin")
+    ":micronaut-graphql-tools-bom", ":micronaut-graphql-tools-client", ":micronaut-graphql-tools-codegen", ":micronaut-graphql-tools-maven-plugin")
 
 // The library as a consumer resolves it: the modules above, published to the build repository of the root project.
 val publishLibrary by tasks.registering {

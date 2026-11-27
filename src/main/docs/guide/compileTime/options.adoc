@@ -75,7 +75,7 @@ The tests that build these snippets are `KotlinKspLooseNullabilityTest` (the def
 |Groovy compiler |a system property of the compiler JVM: `-D<name>=<value>` in the `jvmArgs` of the forked `compileGroovy` task (Gradle), or `properties-maven-plugin` in the Maven JVM
 |===
 
-The snippets are on the <<compileTimeSetup,Set up the build>> page. Each one is the tagged part of a sample build that a test builds (see the support matrix on the <<compileTimeBuildManifest,Build Manifest>> page).
+The snippets are on the <<compileTimeSetup,Set up the build>> page and, for the client options, in <<compileTimeSetupClient,Set up the build for a client>>. Each one is the tagged part of a sample build that a test builds (see the support matrix on the <<compileTimeBuildManifest,Build Manifest>> page).
 
 == The module marker
 
@@ -107,5 +107,8 @@ A runtime key (`micronaut.graphql.tools.schema.locations`, `micronaut.graphql.to
 |Several directories are read |corpus `options/several-schema-directories`
 |`checks=false` compiles with one note |`checksFalsePrintsItsNoteAndPasses` in both contracts; corpus `options/checks-off`
 |An unknown option or a bad value fails |corpus `options/unknown-option` and `options/invalid-checks-value`; `GraphQLClientVisitorSpec`, `ProcessorOptionsSpec` for the client options
+|`client.dirs` arrives, and a client document edit reruns the Gradle task |`aClientDocumentEditRerunsTheCheckedTask` in `GradleSampleContract`, for each Gradle sample; the Maven rule (`mvn clean verify`) is `aClientDocumentEditNeedsACleanCompile` in `MavenSampleContract`
+|`client.dirs` missing fails with `client-schema-missing` |`aMissingClientOptionFails` in both contracts
+|`client.checks=false` compiles with one note |`clientChecksFalsePrintsItsNoteAndPasses` in both contracts
 |`module.dir` rejects another module's schema directory |`MultiModuleGradleSampleTest`, `MultiModuleMavenSampleTest`
 |===

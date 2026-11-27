@@ -50,6 +50,10 @@ snippets that the compile-time guide page (#12) includes, so a documented snippe
   `[code] coordinate` and the schema location, a missing option fails with `processor-schema-not-configured`,
   `checks=false` compiles with one note, and the build cache outcome of a clean rebuild and of a relocated project is
   recorded (it is asserted for javac: `FROM_CACHE`). One subclass per sample names the compile task.
+  The client options (#663) have the same three scenarios on the `catalog` client of each sample (`src/main/graphql/client`):
+  an edit of an operation or of the client schema reruns the compile task, a drifted operation fails with
+  `[client-document-invalid]`, a missing `client.dirs` fails with `[client-schema-missing]`, and `client.checks=false` passes
+  with its note. Maven needs `mvn clean verify` after a client document edit; the Maven spec records what each sample does without it.
   `MavenSampleContract` is the Maven counterpart: the option arrives, a drifted class fails `mvn clean verify` with
   `[code] coordinate`, a missing option fails, and `-Dgraphql.checks=false` passes with the note. Maven does not track the
   schema directory: the compiler plugin of a Java project calls the classes up to date after a schema edit, so the
