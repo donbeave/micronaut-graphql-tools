@@ -64,7 +64,7 @@ class CompileTimeBudgetTest {
     @Test
     void budgetNamesACleanAndAnIncrementalLimitForEachSample() throws IOException {
         var budget = CompileTimeBudget.parse(java.nio.file.Files.readString(PROFILER.resolve("compile-time-budget.properties")));
-        for (String sample : SAMPLES) {
+        for (String sample : java.util.stream.Stream.concat(SAMPLES.stream(), CLIENT_SAMPLES.stream()).toList()) {
             for (String kind : List.of("clean", "incremental")) {
                 assertTrue(Long.parseLong(budget.getProperty(sample + "." + kind, "").trim()) > 0, "no " + kind + " budget for " + sample);
             }

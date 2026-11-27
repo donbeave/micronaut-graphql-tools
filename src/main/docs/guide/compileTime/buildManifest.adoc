@@ -23,6 +23,9 @@ The checks run inside the compile task of each language (javac, KSP, kapt and th
 |Kotlin, kapt |2508 |8000 |3481 |11000
 |Groovy |3102 |10000 |4101 |13000
 |Multi-module, Java |7356 |23000 |4133 |13000
+|Java client |626 |2000 |636 |2000
+|Groovy client |1588 |5000 |1616 |5000
+|Kotlin, KSP client |1218 |4000 |1060 |4000
 |===
 
 The numbers are the medians of 5 builds after 2 warm-ups, on JDK 25.0.5 (Oracle GraalVM) with Gradle 9.9.1 on a machine whose load average was 32 to 38, so the noise is large: the cost of the checks (the build time with the checks on minus off) is a few hundred milliseconds for Java and up to about 1.8 seconds for KSP and kapt, and it is negative for Groovy, which means that the difference is below the noise. Treat the budget as a guard against a regression of several times, not as a measurement of the cost. The CI job `compile-time budget` runs the scenarios on every change and fails when a budget is exceeded; the budget file is link:{repo}/test-suite-build/profiler/compile-time-budget.properties[`compile-time-budget.properties`]. A change that raises a budget quotes new numbers from gradle-profiler.
