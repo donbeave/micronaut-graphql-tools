@@ -229,8 +229,7 @@ scalar Long''')], OPTIONS.toBuilder().typeMappings([Color: 'org.mine.Color']).bu
                 .withOptions(OPTIONS).build().generate()
 
         then:
-        result.files()*.path() == [TypeMappingsFile.PATH]
-        result.files()[0].content().contains('Pet=com.example.model.Pet\n')
+        result.files().find { it.path() == TypeMappingsFile.PATH }.content().contains('Pet=com.example.model.Pet\n')
         TypeMappingsFile.of(build('type Query { a: String }').ir()) == null
     }
 

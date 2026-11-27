@@ -129,7 +129,7 @@ class IncrementalRunSpec extends Specification {
 
         then:
         !Files.exists(output.resolve('java/example/api/model/Book.java'))
-        !Files.exists(output.resolve('java/example'))
+        !Files.exists(output.resolve('java/example/api/model'))
     }
 
     def "a deleted generated file regenerates even when the inputs are the same"() {

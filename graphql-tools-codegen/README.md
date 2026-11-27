@@ -8,8 +8,9 @@ Gradle project `:micronaut-graphql-tools-codegen`, folder `graphql-tools-codegen
 The code generator of the library, as a plain Java library: the Gradle plugin and the Maven plugin map their configuration one
 to one onto it and add only wiring. This module holds the entry point, the options model, the diagnostics, the schema loader and
 the intermediate representation (IR). The Java emitter (`JavaEmitter`, behind the package-private `Emitter` interface) writes the
-enums of the IR; the other languages and the other types produce no source file yet. The type mappings file is written for every
-run that has no errors: it checks the options, loads the schema files, builds the IR and reports what is wrong.
+enums and the name constants of the IR; the other languages and the models, inputs, interfaces, unions and contracts produce no
+source file yet. The type mappings file is written for every run that has no errors: it checks the options, loads the schema files,
+builds the IR and reports what is wrong.
 Each package that holds a generated type gets a `package-info.java`.
 
 ## Responsibility
@@ -128,7 +129,7 @@ runtime and the compile-time checks decide. This loader does not call the runtim
 module of the library, so a change to those rules is made in both places.
 
 **Nodes.** `ModelType`, `InputType`, `EnumType`, `AbstractType` (an interface, a union, or an object type that `interfaceTypes`
-selects), `ScalarType` and `ResolverContract` (`ContractMethod`, `Argument`, `Wrapper`). Each carries the SDL name and the generated
+selects), `ScalarType`, `ResolverContract` (`ContractMethod`, `Argument`, `Wrapper`) and the name classes (`NameClass`, with its `NameConstant`s). Each carries the SDL name and the generated
 name side by side (`Names`), `Docs` (description and deprecation), the applied directives as a name and string arguments (without
 `@deprecated`, which is in `Docs`) and an `Origin` (relative path, line, column) that is never written into generated code. Every type
 reference (`TypeRef`) keeps its nullability exactly; primitive or boxed is a rule of the emitter. A reference is a `Builtin`, a `Mapped` external class
@@ -163,7 +164,7 @@ become character references such as `&#47;`, and line endings become `\n`.
 | `invalid-union-member` | error | A union has a member that is not an object type |
 | `reserved-contract-name` | error | `contractNameTemplate` resolves a contract to `Query`, `Mutation` or `Subscription`, the name of a root type |
 | `object-method-name` | error | A field is named like a method of `java.lang.Object` (`clone`, `finalize`, `getClass`, `hashCode`, `notify`, `notifyAll`, `toString`, `wait`) |
-| `name-collision` | error | Two schema elements, or an element and a generated helper class (`GraphQLTypeNames`, `<Type>Names`), generate the same class; the comparison folds the case of the path, because two names such as `Foo` and `foo` overwrite each other on a case-insensitive file system |
+| `name-collision` | error | Two schema elements, or an element and a generated helper class (`GraphQLTypeNames`, `<Type>Names`), generate the same class, or two name constants of one class have the same identifier; the class comparison folds the case of the path, because two names such as `Foo` and `foo` overwrite each other on a case-insensitive file system |
 | `root-type-reference` | error | A field or argument has a root operation type as its type (map it with `typeMappings`) |
 | `field-mapping-not-scalar` | error | A `Type.field` entry of `typeMappings` names a field whose type is an object, interface, union, enum or input type |
 | `mapped-member` | warning | A union has a member, or an interface an implementing type, that `typeMappings` maps to an external class; the union or interface is not sealed |
@@ -173,6 +174,14 @@ become character references such as `&#47;`, and line endings become `\n`.
 
 The option diagnostics (`unknown-option`, `invalid-option-value`, `missing-option`, `invalid-option-combination`) are described under the
 options above. A keyword or `Object` method name is an error until a renaming rule exists; there is no renaming option yet.
+
+**Name constants.** With `nameConstants` other than `NONE`, the rules emit name classes in `namesPackage`. Each object, interface and input
+type gets one class `<Type>Names` (or `<generated name>Names` with a prefix or suffix), with the constant `TYPE` holding the SDL type name and
+one constant for each field, so that a constant change recompiles only that type's users. The root types get one class each too. The
+names of the enums, unions and scalars, and under `TYPES` the names of every type, are constants of the class `GraphQLTypeNames`. A constant
+holds its SDL name; its identifier is the name in upper case with an underscore before each word (`fooBar` gives `FOO_BAR`, and
+`HTTPStatus` gives `HTTP_STATUS`). Two names of one class with the same identifier are a `name-collision` error that names both
+schema locations, and so is a field named `type` in a type, which would clash with `TYPE`. Argument names have no constants yet.
 
 ## Packages
 
