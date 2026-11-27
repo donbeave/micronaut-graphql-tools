@@ -1,0 +1,2 @@
+BookClient#missing type=query name=Q payload=field variables=x document=queryQ($x:Int){notInTheSchema}
+BookClient#two type=query name=- payload=data variables=- document={alsoNotanother}

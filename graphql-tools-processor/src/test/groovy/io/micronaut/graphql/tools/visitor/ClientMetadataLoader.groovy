@@ -25,7 +25,12 @@ final class ClientMetadataLoader {
     }
 
     static Map<String, Map<String, Object>> read(File classes, String type) {
-        List<URL> urls = [classes.toURI().toURL()]
+        return read([classes], type)
+    }
+
+    /** @param directories the class and resource directories of the output, for a build that writes them apart (Kotlin with KSP) */
+    static Map<String, Map<String, Object>> read(List<File> directories, String type) {
+        List<URL> urls = directories.collect { it.toURI().toURL() }
         System.getProperty('java.class.path').split(File.pathSeparator).each { urls.add(new File(it).toURI().toURL()) }
         URLClassLoader loader = new URLClassLoader(urls as URL[], ClassLoader.platformClassLoader)
         Thread thread = Thread.currentThread()

@@ -1,0 +1,1 @@
+client-document-invalid example.BookClient#findBooks() <client>/books/ops/books.graphql:3:5

@@ -1,0 +1,1 @@
+client-document-invalid - <client>/books/ops/bad.graphql:3:1

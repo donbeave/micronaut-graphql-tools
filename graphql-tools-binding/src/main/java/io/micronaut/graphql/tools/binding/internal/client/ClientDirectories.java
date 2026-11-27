@@ -79,7 +79,8 @@ public final class ClientDirectories {
         if (foreign != null) {
             return new Resolved(null, missing(member, foreign, "set micronaut.graphql.tools.processor.client.dirs, "
                     + "micronaut.graphql.tools.processor.schema.dirs and micronaut.graphql.tools.processor.module.dir in this "
-                    + "module, or compile without client checks with micronaut.graphql.tools.processor.client.checks=false"));
+                    + "module (micronaut.graphql.tools.processor.client.checks=false helps only an inline document that needs no file of a "
+                    + "client directory)"));
         }
         String name = requested;
         if (requested.isEmpty()) {

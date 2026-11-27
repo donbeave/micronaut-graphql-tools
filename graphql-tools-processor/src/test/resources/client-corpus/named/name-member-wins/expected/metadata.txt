@@ -1,0 +1,1 @@
+BookClient#other type=query name=FindBooks payload=field variables=- document=queryFindBooks{books{id}}

@@ -1,0 +1,2 @@
+BookClient#one type=query name=- payload=field variables=- document={v:version}
+BookClient#two type=query name=- payload=data variables=- document={a:versionb:version}
