@@ -264,6 +264,136 @@ class IrDiagnosticsSpec extends Specification {
         result.ir().contracts().empty
     }
 
+    def "an object type that implements an object type is an error at the type"() {
+        when:
+        def result = build('type Query { a: A }\ntype B { x: Int }\ntype A implements B { x: Int }')
+
+        then:
+        result.diagnostics().size() == 1
+        with(result.diagnostics()[0]) {
+            code() == Diagnostic.INVALID_IMPLEMENTS
+            origin() == new Origin('schema.graphqls', 3, 1)
+            message() == "The object type 'A' (schema.graphqls:3:1) implements 'B', which is an object type, not an interface. " +
+                    "Only an interface can be implemented."
+        }
+        result.hasErrors()
+    }
+
+    def "an interface that implements an enum is an error at the interface"() {
+        when:
+        def result = build('type Query { a: Int }\nenum E { A }\ninterface I implements E { x: Int }')
+
+        then:
+        result.diagnostics()*.code() == [Diagnostic.INVALID_IMPLEMENTS]
+        result.diagnostics()[0].origin() == new Origin('schema.graphqls', 3, 1)
+        result.diagnostics()[0].message() == "The interface type 'I' (schema.graphqls:3:1) implements 'E', which is an enum type, " +
+                "not an interface. Only an interface can be implemented."
+    }
+
+    @Unroll
+    def "a union member that is #what is an error at the union"() {
+        when:
+        def result = build("type Query { u: U }\nunion U = A | M\ntype A { x: Int }\n" + member,
+                OPTIONS.toBuilder().typeMappings(what == 'a scalar' ? ['M': 'java.lang.String'] : [:]).build())
+
+        then:
+        result.diagnostics().size() == 1
+        with(result.diagnostics()[0]) {
+            code() == Diagnostic.INVALID_UNION_MEMBER
+            origin() == new Origin('schema.graphqls', 2, 1)
+            message() == "The union 'U' (schema.graphqls:2:1) lists the member 'M', which is ${what}, not an object type. " +
+                    "A union has object types as members."
+        }
+
+        where:
+        what               | member
+        'an interface type' | 'interface M { x: Int }'
+        'an enum type'      | 'enum M { X }'
+        'an input type'     | 'input M { x: Int }'
+        'a scalar'          | 'scalar M'
+    }
+
+    @Unroll
+    def "the name #name cannot be a generated type name in #language"() {
+        when:
+        def result = build("type Query { a: ${name} }\ntype ${name} {\n  x: Int\n}",
+                OPTIONS.toBuilder().language(language).build())
+
+        then:
+        result.diagnostics().size() == 1
+        with(result.diagnostics()[0]) {
+            code() == Diagnostic.RESERVED_NAME
+            origin() == new Origin('schema.graphqls', 2, 1)
+            message() == "The object type '${name}' (schema.graphqls:2:1) cannot be generated as the class ${name}: it is a " +
+                    "${reason}. Rename it in the schema or set typeNamePrefix or typeNameSuffix."
+        }
+
+        where:
+        [name, language] << [['record', 'var', 'sealed', 'permits', 'yield'], Language.values().toList()].combinations()
+        reason = name == 'var' && language == Language.KOTLIN ? 'Kotlin keyword' : 'Java restricted type name'
+    }
+
+    def "a restricted type name that a prefix turns into another name is allowed"() {
+        expect:
+        build('type Query { a: record }\ntype record { x: Int }', OPTIONS.toBuilder().typeNamePrefix('Gql').build()).diagnostics().empty
+    }
+
+    def "the root fields are validated when rootContracts is false"() {
+        when:
+        def result = build('type Query {\n  class: String\n  b(i: Unknown): Int\n  hashCode: Int\n}',
+                OPTIONS.toBuilder().rootContracts(false).build())
+
+        then:
+        result.diagnostics()*.code() == [Diagnostic.RESERVED_NAME, Diagnostic.UNKNOWN_TYPE,
+                                         Diagnostic.OBJECT_METHOD_NAME]
+        result.diagnostics()*.origin()*.line() == [2, 3, 4]
+        result.diagnostics()[0].message() ==
+                "The field 'Query.class' (schema.graphqls:2:3) cannot be generated: class is a Java keyword. " +
+                "Rename it in the schema; the generator has no renaming option yet."
+        result.ir().contracts().empty
+    }
+
+    def "a valid schema with rootContracts false reports nothing and has no contract"() {
+        when:
+        def result = build('type Query { a: String }', OPTIONS.toBuilder().rootContracts(false).build())
+
+        then:
+        result.diagnostics().empty
+        result.ir().contracts().empty
+    }
+
+    @Unroll
+    def "a contract name template #template that resolves to #resolved is an error at the field"() {
+        when:
+        def result = build('type Query {\n  query: String\n}', OPTIONS.toBuilder().contractNameTemplate(template).build())
+
+        then:
+        result.diagnostics().size() == 1
+        with(result.diagnostics()[0]) {
+            code() == Diagnostic.RESERVED_CONTRACT_NAME
+            origin() == new Origin('schema.graphqls', 2, 3)
+            message() == "The option contractNameTemplate '${template}' names the resolver contract of the field 'Query.query' " +
+                    "(schema.graphqls:2:3) '${resolved}', which is the name of a root type. " +
+                    "Add text around the placeholders, for example {Field}{Operation}Resolver."
+        }
+
+        where:
+        template      | resolved
+        '{Operation}' | 'Query'
+        '{Field}'     | 'Query'
+        'Query'       | 'Query'
+    }
+
+    def "a contract name template that resolves to a Java restricted type name is an error"() {
+        when:
+        def result = build('type Query { a: String }', OPTIONS.toBuilder().contractNameTemplate('record').build())
+
+        then:
+        result.diagnostics()*.code() == [Diagnostic.RESERVED_NAME]
+        result.diagnostics()[0].message() == "The option contractNameTemplate 'record' names the resolver contract of the field " +
+                "'Query.a' (schema.graphqls:1:14) 'record', which is a Java restricted type name."
+    }
+
     private static IrResult build(String schema, Options options = OPTIONS) {
         IrBuilder.fromSources([new SchemaSource('schema.graphqls', schema)], options)
     }
