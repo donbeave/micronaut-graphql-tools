@@ -16,7 +16,7 @@ stack, this module the Serde stack.
   `NON_NULL` and `ALWAYS` (`micronaut.serde.serialization.inclusion`).
 - `src/test/java/example/client`: `GraphQLHttpClient` against the GraphQL endpoint of this application: typed and dynamic
   queries, GET, a mutation with a union, the 405 of a mutation over GET, request and field errors, `@ClientFilter(serviceId)`
-  and the blocking call on an event loop and on a worker. They run in the native test too.
+  the blocking call on an event loop and on a worker, and a `GraphQLSession` that replays a cookie. They run in the native test too.
 
 ## Packages
 

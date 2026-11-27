@@ -23,6 +23,7 @@ import io.micronaut.graphql.tools.client.GraphQLClientAttributes;
 import io.micronaut.graphql.tools.client.GraphQLHttpClient;
 import io.micronaut.graphql.tools.client.GraphQLMediaTypes;
 import io.micronaut.graphql.tools.client.GraphQLRequest;
+import io.micronaut.graphql.tools.client.GraphQLSession;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.graphql.tools.client.OperationType;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLClientException;
@@ -38,6 +39,7 @@ import org.reactivestreams.Publisher;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -54,6 +56,7 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
     private final HttpClient transport;
     private final GraphQLCodec codec;
     private final String endpoint;
+    private final String path;
 
     /**
      * Creates a client.
@@ -61,11 +64,23 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
      * @param transport the HTTP client of the registry, which this client never closes
      * @param codec     the codec of requests and responses
      * @param endpoint  the path of every request, relative to the path that the transport was created with; empty for that path itself
+     * @param path      the path of the endpoint on the server, which the cookies of a session are matched against
      */
-    public DefaultGraphQLHttpClient(HttpClient transport, GraphQLCodec codec, String endpoint) {
+    public DefaultGraphQLHttpClient(HttpClient transport, GraphQLCodec codec, String endpoint, String path) {
         this.transport = transport;
         this.codec = codec;
         this.endpoint = endpoint;
+        this.path = path;
+    }
+
+    @Override
+    public GraphQLSession newSession() {
+        return newSession(Map.of());
+    }
+
+    @Override
+    public GraphQLSession newSession(Map<String, String> headers) {
+        return new DefaultGraphQLSession(this, path, headers, Clock.systemUTC());
     }
 
     @Override
@@ -85,7 +100,7 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
 
     @Override
     public <D> CompletableFuture<GraphQLResponse<D>> executeAsync(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer) {
-        return call(request, customizer, false);
+        return call(request, customizer, false, null);
     }
 
     @Override
@@ -96,7 +111,7 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
     @Override
     public <D> GraphQLResponse<D> executeBlocking(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer) {
         requireBlockingAllowed();
-        return await(call(request, customizer, false));
+        return await(call(request, customizer, false, null));
     }
 
     /**
@@ -108,17 +123,21 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
      * @return a future of the response
      */
     public <D> CompletableFuture<GraphQLResponse<D>> executeUnwrapped(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer) {
-        return call(request, customizer, true);
+        return call(request, customizer, true, null);
     }
 
-    private static void requireBlockingAllowed() {
+    <D> CompletableFuture<GraphQLResponse<D>> executeObserved(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer, Consumer<HttpHeaders> observer) {
+        return call(request, customizer, false, observer);
+    }
+
+    static void requireBlockingAllowed() {
         if (EventLoops.isEventLoopThread()) {
             throw new GraphQLClientException(GraphQLClientException.BLOCKING_ON_EVENT_LOOP,
                     "A blocking call on an event loop thread would stall it; use execute or executeAsync, or call from another thread");
         }
     }
 
-    private static <D> GraphQLResponse<D> await(CompletableFuture<GraphQLResponse<D>> future) {
+    static <D> GraphQLResponse<D> await(CompletableFuture<GraphQLResponse<D>> future) {
         try {
             return future.get();
         } catch (InterruptedException e) {
@@ -137,13 +156,14 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
         }
     }
 
-    private <D> CompletableFuture<GraphQLResponse<D>> call(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer, boolean unwrap) {
+    private <D> CompletableFuture<GraphQLResponse<D>> call(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer, boolean unwrap,
+                                                     @Nullable Consumer<HttpHeaders> observer) {
         try {
             MutableHttpRequest<?> http = build(request);
             if (customizer != null) {
                 customizer.accept(http);
             }
-            Call<D> call = new Call<>(codec, request, unwrap);
+            Call<D> call = new Call<>(codec, request, unwrap, observer);
             transport.exchange(http, BYTES, BYTES).subscribe(call);
             return call;
         } catch (Exception e) {

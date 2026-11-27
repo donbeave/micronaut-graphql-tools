@@ -7,13 +7,13 @@ Gradle project `:micronaut-graphql-tools-client`, folder `graphql-tools-client/`
 
 The GraphQL client of the library for Micronaut 4: the runtime that an application uses to call a GraphQL server. The module
 holds the packages, the dependencies, the check that keeps the server stack out and the annotations of the declarative client
-(`@GraphQLClient`, `@GraphQLOperation` and `@GraphQLVariable`, described in the guide page Client). The types of a call (request, response, error, exceptions) and the Serde codec of the wire format are here too. The low-level client, `GraphQLHttpClient`, is here: reactive, `CompletableFuture` and blocking calls over the Micronaut HTTP client, an injection-point factory (`@Inject @GraphQLClient("id") GraphQLHttpClient`), the classification of responses and GET queries. The runtime that
+(`@GraphQLClient`, `@GraphQLOperation` and `@GraphQLVariable`, described in the guide page Client). The types of a call (request, response, error, exceptions) and the Serde codec of the wire format are here too. The low-level client, `GraphQLHttpClient`, is here: reactive, `CompletableFuture` and blocking calls over the Micronaut HTTP client, an injection-point factory (`@Inject @GraphQLClient("id") GraphQLHttpClient`), the classification of responses, GET queries and `GraphQLSession`, a client with a cookie and header session. The runtime that
 implements a client interface arrives with the client phases.
 
 ## Responsibility
 
 - The public packages of the client: `io.micronaut.graphql.tools.client` (the root), `...client.annotation` and
-  `...client.exceptions`. The root holds `GraphQLHttpClient`, `GraphQLRequest`, `GraphQLResponse`, `GraphQLError`, `OperationType`, `GraphQLMediaTypes` and
+  `...client.exceptions`. The root holds `GraphQLHttpClient`, `GraphQLRequest`, `GraphQLResponse`, `GraphQLSession`, `GraphQLError`, `OperationType`, `GraphQLMediaTypes` and
   `GraphQLClientAttributes`; the annotation package holds the three annotations; the exceptions package holds `GraphQLClientException`,
   `GraphQLErrorsException` and `GraphQLTransportException`.
 - The internal packages: `...client.internal` (the call path), `...client.internal.serde` (the Micronaut Serialization codec: it

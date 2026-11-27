@@ -116,6 +116,7 @@ public class StubController {
         MutableHttpResponse<String> response = HttpResponse.ok(kind[1]);
         response.status(status, "status " + status);
         response.contentType(kind[0]);
+        request.getHeaders().getAll("X-Set-Cookie").forEach(cookie -> response.getHeaders().add("Set-Cookie", cookie));
         return response;
     }
 }

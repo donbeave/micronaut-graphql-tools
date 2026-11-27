@@ -45,6 +45,7 @@ final class GraphQLHttpClientFactory {
                     + "@Inject @GraphQLClient(\"books\") GraphQLHttpClient client");
         }
         boolean endpointGiven = metadata.stringValue(GraphQLClient.class, "endpoint").filter(path -> !path.isEmpty()).isPresent();
-        return new DefaultGraphQLHttpClient(registry.getClient(metadata), codec, endpointGiven ? "" : DEFAULT_ENDPOINT);
+        String path = metadata.stringValue(GraphQLClient.class, "endpoint").filter(value -> !value.isEmpty()).orElse(DEFAULT_ENDPOINT);
+        return new DefaultGraphQLHttpClient(registry.getClient(metadata), codec, endpointGiven ? "" : DEFAULT_ENDPOINT, path);
     }
 }

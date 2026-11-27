@@ -20,12 +20,15 @@ import io.micronaut.graphql.tools.client.GraphQLRequest;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException;
 import io.micronaut.graphql.tools.client.internal.serde.GraphQLCodec;
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /**
  * One call: it subscribes to the single HTTP response, classifies it and completes with the GraphQL response or the exception.
@@ -39,9 +42,11 @@ final class Call<D> extends CompletableFuture<GraphQLResponse<D>> implements Sub
     private final GraphQLCodec codec;
     private final GraphQLRequest<D> request;
     private final boolean unwrap;
+    private final Consumer<HttpHeaders> observer;
     private volatile Subscription subscription;
 
-    Call(GraphQLCodec codec, GraphQLRequest<D> request, boolean unwrap) {
+    Call(GraphQLCodec codec, GraphQLRequest<D> request, boolean unwrap, @Nullable Consumer<HttpHeaders> observer) {
+        this.observer = observer;
         this.codec = codec;
         this.request = request;
         this.unwrap = unwrap;
@@ -70,6 +75,7 @@ final class Call<D> extends CompletableFuture<GraphQLResponse<D>> implements Sub
     @Override
     public void onNext(HttpResponse<byte[]> response) {
         try {
+            observe(response);
             complete(ResponseClassifier.classify(codec, request, unwrap, response, response.body()));
         } catch (Throwable e) {
             completeExceptionally(e);
@@ -81,6 +87,7 @@ final class Call<D> extends CompletableFuture<GraphQLResponse<D>> implements Sub
         try {
             if (failure instanceof HttpClientResponseException e && e.getResponse() != null) {
                 HttpResponse<?> response = e.getResponse();
+                observe(response);
                 byte[] body = response.getBody(byte[].class).orElse(null);
                 complete(ResponseClassifier.classify(codec, request, unwrap, response, body));
             } else {
@@ -88,6 +95,12 @@ final class Call<D> extends CompletableFuture<GraphQLResponse<D>> implements Sub
             }
         } catch (Throwable e) {
             completeExceptionally(e);
+        }
+    }
+
+    private void observe(HttpResponse<?> response) {
+        if (observer != null) {
+            observer.accept(response.getHeaders());
         }
     }
 

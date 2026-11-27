@@ -1,4 +1,4 @@
-The `micronaut-graphql-tools-client` module is the GraphQL client of the library: a runtime for an application that calls a GraphQL server. It runs on the Micronaut HTTP client, so `micronaut.http.services.<id>.*`, filters and TLS apply unchanged. This page describes the low-level client, api:io.micronaut.graphql.tools.client.GraphQLHttpClient[], the annotations of the declarative client and the compile-time checks of its operations. The runtime that implements a client interface arrives in a later milestone, so the annotations and the checks are what a declarative client has today.
+The `micronaut-graphql-tools-client` module is the GraphQL client of the library: a runtime for an application that calls a GraphQL server. It runs on the Micronaut HTTP client, so `micronaut.http.services.<id>.*`, filters and TLS apply unchanged. This page describes the low-level client, its sessions, api:io.micronaut.graphql.tools.client.GraphQLHttpClient[], the annotations of the declarative client and the compile-time checks of its operations. The runtime that implements a client interface arrives in a later milestone, so the annotations and the checks are what a declarative client has today.
 
 == The low-level client
 
@@ -77,6 +77,38 @@ A response is classified by its status and its body. A body is a GraphQL body wh
 |===
 
 The media type of the response is not checked; the body is.
+
+== Sessions
+
+The client keeps no cookies, because one client is shared by every caller. A caller that needs a cookie session, for example a login followed by calls that depend on it, starts a `GraphQLSession` with `newSession()`. A session is itself a `GraphQLHttpClient`: it has the same methods, and it also stores the cookies that the responses of its calls set, sends them on its next calls, and sends fixed headers that `newSession(Map<String, String>)` takes. The code that starts the session owns it and decides how long it lives; two sessions share nothing, and the client that started them never keeps a cookie.
+
+[source,java]
+----
+GraphQLSession session = client.newSession(Map.of("X-Tenant", "books"));
+session.executeBlocking(login);   // the response sets a cookie
+session.executeBlocking(viewer);  // the cookie is sent
+session.clearCookies();
+----
+
+[source,kotlin]
+----
+val session = client.newSession(mapOf("X-Tenant" to "books"))
+session.executeBlocking(login) // the response sets a cookie
+session.executeBlocking(viewer) // the cookie is sent
+session.clearCookies()
+----
+
+[source,groovy]
+----
+GraphQLSession session = client.newSession([ 'X-Tenant': 'books' ])
+session.executeBlocking(login) // the response sets a cookie
+session.executeBlocking(viewer) // the cookie is sent
+session.clearCookies()
+----
+
+A cookie is kept by its name and path, with its value and its expiry. A response that sets the same name and path replaces it, and one that expires it (`Max-Age` of zero or less, or an `Expires` in the past) removes it. A cookie whose expiry has passed is not sent. A cookie is sent when its path is a prefix of the path of the endpoint by the rules of RFC 6265; a cookie that sets no `Path` takes the directory of the endpoint path, which is `/` for `/graphql`. `Domain`, `Secure` and `HttpOnly` are not interpreted: a session sends its cookies to the service id it was started from and never rewrites a domain. `cookies()` returns the cookies the session would send now, as `GraphQLSession.Cookie` values with a name, a value, a path and an optional expiry.
+
+A response stores its cookies before the call completes, so the next call sees them, including the cookies of a 4xx or 5xx response. A session is thread safe: concurrent calls each send the cookies that were stored when they started. The fixed headers are set first and the cookie header after them, and the customizer of a call runs last, so it can replace either. `newSession()` on a session starts a new, independent session.
 
 == The annotations
 

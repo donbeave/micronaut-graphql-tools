@@ -31,6 +31,8 @@ public interface io.micronaut.graphql.tools.client.GraphQLHttpClient {
   public abstract <D> java.util.concurrent.CompletableFuture<io.micronaut.graphql.tools.client.GraphQLResponse<D>> executeAsync(io.micronaut.graphql.tools.client.GraphQLRequest<D>, java.util.function.Consumer<io.micronaut.http.MutableHttpRequest<?>>);
   public abstract <D> org.reactivestreams.Publisher<io.micronaut.graphql.tools.client.GraphQLResponse<D>> execute(io.micronaut.graphql.tools.client.GraphQLRequest<D>);
   public abstract <D> org.reactivestreams.Publisher<io.micronaut.graphql.tools.client.GraphQLResponse<D>> execute(io.micronaut.graphql.tools.client.GraphQLRequest<D>, java.util.function.Consumer<io.micronaut.http.MutableHttpRequest<?>>);
+  public abstract io.micronaut.graphql.tools.client.GraphQLSession newSession();
+  public abstract io.micronaut.graphql.tools.client.GraphQLSession newSession(java.util.Map<java.lang.String, java.lang.String>);
 }
 
 public final class io.micronaut.graphql.tools.client.GraphQLMediaTypes {
@@ -76,6 +78,22 @@ public final class io.micronaut.graphql.tools.client.GraphQLResponse<D> extends 
   public io.micronaut.http.HttpResponse<?> httpResponse();
   public java.util.List<io.micronaut.graphql.tools.client.GraphQLError> errors();
   public java.util.Map<java.lang.String, java.lang.Object> extensions();
+}
+
+public interface io.micronaut.graphql.tools.client.GraphQLSession extends io.micronaut.graphql.tools.client.GraphQLHttpClient {
+  public abstract java.util.List<io.micronaut.graphql.tools.client.GraphQLSession$Cookie> cookies();
+  public abstract void clearCookies();
+}
+
+public static final class io.micronaut.graphql.tools.client.GraphQLSession$Cookie extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.client.GraphQLSession$Cookie(java.lang.String, java.lang.String, java.lang.String, java.time.Instant);
+  public java.lang.String name();
+  public java.lang.String path();
+  public java.lang.String value();
+  public java.time.Instant expires();
 }
 
 public final class io.micronaut.graphql.tools.client.OperationType extends java.lang.Enum<io.micronaut.graphql.tools.client.OperationType> {
