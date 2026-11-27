@@ -49,6 +49,7 @@ compileTime:
 codegen:
   title: Code Generation
   mavenPlugin: Maven Plugin
+  gradlePlugin: Gradle Plugin
 nativeImage: Native Image
 testing: Testing
 performance: Performance
