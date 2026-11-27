@@ -9,3 +9,15 @@ public final class io.micronaut.graphql.tools.visitor.GraphQLToolsVisitor implem
   public void start(io.micronaut.inject.visitor.VisitorContext);
   public void visitClass(io.micronaut.inject.ast.ClassElement, io.micronaut.inject.visitor.VisitorContext);
 }
+
+public final class io.micronaut.graphql.tools.visitor.client.GraphQLClientVisitor implements io.micronaut.inject.visitor.TypeElementVisitor<java.lang.Object, java.lang.Object> {
+  public int getOrder();
+  public io.micronaut.graphql.tools.visitor.client.GraphQLClientVisitor();
+  public io.micronaut.inject.visitor.TypeElementQuery query();
+  public io.micronaut.inject.visitor.TypeElementVisitor$VisitorKind getVisitorKind();
+  public java.util.Set<java.lang.String> getSupportedAnnotationNames();
+  public java.util.Set<java.lang.String> getSupportedOptions();
+  public void finish(io.micronaut.inject.visitor.VisitorContext);
+  public void start(io.micronaut.inject.visitor.VisitorContext);
+  public void visitClass(io.micronaut.inject.ast.ClassElement, io.micronaut.inject.visitor.VisitorContext);
+}

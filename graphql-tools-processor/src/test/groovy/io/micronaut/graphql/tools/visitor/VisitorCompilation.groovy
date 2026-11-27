@@ -42,6 +42,7 @@ class VisitorCompilation {
 
     private final Map<String, String> sources = new LinkedHashMap<>()
     private final Map<String, String> schemaFiles = new LinkedHashMap<>()
+    private final Map<String, String> clientFiles = new LinkedHashMap<>()
     private final Map<String, String> options = new LinkedHashMap<>()
     private boolean schemaOption = true
     private boolean ownModuleDir
@@ -49,6 +50,12 @@ class VisitorCompilation {
 
     VisitorCompilation schema(String path, String content) {
         schemaFiles.put(path, content)
+        return this
+    }
+
+    /** A file of the client directory, by its path under it: {@code books/schema.graphqls} is the schema {@code books}. */
+    VisitorCompilation clientFile(String path, String content) {
+        clientFiles.put(path, content)
         return this
     }
 
@@ -89,6 +96,12 @@ class VisitorCompilation {
             Files.writeString(file, content)
         }
         Path classes = Files.createDirectories(work.resolve('classes'))
+        Path clientDir = work.resolve('client')
+        clientFiles.each { path, content ->
+            Path file = clientDir.resolve(path)
+            Files.createDirectories(file.parent)
+            Files.writeString(file, content)
+        }
 
         JavaCompiler compiler = ToolProvider.systemJavaCompiler
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>()
@@ -100,6 +113,9 @@ class VisitorCompilation {
         List<String> arguments = ['-proc:full', '-parameters']
         if (schemaOption) {
             arguments.add("-A${ProcessorOptions.SCHEMA_DIRS}=${([schemaDir.toFile()] + extraDirectories).join(File.pathSeparator)}".toString())
+        }
+        if (!clientFiles.isEmpty()) {
+            arguments.add("-A${ProcessorOptions.CLIENT_DIRS}=${clientDir}".toString())
         }
         if (ownModuleDir) {
             arguments.add("-A${ProcessorOptions.MODULE_DIR}=${work}".toString())

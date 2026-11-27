@@ -24,6 +24,7 @@ import io.micronaut.core.annotation.Internal;
  * [code] coordinate: sentence.
  *   at binary.Name#member(parameter types) (declared in binary.Contract)
  *   schema /absolute/path.graphqls:3:5
+ *   document /absolute/path.graphql:3:5
  *   fix: the change that resolves it
  * </pre>
  *
@@ -53,6 +54,9 @@ public final class FindingRenderer {
         }
         if (finding.schemaLocation() != null) {
             text.append("\n  schema ").append(finding.schemaLocation());
+        }
+        if (finding.documentLocation() != null) {
+            text.append("\n  document ").append(finding.documentLocation());
         }
         if (finding.fix() != null) {
             text.append("\n  fix: ").append(finding.fix());

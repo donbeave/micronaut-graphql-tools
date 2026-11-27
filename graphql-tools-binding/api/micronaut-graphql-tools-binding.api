@@ -72,6 +72,12 @@ public final class io.micronaut.graphql.tools.binding.BindingCode extends java.l
   public static final io.micronaut.graphql.tools.binding.BindingCode PROCESSOR_SCHEMA_NOT_CONFIGURED;
   public static final io.micronaut.graphql.tools.binding.BindingCode PROCESSOR_SCHEMA_NOT_FOUND;
   public static final io.micronaut.graphql.tools.binding.BindingCode PROCESSOR_INTERNAL_ERROR;
+  public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_SCHEMA_MISSING;
+  public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_SCHEMA_INVALID;
+  public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_OPERATION_NOT_FOUND;
+  public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_OPERATION_AMBIGUOUS;
+  public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_DOCUMENT_INVALID;
+  public static final io.micronaut.graphql.tools.binding.BindingCode CLIENT_DOCUMENT_TOO_LARGE;
   public boolean isCheck();
   public boolean isCompileTime();
   public java.lang.String getCode();

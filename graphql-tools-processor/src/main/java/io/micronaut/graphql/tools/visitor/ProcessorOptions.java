@@ -15,6 +15,7 @@
  */
 package io.micronaut.graphql.tools.visitor;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.graphql.tools.binding.BindingCode;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
@@ -33,9 +34,12 @@ import java.util.TreeSet;
 
 /**
  * The options of the visitor, read from the options of the compilation: {@code -A} under javac and kapt, {@code arg}
- * under KSP, system properties under the Groovy compiler. There are six, all under {@code micronaut.graphql.tools.processor.},
+ * under KSP, system properties under the Groovy compiler. There are eight, all under {@code micronaut.graphql.tools.processor.},
  * a segment that no runtime key uses, so that the visitor rejects an unknown key there without failing on a runtime key that
- * happens to be a system property.
+ * happens to be a system property. The two that start with {@code client.} belong to the client visitor, which reads this record
+ * too, so that one place validates every option and reports each error once.
+ *
+ * <p>Internal: the two visitors of this module share it; it is not an API.</p>
  *
  * @param schemaDirs the directories to read the schema from, empty when the option is absent
  * @param moduleDir  the directory of the module that sets {@code schema.dirs}, null when the option is absent (the visitor then
@@ -48,19 +52,27 @@ import java.util.TreeSet;
  *                   ({@code kotlin-nullability-loose}): {@code ignore} by default
  * @param typeClassConvention the value of {@code micronaut.graphql.tools.type-class-convention} that the checks apply when
  *                   they look for two classes that match one object type, or null for none
+ * @param clientDirs the directories of the client schemas, empty when the option is absent: each subdirectory is one schema
+ * @param clientChecks whether the client operations are validated against their schema ({@code client.checks}); the client
+ *                   visitor also stays off when {@code checks} is false
  * @param errors     the options that are wrong; the checks do not run when there are any
  */
-record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean checks,
-                        boolean accessorPrefixes, Severity looseNullability, @Nullable String typeClassConvention,
-                        List<Finding> errors) {
+@Internal
+public record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean checks,
+                               boolean accessorPrefixes, Severity looseNullability, @Nullable String typeClassConvention,
+                               List<Path> clientDirs, boolean clientChecks, List<Finding> errors) {
 
-    static final String PREFIX = "micronaut.graphql.tools.processor.";
+    /** The prefix of every option of the visitors. */
+    public static final String PREFIX = "micronaut.graphql.tools.processor.";
 
-    static final String SCHEMA_DIRS = PREFIX + "schema.dirs";
+    /** The schema directories of the resolvers, and the schema of the client schema named {@code server}. */
+    public static final String SCHEMA_DIRS = PREFIX + "schema.dirs";
 
-    static final String CHECKS = PREFIX + "checks";
+    /** Whether the checks run at all. */
+    public static final String CHECKS = PREFIX + "checks";
 
-    static final String MODULE_DIR = PREFIX + "module.dir";
+    /** The directory of the module that sets {@link #SCHEMA_DIRS}. */
+    public static final String MODULE_DIR = PREFIX + "module.dir";
 
     static final String ACCESSOR_PREFIXES = PREFIX + "resolver.accessor.prefixes";
 
@@ -68,8 +80,14 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
 
     static final String TYPE_CLASS_CONVENTION = PREFIX + "type.class.convention";
 
+    /** The directories of the client schemas. */
+    public static final String CLIENT_DIRS = PREFIX + "client.dirs";
+
+    /** Whether the client operations are validated. */
+    public static final String CLIENT_CHECKS = PREFIX + "client.checks";
+
     static final Set<String> NAMES = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY,
-            TYPE_CLASS_CONVENTION);
+            TYPE_CLASS_CONVENTION, CLIENT_DIRS, CLIENT_CHECKS);
 
     static final String RETIRED_ACCESSOR_PREFIXES = PREFIX + "resolverAccessorPrefixes";
 
@@ -96,15 +114,20 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
      * The retired names are not options: {@link #NAMES} stays the options.
      */
     static final Set<String> ADVERTISED = Set.of(SCHEMA_DIRS, MODULE_DIR, CHECKS, ACCESSOR_PREFIXES, LOOSE_NULLABILITY,
-            TYPE_CLASS_CONVENTION, REMOVED_SDL_DIR, RETIRED_ACCESSOR_PREFIXES, RETIRED_LOOSE_NULLABILITY,
+            TYPE_CLASS_CONVENTION, CLIENT_DIRS, CLIENT_CHECKS, REMOVED_SDL_DIR, RETIRED_ACCESSOR_PREFIXES, RETIRED_LOOSE_NULLABILITY,
             RETIRED_TYPE_CLASS_CONVENTION);
 
-    ProcessorOptions {
+    public ProcessorOptions {
         schemaDirs = List.copyOf(schemaDirs);
+        clientDirs = List.copyOf(clientDirs);
         errors = List.copyOf(errors);
     }
 
-    static ProcessorOptions read(Map<String, String> options) {
+    /**
+     * @param options the options of the compilation
+     * @return the options, with the errors of those that are wrong
+     */
+    public static ProcessorOptions read(Map<String, String> options) {
         List<Finding> errors = new ArrayList<>();
         options.keySet().stream().sorted().forEach(key -> {
             if (key.startsWith(PREFIX) && !NAMES.contains(key) && !RETIRED.containsKey(key)) {
@@ -114,6 +137,7 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
         });
 
         boolean checks = flag(options, CHECKS, true, errors);
+        boolean clientChecks = flag(options, CLIENT_CHECKS, true, errors);
         boolean accessorPrefixes = flag(options, ACCESSOR_PREFIXES, false, errors);
         Severity looseNullability = Severity.IGNORE;
         String looseValue = options.get(LOOSE_NULLABILITY);
@@ -137,20 +161,8 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
             });
         }
 
-        List<Path> directories = new ArrayList<>();
-        String dirsValue = options.get(SCHEMA_DIRS);
-        if (dirsValue != null) {
-            for (String entry : dirsValue.split(File.pathSeparator)) {
-                if (!entry.isBlank()) {
-                    try {
-                        directories.add(Path.of(entry.trim()));
-                    } catch (InvalidPathException e) {
-                        errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, SCHEMA_DIRS + " holds a path that this "
-                                + "system cannot use: '" + entry.trim() + "' (" + e.getReason() + ")"));
-                    }
-                }
-            }
-        }
+        List<Path> directories = directories(options, SCHEMA_DIRS, errors);
+        List<Path> clientDirs = directories(options, CLIENT_DIRS, errors);
         Path moduleDir = null;
         String moduleValue = options.get(MODULE_DIR);
         if (moduleValue != null) {
@@ -170,7 +182,25 @@ record ProcessorOptions(List<Path> schemaDirs, @Nullable Path moduleDir, boolean
             errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, TYPE_CLASS_CONVENTION + ": " + conventionProblem));
         }
         return new ProcessorOptions(directories, moduleDir, checks, accessorPrefixes,
-                looseNullability, convention == null ? null : convention.strip(), errors);
+                looseNullability, convention == null ? null : convention.strip(), clientDirs, clientChecks, errors);
+    }
+
+    private static List<Path> directories(Map<String, String> options, String name, List<Finding> errors) {
+        List<Path> directories = new ArrayList<>();
+        String value = options.get(name);
+        if (value != null) {
+            for (String entry : value.split(File.pathSeparator)) {
+                if (!entry.isBlank()) {
+                    try {
+                        directories.add(Path.of(entry.trim()));
+                    } catch (InvalidPathException e) {
+                        errors.add(error(BindingCode.PROCESSOR_OPTION_INVALID, name + " holds a path that this "
+                                + "system cannot use: '" + entry.trim() + "' (" + e.getReason() + ")"));
+                    }
+                }
+            }
+        }
+        return directories;
     }
 
     private static boolean flag(Map<String, String> options, String name, boolean absent, List<Finding> errors) {
