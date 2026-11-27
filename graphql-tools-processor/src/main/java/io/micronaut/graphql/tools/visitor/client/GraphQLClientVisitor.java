@@ -137,7 +137,8 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
             current.failed = true;
             context.fail(FindingRenderer.render(new Finding(BindingCode.PROCESSOR_INTERNAL_ERROR.getCode(), member(method),
                     "the compile-time check failed on " + member(method) + ": " + e + "\n" + trace, null, null, null,
-                    "report this, and compile with " + ProcessorOptions.CLIENT_CHECKS + "=false until it is fixed")), method);
+                    "report this; every operation is parsed and assembled whatever " + ProcessorOptions.CLIENT_CHECKS + " says, so no option "
+                    + "skips the work that failed")), method);
         }
     }
 

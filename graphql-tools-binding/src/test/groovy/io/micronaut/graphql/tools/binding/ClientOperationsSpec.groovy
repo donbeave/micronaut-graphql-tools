@@ -388,6 +388,29 @@ union SearchResult = Book | Magazine
         FindingRenderer.render(several.findings()[0]).contains('[books, news]')
     }
 
+    void "a client directory that is listed twice is read once"() {
+        given:
+        def dir = schemaDir('books')
+        write(dir, 'ops/book.graphql', 'query Same { version }')
+        def operations = new ClientOperations(new ClientDirectories([clients, clients.resolve('../client')], [server]), true, ClientSchemaBuilder.STACK_BYTES)
+
+        expect:
+        operations.resolve(request('Same')).operation().operationName() == 'Same'
+    }
+
+    void "a schema name that is a path is client-schema-missing, and no directory outside the client directories is read"() {
+        given:
+        schemaDir('books')
+        def outside = Files.createDirectories(work.resolve('outside'))
+        Files.writeString(outside.resolve('schema.graphqls'), SCHEMA)
+
+        expect:
+        codes(operations().resolve(request('{ version }', '', '../outside'))) == ['client-schema-missing']
+        codes(operations().resolve(request('{ version }', '', outside.toString()))) == ['client-schema-missing']
+        codes(operations().resolve(request('{ version }', '', 'books/../books'))) == ['client-schema-missing']
+        codes(operations().resolve(request('{ version }', '', '..'))) == ['client-schema-missing']
+    }
+
     void "the reserved schema name server reads the schema directories, and its documents are in the subdirectory server"() {
         given:
         write(server, 'schema.graphqls', SCHEMA)

@@ -27,14 +27,14 @@ The names are dot-separated lowercase segments, as every Micronaut `-A` option i
 
 ----
 src/main/graphql/client/        <- an entry of client.dirs
-  github/                       <- the schema named github
+  catalog/                      <- the schema named catalog
     schema.graphqls             <- the schema, as many *.graphqls files as it has
     operations/*.graphql        <- operations and fragments, in any subdirectory
   server/                       <- operations of the schema server (it holds no schema)
     health.graphql
 ----
 
-* `@GraphQLClient(schema = "github")` selects the subdirectory `github`. An empty `schema` selects the only subdirectory of the client directories, and fails with `[client-schema-missing]` when there are none or several, naming them.
+* `@GraphQLClient(schema = "catalog")` selects the subdirectory `catalog`; the name is the name of a direct subdirectory, not a path. An empty `schema` selects the only subdirectory of the client directories, and fails with `[client-schema-missing]` when there are none or several, naming them.
 * The name `server` is reserved: its schema is `schema.dirs`, so an application can check a client of its own schema without a copy of it. A `server` subdirectory of a client directory only holds `*.graphql` files; its `*.graphqls` files are not read.
 * A client directory that does not exist, a name with no subdirectory and an unset option fail with `[client-schema-missing]` when an operation needs them: a compilation with no client reads no client directory. With `client.checks=false` an inline document needs no directory at all.
 * A schema directory without a `*.graphqls` file fails with `[client-schema-missing]`, and a schema that does not parse or build fails with `[client-schema-invalid]`.

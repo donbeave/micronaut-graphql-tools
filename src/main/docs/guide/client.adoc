@@ -59,7 +59,7 @@ public interface BookClient {
 [[clientCompileTime]]
 == Compile-time checks
 
-The annotation processor of `micronaut-graphql-tools-processor` checks every method that carries `@GraphQLOperation` in a type annotated with `@GraphQLClient`, in Java, Kotlin (KSP and kapt) and Groovy. It takes the document of the method, assembles the operation, validates it against the client schema with graphql-java and writes the result into the annotation metadata of the method. The runtime reads that metadata and never parses GraphQL. The processor writes no source, resource or service file.
+The annotation processor of `micronaut-graphql-tools-processor` checks every method that carries `@GraphQLOperation` in a type annotated with `@GraphQLClient`, declared on that type itself (a method that the type inherits from another interface is not checked, so declare the operations on the interface that carries the annotation), in Java, Kotlin (KSP and kapt) and Groovy. It takes the document of the method, assembles the operation, validates it against the client schema with graphql-java and writes the result into the annotation metadata of the method. The runtime reads that metadata and never parses GraphQL. The processor writes no source, resource or service file.
 
 The checks are set by two options, `micronaut.graphql.tools.processor.client.dirs` and `micronaut.graphql.tools.processor.client.checks`, which the <<compileTimeOptions,options page>> describes, and by the `schema` member of `@GraphQLClient`.
 

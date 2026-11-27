@@ -64,7 +64,8 @@ public final class ClientDirectories {
      *                   JVM), or null when they are; every question that needs a directory then fails with this reason
      */
     public ClientDirectories(List<Path> clientDirs, List<Path> serverDirs, @Nullable String foreign) {
-        this.clientDirs = List.copyOf(clientDirs);
+        // the same directory twice would read every file of it twice, and make every operation and fragment of it ambiguous
+        this.clientDirs = clientDirs.stream().map(it -> it.toAbsolutePath().normalize()).distinct().toList();
         this.serverDirs = List.copyOf(serverDirs);
         this.foreign = foreign;
     }
@@ -106,6 +107,11 @@ public final class ClientDirectories {
         Finding problem = checkDirectories(member);
         if (problem != null) {
             return new Resolved(null, problem);
+        }
+        if (!isDirectoryName(name)) {
+            return new Resolved(null, missing(member, "the schema " + name + " is not the name of a subdirectory of a client directory: "
+                    + "a schema is named by one directory name, not by a path", names().isEmpty() ? hintNone()
+                    : "set the schema member of the client to one of " + names()));
         }
         List<Path> directories = subdirectories(name);
         if (directories.isEmpty()) {
@@ -153,6 +159,12 @@ public final class ClientDirectories {
             names = List.copyOf(found);
         }
         return names;
+    }
+
+    // one name of a direct child, so that a schema is never read from outside the client directories
+    private static boolean isDirectoryName(String name) {
+        return !name.isEmpty() && !name.equals(".") && !name.equals("..") && name.indexOf('/') < 0 && name.indexOf('\\') < 0
+                && name.indexOf(':') < 0;
     }
 
     private List<Path> subdirectories(String name) {
