@@ -35,8 +35,6 @@ import java.util.Map;
 @Internal
 final class ResponseReader {
 
-    private static final Argument<Object> OBJECT = Argument.OBJECT_ARGUMENT;
-
     private ResponseReader() {
     }
 
@@ -66,12 +64,13 @@ final class ResponseReader {
         return new GraphQLResponse<>(data, hasData, errors, extensions, null);
     }
 
+    @SuppressWarnings("unchecked")
     private static Object readData(Decoder decoder, Deserializer.DecoderContext context, Argument<?> type) throws IOException {
         if (decoder.decodeNull()) {
             return null;
         }
         Deserializer<Object> deserializer = specific(context, type);
-        return deserializer.deserialize(decoder, context, OBJECT);
+        return deserializer.deserialize(decoder, context, (Argument<Object>) type);
     }
 
     private static Object readUnwrapped(Decoder decoder, Deserializer.DecoderContext context, Argument<?> type) throws IOException {
