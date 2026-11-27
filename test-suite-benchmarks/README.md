@@ -21,7 +21,8 @@ runs, or when they claim a performance gain.
   the field decorators on one query of 1,050 fields (`FieldDecoratorBenchmark`: no decorator bean, one that selects no field, one that
   wraps every field; each configuration checks its result against the first and what the decorator did at startup; no allocation gate),
   and the per-class binding rules over a compiler `ClassElement` (`BindingRulesBenchmark`: a resolver class, an input class with
-  properties and an input class with constructor arguments; its allocation gate is `BindingRulesAllocationTest`).
+  properties and an input class with constructor arguments; its allocation gate is `BindingRulesAllocationTest`),
+  and the codec of the GraphQL client (`ClientCodecBenchmark`: encode a request, decode data, decode with the single root field unwrapped, decode errors; its allocation gates are `clientEncodeRequest`, `clientDecodeData`, `clientDecodeUnwrap` and `clientDecodeErrors`).
 - `src/allocationTest/java`: the allocation gate. It fails when an operation allocates more bytes than its baseline in
   `allocation-baselines.properties`.
 - `src/jmhSmokeTest/java`: runs every JMH benchmark once, so that the benchmarks compile and start. Its numbers mean nothing.
@@ -54,8 +55,8 @@ Nothing here is a library API. The module is not in the BOM (`graphql-tools-bom`
 
 ## Relation to other modules
 
-- Depends on `micronaut-graphql-tools` (`implementation`), the library under measurement, and on `micronaut-inject`
-  (annotation processing for the benchmark beans).
+- Depends on `micronaut-graphql-tools` (`implementation`), the library under measurement, on `micronaut-graphql-tools-client` and
+  Micronaut Serialization (the client codec cases), and on `micronaut-inject` (annotation processing for the benchmark beans).
 - JMH is the benchmark framework (`jmh` and `jmhAnnotationProcessor` configurations).
 - Nothing depends on this module.
 

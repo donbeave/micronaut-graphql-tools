@@ -1,3 +1,80 @@
+public final class io.micronaut.graphql.tools.client.GraphQLClientAttributes {
+  public static final java.lang.String OPERATION_NAME = "graphql.operation.name";
+  public static final java.lang.String OPERATION_TYPE = "graphql.operation.type";
+}
+
+public final class io.micronaut.graphql.tools.client.GraphQLError extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.client.GraphQLError(java.lang.String, java.util.List<io.micronaut.graphql.tools.client.GraphQLError$Location>, java.util.List<java.lang.Object>, java.util.Map<java.lang.String, java.lang.Object>);
+  public java.lang.String message();
+  public java.util.List<io.micronaut.graphql.tools.client.GraphQLError$Location> locations();
+  public java.util.List<java.lang.Object> path();
+  public java.util.Map<java.lang.String, java.lang.Object> extensions();
+  public static io.micronaut.graphql.tools.client.GraphQLError of(java.lang.String);
+}
+
+public static final class io.micronaut.graphql.tools.client.GraphQLError$Location extends java.lang.Record {
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public int column();
+  public int line();
+  public io.micronaut.graphql.tools.client.GraphQLError$Location(int, int);
+}
+
+public final class io.micronaut.graphql.tools.client.GraphQLMediaTypes {
+  public static final io.micronaut.http.MediaType GRAPHQL_RESPONSE_JSON_TYPE;
+  public static final java.lang.String ACCEPT = "application/graphql-response+json, application/json;q=0.9";
+  public static final java.lang.String GRAPHQL_RESPONSE_JSON = "application/graphql-response+json";
+}
+
+public final class io.micronaut.graphql.tools.client.GraphQLRequest<D> {
+  public io.micronaut.core.type.Argument<D> getDataType();
+  public io.micronaut.graphql.tools.client.OperationType getOperationType();
+  public java.lang.String getDocument();
+  public java.lang.String getOperationName();
+  public java.util.Map<java.lang.String, java.lang.Object> getExtensions();
+  public java.util.Map<java.lang.String, java.lang.Object> getVariables();
+  public static <D> io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> builder(io.micronaut.core.type.Argument<D>);
+  public static <D> io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> builder(java.lang.Class<D>);
+  public static io.micronaut.graphql.tools.client.GraphQLRequest$Builder<java.util.Map<java.lang.String, java.lang.Object>> builder();
+}
+
+public static final class io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> {
+  public io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> document(java.lang.String);
+  public io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> extension(java.lang.String, java.lang.Object);
+  public io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> extensions(java.util.Map<java.lang.String, ?>);
+  public io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> operationName(java.lang.String);
+  public io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> operationType(io.micronaut.graphql.tools.client.OperationType);
+  public io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> variable(java.lang.String, java.lang.Object);
+  public io.micronaut.graphql.tools.client.GraphQLRequest$Builder<D> variables(java.util.Map<java.lang.String, ?>);
+  public io.micronaut.graphql.tools.client.GraphQLRequest<D> build();
+}
+
+public final class io.micronaut.graphql.tools.client.GraphQLResponse<D> extends java.lang.Record {
+  public D data();
+  public D dataOrThrow();
+  public boolean hasData();
+  public final boolean equals(java.lang.Object);
+  public final int hashCode();
+  public final java.lang.String toString();
+  public io.micronaut.graphql.tools.client.GraphQLResponse(D, boolean, java.util.List<io.micronaut.graphql.tools.client.GraphQLError>, java.util.Map<java.lang.String, java.lang.Object>, io.micronaut.http.HttpResponse<?>);
+  public io.micronaut.graphql.tools.client.GraphQLResponse<D> withHttpResponse(io.micronaut.http.HttpResponse<?>);
+  public io.micronaut.http.HttpResponse<?> httpResponse();
+  public java.util.List<io.micronaut.graphql.tools.client.GraphQLError> errors();
+  public java.util.Map<java.lang.String, java.lang.Object> extensions();
+}
+
+public final class io.micronaut.graphql.tools.client.OperationType extends java.lang.Enum<io.micronaut.graphql.tools.client.OperationType> {
+  public static final io.micronaut.graphql.tools.client.OperationType QUERY;
+  public static final io.micronaut.graphql.tools.client.OperationType MUTATION;
+  public static final io.micronaut.graphql.tools.client.OperationType SUBSCRIPTION;
+  public static io.micronaut.graphql.tools.client.OperationType valueOf(java.lang.String);
+  public static io.micronaut.graphql.tools.client.OperationType[] values();
+}
+
 public interface io.micronaut.graphql.tools.client.annotation.GraphQLClient extends java.lang.annotation.Annotation {
   public abstract java.lang.Class<? extends io.micronaut.http.client.HttpClientConfiguration> configuration();
   public abstract java.lang.String endpoint();
@@ -22,4 +99,29 @@ public static final class io.micronaut.graphql.tools.client.annotation.GraphQLOp
 
 public interface io.micronaut.graphql.tools.client.annotation.GraphQLVariable extends java.lang.annotation.Annotation {
   public abstract java.lang.String value();
+}
+
+public class io.micronaut.graphql.tools.client.exceptions.GraphQLClientException extends java.lang.RuntimeException {
+  public io.micronaut.graphql.tools.client.exceptions.GraphQLClientException(java.lang.String, java.lang.String);
+  public io.micronaut.graphql.tools.client.exceptions.GraphQLClientException(java.lang.String, java.lang.String, java.lang.Throwable);
+  public java.lang.String getCode();
+  public static final java.lang.String DECODE_ERROR = "decode-error";
+  public static final java.lang.String NO_DATA = "no-data";
+}
+
+public class io.micronaut.graphql.tools.client.exceptions.GraphQLErrorsException extends io.micronaut.graphql.tools.client.exceptions.GraphQLClientException {
+  public io.micronaut.graphql.tools.client.GraphQLResponse<?> getResponse();
+  public io.micronaut.graphql.tools.client.exceptions.GraphQLErrorsException(java.util.List<io.micronaut.graphql.tools.client.GraphQLError>, io.micronaut.graphql.tools.client.GraphQLResponse<?>);
+  public java.util.List<io.micronaut.graphql.tools.client.GraphQLError> getErrors();
+  public static final java.lang.String CODE = "graphql-errors";
+}
+
+public class io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException extends io.micronaut.graphql.tools.client.exceptions.GraphQLClientException {
+  public boolean isTimeout();
+  public int getStatus();
+  public io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException(java.lang.String, int, io.micronaut.http.HttpHeaders, boolean, java.lang.Throwable);
+  public io.micronaut.http.HttpHeaders getHeaders();
+  public static final int NO_STATUS = -1;
+  public static final java.lang.String CODE = "transport-error";
+  public static final java.lang.String TIMEOUT_CODE = "transport-timeout";
 }

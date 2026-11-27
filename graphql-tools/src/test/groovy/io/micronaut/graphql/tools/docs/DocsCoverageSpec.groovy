@@ -15,6 +15,8 @@
  */
 package io.micronaut.graphql.tools.docs
 
+import com.tngtech.archunit.core.domain.JavaModifier
+import com.tngtech.archunit.core.importer.ClassFileImporter
 import groovy.json.JsonSlurper
 import io.micronaut.graphql.tools.annotation.GraphQLField
 import io.micronaut.graphql.tools.binding.BindingCode
@@ -60,6 +62,26 @@ class DocsCoverageSpec extends Specification {
         expect:
         names == [SchemaBindingException.simpleName]
         failures('exception', names, 'the error reference: src/main/docs/guide/exceptions.adoc (or README.md)').empty
+    }
+
+    def "every public exception of the client is documented with its code"() {
+        given:
+        def names = publishedClasses('io.micronaut.graphql.tools.client.exceptions', 'java.lang.Throwable')
+
+        expect:
+        names == ['GraphQLClientException', 'GraphQLErrorsException', 'GraphQLTransportException']
+        failures('exception', names, 'the client errors section of src/main/docs/guide/exceptions.adoc').empty
+        Files.readString(root.resolve(GUIDE + '/exceptions.adoc')).contains('[[clientErrors]]')
+    }
+
+    def "the client types are listed on the public API page"() {
+        given:
+        def page = Files.readString(root.resolve(GUIDE + '/publicApi.adoc'))
+        def types = publishedClasses('io.micronaut.graphql.tools.client', 'java.lang.Object') + publishedClasses('io.micronaut.graphql.tools.client.exceptions', 'java.lang.Object')
+
+        expect:
+        types.size() >= 9
+        types.findAll { !page.contains('`' + it + '`') }.empty
     }
 
     def "the error reference names the base class and the accessor of the code"() {
@@ -243,6 +265,17 @@ class DocsCoverageSpec extends Specification {
                     .map { it.simpleName }
                     .toList()
         }.toSorted()
+    }
+
+    private static List<String> publishedClasses(String packageName, String superType) {
+        def dirs = System.getProperty('published.modules.classes').split(File.pathSeparator)
+                .collect { Paths.get(it) }
+                .findAll { Files.isDirectory(it.resolve(packageName.replace('.', '/'))) }
+        assert dirs.size() == 1: "Expected the package ${packageName} in one published module, found ${dirs}"
+        new ClassFileImporter().importPath(dirs[0].resolve(packageName.replace('.', '/')))
+                .findAll { it.packageName == packageName && it.enclosingClass.empty && it.name != packageName + '.package-info' &&
+                        it.modifiers.contains(JavaModifier.PUBLIC) && it.isAssignableTo(superType) }
+                .collect { it.simpleName }.toSorted()
     }
 
     private static List<String> publicAnnotations() {

@@ -17,6 +17,12 @@
  * The root of the GraphQL client API: the types that an application uses to call a GraphQL server. The annotations and the
  * exceptions are in the packages below this one, and the implementation is in the {@code internal} packages.
  *
- * <p><b>Audience.</b> Public. This package holds no types yet; the client types are added by the client phases.</p>
+ * <p>{@link io.micronaut.graphql.tools.client.GraphQLRequest} describes a call and
+ * {@link io.micronaut.graphql.tools.client.GraphQLResponse} is its result, with
+ * {@link io.micronaut.graphql.tools.client.GraphQLError} entries. {@link io.micronaut.graphql.tools.client.OperationType},
+ * {@link io.micronaut.graphql.tools.client.GraphQLMediaTypes} and {@link io.micronaut.graphql.tools.client.GraphQLClientAttributes}
+ * name the kinds, the media types and the request attributes.</p>
+ *
+ * <p><b>Audience.</b> Public. An application imports from here.</p>
  */
 package io.micronaut.graphql.tools.client;
