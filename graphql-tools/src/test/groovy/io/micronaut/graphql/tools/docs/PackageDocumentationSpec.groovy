@@ -36,7 +36,9 @@ class PackageDocumentationSpec extends Specification {
     static final int MAX_TYPES = 15
 
     /** A package over the limit needs an entry here, with the reason and the issue that removes it. */
-    static final Map<String, String> OVER_THE_LIMIT = [:]
+    static final Map<String, String> OVER_THE_LIMIT = [
+            'io.micronaut.graphql.tools.codegen': 'holds the generator entry point, the options, the diagnostics and the package-private Java emitter seam; the emitters move to their own package when the shared emitter interface is extracted (#191)',
+    ]
 
     @Shared Path root = Paths.get(System.getProperty('docs.root'))
     @Shared Map<String, Map> packages = readPackages()
