@@ -96,6 +96,7 @@ final class Lowering {
     private final Map<String, List<String>> implementers = new HashMap<>();
     private final Set<String> selectedObjects;
     private final List<Unit> units = new ArrayList<>();
+    private final Set<String> usedMappings = new HashSet<>();
 
     private Lowering(Options options, MergedSchema schema, List<Diagnostic> diagnostics) {
         this.options = options;
@@ -110,7 +111,6 @@ final class Lowering {
     }
 
     private Ir lower() {
-        checkOptionEntries();
         resolveRoots();
         nameTypes();
         relate();
@@ -133,6 +133,7 @@ final class Lowering {
         List<ResolverContract> contracts = options.rootContracts() ? contracts() : List.of();
         nameConstants();
         collisions();
+        checkOptionEntries();
         return new Ir(enums, inputs, models, abstractTypes, scalars, contracts);
     }
 
@@ -153,11 +154,11 @@ final class Lowering {
             int dot = key.indexOf('.');
             boolean known;
             if (dot < 0) {
-                known = schema.types.containsKey(key) || BUILTIN.containsKey(key);
+                known = schema.types.containsKey(key) || BUILTIN.containsKey(key) || usedMappings.contains(key);
             } else {
                 MergedType owner = schema.types.get(key.substring(0, dot));
                 String field = key.substring(dot + 1);
-                known = owner != null && (owner.fields.stream().anyMatch(it -> it.getName().equals(field))
+                known = usedMappings.contains(key) || owner != null && (owner.fields.stream().anyMatch(it -> it.getName().equals(field))
                         || owner.inputFields.stream().anyMatch(it -> it.getName().equals(field)));
             }
             if (!known) {
@@ -479,8 +480,13 @@ final class Lowering {
         }
         String name = ((TypeName) type).getName();
         String mapped = mappingKey != null ? options.typeMappings().get(mappingKey) : null;
-        if (mapped == null) {
+        if (mapped != null) {
+            usedMappings.add(mappingKey);
+        } else {
             mapped = options.typeMappings().get(name);
+            if (mapped != null) {
+                usedMappings.add(name);
+            }
         }
         if (mapped != null) {
             return new TypeRef.Mapped(mapped, nullable);

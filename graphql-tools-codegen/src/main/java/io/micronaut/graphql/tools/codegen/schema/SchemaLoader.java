@@ -69,7 +69,7 @@ import java.util.Map;
  */
 final class SchemaLoader {
 
-    private static final Comparator<String> UTF8_ORDER = (a, b) -> Arrays.compareUnsigned(
+    static final Comparator<String> UTF8_ORDER = (a, b) -> Arrays.compareUnsigned(
             a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
 
     private final List<Diagnostic> diagnostics;

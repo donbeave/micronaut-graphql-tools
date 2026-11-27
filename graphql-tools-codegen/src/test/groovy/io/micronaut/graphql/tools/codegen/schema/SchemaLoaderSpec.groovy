@@ -147,6 +147,16 @@ class SchemaLoaderSpec extends Specification {
         result.diagnostics()*.origin() == [new Origin('y/b.graphqls', 1, 21)]
     }
 
+    def "unreadable explicit files are reported in path order for any input order"() {
+        given:
+        def b = dir.resolve('b.graphqls')
+        def a = dir.resolve('a.graphqls')
+
+        expect:
+        IrBuilder.fromFiles([b, a], OPTIONS).diagnostics()*.origin()*.path() == ['a.graphqls', 'b.graphqls']
+        IrBuilder.fromFiles([a, b], OPTIONS).diagnostics()*.origin()*.path() == ['a.graphqls', 'b.graphqls']
+    }
+
     def "the same definition in two files is a diagnostic that names both places"() {
         given:
         write('a.graphqls', 'type Query { a: String }\ntype Dup { x: Int }')

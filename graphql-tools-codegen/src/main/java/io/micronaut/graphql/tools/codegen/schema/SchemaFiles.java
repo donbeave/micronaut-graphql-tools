@@ -27,7 +27,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -77,10 +79,12 @@ final class SchemaFiles {
         Set<Path> unique = new LinkedHashSet<>();
         files.forEach(file -> unique.add(file.toAbsolutePath().normalize()));
         Path root = commonParent(unique);
-        List<SchemaSource> sources = new ArrayList<>();
+        Map<String, Path> byPath = new TreeMap<>(SchemaLoader.UTF8_ORDER);
         for (Path file : unique) {
-            read(file, root == null ? file.toString().replace('\\', '/') : relative(root, file), sources, diagnostics);
+            byPath.put(root == null ? file.toString().replace('\\', '/') : relative(root, file), file);
         }
+        List<SchemaSource> sources = new ArrayList<>();
+        byPath.forEach((path, file) -> read(file, path, sources, diagnostics));
         return sources;
     }
 

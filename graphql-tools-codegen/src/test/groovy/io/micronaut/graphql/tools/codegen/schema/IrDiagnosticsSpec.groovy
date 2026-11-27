@@ -211,6 +211,12 @@ class IrDiagnosticsSpec extends Specification {
         result.ir().contracts().size() == 1
     }
 
+    def "a mapping that gives a type that no file defines is used, not unused"() {
+        expect:
+        build('type Query { when: Long }', OPTIONS.toBuilder().typeMappings(['Long': 'java.lang.Long']).build()).diagnostics().empty
+        build('type Query { when: [Long] }', OPTIONS.toBuilder().typeMappings(['Query.when': 'java.lang.Long']).build()).diagnostics().empty
+    }
+
     def "a root operation that names a type that is not an object is an error"() {
         when:
         def result = build('schema { query: Q }\nenum Q { A }')

@@ -108,7 +108,7 @@ escapes it once for every emitter: `*/` and `/*` (Kotlin nests comments), a back
 become character references such as `&#47;`, and line endings become `\n`.
 
 **Diagnostics.** Every problem is a `Diagnostic` with a stable code, a message that names the schema element and its location
-(`path:line:column`), and the origin; one run reports all of them in schema order. When a diagnostic is an error the IR is empty.
+(`path:line:column`), and the origin; one run reports all of them, in a stable order that does not depend on the order of the files given. When a diagnostic is an error the IR is empty.
 
 | Code | Severity | When |
 | --- | --- | --- |

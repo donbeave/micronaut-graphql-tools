@@ -24,7 +24,8 @@ import java.util.List;
  * The outcome of {@link IrBuilder}.
  *
  * @param ir           the IR; {@link Ir#EMPTY} when a diagnostic is an error, because a partial IR would mislead an emitter
- * @param diagnostics  the findings of the options, the loader and the rules, in that order and in schema order inside each
+ * @param diagnostics  the findings of the options, the loader and the rules, in that order; the findings of a step are in a stable
+ *                     order that does not depend on the order of the input
  * @param skippedFiles the relative paths of the schema files that hold no schema definition, only executable definitions (client
  *                     operations) or only comments, in the order of their paths; they are not an error
  */
