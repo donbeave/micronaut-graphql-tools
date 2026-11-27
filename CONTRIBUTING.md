@@ -39,6 +39,11 @@ Gradle build logic is written in the Kotlin DSL only: `*.gradle.kts` files, Kotl
 
 The binding corpus (#142) is a directory of data cases under `graphql-tools-processor/src/test/resources/corpus/`; its README says how to add and update a case (`./gradlew :micronaut-graphql-tools-processor:corpusUpdate`, and read the diff). It runs as part of `test` on the default graphql-java leg, on JDK 17, 21 and 25 (about 70 s); the floor and ceiling legs skip it with a message, because its verdicts do not depend on the leg. The drift mutation tests (the SDL of the corpus changed, breaking and equivalent mutants, issue #89) run a sample as part of `test` and every mutant with `./gradlew :micronaut-graphql-tools-processor:corpusMutation` (about 30 minutes; the canary workflow runs it every night); the README of the corpus says how to narrow it. The Kotlin cases are a separate task, `./gradlew :micronaut-graphql-tools-processor:corpusKotlin`, not part of `check` or `build`: it runs one Gradle TestKit build (the Kotlin and KSP2 versions of the root build) that compiles every Kotlin case with the visitor on and off, and downloads the Kotlin and KSP Gradle plugins from the Gradle plugin portal and the processor from Maven Central, so it needs the network (about 1 minute with a warm Gradle home). The CI job `build tools` runs it on every pull request; the canary workflow runs it under kapt every night (`-Pcorpus.kotlin.processor=kapt`).
 
+### Golden files of the code generator
+
+The tests of `graphql-tools-codegen` compare generated files with the snapshots under `graphql-tools-codegen/src/test/resources/golden/<case>/`
+and compile them in memory. After an intended change of the output, run `./gradlew :micronaut-graphql-tools-codegen:test -PupdateGolden`, review the diff of the snapshots and commit it.
+
 ### Architecture rules
 
 `ArchitectureRulesSpec` (in `graphql-tools`, part of `check`, so it also runs on JDK 17) reads the bytecode of the library and of `graphql-tools-binding` with ArchUnit and fails the build, naming the class and the rule, when:
