@@ -20,21 +20,24 @@ import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.client.GraphQLRequest;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLClientException;
-import io.micronaut.json.JsonMapper;
+import io.micronaut.serde.ObjectMapper;
 import jakarta.inject.Singleton;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
- * Encodes requests and decodes responses with the application's Micronaut Serialization {@link JsonMapper}.
+ * Encodes requests and decodes responses with the application's Micronaut Serialization {@link ObjectMapper}.
  */
 @Internal
 @Singleton
 public final class GraphQLCodec {
 
-    private final JsonMapper mapper;
+    private static final Argument<Map<String, Object>> MAP = Argument.mapOf(String.class, Object.class);
 
-    GraphQLCodec(JsonMapper mapper) {
+    private final ObjectMapper mapper;
+
+    GraphQLCodec(ObjectMapper mapper) {
         this.mapper = mapper;
     }
 
@@ -47,6 +50,20 @@ public final class GraphQLCodec {
     public byte[] encode(GraphQLRequest<?> request) {
         try {
             return mapper.writeValueAsBytes(Argument.of(GraphQLRequest.class, request.getDataType()), request);
+        } catch (IOException e) {
+            throw new GraphQLClientException(GraphQLClientException.DECODE_ERROR, "The request cannot be encoded: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Encodes the variables or the extensions of a request as the JSON text of a URL parameter.
+     *
+     * @param value the map
+     * @return the JSON text
+     */
+    public String encodeValue(Map<String, Object> value) {
+        try {
+            return mapper.writeValueAsString(MAP, value);
         } catch (IOException e) {
             throw new GraphQLClientException(GraphQLClientException.DECODE_ERROR, "The request cannot be encoded: " + e.getMessage(), e);
         }

@@ -16,6 +16,7 @@
 package io.micronaut.graphql.tools.client
 
 import io.micronaut.core.type.Argument
+import io.micronaut.http.HttpMethod
 import spock.lang.Specification
 
 class GraphQLRequestSpec extends Specification {
@@ -31,6 +32,7 @@ class GraphQLRequestSpec extends Specification {
         request.variables.isEmpty()
         request.extensions.isEmpty()
         request.dataType == Argument.mapOf(String, Object)
+        request.httpMethod == HttpMethod.POST
     }
 
     void "the builder takes the data type as a class or an argument"() {
