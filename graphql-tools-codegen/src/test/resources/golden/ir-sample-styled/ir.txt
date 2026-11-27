@@ -76,3 +76,55 @@ contract Mutation.addReview -> com.example.api.MutationAddReview : io.micronaut.
 contract Subscription.reviewAdded -> com.example.api.SubscriptionReviewAdded : io.micronaut.graphql.tools.resolver.SubscriptionResolver @ operations.graphqls:14:3
   method reviewAdded returns Review! wrapper kotlinx.coroutines.flow.Flow<T> @ operations.graphqls:14:3
     argument productId: ID! @ operations.graphqls:14:15
+names com.example.names.GqlNodeDtoNames
+  constant TYPE = Node @ model.graphqls:6:1
+  constant ID = id @ model.graphqls:8:3
+names com.example.names.GqlResourceDtoNames
+  constant TYPE = Resource @ model.graphqls:11:1
+  constant ID = id @ model.graphqls:13:3
+  constant URL = url @ model.graphqls:14:3
+names com.example.names.GqlProductDtoNames
+  constant TYPE = Product @ model.graphqls:17:1
+  constant ID = id @ model.graphqls:21:3
+  constant URL = url @ model.graphqls:22:3
+  constant NAME = name @ model.graphqls:23:3
+  constant STARS = stars @ model.graphqls:24:3
+  constant REVIEWS = reviews @ model.graphqls:25:3
+  constant COLOR = color @ model.graphqls:26:3
+  constant OLD_NAME = oldName @ model.graphqls:27:3
+  constant RELEASED_AT = releasedAt @ a-extensions.graphqls:2:3
+  constant PRICE = price @ a-extensions.graphqls:4:3
+names com.example.names.GqlReviewDtoNames
+  constant TYPE = Review @ model.graphqls:30:1
+  constant ID = id @ model.graphqls:31:3
+  constant STARS = stars @ model.graphqls:32:3
+  constant BODY = body @ model.graphqls:33:3
+names com.example.names.GqlProductFilterDtoNames
+  constant TYPE = ProductFilter @ model.graphqls:51:1
+  constant MIN_STARS = minStars @ model.graphqls:52:3
+  constant COLOR = color @ model.graphqls:53:3
+  constant TAGS = tags @ model.graphqls:54:3
+  constant TEXT = text @ a-extensions.graphqls:14:3
+names com.example.names.GqlReviewInputDtoNames
+  constant TYPE = ReviewInput @ model.graphqls:57:1
+  constant PRODUCT_ID = productId @ model.graphqls:58:3
+  constant STARS = stars @ model.graphqls:59:3
+  constant BODY = body @ model.graphqls:60:3
+names com.example.names.QueryNames
+  constant TYPE = Query @ operations.graphqls:1:1
+  constant NODE = node @ operations.graphqls:2:3
+  constant PRODUCTS = products @ operations.graphqls:4:3
+  constant SEARCH = search @ operations.graphqls:5:3
+  constant OLD_QUERY = oldQuery @ operations.graphqls:6:3
+  constant CATEGORIES = categories @ a-extensions.graphqls:18:3
+names com.example.names.MutationNames
+  constant TYPE = Mutation @ operations.graphqls:9:1
+  constant ADD_REVIEW = addReview @ operations.graphqls:10:3
+names com.example.names.SubscriptionNames
+  constant TYPE = Subscription @ operations.graphqls:13:1
+  constant REVIEW_ADDED = reviewAdded @ operations.graphqls:14:3
+names com.example.names.GraphQLTypeNames
+  constant DATE = Date @ model.graphqls:1:1
+  constant MONEY = Money @ model.graphqls:4:1
+  constant SEARCH_RESULT = SearchResult @ model.graphqls:41:1
+  constant COLOR = Color @ model.graphqls:43:1

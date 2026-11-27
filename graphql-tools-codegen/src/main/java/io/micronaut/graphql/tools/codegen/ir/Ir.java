@@ -31,12 +31,13 @@ import java.util.Objects;
  * @param abstractTypes the interfaces, unions and selected object types that are generated as interfaces
  * @param scalars       the custom scalars with a mapping
  * @param contracts     the resolver contracts
+ * @param nameClasses   the classes of name constants, in the order of the types
  */
 public record Ir(List<EnumType> enums, List<InputType> inputs, List<ModelType> models, List<AbstractType> abstractTypes,
-                 List<ScalarType> scalars, List<ResolverContract> contracts) {
+                 List<ScalarType> scalars, List<ResolverContract> contracts, List<NameClass> nameClasses) {
 
     /** An IR without a node. */
-    public static final Ir EMPTY = new Ir(List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+    public static final Ir EMPTY = new Ir(List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
 
     /**
      * Creates an IR, keeping immutable copies of the lists.
@@ -49,5 +50,6 @@ public record Ir(List<EnumType> enums, List<InputType> inputs, List<ModelType> m
         abstractTypes = List.copyOf(abstractTypes);
         scalars = List.copyOf(scalars);
         contracts = List.copyOf(contracts);
+        nameClasses = List.copyOf(nameClasses);
     }
 }

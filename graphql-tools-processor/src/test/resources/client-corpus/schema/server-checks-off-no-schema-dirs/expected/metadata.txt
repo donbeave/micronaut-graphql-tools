@@ -1,0 +1,1 @@
+BookClient#named type=query name=FromServerDirectory payload=field variables=- document=queryFromServerDirectory{...Version}fragmentVersiononQuery{version}

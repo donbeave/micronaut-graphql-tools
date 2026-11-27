@@ -50,7 +50,16 @@ public final class IrSnapshot {
         ir.abstractTypes().forEach(it -> abstractType(out, it));
         ir.models().forEach(it -> model(out, it));
         ir.contracts().forEach(it -> contract(out, it));
+        ir.nameClasses().forEach(it -> nameClass(out, it));
         return out.toString();
+    }
+
+    private static void nameClass(StringBuilder out, NameClass nameClass) {
+        out.append("names ").append(nameClass.packageName()).append('.').append(nameClass.simpleName()).append('\n');
+        for (NameConstant constant : nameClass.constants()) {
+            out.append("  constant ").append(constant.name()).append(" = ").append(constant.value()).append(" @ ")
+                    .append(constant.origin()).append('\n');
+        }
     }
 
     private static void scalar(StringBuilder out, ScalarType scalar) {

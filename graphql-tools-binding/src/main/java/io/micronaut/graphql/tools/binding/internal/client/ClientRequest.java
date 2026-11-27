@@ -26,7 +26,19 @@ import io.micronaut.core.annotation.Internal;
  * @param value      the {@code value} member of the operation: an inline document, the name of an operation of the client
  *                   directory, or empty
  * @param name       the {@code name} member of the operation, empty when it is not set
+ * @param get        whether the operation is sent with GET
  */
 @Internal
-public record ClientRequest(String member, String methodName, String schema, String value, String name) {
+public record ClientRequest(String member, String methodName, String schema, String value, String name, boolean get) {
+
+    /**
+     * @param member     where the finding is reported: {@code binary.Name#method(parameter types)}
+     * @param methodName the simple name of the method
+     * @param schema     the {@code schema} member of the client, empty when it is not set
+     * @param value      the {@code value} member of the operation
+     * @param name       the {@code name} member of the operation, empty when it is not set
+     */
+    public ClientRequest(String member, String methodName, String schema, String value, String name) {
+        this(member, methodName, schema, value, name, false);
+    }
 }

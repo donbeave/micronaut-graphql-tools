@@ -35,7 +35,7 @@ class GraphQLCodeGeneratorSpec extends Specification {
         then:
         result.diagnostics().empty
         !result.hasErrors()
-        result.files().empty
+        result.files()*.path() == ['com/example/names/QueryNames.java', 'com/example/names/package-info.java']
     }
 
     def "the builder takes a list of files too, and keeps the output directory"() {
