@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.client.declarative;
 
 import io.micronaut.graphql.tools.client.annotation.GraphQLClient;
 import io.micronaut.graphql.tools.client.annotation.GraphQLOperation;
+import io.micronaut.graphql.tools.client.annotation.GraphQLVariable;
 import io.micronaut.graphql.tools.client.declarative.Types.Book;
 import io.micronaut.graphql.tools.client.internal.GraphQLOperationMetadata;
 import io.micronaut.http.annotation.Body;
@@ -42,6 +43,10 @@ public interface BrokenClient {
     @GraphQLOperation("query Q($id: ID!) { book(id: $id) { title } }")
     @GraphQLOperationMetadata(document = "query Q($id: ID!) { book(id: $id) { title } }", operationName = "Q", variables = "id", payload = "field")
     Book undeclaredVariable(String id, String other);
+
+    @GraphQLOperation("query Q($id: ID!) { book(id: $id) { title } }")
+    @GraphQLOperationMetadata(document = "query Q($id: ID!) { book(id: $id) { title } }", operationName = "Q", variables = "id", payload = "field")
+    Book duplicateVariable(@GraphQLVariable("id") String first, @GraphQLVariable("id") String second);
 
     @GraphQLOperation(value = "mutation M { touch }", method = GraphQLOperation.Method.GET)
     @GraphQLOperationMetadata(document = "mutation M { touch }", operationName = "M", operationType = "mutation", payload = "field")

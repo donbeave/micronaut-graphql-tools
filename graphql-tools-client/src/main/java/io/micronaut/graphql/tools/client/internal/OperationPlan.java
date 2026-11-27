@@ -171,6 +171,10 @@ final class OperationPlan {
                             + "(it declares " + Arrays.toString(declared) + "); name the variable with @GraphQLVariable, or mark the parameter "
                             + "@Header or @CookieValue");
                 }
+                if (declaredArguments[index] >= 0) {
+                    throw unsupported(member, "the parameters " + arguments[declaredArguments[index]].getName() + " and " + argument.getName()
+                            + " both bind the variable $" + name);
+                }
                 declaredArguments[index] = i;
             }
         }

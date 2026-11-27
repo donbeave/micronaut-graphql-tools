@@ -152,6 +152,10 @@ public interface BookClient {
     @GraphQLOperationMetadata(document = ECHO, operationName = "Echo", variables = {"id", "count"}, payload = "field")
     Map<String, Object> echoGet(@GraphQLVariable("id") Long identifier, int count);
 
+    @GraphQLOperation(value = ECHO, method = GraphQLOperation.Method.GET)
+    @GraphQLOperationMetadata(document = ECHO, operationName = "Echo", variables = {"filter", "sorts", "missing"}, payload = "field")
+    Map<String, Object> echoGetObjects(Filter filter, List<Sort> sorts, @Nullable String missing);
+
     @GraphQLOperation(ECHO)
     @GraphQLOperationMetadata(document = ECHO, operationName = "Echo", variables = {"count"}, payload = "field")
     @Header(name = "X-Method", value = "method")

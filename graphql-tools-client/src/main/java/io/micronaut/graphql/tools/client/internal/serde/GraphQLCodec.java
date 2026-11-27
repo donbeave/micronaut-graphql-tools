@@ -38,6 +38,7 @@ public final class GraphQLCodec {
 
     private static final Argument<Map<String, Object>> MAP = Argument.mapOf(String.class, Object.class);
     private static final Argument<OperationRequest> OPERATION = Argument.of(OperationRequest.class);
+    private static final Argument<OperationVariables> VARIABLES = Argument.of(OperationVariables.class);
 
     private final ObjectMapper mapper;
 
@@ -72,6 +73,20 @@ public final class GraphQLCodec {
     public byte[] encode(OperationRequest request) {
         try {
             return mapper.writeValueAsBytes(OPERATION, request);
+        } catch (IOException e) {
+            throw new GraphQLClientException(GraphQLClientException.DECODE_ERROR, "The request cannot be encoded: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Encodes the variables of a declarative call as the JSON text of a URL parameter, each with the serializer of its declared type.
+     *
+     * @param request the call
+     * @return the JSON text
+     */
+    public String encodeVariables(OperationRequest request) {
+        try {
+            return mapper.writeValueAsString(VARIABLES, new OperationVariables(request));
         } catch (IOException e) {
             throw new GraphQLClientException(GraphQLClientException.DECODE_ERROR, "The request cannot be encoded: " + e.getMessage(), e);
         }

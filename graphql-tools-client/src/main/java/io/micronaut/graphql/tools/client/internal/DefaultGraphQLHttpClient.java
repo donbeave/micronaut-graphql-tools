@@ -39,7 +39,6 @@ import org.reactivestreams.Publisher;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -185,7 +184,8 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
         requireHttp(type);
         MutableHttpRequest<?> http;
         if (request.getHttpMethod() == HttpMethod.GET) {
-            http = HttpRequest.GET(endpoint + queryString(request.getDocument(), request.getOperationName(), request.getVariables(), request.getExtensions()));
+            http = HttpRequest.GET(endpoint + queryString(request.getDocument(), request.getOperationName(), json(request.getVariables()),
+                    json(request.getExtensions())));
         } else {
             http = HttpRequest.POST(endpoint, codec.encode(request)).contentType(MediaType.APPLICATION_JSON_TYPE);
         }
@@ -196,11 +196,8 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
         requireHttp(request.operationType());
         MutableHttpRequest<?> http;
         if (request.httpMethod() == HttpMethod.GET) {
-            Map<String, Object> variables = new LinkedHashMap<>();
-            for (int i = 0; i < request.variableNames().length; i++) {
-                variables.put(request.variableNames()[i], request.variableValues()[i]);
-            }
-            http = HttpRequest.GET(endpoint + queryString(request.document(), request.operationName(), variables, Map.of()));
+            http = HttpRequest.GET(endpoint + queryString(request.document(), request.operationName(),
+                    request.variableNames().length == 0 ? null : codec.encodeVariables(request), null));
         } else {
             http = HttpRequest.POST(endpoint, codec.encode(request)).contentType(MediaType.APPLICATION_JSON_TYPE);
         }
@@ -222,21 +219,23 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
         return http;
     }
 
-    private String queryString(String document, @Nullable String operationName, Map<String, Object> variables, Map<String, Object> extensions) {
+    private String json(Map<String, Object> value) {
+        return value.isEmpty() ? null : codec.encodeValue(value);
+    }
+
+    private static String queryString(String document, @Nullable String operationName, @Nullable String variables, @Nullable String extensions) {
         StringBuilder query = new StringBuilder(document.length() + 32).append("?query=");
         encode(query, document);
         if (operationName != null) {
             encode(query.append("&operationName="), operationName);
         }
-        append(query, "&variables=", variables);
-        append(query, "&extensions=", extensions);
-        return query.toString();
-    }
-
-    private void append(StringBuilder query, String name, Map<String, Object> value) {
-        if (!value.isEmpty()) {
-            encode(query.append(name), codec.encodeValue(value));
+        if (variables != null) {
+            encode(query.append("&variables="), variables);
         }
+        if (extensions != null) {
+            encode(query.append("&extensions="), extensions);
+        }
+        return query.toString();
     }
 
     private static void encode(StringBuilder query, String value) {

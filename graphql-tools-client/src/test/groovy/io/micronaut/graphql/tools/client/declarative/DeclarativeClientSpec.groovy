@@ -136,6 +136,16 @@ class DeclarativeClientSpec extends Specification {
         result.variables == [id: 7, count: 3]
     }
 
+    def "GET variables are encoded with the declared types, a null one included"() {
+        when:
+        def result = books.echoGetObjects(new Filter('n', ['a', 'b']), [Sort.PAGES], null)
+
+        then:
+        echo.last().method() == 'GET'
+        echo.last().body().variables == [filter: [name: 'n', tags: ['a', 'b']], sorts: ['PAGES'], missing: null]
+        result.variables == echo.last().body().variables
+    }
+
     def "headers and cookies bind from parameters, and static headers come from the annotations"() {
         when:
         def result = books.echoHeaders(3, 'tok', 'req-1', 'sess', null, 5)
@@ -348,6 +358,7 @@ class DeclarativeClientSpec extends Specification {
         'a parameter that HTTP annotations bind' | { broken.bodyParameter('x') }       | 'bound by an HTTP annotation'
         'a query parameter'                     | { broken.queryParameter('x') }      | 'bound by an HTTP annotation'
         'a parameter of an undeclared variable' | { broken.undeclaredVariable('a', 'b') } | 'does not declare'
+        'two parameters of one variable'        | { broken.duplicateVariable('a', 'b') }  | 'both bind the variable $id'
     }
 
     def "a mutation over GET and a subscription fail"() {

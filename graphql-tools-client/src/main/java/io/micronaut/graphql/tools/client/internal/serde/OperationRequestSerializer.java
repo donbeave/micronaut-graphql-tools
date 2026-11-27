@@ -36,7 +36,6 @@ final class OperationRequestSerializer implements Serializer<OperationRequest> {
     private static final Argument<Map<String, Object>> MAP = Argument.mapOf(String.class, Object.class);
 
     @Override
-    @SuppressWarnings("unchecked")
     public void serialize(Encoder encoder, EncoderContext context, Argument<? extends OperationRequest> type, OperationRequest value)
             throws IOException {
         Encoder object = encoder.encodeObject(type);
@@ -46,22 +45,27 @@ final class OperationRequestSerializer implements Serializer<OperationRequest> {
             object.encodeKey("operationName");
             object.encodeString(value.operationName());
         }
-        String[] names = value.variableNames();
-        if (names.length > 0) {
+        if (value.variableNames().length > 0) {
             object.encodeKey("variables");
-            Encoder variables = object.encodeObject(MAP);
-            for (int i = 0; i < names.length; i++) {
-                variables.encodeKey(names[i]);
-                Object variable = value.variableValues()[i];
-                if (variable == null) {
-                    variables.encodeNull();
-                } else {
-                    Argument<Object> declared = (Argument<Object>) value.variableTypes()[i];
-                    context.findSerializer(declared).createSpecific(context, declared).serialize(variables, context, declared, variable);
-                }
-            }
-            variables.finishStructure();
+            writeVariables(object, context, value);
         }
         object.finishStructure();
+    }
+
+    @SuppressWarnings("unchecked")
+    static void writeVariables(Encoder encoder, EncoderContext context, OperationRequest value) throws IOException {
+        String[] names = value.variableNames();
+        Encoder variables = encoder.encodeObject(MAP);
+        for (int i = 0; i < names.length; i++) {
+            variables.encodeKey(names[i]);
+            Object variable = value.variableValues()[i];
+            if (variable == null) {
+                variables.encodeNull();
+            } else {
+                Argument<Object> declared = (Argument<Object>) value.variableTypes()[i];
+                context.findSerializer(declared).createSpecific(context, declared).serialize(variables, context, declared, variable);
+            }
+        }
+        variables.finishStructure();
     }
 }
