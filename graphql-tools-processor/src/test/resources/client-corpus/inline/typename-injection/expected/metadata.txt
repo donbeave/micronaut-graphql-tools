@@ -1,0 +1,3 @@
+BookClient#books type=query name=- payload=field variables=- document={books{title}}
+BookClient#hits type=query name=Hits payload=field variables=term document=queryHits($term:String!){search(term:$term){__typename...Hit}}fragmentHitonSearchResult{__typename...onBook{title}}
+BookClient#search type=query name=Search payload=field variables=term document=querySearch($term:String!){search(term:$term){__typename...onBook{title}...onMagazine{issue}}}
