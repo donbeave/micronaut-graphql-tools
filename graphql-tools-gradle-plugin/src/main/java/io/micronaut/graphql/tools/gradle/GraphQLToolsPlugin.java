@@ -18,10 +18,13 @@ package io.micronaut.graphql.tools.gradle;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.attributes.Attribute;
 import org.gradle.api.attributes.Category;
 import org.gradle.api.attributes.LibraryElements;
 import org.gradle.api.attributes.Usage;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.SourceDirectorySet;
+import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
@@ -54,6 +57,9 @@ public class GraphQLToolsPlugin implements Plugin<Project> {
     /** The name of the resolvable configuration that the generation tasks read the generator classpath from. */
     public static final String CODEGEN_CLASSPATH_CONFIGURATION = "graphqlToolsCodegenClasspath";
 
+    /** The name of the resolvable configuration that holds the jars of the project's dependencies, whose type mappings the generator reads. */
+    public static final String DEPENDENCY_CLASSPATH_CONFIGURATION = "graphqlToolsDependencyClasspath";
+
     private static final String JAVA = "JAVA";
     private static final String KOTLIN = "KOTLIN";
     private static final String GROOVY = "GROOVY";
@@ -81,13 +87,17 @@ public class GraphQLToolsPlugin implements Plugin<Project> {
             c.getAttributes().attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
                     project.getObjects().named(LibraryElements.class, LibraryElements.JAR));
         });
+        project.getConfigurations().resolvable(DEPENDENCY_CLASSPATH_CONFIGURATION, c ->
+                c.setDescription("The dependencies of the project, as jars, whose type mappings the GraphQL code generator reads."));
         project.getDependencies().addProvider(CODEGEN_CONFIGURATION, extension.getVersion().map(v -> coordinate(CODEGEN_ARTIFACT, v)));
 
         extension.getCodegenSpecs().all(spec -> configure(project, extension, spec));
         CompileTimeWiring.wire(project, extension);
 
         project.getPluginManager().withPlugin("java", plugin -> {
+            configureDependencyClasspath(project);
             extension.getCodegenSpecs().all(spec -> addRuntimeDependency(project, extension, spec));
+            extension.getCodegenSpecs().all(spec -> wireResources(project, spec));
             wire(project, extension, JAVA, mainSourceSet(project).getJava());
         });
         project.getPluginManager().withPlugin("groovy", plugin -> wire(project, extension, GROOVY, extensionOf(project, "groovy")));
@@ -98,14 +108,38 @@ public class GraphQLToolsPlugin implements Plugin<Project> {
         spec.getLanguage().convention(project.provider(() -> inferLanguage(project, spec)));
         spec.getSchemaDirs().convention(extension.getSchemaDirs());
         spec.getOutputDirectory().convention(project.getLayout().getBuildDirectory().dir("generated/sources/graphqlTools/" + spec.getName()));
+        spec.getResourcesDirectory().convention(project.getLayout().getBuildDirectory().dir("generated/resources/graphqlTools/" + spec.getName()));
         project.getTasks().register(taskName(spec.getName()), GenerateGraphQLTask.class, task -> {
             task.setDescription("Generates sources from the GraphQL schema files of the spec '" + spec.getName() + "'.");
             task.setGroup("build");
             task.getSchemaDirectories().from(spec.getSchemaDirs());
             task.getOptions().set(project.provider(spec::toOptionMap));
             task.getGeneratorClasspath().from(project.getConfigurations().named(CODEGEN_CLASSPATH_CONFIGURATION));
+            task.getDependencyClasspath().from(spec.getTypeMappingsFromDependencies().orElse(true).map(read ->
+                    read ? (FileCollection) project.getConfigurations().getByName(DEPENDENCY_CLASSPATH_CONFIGURATION) : project.files()));
             task.getOutputDirectory().set(spec.getOutputDirectory());
+            task.getResourcesDirectory().set(spec.getResourcesDirectory());
         });
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void configureDependencyClasspath(Project project) {
+        Configuration compile = project.getConfigurations().getByName(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME);
+        project.getConfigurations().named(DEPENDENCY_CLASSPATH_CONFIGURATION, c -> {
+            c.extendsFrom(project.getConfigurations().getByName(JavaPlugin.IMPLEMENTATION_CONFIGURATION_NAME),
+                    project.getConfigurations().getByName(JavaPlugin.COMPILE_ONLY_CONFIGURATION_NAME));
+            for (Attribute attribute : compile.getAttributes().keySet()) {
+                c.getAttributes().attribute(attribute, compile.getAttributes().getAttribute(attribute));
+            }
+            c.getAttributes().attribute(Usage.USAGE_ATTRIBUTE, project.getObjects().named(Usage.class, Usage.JAVA_RUNTIME));
+            c.getAttributes().attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
+                    project.getObjects().named(LibraryElements.class, LibraryElements.JAR));
+        });
+    }
+
+    private static void wireResources(Project project, CodegenSpec spec) {
+        TaskProvider<?> task = project.getTasks().named(taskName(spec.getName()));
+        mainSourceSet(project).getResources().srcDir(project.files(spec.getResourcesDirectory()).builtBy(task));
     }
 
     private static String inferLanguage(Project project, CodegenSpec spec) {

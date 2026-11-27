@@ -34,6 +34,20 @@ public interface GenerateParameters extends WorkParameters {
     ConfigurableFileCollection getSchemaDirectories();
 
     /**
+     * The jars and class directories whose type mappings file the generator reads.
+     *
+     * @return the dependencies
+     */
+    ConfigurableFileCollection getDependencies();
+
+    /**
+     * The directory that receives the generated resources.
+     *
+     * @return the directory
+     */
+    DirectoryProperty getResourcesDirectory();
+
+    /**
      * The directory that receives the generated sources.
      *
      * @return the directory
