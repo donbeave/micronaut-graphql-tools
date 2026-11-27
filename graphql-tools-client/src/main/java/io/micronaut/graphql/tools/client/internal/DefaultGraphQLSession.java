@@ -60,7 +60,7 @@ public final class DefaultGraphQLSession implements GraphQLSession {
     }
 
     @Override
-    public List<Cookie> cookies() {
+    public List<Cookie> getCookies() {
         return jar.snapshot();
     }
 

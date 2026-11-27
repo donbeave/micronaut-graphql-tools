@@ -81,7 +81,7 @@ public final class io.micronaut.graphql.tools.client.GraphQLResponse<D> extends 
 }
 
 public interface io.micronaut.graphql.tools.client.GraphQLSession extends io.micronaut.graphql.tools.client.GraphQLHttpClient {
-  public abstract java.util.List<io.micronaut.graphql.tools.client.GraphQLSession$Cookie> cookies();
+  public abstract java.util.List<io.micronaut.graphql.tools.client.GraphQLSession$Cookie> getCookies();
   public abstract void clearCookies();
 }
 

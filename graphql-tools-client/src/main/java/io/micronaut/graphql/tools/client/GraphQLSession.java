@@ -42,7 +42,7 @@ public interface GraphQLSession extends GraphQLHttpClient {
      *
      * @return a snapshot of the cookies
      */
-    List<Cookie> cookies();
+    List<Cookie> getCookies();
 
     /**
      * Forgets every cookie of the session; the fixed headers stay.

@@ -60,7 +60,7 @@ class GraphQLSessionSpec extends Specification {
 
         then:
         cookieSent(session) == 'sid=abc'
-        session.cookies()*.name() == ['sid']
+        session.getCookies()*.name() == ['sid']
     }
 
     void "the async, reactive and blocking variants all store and replay cookies"() {
@@ -80,7 +80,7 @@ class GraphQLSessionSpec extends Specification {
         def session = clients.stub.newSession()
 
         expect:
-        session.executeAsync(query(), setCookies('sid=abc')).thenApply { session.cookies().size() }.join() == 1
+        session.executeAsync(query(), setCookies('sid=abc')).thenApply { session.getCookies().size() }.join() == 1
     }
 
     void "the shared client never keeps cookies, and two sessions do not see each other's"() {
@@ -127,7 +127,7 @@ class GraphQLSessionSpec extends Specification {
         session.executeBlocking(query(), setCookies('sid=abc'))
 
         then:
-        session.cookies()*.path() == ['/']
+        session.getCookies()*.path() == ['/']
     }
 
     void "a cookie that a response expires is removed"() {
@@ -189,12 +189,12 @@ class GraphQLSessionSpec extends Specification {
         session.executeBlocking(query(), { it.header('X-Status', '500').header('X-Set-Cookie', 'sid=abc') } as Consumer)
 
         then:
-        session.cookies()*.name() == ['sid']
+        session.getCookies()*.name() == ['sid']
 
         when:
         session.clearCookies()
 
         then:
-        session.cookies().empty
+        session.getCookies().empty
     }
 }
