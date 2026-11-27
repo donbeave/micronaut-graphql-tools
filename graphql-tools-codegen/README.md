@@ -40,7 +40,7 @@ Each package that holds a generated type gets a `package-info.java`.
   Keep the 1k-type compile out of the unit suites.
 
 
-Not in this module: the Gradle plugin and the Maven plugin, and the emitters.
+Not in this module: the Gradle plugin and the Maven plugin (`graphql-tools-maven-plugin`), and the emitters.
 
 ## Options
 
