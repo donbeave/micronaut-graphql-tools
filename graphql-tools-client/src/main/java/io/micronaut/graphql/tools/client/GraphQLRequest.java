@@ -17,6 +17,7 @@ package io.micronaut.graphql.tools.client;
 
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
+import io.micronaut.http.HttpMethod;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -37,6 +38,7 @@ public final class GraphQLRequest<D> {
     private final String document;
     private final String operationName;
     private final OperationType operationType;
+    private final HttpMethod httpMethod;
     private final Map<String, Object> variables;
     private final Map<String, Object> extensions;
     private final Argument<D> dataType;
@@ -45,6 +47,7 @@ public final class GraphQLRequest<D> {
         this.document = builder.document;
         this.operationName = builder.operationName;
         this.operationType = builder.operationType;
+        this.httpMethod = builder.httpMethod;
         this.variables = copy(builder.variables);
         this.extensions = copy(builder.extensions);
         this.dataType = builder.dataType;
@@ -110,6 +113,15 @@ public final class GraphQLRequest<D> {
     }
 
     /**
+     * Returns the HTTP method that sends the request.
+     *
+     * @return {@link HttpMethod#POST} unless the builder says otherwise; {@link HttpMethod#GET} only for a query
+     */
+    public HttpMethod getHttpMethod() {
+        return httpMethod;
+    }
+
+    /**
      * Returns the variables of the operation.
      *
      * @return an unmodifiable map, empty when the request has no variables
@@ -154,6 +166,7 @@ public final class GraphQLRequest<D> {
         private String document;
         private String operationName;
         private OperationType operationType = OperationType.QUERY;
+        private HttpMethod httpMethod = HttpMethod.POST;
 
         private Builder(Argument<D> dataType) {
             this.dataType = Objects.requireNonNull(dataType, "dataType");
@@ -189,6 +202,22 @@ public final class GraphQLRequest<D> {
          */
         public Builder<D> operationType(OperationType operationType) {
             this.operationType = Objects.requireNonNull(operationType, "operationType");
+            return this;
+        }
+
+        /**
+         * Sets the HTTP method that sends the request. The default is {@link HttpMethod#POST}; {@link HttpMethod#GET} sends the
+         * parameters in the URL and is allowed for a query only.
+         *
+         * @param httpMethod {@link HttpMethod#POST} or {@link HttpMethod#GET}
+         * @return this builder
+         * @throws IllegalArgumentException for any other method
+         */
+        public Builder<D> httpMethod(HttpMethod httpMethod) {
+            if (httpMethod != HttpMethod.POST && httpMethod != HttpMethod.GET) {
+                throw new IllegalArgumentException("A GraphQL request is sent with POST or GET, not " + httpMethod);
+            }
+            this.httpMethod = httpMethod;
             return this;
         }
 
@@ -242,11 +271,14 @@ public final class GraphQLRequest<D> {
          * Builds the request.
          *
          * @return the request
-         * @throws IllegalStateException when the document is missing or blank
+         * @throws IllegalStateException when the document is missing or blank, or the method is GET and the operation is not a query
          */
         public GraphQLRequest<D> build() {
             if (document == null || document.isBlank()) {
                 throw new IllegalStateException("A GraphQL request needs a document");
+            }
+            if (httpMethod == HttpMethod.GET && operationType != OperationType.QUERY) {
+                throw new IllegalStateException("Only a query can be sent with GET, not a " + operationType);
             }
             return new GraphQLRequest<>(this);
         }
