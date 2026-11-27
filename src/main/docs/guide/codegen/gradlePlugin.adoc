@@ -83,3 +83,27 @@ includeBuild("../micronaut-graphql-tools")
 The plugin then needs no version. The plugin's default version of the generator is its own version, and Gradle substitutes the included `micronaut-graphql-tools-codegen` project for that dependency, so the generator is built from the same checkout as the plugin and never resolved from a repository.
 
 The TestKit scenarios of the plugin build each of the three ways with a sample project: `PublishingFunctionalSpec`: a repository through its marker, Maven Local filled by `publishToMavenLocal`, and the included build.
+
+
+[[codegenGradlePluginSourceSets]]
+== Generated sources and the compilers
+
+The output directory of each spec is added to the main source set of the language that the spec generates, as a directory that the generation task builds. The compile tasks (`compileJava`, `compileKotlin`, `kspKotlin`, `kaptGenerateStubsKotlin`, `compileGroovy`) and `sourcesJar` therefore run the generation first, with no `dependsOn` or `mustRunAfter` of your own, and an IDE import sees the directory as a source root.
+
+The generator emits Java only, so the default `language` is `JAVA` in a Java, a Kotlin and a Groovy project. A Kotlin or Groovy project compiles that Java together with its own sources: the Kotlin compiler reads the generated Java, and `compileJava` runs before `compileGroovy`. A generated Java class cannot refer to a Kotlin or Groovy class of the project.
+
+Micronaut's processors must run on the generated Java, and the processor of your language does it:
+
+[source,kotlin]
+----
+dependencies {
+    annotationProcessor("io.micronaut:micronaut-inject-java")   // Java, and the generated Java of a Groovy project
+    ksp("io.micronaut:micronaut-inject-kotlin")                  // Kotlin with KSP (it reads the generated Java too)
+    kapt("io.micronaut:micronaut-inject-java")                   // Kotlin with kapt (it reads the generated Java too)
+    compileOnly("io.micronaut:micronaut-inject-groovy")          // Groovy sources
+}
+----
+
+Declare the lines of your build only: a Kotlin project that adds `annotationProcessor` next to `ksp` or `kapt` writes every introspection twice, and its `jar` task fails on the duplicate entry.
+
+The `GeneratedSourceSetsFunctionalSpec` scenarios build a Java, a Kotlin plus KSP, a Kotlin plus kapt and a Groovy project this way and check that Micronaut writes the introspection of a generated `@Introspected` class in each.

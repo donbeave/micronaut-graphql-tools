@@ -64,7 +64,7 @@ class GraphQLToolsPluginSpec extends Specification {
         project.tasks.getByName('generateClientGraphQL').outputDirectory.get().asFile.path.endsWith('generated/sources/graphqlTools/client')
     }
 
-    def "the language follows the applied Groovy plugin, else it is Java"() {
+    def "the language is Java, also when the Groovy plugin is applied, because the generator emits Java only"() {
         given:
         def java = ProjectBuilder.builder().build()
         def groovy = ProjectBuilder.builder().build()
@@ -76,7 +76,7 @@ class GraphQLToolsPluginSpec extends Specification {
 
         then:
         java.extensions.getByType(GraphQLToolsExtension).codegenSpecs.getByName('main').language.get() == 'JAVA'
-        groovy.extensions.getByType(GraphQLToolsExtension).codegenSpecs.getByName('main').language.get() == 'GROOVY'
+        groovy.extensions.getByType(GraphQLToolsExtension).codegenSpecs.getByName('main').language.get() == 'JAVA'
     }
 
     def "a client spec generates Java even when the Groovy plugin is applied"() {
@@ -91,6 +91,36 @@ class GraphQLToolsPluginSpec extends Specification {
 
         then:
         extension.codegenSpecs.getByName('client').language.get() == 'JAVA'
-        extension.codegenSpecs.getByName('main').language.get() == 'GROOVY'
+    }
+
+    def "the Java source set has the output directory, and the compile and sources tasks depend on the generation without mustRunAfter"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+        project.pluginManager.apply('java')
+        project.pluginManager.apply('io.micronaut.graphql.tools')
+        project.java.withSourcesJar()
+        project.evaluate()
+        def generate = project.tasks.getByName('generateGraphQL')
+
+        expect:
+        project.sourceSets.main.java.srcDirs.contains(generate.outputDirectory.get().asFile)
+        ['compileJava', 'sourcesJar'].every { project.tasks.getByName(it).taskDependencies.getDependencies(null).contains(generate) }
+        generate.mustRunAfter.getDependencies(generate).isEmpty()
+        project.tasks.every { it.mustRunAfter.getDependencies(it).every { dependency -> dependency != generate } }
+    }
+
+    def "the Groovy compile task depends on the generation, and an explicit Groovy language wires the Groovy source set"() {
+        given:
+        def project = ProjectBuilder.builder().build()
+        project.pluginManager.apply('groovy')
+        project.pluginManager.apply('io.micronaut.graphql.tools')
+        project.extensions.getByType(GraphQLToolsExtension).codegen { it.language.set('GROOVY') }
+        project.evaluate()
+        def generate = project.tasks.getByName('generateGraphQL')
+
+        expect:
+        project.sourceSets.main.groovy.srcDirs.contains(generate.outputDirectory.get().asFile)
+        !project.sourceSets.main.java.srcDirs.contains(generate.outputDirectory.get().asFile)
+        project.tasks.getByName('compileGroovy').taskDependencies.getDependencies(null).contains(generate)
     }
 }

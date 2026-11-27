@@ -111,7 +111,7 @@ type Book {
         Files.exists(project.resolve(path))
     }
 
-    private static String repository() {
+    protected static String repository() {
         new File(System.getProperty('plugin.repository')).toURI().toString()
     }
 
