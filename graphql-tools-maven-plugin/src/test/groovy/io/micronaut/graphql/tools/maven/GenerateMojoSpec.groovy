@@ -26,7 +26,13 @@ import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.TempDir
 
+import org.apache.maven.artifact.DefaultArtifact
+import org.apache.maven.artifact.handler.DefaultArtifactHandler
+
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 /**
  * The binding of a pom configuration to the parameters of the mojo, and the source root that the goal registers for each language.
@@ -270,5 +276,57 @@ class GenerateMojoSpec extends Specification {
         then:
         noExceptionThrown()
         GeneratedSources.readManifest(dir.resolve('target/generated-sources/graphql-tools')) != null
+    }
+
+    private MojoProject withDependency(String configuration) {
+        def jar = dir.resolve('libs/lib.jar')
+        Files.createDirectories(jar.parent)
+        new ZipOutputStream(Files.newOutputStream(jar)).withCloseable { zip ->
+            zip.putNextEntry(new ZipEntry('META-INF/micronaut-graphql-tools/type-mappings.properties'))
+            zip.write('Pet=org.lib.Pet\nMoney=org.lib.Money\n'.getBytes('UTF-8'))
+            zip.closeEntry()
+        }
+        def built = MojoProject.create(rule, dir, "<packageName>example.api</packageName>${configuration}",
+                ['src/main/resources/graphql/schema.graphqls': 'type Query { pet: Pet  price: Money }\nscalar Money'])
+        def artifact = new DefaultArtifact('org.lib', 'lib', '1.0', 'compile', 'jar', null, new DefaultArtifactHandler(type: 'jar', addedToClasspath: true))
+        artifact.file = jar.toFile()
+        built.project.artifacts = [artifact] as Set
+        built
+    }
+
+    def "a type that a dependency of the compile class path maps needs no typeMappings entry, and the mappings file of the module is a resource"() {
+        given:
+        def built = withDependency('')
+
+        when:
+        built.mojo.execute()
+
+        then:
+        def resources = dir.resolve('target/generated-sources/graphql-tools/resources')
+        built.project.resources*.directory.contains(resources.toString())
+        Files.readString(resources.resolve('META-INF/micronaut-graphql-tools/type-mappings.properties')).contains('Money=org.lib.Money')
+    }
+
+    def "with typeMappingsFromDependencies off the dependencies are not read"() {
+        given:
+        def built = withDependency('<typeMappingsFromDependencies>false</typeMappingsFromDependencies>')
+
+        when:
+        built.mojo.execute()
+
+        then:
+        def failure = thrown(MojoFailureException)
+        failure.message.contains('code generation failed')
+    }
+
+    def "the classes of the project itself are not given to the generator"() {
+        given:
+        def built = MojoProject.create(rule, dir, '<packageName>example.api</packageName>',
+                ['src/main/resources/graphql/schema.graphqls': 'type Query { pet: Pet }\ntype Pet { name: String }'])
+        def own = Files.createDirectories(dir.resolve('target/classes/META-INF/micronaut-graphql-tools'))
+        Files.writeString(own.resolve('type-mappings.properties'), 'Pet=org.stale.Pet\n')
+
+        expect:
+        built.mojo.dependencyPaths().every { !it.startsWith(dir.resolve('target/classes')) }
     }
 }
