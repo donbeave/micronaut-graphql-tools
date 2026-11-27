@@ -107,7 +107,7 @@ class CookieJarSpec extends Specification {
 
     void "the legacy cookie date formats are understood"() {
         when:
-        jar.store(["a=1; Expires=\$date"], '/graphql')
+        jar.store(['a=1; Expires=' + date], '/graphql')
 
         then:
         jar.snapshot()*.expires() == [Instant.parse('2031-06-09T10:18:14Z')]
