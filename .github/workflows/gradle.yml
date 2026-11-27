@@ -82,7 +82,7 @@ jobs:
         java: ['17']
         # the default graphql-java leg only
         graphql-java: [default]
-    # The library modules (graphql-tools, graphql-tools-binding, graphql-tools-processor, graphql-tools-scalars, graphql-tools-micrometer, graphql-tools-opentelemetry, graphql-tools-upload, graphql-tools-security, graphql-tools-testing, graphql-tools-client, graphql-tools-codegen) compile to release 17 (see buildSrc); the test-suite-* modules
+    # The library modules (graphql-tools, graphql-tools-binding, graphql-tools-processor, graphql-tools-scalars, graphql-tools-micrometer, graphql-tools-opentelemetry, graphql-tools-upload, graphql-tools-security, graphql-tools-testing, graphql-tools-client, graphql-tools-codegen, graphql-tools-gradle-plugin) compile to release 17 (see buildSrc); the test-suite-* modules
     # need Java 21 and cannot run here.
     name: check library (Java ${{ matrix.java }}, graphql-java ${{ matrix.graphql-java }})
     timeout-minutes: 30
@@ -93,7 +93,7 @@ jobs:
           jdk: ${{ matrix.java }}
           tools: java
       - name: Build with Gradle
-        run: .github/scripts/retry-on-download-failure.sh ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check :micronaut-graphql-tools-testing:check :micronaut-graphql-tools-client:check :micronaut-graphql-tools-codegen:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :micronaut-graphql-tools:check :micronaut-graphql-tools-binding:check :micronaut-graphql-tools-processor:check :micronaut-graphql-tools-scalars:check :micronaut-graphql-tools-micrometer:check :micronaut-graphql-tools-opentelemetry:check :micronaut-graphql-tools-upload:check :micronaut-graphql-tools-security:check :micronaut-graphql-tools-testing:check :micronaut-graphql-tools-client:check :micronaut-graphql-tools-codegen:check :micronaut-graphql-tools-gradle-plugin:check --no-daemon --continue -PgraphqlJavaLeg=${{ matrix.graphql-java }}
         env:
           # Optional: build scans and remote cache when the secrets exist; the build passes without them (forks).
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
@@ -162,8 +162,8 @@ jobs:
         with:
           jdk: '25'
           tools: java maven
-      - name: Build the samples and the Kotlin corpus
-        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-build:buildToolsTest :micronaut-graphql-tools-processor:corpusKotlin --no-daemon --continue -PgraphqlJavaLeg=default
+      - name: Build the samples, the Gradle plugin scenarios and the Kotlin corpus
+        run: .github/scripts/retry-on-download-failure.sh ./gradlew :test-suite-build:buildToolsTest :micronaut-graphql-tools-gradle-plugin:functionalTest :micronaut-graphql-tools-processor:corpusKotlin --no-daemon --continue -PgraphqlJavaLeg=default
         env:
           PREDICTIVE_TEST_SELECTION: 'false'
       - name: Upload test reports
@@ -175,6 +175,8 @@ jobs:
             test-suite-build/build/test-results/buildToolsTest/TEST-*.xml
             test-suite-build/build/reports/tests/buildToolsTest/
             test-suite-build/build/reports/build-tools/
+            graphql-tools-gradle-plugin/build/test-results/functionalTest/TEST-*.xml
+            graphql-tools-gradle-plugin/build/reports/tests/functionalTest/
             graphql-tools-processor/build/test-results/corpusKotlin/TEST-*.xml
             graphql-tools-processor/build/reports/tests/corpusKotlin/
             graphql-tools-processor/build/corpus/kotlin-timings.txt

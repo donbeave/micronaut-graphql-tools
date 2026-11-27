@@ -50,6 +50,7 @@ and test it.
 | [`graphql-tools-testing`](graphql-tools-testing/README.md) | `:micronaut-graphql-tools-testing` | The in-process tester for application tests: run a document against the `GraphQL` bean and assert on the response, test scope. |
 | [`graphql-tools-client`](graphql-tools-client/README.md) | `:micronaut-graphql-tools-client` | The GraphQL client for applications that call a server: its annotations (`@GraphQLClient`, `@GraphQLOperation`, `@GraphQLVariable`), its packages and the check that keeps the server stack out. |
 | [`graphql-tools-codegen`](graphql-tools-codegen/README.md) | `:micronaut-graphql-tools-codegen` | The code generator library: the entry point, the immutable options model with its string form and the diagnostics; used by the build plugins, never on an application's classpath. |
+| [`graphql-tools-gradle-plugin`](graphql-tools-gradle-plugin/README.md) | `:micronaut-graphql-tools-gradle-plugin` | The Gradle plugin `io.micronaut.graphql.tools`: the `graphqlTools { codegen { } }` extension, the cacheable generation task and the compile-time wiring of the schema directories |
 | [`graphql-tools-processor`](graphql-tools-processor/README.md) | `:micronaut-graphql-tools-processor` | The annotation processor that runs the compile-time checks. |
 | [`graphql-tools-bom`](graphql-tools-bom/README.md) | `:micronaut-graphql-tools-bom` | The bill of materials for the published artifacts. |
 | [`docs-examples-java`](docs-examples-java/README.md) | `:micronaut-docs-examples-java` | The guide examples in Java, with a test that runs the quickstart. |
@@ -80,6 +81,7 @@ guide is in `src/main/docs/guide`, and the build convention plugin is in `buildS
 | Testing | `io.micronaut.graphql.tools:micronaut-graphql-tools-testing` |
 | Client | `io.micronaut.graphql.tools:micronaut-graphql-tools-client` |
 | Code generator | `io.micronaut.graphql.tools:micronaut-graphql-tools-codegen` |
+| Gradle plugin | `io.micronaut.graphql.tools:micronaut-graphql-tools-gradle-plugin` |
 | Annotation processor | `io.micronaut.graphql.tools:micronaut-graphql-tools-processor` |
 | BOM | `io.micronaut.graphql.tools:micronaut-graphql-tools-bom` |
 

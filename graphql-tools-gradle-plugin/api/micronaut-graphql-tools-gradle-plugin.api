@@ -1,0 +1,77 @@
+public abstract class io.micronaut.graphql.tools.gradle.CodegenSpec implements org.gradle.api.Named {
+  public abstract org.gradle.api.file.ConfigurableFileCollection getSchemaDirs();
+  public abstract org.gradle.api.file.DirectoryProperty getOutputDirectory();
+  public abstract org.gradle.api.provider.ListProperty<java.lang.String> getExcludes();
+  public abstract org.gradle.api.provider.ListProperty<java.lang.String> getIncludes();
+  public abstract org.gradle.api.provider.ListProperty<java.lang.String> getInterfaceTypes();
+  public abstract org.gradle.api.provider.MapProperty<java.lang.String, java.lang.String> getTypeMappings();
+  public abstract org.gradle.api.provider.Property<java.lang.Boolean> getCommentsAsDescriptions();
+  public abstract org.gradle.api.provider.Property<java.lang.Boolean> getKotlinSuspend();
+  public abstract org.gradle.api.provider.Property<java.lang.Boolean> getRootContracts();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getContractNameTemplate();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getGeneratedAnnotation();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getLanguage();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getMode();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getModelPackage();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getModelStyle();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getNameConstants();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getNamesPackage();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getNullableAnnotation();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getPackageName();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getResolverPackage();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getSubscriptionReturnType();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getTypeNamePrefix();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getTypeNameSuffix();
+  public io.micronaut.graphql.tools.gradle.CodegenSpec(java.lang.String);
+  public java.lang.String getName();
+  public static final java.lang.String MAIN = "main";
+}
+
+public abstract class io.micronaut.graphql.tools.gradle.GenerateAction implements org.gradle.workers.WorkAction<io.micronaut.graphql.tools.gradle.GenerateParameters> {
+  public io.micronaut.graphql.tools.gradle.GenerateAction();
+  public void execute();
+}
+
+public abstract class io.micronaut.graphql.tools.gradle.GenerateGraphQLTask extends org.gradle.api.DefaultTask {
+  protected abstract org.gradle.api.file.FileSystemOperations getFileSystemOperations();
+  protected abstract org.gradle.workers.WorkerExecutor getWorkerExecutor();
+  public abstract org.gradle.api.file.ConfigurableFileCollection getGeneratorClasspath();
+  public abstract org.gradle.api.file.ConfigurableFileCollection getSchemaFiles();
+  public abstract org.gradle.api.file.DirectoryProperty getOutputDirectory();
+  public abstract org.gradle.api.provider.MapProperty<java.lang.String, java.lang.String> getOptions();
+  public io.micronaut.graphql.tools.gradle.GenerateGraphQLTask();
+  public void generate();
+}
+
+public interface io.micronaut.graphql.tools.gradle.GenerateParameters extends org.gradle.workers.WorkParameters {
+  public abstract org.gradle.api.file.ConfigurableFileCollection getSchemaFiles();
+  public abstract org.gradle.api.file.DirectoryProperty getOutputDirectory();
+  public abstract org.gradle.api.provider.MapProperty<java.lang.String, java.lang.String> getOptions();
+}
+
+public abstract class io.micronaut.graphql.tools.gradle.GraphQLToolsExtension {
+  public abstract org.gradle.api.file.ConfigurableFileCollection getSchemaDirs();
+  public abstract org.gradle.api.provider.Property<java.lang.Boolean> getAddRuntimeDependency();
+  public abstract org.gradle.api.provider.Property<java.lang.String> getVersion();
+  public io.micronaut.graphql.tools.gradle.GraphQLToolsExtension(org.gradle.api.model.ObjectFactory);
+  public org.gradle.api.NamedDomainObjectContainer<io.micronaut.graphql.tools.gradle.CodegenSpec> getCodegenSpecs();
+  public void codegen(java.lang.String, org.gradle.api.Action<? super io.micronaut.graphql.tools.gradle.CodegenSpec>);
+  public void codegen(org.gradle.api.Action<? super io.micronaut.graphql.tools.gradle.CodegenSpec>);
+}
+
+public class io.micronaut.graphql.tools.gradle.GraphQLToolsPlugin implements org.gradle.api.Plugin<org.gradle.api.Project> {
+  public io.micronaut.graphql.tools.gradle.GraphQLToolsPlugin();
+  public static final java.lang.String CODEGEN_CLASSPATH_CONFIGURATION = "graphqlToolsCodegenClasspath";
+  public static final java.lang.String CODEGEN_CONFIGURATION = "graphqlToolsCodegen";
+  public static final java.lang.String EXTENSION_NAME = "graphqlTools";
+  public static final java.lang.String PLUGIN_ID = "io.micronaut.graphql.tools";
+  public void apply(java.lang.Object);
+  public void apply(org.gradle.api.Project);
+}
+
+public abstract class io.micronaut.graphql.tools.gradle.SchemaDirsArguments implements org.gradle.process.CommandLineArgumentProvider {
+  public abstract org.gradle.api.file.ConfigurableFileCollection getDirs();
+  public abstract org.gradle.api.file.DirectoryProperty getModuleDir();
+  public io.micronaut.graphql.tools.gradle.SchemaDirsArguments();
+  public java.lang.Iterable<java.lang.String> asArguments();
+}
