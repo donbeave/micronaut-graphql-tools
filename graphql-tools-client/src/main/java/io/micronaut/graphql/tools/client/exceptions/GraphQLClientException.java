@@ -31,6 +31,9 @@ public class GraphQLClientException extends RuntimeException {
     /** The code of a response body that cannot be decoded. */
     public static final String DECODE_ERROR = "decode-error";
 
+    /** The code of a blocking call that was made on an event loop thread. */
+    public static final String BLOCKING_ON_EVENT_LOOP = "blocking-on-event-loop";
+
     private static final long serialVersionUID = 1L;
 
     private final String code;
