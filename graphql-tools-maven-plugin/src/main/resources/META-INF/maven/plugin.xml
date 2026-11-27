@@ -16,8 +16,8 @@
   <mojos>
     <mojo>
       <goal>generate</goal>
-      <description>Generates Java, Kotlin or Groovy sources from the GraphQL schema files of a directory, under outputDirectory/language, and adds that directory to the compile source roots of the project.</description>
-      <requiresDependencyResolution>none</requiresDependencyResolution>
+      <description>Generates Java, Kotlin or Groovy sources from the GraphQL schema files of a directory, under outputDirectory/language, adds that directory to the compile source roots of the project, and writes the type mappings file to outputDirectory/resources, a resource root. It needs the compile class path of the project, which the descriptor asks Maven to resolve.</description>
+      <requiresDependencyResolution>compile</requiresDependencyResolution>
       <requiresDirectInvocation>false</requiresDirectInvocation>
       <requiresProject>true</requiresProject>
       <requiresReports>false</requiresReports>
@@ -190,7 +190,7 @@
           <type>boolean</type>
           <required>false</required>
           <editable>true</editable>
-          <description>Whether the mappings of dependency jars are read; the goal gives the generator no dependency jar yet, so it has no effect.</description>
+          <description>Whether the type mappings file of each dependency on the compile class path is read, so that a type a dependency maps needs no typeMappings entry.</description>
         </parameter>
         <parameter>
           <name>nameConstants</name>

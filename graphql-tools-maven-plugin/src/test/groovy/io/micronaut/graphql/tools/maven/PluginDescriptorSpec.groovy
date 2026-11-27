@@ -116,6 +116,17 @@ class PluginDescriptorSpec extends Specification {
         mojoParameters().keySet() == descriptorParameters().keySet()
     }
 
+    def "the descriptor asks Maven for the compile class path, as the annotation of the mojo does"() {
+        given:
+        def source = Files.readString(SOURCES.resolve('java/io/micronaut/graphql/tools/maven/GenerateMojo.java'))
+        def xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(
+                getClass().getResourceAsStream('/META-INF/maven/plugin.xml'))
+
+        expect:
+        source.contains('requiresDependencyResolution = ResolutionScope.COMPILE')
+        xml.getElementsByTagName('requiresDependencyResolution').item(0).textContent == 'compile'
+    }
+
     def "the default of every option is the default of Options, in the mojo and in the descriptor"() {
         given:
         def defaults = Options.builder().build()

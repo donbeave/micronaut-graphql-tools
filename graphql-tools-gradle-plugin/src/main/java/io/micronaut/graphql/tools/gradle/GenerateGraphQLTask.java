@@ -41,7 +41,7 @@ import java.util.TreeSet;
 
 /**
  * Generates sources from the schema files of one {@link CodegenSpec}. The task is cacheable: its inputs are the schema directories, the
- * options in their string form and the generator's class path. It recreates its output directory before every run, so a type that
+ * options in their string form, the generator's class path and the dependency class path. It recreates its output directory before every run, so a type that
  * the schema no longer has leaves no stale source, and it runs the generator in a worker with its own class loader, so that the
  * generator and its dependencies stay off the build's class path.
  */
@@ -75,12 +75,29 @@ public abstract class GenerateGraphQLTask extends DefaultTask {
     public abstract ConfigurableFileCollection getGeneratorClasspath();
 
     /**
+     * The jars and class directories of the project's dependencies, whose type mappings file the generator reads. It is empty when the
+     * option {@code typeMappingsFromDependencies} is off. Gradle resolves it when the task runs, not when the build is configured.
+     *
+     * @return the class path
+     */
+    @Classpath
+    public abstract ConfigurableFileCollection getDependencyClasspath();
+
+    /**
      * The directory that receives the generated sources.
      *
      * @return the directory
      */
     @OutputDirectory
     public abstract DirectoryProperty getOutputDirectory();
+
+    /**
+     * The directory that receives the generated resources, the type mappings file.
+     *
+     * @return the directory
+     */
+    @OutputDirectory
+    public abstract DirectoryProperty getResourcesDirectory();
 
     @Inject
     protected abstract WorkerExecutor getWorkerExecutor();
@@ -92,11 +109,13 @@ public abstract class GenerateGraphQLTask extends DefaultTask {
     @TaskAction
     public void generate() {
         File output = getOutputDirectory().get().getAsFile();
-        getFileSystemOperations().delete(spec -> spec.delete(output));
+        File resources = getResourcesDirectory().get().getAsFile();
+        getFileSystemOperations().delete(spec -> spec.delete(output, resources));
         try {
             Files.createDirectories(output.toPath());
+            Files.createDirectories(resources.toPath());
         } catch (IOException e) {
-            throw new GradleException("Cannot create the output directory " + output, e);
+            throw new GradleException("Cannot create the output directories " + output + " and " + resources, e);
         }
         List<File> schemaDirectories = new TreeSet<>(getSchemaDirectories().getFiles()).stream().filter(File::isDirectory).toList();
         if (schemaDirectories.isEmpty()) {
@@ -106,6 +125,8 @@ public abstract class GenerateGraphQLTask extends DefaultTask {
         queue.submit(GenerateAction.class, parameters -> {
             parameters.getSchemaDirectories().setFrom(schemaDirectories);
             parameters.getOutputDirectory().set(getOutputDirectory());
+            parameters.getResourcesDirectory().set(getResourcesDirectory());
+            parameters.getDependencies().setFrom(getDependencyClasspath());
             parameters.getOptions().set(getOptions());
         });
         queue.await();
