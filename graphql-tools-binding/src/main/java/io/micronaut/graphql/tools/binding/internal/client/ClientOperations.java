@@ -126,24 +126,33 @@ public final class ClientOperations {
             findings.addAll(selected.findings);
             return ClientOutcome.failed(findings);
         }
+        if (request.get() && selected.operation.getOperation() != OperationDefinition.Operation.QUERY) {
+            findings.add(ClientRules.getOnNonQuery(request.member(), selected.operation.getOperation().name().toLowerCase(Locale.ROOT)));
+        }
         Map<String, FragmentDefinition> fragments = new TreeMap<>();
         if (!collectFragments(request, selected, fragments, state, findings)) {
             return ClientOutcome.failed(findings);
         }
-        Document assembled = Document.newDocument().definitions(definitions(selected.operation, fragments)).build();
+        OperationDefinition operation = selected.operation;
         if (checks) {
             GraphQLSchema schema = schema(request, state, findings);
             if (schema == null) {
                 return ClientOutcome.failed(findings);
             }
+            Document assembled = Document.newDocument().definitions(definitions(operation, fragments)).build();
             for (ValidationError error : validator.validateDocument(schema, assembled, Locale.ENGLISH)) {
                 findings.add(ClientDocuments.invalid(request.member(), error.getMessage(), location(error)));
+            }
+            if (findings.isEmpty()) {
+                ClientTypenames.Injected injected = ClientTypenames.inject(schema, operation, fragments);
+                operation = injected.operation();
+                fragments = injected.fragments();
             }
         }
         if (!findings.isEmpty()) {
             return ClientOutcome.failed(findings);
         }
-        String document = AstPrinter.printAstCompact(assembled);
+        String document = AstPrinter.printAstCompact(Document.newDocument().definitions(definitions(operation, fragments)).build());
         int bytes = modifiedUtf8Length(document);
         if (bytes > MAX_DOCUMENT_BYTES) {
             return ClientOutcome.failed(List.of(new Finding(BindingCode.CLIENT_DOCUMENT_TOO_LARGE.getCode(), request.member(),
@@ -152,7 +161,6 @@ public final class ClientOperations {
                     + "is the operation and the fragments it uses")));
         }
         operations++;
-        OperationDefinition operation = selected.operation;
         return ClientOutcome.of(new ClientOperation(document, operation.getName() == null ? "" : operation.getName(),
                 operation.getOperation().name().toLowerCase(Locale.ROOT), variables(operation), payload(operation, fragments)));
     }
@@ -186,6 +194,9 @@ public final class ClientOperations {
 
     private Selected selectNamed(ClientRequest request, SchemaState state, List<Finding> findings) {
         ClientDocuments.Index index = index(state, findings);
+        if (state.layout.documentsProblem() != null) {
+            return Selected.failed();
+        }
         String name = !request.name().isEmpty() ? request.name() : request.value().isEmpty() ? request.methodName() : request.value();
         List<OperationDefinition> defined = index.operations().getOrDefault(name, List.of());
         if (defined.size() == 1) {
@@ -210,8 +221,9 @@ public final class ClientOperations {
             Node<?> node = work.pop();
             if (node instanceof FragmentSpread spread && seen.add(spread.getName())) {
                 FragmentDefinition fragment = selected.own.get(spread.getName());
+                SchemaState from = null;
                 if (fragment == null) {
-                    SchemaState from = state != null ? state : quietState(request);
+                    from = state != null ? state : quietState(request);
                     if (from != null) {
                         List<FragmentDefinition> defined = index(from, findings).fragments().get(spread.getName());
                         fragment = defined == null ? null : defined.get(0);
@@ -219,6 +231,10 @@ public final class ClientOperations {
                 }
                 if (fragment == null) {
                     complete = false;
+                    // the directories that the fragment may be in cannot be read, which is reported instead of a missing fragment
+                    if (from != null && from.layout.documentsProblem() != null) {
+                        continue;
+                    }
                     findings.add(ClientDocuments.invalid(request.member(), "the operation uses the fragment " + spread.getName()
                             + ", which neither its document nor the document files of the client schema define",
                             ClientDocuments.location(spread.getSourceLocation())));
@@ -316,7 +332,7 @@ public final class ClientOperations {
     private Resolution resolution(ClientRequest request) {
         Resolution resolution = resolutions.get(request.schema());
         if (resolution == null) {
-            ClientDirectories.Resolved resolved = directories.resolve(request.schema(), request.member());
+            ClientDirectories.Resolved resolved = directories.resolve(request.schema(), request.member(), checks);
             SchemaState state = resolved.layout() == null ? null
                     : states.computeIfAbsent(resolved.layout().name(), name -> new SchemaState(resolved.layout()));
             resolution = new Resolution(state, resolved.problem());
@@ -332,6 +348,9 @@ public final class ClientOperations {
         if (!state.indexReported) {
             state.indexReported = true;
             findings.addAll(state.index.problems());
+            if (state.layout.documentsProblem() != null) {
+                findings.add(state.layout.documentsProblem());
+            }
         }
         return state.index;
     }
@@ -374,6 +393,11 @@ public final class ClientOperations {
 
         static Selected failed(Finding finding) {
             return new Selected(null, Map.of(), List.of(finding));
+        }
+
+        // the cause was reported through the findings of the request, or by an earlier request
+        static Selected failed() {
+            return new Selected(null, Map.of(), List.of());
         }
     }
 

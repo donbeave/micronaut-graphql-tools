@@ -54,6 +54,10 @@ interface ClientCaseCompiler {
                         options.put(CLIENT_DIRS, client.toString())
                     }
                     break
+                case 'case+missing':
+                    client = copy(corpusCase.clientDir(), work.resolve('client'))
+                    options.put(CLIENT_DIRS, client.toString() + File.pathSeparator + work.resolve('missing-client'))
+                    break
                 case 'missing':
                     client = work.resolve('missing-client')
                     options.put(CLIENT_DIRS, client.toString())

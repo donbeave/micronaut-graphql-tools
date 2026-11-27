@@ -1,0 +1,2 @@
+query FromServerDirectory { ...Version }
+fragment Version on Query { version }

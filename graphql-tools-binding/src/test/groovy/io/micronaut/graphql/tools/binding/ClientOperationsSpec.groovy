@@ -19,6 +19,7 @@ import io.micronaut.graphql.tools.binding.internal.client.ClientDirectories
 import io.micronaut.graphql.tools.binding.internal.client.ClientOperations
 import io.micronaut.graphql.tools.binding.internal.client.ClientOutcome
 import io.micronaut.graphql.tools.binding.internal.client.ClientRequest
+import io.micronaut.graphql.tools.binding.internal.client.ClientRules
 import io.micronaut.graphql.tools.binding.internal.client.ClientSchemaBuilder
 import io.micronaut.graphql.tools.binding.internal.client.PayloadMode
 import io.micronaut.graphql.tools.binding.internal.finding.FindingRenderer
@@ -540,5 +541,164 @@ union SearchResult = Book | Magazine
         rendered.readLines()[0].startsWith('[client-document-invalid] example.BookClient#book(): ')
         rendered.contains('\n  document inline:3:5\n')
         rendered.contains('\n  fix: correct the document at the position that the message gives')
+    }
+
+    private ClientOperations operations(List<Path> clientDirs, List<Path> serverDirs, boolean checks = true) {
+        return new ClientOperations(new ClientDirectories(clientDirs, serverDirs), checks, ClientSchemaBuilder.STACK_BYTES)
+    }
+
+    void "the type name is the first selection of every abstract selection set, in the operation, an inline fragment and a fragment"() {
+        given:
+        schemaDir('books')
+
+        when:
+        def union = operations().resolve(request('query($t: String!) { search(term: $t) { ... on Book { title } ... on Magazine { issue } } }'))
+        def named = operations().resolve(request('{ search(term: "a") { ...Hit } } fragment Hit on SearchResult { ... on Book { title } }'))
+        def nested = operations().resolve(request('{ books { title } }'))
+
+        then:
+        union.findings().isEmpty()
+        text(union) == text('query($t: String!) {search(term: $t) {__typename ... on Book {title} ... on Magazine {issue}}}')
+        text(named) == text('{search(term: "a") {__typename ...Hit}} fragment Hit on SearchResult {__typename ... on Book {title}}')
+        text(nested) == text('{books {title}}')
+    }
+
+    void "a type name that the document selects is not added again, and an alias does not count as the type name"() {
+        given:
+        schemaDir('books')
+
+        when:
+        def own = operations().resolve(request('{ search(term: "a") { ... on Book { title } __typename } }'))
+        def aliased = operations().resolve(request('{ search(term: "a") { kind: __typename } }'))
+
+        then:
+        text(own) == text('{search(term: "a") {... on Book {title} __typename}}')
+        text(aliased) == text('{search(term: "a") {__typename kind: __typename}}')
+    }
+
+    void "the type name is injected under an interface and into an inline fragment of an abstract type, and a concrete selection is left alone"() {
+        given:
+        schemaDir('nodes', '''
+            type Query { node(id: ID!): Node nodes: [Node!]! book: Book }
+            interface Node { id: ID! }
+            type Book implements Node { id: ID! title: String }
+        '''.stripIndent())
+
+        when:
+        def node = operations().resolve(request('{ node(id: "1") { id ... on Book { title } } }', '', 'nodes'))
+        def book = operations().resolve(request('{ book { ... on Node { id } } }', '', 'nodes'))
+
+        then:
+        text(node) == text('{node(id: "1") {__typename id ... on Book {title}}}')
+        text(book) == text('{book {... on Node {__typename id}}}')
+    }
+
+    void "nothing is injected with the checks off, because the types of the document are not known"() {
+        given:
+        schemaDir('books')
+
+        expect:
+        text(operations(false).resolve(request('{ search(term: "a") { ... on Book { title } } }'))) == text('{search(term: "a") {... on Book {title}}}')
+    }
+
+    void "an operation sent with GET must be a query, whatever the checks say"() {
+        given:
+        schemaDir('books')
+
+        expect:
+        codes(operations(checks).resolve(get('mutation Save($t: String!) { save(title: $t) { id } }'))) == ['client-get-mutation']
+        codes(operations(checks).resolve(get('subscription { bookAdded { id } }'))) == ['client-get-mutation']
+        operations(checks).resolve(get('{ version }')).findings().isEmpty()
+        operations(checks).resolve(request('mutation Save($t: String!) { save(title: $t) { id } }')).findings().isEmpty()
+
+        where:
+        checks << [true, false]
+    }
+
+    private static ClientRequest get(String value) {
+        return new ClientRequest('example.BookClient#book()', 'book', 'books', value, '', true)
+    }
+
+    void "a GET mutation names its member and a fix, and still reports a validation error of the same document"() {
+        given:
+        schemaDir('books')
+
+        when:
+        def outcome = operations().resolve(get('mutation { save(title: 1) { id } }'))
+
+        then:
+        codes(outcome).toSet() == ['client-get-mutation', 'client-document-invalid'] as Set
+        FindingRenderer.render(outcome.findings().find { it.code() == 'client-get-mutation' }).contains('\n  fix: remove method = GET')
+    }
+
+    void "a retry on an interface that declares mutations names the mutations"() {
+        when:
+        def finding = ClientRules.retryOnMutation('example.BookClient', ['example.BookClient#save(java.lang.String)'])
+
+        then:
+        finding.code() == 'client-retry-mutation'
+        FindingRenderer.render(finding).startsWith('[client-retry-mutation] example.BookClient: ')
+        FindingRenderer.render(finding).contains('example.BookClient#save(java.lang.String)')
+    }
+
+    void "the documents of the schema server are read from the client directories alone when the checks are off"() {
+        given:
+        write(clients.resolve('server'), 'ops.graphql', 'query FindVersion { ...V } fragment V on Query { version }')
+
+        when:
+        def named = operations([clients], [], false).resolve(request('FindVersion', '', 'server'))
+        def inline = operations([clients], [], false).resolve(request('{ ...V }', '', 'server'))
+
+        then:
+        named.findings().isEmpty()
+        named.operation().document().contains('fragment V on Query')
+        inline.findings().isEmpty()
+    }
+
+    void "the schema server needs the schema directories when the checks are on, and says how to do without them"() {
+        given:
+        write(clients.resolve('server'), 'ops.graphql', 'query FindVersion { version }')
+
+        when:
+        def outcome = operations([clients], [], true).resolve(request('FindVersion', '', 'server'))
+
+        then:
+        codes(outcome) == ['client-schema-missing']
+        outcome.findings()[0].fix().contains('client.checks=false')
+    }
+
+    void "a client directory that does not exist is client-schema-missing for the documents of the schema server, next to one that does"() {
+        given:
+        write(server, 'schema.graphqls', SCHEMA)
+        write(clients.resolve('server'), 'ops.graphql', 'query FindVersion { version }\nfragment Titled on Book { title }')
+        Path gone = work.resolve('gone')
+
+        when:
+        def named = operations([clients, gone], [server]).resolve(request('FindVersion', '', 'server'))
+        def again = operations([clients, gone], [server])
+        def first = again.resolve(request('FindVersion', '', 'server'))
+        def second = again.resolve(request('FindVersion', '', 'server'))
+        def fragment = operations([clients, gone], [server]).resolve(request('{ book(id: "1") { ...Titled } }', '', 'server'))
+        def inline = operations([clients, gone], [server]).resolve(request('{ version }', '', 'server'))
+
+        then:
+        codes(named) == ['client-schema-missing']
+        named.operation() == null
+        codes(first) == ['client-schema-missing']
+        codes(second) == []
+        second.operation() == null
+        codes(fragment) == ['client-schema-missing']
+        inline.findings().isEmpty()
+    }
+
+    void "no client directory at all is client-schema-missing for a named operation of the schema server, not client-operation-not-found"() {
+        given:
+        write(server, 'schema.graphqls', SCHEMA)
+
+        when:
+        def outcome = operations([], [server]).resolve(request('FindVersion', '', 'server'))
+
+        then:
+        codes(outcome) == ['client-schema-missing']
     }
 }

@@ -1,0 +1,2 @@
+BookClient#version type=query name=- payload=field variables=- document={version}
+WriteClient#save type=mutation name=Save payload=field variables=title document=mutationSave($title:String!){save(title:$title){id}}

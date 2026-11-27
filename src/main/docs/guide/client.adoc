@@ -155,6 +155,14 @@ The `value` of `@GraphQLOperation` is one of these:
 
 The assembled document holds the selected operation and the fragments it uses, directly or through other fragments, and nothing else. The fragments of the operation's own document come first; a fragment that the document does not define is taken from the `*.graphql` files of the client schema, so a fragment can be shared by every operation of a schema. A fragment that neither defines fails with `[client-document-invalid]`. The document is printed compactly, the operation first and the fragments after it in name order, and that text is what the client sends.
 
+=== The type name
+
+A value of an interface or a union is decoded as one of the object types that implement it, and the client chooses by the `__typename` of the value. The processor therefore puts `__typename` first in every selection set of an interface or union type that does not select it, in the operation, in an inline fragment and in a fragment, and the metadata holds the document with it. A `__typename` that the document selects without an alias or a directive is left where it is, and an aliased one does not count. A selection set of an object type is not changed. The types come from the client schema, so a compilation with `client.checks=false` adds nothing.
+
+=== The HTTP method and the retry policy
+
+`@GraphQLOperation(method = GET)` sends a query in the URL, so an operation that is a mutation or a subscription with `method = GET` fails with `[client-get-mutation]`. A retry annotation of Micronaut (`@Retryable`, `@CircuitBreaker`) on the interface applies to every method of it, so an interface that carries one and declares a mutation fails with `[client-retry-mutation]`: the retry would repeat a mutation whose response was lost. A retry annotation on a single method is a decision about that method and is accepted. Both checks run with the checks switched off, because the operation type comes from the document that is always parsed.
+
 === Metadata
 
 For each operation the processor writes `GraphQLOperationMetadata` on the method: the assembled `document`, the `operationName` (empty for an anonymous operation), the `operationType` (`query`, `mutation` or `subscription`), the names of the `variables` in declaration order and the `payload` mode. The payload is `field` when the operation selects one root field, counted by response key through fragments, and the result is the value of that field. It is `data` when the operation selects several, and the result is the whole `data` object.
@@ -186,6 +194,12 @@ A finding carries a code, the method as `binary.Name#method(parameter types)`, t
 
 | `client-document-too-large`
 | The assembled document is over the limit of the metadata.
+
+| `client-get-mutation`
+| An operation that is a mutation or a subscription is sent with `method = GET`.
+
+| `client-retry-mutation`
+| An interface with a type-level retry annotation declares a mutation.
 |===
 
 Each code is described on the <<exceptions,Exceptions>> page.

@@ -10,7 +10,7 @@ change when one is added.
 
 ```
 <category>/<case>/
-  case.properties            description=...  tags=lang:all  compile.client-dirs=case|none|missing  compile.schema-dirs=case|none  compile.option.<full key>=<value>
+  case.properties            description=...  tags=lang:all  compile.client-dirs=case|none|missing|case+missing  compile.schema-dirs=case|none  compile.option.<full key>=<value>
   client/<schema>/...        the client directory: one subdirectory per client schema, with *.graphqls and *.graphql files
   schema/*.graphqls          optional: the schema directory of the resolvers, which is the client schema named server
   java/example/*.java        the client interfaces, one per file, named after the interface; a language directory is a language the case covers
@@ -29,7 +29,7 @@ change when one is added.
   metadata of the method, read back from the bean definition of the compiled interface. The document has its whitespace removed,
   because the printer of graphql-java spaces a compact document a little differently from one release to the next.
 - `compile.client-dirs` says which client directory the compilation gets: the one of the case (default), none (no option), or a
-  directory that does not exist. `compile.schema-dirs=none` leaves `schema.dirs` out. `compile.option.<key>` adds or replaces an option under its
+  directory that does not exist, or the directory of the case followed by one that does not exist (`case+missing`, two roots). `compile.schema-dirs=none` leaves `schema.dirs` out. `compile.option.<key>` adds or replaces an option under its
   full key (`compile.option.micronaut.graphql.tools.processor.client.checks=false`).
 - The three languages of a case define the same interfaces, and every language gives the same verdict: a language that differs is a
   bug of the visitor or of the harness, not a second expected file. A case with one language directory (`kotlin/suspend-function`) is for what only that

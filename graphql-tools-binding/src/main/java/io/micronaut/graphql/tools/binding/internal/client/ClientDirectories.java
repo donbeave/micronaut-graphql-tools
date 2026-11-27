@@ -71,11 +71,13 @@ public final class ClientDirectories {
     }
 
     /**
-     * @param requested the {@code schema} member of a client, empty for the only schema of the client directories
-     * @param member    where a problem is reported
+     * @param requested    the {@code schema} member of a client, empty for the only schema of the client directories
+     * @param member       where a problem is reported
+     * @param schemaNeeded whether the schema is built, which the reserved name {@value #SERVER} then needs the server schema
+     *                     directories for; with the checks off the documents of that name are read from the client directories alone
      * @return the layout of the schema, or a {@code client-schema-missing} finding
      */
-    public Resolved resolve(String requested, String member) {
+    public Resolved resolve(String requested, String member, boolean schemaNeeded) {
         if (foreign != null) {
             return new Resolved(null, missing(member, foreign, "set micronaut.graphql.tools.processor.client.dirs, "
                     + "micronaut.graphql.tools.processor.schema.dirs and micronaut.graphql.tools.processor.module.dir in this "
@@ -99,11 +101,12 @@ public final class ClientDirectories {
             name = available.get(0);
         }
         if (name.equals(SERVER)) {
-            if (serverDirs.isEmpty()) {
+            if (serverDirs.isEmpty() && schemaNeeded) {
                 return new Resolved(null, missing(member, "the schema " + SERVER + " is the schema of the schema directories, "
-                        + "and none is configured", "set micronaut.graphql.tools.processor.schema.dirs"));
+                        + "and none is configured", "set micronaut.graphql.tools.processor.schema.dirs, or compile with "
+                        + "micronaut.graphql.tools.processor.client.checks=false"));
             }
-            return new Resolved(new Layout(SERVER, serverDirs, subdirectories(SERVER)), null);
+            return new Resolved(new Layout(SERVER, serverDirs, subdirectories(SERVER), documentsProblem(member)), null);
         }
         Finding problem = checkDirectories(member);
         if (problem != null) {
@@ -121,6 +124,17 @@ public final class ClientDirectories {
                     + "schema member of the client to one of " + names()));
         }
         return new Resolved(new Layout(name, directories, directories), null);
+    }
+
+    // the documents of the schema server are the directory server of every client directory, and a client directory that is
+    // listed and does not exist, or none at all, would leave out operations and fragments that the build means to read
+    private @Nullable Finding documentsProblem(String member) {
+        if (clientDirs.isEmpty()) {
+            return missing(member, "the client directories are not configured, and the documents of the schema " + SERVER
+                    + " are the *" + ClientDocuments.EXTENSION + " files of a directory " + SERVER + " in a client directory",
+                    "set micronaut.graphql.tools.processor.client.dirs to a directory with a subdirectory " + SERVER);
+        }
+        return checkDirectories(member);
     }
 
     private String hintNone() {
@@ -190,15 +204,26 @@ public final class ClientDirectories {
     /**
      * The directories of one schema.
      *
-     * @param name          the schema name
-     * @param schemaDirs    the directories of the {@code *.graphqls} files
-     * @param documentDirs  the directories of the {@code *.graphql} files
+     * @param name             the schema name
+     * @param schemaDirs       the directories of the {@code *.graphqls} files
+     * @param documentDirs     the directories of the {@code *.graphql} files
+     * @param documentsProblem why the documents of the schema cannot all be read, null when they can: the client directories of
+     *                         the reserved schema are not configured, or one of them does not exist
      */
-    public record Layout(String name, List<Path> schemaDirs, List<Path> documentDirs) {
+    public record Layout(String name, List<Path> schemaDirs, List<Path> documentDirs, @Nullable Finding documentsProblem) {
 
         public Layout {
             schemaDirs = List.copyOf(schemaDirs);
             documentDirs = List.copyOf(documentDirs);
+        }
+
+        /**
+         * @param name         the schema name
+         * @param schemaDirs   the directories of the {@code *.graphqls} files
+         * @param documentDirs the directories of the {@code *.graphql} files
+         */
+        public Layout(String name, List<Path> schemaDirs, List<Path> documentDirs) {
+            this(name, schemaDirs, documentDirs, null);
         }
     }
 

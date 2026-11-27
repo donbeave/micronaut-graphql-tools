@@ -23,6 +23,7 @@ import io.micronaut.graphql.tools.binding.internal.client.ClientOperation;
 import io.micronaut.graphql.tools.binding.internal.client.ClientOperations;
 import io.micronaut.graphql.tools.binding.internal.client.ClientOutcome;
 import io.micronaut.graphql.tools.binding.internal.client.ClientRequest;
+import io.micronaut.graphql.tools.binding.internal.client.ClientRules;
 import io.micronaut.graphql.tools.binding.internal.client.ClientSchemaBuilder;
 import io.micronaut.graphql.tools.binding.internal.finding.Finding;
 import io.micronaut.graphql.tools.binding.internal.finding.FindingRenderer;
@@ -38,6 +39,8 @@ import io.micronaut.inject.visitor.VisitorContext;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -63,6 +66,12 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
     private static final String OPERATION = "io.micronaut.graphql.tools.client.annotation.GraphQLOperation";
 
     private static final String METADATA = "io.micronaut.graphql.tools.client.internal.GraphQLOperationMetadata";
+
+    private static final String GET = "GET";
+
+    private static final String MUTATION = "mutation";
+
+    private static final String RETRYABLE = "io.micronaut.retry.annotation.Retryable";
 
     @Nullable
     private Compilation compilation;
@@ -106,19 +115,26 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
         if (current == null || current.failed || !element.hasStereotype(CLIENT) || element.isEnum()) {
             return;
         }
+        List<String> mutations = new ArrayList<>();
         for (MethodElement method : element.getEnclosedElements(ElementQuery.ALL_METHODS.onlyDeclared())) {
-            if (method.hasDeclaredAnnotation(OPERATION)) {
-                visitOperation(current, element, method, context);
+            if (method.hasDeclaredAnnotation(OPERATION) && visitOperation(current, element, method, context)) {
+                mutations.add(member(method));
             }
+        }
+        if (!mutations.isEmpty() && element.hasStereotype(RETRYABLE)) {
+            current.findings++;
+            context.fail(FindingRenderer.render(ClientRules.retryOnMutation(element.getName(), mutations)), element);
         }
     }
 
-    private void visitOperation(Compilation current, ClassElement client, MethodElement method, VisitorContext context) {
+    // whether the method is an operation that was resolved and is a mutation
+    private boolean visitOperation(Compilation current, ClassElement client, MethodElement method, VisitorContext context) {
         try {
             ClientRequest request = new ClientRequest(member(method), method.getName(),
                     client.getAnnotationMetadata().stringValue(CLIENT, "schema").orElse(""),
                     method.getAnnotationMetadata().stringValue(OPERATION, "value").orElse(""),
-                    method.getAnnotationMetadata().stringValue(OPERATION, "name").orElse(""));
+                    method.getAnnotationMetadata().stringValue(OPERATION, "name").orElse(""),
+                    GET.equals(method.getAnnotationMetadata().stringValue(OPERATION, "method").orElse("")));
             ClientOutcome outcome = current.operations().resolve(request);
             for (Finding finding : outcome.findings()) {
                 current.findings++;
@@ -127,6 +143,7 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
             ClientOperation operation = outcome.operation();
             if (operation != null && outcome.findings().isEmpty()) {
                 write(method, operation);
+                return MUTATION.equals(operation.operationType());
             }
         } catch (RuntimeException e) {
             if (isControlFlow(e)) {
@@ -140,6 +157,7 @@ public final class GraphQLClientVisitor implements TypeElementVisitor<Object, Ob
                     "report this; every operation is parsed and assembled whatever " + ProcessorOptions.CLIENT_CHECKS + " says, so no option "
                     + "skips the work that failed")), method);
         }
+        return false;
     }
 
     private static void write(MethodElement method, ClientOperation operation) {
