@@ -44,8 +44,28 @@ final class GraphQLHttpClientFactory {
             throw new ConfigurationException("A GraphQLHttpClient is injected with @GraphQLClient(\"<service id>\"), for example "
                     + "@Inject @GraphQLClient(\"books\") GraphQLHttpClient client");
         }
+        return new DefaultGraphQLHttpClient(registry.getClient(metadata), codec, endpoint(metadata), path(metadata));
+    }
+
+    /**
+     * Returns the path to request on the transport of a client: empty when {@code @GraphQLClient(endpoint)} is set, because the
+     * transport was created with that path, and {@code /graphql} otherwise.
+     *
+     * @param metadata the annotation metadata of the client
+     * @return the path
+     */
+    static String endpoint(AnnotationMetadata metadata) {
         boolean endpointGiven = metadata.stringValue(GraphQLClient.class, "endpoint").filter(path -> !path.isEmpty()).isPresent();
-        String path = metadata.stringValue(GraphQLClient.class, "endpoint").filter(value -> !value.isEmpty()).orElse(DEFAULT_ENDPOINT);
-        return new DefaultGraphQLHttpClient(registry.getClient(metadata), codec, endpointGiven ? "" : DEFAULT_ENDPOINT, path);
+        return endpointGiven ? "" : DEFAULT_ENDPOINT;
+    }
+
+    /**
+     * Returns the path of the endpoint on the server: the {@code endpoint} member of {@code @GraphQLClient}, and {@code /graphql} when it is empty.
+     *
+     * @param metadata the annotation metadata of the client
+     * @return the path
+     */
+    static String path(AnnotationMetadata metadata) {
+        return metadata.stringValue(GraphQLClient.class, "endpoint").filter(path -> !path.isEmpty()).orElse(DEFAULT_ENDPOINT);
     }
 }

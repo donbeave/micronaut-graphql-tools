@@ -16,11 +16,11 @@
 package io.micronaut.graphql.tools.client.internal;
 
 import io.micronaut.core.annotation.Internal;
-import io.micronaut.graphql.tools.client.GraphQLRequest;
+import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException;
 import io.micronaut.graphql.tools.client.internal.serde.GraphQLCodec;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
@@ -31,25 +31,27 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
- * One call: it subscribes to the single HTTP response, classifies it and completes with the GraphQL response or the exception.
- * Cancelling it cancels the HTTP call.
+ * One call: it subscribes to the single HTTP response, classifies it and completes with what its {@link Outcome} says, or with the
+ * exception that {@link GraphQLResponse#dataOrThrow()} throws. Cancelling it cancels the HTTP call.
  *
- * @param <D> the type of the {@code data}
+ * @param <R> the type of the result
  */
 @Internal
-final class Call<D> extends CompletableFuture<GraphQLResponse<D>> implements Subscriber<HttpResponse<byte[]>> {
+final class Call<R> extends CompletableFuture<R> implements Subscriber<HttpResponse<byte[]>> {
 
     private final GraphQLCodec codec;
-    private final GraphQLRequest<D> request;
+    private final Argument<?> responseType;
     private final boolean unwrap;
+    private final Outcome outcome;
     private final Consumer<HttpHeaders> observer;
     private volatile Subscription subscription;
 
-    Call(GraphQLCodec codec, GraphQLRequest<D> request, boolean unwrap, @Nullable Consumer<HttpHeaders> observer) {
+    Call(GraphQLCodec codec, Argument<?> responseType, boolean unwrap, Outcome outcome, @Nullable Consumer<HttpHeaders> observer) {
         this.observer = observer;
         this.codec = codec;
-        this.request = request;
+        this.responseType = responseType;
         this.unwrap = unwrap;
+        this.outcome = outcome;
     }
 
     @Override
@@ -76,7 +78,7 @@ final class Call<D> extends CompletableFuture<GraphQLResponse<D>> implements Sub
     public void onNext(HttpResponse<byte[]> response) {
         try {
             observe(response);
-            complete(ResponseClassifier.classify(codec, request, unwrap, response, response.body()));
+            finish(ResponseClassifier.classify(codec, responseType, unwrap, response, response.body()));
         } catch (Throwable e) {
             completeExceptionally(e);
         }
@@ -89,7 +91,7 @@ final class Call<D> extends CompletableFuture<GraphQLResponse<D>> implements Sub
                 HttpResponse<?> response = e.getResponse();
                 observe(response);
                 byte[] body = response.getBody(byte[].class).orElse(null);
-                complete(ResponseClassifier.classify(codec, request, unwrap, response, body));
+                finish(ResponseClassifier.classify(codec, responseType, unwrap, response, body));
             } else {
                 completeExceptionally(ResponseClassifier.transportFailure(failure));
             }
@@ -102,6 +104,19 @@ final class Call<D> extends CompletableFuture<GraphQLResponse<D>> implements Sub
         if (observer != null) {
             observer.accept(response.getHeaders());
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void finish(GraphQLResponse<?> response) {
+        Object result = switch (outcome) {
+            case RESPONSE -> response;
+            case DATA -> response.dataOrThrow();
+            case NOTHING -> {
+                response.dataOrThrow();
+                yield null;
+            }
+        };
+        complete((R) result);
     }
 
     @Override

@@ -17,7 +17,7 @@ package io.micronaut.graphql.tools.client.internal;
 
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.graphql.tools.client.GraphQLRequest;
+import io.micronaut.core.type.Argument;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLClientException;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException;
@@ -35,8 +35,8 @@ final class ResponseClassifier {
     private ResponseClassifier() {
     }
 
-    static <D> GraphQLResponse<D> classify(GraphQLCodec codec, GraphQLRequest<D> request, boolean unwrap, HttpResponse<?> http,
-                                           @Nullable byte[] body) {
+    static GraphQLResponse<?> classify(GraphQLCodec codec, Argument<?> responseType, boolean unwrap, HttpResponse<?> http,
+                                       @Nullable byte[] body) {
         int status = http.code();
         boolean success = status >= 200 && status < 300;
         boolean failure = status >= 400 && status < 600 && status != 404;
@@ -46,9 +46,9 @@ final class ResponseClassifier {
         if (!startsObject(body)) {
             throw notGraphQL(http, "the body is not a GraphQL response", null);
         }
-        GraphQLResponse<D> response;
+        GraphQLResponse<?> response;
         try {
-            response = unwrap ? codec.decodeUnwrapped(body, request.getDataType()) : codec.decode(body, request.getDataType());
+            response = codec.decode(body, responseType, unwrap);
         } catch (GraphQLClientException e) {
             if (success) {
                 throw e;

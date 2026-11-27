@@ -1,4 +1,4 @@
-The `micronaut-graphql-tools-client` module is the GraphQL client of the library: a runtime for an application that calls a GraphQL server. It runs on the Micronaut HTTP client, so `micronaut.http.services.<id>.*`, filters and TLS apply unchanged. This page describes the low-level client, its sessions, api:io.micronaut.graphql.tools.client.GraphQLHttpClient[], the annotations of the declarative client and the compile-time checks of its operations. The runtime that implements a client interface arrives in a later milestone, so the annotations and the checks are what a declarative client has today.
+The `micronaut-graphql-tools-client` module is the GraphQL client of the library: a runtime for an application that calls a GraphQL server. It runs on the Micronaut HTTP client, so `micronaut.http.services.<id>.*`, filters and TLS apply unchanged. This page describes the low-level client, api:io.micronaut.graphql.tools.client.GraphQLHttpClient[], the declarative client (an interface that you annotate and Micronaut implements at compile time), its annotations and the compile-time checks of its operations.
 
 == The low-level client
 
@@ -43,12 +43,14 @@ A request is sent with POST by default. The body is JSON with the keys `query`, 
 
 `GraphQLRequest.Builder#httpMethod(HttpMethod.GET)` sends a query with GET instead: the parameters `query`, `operationName`, `variables` and `extensions` are URL-encoded in the URL, and the last two hold JSON. Only a query can be sent with GET; the builder rejects any other operation. A subscription is not sent over HTTP.
 
+[[clientServer]]
 === The server
 
 The service id of `@GraphQLClient` is the Micronaut one, so the server comes from `micronaut.http.services.<id>.url` or `micronaut.http.services.<id>.urls` (several URLs are load balanced), and the timeouts, TLS, proxy and HTTP version settings of `micronaut.http.services.<id>.*` apply. The client adds no configuration key. A client filter with `@ClientFilter(serviceId = "<id>")` runs on each call.
 
 The path of the endpoint is the `endpoint` member of `@GraphQLClient`, and `/graphql` when it is empty. A path in the service URL is not used.
 
+[[clientResponses]]
 === Responses
 
 A response is classified by its status and its body. A body is a GraphQL body when it is a JSON object with a `data` entry or at least one error.
@@ -77,6 +79,76 @@ A response is classified by its status and its body. A body is a GraphQL body wh
 |===
 
 The media type of the response is not checked; the body is.
+
+== The declarative client
+
+A declarative client is an interface annotated with `@GraphQLClient`. Each method that carries `@GraphQLOperation` is one operation: calling it sends the operation to the server and returns the response as the declared type. Micronaut implements the interface at compile time, with no `java.lang.reflect.Proxy` and no reflection, so it works in a native image.
+
+[source,java]
+----
+@GraphQLClient("books")
+public interface BookClient {
+
+    @GraphQLOperation("query($id: ID!) { book(id: $id) { title pages } }")
+    Book book(String id);
+
+    @GraphQLOperation("query($id: ID!) { book(id: $id) { title pages } }")
+    GraphQLResponse<Book> bookResponse(String id);
+
+    @GraphQLOperation("mutation($title: String!) { addBook(title: $title) { id } }")
+    CompletableFuture<Long> addBook(String title);
+
+    @GraphQLOperation("mutation { clear }")
+    void clear();
+}
+----
+
+The client is a bean: inject `BookClient` where you need it. It runs on the Micronaut HTTP client, so everything that the <<clientServer,server section>> says about the service id applies, and `@ClientFilter(serviceId = "books")` filters, `@Retryable` and the other Micronaut interceptors apply to its methods. A method without `@GraphQLOperation` is left to the Micronaut HTTP client, so an interface can mix GraphQL operations with `@Get` and `@Post` methods.
+
+The module needs the annotation processor of `micronaut-graphql-tools-processor`, which compiles each operation (see the <<clientCompileTime,compile-time checks>>). The runtime parses no GraphQL: on the first call of a method it builds a plan from the compiled operation and the signature of the method, and every later call picks the values of the arguments. A method that carries `@GraphQLOperation` and no compiled operation fails on its first call with a `GraphQLClientException` of the code `missing-operation` that tells you to apply the processor.
+
+=== Return types
+
+The result of a method is one of these. Its type is the type of the payload: for an operation that selects one root field, the value of that field, and for an operation that selects several, the whole `data` object (see <<clientMetadata,Metadata>>).
+
+[cols="2,5", options="header"]
+|===
+| Return type | Result
+
+| `P`, the payload
+| The payload. The call blocks, so it is refused on an event loop thread. It throws `GraphQLErrorsException` when the response has errors, even when it has partial data, which the exception carries in `getResponse()`. It returns `null` for a payload that is `null`.
+
+| `GraphQLResponse<P>`
+| The response with the unwrapped payload as its `data`, the errors, the extensions and the HTTP response. It never throws `GraphQLErrorsException`; the errors are in the response. It still throws a transport or decode failure.
+
+| `void`
+| Nothing. It throws like a payload method when the response has errors, and the payload is not decoded.
+
+| `CompletableFuture<R>` or `CompletionStage<R>`
+| The same results as above, in a future that completes on the event loop of the HTTP client. A failure, including `GraphQLErrorsException`, completes the future exceptionally. The future is `CompletableFuture<Void>` for no result. Cancelling it cancels the call.
+
+| `Publisher<R>`, and `Mono<R>` and `Flux<R>` of Reactor when `micronaut-reactor` is on the classpath
+| A cold publisher of one item: each subscription sends the request, and nothing is sent before it. A `null` payload completes it with no item. A failure is the `onError` signal. Cancelling the subscription cancels the call.
+
+| Kotlin `suspend` functions and `Flow<R>`
+| The same results as the future and the publisher. A `suspend` function resumes with the payload, the response or the exception; `Flow` emits one item.
+|===
+
+A method that returns a list, such as `List<Book>`, returns the payload, which is the list: the publisher variants emit it as one item, as `Publisher<List<Book>>`. The type of the payload is decoded with Micronaut Serialization, so `@Serdeable` types and the types that it supports work, and no Jackson type is used.
+
+=== Parameters
+
+Each parameter is one of these:
+
+* A variable. A parameter binds the variable named like the parameter, or the variable that `@GraphQLVariable` names. The value is encoded with the serializer of the declared type of the parameter, so an input type, a list, an enum or a `java.time` value is encoded as Micronaut Serialization encodes it, and `null` is sent as JSON `null`. A variable of the operation that has no parameter is not sent.
+* A header: `@Header("X-Request-Id") String requestId`. `@Header` without a name names the header after the parameter in the hyphenated form (`requestId` is `request-id`). A `null` value sends no header.
+* A cookie: `@CookieValue("session") String session`. A `null` value sends no cookie.
+
+`@Header` on the method or on the interface adds a header to the request with `name` and `value`, as it does for the Micronaut HTTP client. A parameter that another HTTP annotation binds (`@Body`, `@QueryValue` and the like) is refused with a `GraphQLClientException` of the code `unsupported-signature`, naming the parameter, on the first call of the method, and so is a parameter that binds a variable that the operation does not declare.
+
+=== What the client sends
+
+The request is the one of the low-level client: POST with the compiled document, the operation name and the variables, or, for `@GraphQLOperation(method = GET)`, a GET with the parameters in the URL. The request attributes `graphql.operation.name` and `graphql.operation.type` are set for the filters. The responses are classified as the <<clientResponses,responses of the low-level client>> are.
 
 == Sessions
 
@@ -187,6 +259,7 @@ The `value` of `@GraphQLOperation` is one of these:
 
 The assembled document holds the selected operation and the fragments it uses, directly or through other fragments, and nothing else. The fragments of the operation's own document come first; a fragment that the document does not define is taken from the `*.graphql` files of the client schema, so a fragment can be shared by every operation of a schema. A fragment that neither defines fails with `[client-document-invalid]`. The document is printed compactly, the operation first and the fragments after it in name order, and that text is what the client sends.
 
+[[clientMetadata]]
 === Metadata
 
 For each operation the processor writes `GraphQLOperationMetadata` on the method: the assembled `document`, the `operationName` (empty for an anonymous operation), the `operationType` (`query`, `mutation` or `subscription`), the names of the `variables` in declaration order and the `payload` mode. The payload is `field` when the operation selects one root field, counted by response key through fragments, and the result is the value of that field. It is `data` when the operation selects several, and the result is the whole `data` object.

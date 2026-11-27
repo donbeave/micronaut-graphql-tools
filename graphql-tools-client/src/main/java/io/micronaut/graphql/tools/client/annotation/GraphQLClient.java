@@ -15,7 +15,10 @@
  */
 package io.micronaut.graphql.tools.client.annotation;
 
+import io.micronaut.aop.Introduction;
 import io.micronaut.context.annotation.AliasFor;
+import io.micronaut.context.annotation.Type;
+import io.micronaut.graphql.tools.client.internal.GraphQLClientIntroductionAdvice;
 import io.micronaut.http.client.HttpClientConfiguration;
 import io.micronaut.http.client.annotation.Client;
 
@@ -30,8 +33,9 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * Marks a GraphQL client. It is a stereotype of {@link Client}, so the service id, the path and the configuration
  * resolve like those of any Micronaut HTTP client, and {@code micronaut.http.services.<id>.*} applies.
  *
- * <p>On an interface it declares a client whose methods, annotated with {@link GraphQLOperation}, are the operations.
- * On a field or a parameter it marks a low-level injection point: the client is built for the service id of the
+ * <p>On an interface it declares a client whose methods, annotated with {@link GraphQLOperation}, are the operations;
+ * Micronaut implements the interface at compile time, and a method without {@code @GraphQLOperation} is left to the Micronaut
+ * HTTP client. On a field or a parameter it marks a low-level injection point: the client is built for the service id of the
  * annotation.</p>
  *
  * @author Alexey Zhokhov
@@ -40,6 +44,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 @Target({ElementType.TYPE, ElementType.FIELD, ElementType.PARAMETER})
 @Client
+@Introduction
+@Type(GraphQLClientIntroductionAdvice.class)
 public @interface GraphQLClient {
 
     /**

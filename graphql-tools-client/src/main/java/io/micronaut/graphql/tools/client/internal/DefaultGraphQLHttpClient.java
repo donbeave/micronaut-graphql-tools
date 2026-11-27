@@ -23,12 +23,13 @@ import io.micronaut.graphql.tools.client.GraphQLClientAttributes;
 import io.micronaut.graphql.tools.client.GraphQLHttpClient;
 import io.micronaut.graphql.tools.client.GraphQLMediaTypes;
 import io.micronaut.graphql.tools.client.GraphQLRequest;
-import io.micronaut.graphql.tools.client.GraphQLSession;
 import io.micronaut.graphql.tools.client.GraphQLResponse;
+import io.micronaut.graphql.tools.client.GraphQLSession;
 import io.micronaut.graphql.tools.client.OperationType;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLClientException;
 import io.micronaut.graphql.tools.client.exceptions.GraphQLTransportException;
 import io.micronaut.graphql.tools.client.internal.serde.GraphQLCodec;
+import io.micronaut.graphql.tools.client.internal.serde.OperationRequest;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpMethod;
 import io.micronaut.http.HttpRequest;
@@ -100,7 +101,7 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
 
     @Override
     public <D> CompletableFuture<GraphQLResponse<D>> executeAsync(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer) {
-        return call(request, customizer, false, null);
+        return call(request, customizer);
     }
 
     @Override
@@ -111,23 +112,42 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
     @Override
     public <D> GraphQLResponse<D> executeBlocking(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer) {
         requireBlockingAllowed();
-        return await(call(request, customizer, false, null));
+        return await(call(request, customizer));
     }
 
     /**
-     * Sends a request whose {@code data} is an object with one root field, and returns the value of that field as the data.
+     * Sends the call of a declarative client.
      *
-     * @param request    the request, whose data type is the type of the root field
+     * @param request    the call
      * @param customizer changes the HTTP request, or {@code null} for none
-     * @param <D>        the type of the root field
-     * @return a future of the response
+     * @param unwrap     whether the {@code data} is an object with one root field and the result is the value of that field
+     * @param outcome    what the result is
+     * @param <R>        the type of the result
+     * @return a future of the result, which holds every failure, including a request that cannot be sent
      */
-    public <D> CompletableFuture<GraphQLResponse<D>> executeUnwrapped(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer) {
-        return call(request, customizer, true, null);
+    public <R> CompletableFuture<R> executeOperation(OperationRequest request, @Nullable Consumer<MutableHttpRequest<?>> customizer,
+                                                     boolean unwrap, Outcome outcome) {
+        try {
+            return send(build(request), customizer, request.responseType(), unwrap, outcome, null);
+        } catch (Exception e) {
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
-    <D> CompletableFuture<GraphQLResponse<D>> executeObserved(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer, Consumer<HttpHeaders> observer) {
-        return call(request, customizer, false, observer);
+    /**
+     * Sends the call of a declarative client and waits for the result.
+     *
+     * @param request    the call
+     * @param customizer changes the HTTP request, or {@code null} for none
+     * @param unwrap     whether the {@code data} is an object with one root field and the result is the value of that field
+     * @param outcome    what the result is
+     * @param <R>        the type of the result
+     * @return the result
+     */
+    public <R> R executeOperationBlocking(OperationRequest request, @Nullable Consumer<MutableHttpRequest<?>> customizer,
+                                          boolean unwrap, Outcome outcome) {
+        requireBlockingAllowed();
+        return await(this.<R>executeOperation(request, customizer, unwrap, outcome));
     }
 
     static void requireBlockingAllowed() {
@@ -137,7 +157,7 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
         }
     }
 
-    static <D> GraphQLResponse<D> await(CompletableFuture<GraphQLResponse<D>> future) {
+    static <R> R await(CompletableFuture<R> future) {
         try {
             return future.get();
         } catch (InterruptedException e) {
@@ -156,55 +176,91 @@ public final class DefaultGraphQLHttpClient implements GraphQLHttpClient {
         }
     }
 
-    private <D> CompletableFuture<GraphQLResponse<D>> call(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer, boolean unwrap,
-                                                     @Nullable Consumer<HttpHeaders> observer) {
+    <D> CompletableFuture<GraphQLResponse<D>> executeObserved(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer,
+                                                              Consumer<HttpHeaders> observer) {
+        return call(request, customizer, observer);
+    }
+
+    private <D> CompletableFuture<GraphQLResponse<D>> call(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer) {
+        return call(request, customizer, null);
+    }
+
+    private <D> CompletableFuture<GraphQLResponse<D>> call(GraphQLRequest<D> request, @Nullable Consumer<MutableHttpRequest<?>> customizer,
+                                                           @Nullable Consumer<HttpHeaders> observer) {
         try {
-            MutableHttpRequest<?> http = build(request);
-            if (customizer != null) {
-                customizer.accept(http);
-            }
-            Call<D> call = new Call<>(codec, request, unwrap, observer);
-            transport.exchange(http, BYTES, BYTES).subscribe(call);
-            return call;
+            return send(build(request), customizer, codec.responseType(request.getDataType(), false), false, Outcome.RESPONSE, observer);
         } catch (Exception e) {
             return CompletableFuture.failedFuture(e);
         }
     }
 
+    private <R> CompletableFuture<R> send(MutableHttpRequest<?> http, @Nullable Consumer<MutableHttpRequest<?>> customizer,
+                                          Argument<?> responseType, boolean unwrap, Outcome outcome, @Nullable Consumer<HttpHeaders> observer) {
+        if (customizer != null) {
+            customizer.accept(http);
+        }
+        Call<R> call = new Call<>(codec, responseType, unwrap, outcome, observer);
+        transport.exchange(http, BYTES, BYTES).subscribe(call);
+        return call;
+    }
+
     private MutableHttpRequest<?> build(GraphQLRequest<?> request) {
         OperationType type = request.getOperationType();
-        if (type == OperationType.SUBSCRIPTION) {
-            throw new IllegalArgumentException("A subscription cannot be sent as an HTTP request and response; it needs the subscription transport");
-        }
+        requireHttp(type);
         MutableHttpRequest<?> http;
         if (request.getHttpMethod() == HttpMethod.GET) {
-            http = HttpRequest.GET(endpoint + queryString(request));
+            http = HttpRequest.GET(endpoint + queryString(request.getDocument(), request.getOperationName(), json(request.getVariables()),
+                    json(request.getExtensions())));
         } else {
             http = HttpRequest.POST(endpoint, codec.encode(request)).contentType(MediaType.APPLICATION_JSON_TYPE);
         }
+        return decorate(http, request.getOperationName(), type);
+    }
+
+    private MutableHttpRequest<?> build(OperationRequest request) {
+        requireHttp(request.operationType());
+        MutableHttpRequest<?> http;
+        if (request.httpMethod() == HttpMethod.GET) {
+            http = HttpRequest.GET(endpoint + queryString(request.document(), request.operationName(),
+                    request.variableNames().length == 0 ? null : codec.encodeVariables(request), null));
+        } else {
+            http = HttpRequest.POST(endpoint, codec.encode(request)).contentType(MediaType.APPLICATION_JSON_TYPE);
+        }
+        return decorate(http, request.operationName(), request.operationType());
+    }
+
+    private static void requireHttp(OperationType type) {
+        if (type == OperationType.SUBSCRIPTION) {
+            throw new IllegalArgumentException("A subscription cannot be sent as an HTTP request and response; it needs the subscription transport");
+        }
+    }
+
+    private static MutableHttpRequest<?> decorate(MutableHttpRequest<?> http, @Nullable String operationName, OperationType type) {
         http.getHeaders().set(HttpHeaders.ACCEPT, GraphQLMediaTypes.ACCEPT);
-        if (request.getOperationName() != null) {
-            http.setAttribute(GraphQLClientAttributes.OPERATION_NAME, request.getOperationName());
+        if (operationName != null) {
+            http.setAttribute(GraphQLClientAttributes.OPERATION_NAME, operationName);
         }
         http.setAttribute(GraphQLClientAttributes.OPERATION_TYPE, type);
         return http;
     }
 
-    private String queryString(GraphQLRequest<?> request) {
-        StringBuilder query = new StringBuilder(request.getDocument().length() + 32).append("?query=");
-        encode(query, request.getDocument());
-        if (request.getOperationName() != null) {
-            encode(query.append("&operationName="), request.getOperationName());
-        }
-        append(query, "&variables=", request.getVariables());
-        append(query, "&extensions=", request.getExtensions());
-        return query.toString();
+    private String json(Map<String, Object> value) {
+        return value.isEmpty() ? null : codec.encodeValue(value);
     }
 
-    private void append(StringBuilder query, String name, Map<String, Object> value) {
-        if (!value.isEmpty()) {
-            encode(query.append(name), codec.encodeValue(value));
+    private static String queryString(String document, @Nullable String operationName, @Nullable String variables, @Nullable String extensions) {
+        StringBuilder query = new StringBuilder(document.length() + 32).append("?query=");
+        encode(query, document);
+        if (operationName != null) {
+            encode(query.append("&operationName="), operationName);
         }
+        if (variables != null) {
+            encode(query.append("&variables="), variables);
+        }
+        if (extensions != null) {
+            encode(query.append("&extensions="), extensions);
+        }
+        return query.toString();
     }
 
     private static void encode(StringBuilder query, String value) {

@@ -34,6 +34,12 @@ public class GraphQLClientException extends RuntimeException {
     /** The code of a blocking call that was made on an event loop thread. */
     public static final String BLOCKING_ON_EVENT_LOOP = "blocking-on-event-loop";
 
+    /** The code of an operation method that has no compiled operation: the annotation processor did not run on it. */
+    public static final String MISSING_OPERATION = "missing-operation";
+
+    /** The code of an operation method with a parameter or a return type that the declarative client cannot bind. */
+    public static final String UNSUPPORTED_SIGNATURE = "unsupported-signature";
+
     private static final long serialVersionUID = 1L;
 
     private final String code;
