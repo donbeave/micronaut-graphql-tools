@@ -15,11 +15,13 @@
  */
 package io.micronaut.graphql.tools.visitor;
 
+import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.visitor.VisitorContext;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * Tells whether the options of a compilation are its own. Micronaut copies the options of a compilation into system properties
@@ -28,9 +30,40 @@ import java.nio.file.Path;
  * module as {@code module.dir}, which is stale in the same way; the output of this compilation is not, so a value whose
  * directory does not contain the output belongs to another module.
  */
-final class ModuleOwnership {
+@Internal
+public final class ModuleOwnership {
+
+    private static final String KEY = "micronaut.graphql.tools.processor.module-ownership";
 
     private ModuleOwnership() {
+    }
+
+    /**
+     * Answers the question once per compilation and remembers the answer in the context, which both visitors of this module share.
+     * The compiler is asked for the project directory and the class output at most once: KSP creates a file of its own to answer each
+     * of them, and a second request for the same file fails the build.
+     *
+     * @param option  the {@code module.dir} option, null when it is absent
+     * @param context the context of this compilation
+     * @return the module directory and the foreign output
+     */
+    public static Ownership of(@Nullable Path option, VisitorContext context) {
+        try {
+            Ownership known = context.get(KEY, Ownership.class).orElse(null);
+            if (known != null && Objects.equals(known.option(), option)) {
+                return known;
+            }
+        } catch (RuntimeException e) {
+            // a context without attributes asks the compiler each time
+        }
+        Path moduleDir = option != null ? option : projectDir(context);
+        Ownership found = new Ownership(option, moduleDir, foreignOutput(moduleDir, context));
+        try {
+            context.put(KEY, found);
+        } catch (RuntimeException e) {
+            // see above
+        }
+        return found;
     }
 
     /**
@@ -40,7 +73,7 @@ final class ModuleOwnership {
      * @return the output directory of this compilation when it lies outside {@code moduleDir}, null when it lies inside or when
      *         the compiler gives no output directory (kapt and KSP do not), so that the check does not apply
      */
-    static @Nullable Path foreignOutput(@Nullable Path moduleDir, VisitorContext context) {
+    private static @Nullable Path foreignOutput(@Nullable Path moduleDir, VisitorContext context) {
         if (moduleDir == null) {
             return null;
         }
@@ -57,7 +90,7 @@ final class ModuleOwnership {
      * @param context the context of this compilation
      * @return the project directory that the compiler reports, null when it reports none
      */
-    static @Nullable Path projectDir(VisitorContext context) {
+    private static @Nullable Path projectDir(VisitorContext context) {
         try {
             return context.getProjectDir().map(it -> it.toAbsolutePath().normalize()).orElse(null);
         } catch (RuntimeException e) {
@@ -72,5 +105,16 @@ final class ModuleOwnership {
         } catch (IOException | RuntimeException e) {
             return path;
         }
+    }
+
+    /**
+     * What the question has found out about this compilation.
+     *
+     * @param option        the {@code module.dir} option that it was asked with, null when it was absent
+     * @param moduleDir     the directory of the module: {@code module.dir}, else the project directory that the compiler reports,
+     *                      null when there is neither
+     * @param foreignOutput the output directory of this compilation when it lies outside {@code moduleDir}, null otherwise
+     */
+    public record Ownership(@Nullable Path option, @Nullable Path moduleDir, @Nullable Path foreignOutput) {
     }
 }

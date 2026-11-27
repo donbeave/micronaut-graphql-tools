@@ -12,6 +12,8 @@ dependencies {
     compileOnly(mn.micronaut.inject.java)
 
     testImplementation(projects.micronautGraphqlTools)
+    // the annotations of the client that the client visitor reads by name, and the metadata annotation it writes
+    testImplementation(projects.micronautGraphqlToolsClient)
     testImplementation(mnTest.micronaut.test.spock)
     testImplementation(mn.micronaut.inject.java)
     // JavaParser: compiles the sources of GraphQLToolsVisitorSpec and ParameterNamesSpec in memory

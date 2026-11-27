@@ -113,8 +113,9 @@ public final class GraphQLToolsVisitor implements TypeElementVisitor<Object, Obj
     public void start(VisitorContext context) {
         Compilation started = new Compilation(ProcessorOptions.read(context.getOptions()));
         compilation = started;
-        started.moduleDir = started.options.moduleDir() != null ? started.options.moduleDir() : ModuleOwnership.projectDir(context);
-        started.foreignOutput = ModuleOwnership.foreignOutput(started.moduleDir, context);
+        ModuleOwnership.Ownership ownership = ModuleOwnership.of(started.options.moduleDir(), context);
+        started.moduleDir = ownership.moduleDir();
+        started.foreignOutput = ownership.foreignOutput();
         started.options.errors().forEach(it -> report(context, it, null));
         if (started.options.checks() && started.options.errors().isEmpty()) {
             started.schema.missingDirectories().forEach(it -> {

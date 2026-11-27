@@ -288,6 +288,7 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.internal.checks` | graphql-tools | Internal | The startup checks and validators: strict mode, unreachable types, schema coordinates, the directive wiring check and the mapping dictionary |
 | `io.micronaut.graphql.tools.internal.manifest` | graphql-tools | Internal | Recording and writing the binding manifest at startup |
 | `io.micronaut.graphql.tools.internal.model` | graphql-tools | Internal | The runtime model the binding reads: the resolver registry, the introspection registry, the type and bean models |
+| `io.micronaut.graphql.tools.binding.internal.client` | graphql-tools-binding | Internal | The rules of the client: the client directories, the assembly of an operation document and its validation against a client schema |
 | `io.micronaut.graphql.tools.binding.internal.finding` | graphql-tools-binding | Internal | Findings and their rendering |
 | `io.micronaut.graphql.tools.binding.internal.manifest` | graphql-tools-binding | Internal | The binding manifest renderer and the schema hash |
 | `io.micronaut.graphql.tools.binding.internal.membership` | graphql-tools-binding | Internal | The rule that a union or interface member is not mapped to a disjoint class |
@@ -319,7 +320,8 @@ This is the layout of the code now. `graphql-tools` is the library, `graphql-too
 | `io.micronaut.graphql.tools.codegen.schema` | graphql-tools-codegen | Public API | `IrBuilder`, `IrResult` and `SchemaSource`: the loader that merges the schema files and the rules that lower them into the IR; the rest of the package is package-private |
 | `io.micronaut.graphql.tools.codegen.ir` | graphql-tools-codegen | Public API | The IR nodes (`Ir`, `ModelType`, `InputType`, `EnumType`, `AbstractType`, `ScalarType`, `ResolverContract` and what they hold) and `IrSnapshot`, which prints an IR as text |
 | `io.micronaut.graphql.tools.codegen.ir.shared` | graphql-tools-codegen | Public API | The pieces of the IR nodes: `Names`, `Docs`, `AppliedDirective`, `TypeRef`, `BuiltinScalar`, `Coordinate`, `Operation` and `Wrapper` |
-| `io.micronaut.graphql.tools.visitor` | graphql-tools-processor | Mixed: compiler plug-in | The compile-time `TypeElementVisitor`, loaded by the compiler and never imported, and `BindingRulesAccess`, which is `@Internal` and exists for the benchmarks |
+| `io.micronaut.graphql.tools.visitor` | graphql-tools-processor | Mixed: compiler plug-in | The compile-time `TypeElementVisitor` of the resolvers, loaded by the compiler and never imported, and `BindingRulesAccess`, `ProcessorOptions` and `ModuleOwnership`, which are `@Internal` (the benchmarks and the client visitor use them) |
+| `io.micronaut.graphql.tools.visitor.client` | graphql-tools-processor | Compiler plug-in | The compile-time `TypeElementVisitor` of the client operations, loaded by the compiler and never imported |
 | `io.micronaut.graphql.tools.tck` | test-suite-tck | Test helper | The TCK runner; not published |
 
 Kotlin and Groovy sources need no `package-info`; the library modules are Java.
