@@ -46,6 +46,9 @@ compileTime:
   options: Options
   buildManifest: Build Manifest
   limits: Limits
+codegen:
+  title: Code Generation
+  mavenPlugin: Maven Plugin
 nativeImage: Native Image
 testing: Testing
 performance: Performance

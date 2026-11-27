@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -49,8 +50,21 @@ public final class IrBuilder {
      * @return the IR and the diagnostics
      */
     public static IrResult fromDirectory(Path directory, Options options) {
+        return fromDirectory(directory, options, List.of());
+    }
+
+    /**
+     * Builds the IR of the schema files under a directory, with the type mappings of dependencies.
+     *
+     * @param directory    the schema root; the origins in the IR are relative to it
+     * @param options      the options
+     * @param dependencies the jars and class directories to read {@value TypeMappingsFile#PATH} from, used when the option
+     *                     {@code typeMappingsFromDependencies} is on
+     * @return the IR and the diagnostics
+     */
+    public static IrResult fromDirectory(Path directory, Options options, Collection<Path> dependencies) {
         Objects.requireNonNull(directory, "directory");
-        return build(options, diagnostics -> SchemaFiles.readDirectory(directory, options.includes(), options.excludes(), diagnostics));
+        return build(options, dependencies, diagnostics -> SchemaFiles.readDirectory(directory, options.includes(), options.excludes(), diagnostics));
     }
 
     /**
@@ -62,8 +76,21 @@ public final class IrBuilder {
      * @return the IR and the diagnostics
      */
     public static IrResult fromFiles(Collection<Path> files, Options options) {
+        return fromFiles(files, options, List.of());
+    }
+
+    /**
+     * Builds the IR of schema files, with the type mappings of dependencies.
+     *
+     * @param files        the files, in any order
+     * @param options      the options
+     * @param dependencies the jars and class directories to read {@value TypeMappingsFile#PATH} from, used when the option
+     *                     {@code typeMappingsFromDependencies} is on
+     * @return the IR and the diagnostics
+     */
+    public static IrResult fromFiles(Collection<Path> files, Options options, Collection<Path> dependencies) {
         Objects.requireNonNull(files, "files");
-        return build(options, diagnostics -> SchemaFiles.readFiles(files, diagnostics));
+        return build(options, dependencies, diagnostics -> SchemaFiles.readFiles(files, diagnostics));
     }
 
     /**
@@ -74,18 +101,34 @@ public final class IrBuilder {
      * @return the IR and the diagnostics
      */
     public static IrResult fromSources(Collection<SchemaSource> sources, Options options) {
-        Objects.requireNonNull(sources, "sources");
-        return build(options, diagnostics -> List.copyOf(sources));
+        return fromSources(sources, options, List.of());
     }
 
-    private static IrResult build(Options options, Function<List<Diagnostic>, List<SchemaSource>> discovery) {
+    /**
+     * Builds the IR of schema text that the caller has read, with the type mappings of dependencies.
+     *
+     * @param sources      the sources, in any order
+     * @param options      the options
+     * @param dependencies the jars and class directories to read {@value TypeMappingsFile#PATH} from, used when the option
+     *                     {@code typeMappingsFromDependencies} is on
+     * @return the IR and the diagnostics
+     */
+    public static IrResult fromSources(Collection<SchemaSource> sources, Options options, Collection<Path> dependencies) {
+        Objects.requireNonNull(sources, "sources");
+        return build(options, dependencies, diagnostics -> List.copyOf(sources));
+    }
+
+    private static IrResult build(Options options, Collection<Path> dependencies, Function<List<Diagnostic>, List<SchemaSource>> discovery) {
         Objects.requireNonNull(options, "options");
+        Objects.requireNonNull(dependencies, "dependencies");
         List<Diagnostic> diagnostics = new ArrayList<>(options.validate());
         List<SchemaSource> sources = discovery.apply(diagnostics);
         SchemaLoader.Loaded loaded = SchemaLoader.load(sources, diagnostics);
+        Map<String, String> inherited = options.typeMappingsFromDependencies()
+                ? TypeMappingsFile.read(dependencies, diagnostics) : Map.of();
         Ir ir = Ir.EMPTY;
         if (diagnostics.stream().noneMatch(Diagnostic::isError)) {
-            ir = Lowering.lower(options, loaded.schema(), diagnostics);
+            ir = Lowering.lower(options, loaded.schema(), inherited, diagnostics);
             if (diagnostics.stream().anyMatch(Diagnostic::isError)) {
                 ir = Ir.EMPTY;
             }

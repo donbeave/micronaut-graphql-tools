@@ -18,7 +18,7 @@
  * pure function of the schema files and the options. The rules that name, map and group the schema produce it and the emitters
  * read nothing else, so a golden test can print it with {@link io.micronaut.graphql.tools.codegen.ir.IrSnapshot}.
  *
- * <p>A node carries the SDL name and the generated name side by side ({@link io.micronaut.graphql.tools.codegen.ir.Names}),
+ * <p>A node carries the SDL name and the generated name side by side ({@link io.micronaut.graphql.tools.codegen.ir.shared.Names}),
  * the nullability of every type reference, its documentation (description and deprecation) and its origin: the schema file
  * relative to the schema root, the line and the column. The origin is for diagnostics and snapshots and is never written into
  * generated code. No node holds a graphql-java object, and every list is in schema order.</p>

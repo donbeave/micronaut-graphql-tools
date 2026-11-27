@@ -84,10 +84,13 @@ final class Lowering {
             Operation.MUTATION, "io.micronaut.graphql.tools.resolver.MutationResolver",
             Operation.SUBSCRIPTION, "io.micronaut.graphql.tools.resolver.SubscriptionResolver");
 
+    private static final Set<String> ROOT_TYPE_NAMES = Set.of("Query", "Mutation", "Subscription");
+
     private static final Set<String> OBJECT_METHODS = Set.of(
             "clone", "finalize", "getClass", "hashCode", "notify", "notifyAll", "toString", "wait");
 
     private final Options options;
+    private final Map<String, String> inherited;
     private final MergedSchema schema;
     private final List<Diagnostic> diagnostics;
     private final NodeText text;
@@ -99,16 +102,17 @@ final class Lowering {
     private final List<Unit> units = new ArrayList<>();
     private final Set<String> usedMappings = new HashSet<>();
 
-    private Lowering(Options options, MergedSchema schema, List<Diagnostic> diagnostics) {
+    private Lowering(Options options, MergedSchema schema, Map<String, String> inherited, List<Diagnostic> diagnostics) {
         this.options = options;
+        this.inherited = inherited;
         this.schema = schema;
         this.diagnostics = diagnostics;
         this.text = new NodeText(options.commentsAsDescriptions());
         this.selectedObjects = new HashSet<>(options.interfaceTypes());
     }
 
-    static Ir lower(Options options, MergedSchema schema, List<Diagnostic> diagnostics) {
-        return new Lowering(options, schema, diagnostics).lower();
+    static Ir lower(Options options, MergedSchema schema, Map<String, String> inherited, List<Diagnostic> diagnostics) {
+        return new Lowering(options, schema, inherited, diagnostics).lower();
     }
 
     private Ir lower() {
@@ -131,7 +135,7 @@ final class Lowering {
                 default -> throw new IllegalStateException(type.kind.name());
             }
         }
-        List<ResolverContract> contracts = options.rootContracts() ? contracts() : List.of();
+        List<ResolverContract> contracts = contracts();
         nameConstants();
         collisions();
         checkOptionEntries();
@@ -142,8 +146,22 @@ final class Lowering {
         return rootTypes.containsKey(type.name);
     }
 
+    private String mapping(String name) {
+        String mapped = options.typeMappings().get(name);
+        if (mapped == null) {
+            mapped = inherited.get(name);
+        }
+        if (mapped == null && !BUILTIN.containsKey(name)) {
+            MergedType type = schema.types.get(name);
+            if (type == null || type.kind == Kind.SCALAR) {
+                mapped = ScalarPresets.presets().get(name);
+            }
+        }
+        return mapped;
+    }
+
     private boolean external(String name) {
-        return options.typeMappings().containsKey(name);
+        return mapping(name) != null;
     }
 
     private void error(String code, String message, Origin origin) {
@@ -159,6 +177,7 @@ final class Lowering {
             } else {
                 MergedType owner = schema.types.get(key.substring(0, dot));
                 String field = key.substring(dot + 1);
+                checkFieldMapping(key, owner, field);
                 known = usedMappings.contains(key) || owner != null && (owner.fields.stream().anyMatch(it -> it.getName().equals(field))
                         || owner.inputFields.stream().anyMatch(it -> it.getName().equals(field)));
             }
@@ -175,6 +194,59 @@ final class Lowering {
                 diagnostics.add(new Diagnostic(Diagnostic.Severity.WARNING, Diagnostic.UNUSED_INTERFACE_TYPE,
                         "The option interfaceTypes." + i + " names '" + name + "', which is not an object type of the schema.",
                         "interfaceTypes." + i, null));
+            }
+        }
+    }
+
+    private void checkFieldMapping(String key, MergedType owner, String field) {
+        if (owner == null) {
+            return;
+        }
+        Type<?> type = null;
+        Origin origin = null;
+        for (FieldDefinition definition : owner.fields) {
+            if (definition.getName().equals(field)) {
+                type = definition.getType();
+                origin = SchemaLoader.origin(definition);
+            }
+        }
+        for (InputValueDefinition definition : owner.inputFields) {
+            if (definition.getName().equals(field)) {
+                type = definition.getType();
+                origin = SchemaLoader.origin(definition);
+            }
+        }
+        if (type == null) {
+            return;
+        }
+        String target = baseName(type);
+        MergedType targetType = schema.types.get(target);
+        if (targetType != null && targetType.kind != Kind.SCALAR) {
+            error(Diagnostic.FIELD_MAPPING_NOT_SCALAR, "The option typeMappings." + key + " maps the field '" + key + "' (" + origin
+                    + "), whose type '" + target + "' is not a scalar. A GraphQL type has one Java type, so map the type with the"
+                    + " option typeMappings." + target + " instead.", origin);
+        }
+    }
+
+    private static String baseName(Type<?> type) {
+        if (type instanceof NonNullType nonNull) {
+            return baseName(nonNull.getType());
+        } else if (type instanceof ListType list) {
+            return baseName(list.getType());
+        }
+        return ((TypeName) type).getName();
+    }
+
+    private void warnMappedMembers(MergedType owner, Iterable<String> members) {
+        for (String member : members) {
+            MergedType type = schema.types.get(member);
+            if (type != null && type.kind != Kind.SCALAR && external(member)) {
+                diagnostics.add(new Diagnostic(Diagnostic.Severity.WARNING, Diagnostic.MAPPED_MEMBER, "The "
+                        + owner.kind.name().toLowerCase(Locale.ROOT) + " '" + owner.name + "' (" + owner.origin + ") has the member '"
+                        + member + "', which typeMappings." + member + " maps to the external class " + mapping(member)
+                        + ". That class cannot implement a generated type, so '" + owner.name + "' is generated as a plain interface,"
+                        + " not a sealed one, and the application registers the class as a member itself.",
+                        "typeMappings." + member, owner.origin));
             }
         }
     }
@@ -211,22 +283,43 @@ final class Lowering {
         for (MergedType type : schema.types.values()) {
             if (type.kind == Kind.UNION) {
                 for (String member : type.members) {
-                    if (!schema.types.containsKey(member)) {
+                    MergedType target = schema.types.get(member);
+                    if (target == null) {
                         error(Diagnostic.UNKNOWN_TYPE, "The union '" + type.name + "' (" + type.origin + ") lists the member '" + member
                                 + "', which is not defined in the schema files.", type.origin);
+                    } else if (target.kind != Kind.OBJECT) {
+                        error(Diagnostic.INVALID_UNION_MEMBER, "The union '" + type.name + "' (" + type.origin + ") lists the member '"
+                                + member + "', which is " + article(target.kind) + ", not an object type. A union has object types as members.",
+                                type.origin);
                     }
                     unionsOf.computeIfAbsent(member, key -> new ArrayList<>()).add(type.name);
                 }
             } else if (type.kind == Kind.OBJECT || type.kind == Kind.INTERFACE) {
                 for (String implemented : type.implemented) {
-                    if (!schema.types.containsKey(implemented)) {
+                    MergedType target = schema.types.get(implemented);
+                    if (target == null) {
                         error(Diagnostic.UNKNOWN_TYPE, "The type '" + type.name + "' (" + type.origin + ") implements '" + implemented
                                 + "', which is not defined in the schema files.", type.origin);
+                    } else if (target.kind != Kind.INTERFACE) {
+                        error(Diagnostic.INVALID_IMPLEMENTS, "The " + type.kind.name().toLowerCase(Locale.ROOT) + " type '" + type.name
+                                + "' (" + type.origin + ") implements '" + implemented + "', which is " + article(target.kind)
+                                + ", not an interface. Only an interface can be implemented.", type.origin);
                     }
                     implementers.computeIfAbsent(implemented, key -> new ArrayList<>()).add(type.name);
                 }
             }
         }
+    }
+
+    private static String article(Kind kind) {
+        return switch (kind) {
+            case OBJECT -> "an object type";
+            case INTERFACE -> "an interface type";
+            case UNION -> "a union type";
+            case ENUM -> "an enum type";
+            case INPUT -> "an input type";
+            case SCALAR -> "a scalar";
+        };
     }
 
     private List<Names> generatedNames(Iterable<String> typeNames) {
@@ -251,7 +344,7 @@ final class Lowering {
             return;
         }
         scalars.add(new ScalarType(names.get(type.name), text.docs(type.base, description(type), type.directives),
-                options.typeMappings().get(type.name), text.directives(type.directives), type.origin));
+                mapping(type.name), text.directives(type.directives), type.origin));
     }
 
     private static Description description(MergedType type) {
@@ -326,6 +419,7 @@ final class Lowering {
         }
         List<String> implementing = implementers.getOrDefault(type.name, List.of());
         List<Names> members = generatedNames(implementing);
+        warnMappedMembers(type, implementing);
         register(type, "interface type");
         abstractTypes.add(new AbstractType(AbstractType.Kind.INTERFACE, generated,
                 text.docs(type.base, description(type), type.directives), fields(type), generatedNames(type.implemented), members,
@@ -338,6 +432,7 @@ final class Lowering {
             return;
         }
         List<Names> members = generatedNames(type.members);
+        warnMappedMembers(type, type.members);
         register(type, "union type");
         abstractTypes.add(new AbstractType(AbstractType.Kind.UNION, generated,
                 text.docs(type.base, description(type), type.directives), List.of(), List.of(), members,
@@ -381,19 +476,35 @@ final class Lowering {
             }
             for (FieldDefinition definition : type.fields) {
                 Field field = field(type.name, definition);
-                Wrapper wrapper = operation == Operation.SUBSCRIPTION ? Wrapper.generic(options.subscriptionReturnType())
-                        : options.kotlinSuspend() ? Wrapper.SUSPEND : Wrapper.PLAIN;
-                ContractMethod method = new ContractMethod(field.name(), new Coordinate(type.name, field.sdlName()), field.type(),
-                        field.arguments(), wrapper, field.docs(), field.directives(), field.origin());
-                String simple = options.contractNameTemplate().replace("{Field}", capitalize(field.name()))
-                        .replace("{Operation}", type.name);
-                Names contractNames = new Names(type.name + "." + field.sdlName(), options.effectiveResolverPackage(), simple);
-                units.add(new Unit(contractNames.packageName(), simple, "the resolver contract of the field '" + method.coordinate()
-                        + "' (" + field.origin() + ")", field.origin()));
-                contracts.add(new ResolverContract(operation, contractNames, MARKERS.get(operation), List.of(method), field.origin()));
+                if (options.rootContracts()) {
+                    contracts.add(contract(operation, type, field));
+                }
             }
         }
         return contracts;
+    }
+
+    private ResolverContract contract(Operation operation, MergedType type, Field field) {
+        Wrapper wrapper = operation == Operation.SUBSCRIPTION ? Wrapper.generic(options.subscriptionReturnType())
+                : options.kotlinSuspend() ? Wrapper.SUSPEND : Wrapper.PLAIN;
+        ContractMethod method = new ContractMethod(field.name(), new Coordinate(type.name, field.sdlName()), field.type(),
+                field.arguments(), wrapper, field.docs(), field.directives(), field.origin());
+        String simple = options.contractNameTemplate().replace("{Field}", capitalize(field.name()))
+                .replace("{Operation}", type.name);
+        Names contractNames = new Names(type.name + "." + field.sdlName(), options.effectiveResolverPackage(), simple);
+        String description = "the resolver contract of the field '" + method.coordinate() + "' (" + field.origin() + ")";
+        if (ROOT_TYPE_NAMES.contains(simple)) {
+            error(Diagnostic.RESERVED_CONTRACT_NAME, "The option contractNameTemplate '" + options.contractNameTemplate() + "' names "
+                    + description + " '" + simple + "', which is the name of a root type. Add text around the placeholders, for example"
+                    + " {Field}{Operation}Resolver.", field.origin());
+        }
+        String problem = ReservedNames.typeNameProblem(options.language(), simple);
+        if (problem != null) {
+            error(Diagnostic.RESERVED_NAME, "The option contractNameTemplate '" + options.contractNameTemplate() + "' names " + description
+                    + " '" + simple + "', which is a " + problem + ".", field.origin());
+        }
+        units.add(new Unit(contractNames.packageName(), simple, description, field.origin()));
+        return new ResolverContract(operation, contractNames, MARKERS.get(operation), List.of(method), field.origin());
     }
 
     private static String capitalize(String name) {
@@ -404,10 +515,10 @@ final class Lowering {
 
     private void register(MergedType type, String kindName) {
         Names generated = names.get(type.name);
-        String language = ReservedNames.languageOf(options.language(), generated.simpleName());
-        if (language != null) {
+        String problem = ReservedNames.typeNameProblem(options.language(), generated.simpleName());
+        if (problem != null) {
             error(Diagnostic.RESERVED_NAME, "The " + kindName + " '" + type.name + "' (" + type.origin + ") cannot be generated as the class "
-                    + generated.simpleName() + ": it is a " + language + " keyword. Rename it in the schema or set typeNamePrefix or typeNameSuffix.",
+                    + generated.simpleName() + ": it is a " + problem + ". Rename it in the schema or set typeNamePrefix or typeNameSuffix.",
                     type.origin);
         }
         units.add(new Unit(generated.packageName(), generated.simpleName(), "the " + kindName + " '" + type.name + "' (" + type.origin + ")",
@@ -485,7 +596,7 @@ final class Lowering {
         if (mapped != null) {
             usedMappings.add(mappingKey);
         } else {
-            mapped = options.typeMappings().get(name);
+            mapped = mapping(name);
             if (mapped != null) {
                 usedMappings.add(name);
             }
